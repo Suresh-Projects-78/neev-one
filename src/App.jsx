@@ -6507,20 +6507,11 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         ),
       });
 
-      const token = localStorage.getItem('token');
-      if (token && currentCompany?.id) {
-        const backendCompanyId = currentCompany?.profile?.backendCompanyId || currentCompany.id;
-        await fetch('/api/profile/company', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            'X-Company-Id': String(backendCompanyId),
-          },
-          body: JSON.stringify({ companyProfile: { ...(savedProfile || {}), taxCompliances: nextTax } }),
-        });
-      }
-
+      // NOTE: tax & compliance settings are stored locally only. The old
+      // PUT /api/profile/company call was removed with the unused Sequelize
+      // backend that served it; the live API has no such route, so the request
+      // never reached a handler and its failure was never checked. A real
+      // endpoint lands with the server-side company profile work.
       alert('Tax & compliances saved.');
       return;
     } finally {
@@ -6878,21 +6869,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
         return { ...prev, companies: nextCompanies };
       });
 
-      // Save to backend (per-company profile)
-      const token = localStorage.getItem('token');
-      if (token && currentCompany?.id) {
-        const backendCompanyId = currentCompany?.profile?.backendCompanyId || currentCompany.id;
-        await fetch('/api/profile/company', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-            'X-Company-Id': String(backendCompanyId),
-          },
-          body: JSON.stringify({ companyProfile: { ...(saved || {}), companySettings: payload } }),
-        });
-      }
-
+      // Local-only for now — see the note on the tax & compliances save above.
       alert('Company settings saved.');
     } catch (e) {
       alert('Failed to save company settings.');
