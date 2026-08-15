@@ -4,9 +4,14 @@ import { z } from 'zod';
 import { prisma } from '../utils/prisma';
 import { requireAuth } from '../middleware/auth';
 import { requireTenantContext } from '../middleware/tenantContext';
+import { requirePermission } from '../middleware/rbac';
+import { PermissionAction } from '../constants/enums';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
+
+const INVOICE_MODULE = 'SALES';
+const INVOICE_SUBMODULE = 'Invoices';
 
 const invoiceItemSchema = z.object({
   itemId: z.string().optional().nullable(),
@@ -100,7 +105,7 @@ const normalizeInvoiceResponse = (row: any) => {
   };
 };
 
-invoicesRouter.get('/orgs/:orgId/invoices', async (req, res) => {
+invoicesRouter.get('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, PermissionAction.VIEW, INVOICE_SUBMODULE), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
   const branchId = req.tenant!.branchId;
@@ -118,7 +123,7 @@ invoicesRouter.get('/orgs/:orgId/invoices', async (req, res) => {
   res.json({ invoices: rows.map((r: any) => normalizeInvoiceResponse(r)) });
 });
 
-invoicesRouter.post('/orgs/:orgId/invoices', async (req, res) => {
+invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, PermissionAction.CREATE, INVOICE_SUBMODULE), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
   const userId = req.auth!.userId;
@@ -179,7 +184,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', async (req, res) => {
   res.status(201).json({ invoice: normalizeInvoiceResponse(row) });
 });
 
-invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', async (req, res) => {
+invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOICE_MODULE, PermissionAction.EDIT, INVOICE_SUBMODULE), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
   const invoiceId = String(req.params.invoiceId);
@@ -243,7 +248,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', async (req, res) => {
   res.json({ invoice: normalizeInvoiceResponse(row) });
 });
 
-invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', async (req, res) => {
+invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermission(INVOICE_MODULE, PermissionAction.EDIT, INVOICE_SUBMODULE), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
   const invoiceId = String(req.params.invoiceId);
@@ -274,7 +279,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', async (req, res)
   res.json({ invoice: normalizeInvoiceResponse(row) });
 });
 
-invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', async (req, res) => {
+invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOICE_MODULE, PermissionAction.DELETE, INVOICE_SUBMODULE), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
   const invoiceId = String(req.params.invoiceId);

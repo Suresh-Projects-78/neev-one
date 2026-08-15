@@ -50,6 +50,7 @@ async function bootstrapOwnerRole(accountId: string, orgId: string, userId: stri
     { module: 'SETTINGS', subModule: 'Roles', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.DELETE] },
     { module: 'INVENTORY', subModule: 'Inter-branch transfer', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.APPROVE] },
     { module: 'INVENTORY', subModule: 'Stock Adjustment', actions: [PermissionAction.VIEW, PermissionAction.CREATE] },
+    { module: 'SALES', subModule: 'Invoices', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.DELETE] },
   ];
 
   const permissions: Array<{ id: string }> = [];

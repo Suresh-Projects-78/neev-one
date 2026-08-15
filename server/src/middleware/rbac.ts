@@ -113,6 +113,10 @@ async function bootstrapOwnerRoleIfCreator(accountId: string, orgId: string, use
     { module: 'SETTINGS', subModule: 'Roles', action: PermissionAction.CREATE },
     { module: 'SETTINGS', subModule: 'Roles', action: PermissionAction.EDIT },
     { module: 'SETTINGS', subModule: 'Roles', action: PermissionAction.DELETE },
+    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.VIEW },
+    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.CREATE },
+    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.EDIT },
+    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.DELETE },
   ];
 
   const permissionIds: string[] = [];
