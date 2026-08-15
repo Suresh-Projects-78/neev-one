@@ -1,0 +1,81 @@
+# Accounting app — full stack (web + api [+ postgres]).
+#
+#   cp .env.docker.example .env
+#   docker compose up --build            # SQLite (works with the current Prisma schema)
+#   docker compose --profile postgres up # Postgres (needs the schema change below)
+#
+# Web:  http://localhost:${WEB_PORT:-8080}
+# API:  proxied at /api by nginx; also exposed on ${API_PORT:-4001} for debugging.
+#
+# SWITCHING TO POSTGRES is not just a URL change — see docs/REVIEW.md gap D-1:
+#   1. server/prisma/schema.prisma -> datasource provider = "postgresql"
+#   2. server/src/routes/invoices.ts uses $queryRawUnsafe with SQLite `?`
+#      placeholders; Postgres needs `$1..$n` (or move to the typed Prisma client).
+#   3. Run `npx prisma migrate dev` once to create a real migration history.
+
+services:
+  api:
+    build:
+      context: ./server
+      dockerfile: ../docker/api.Dockerfile
+    image: accounting-api:local
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "4001"
+      # SQLite by default; the postgres profile overrides this via DATABASE_URL in .env.
+      DATABASE_URL: ${DATABASE_URL:-file:/data/dev.db}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env (see .env.docker.example)}
+      JWT_ISSUER: ${JWT_ISSUER:-accounting}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-accounting-web}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      # Requests arrive from the browser via nginx on the same origin, so this
+      # only matters if you call the API directly from another origin.
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+    volumes:
+      - api-data:/data
+    ports:
+      - "${API_PORT:-4001}:4001"
+    networks: [appnet]
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-}
+    image: accounting-web:local
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    networks: [appnet]
+
+  db:
+    profiles: [postgres]
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-accounting}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-accounting}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-accounting} -d ${POSTGRES_DB:-accounting}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [appnet]
+
+volumes:
+  api-data:
+  db-data:
+
+networks:
+  appnet:

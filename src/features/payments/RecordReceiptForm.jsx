@@ -1,0 +1,454 @@
+import React, { useMemo, useState } from 'react';
+
+import CustomerPicker from '../../components/pickers/CustomerPicker';
+import { getNextNumericId } from '../../utils/ids';
+import { formatMoney, round2 } from '../../utils/money';
+
+const safeArray = (v) => (Array.isArray(v) ? v : []);
+
+const getInvoiceBalance = (inv) => {
+  const total = Number(inv?.total ?? 0);
+  const paid = Number(inv?.paidAmount ?? 0);
+  const bal = total - paid;
+  return Number.isFinite(bal) ? Math.max(0, round2(bal)) : 0;
+};
+
+const canCollectAgainstInvoice = (inv) => {
+  const rawStatus = String(inv?.status || '').trim();
+  if (rawStatus === 'Draft') return false;
+  if (rawStatus === 'Cancelled') return false;
+  return getInvoiceBalance(inv) > 0.0001;
+};
+
+const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
+  const companyId = currentCompany.id;
+
+  const initial = useMemo(() => {
+    const d = initialData && typeof initialData === 'object' ? initialData : null;
+    return {
+      date: String(d?.date || '').trim() || new Date().toISOString().slice(0, 10),
+      customerId: d?.customerId !== undefined && d?.customerId !== null ? String(d.customerId) : '',
+      amount: d?.amount !== undefined && d?.amount !== null ? String(d.amount) : '',
+      mode: String(d?.mode || '').trim() || 'Cash',
+      reference: String(d?.reference || '').trim(),
+      notes: String(d?.notes || '').trim(),
+      cashBankAccountId: d?.cashBankAccountId,
+      sourceBankTransactionId: d?.sourceBankTransactionId,
+    };
+  }, [initialData]);
+
+  const [formData, setFormData] = useState(() => ({
+    date: initial.date,
+    customerId: initial.customerId,
+    amount: initial.amount,
+    mode: initial.mode,
+    reference: initial.reference,
+    notes: initial.notes,
+  }));
+
+  const [allocations, setAllocations] = useState(() => ({}));
+
+  const invoices = useMemo(() => {
+    return safeArray(db.invoices)
+      .filter((i) => i.companyId === companyId)
+      .sort((a, b) => {
+        const da = String(a.date || '');
+        const dbb = String(b.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b.id) - Number(a.id);
+      });
+  }, [db.invoices, companyId]);
+
+  const outstandingInvoices = useMemo(() => {
+    const cid = Number(formData.customerId);
+    if (!Number.isFinite(cid) || !cid) return [];
+
+    return invoices
+      .filter((inv) => Number(inv.customerId) === cid)
+      .filter((inv) => canCollectAgainstInvoice(inv));
+  }, [formData.customerId, invoices]);
+
+  const selectedInvoiceIds = useMemo(() => {
+    return Object.entries(allocations)
+      .filter(([, v]) => Boolean(v?.selected))
+      .map(([k]) => Number(k))
+      .filter((n) => Number.isFinite(n));
+  }, [allocations]);
+
+  const computed = useMemo(() => {
+    const receiptAmount = Number(formData.amount ?? 0);
+    const totalAmount = Number.isFinite(receiptAmount) ? Math.max(0, receiptAmount) : 0;
+
+    let allocated = 0;
+    const lines = [];
+
+    for (const inv of outstandingInvoices) {
+      const key = String(inv.id);
+      const row = allocations[key];
+      if (!row?.selected) continue;
+      const want = Number(row?.amount ?? 0);
+      const amt = Number.isFinite(want) ? Math.max(0, want) : 0;
+      if (amt <= 0) continue;
+      const balance = getInvoiceBalance(inv);
+      const capped = Math.min(balance, amt);
+      if (capped <= 0) continue;
+
+      allocated = round2(allocated + capped);
+      lines.push({
+        invoiceId: Number(inv.id),
+        invoiceNumber: inv.number,
+        amount: round2(capped),
+      });
+    }
+
+    const advance = round2(Math.max(0, totalAmount - allocated));
+
+    return {
+      totalAmount: round2(totalAmount),
+      allocated: round2(allocated),
+      advance,
+      lines,
+    };
+  }, [allocations, formData.amount, outstandingInvoices]);
+
+  const toggleInvoice = (inv, selected) => {
+    const key = String(inv.id);
+
+    setAllocations((prev) => {
+      const next = { ...prev };
+      const existing = next[key] || { selected: false, amount: 0 };
+
+      const nextSelected = Boolean(selected);
+      let nextAmount = existing.amount;
+
+      if (nextSelected && (!Number(nextAmount) || Number(nextAmount) <= 0)) {
+        // Default allocation to remaining (or full outstanding if no amount entered).
+        const receiptAmount = Number(formData.amount ?? 0);
+        const totalAmount = Number.isFinite(receiptAmount) ? Math.max(0, receiptAmount) : 0;
+
+        const alreadyAllocated = Object.entries(prev)
+          .filter(([k, v]) => k !== key && v?.selected)
+          .reduce((sum, [k, v]) => {
+            const amt = Number(v?.amount ?? 0);
+            return sum + (Number.isFinite(amt) ? Math.max(0, amt) : 0);
+          }, 0);
+
+        const remaining = Math.max(0, totalAmount - alreadyAllocated);
+        const suggested = Math.min(getInvoiceBalance(inv), remaining || getInvoiceBalance(inv));
+        nextAmount = round2(suggested);
+      }
+
+      next[key] = { ...existing, selected: nextSelected, amount: nextAmount };
+      return next;
+    });
+  };
+
+  const setInvoiceAmount = (inv, amount) => {
+    const key = String(inv.id);
+    setAllocations((prev) => {
+      const next = { ...prev };
+      const existing = next[key] || { selected: true, amount: 0 };
+      next[key] = { ...existing, selected: true, amount };
+      return next;
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    const amount = Number(formData.amount ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Receipt amount must be greater than 0');
+      return;
+    }
+
+    const customerIdNum = Number(formData.customerId);
+    if (!Number.isFinite(customerIdNum) || !customerIdNum) {
+      alert('Party (Customer) is required');
+      return;
+    }
+
+    // Validate allocations are within invoice balances
+    for (const line of computed.lines) {
+      const inv = safeArray(db.invoices).find((i) => i.companyId === companyId && Number(i.id) === Number(line.invoiceId));
+      if (!inv) {
+        alert('One of the selected invoices was not found. Please refresh and try again.');
+        return;
+      }
+      if (!canCollectAgainstInvoice(inv)) {
+        alert(`Cannot record against invoice ${inv.number || ''} (Draft/Cancelled/No balance).`);
+        return;
+      }
+      const balance = getInvoiceBalance(inv);
+      if (Number(line.amount) > balance + 0.0001) {
+        alert(`Allocation exceeds outstanding for invoice ${inv.number || ''}.`);
+        return;
+      }
+    }
+
+    if (computed.allocated > amount + 0.0001) {
+      alert('Total allocated cannot be more than receipt amount');
+      return;
+    }
+
+    const customers = safeArray(db.customers).filter((c) => c.companyId === companyId);
+    const customer = customers.find((c) => Number(c.id) === customerIdNum) || null;
+    const customerName = customer?.name || customer?.displayName || customer?.companyName || customer?.legalName || '';
+
+    const paymentId = getNextNumericId(db.payments);
+    const receiptNo = `RCPT-${paymentId}`;
+
+    const receiptRecord = {
+      id: paymentId,
+      companyId,
+      voucherType: 'receipt',
+      voucherId: null,
+      direction: 'IN',
+      cashBankAccountId:
+        initial.cashBankAccountId !== undefined && initial.cashBankAccountId !== null && String(initial.cashBankAccountId) !== ''
+          ? Number(initial.cashBankAccountId)
+          : undefined,
+      sourceBankTransactionId:
+        initial.sourceBankTransactionId !== undefined && initial.sourceBankTransactionId !== null && String(initial.sourceBankTransactionId) !== ''
+          ? Number(initial.sourceBankTransactionId)
+          : undefined,
+      receiptNo,
+      date: formData.date,
+      customerId: customerIdNum,
+      customerName,
+      amount: round2(amount),
+      allocatedAmount: round2(computed.allocated),
+      advanceAmount: round2(computed.advance),
+      allocations: computed.lines.map((l) => ({
+        voucherType: 'invoice',
+        voucherId: l.invoiceId,
+        documentNumber: l.invoiceNumber,
+        amount: round2(l.amount),
+      })),
+      mode: formData.mode,
+      reference: formData.reference,
+      notes: formData.notes,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Apply allocations to invoices
+    const invoiceMap = new Map(safeArray(db.invoices).map((i) => [Number(i.id), i]));
+
+    const nextInvoices = safeArray(db.invoices).map((inv) => {
+      if (inv.companyId !== companyId) return inv;
+
+      const line = receiptRecord.allocations.find((a) => Number(a.voucherId) === Number(inv.id));
+      if (!line) return inv;
+
+      const total = Number(inv.total ?? 0);
+      const alreadyPaid = Number(inv.paidAmount ?? 0);
+      const nextPaid = round2(Math.min(total, alreadyPaid + Number(line.amount ?? 0)));
+
+      const rawStatus = String(inv.status || '').trim();
+      const nextStatus =
+        rawStatus === 'Draft'
+          ? 'Draft'
+          : total > 0 && nextPaid >= total - 0.0001
+            ? 'Paid'
+            : nextPaid > 0
+              ? 'Partial'
+              : 'Unpaid';
+
+      return {
+        ...inv,
+        paidAmount: nextPaid,
+        status: nextStatus,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+
+    setDb({
+      ...db,
+      invoices: nextInvoices,
+      payments: [...safeArray(db.payments), receiptRecord],
+    });
+
+    onSaved?.(receiptRecord);
+
+    alert(computed.advance > 0 ? 'Receipt recorded (with advance)!' : 'Receipt recorded!');
+    onClose?.();
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Receipt Date</label>
+          <input
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
+            className="w-full px-3 py-2 border rounded-lg"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Amount Received</label>
+          <input
+            type="number"
+            value={formData.amount}
+            onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
+            className="w-full px-3 py-2 border rounded-lg"
+            min="0"
+            step="0.01"
+            required
+          />
+        </div>
+
+        <div className="col-span-2">
+          <CustomerPicker
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            value={formData.customerId}
+            onChange={(customerId) => {
+              setFormData((p) => ({ ...p, customerId }));
+              setAllocations({});
+            }}
+          />
+        </div>
+
+        {!hideMode ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Mode</label>
+            <select
+              value={formData.mode}
+              onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
+              className="w-full px-3 py-2 border rounded-lg"
+            >
+              <option>Cash</option>
+              <option>Bank</option>
+              <option>UPI</option>
+              <option>Card</option>
+              <option>Other</option>
+            </select>
+          </div>
+        ) : null}
+        <div>
+          <label className="block text-sm font-medium mb-1">Reference</label>
+          <input
+            type="text"
+            value={formData.reference}
+            onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+            className="w-full px-3 py-2 border rounded-lg"
+            placeholder="Txn / UTR / Cheque no"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 text-sm bg-gray-50 border rounded-lg p-3">
+        <div>
+          <div className="text-gray-500">Allocated</div>
+          <div className="font-semibold">{formatMoney(computed.allocated, currentCompany)}</div>
+        </div>
+        <div>
+          <div className="text-gray-500">Advance</div>
+          <div className="font-semibold">{formatMoney(computed.advance, currentCompany)}</div>
+        </div>
+        <div>
+          <div className="text-gray-500">Selected Invoices</div>
+          <div className="font-semibold">{selectedInvoiceIds.length}</div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-medium">Outstanding Invoices</div>
+          {formData.customerId ? (
+            <div className="text-sm text-gray-500">{outstandingInvoices.length} invoice(s)</div>
+          ) : (
+            <div className="text-sm text-gray-500">Select party to load invoices</div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">Sel</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Outstanding</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Allocate</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {!formData.customerId ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    Select party name to see outstanding invoices
+                  </td>
+                </tr>
+              ) : outstandingInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    No outstanding invoices. This receipt will be recorded as advance.
+                  </td>
+                </tr>
+              ) : (
+                outstandingInvoices.map((inv) => {
+                  const key = String(inv.id);
+                  const selected = Boolean(allocations[key]?.selected);
+                  const allocValue = allocations[key]?.amount ?? '';
+                  const bal = getInvoiceBalance(inv);
+
+                  return (
+                    <tr key={inv.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={(e) => toggleInvoice(inv, e.target.checked)}
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-medium">{inv.number || '-'}</td>
+                      <td className="px-4 py-3">{inv.date || '-'}</td>
+                      <td className="px-4 py-3 text-right font-semibold">{formatMoney(bal, currentCompany)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <input
+                          type="number"
+                          value={allocValue}
+                          onChange={(e) => setInvoiceAmount(inv, e.target.value)}
+                          className="w-32 px-2 py-1 border rounded text-right"
+                          min="0"
+                          step="0.01"
+                          disabled={!formData.amount}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1">Notes</label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+          className="w-full px-3 py-2 border rounded-lg"
+          rows={3}
+        />
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          Record Receipt
+        </button>
+      </div>
+    </form>
+  );
+};
+
+export default RecordReceiptForm;

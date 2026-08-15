@@ -1,0 +1,524 @@
+import React, { useMemo, useState } from 'react';
+
+import RecordPaymentForm from './RecordPaymentForm';
+import { formatMoney } from '../../utils/money';
+
+const safeArray = (v) => (Array.isArray(v) ? v : []);
+
+const getVoucherLabel = (voucherType) => {
+  if (voucherType === 'invoice') return 'Invoice';
+  if (voucherType === 'bill') return 'Bill';
+  if (voucherType === 'expense') return 'Expense';
+  if (voucherType === 'receipt') return 'Receipt';
+  if (voucherType === 'payment') return 'Payment';
+  return String(voucherType || 'Document');
+};
+
+const resolveVoucher = ({ db, companyId, voucherType, voucherId }) => {
+  const id = Number(voucherId);
+  if (!Number.isFinite(id)) return null;
+
+  if (voucherType === 'invoice') return safeArray(db.invoices).find((d) => d.companyId === companyId && Number(d.id) === id) || null;
+  if (voucherType === 'bill') return safeArray(db.bills).find((d) => d.companyId === companyId && Number(d.id) === id) || null;
+  if (voucherType === 'expense') return safeArray(db.expenses).find((d) => d.companyId === companyId && Number(d.id) === id) || null;
+  return null;
+};
+
+const getBalanceForVoucher = (voucher) => {
+  const total = Number(voucher?.total ?? 0);
+  const paid = Number(voucher?.paidAmount ?? 0);
+  const balance = total - paid;
+  return Number.isFinite(balance) ? Math.max(0, balance) : 0;
+};
+
+const canRecordAgainstVoucher = ({ voucherType, voucher }) => {
+  if (!voucher) return false;
+
+  const rawStatus = String(voucher?.status || '').trim();
+  if (rawStatus === 'Draft') return false;
+  if (voucherType === 'invoice' && rawStatus === 'Cancelled') return false;
+
+  return getBalanceForVoucher(voucher) > 0.0001;
+};
+
+const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onClose }) => {
+  // kind: 'receipt' | 'payment'
+  const companyId = currentCompany.id;
+
+  const [voucherType, setVoucherType] = useState(kind === 'receipt' ? 'invoice' : 'bill');
+  const [voucherId, setVoucherId] = useState('');
+
+  const invoices = useMemo(() => safeArray(db.invoices).filter((i) => i.companyId === companyId), [db, companyId]);
+  const bills = useMemo(() => safeArray(db.bills).filter((b) => b.companyId === companyId), [db, companyId]);
+  const expenses = useMemo(() => safeArray(db.expenses).filter((e) => e.companyId === companyId), [db, companyId]);
+
+  const list = voucherType === 'invoice' ? invoices : voucherType === 'bill' ? bills : expenses;
+
+  const eligibleDocs = useMemo(() => {
+    return list.filter((d) => canRecordAgainstVoucher({ voucherType, voucher: d }));
+  }, [list, voucherType]);
+
+  const selected = useMemo(() => {
+    const id = Number(voucherId);
+    if (!Number.isFinite(id)) return null;
+    return list.find((d) => Number(d.id) === id) || null;
+  }, [list, voucherId]);
+
+  const openRecord = () => {
+    if (!selected) return;
+
+    const titlePrefix = voucherType === 'invoice' ? 'Record Receipt' : 'Record Payment';
+    openModal(
+      <RecordPaymentForm
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        voucherType={voucherType}
+        voucher={selected}
+        onClose={() => openModal(null)}
+      />,
+      { title: `${titlePrefix} ${selected?.number || ''}`.trim(), maxWidthClass: 'max-w-3xl' }
+    );
+  };
+
+  const title = kind === 'receipt' ? 'Record Receipt' : 'Record Payment';
+
+  return (
+    <div className="space-y-4">
+      {kind === 'payment' ? (
+        <div>
+          <label className="block text-sm font-medium mb-1">Type</label>
+          <select
+            value={voucherType}
+            onChange={(e) => {
+              setVoucherType(e.target.value);
+              setVoucherId('');
+            }}
+            className="w-full px-3 py-2 border rounded-lg"
+          >
+            <option value="bill">Bill</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+      ) : null}
+
+      <div>
+        <label className="block text-sm font-medium mb-1">{getVoucherLabel(voucherType)} #</label>
+        <select
+          value={voucherId}
+          onChange={(e) => setVoucherId(e.target.value)}
+          className="w-full px-3 py-2 border rounded-lg"
+        >
+          <option value="">Select</option>
+          {eligibleDocs.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.number}
+            </option>
+          ))}
+        </select>
+        {eligibleDocs.length === 0 ? (
+          <div className="text-sm text-gray-500 mt-2">No eligible documents found (needs balance and not Draft).</div>
+        ) : null}
+      </div>
+
+      {selected ? (
+        <div className="grid grid-cols-3 gap-3 text-sm bg-gray-50 border rounded-lg p-3">
+          <div>
+            <div className="text-gray-500">Total</div>
+            <div className="font-semibold">{formatMoney(Number(selected.total ?? 0), currentCompany)}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Paid</div>
+            <div className="font-semibold">{formatMoney(Number(selected.paidAmount ?? 0), currentCompany)}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Balance</div>
+            <div className="font-semibold">{formatMoney(getBalanceForVoucher(selected), currentCompany)}</div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={openRecord}
+          disabled={!selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })}
+          className={`px-4 py-2 rounded-lg ${
+            !selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })
+              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          {title}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const TransactionView = ({ title, payload }) => {
+  const shareText = useMemo(() => {
+    const lines = [
+      title,
+      payload?.documentNumber ? `Document: ${payload.documentNumber}` : null,
+      payload?.partyName ? `Party: ${payload.partyName}` : null,
+      payload?.date ? `Date: ${payload.date}` : null,
+      payload?.mode ? `Mode: ${payload.mode}` : null,
+      payload?.reference ? `Reference: ${payload.reference}` : null,
+      payload?.amount !== undefined && payload?.amount !== null ? `Amount: ${String(payload.amount)}` : null,
+    ].filter(Boolean);
+    return lines.join('\n');
+  }, [payload, title]);
+
+  const doPrint = () => {
+    try {
+      const prevTitle = document.title;
+      if (payload?.documentNumber) document.title = String(payload.documentNumber);
+
+      document.body.classList.add('print-mode');
+      const cleanup = () => {
+        document.body.classList.remove('print-mode');
+        document.title = prevTitle;
+      };
+      window.addEventListener('afterprint', cleanup, { once: true });
+      window.print();
+      window.setTimeout(cleanup, 1200);
+    } catch {
+      // ignore
+    }
+  };
+
+  const doShare = async () => {
+    try {
+      if (navigator?.share) {
+        await navigator.share({ title, text: shareText });
+        return;
+      }
+    } catch {
+      // fallthrough to copy
+    }
+
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        alert('Copied to clipboard');
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    alert(shareText);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-sm text-gray-500">{title}</div>
+          <div className="font-semibold">{payload?.documentNumber || '-'}</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={doPrint}
+            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+          >
+            Print
+          </button>
+          <button
+            type="button"
+            onClick={doShare}
+            className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          >
+            Share
+          </button>
+        </div>
+      </div>
+
+      <div className="printable bg-white border rounded-xl p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="text-gray-500">Party</div>
+            <div className="font-medium">{payload?.partyName || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Date</div>
+            <div className="font-medium">{payload?.date || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Mode</div>
+            <div className="font-medium">{payload?.mode || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Reference</div>
+            <div className="font-medium">{payload?.reference || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Type</div>
+            <div className="font-medium">{payload?.typeLabel || '-'}</div>
+          </div>
+          <div>
+            <div className="text-gray-500">Amount</div>
+            <div className="font-semibold">{formatMoney(payload?.amount || 0, payload?.currentCompany)}</div>
+          </div>
+        </div>
+
+        {payload?.notes ? (
+          <div className="text-sm">
+            <div className="text-gray-500">Notes</div>
+            <div className="whitespace-pre-wrap">{payload.notes}</div>
+          </div>
+        ) : null}
+
+        {Array.isArray(payload?.allocations) && payload.allocations.length ? (
+          <div className="text-sm">
+            <div className="text-gray-500 mb-2">Allocations</div>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Document #</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {payload.allocations.map((a, idx) => (
+                    <tr key={idx}>
+                      <td className="px-3 py-2">
+                        {a?.voucherType ? `${getVoucherLabel(a.voucherType)}: ` : ''}
+                        {a?.documentNumber || a?.voucherId || '-'}
+                      </td>
+                      <td className="px-3 py-2 text-right font-semibold">
+                        {formatMoney(Number(a?.amount ?? 0), payload?.currentCompany)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {Number(payload?.advanceAmount ?? 0) > 0 ? (
+              <div className="mt-3 flex items-center justify-between">
+                <div className="text-gray-500">Advance</div>
+                <div className="font-semibold">{formatMoney(Number(payload.advanceAmount ?? 0), payload?.currentCompany)}</div>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
+const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }) => {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-bold">{title}</h3>
+        {rightActions ? <div>{rightActions}</div> : null}
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Document #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Party</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mode</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  No transactions found
+                </td>
+              </tr>
+            ) : (
+              rows.map((r) => (
+                <tr
+                  key={r.id}
+                  className={onView ? 'hover:bg-gray-50 cursor-pointer' : 'hover:bg-gray-50'}
+                  onClick={() => {
+                    if (typeof onView === 'function') onView(r);
+                  }}
+                >
+                  <td className="px-6 py-4">{r.date || '-'}</td>
+                  <td className="px-6 py-4">{r.typeLabel}</td>
+                  <td className="px-6 py-4 font-medium">{r.documentNumber || '-'}</td>
+                  <td className="px-6 py-4">{r.partyName || '-'}</td>
+                  <td className="px-6 py-4">{r.mode || '-'}</td>
+                  <td className="px-6 py-4">{r.reference || '-'}</td>
+                  <td className="px-6 py-4 text-right font-semibold">{formatMoney(r.amount || 0, currentCompany)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal, onRecordReceipt }) => {
+  const rows = useMemo(() => {
+    const companyId = currentCompany.id;
+    const payments = safeArray(db.payments).filter((p) => p.companyId === companyId);
+
+    return payments
+      .filter((p) => String(p.direction || '').toUpperCase() === 'IN')
+      .map((p) => {
+        const isReceipt = String(p.voucherType || '') === 'receipt';
+        const voucher = isReceipt ? null : resolveVoucher({ db, companyId, voucherType: p.voucherType, voucherId: p.voucherId });
+        const partyName = isReceipt ? p.customerName || '' : voucher?.customerName || voucher?.partyName || '';
+
+        return {
+          id: p.id,
+          date: p.date,
+          amount: Number(p.amount ?? 0),
+          mode: p.mode,
+          reference: p.reference,
+          notes: p.notes,
+          typeLabel: getVoucherLabel(p.voucherType),
+          documentNumber: isReceipt ? p.receiptNo || '' : voucher?.number || '',
+          partyName,
+          allocations: isReceipt ? safeArray(p.allocations) : null,
+          advanceAmount: isReceipt ? Number(p.advanceAmount ?? 0) : 0,
+        };
+      })
+      .sort((a, b) => {
+        const da = String(a.date || '');
+        const dbb = String(b.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b.id) - Number(a.id);
+      });
+  }, [db, currentCompany.id]);
+
+  return (
+    <TransactionsTable
+      title="Receipts"
+      rows={rows}
+      currentCompany={currentCompany}
+      onView={(row) => {
+        if (typeof openModal !== 'function') return;
+        const title = row?.documentNumber ? `Receipt ${row.documentNumber}` : 'Receipt';
+        openModal(<TransactionView title={title} payload={{ ...row, currentCompany }} />, {
+          title,
+          maxWidthClass: 'max-w-3xl',
+        });
+      }}
+      rightActions={
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof onRecordReceipt === 'function') {
+              onRecordReceipt();
+              return;
+            }
+
+            if (typeof openModal !== 'function' || typeof setDb !== 'function') return;
+            openModal(
+              <SelectAndRecordPrompt
+                db={db}
+                setDb={setDb}
+                currentCompany={currentCompany}
+                openModal={openModal}
+                kind="receipt"
+                onClose={() => openModal(null)}
+              />,
+              { title: 'Record Receipt', maxWidthClass: 'max-w-md' }
+            );
+          }}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Record Receipt
+        </button>
+      }
+    />
+  );
+};
+
+export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal, onRecordPayment }) => {
+  const rows = useMemo(() => {
+    const companyId = currentCompany.id;
+    const payments = safeArray(db.payments).filter((p) => p.companyId === companyId);
+
+    return payments
+      .filter((p) => String(p.direction || '').toUpperCase() === 'OUT' && p.voucherType !== 'invoice')
+      .map((p) => {
+        const isGroupedPayment = String(p.voucherType || '') === 'payment';
+        const voucher = isGroupedPayment ? null : resolveVoucher({ db, companyId, voucherType: p.voucherType, voucherId: p.voucherId });
+        const partyName = isGroupedPayment ? p.vendorName || '' : voucher?.vendorName || voucher?.partyName || '';
+        return {
+          id: p.id,
+          date: p.date,
+          amount: Number(p.amount ?? 0),
+          mode: p.mode,
+          reference: p.reference,
+          notes: p.notes,
+          typeLabel: getVoucherLabel(p.voucherType),
+          documentNumber: isGroupedPayment ? p.paymentNo || '' : voucher?.number || '',
+          partyName,
+          allocations: isGroupedPayment ? safeArray(p.allocations) : null,
+          advanceAmount: isGroupedPayment ? Number(p.advanceAmount ?? 0) : 0,
+        };
+      })
+      .sort((a, b) => {
+        const da = String(a.date || '');
+        const dbb = String(b.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b.id) - Number(a.id);
+      });
+  }, [db, currentCompany.id]);
+
+  return (
+    <TransactionsTable
+      title="Payments"
+      rows={rows}
+      currentCompany={currentCompany}
+      onView={(row) => {
+        if (typeof openModal !== 'function') return;
+        const title = row?.documentNumber ? `Payment ${row.documentNumber}` : 'Payment';
+        openModal(<TransactionView title={title} payload={{ ...row, currentCompany }} />, {
+          title,
+          maxWidthClass: 'max-w-3xl',
+        });
+      }}
+      rightActions={
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof onRecordPayment === 'function') {
+              onRecordPayment();
+              return;
+            }
+
+            if (typeof openModal !== 'function' || typeof setDb !== 'function') return;
+            openModal(
+              <SelectAndRecordPrompt
+                db={db}
+                setDb={setDb}
+                currentCompany={currentCompany}
+                openModal={openModal}
+                kind="payment"
+                onClose={() => openModal(null)}
+              />,
+              { title: 'Record Payment', maxWidthClass: 'max-w-md' }
+            );
+          }}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Record Payment
+        </button>
+      }
+    />
+  );
+};

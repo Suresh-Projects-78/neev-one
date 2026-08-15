@@ -1,0 +1,469 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------
+// Core tenancy
+// ----------------------------
+model Account {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orgs  Org[]
+  users User[]
+}
+
+model Org {
+  id          String   @id @default(cuid())
+  accountId   String
+  name        String
+  legalName   String?
+  pan         String?
+  createdByUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy User @relation("OrgCreatedBy", fields: [createdByUserId], references: [id])
+
+  branches Branch[]
+  roles    Role[]
+  members  UserOrgMembership[]
+  audit    AuditLog[]
+
+  @@index([accountId])
+  @@unique([accountId, name])
+}
+
+model Branch {
+  id              String   @id @default(cuid())
+  accountId       String
+  orgId           String
+
+  branchCode      String
+  branchName      String
+  addressLine1    String
+  addressLine2    String?
+  city            String?
+  state           String
+  country         String
+
+  gstin           String?
+  // SQLite-compatible: store enum as string (REGULAR | COMPOSITION | UNREGISTERED)
+  gstRegistrationType String @default("UNREGISTERED")
+  phone           String?
+  email           String?
+  contactPerson   String?
+
+  parentBranchId  String?
+  shareHeadOfficeSettings Boolean @default(false)
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  org       Org   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent    Branch? @relation("BranchParent", fields: [parentBranchId], references: [id])
+  children  Branch[] @relation("BranchParent")
+
+  createdBy User @relation("BranchCreatedBy", fields: [createdByUserId], references: [id])
+
+  users       UserBranchMembership[]
+  warehouses  Warehouse[]
+
+  transfersOut InterBranchTransfer[] @relation("TransferSource")
+  transfersIn  InterBranchTransfer[] @relation("TransferTarget")
+
+  @@unique([orgId, branchCode])
+  @@index([accountId, orgId])
+}
+
+// ----------------------------
+// Warehouses
+// ----------------------------
+model Warehouse {
+  id             String   @id @default(cuid())
+  accountId      String
+  orgId          String
+  branchId       String
+
+  name           String
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  country        String?
+  gstin          String?
+  gstRegistrationType String @default("UNREGISTERED")
+  contactPerson  String?
+  phone          String?
+  email          String?
+
+  createdByUserId String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  branch   Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  stock    StockBalance[]
+  access   UserWarehouseAccess[]
+
+  transferLines InterBranchTransferLine[]
+
+  transfersOut InterBranchTransfer[] @relation("WarehouseOut")
+  transfersIn  InterBranchTransfer[] @relation("WarehouseIn")
+
+  @@unique([orgId, branchId, name])
+  @@index([accountId, orgId, branchId])
+}
+
+// ----------------------------
+// Users + access
+// ----------------------------
+model User {
+  id            String   @id @default(cuid())
+  accountId     String
+
+  username      String?  // optional username login
+  email         String   // primary login
+  fullName      String
+  passwordHash  String
+  isActive      Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  orgMemberships    UserOrgMembership[]
+  branchMemberships UserBranchMembership[]
+  roleAssignments   UserRoleAssignment[]
+  warehouseAccess   UserWarehouseAccess[]
+
+  createdOrgs    Org[]    @relation("OrgCreatedBy")
+  createdBranches Branch[] @relation("BranchCreatedBy")
+
+  auditCreated AuditLog[] @relation("AuditCreatedBy")
+
+  @@unique([accountId, email])
+  @@index([accountId])
+}
+
+model UserOrgMembership {
+  id        String   @id @default(cuid())
+  accountId String
+  orgId     String
+  userId    String
+
+  createdAt DateTime @default(now())
+
+  org  Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, userId])
+  @@index([accountId, orgId])
+}
+
+model UserBranchMembership {
+  id        String   @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+  userId    String
+
+  createdAt DateTime @default(now())
+
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, branchId, userId])
+  @@index([accountId, orgId, branchId])
+}
+
+model UserWarehouseAccess {
+  id          String   @id @default(cuid())
+  accountId   String
+  orgId       String
+  branchId    String
+  warehouseId String
+  userId      String
+
+  createdAt   DateTime @default(now())
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, branchId, warehouseId, userId])
+  @@index([accountId, orgId, branchId, warehouseId])
+}
+
+// ----------------------------
+// Roles + permissions
+// ----------------------------
+model Role {
+  id          String   @id @default(cuid())
+  accountId   String
+  orgId       String
+  // Optional: branch-scoped custom role
+  branchId    String?
+
+  name        String
+  description String?
+  // SQLite-compatible: store enum as string (ADMIN | ACCOUNTANT | SALES | CUSTOM)
+  roleType    String
+
+  createdByUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  permissions RolePermission[]
+  assignments UserRoleAssignment[]
+
+  @@unique([orgId, branchId, name])
+  @@index([accountId, orgId])
+}
+
+model Permission {
+  id        String @id @default(cuid())
+  module    String
+  subModule String?
+  // SQLite-compatible: store enum as string (VIEW | CREATE | EDIT | DELETE | APPROVE | EXPORT)
+  action    String
+
+  rolePermissions RolePermission[]
+
+  @@unique([module, subModule, action])
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  accountId    String
+  orgId        String
+  roleId       String
+  permissionId String
+  allowed      Boolean @default(true)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([accountId, orgId])
+}
+
+// Role assignment per org and optionally per branch.
+// If branchId is null => org-wide role.
+model UserRoleAssignment {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+  userId    String
+  roleId    String
+
+  createdByUserId String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, branchId, userId, roleId])
+  @@index([accountId, orgId, branchId])
+}
+
+// ----------------------------
+// Inventory + inter-branch transfer
+// ----------------------------
+model Item {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  // branchId allows branch-specific master overrides; for shared masters use null
+  branchId  String?
+
+  sku       String
+  name      String
+  unit      String
+  isActive  Boolean @default(true)
+
+  createdByUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stockBalances StockBalance[]
+  transferLines InterBranchTransferLine[]
+
+  @@unique([orgId, branchId, sku])
+  @@index([accountId, orgId])
+}
+
+model StockBalance {
+  id          String @id @default(cuid())
+  accountId   String
+  orgId       String
+  branchId    String
+  warehouseId String
+  itemId      String
+
+  qtyOnHand   Decimal @default(0)
+
+  createdByUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, branchId, warehouseId, itemId])
+  @@index([accountId, orgId, branchId, warehouseId])
+}
+
+model InterBranchTransfer {
+  id                 String @id @default(cuid())
+  accountId          String
+  orgId              String
+
+  branchId           String   // source context for isolation
+  sourceBranchId     String
+  sourceWarehouseId  String
+  targetBranchId     String
+  targetWarehouseId  String
+
+  transferNo         String
+  status             String @default("DRAFT") // DRAFT | SENT | RECEIVED | REJECTED
+
+  initiatedByUserId  String
+  approvedByUserId   String?
+  rejectedReason     String?
+
+  sentAt             DateTime?
+  receivedAt         DateTime?
+
+  createdByUserId    String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  sourceBranch    Branch    @relation("TransferSource", fields: [sourceBranchId], references: [id])
+  targetBranch    Branch    @relation("TransferTarget", fields: [targetBranchId], references: [id])
+  sourceWarehouse Warehouse @relation("WarehouseOut", fields: [sourceWarehouseId], references: [id])
+  targetWarehouse Warehouse @relation("WarehouseIn", fields: [targetWarehouseId], references: [id])
+
+  lines InterBranchTransferLine[]
+
+  @@unique([orgId, transferNo])
+  @@index([accountId, orgId, sourceBranchId])
+  @@index([accountId, orgId, targetBranchId])
+}
+
+model InterBranchTransferLine {
+  id         String @id @default(cuid())
+  accountId  String
+  orgId      String
+  branchId   String
+  warehouseId String
+
+  transferId String
+  itemId     String
+  qty        Decimal
+
+  createdByUserId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transfer InterBranchTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, orgId, transferId])
+}
+
+model InventoryAdjustment {
+  id          String @id @default(cuid())
+  accountId   String
+  orgId       String
+  branchId    String
+  warehouseId String
+  itemId      String
+  qtyDelta    Decimal
+  reason      String
+
+  createdByUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([accountId, orgId, branchId, warehouseId, itemId])
+}
+
+// ----------------------------
+// Sales invoices
+// ----------------------------
+model Invoice {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  warehouseId        String?
+  number             String
+  date               String
+  dueDate            String?
+  refNo              String?
+  refDate            String?
+
+  customerId         String?
+  customerName       String
+  customerGstin      String?
+  placeOfSupplyState String?
+  taxType            String?
+
+  subtotal  Decimal @default(0)
+  cgstTotal Decimal @default(0)
+  sgstTotal Decimal @default(0)
+  igstTotal Decimal @default(0)
+  gstTotal  Decimal @default(0)
+  total     Decimal @default(0)
+  paidAmount Decimal @default(0)
+
+  status             String @default("Draft")
+  sourceEstimateId   String?
+  itemsJson          String
+
+  createdByUserId    String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@index([accountId, orgId, branchId, date])
+}
+
+// ----------------------------
+// Audit log
+// ----------------------------
+model AuditLog {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  entity    String
+  entityId  String
+  action    String
+  message   String?
+  // SQLite-compatible: store JSON metadata as string (optional)
+  metadata  String?
+
+  createdByUserId String
+  createdAt DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdBy User @relation("AuditCreatedBy", fields: [createdByUserId], references: [id])
+
+  @@index([accountId, orgId, branchId])
+}
