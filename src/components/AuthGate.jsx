@@ -95,9 +95,16 @@ const AuthGate = ({ onAuth }) => {
         if (res.data.user?.accountId) {
           localStorage.setItem('accountId', res.data.user.accountId);
         }
-        const firstOrgId = res.data?.companies?.[0]?.orgId;
+        // The server picks the active org/branch on login; without them every
+        // protected call fails on the missing x-org-id / x-branch-id headers.
+        const firstOrgId = res.data?.activeOrgId || res.data?.companies?.[0]?.orgId;
         if (firstOrgId) {
           localStorage.setItem('activeOrgId', String(firstOrgId));
+        }
+        const firstBranchId = res.data?.activeBranchId;
+        if (firstBranchId) {
+          localStorage.setItem('activeBranchId', String(firstBranchId));
+          localStorage.setItem('branchId', String(firstBranchId));
         }
         setSuccess('Login successful! Redirecting...');
         setTimeout(() => {

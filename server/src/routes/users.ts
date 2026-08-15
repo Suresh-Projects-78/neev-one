@@ -80,6 +80,17 @@ usersRouter.patch('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', Pe
   const member = await prisma.userOrgMembership.findFirst({ where: { accountId, orgId, userId }, select: { id: true } });
   if (!member) return res.status(404).json({ error: 'User not found in org' });
 
+  // Same global-uniqueness rule as user creation: login resolves by email
+  // across every account, so an email may not be moved onto a taken address.
+  if ('email' in body && body.email) {
+    const nextEmail = body.email.toLowerCase();
+    const clash = await prisma.user.findFirst({
+      where: { email: nextEmail, NOT: { id: userId } },
+      select: { id: true },
+    });
+    if (clash) return res.status(409).json({ error: 'That email address is already registered' });
+  }
+
   const updated = await prisma.user.update({
     where: { id: userId },
     data: {
@@ -202,11 +213,28 @@ usersRouter.post('/users', requirePermission('SETTINGS', PermissionAction.CREATE
   const body = createUserSchema.parse(req.body);
   const email = body.email.toLowerCase();
 
+  // Email must be unique GLOBALLY, not per account: /api/auth/login resolves a
+  // user by email across all accounts, so two accounts sharing an email would
+  // make login non-deterministic. Only expose the existing row when it belongs
+  // to the caller's own account, otherwise this leaks other tenants' users.
   const existing = await prisma.user.findFirst({
-    where: { accountId, email },
+    where: { email },
     select: { id: true, email: true, fullName: true, accountId: true },
   });
-  if (existing) return res.status(409).json({ error: 'User already exists (email must be unique)', user: existing });
+  if (existing) {
+    if (existing.accountId === accountId) {
+      return res.status(409).json({ error: 'User already exists (email must be unique)', user: existing });
+    }
+    return res.status(409).json({ error: 'That email address is already registered' });
+  }
+
+  if (body.username) {
+    const usernameTaken = await prisma.user.findFirst({
+      where: { username: body.username.trim() },
+      select: { id: true },
+    });
+    if (usernameTaken) return res.status(409).json({ error: 'That username is already taken' });
+  }
 
   const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
   const passwordHash = await bcrypt.hash(body.password, rounds);

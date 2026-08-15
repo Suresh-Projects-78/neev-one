@@ -165,9 +165,37 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
   const token = signToken({ userId: user.id, accountId: user.accountId });
 
+  // The client needs an active org immediately after login: apiFetch sends
+  // x-org-id on every protected call. Returning memberships here means a
+  // returning user on a fresh browser can work without re-running setup.
+  const memberships = await prisma.userOrgMembership.findMany({
+    where: { accountId: user.accountId, userId: user.id },
+    select: { orgId: true, org: { select: { id: true, name: true } } },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const companies = memberships.map((m) => ({
+    orgId: m.orgId,
+    id: m.org?.id ?? m.orgId,
+    name: m.org?.name ?? '',
+  }));
+
+  const firstOrgId = companies[0]?.orgId ?? null;
+
+  const branches = firstOrgId
+    ? await prisma.userBranchMembership.findMany({
+        where: { accountId: user.accountId, orgId: firstOrgId, userId: user.id },
+        select: { branchId: true },
+        orderBy: { createdAt: 'asc' },
+      })
+    : [];
+
   return res.json({
     token,
     user: { id: user.id, email: user.email, fullName: user.fullName, accountId: user.accountId },
+    companies,
+    activeOrgId: firstOrgId,
+    activeBranchId: branches[0]?.branchId ?? null,
   });
 });
 
