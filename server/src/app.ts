@@ -3,15 +3,15 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { authRouter } from './routes/auth';
-import { branchesRouter } from './routes/branches';
-import { rolesRouter } from './routes/roles';
-import { usersRouter } from './routes/users';
-import { transfersRouter } from './routes/transfers';
-import { warehousesRouter } from './routes/warehouses';
-import { inventoryAdjustmentsRouter } from './routes/inventoryAdjustments';
-import { invoicesRouter } from './routes/invoices';
-import { notFound, errorHandler } from './middleware/errors';
+import { authRouter } from './routes/auth.js';
+import { branchesRouter } from './routes/branches.js';
+import { rolesRouter } from './routes/roles.js';
+import { usersRouter } from './routes/users.js';
+import { transfersRouter } from './routes/transfers.js';
+import { warehousesRouter } from './routes/warehouses.js';
+import { inventoryAdjustmentsRouter } from './routes/inventoryAdjustments.js';
+import { invoicesRouter } from './routes/invoices.js';
+import { notFound, errorHandler } from './middleware/errors.js';
 
 export function buildApp() {
   const app = express();

@@ -1,4 +1,4 @@
-import { prisma } from '../utils/prisma';
+import { prisma } from '../utils/prisma.js';
 
 // Example: secure query filtered by userId + accountId + orgId + branchId
 //

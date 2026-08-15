@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../utils/prisma';
+import { prisma } from '../utils/prisma.js';
 import type { Prisma } from '@prisma/client';
-import { requireAuth } from '../middleware/auth';
-import { requireTenantContext } from '../middleware/tenantContext';
-import { requirePermission } from '../middleware/rbac';
-import { PermissionAction, TransferStatus } from '../constants/enums';
+import { requireAuth } from '../middleware/auth.js';
+import { requireTenantContext } from '../middleware/tenantContext.js';
+import { requirePermission } from '../middleware/rbac.js';
+import { PermissionAction, TransferStatus } from '../constants/enums.js';
 
 export const transfersRouter = Router();
 transfersRouter.use(requireAuth, requireTenantContext);

@@ -3,8 +3,8 @@ import type { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
-import { prisma } from '../utils/prisma';
-import { PermissionAction, RoleType } from '../constants/enums';
+import { prisma } from '../utils/prisma.js';
+import { PermissionAction, RoleType } from '../constants/enums.js';
 
 export const authRouter = Router();
 

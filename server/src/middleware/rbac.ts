@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { PermissionAction, type PermissionAction as PermissionActionType } from '../constants/enums';
-import { prisma } from '../utils/prisma';
+import { PermissionAction, type PermissionAction as PermissionActionType } from '../constants/enums.js';
+import { prisma } from '../utils/prisma.js';
 
 // DB-stored RBAC:
 // - UserRoleAssignment can be org-wide (branchId null) or branch-scoped

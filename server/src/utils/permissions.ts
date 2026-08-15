@@ -1,4 +1,4 @@
-import type { PermissionAction } from '../constants/enums';
+import type { PermissionAction } from '../constants/enums.js';
 
 export type PermissionKey = {
   module: string;

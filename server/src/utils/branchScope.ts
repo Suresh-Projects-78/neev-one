@@ -1,4 +1,4 @@
-import { prisma } from './prisma';
+import { prisma } from './prisma.js';
 
 // When a branch chooses "Share ledgers and settings of head office":
 // - masters can be resolved from (current branch) OR (parent/head-office branch) OR (org-shared null)

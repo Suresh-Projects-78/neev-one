@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { prisma } from '../utils/prisma';
-import { validateGstinOrThrow } from '../utils/gstin';
-import { requireAuth } from '../middleware/auth';
-import { requireTenantContext } from '../middleware/tenantContext';
-import { requirePermission } from '../middleware/rbac';
-import { PermissionAction } from '../constants/enums';
+import { prisma } from '../utils/prisma.js';
+import { validateGstinOrThrow } from '../utils/gstin.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireTenantContext } from '../middleware/tenantContext.js';
+import { requirePermission } from '../middleware/rbac.js';
+import { PermissionAction } from '../constants/enums.js';
 
 export const warehousesRouter = Router();
 warehousesRouter.use(requireAuth, requireTenantContext);
