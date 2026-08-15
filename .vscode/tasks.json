@@ -2,103 +2,70 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "setup",
+			"detail": "Install web + api dependencies and push the Prisma schema",
+			"type": "npm",
+			"script": "setup",
+			"problemMatcher": []
+		},
+		{
+			"label": "start (web + api)",
+			"detail": "Run the Vite dev server and the API together",
+			"type": "npm",
+			"script": "start",
+			"isBackground": true,
+			"problemMatcher": [],
+			"group": { "kind": "build", "isDefault": true }
+		},
+		{
+			"label": "web: dev",
+			"type": "npm",
+			"script": "dev",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "api: dev",
+			"type": "npm",
+			"script": "api",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
 			"label": "build",
-			"type": "shell",
-			"command": "npm.cmd",
-			"args": [
-				"run",
-				"build"
-			],
-			"isBackground": false,
+			"type": "npm",
+			"script": "build",
 			"problemMatcher": [],
 			"group": "build"
 		},
 		{
-			"label": "dev",
+			"label": "verify (lint + typecheck + builds)",
+			"type": "npm",
+			"script": "verify",
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "api: health",
+			"detail": "Curl the API health endpoint",
 			"type": "shell",
-			"command": "npm.cmd",
-			"args": [
-				"run",
-				"dev",
-				"--",
-				"--host",
-				"127.0.0.1",
-				"--port",
-				"5173"
-			],
+			"command": "curl -fsS http://127.0.0.1:4001/health && echo",
+			"windows": {
+				"command": "curl.exe -fsS http://127.0.0.1:4001/health"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "docker: up",
+			"type": "npm",
+			"script": "docker:up",
 			"isBackground": true,
-			"problemMatcher": [],
-			"group": "build"
-		},
-		{
-			"label": "server:dev:4001",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"$env:PORT='4001'; Set-Location 'server'; npm.cmd run dev"
-			],
-			"isBackground": true,
-			"problemMatcher": [],
-			"group": "build"
-		},
-		{
-			"label": "server:health:4001",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				"tools\\health-4001.ps1"
-			],
-			"isBackground": false,
 			"problemMatcher": []
 		},
 		{
-			"label": "port4000:show",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"$conns = Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue; if (-not $conns) { Write-Host 'No listener on 4000'; exit 0 }; $conns | Select-Object LocalAddress,LocalPort,OwningProcess | Format-Table -AutoSize | Out-String | Write-Host"
-			],
-			"isBackground": false,
-			"problemMatcher": []
-		},
-		{
-			"label": "kill:port4000:force",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-Command",
-				"$conns = Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue; if (-not $conns) { Write-Host 'No listener on 4000'; exit 0 }; $pids = $conns | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($p in $pids) { Write-Host \"Stopping PID $p on port 4000\"; Stop-Process -Id $p -Force -ErrorAction SilentlyContinue }; Start-Sleep -Milliseconds 250; $left = Get-NetTCPConnection -LocalPort 4000 -State Listen -ErrorAction SilentlyContinue; if ($left) { Write-Host 'Still listening on 4000:'; ($left | Select-Object -ExpandProperty OwningProcess -Unique) | ForEach-Object { Write-Host $_ }; exit 1 } else { Write-Host 'Port 4000 is free.' }"
-			],
-			"isBackground": false,
-			"problemMatcher": []
-		},
-		{
-			"label": "port4000:diagnose",
-			"type": "shell",
-			"command": "powershell.exe",
-			"args": [
-				"-NoProfile",
-				"-ExecutionPolicy",
-				"Bypass",
-				"-File",
-				"tools\\port4000-diagnose.ps1"
-			],
-			"isBackground": false,
+			"label": "docker: down",
+			"type": "npm",
+			"script": "docker:down",
 			"problemMatcher": []
 		}
 	]

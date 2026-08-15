@@ -4,10 +4,20 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 127.0.0.1 --port 5173",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup": "npm install && npm --prefix server install && npm --prefix server run prisma:generate && npm --prefix server run prisma:push",
+    "api": "npm --prefix server run dev",
+    "api:build": "npm --prefix server run build",
+    "api:start": "npm --prefix server start",
+    "start": "concurrently -n web,api -c cyan,magenta \"npm:dev\" \"npm:api\"",
+    "typecheck": "npm --prefix server exec -- tsc -p tsconfig.json --noEmit",
+    "verify": "npm run lint && npm run typecheck && npm run build && npm run api:build",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "dependencies": {
     "jspdf": "^3.0.4",
@@ -23,6 +33,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "concurrently": "^10.0.5",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
