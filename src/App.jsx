@@ -9063,11 +9063,6 @@ const App = () => {
   const [warehousesReloadKey, setWarehousesReloadKey] = useState(0);
   const reloadWarehouses = useCallback(() => setWarehousesReloadKey((x) => x + 1), []);
 
-  const isOwnerUser = useMemo(() => {
-    const email = String(localStorage.getItem('userEmail') || '').trim().toLowerCase();
-    return email === 'anandgowda.sr@gmail.com';
-  }, []);
-
   // Load allowed branches for the logged-in user (active org). Intentionally skips x-branch-id.
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -9099,10 +9094,9 @@ const App = () => {
     return Array.isArray(ids) ? ids.map((x) => String(x)) : [];
   }, [authCtx?.data]);
 
-  const hasBranchRestriction = useMemo(() => {
-    if (isOwnerUser) return false;
-    return !isOrgAdmin;
-  }, [isOwnerUser, isOrgAdmin]);
+  // Branch/warehouse authority comes from the server (/auth/me) only. Never from
+  // a locally-stored identity, which the user controls.
+  const hasBranchRestriction = useMemo(() => !isOrgAdmin, [isOrgAdmin]);
 
   const allowedBranchIdSet = useMemo(() => new Set(allowedBranchIds.map((x) => String(x))), [allowedBranchIds]);
 
@@ -9442,7 +9436,7 @@ const App = () => {
   const setActiveWarehouse = useCallback(
     (warehouseId) => {
       const nextId = warehouseId ? String(warehouseId) : '';
-      if (!isOwnerUser && nextId && !warehousesForUser.some((w) => String(w.id) === nextId)) {
+      if (nextId && !warehousesForUser.some((w) => String(w.id) === nextId)) {
         setWarehousesError('You do not have access to this warehouse.');
         return;
       }
@@ -9453,7 +9447,7 @@ const App = () => {
       }
       setActiveWarehouseId(nextId);
     },
-    [warehousesForUser, isOwnerUser]
+    [warehousesForUser]
   );
 
   const activeWarehouse = useMemo(() => {
