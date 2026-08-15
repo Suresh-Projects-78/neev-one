@@ -21,62 +21,62 @@ model Account {
 }
 
 model Org {
-  id          String   @id @default(cuid())
-  accountId   String
-  name        String
-  legalName   String?
-  pan         String?
+  id              String   @id @default(cuid())
+  accountId       String
+  name            String
+  legalName       String?
+  pan             String?
   createdByUserId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdBy User @relation("OrgCreatedBy", fields: [createdByUserId], references: [id])
+  account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("OrgCreatedBy", fields: [createdByUserId], references: [id])
 
   branches Branch[]
   roles    Role[]
   members  UserOrgMembership[]
   audit    AuditLog[]
 
-  @@index([accountId])
   @@unique([accountId, name])
+  @@index([accountId])
 }
 
 model Branch {
-  id              String   @id @default(cuid())
-  accountId       String
-  orgId           String
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
 
-  branchCode      String
-  branchName      String
-  addressLine1    String
-  addressLine2    String?
-  city            String?
-  state           String
-  country         String
+  branchCode   String
+  branchName   String
+  addressLine1 String
+  addressLine2 String?
+  city         String?
+  state        String
+  country      String
 
-  gstin           String?
+  gstin               String?
   // SQLite-compatible: store enum as string (REGULAR | COMPOSITION | UNREGISTERED)
-  gstRegistrationType String @default("UNREGISTERED")
-  phone           String?
-  email           String?
-  contactPerson   String?
+  gstRegistrationType String  @default("UNREGISTERED")
+  phone               String?
+  email               String?
+  contactPerson       String?
 
-  parentBranchId  String?
+  parentBranchId          String?
   shareHeadOfficeSettings Boolean @default(false)
 
   createdByUserId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  org       Org   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  parent    Branch? @relation("BranchParent", fields: [parentBranchId], references: [id])
-  children  Branch[] @relation("BranchParent")
+  org      Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent   Branch?  @relation("BranchParent", fields: [parentBranchId], references: [id])
+  children Branch[] @relation("BranchParent")
 
   createdBy User @relation("BranchCreatedBy", fields: [createdByUserId], references: [id])
 
-  users       UserBranchMembership[]
-  warehouses  Warehouse[]
+  users      UserBranchMembership[]
+  warehouses Warehouse[]
 
   transfersOut InterBranchTransfer[] @relation("TransferSource")
   transfersIn  InterBranchTransfer[] @relation("TransferTarget")
@@ -89,30 +89,30 @@ model Branch {
 // Warehouses
 // ----------------------------
 model Warehouse {
-  id             String   @id @default(cuid())
-  accountId      String
-  orgId          String
-  branchId       String
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
 
-  name           String
-  addressLine1   String?
-  addressLine2   String?
-  city           String?
-  state          String?
-  country        String?
-  gstin          String?
-  gstRegistrationType String @default("UNREGISTERED")
-  contactPerson  String?
-  phone          String?
-  email          String?
+  name                String
+  addressLine1        String?
+  addressLine2        String?
+  city                String?
+  state               String?
+  country             String?
+  gstin               String?
+  gstRegistrationType String  @default("UNREGISTERED")
+  contactPerson       String?
+  phone               String?
+  email               String?
 
   createdByUserId String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  branch   Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  stock    StockBalance[]
-  access   UserWarehouseAccess[]
+  branch Branch                @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  stock  StockBalance[]
+  access UserWarehouseAccess[]
 
   transferLines InterBranchTransferLine[]
 
@@ -127,14 +127,14 @@ model Warehouse {
 // Users + access
 // ----------------------------
 model User {
-  id            String   @id @default(cuid())
-  accountId     String
+  id        String @id @default(cuid())
+  accountId String
 
-  username      String?  // optional username login
-  email         String   // primary login
-  fullName      String
-  passwordHash  String
-  isActive      Boolean @default(true)
+  username     String? // optional username login
+  email        String // primary login
+  fullName     String
+  passwordHash String
+  isActive     Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -146,7 +146,7 @@ model User {
   roleAssignments   UserRoleAssignment[]
   warehouseAccess   UserWarehouseAccess[]
 
-  createdOrgs    Org[]    @relation("OrgCreatedBy")
+  createdOrgs     Org[]    @relation("OrgCreatedBy")
   createdBranches Branch[] @relation("BranchCreatedBy")
 
   auditCreated AuditLog[] @relation("AuditCreatedBy")
@@ -156,7 +156,7 @@ model User {
 }
 
 model UserOrgMembership {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   accountId String
   orgId     String
   userId    String
@@ -171,7 +171,7 @@ model UserOrgMembership {
 }
 
 model UserBranchMembership {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   accountId String
   orgId     String
   branchId  String
@@ -187,14 +187,14 @@ model UserBranchMembership {
 }
 
 model UserWarehouseAccess {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   accountId   String
   orgId       String
   branchId    String
   warehouseId String
   userId      String
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -207,11 +207,11 @@ model UserWarehouseAccess {
 // Roles + permissions
 // ----------------------------
 model Role {
-  id          String   @id @default(cuid())
-  accountId   String
-  orgId       String
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
   // Optional: branch-scoped custom role
-  branchId    String?
+  branchId  String?
 
   name        String
   description String?
@@ -219,8 +219,8 @@ model Role {
   roleType    String
 
   createdByUserId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
@@ -232,7 +232,7 @@ model Role {
 }
 
 model Permission {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   module    String
   subModule String?
   // SQLite-compatible: store enum as string (VIEW | CREATE | EDIT | DELETE | APPROVE | EXPORT)
@@ -244,7 +244,7 @@ model Permission {
 }
 
 model RolePermission {
-  id           String @id @default(cuid())
+  id           String  @id @default(cuid())
   accountId    String
   orgId        String
   roleId       String
@@ -261,7 +261,7 @@ model RolePermission {
 // Role assignment per org and optionally per branch.
 // If branchId is null => org-wide role.
 model UserRoleAssignment {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   accountId String
   orgId     String
   branchId  String?
@@ -269,7 +269,7 @@ model UserRoleAssignment {
   roleId    String
 
   createdByUserId String
-  createdAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -282,20 +282,20 @@ model UserRoleAssignment {
 // Inventory + inter-branch transfer
 // ----------------------------
 model Item {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   accountId String
   orgId     String
   // branchId allows branch-specific master overrides; for shared masters use null
   branchId  String?
 
-  sku       String
-  name      String
-  unit      String
-  isActive  Boolean @default(true)
+  sku      String
+  name     String
+  unit     String
+  isActive Boolean @default(true)
 
   createdByUserId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   stockBalances StockBalance[]
   transferLines InterBranchTransferLine[]
@@ -312,43 +312,43 @@ model StockBalance {
   warehouseId String
   itemId      String
 
-  qtyOnHand   Decimal @default(0)
+  qtyOnHand Decimal @default(0)
 
   createdByUserId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  item        Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@unique([orgId, branchId, warehouseId, itemId])
   @@index([accountId, orgId, branchId, warehouseId])
 }
 
 model InterBranchTransfer {
-  id                 String @id @default(cuid())
-  accountId          String
-  orgId              String
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
 
-  branchId           String   // source context for isolation
-  sourceBranchId     String
-  sourceWarehouseId  String
-  targetBranchId     String
-  targetWarehouseId  String
+  branchId          String // source context for isolation
+  sourceBranchId    String
+  sourceWarehouseId String
+  targetBranchId    String
+  targetWarehouseId String
 
-  transferNo         String
-  status             String @default("DRAFT") // DRAFT | SENT | RECEIVED | REJECTED
+  transferNo String
+  status     String @default("DRAFT") // DRAFT | SENT | RECEIVED | REJECTED
 
-  initiatedByUserId  String
-  approvedByUserId   String?
-  rejectedReason     String?
+  initiatedByUserId String
+  approvedByUserId  String?
+  rejectedReason    String?
 
-  sentAt             DateTime?
-  receivedAt         DateTime?
+  sentAt     DateTime?
+  receivedAt DateTime?
 
-  createdByUserId    String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   sourceBranch    Branch    @relation("TransferSource", fields: [sourceBranchId], references: [id])
   targetBranch    Branch    @relation("TransferTarget", fields: [targetBranchId], references: [id])
@@ -363,10 +363,10 @@ model InterBranchTransfer {
 }
 
 model InterBranchTransferLine {
-  id         String @id @default(cuid())
-  accountId  String
-  orgId      String
-  branchId   String
+  id          String @id @default(cuid())
+  accountId   String
+  orgId       String
+  branchId    String
   warehouseId String
 
   transferId String
@@ -374,18 +374,18 @@ model InterBranchTransferLine {
   qty        Decimal
 
   createdByUserId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  transfer InterBranchTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  item      Item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  transfer  InterBranchTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  warehouse Warehouse           @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  item      Item                @relation(fields: [itemId], references: [id], onDelete: Cascade)
 
   @@index([accountId, orgId, transferId])
 }
 
 model InventoryAdjustment {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   accountId   String
   orgId       String
   branchId    String
@@ -395,8 +395,8 @@ model InventoryAdjustment {
   reason      String
 
   createdByUserId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([accountId, orgId, branchId, warehouseId, itemId])
 }
@@ -410,12 +410,12 @@ model Invoice {
   orgId     String
   branchId  String
 
-  warehouseId        String?
-  number             String
-  date               String
-  dueDate            String?
-  refNo              String?
-  refDate            String?
+  warehouseId String?
+  number      String
+  date        String
+  dueDate     String?
+  refNo       String?
+  refDate     String?
 
   customerId         String?
   customerName       String
@@ -423,21 +423,21 @@ model Invoice {
   placeOfSupplyState String?
   taxType            String?
 
-  subtotal  Decimal @default(0)
-  cgstTotal Decimal @default(0)
-  sgstTotal Decimal @default(0)
-  igstTotal Decimal @default(0)
-  gstTotal  Decimal @default(0)
-  total     Decimal @default(0)
+  subtotal   Decimal @default(0)
+  cgstTotal  Decimal @default(0)
+  sgstTotal  Decimal @default(0)
+  igstTotal  Decimal @default(0)
+  gstTotal   Decimal @default(0)
+  total      Decimal @default(0)
   paidAmount Decimal @default(0)
 
-  status             String @default("Draft")
-  sourceEstimateId   String?
-  itemsJson          String
+  status           String  @default("Draft")
+  sourceEstimateId String?
+  itemsJson        String
 
-  createdByUserId    String
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([orgId, branchId, number])
   @@index([accountId, orgId, branchId, date])
@@ -452,18 +452,165 @@ model AuditLog {
   orgId     String
   branchId  String
 
-  entity    String
-  entityId  String
-  action    String
-  message   String?
+  entity   String
+  entityId String
+  action   String
+  message  String?
   // SQLite-compatible: store JSON metadata as string (optional)
-  metadata  String?
+  metadata String?
 
   createdByUserId String
-  createdAt DateTime @default(now())
+  createdAt       DateTime @default(now())
 
-  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org       Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
   createdBy User @relation("AuditCreatedBy", fields: [createdByUserId], references: [id])
 
   @@index([accountId, orgId, branchId])
+}
+
+// ----------------------------
+// General ledger (double-entry)
+// ----------------------------
+// Reports read POSTED JournalLine rows. Control accounts are resolved by
+// controlKind, never by matching an account name.
+
+model FiscalYear {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+
+  name          String // "2026-27"
+  startDate     String // ISO date
+  endDate       String
+  status        String  @default("OPEN") // OPEN | CLOSED
+  lockedThrough String? // books locked up to and including this date
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  entries JournalEntry[]
+
+  @@unique([orgId, name])
+  @@index([accountId, orgId])
+}
+
+model Journal {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  code String // SAL | PUR | BNK | CSH | JV | OPN
+  name String
+  type String // SALE | PURCHASE | BANK | CASH | GENERAL | OPENING
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  entries JournalEntry[]
+
+  @@unique([orgId, branchId, code])
+  @@index([accountId, orgId])
+}
+
+model LedgerAccount {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String? // null = shared by every branch
+
+  code        String
+  name        String
+  accountType String // ASSET | LIABILITY | EQUITY | INCOME | EXPENSE
+  parentId    String?
+
+  // Machine identity for control accounts. Postings look accounts up by this,
+  // which is what makes renaming an account safe.
+  controlKind String? // AR | AP | STOCK | SALES | PURCHASES | CGST_OUT |
+  // SGST_OUT | IGST_OUT | CGST_IN | SGST_IN | IGST_IN |
+  // CASH | BANK | ROUNDING | OPENING_DIFF | SUSPENSE
+  isActive    Boolean @default(true)
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lines JournalLine[]
+
+  @@unique([orgId, branchId, code])
+  @@unique([orgId, sourceSystem, sourceKey])
+  @@index([accountId, orgId, controlKind])
+}
+
+model JournalEntry {
+  id           String @id @default(cuid())
+  accountId    String
+  orgId        String
+  branchId     String
+  journalId    String
+  fiscalYearId String
+
+  entryNo   String
+  date      String
+  narration String?
+  status    String  @default("DRAFT") // DRAFT | POSTED | REVERSED
+
+  postedAt       DateTime?
+  postedByUserId String?
+  reversedById   String? // the entry that reverses this one
+
+  sourceDocType String? // INVOICE | BILL | PAYMENT | RECEIPT | TRANSFER | OPENING
+  sourceDocId   String?
+
+  // Tamper-evidence: sha256(prevHash + canonical payload) per branch chain.
+  prevHash String?
+  hash     String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  journal    Journal       @relation(fields: [journalId], references: [id])
+  fiscalYear FiscalYear    @relation(fields: [fiscalYearId], references: [id])
+  lines      JournalLine[]
+
+  @@unique([orgId, branchId, entryNo])
+  @@index([accountId, orgId, branchId, date])
+  @@index([accountId, orgId, sourceDocType, sourceDocId])
+  @@index([accountId, orgId, status])
+}
+
+model JournalLine {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+  entryId   String
+
+  ledgerAccountId String
+  partyType       String? // CUSTOMER | VENDOR
+  partyId         String?
+  itemId          String?
+  warehouseId     String?
+
+  debit  Decimal @default(0)
+  credit Decimal @default(0)
+
+  taxCode     String?
+  hsnSac      String?
+  description String?
+
+  createdAt DateTime @default(now())
+
+  entry         JournalEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  ledgerAccount LedgerAccount @relation(fields: [ledgerAccountId], references: [id])
+
+  @@index([accountId, orgId, branchId, ledgerAccountId])
+  @@index([accountId, orgId, partyType, partyId])
+  @@index([entryId])
 }

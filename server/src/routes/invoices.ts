@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
+import { ensureLedgerSetup, invoicePostingLines, postEntry, reverseEntry } from '../services/ledger.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -181,6 +182,36 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to create invoice' });
 
+  // Post the invoice to the general ledger. A failure here is not silent: the
+  // invoice row is removed so the books and the document list cannot diverge.
+  try {
+    await ensureLedgerSetup(accountId, orgId, userId);
+    await postEntry({
+      accountId,
+      orgId,
+      branchId,
+      userId,
+      date: String(body.date).trim(),
+      journalCode: 'SAL',
+      narration: `Invoice ${String(body.number).trim()} - ${String(body.customerName || '').trim()}`,
+      sourceDocType: 'INVOICE',
+      sourceDocId: id,
+      lines: invoicePostingLines({
+        customerId: body.customerId ?? null,
+        customerName: body.customerName,
+        subtotal: body.subtotal ?? 0,
+        cgstTotal: body.cgstTotal ?? 0,
+        sgstTotal: body.sgstTotal ?? 0,
+        igstTotal: body.igstTotal ?? 0,
+        total: body.total ?? 0,
+      }),
+    });
+  } catch (e: any) {
+    await prisma.$executeRawUnsafe(`DELETE FROM Invoice WHERE id = ?`, id);
+    const status = Number(e?.status || 400);
+    return res.status(status).json({ error: `Invoice not saved: ${String(e?.message || e)}` });
+  }
+
   res.status(201).json({ invoice: normalizeInvoiceResponse(row) });
 });
 
@@ -295,6 +326,29 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
   const existing = existingRows[0];
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
+  // Reverse any posted entry with a contra entry. Posted rows stay immutable,
+  // so the audit trail keeps both the original and its reversal.
+  const posted = await prisma.journalEntry.findMany({
+    where: {
+      accountId,
+      orgId,
+      sourceDocType: 'INVOICE',
+      sourceDocId: existing.id,
+      status: 'POSTED',
+    },
+    select: { id: true },
+  });
+  for (const p of posted) {
+    await reverseEntry({
+      accountId,
+      orgId,
+      branchId: req.tenant!.branchId,
+      userId: req.auth!.userId,
+      entryId: p.id,
+      narration: 'Invoice deleted',
+    });
+  }
+
   await prisma.$executeRawUnsafe(`DELETE FROM Invoice WHERE id = ?`, existing.id);
-  res.json({ ok: true });
+  res.json({ ok: true, reversedEntries: posted.length });
 });

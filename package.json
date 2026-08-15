@@ -14,10 +14,11 @@
     "api:start": "npm --prefix server start",
     "start": "concurrently -n web,api -c cyan,magenta \"npm:dev\" \"npm:api\"",
     "typecheck": "npm --prefix server exec -- tsc -p tsconfig.json --noEmit",
-    "verify": "npm run lint && npm run typecheck && npm run build && npm run api:build",
+    "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run api:build",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f"
+    "docker:logs": "docker compose logs -f",
+    "test": "npm --prefix server test"
   },
   "dependencies": {
     "jspdf": "^3.0.4",

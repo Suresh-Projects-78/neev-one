@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
+import { ensureLedgerSetup } from '../services/ledger.js';
 
 export const authRouter = Router();
 
@@ -51,6 +52,7 @@ async function bootstrapOwnerRole(accountId: string, orgId: string, userId: stri
     { module: 'INVENTORY', subModule: 'Inter-branch transfer', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.APPROVE] },
     { module: 'INVENTORY', subModule: 'Stock Adjustment', actions: [PermissionAction.VIEW, PermissionAction.CREATE] },
     { module: 'SALES', subModule: 'Invoices', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.DELETE] },
+    { module: 'ACCOUNTING', subModule: 'Ledger', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.APPROVE] },
   ];
 
   const permissions: Array<{ id: string }> = [];
@@ -350,6 +352,10 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
 
   // Ensure the creator can manage setup screens immediately.
   await bootstrapOwnerRole(auth.accountId, org.id, auth.userId);
+
+  // Every org gets a chart of accounts and journals up front, so the first
+  // invoice has somewhere to post.
+  await ensureLedgerSetup(auth.accountId, org.id, auth.userId);
 
   // Frontend expects { company: { id, name, orgId }, branch: { id } }
   return res.json({

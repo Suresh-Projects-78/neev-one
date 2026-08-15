@@ -1,0 +1,533 @@
+import { createHash } from 'crypto';
+import { Prisma } from '@prisma/client';
+import { prisma } from '../utils/prisma.js';
+
+// ---------------------------------------------------------------------------
+// Double-entry posting.
+//
+// Rules this module enforces, and which nothing else may bypass:
+//   1. An entry posts only if debits equal credits, to the paisa.
+//   2. Control accounts are resolved by controlKind, never by name.
+//   3. A POSTED entry is immutable. Corrections are contra entries.
+//   4. Posting refuses to write into a locked period.
+// ---------------------------------------------------------------------------
+
+export type ControlKind =
+  | 'AR'
+  | 'AP'
+  | 'STOCK'
+  | 'SALES'
+  | 'PURCHASES'
+  | 'CGST_OUT'
+  | 'SGST_OUT'
+  | 'IGST_OUT'
+  | 'CGST_IN'
+  | 'SGST_IN'
+  | 'IGST_IN'
+  | 'CASH'
+  | 'BANK'
+  | 'ROUNDING'
+  | 'OPENING_DIFF'
+  | 'SUSPENSE';
+
+export type PostingLine = {
+  controlKind?: ControlKind;
+  ledgerAccountId?: string;
+  debit?: number;
+  credit?: number;
+  partyType?: 'CUSTOMER' | 'VENDOR' | null;
+  partyId?: string | null;
+  itemId?: string | null;
+  warehouseId?: string | null;
+  taxCode?: string | null;
+  hsnSac?: string | null;
+  description?: string | null;
+};
+
+export type PostingRequest = {
+  accountId: string;
+  orgId: string;
+  branchId: string;
+  userId: string;
+  date: string;
+  journalCode: string;
+  narration?: string | null;
+  sourceDocType?: string | null;
+  sourceDocId?: string | null;
+  lines: PostingLine[];
+};
+
+export class PostingError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.name = 'PostingError';
+    this.status = status;
+  }
+}
+
+// Money is handled in integer paise internally so that a sum of rounded
+// two-decimal amounts can be compared for exact equality.
+const toPaise = (v: number | undefined | null) => {
+  const n = Number(v ?? 0);
+  if (!Number.isFinite(n)) return 0;
+  return Math.round(n * 100);
+};
+const fromPaise = (p: number) => p / 100;
+
+// ---------------------------------------------------------------------------
+// Chart of accounts
+// ---------------------------------------------------------------------------
+
+const DEFAULT_ACCOUNTS: Array<{
+  code: string;
+  name: string;
+  accountType: string;
+  controlKind: ControlKind;
+}> = [
+  { code: '1100', name: 'Accounts Receivable', accountType: 'ASSET', controlKind: 'AR' },
+  { code: '1200', name: 'Cash-in-Hand', accountType: 'ASSET', controlKind: 'CASH' },
+  { code: '1300', name: 'Bank Accounts', accountType: 'ASSET', controlKind: 'BANK' },
+  { code: '1400', name: 'Stock-in-Hand', accountType: 'ASSET', controlKind: 'STOCK' },
+  { code: '1500', name: 'Input CGST', accountType: 'ASSET', controlKind: 'CGST_IN' },
+  { code: '1510', name: 'Input SGST', accountType: 'ASSET', controlKind: 'SGST_IN' },
+  { code: '1520', name: 'Input IGST', accountType: 'ASSET', controlKind: 'IGST_IN' },
+  { code: '2000', name: 'Accounts Payable', accountType: 'LIABILITY', controlKind: 'AP' },
+  { code: '2100', name: 'Output CGST', accountType: 'LIABILITY', controlKind: 'CGST_OUT' },
+  { code: '2110', name: 'Output SGST', accountType: 'LIABILITY', controlKind: 'SGST_OUT' },
+  { code: '2120', name: 'Output IGST', accountType: 'LIABILITY', controlKind: 'IGST_OUT' },
+  { code: '3000', name: 'Opening Balance Difference', accountType: 'EQUITY', controlKind: 'OPENING_DIFF' },
+  { code: '4000', name: 'Sales Accounts', accountType: 'INCOME', controlKind: 'SALES' },
+  { code: '5000', name: 'Purchase Accounts', accountType: 'EXPENSE', controlKind: 'PURCHASES' },
+  { code: '9998', name: 'Rounding Difference', accountType: 'EXPENSE', controlKind: 'ROUNDING' },
+  { code: '9999', name: 'Suspense / Uncategorised', accountType: 'ASSET', controlKind: 'SUSPENSE' },
+];
+
+const DEFAULT_JOURNALS: Array<{ code: string; name: string; type: string }> = [
+  { code: 'SAL', name: 'Sales', type: 'SALE' },
+  { code: 'PUR', name: 'Purchase', type: 'PURCHASE' },
+  { code: 'BNK', name: 'Bank', type: 'BANK' },
+  { code: 'CSH', name: 'Cash', type: 'CASH' },
+  { code: 'JV', name: 'Journal', type: 'GENERAL' },
+  { code: 'OPN', name: 'Opening', type: 'OPENING' },
+];
+
+// India: 1 April to 31 March.
+export function fiscalYearFor(dateIso: string) {
+  const d = new Date(`${String(dateIso).slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) throw new PostingError(`Invalid date: ${dateIso}`);
+  const y = d.getUTCFullYear();
+  const startYear = d.getUTCMonth() >= 3 ? y : y - 1;
+  return {
+    name: `${startYear}-${String((startYear + 1) % 100).padStart(2, '0')}`,
+    startDate: `${startYear}-04-01`,
+    endDate: `${startYear + 1}-03-31`,
+  };
+}
+
+/** Idempotently create the default chart of accounts and journals for an org. */
+export async function ensureLedgerSetup(accountId: string, orgId: string, userId: string) {
+  for (const a of DEFAULT_ACCOUNTS) {
+    const existing = await prisma.ledgerAccount.findFirst({
+      where: { orgId, branchId: null, code: a.code },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.ledgerAccount.create({
+      data: {
+        accountId,
+        orgId,
+        branchId: null,
+        code: a.code,
+        name: a.name,
+        accountType: a.accountType,
+        controlKind: a.controlKind,
+        createdByUserId: userId,
+      },
+    });
+  }
+
+  for (const j of DEFAULT_JOURNALS) {
+    const existing = await prisma.journal.findFirst({
+      where: { orgId, branchId: null, code: j.code },
+      select: { id: true },
+    });
+    if (existing) continue;
+    await prisma.journal.create({
+      data: { accountId, orgId, branchId: null, code: j.code, name: j.name, type: j.type, createdByUserId: userId },
+    });
+  }
+}
+
+async function resolveControlAccountId(
+  tx: Prisma.TransactionClient,
+  orgId: string,
+  branchId: string,
+  controlKind: ControlKind
+) {
+  // Branch-specific override first, then the org-wide account.
+  const row =
+    (await tx.ledgerAccount.findFirst({
+      where: { orgId, branchId, controlKind, isActive: true },
+      select: { id: true },
+    })) ||
+    (await tx.ledgerAccount.findFirst({
+      where: { orgId, branchId: null, controlKind, isActive: true },
+      select: { id: true },
+    }));
+
+  if (!row) {
+    throw new PostingError(
+      `No ledger account configured for control kind ${controlKind}. Run ledger setup for this org.`,
+      500
+    );
+  }
+  return row.id;
+}
+
+async function ensureFiscalYear(
+  tx: Prisma.TransactionClient,
+  accountId: string,
+  orgId: string,
+  userId: string,
+  date: string
+) {
+  const fy = fiscalYearFor(date);
+  const existing = await tx.fiscalYear.findFirst({ where: { orgId, name: fy.name } });
+  if (existing) return existing;
+  return tx.fiscalYear.create({
+    data: {
+      accountId,
+      orgId,
+      name: fy.name,
+      startDate: fy.startDate,
+      endDate: fy.endDate,
+      createdByUserId: userId,
+    },
+  });
+}
+
+async function nextEntryNo(tx: Prisma.TransactionClient, orgId: string, branchId: string, journalCode: string) {
+  // Gap-free per (org, branch, journal). Runs inside the posting transaction.
+  const last = await tx.journalEntry.findFirst({
+    where: { orgId, branchId, entryNo: { startsWith: `${journalCode}-` } },
+    orderBy: { entryNo: 'desc' },
+    select: { entryNo: true },
+  });
+  const lastSeq = last ? Number(String(last.entryNo).split('-').pop()) : 0;
+  const next = (Number.isFinite(lastSeq) ? lastSeq : 0) + 1;
+  return `${journalCode}-${String(next).padStart(6, '0')}`;
+}
+
+function canonicalPayload(entry: {
+  entryNo: string;
+  date: string;
+  branchId: string;
+  lines: Array<{ ledgerAccountId: string; debit: number; credit: number }>;
+}) {
+  return JSON.stringify({
+    entryNo: entry.entryNo,
+    date: entry.date,
+    branchId: entry.branchId,
+    lines: entry.lines
+      .map((l) => `${l.ledgerAccountId}:${l.debit}:${l.credit}`)
+      .sort(),
+  });
+}
+
+/**
+ * Post a balanced journal entry. Throws PostingError unless debits === credits.
+ * The whole entry (numbering, lines, hash chain) commits atomically.
+ */
+export async function postEntry(req: PostingRequest) {
+  const { accountId, orgId, branchId, userId, date } = req;
+
+  if (!req.lines?.length) throw new PostingError('A journal entry needs at least two lines');
+  if (req.lines.length < 2) throw new PostingError('A journal entry needs at least two lines');
+
+  let debitPaise = 0;
+  let creditPaise = 0;
+  for (const l of req.lines) {
+    const d = toPaise(l.debit);
+    const c = toPaise(l.credit);
+    if (d < 0 || c < 0) throw new PostingError('Journal amounts cannot be negative');
+    if (d > 0 && c > 0) throw new PostingError('A line may carry either a debit or a credit, not both');
+    if (d === 0 && c === 0) throw new PostingError('A line must carry a non-zero debit or credit');
+    debitPaise += d;
+    creditPaise += c;
+  }
+
+  if (debitPaise !== creditPaise) {
+    throw new PostingError(
+      `Entry does not balance: debits ${fromPaise(debitPaise).toFixed(2)} vs credits ${fromPaise(creditPaise).toFixed(2)}`
+    );
+  }
+
+  return prisma.$transaction(async (tx) => {
+    const fy = await ensureFiscalYear(tx, accountId, orgId, userId, date);
+
+    if (fy.status === 'CLOSED') {
+      throw new PostingError(`Fiscal year ${fy.name} is closed`, 409);
+    }
+    if (fy.lockedThrough && String(date) <= String(fy.lockedThrough)) {
+      throw new PostingError(`Books are locked through ${fy.lockedThrough}`, 409);
+    }
+
+    const journal =
+      (await tx.journal.findFirst({ where: { orgId, branchId, code: req.journalCode } })) ||
+      (await tx.journal.findFirst({ where: { orgId, branchId: null, code: req.journalCode } }));
+    if (!journal) throw new PostingError(`Unknown journal ${req.journalCode}`, 500);
+
+    const resolved: Array<PostingLine & { ledgerAccountId: string }> = [];
+    for (const l of req.lines) {
+      let ledgerAccountId = l.ledgerAccountId;
+      if (!ledgerAccountId) {
+        if (!l.controlKind) throw new PostingError('Each line needs a ledgerAccountId or a controlKind');
+        ledgerAccountId = await resolveControlAccountId(tx, orgId, branchId, l.controlKind);
+      } else {
+        const owned = await tx.ledgerAccount.findFirst({
+          where: { id: ledgerAccountId, orgId },
+          select: { id: true },
+        });
+        if (!owned) throw new PostingError('Ledger account does not belong to this org', 403);
+      }
+      resolved.push({ ...l, ledgerAccountId });
+    }
+
+    const entryNo = await nextEntryNo(tx, orgId, branchId, journal.code);
+
+    const prev = await tx.journalEntry.findFirst({
+      where: { orgId, branchId, status: 'POSTED' },
+      orderBy: { createdAt: 'desc' },
+      select: { hash: true },
+    });
+    const prevHash = prev?.hash ?? null;
+
+    const payload = canonicalPayload({
+      entryNo,
+      date,
+      branchId,
+      lines: resolved.map((l) => ({
+        ledgerAccountId: l.ledgerAccountId,
+        debit: toPaise(l.debit),
+        credit: toPaise(l.credit),
+      })),
+    });
+    const hash = createHash('sha256').update(`${prevHash ?? ''}${payload}`).digest('hex');
+
+    const entry = await tx.journalEntry.create({
+      data: {
+        accountId,
+        orgId,
+        branchId,
+        journalId: journal.id,
+        fiscalYearId: fy.id,
+        entryNo,
+        date,
+        narration: req.narration ?? null,
+        status: 'POSTED',
+        postedAt: new Date(),
+        postedByUserId: userId,
+        sourceDocType: req.sourceDocType ?? null,
+        sourceDocId: req.sourceDocId ?? null,
+        prevHash,
+        hash,
+        createdByUserId: userId,
+        lines: {
+          create: resolved.map((l) => ({
+            accountId,
+            orgId,
+            branchId,
+            ledgerAccountId: l.ledgerAccountId,
+            partyType: l.partyType ?? null,
+            partyId: l.partyId ?? null,
+            itemId: l.itemId ?? null,
+            warehouseId: l.warehouseId ?? null,
+            debit: new Prisma.Decimal(fromPaise(toPaise(l.debit)).toFixed(2)),
+            credit: new Prisma.Decimal(fromPaise(toPaise(l.credit)).toFixed(2)),
+            taxCode: l.taxCode ?? null,
+            hsnSac: l.hsnSac ?? null,
+            description: l.description ?? null,
+          })),
+        },
+      },
+      include: { lines: true },
+    });
+
+    return entry;
+  });
+}
+
+/**
+ * Reverse a posted entry with a contra entry. Posted rows are never mutated,
+ * beyond linking the original to its reversal.
+ */
+export async function reverseEntry(opts: {
+  accountId: string;
+  orgId: string;
+  branchId: string;
+  userId: string;
+  entryId: string;
+  date?: string;
+  narration?: string;
+}) {
+  const original = await prisma.journalEntry.findFirst({
+    where: { id: opts.entryId, accountId: opts.accountId, orgId: opts.orgId },
+    include: { lines: true, journal: true },
+  });
+  if (!original) throw new PostingError('Journal entry not found', 404);
+  if (original.status !== 'POSTED') throw new PostingError('Only a posted entry can be reversed', 409);
+  if (original.reversedById) throw new PostingError('Entry is already reversed', 409);
+
+  const reversal = await postEntry({
+    accountId: opts.accountId,
+    orgId: opts.orgId,
+    branchId: original.branchId,
+    userId: opts.userId,
+    date: opts.date || original.date,
+    journalCode: original.journal.code,
+    narration: opts.narration || `Reversal of ${original.entryNo}`,
+    sourceDocType: original.sourceDocType,
+    sourceDocId: original.sourceDocId,
+    lines: original.lines.map((l) => ({
+      ledgerAccountId: l.ledgerAccountId,
+      debit: Number(l.credit),
+      credit: Number(l.debit),
+      partyType: (l.partyType as any) ?? null,
+      partyId: l.partyId,
+      itemId: l.itemId,
+      warehouseId: l.warehouseId,
+      description: `Reversal: ${l.description ?? ''}`.trim(),
+    })),
+  });
+
+  await prisma.journalEntry.update({
+    where: { id: original.id },
+    data: { status: 'REVERSED', reversedById: reversal.id },
+  });
+
+  return reversal;
+}
+
+/** Journal lines for a sales invoice: AR debit, revenue + tax credits. */
+export function invoicePostingLines(invoice: {
+  customerId?: string | null;
+  customerName?: string | null;
+  subtotal?: number | null;
+  cgstTotal?: number | null;
+  sgstTotal?: number | null;
+  igstTotal?: number | null;
+  total?: number | null;
+}): PostingLine[] {
+  const subtotal = Number(invoice.subtotal ?? 0);
+  const cgst = Number(invoice.cgstTotal ?? 0);
+  const sgst = Number(invoice.sgstTotal ?? 0);
+  const igst = Number(invoice.igstTotal ?? 0);
+  const declaredTotal = Number(invoice.total ?? 0);
+
+  const computed = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
+  const total = declaredTotal || computed;
+  // Any difference between the document total and the sum of its parts is
+  // posted explicitly rather than silently absorbed.
+  const rounding = Math.round((total - computed) * 100) / 100;
+
+  const lines: PostingLine[] = [
+    {
+      controlKind: 'AR',
+      debit: total,
+      partyType: 'CUSTOMER',
+      partyId: invoice.customerId || null,
+      description: `Invoice to ${invoice.customerName || 'customer'}`,
+    },
+  ];
+
+  if (subtotal) lines.push({ controlKind: 'SALES', credit: subtotal, description: 'Sales' });
+  if (cgst) lines.push({ controlKind: 'CGST_OUT', credit: cgst, taxCode: 'CGST', description: 'Output CGST' });
+  if (sgst) lines.push({ controlKind: 'SGST_OUT', credit: sgst, taxCode: 'SGST', description: 'Output SGST' });
+  if (igst) lines.push({ controlKind: 'IGST_OUT', credit: igst, taxCode: 'IGST', description: 'Output IGST' });
+
+  if (rounding > 0) lines.push({ controlKind: 'ROUNDING', credit: rounding, description: 'Rounding difference' });
+  if (rounding < 0) lines.push({ controlKind: 'ROUNDING', debit: Math.abs(rounding), description: 'Rounding difference' });
+
+  return lines;
+}
+
+/** Trial balance from POSTED lines only. */
+export async function trialBalance(opts: {
+  accountId: string;
+  orgId: string;
+  branchId?: string;
+  fromDate?: string;
+  toDate?: string;
+}) {
+  const where: Prisma.JournalLineWhereInput = {
+    accountId: opts.accountId,
+    orgId: opts.orgId,
+    ...(opts.branchId ? { branchId: opts.branchId } : {}),
+    entry: {
+      status: 'POSTED',
+      ...(opts.fromDate || opts.toDate
+        ? {
+            date: {
+              ...(opts.fromDate ? { gte: opts.fromDate } : {}),
+              ...(opts.toDate ? { lte: opts.toDate } : {}),
+            },
+          }
+        : {}),
+    },
+  };
+
+  const lines = await prisma.journalLine.findMany({
+    where,
+    select: {
+      debit: true,
+      credit: true,
+      ledgerAccount: { select: { id: true, code: true, name: true, accountType: true, controlKind: true } },
+    },
+  });
+
+  const byAccount = new Map<
+    string,
+    { id: string; code: string; name: string; accountType: string; controlKind: string | null; debitPaise: number; creditPaise: number }
+  >();
+
+  for (const l of lines) {
+    const a = l.ledgerAccount;
+    const row =
+      byAccount.get(a.id) ||
+      { id: a.id, code: a.code, name: a.name, accountType: a.accountType, controlKind: a.controlKind, debitPaise: 0, creditPaise: 0 };
+    row.debitPaise += Math.round(Number(l.debit) * 100);
+    row.creditPaise += Math.round(Number(l.credit) * 100);
+    byAccount.set(a.id, row);
+  }
+
+  const rows = Array.from(byAccount.values())
+    .map((r) => {
+      const netPaise = r.debitPaise - r.creditPaise;
+      return {
+        accountId: r.id,
+        code: r.code,
+        name: r.name,
+        accountType: r.accountType,
+        controlKind: r.controlKind,
+        debit: fromPaise(r.debitPaise),
+        credit: fromPaise(r.creditPaise),
+        closingDebit: netPaise > 0 ? fromPaise(netPaise) : 0,
+        closingCredit: netPaise < 0 ? fromPaise(-netPaise) : 0,
+      };
+    })
+    .sort((a, b) => a.code.localeCompare(b.code));
+
+  const totalDebitPaise = rows.reduce((s, r) => s + Math.round(r.debit * 100), 0);
+  const totalCreditPaise = rows.reduce((s, r) => s + Math.round(r.credit * 100), 0);
+
+  return {
+    rows,
+    totals: {
+      debit: fromPaise(totalDebitPaise),
+      credit: fromPaise(totalCreditPaise),
+      difference: fromPaise(totalDebitPaise - totalCreditPaise),
+      balanced: totalDebitPaise === totalCreditPaise,
+    },
+  };
+}

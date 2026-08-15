@@ -48,3 +48,6 @@ _backup_before_onedrive_restore
 *.njsproj
 *.sln
 *.sw?
+
+# Test env
+.env.test
