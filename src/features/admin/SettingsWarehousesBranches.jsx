@@ -63,7 +63,7 @@ export function SettingsWarehousesBranches({ orgId }) {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-3 py-2 rounded-lg border ${tab === t ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              className={`px-3 py-2 rounded-lg border ${tab === t ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
             >
               {t === 'branches' ? 'Branches' : 'Warehouses'}
             </button>

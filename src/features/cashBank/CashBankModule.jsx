@@ -691,7 +691,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                     });
                   }}
                   className={`w-full px-4 py-2 rounded-lg ${
-                    showCreate ? 'bg-violet-600 text-white hover:bg-violet-700' : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                    showCreate ? 'bg-stone-900 text-white hover:bg-stone-900' : 'bg-gray-100 text-gray-500 cursor-not-allowed'
                   }`}
                   title={
                     !canAttemptCreate
@@ -1338,7 +1338,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+            <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
               {isEdit ? 'Save' : 'Add'}
             </button>
           </div>
@@ -1808,7 +1808,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             type="button"
             onClick={openAddTxn}
             className={`px-4 py-2 rounded-lg ${
-              accountsEmpty ? 'bg-gray-100 text-gray-500' : 'bg-violet-600 text-white hover:bg-violet-700'
+              accountsEmpty ? 'bg-gray-100 text-gray-500' : 'bg-stone-900 text-white hover:bg-stone-900'
             }`}
           >
             Add Transaction

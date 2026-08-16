@@ -338,7 +338,7 @@ export function SettingsUsers({ orgId }) {
         <button
           type="button"
           onClick={openCreate}
-          className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+          className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
         >
           + Create User
         </button>
@@ -501,7 +501,7 @@ export function SettingsUsers({ orgId }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50"
               >
                 {saving ? 'Creating…' : 'Create User'}
               </button>
@@ -574,7 +574,7 @@ export function SettingsUsers({ orgId }) {
               <button
                 type="submit"
                 disabled={assignBranchesSaving || assignBranchesLoading}
-                className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50"
               >
                 {assignBranchesSaving ? 'Saving…' : 'Save'}
               </button>
@@ -643,7 +643,7 @@ export function SettingsUsers({ orgId }) {
             <button
               type="submit"
               disabled={editSaving}
-              className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+              className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50"
             >
               {editSaving ? 'Saving…' : 'Save Changes'}
             </button>

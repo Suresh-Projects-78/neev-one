@@ -331,7 +331,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
                   }
                   setBranchPickerOpen(false);
                 }}
-                className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
               >
                 Apply
               </button>
@@ -461,7 +461,7 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
+          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
         >
           <Plus size={20} /> New Vendor
         </button>
@@ -645,7 +645,7 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
+          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
         >
           <Plus size={20} /> New Customer
         </button>
@@ -800,7 +800,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
+          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
         >
           <Plus size={20} /> New Expense
         </button>
@@ -1163,7 +1163,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
           Create Expense
         </button>
       </div>
@@ -1244,7 +1244,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
               { title: 'New Item', maxWidthClass: 'max-w-3xl' }
             )
           }
-          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
+          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
         >
           <Plus size={20} /> New Item
         </button>
@@ -1568,7 +1568,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           />
         </div>
       </div>
-      <button type="submit" className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+      <button type="submit" className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
         {isEdit ? 'Update Item' : 'Create Item'}
       </button>
     </form>
@@ -1963,7 +1963,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={openNewLedger}
-              className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
+              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
             >
               <Plus size={20} /> New Ledger
             </button>
@@ -1971,7 +1971,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={openNewGroup}
-              className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
+              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
             >
               <Plus size={20} /> New Group
             </button>
@@ -2630,7 +2630,7 @@ const ChartAccountForm = ({
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
           {isEdit ? 'Save' : 'Create'}
         </button>
       </div>
@@ -2746,7 +2746,7 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
         <button type="button" onClick={() => onClose?.()} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
           Create
         </button>
       </div>
@@ -2774,7 +2774,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
         <h3 className="text-xl font-bold">Journal Entries</h3>
         <button
           onClick={onNewJournal}
-          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
+          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
         >
           <Plus size={20} /> New Entry
         </button>
@@ -3084,7 +3084,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Lines</label>
-          <button type="button" onClick={addLine} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
+          <button type="button" onClick={addLine} className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1">
             <Plus size={16} /> Add Line
           </button>
         </div>
@@ -3172,7 +3172,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
           {isEdit ? 'Update Entry' : 'Create Entry'}
         </button>
       </div>
@@ -3376,7 +3376,7 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
                 persistLedgerColumns(draft);
                 openModal(null);
               }}
-              className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+              className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
             >
               Save
             </button>
@@ -3590,7 +3590,7 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
             )}
             <div className="flex gap-2">
               <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">Save</button>
+              <button type="button" onClick={save} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save</button>
             </div>
           </div>
         );
@@ -3745,7 +3745,7 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
             )}
             <div className="flex gap-2">
               <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">Save</button>
+              <button type="button" onClick={save} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save</button>
             </div>
           </div>
         );
@@ -3791,7 +3791,7 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
                   return next2;
                 });
                 openModal(null);
-              }} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">Undo</button>
+              }} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Undo</button>
             </div>
           </div>
         );
@@ -3940,7 +3940,7 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
               openModal(null);
               doExport('pdf');
             }}
-            className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+            className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
           >
             PDF
           </button>
@@ -4004,7 +4004,7 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
                 setFilterTo(draftTo);
                 openModal(null);
               }}
-              className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+              className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
             >
               Apply
             </button>
@@ -4754,7 +4754,7 @@ const ReportsOverview = ({ sections, onNavigate }) => {
                   onClick={() => setActiveSectionKey(s.key)}
                   className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
                     isActive
-                      ? 'bg-violet-50 border-violet-200 text-violet-700'
+                      ? 'bg-stone-100 border-stone-300 text-stone-900'
                       : 'bg-white border-transparent text-gray-700 hover:bg-gray-50'
                   }`}
                 >
@@ -5662,7 +5662,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={addUom}
-              className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+              className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
             >
               Add
             </button>
@@ -5773,7 +5773,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={addRate}
-              className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+              className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
             >
               Add
             </button>
@@ -5888,7 +5888,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Numbering</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
           Save
         </button>
       </div>
@@ -6041,7 +6041,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Templates</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
           Save
         </button>
       </div>
@@ -6181,7 +6181,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Invoice Templates</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
           Save
         </button>
       </div>
@@ -6337,7 +6337,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Company Profile</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
           Save
         </button>
       </div>
@@ -6582,7 +6582,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
           type="button"
           disabled={saving}
           onClick={saveAll}
-          className={`px-4 py-2 rounded-lg ${saving ? 'bg-gray-200 text-gray-600' : 'bg-violet-600 text-white hover:bg-violet-700'}`}
+          className={`px-4 py-2 rounded-lg ${saving ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
@@ -7524,7 +7524,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   key={s}
                   type="button"
                   onClick={() => setActiveSection(s)}
-                  className={`px-3 py-2 text-sm capitalize ${activeSection === s ? 'bg-violet-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  className={`px-3 py-2 text-sm capitalize ${activeSection === s ? 'bg-stone-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
                 >
                   {s}
                 </button>
@@ -7616,7 +7616,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     disabled={loading}
                     onClick={createUser}
-                    className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-violet-600 text-white hover:bg-violet-700'}`}
+                    className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
                   >
                     Add User
                   </button>
@@ -7645,7 +7645,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                           return (
                             <tr
                               key={String(u.userId)}
-                              className={`cursor-pointer ${active ? 'bg-violet-50' : 'hover:bg-gray-50'}`}
+                              className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`}
                               onClick={() => setSelectedUserId(String(u.userId))}
                             >
                               <td className="px-4 py-3 text-sm font-medium text-gray-900">{u.name || '-'}</td>
@@ -7708,7 +7708,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={saveUserBasics} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+                      <button type="button" onClick={saveUserBasics} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
                         Save User
                       </button>
                       <button type="button" onClick={removeUser} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
@@ -7857,7 +7857,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     disabled={loading}
                     onClick={createRole}
-                    className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-violet-600 text-white hover:bg-violet-700'}`}
+                    className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
                   >
                     Create Role
                   </button>
@@ -7883,7 +7883,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                           return (
                             <tr
                               key={String(r.id)}
-                              className={`cursor-pointer ${active ? 'bg-violet-50' : 'hover:bg-gray-50'}`}
+                              className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`}
                               onClick={() => setSelectedRoleId(String(r.id))}
                             >
                               <td className="px-4 py-3 text-sm font-medium text-gray-900">{r.label}</td>
@@ -7951,7 +7951,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+                      <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
                         Save Role
                       </button>
                       <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
@@ -8033,7 +8033,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createRole} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-violet-600 text-white hover:bg-violet-700'}`}>
+                <button type="button" disabled={loading} onClick={createRole} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}>
                   Create Role
                 </button>
               </div>
@@ -8056,7 +8056,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       roles.map((r) => {
                         const active = String(r.id) === String(selectedRoleId);
                         return (
-                          <tr key={String(r.id)} className={`cursor-pointer ${active ? 'bg-violet-50' : 'hover:bg-gray-50'}`} onClick={() => setSelectedRoleId(String(r.id))}>
+                          <tr key={String(r.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`} onClick={() => setSelectedRoleId(String(r.id))}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">{r.label}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{r.description || '-'}</td>
                             <td className="px-4 py-3 text-sm text-gray-700">{r.isSystem ? 'System' : 'Custom'}</td>
@@ -8106,7 +8106,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">Save Role</button>
+                  <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save Role</button>
                   <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Delete</button>
                 </div>
               </div>
@@ -8140,7 +8140,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createBranch} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-violet-600 text-white hover:bg-violet-700'}`}>
+                <button type="button" disabled={loading} onClick={createBranch} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}>
                   Create Branch
                 </button>
               </div>
@@ -8164,7 +8164,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       branches.map((b) => {
                         const active = String(b.id) === String(selectedBranchId);
                         return (
-                          <tr key={String(b.id)} className={`cursor-pointer ${active ? 'bg-violet-50' : 'hover:bg-gray-50'}`} onClick={() => setSelectedBranchId(String(b.id))}>
+                          <tr key={String(b.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`} onClick={() => setSelectedBranchId(String(b.id))}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">{b.name}</td>
                             <td className="px-4 py-3 text-sm text-gray-700">{b.code || '-'}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{b.address || '-'}</td>
@@ -8202,7 +8202,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={saveBranch} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">Save Branch</button>
+                <button type="button" onClick={saveBranch} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save Branch</button>
                 <button type="button" onClick={deleteBranch} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Delete</button>
               </div>
             </div>
@@ -8236,7 +8236,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       }
                       setActiveWarehouse(selectedWarehouse.id);
                     }}
-                    className="px-3 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+                    className="px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
                   >
                     Use selected
                   </button>
@@ -8280,7 +8280,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createWarehouse} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-violet-600 text-white hover:bg-violet-700'}`}>
+                <button type="button" disabled={loading} onClick={createWarehouse} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}>
                   Create Warehouse
                 </button>
               </div>
@@ -8305,7 +8305,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       warehouses.map((w) => {
                         const active = String(w.id) === String(selectedWarehouseId);
                         return (
-                          <tr key={String(w.id)} className={`cursor-pointer ${active ? 'bg-violet-50' : 'hover:bg-gray-50'}`} onClick={() => setSelectedWarehouseId(String(w.id))}>
+                          <tr key={String(w.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`} onClick={() => setSelectedWarehouseId(String(w.id))}>
                             <td className="px-4 py-3 text-sm font-medium text-gray-900">{w.name}</td>
                             <td className="px-4 py-3 text-sm text-gray-700">{w.code || '-'}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{w.location || '-'}</td>
@@ -8355,7 +8355,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={saveWarehouse} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">Save Warehouse</button>
+                <button type="button" onClick={saveWarehouse} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save Warehouse</button>
                 <button type="button" onClick={deleteWarehouse} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Delete</button>
               </div>
             </div>
@@ -8381,7 +8381,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     onClick={() => setActiveTab(s.key)}
                     className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                      isActive ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-transparent text-gray-700 hover:bg-gray-50'
+                      isActive ? 'bg-stone-100 border-stone-300 text-stone-900' : 'bg-white border-transparent text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     <div className="text-sm font-semibold">{s.title}</div>
@@ -8404,7 +8404,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   type="button"
                   disabled={saving}
                   onClick={saveCompanySettings}
-                  className={`px-4 py-2 rounded-lg ${saving ? 'bg-gray-200 text-gray-600' : 'bg-violet-600 text-white hover:bg-violet-700'}`}
+                  className={`px-4 py-2 rounded-lg ${saving ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -10117,7 +10117,7 @@ const App = () => {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
               >
                 Refresh
               </button>

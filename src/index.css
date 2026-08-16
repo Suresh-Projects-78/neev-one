@@ -9,46 +9,50 @@
    Generated from the ui-ux-pro-max design system; see
    design-system/accounting-suite/MASTER.md.
 
-   Deviations from the generated palette, deliberately:
-   1. The dataset proposed green as the CTA accent. In an accounting product
-      green already means "money in / paid", so a green CTA next to a green
-      amount is ambiguous.
-   2. No blue anywhere, by request. The interactive accent is violet; green,
-      amber and red are reserved for financial meaning only.
+   Palette: graphite + warm sand, near-monochrome.
+   - Primary actions are near-black (inverted to near-white in dark mode), not
+     a colour. Coloured CTAs compete with the financial colours.
+   - Amber is the single accent: focus rings, the active-nav indicator, links,
+     and the "partial" money state. Reusing one hue keeps the hue count down.
+   - Green and red mean money in and money out. Nothing else uses them.
+   - No blue anywhere, by request. The neutrals are warm stone, not cool grey.
 --------------------------------------------------------------------------- */
 
 :root {
-  /* Surfaces */
-  --app-bg: 248 250 252;
+  /* Surfaces — warm neutral (stone), not cool grey */
+  --app-bg: 250 250 249;
   --surface: 255 255 255;
   --surface-raised: 255 255 255;
-  --surface-sunken: 241 245 249;
-  --border: 226 232 240;
-  --border-strong: 203 213 225;
+  --surface-sunken: 245 245 244;
+  --border: 231 229 228;
+  --border-strong: 214 211 209;
 
   /* Text */
-  --fg: 15 23 42;
-  --fg-muted: 71 85 105;
-  --fg-subtle: 100 116 139;
+  --fg: 28 25 23;
+  --fg-muted: 87 83 78;
+  --fg-subtle: 120 113 108;
 
-  /* Brand / interactive */
-  --primary: 15 23 42;
+  /* Primary action — near-black, not a colour. Colour is reserved for meaning. */
+  --primary: 28 25 23;
   --on-primary: 255 255 255;
-  --accent: 124 58 237;
-  --accent-hover: 109 40 217;
-  --accent-soft: 245 243 255;
-  --on-accent: 255 255 255;
-  --ring: 139 92 246;
+  --primary-hover: 41 37 36;
 
-  /* Financial semantics — never used for generic UI */
-  --pos: 22 163 74;
+  /* Accent: focus rings, active nav indicator, links. Used sparingly. */
+  --accent: 180 83 9;
+  --accent-hover: 146 64 14;
+  --accent-soft: 245 245 244;
+  --on-accent: 255 255 255;
+  --ring: 180 83 9;
+
+  /* Financial semantics — the only other colour on screen */
+  --pos: 21 128 61;
   --pos-soft: 240 253 244;
-  --neg: 220 38 38;
+  --neg: 185 28 28;
   --neg-soft: 254 242 242;
-  --warn: 217 119 6;
+  --warn: 180 83 9;
   --warn-soft: 255 251 235;
-  --info: 124 58 237;
-  --info-soft: 245 243 255;
+  --info: 87 83 78;
+  --info-soft: 245 245 244;
 
   /* Dense dashboard spacing scale (density 8/10) */
   --space-1: 0.25rem;
@@ -59,29 +63,34 @@
   --space-6: 2rem;
 
   --radius: 0.625rem;
-  --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
-  --shadow-pop: 0 4px 6px -1px rgb(15 23 42 / 0.08), 0 10px 24px -6px rgb(15 23 42 / 0.12);
+  --shadow-card: 0 1px 2px 0 rgb(28 25 23 / 0.04), 0 1px 3px 0 rgb(28 25 23 / 0.06);
+  --shadow-pop: 0 4px 6px -1px rgb(28 25 23 / 0.08), 0 10px 24px -6px rgb(28 25 23 / 0.14);
 }
 
 :root[data-theme='dark'] {
-  --app-bg: 2 6 23;
-  --surface: 15 23 42;
-  --surface-raised: 27 35 54;
-  --surface-sunken: 2 6 23;
-  --border: 51 65 85;
-  --border-strong: 71 85 105;
+  --app-bg: 12 10 9;
+  --surface: 28 25 23;
+  /* Raised and sunken are both LIGHTER than the surface in dark mode; a sunken
+     tone equal to the page background flattens table headers into the page. */
+  --surface-raised: 41 37 36;
+  --surface-sunken: 41 37 36;
+  --border: 68 64 60;
+  --border-strong: 87 83 78;
 
-  --fg: 248 250 252;
-  --fg-muted: 148 163 184;
-  --fg-subtle: 100 116 139;
+  --fg: 250 250 249;
+  --fg-muted: 168 162 158;
+  --fg-subtle: 120 113 108;
 
-  --primary: 248 250 252;
-  --on-primary: 15 23 42;
-  --accent: 167 139 250;
-  --accent-hover: 196 181 253;
-  --accent-soft: 46 16 101;
-  --on-accent: 15 23 42;
-  --ring: 196 181 253;
+  /* Inverted in dark: a near-black button on a near-black page is invisible. */
+  --primary: 250 250 249;
+  --on-primary: 28 25 23;
+  --primary-hover: 231 229 228;
+
+  --accent: 245 158 11;
+  --accent-hover: 251 191 36;
+  --accent-soft: 41 37 36;
+  --on-accent: 28 25 23;
+  --ring: 245 158 11;
 
   --pos: 74 222 128;
   --pos-soft: 5 46 22;
@@ -89,11 +98,11 @@
   --neg-soft: 69 10 10;
   --warn: 251 191 36;
   --warn-soft: 69 39 3;
-  --info: 167 139 250;
-  --info-soft: 46 16 101;
+  --info: 168 162 158;
+  --info-soft: 41 37 36;
 
-  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4);
-  --shadow-pop: 0 10px 30px -10px rgb(0 0 0 / 0.6);
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.5);
+  --shadow-pop: 0 10px 30px -10px rgb(0 0 0 / 0.7);
 }
 
 @layer base {
@@ -184,13 +193,13 @@
     cursor: not-allowed;
   }
   .ui-btn-primary {
-    background-color: rgb(var(--accent));
-    color: rgb(var(--on-accent));
-    border: 1px solid rgb(var(--accent));
+    background-color: rgb(var(--primary));
+    color: rgb(var(--on-primary));
+    border: 1px solid rgb(var(--primary));
   }
   .ui-btn-primary:hover:not(:disabled) {
-    background-color: rgb(var(--accent-hover));
-    border-color: rgb(var(--accent-hover));
+    background-color: rgb(var(--primary-hover));
+    border-color: rgb(var(--primary-hover));
   }
   .ui-btn-secondary {
     background-color: rgb(var(--surface));
@@ -264,8 +273,8 @@
     color: rgb(var(--fg));
   }
   .ui-nav-item[data-active='true'] {
-    background-color: rgb(var(--accent-soft));
-    color: rgb(var(--accent));
+    background-color: rgb(var(--surface-sunken));
+    color: rgb(var(--fg));
     font-weight: 600;
   }
   /* Active state is carried by an indicator bar as well as colour, so the

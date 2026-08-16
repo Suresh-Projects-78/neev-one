@@ -310,7 +310,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -459,7 +459,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 <button
                   type="button"
                   onClick={() => setMode('choose')}
-                  className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                  className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
                 >
                   Create new account
                 </button>

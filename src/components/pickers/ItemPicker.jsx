@@ -298,7 +298,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
+                  <button type="submit" className="px-3 py-2 rounded-lg text-sm bg-stone-900 text-white hover:bg-stone-900">
                     Create
                   </button>
                 </div>

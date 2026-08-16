@@ -342,7 +342,7 @@ const AuthGate = ({ onAuth }) => {
       <div className="min-h-screen flex">
         {/* Left side - Branding */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/20 to-indigo-600/20" />
+          <div className="absolute inset-0 bg-gradient-to-br from-stone-600/20 to-indigo-600/20" />
           <div className="absolute inset-0" style={{
             backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.3) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(99, 102, 241, 0.3) 0%, transparent 50%)',
           }} />
@@ -364,7 +364,7 @@ const AuthGate = ({ onAuth }) => {
               <div className="mt-16 space-y-8">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -412,7 +412,7 @@ const AuthGate = ({ onAuth }) => {
             {/* Mobile logo */}
             <div className="lg:hidden mb-8 text-center">
               <div className="inline-flex items-center gap-2">
-                <div className="w-10 h-10 bg-violet-600 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
@@ -440,7 +440,7 @@ const AuthGate = ({ onAuth }) => {
                           setEmail(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="you@example.com"
                         autoComplete="email"
                         autoFocus
@@ -456,7 +456,7 @@ const AuthGate = ({ onAuth }) => {
                             setPassword(e.target.value);
                             if (error) setError('');
                           }}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none pr-12"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none pr-12"
                           placeholder="Enter your password"
                           autoComplete="current-password"
                         />
@@ -493,7 +493,7 @@ const AuthGate = ({ onAuth }) => {
                           setName(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="John Doe"
                         autoFocus
                       />
@@ -507,7 +507,7 @@ const AuthGate = ({ onAuth }) => {
                           setEmail(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="you@example.com"
                         autoComplete="email"
                       />
@@ -521,7 +521,7 @@ const AuthGate = ({ onAuth }) => {
                           setMobile(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="+91 98765 43210"
                       />
                     </div>
@@ -534,7 +534,7 @@ const AuthGate = ({ onAuth }) => {
                           setPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="Min 8 characters"
                         autoComplete="new-password"
                       />
@@ -548,7 +548,7 @@ const AuthGate = ({ onAuth }) => {
                           setConfirmPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="Re-enter password"
                         autoComplete="new-password"
                       />
@@ -567,7 +567,7 @@ const AuthGate = ({ onAuth }) => {
                         setCompanyName(e.target.value);
                         if (error) setError('');
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                       placeholder="My Business Pvt Ltd"
                       autoFocus
                     />
@@ -586,7 +586,7 @@ const AuthGate = ({ onAuth }) => {
                         setEmail(e.target.value);
                         if (error) setError('');
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                       placeholder="you@example.com"
                       autoFocus
                     />
@@ -605,7 +605,7 @@ const AuthGate = ({ onAuth }) => {
                           setPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="Min 8 characters"
                         autoFocus
                       />
@@ -619,7 +619,7 @@ const AuthGate = ({ onAuth }) => {
                           setConfirmPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition-all outline-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
                         placeholder="Re-enter password"
                       />
                     </div>
@@ -653,7 +653,7 @@ const AuthGate = ({ onAuth }) => {
                   className={`w-full py-3 px-4 rounded-xl font-semibold text-white transition-all ${
                     loading 
                       ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-violet-600 hover:bg-violet-700 active:scale-[0.98] shadow-lg shadow-violet-600/25'
+                      : 'bg-stone-900 hover:bg-stone-900 active:scale-[0.98] shadow-lg shadow-stone-600/25'
                   }`}
                 >
                   {loading ? (
@@ -682,7 +682,7 @@ const AuthGate = ({ onAuth }) => {
                       <button
                         type="button"
                         onClick={() => switchMode('forgot')}
-                        className="w-full text-center text-sm text-gray-500 hover:text-violet-600 transition-colors"
+                        className="w-full text-center text-sm text-gray-500 hover:text-stone-900 transition-colors"
                       >
                         Forgot your password?
                       </button>
@@ -691,7 +691,7 @@ const AuthGate = ({ onAuth }) => {
                         <button
                           type="button"
                           onClick={() => switchMode('signup')}
-                          className="text-violet-600 font-semibold hover:text-violet-700 transition-colors"
+                          className="text-stone-900 font-semibold hover:text-stone-900 transition-colors"
                         >
                           Sign up here
                         </button>
@@ -705,7 +705,7 @@ const AuthGate = ({ onAuth }) => {
                       <button
                         type="button"
                         onClick={() => switchMode('login')}
-                        className="text-violet-600 font-semibold hover:text-violet-700 transition-colors"
+                        className="text-stone-900 font-semibold hover:text-stone-900 transition-colors"
                       >
                         Sign in
                       </button>
@@ -716,7 +716,7 @@ const AuthGate = ({ onAuth }) => {
                     <button
                       type="button"
                       onClick={() => { setSignupStep(1); clearMessages(); }}
-                      className="w-full text-center text-sm text-gray-500 hover:text-violet-600 transition-colors"
+                      className="w-full text-center text-sm text-gray-500 hover:text-stone-900 transition-colors"
                     >
                       ← Back to account details
                     </button>
@@ -726,7 +726,7 @@ const AuthGate = ({ onAuth }) => {
                     <button
                       type="button"
                       onClick={() => switchMode('login')}
-                      className="w-full text-center text-sm text-gray-500 hover:text-violet-600 transition-colors"
+                      className="w-full text-center text-sm text-gray-500 hover:text-stone-900 transition-colors"
                     >
                       ← Back to sign in
                     </button>

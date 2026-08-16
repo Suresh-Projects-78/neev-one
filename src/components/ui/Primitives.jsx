@@ -50,10 +50,8 @@ export const StatusPill = ({ status }) => {
       ? 'pos'
       : s === 'overdue' || s === 'rejected' || s === 'cancelled' || s === 'failed'
       ? 'neg'
-      : s === 'partial' || s === 'pending' || s === 'draft' || s === 'sent'
+      : s === 'partial' || s === 'pending' || s === 'sent'
       ? 'warn'
-      : s === 'unpaid' || s === 'due'
-      ? 'info'
       : 'neutral';
 
   return <span className={`ui-pill ui-pill-${tone}`}>{status || '—'}</span>;

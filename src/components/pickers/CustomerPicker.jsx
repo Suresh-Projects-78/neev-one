@@ -798,7 +798,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         )}
       </div>
 
-      <button type="submit" className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
+      <button type="submit" className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
         {isEdit ? 'Update Customer' : 'Create Customer'}
       </button>
       </form>
@@ -844,7 +844,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               >
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+              <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
                 Create
               </button>
             </div>
@@ -941,7 +941,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                 <button
                   type="button"
                   onClick={() => setCustomerPopupMode('create')}
-                  className="w-full px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+                  className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
                 >
                   Create new customer
                 </button>

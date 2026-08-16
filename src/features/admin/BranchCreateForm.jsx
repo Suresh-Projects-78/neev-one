@@ -152,7 +152,7 @@ export function BranchCreateForm({ orgId, onCreated }) {
       </label>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
           {saving ? 'Saving…' : 'Create Branch'}
         </button>
       </div>

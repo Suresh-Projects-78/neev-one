@@ -146,7 +146,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -306,7 +306,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700">
+        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>

@@ -303,7 +303,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+          className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
         >
           + Create Warehouse
         </button>
@@ -447,7 +447,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 <button type="button" onClick={() => setEditingWarehouseId(null)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
                   Cancel
                 </button>
-                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
+                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
                   {editSaving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
@@ -595,7 +595,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Warehouse'}
             </button>
           </div>
