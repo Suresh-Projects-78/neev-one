@@ -94,6 +94,8 @@ import { SettingsRoles } from './features/admin/SettingsRoles';
 import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
+import { PageHeader, StatTile, ThemeToggle } from './components/ui/Primitives';
+import { useTheme } from './components/ui/useTheme';
 const normalizeId = (v) => String(v ?? '').trim();
 
 const getBranchLabel = (b) => {
@@ -172,33 +174,79 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
   const totalSales = invoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
   const paidSales = invoices.filter((i) => i.status === 'Paid').reduce((sum, i) => sum + Number(i.total || 0), 0);
 
+  const collectedPct = totalSales > 0 ? Math.round((paidSales / totalSales) * 100) : 0;
+  const unpaidCount = invoices.filter((i) => i.status !== 'Paid').length;
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => {
-            setPendingBranchIds(selectedBranchIds);
-            setBranchPickerOpen(true);
-          }}
-          className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
-        >
-          Branches: {branchFilterLabel}
-        </button>
+    <div className="space-y-5">
+      <PageHeader
+        title="Dashboard"
+        description={`${invoices.length} invoice${invoices.length === 1 ? '' : 's'} in view`}
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setPendingBranchIds(selectedBranchIds);
+              setBranchPickerOpen(true);
+            }}
+            className="ui-btn ui-btn-secondary"
+          >
+            <Building2 size={15} aria-hidden="true" />
+            Branches: {branchFilterLabel}
+          </button>
+        }
+      />
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Total sales"
+          value={formatMoney(totalSales, currentCompany)}
+          hint={`Across ${invoices.length} invoices`}
+          icon={BarChart3}
+        />
+        <StatTile
+          label="Collected"
+          value={formatMoney(paidSales, currentCompany)}
+          hint={`${collectedPct}% of billed value`}
+          tone="pos"
+          icon={Receipt}
+        />
+        <StatTile
+          label="Outstanding"
+          value={formatMoney(totalSales - paidSales, currentCompany)}
+          hint={`${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} awaiting payment`}
+          tone="neg"
+          icon={FileText}
+        />
+        <StatTile
+          label="Average invoice"
+          value={formatMoney(invoices.length ? totalSales / invoices.length : 0, currentCompany)}
+          hint="Billed value per invoice"
+          icon={ClipboardList}
+        />
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6 border">
-          <h4 className="text-sm text-gray-600 mb-2">Total Sales</h4>
-          <p className="text-3xl font-bold">{formatMoney(totalSales, currentCompany)}</p>
+      <div className="ui-card p-4">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <span className="ui-muted text-xs font-semibold uppercase tracking-wide">Collection progress</span>
+          <span className="ui-title text-sm">{collectedPct}%</span>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border">
-          <h4 className="text-sm text-gray-600 mb-2">Paid</h4>
-          <p className="text-3xl font-bold text-green-600">{formatMoney(paidSales, currentCompany)}</p>
+        <div
+          className="h-2 rounded-full overflow-hidden"
+          style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
+          role="progressbar"
+          aria-valuenow={collectedPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Share of billed value collected"
+        >
+          <div
+            className="h-full rounded-full transition-[width] duration-500 ease-out"
+            style={{ width: `${collectedPct}%`, backgroundColor: 'rgb(var(--pos))' }}
+          />
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border">
-          <h4 className="text-sm text-gray-600 mb-2">Outstanding</h4>
-          <p className="text-3xl font-bold text-orange-600">{formatMoney(totalSales - paidSales, currentCompany)}</p>
+        <div className="ui-subtle text-xs mt-2">
+          {formatMoney(paidSales, currentCompany)} collected of {formatMoney(totalSales, currentCompany)} billed
         </div>
       </div>
 
@@ -8862,6 +8910,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
 };
 
 const App = () => {
+  const { theme, toggle: toggleTheme } = useTheme();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
@@ -10355,54 +10404,90 @@ const App = () => {
     );
   }
 
+  const userEmail = String(localStorage.getItem('userEmail') || '').trim() || 'User';
+  const userInitials = userEmail.slice(0, 2).toUpperCase();
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="border-b bg-white">
-        <div className="w-full px-6 lg:px-8 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+    <div className="min-h-dvh" style={{ backgroundColor: 'rgb(var(--app-bg))' }}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 ui-btn ui-btn-primary"
+      >
+        Skip to main content
+      </a>
+
+      <header
+        className="sticky top-0 z-40 backdrop-blur"
+        style={{
+          backgroundColor: 'rgb(var(--surface) / 0.85)',
+          borderBottom: '1px solid rgb(var(--border))',
+        }}
+      >
+        <div className="w-full px-4 lg:px-6 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5 min-w-0">
             <div className="relative" ref={profileMenuRef}>
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((v) => !v)}
-                className="h-9 w-9 inline-flex items-center justify-center rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
-                title="Profile menu"
+                className="ui-btn ui-btn-ghost !px-2"
+                aria-haspopup="menu"
+                aria-expanded={profileMenuOpen}
+                aria-label="Account menu"
               >
-                <span className="text-lg leading-none">≡</span>
+                <span
+                  className="h-7 w-7 rounded-full inline-flex items-center justify-center text-[11px] font-bold"
+                  style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--accent))' }}
+                  aria-hidden="true"
+                >
+                  {userInitials}
+                </span>
+                <ChevronDown size={14} aria-hidden="true" />
               </button>
               {profileMenuOpen && (
-                <div className="absolute left-0 mt-2 w-48 rounded-lg border bg-white shadow-sm overflow-hidden z-50">
+                <div
+                  role="menu"
+                  className="absolute left-0 mt-2 w-64 rounded-lg overflow-hidden z-50 ui-card"
+                  style={{ boxShadow: 'var(--shadow-pop)' }}
+                >
+                  <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+                    <div className="text-sm font-semibold ui-title truncate">{userEmail}</div>
+                    <div className="ui-subtle text-[11px] mt-0.5 ui-mono truncate">
+                      org {String(localStorage.getItem('activeOrgId') || '-')}
+                    </div>
+                  </div>
                   <button
                     type="button"
+                    role="menuitem"
                     onClick={() => {
                       logout();
                       setProfileMenuOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 text-red-600"
+                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--neg-soft))]"
+                    style={{ color: 'rgb(var(--neg))' }}
                   >
-                    Logout
+                    Sign out
                   </button>
                 </div>
               )}
             </div>
 
-            <Building2 size={18} className="text-gray-700" />
-            <div className="font-semibold text-gray-900">{currentCompany?.name || 'Accounting'}</div>
+            <div className="h-5 w-px shrink-0" style={{ backgroundColor: 'rgb(var(--border))' }} aria-hidden="true" />
+
+            <Building2 size={17} style={{ color: 'rgb(var(--accent))' }} aria-hidden="true" />
+            <div className="ui-title text-sm truncate">{currentCompany?.name || 'Accounting'}</div>
           </div>
-          <div className="flex items-center gap-6 flex-wrap justify-end">
-            <div className="text-sm text-gray-500">{activeLabel}</div>
-            <div className="text-right leading-tight">
-              <div className="text-xs text-gray-900">{String(localStorage.getItem('userEmail') || '').trim() || 'User'}</div>
-              <div className="text-[11px] text-gray-500">Account ID: {String(localStorage.getItem('accountId') || '-')}</div>
-              <div className="text-[11px] text-gray-500">Org ID: {String(localStorage.getItem('activeOrgId') || '-')}</div>
-            </div>
+
+          <div className="flex items-center gap-2">
+            <span className="ui-pill ui-pill-neutral hidden sm:inline-flex">{activeLabel}</span>
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="w-full px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
+      <div className="w-full px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5">
         <aside className="w-full md:w-56 lg:w-60 shrink-0">
-          <div className="bg-white border rounded-xl p-3 shadow-sm">
-            <div className="space-y-1">
+          <nav aria-label="Main" className="ui-panel p-2 md:sticky md:top-[4.5rem]">
+            <div className="space-y-0.5">
               {navModel.map((entry) => {
                 if (entry.type === 'item') {
                   const Icon = entry.icon;
@@ -10423,14 +10508,12 @@ const App = () => {
                       key={entry.key}
                       type="button"
                       onClick={() => setActive(entry.key)}
-                      className={`w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg border transition-colors ${
-                        isActive
-                          ? 'bg-blue-50 border-blue-200 text-blue-700'
-                          : 'bg-white border-transparent text-gray-700 hover:bg-gray-50'
-                      }`}
+                      className="ui-nav-item"
+                      data-active={isActive}
+                      aria-current={isActive ? 'page' : undefined}
                     >
-                      <Icon size={16} className={isActive ? 'text-blue-700' : 'text-gray-500'} />
-                      <span className="text-sm font-semibold">{entry.label}</span>
+                      <Icon size={16} aria-hidden="true" />
+                      <span>{entry.label}</span>
                     </button>
                   );
                 }
@@ -10449,22 +10532,23 @@ const App = () => {
                           [entry.key]: !prev[entry.key],
                         }))
                       }
-                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                        isGroupActive ? 'bg-gray-50 border-gray-200' : 'bg-white border-transparent hover:bg-gray-50'
-                      }`}
+                      className="ui-nav-item justify-between"
+                      aria-expanded={isOpen}
+                      style={isGroupActive ? { color: 'rgb(var(--fg))' } : undefined}
                     >
-                      <div className="flex items-center gap-2">
-                        <GroupIcon size={16} className={isGroupActive ? 'text-gray-900' : 'text-gray-600'} />
-                        <span className="text-sm font-semibold text-gray-900">{entry.label}</span>
-                      </div>
+                      <span className="flex items-center gap-2.5">
+                        <GroupIcon size={16} aria-hidden="true" />
+                        <span>{entry.label}</span>
+                      </span>
                       <ChevronDown
-                        size={16}
-                        className={`text-gray-500 transition-transform ${isOpen ? 'rotate-0' : '-rotate-90'}`}
+                        size={14}
+                        aria-hidden="true"
+                        className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
                       />
                     </button>
 
                     {isOpen && (
-                      <div className="mt-1 space-y-1 pl-6">
+                      <div className="mt-0.5 space-y-0.5 pl-5">
                         {entry.items.map((item) => {
                           const Icon = item.icon;
                           const isActive = active === item.key;
@@ -10473,14 +10557,12 @@ const App = () => {
                               key={item.key}
                               type="button"
                               onClick={() => setActive(item.key)}
-                              className={`w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg border transition-colors ${
-                                isActive
-                                  ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                  : 'bg-white border-transparent text-gray-700 hover:bg-gray-50'
-                              }`}
+                              className="ui-nav-item"
+                              data-active={isActive}
+                              aria-current={isActive ? 'page' : undefined}
                             >
-                              <Icon size={16} className={isActive ? 'text-blue-700' : 'text-gray-500'} />
-                              <span className="text-sm font-medium">{item.label}</span>
+                              <Icon size={15} aria-hidden="true" />
+                              <span>{item.label}</span>
                             </button>
                           );
                         })}
@@ -10490,10 +10572,10 @@ const App = () => {
                 );
               })}
             </div>
-          </div>
+          </nav>
         </aside>
 
-        <main className="min-w-0 flex-1">
+        <main id="main-content" className="min-w-0 flex-1">
           {reportPageKeys.has(String(active)) && active !== 'reports' ? (
             <div className="space-y-4">
               <div>

@@ -4,9 +4,24 @@ export default {
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
   ],
+  // Component classes in @layer components are purged when the class name never
+  // appears literally in the scanned source. These variants are composed at
+  // runtime (`ui-pill-${tone}`), so they must be kept explicitly.
+  safelist: [
+    'ui-pill-pos',
+    'ui-pill-neg',
+    'ui-pill-warn',
+    'ui-pill-info',
+    'ui-pill-neutral',
+    'ui-amount-pos',
+    'ui-amount-neg',
+    'ui-btn-primary',
+    'ui-btn-secondary',
+    'ui-btn-ghost',
+    'ui-btn-danger',
+  ],
   theme: {
     extend: {},
   },
   plugins: [],
 }
-

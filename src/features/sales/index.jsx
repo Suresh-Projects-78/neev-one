@@ -20,6 +20,7 @@ import {
   isIntraStateSupply,
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
+import { PageHeader, StatusPill, EmptyState } from '../../components/ui/Primitives';
 
 const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
   const initial = String(invoice?.status || '').trim();
@@ -97,11 +98,11 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <label className="ui-label">Status</label>
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 text-sm"
+          className="ui-input"
         >
           <option value="">Auto (based on payments)</option>
           <option value="Draft">Draft</option>
@@ -114,7 +115,7 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="px-3 py-2 rounded-lg text-sm border bg-white hover:bg-gray-50 border-gray-200"
+          className="ui-btn ui-btn-secondary"
         >
           Cancel
         </button>
@@ -388,13 +389,13 @@ export const InvoicesList = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <div className="text-sm text-gray-500">{title}</div>
+            <div className="ui-muted text-sm">{title}</div>
           </div>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={doPrint}
-              className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 flex items-center gap-2"
+              className="ui-btn ui-btn-secondary"
             >
               <Printer size={16} /> Print
             </button>
@@ -547,35 +548,34 @@ export const InvoicesList = ({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Invoices</h3>
-        <button
-          type="button"
-          onClick={openNewInvoice}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={20} /> New Invoice
-        </button>
-      </div>
+      <PageHeader
+        title="Invoices"
+        description="Sales invoices for the active branch"
+        actions={
+          <button type="button" onClick={openNewInvoice} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> New Invoice
+          </button>
+        }
+      />
 
-      <div className="bg-white rounded-xl shadow-sm border p-4">
+      <div className="ui-card p-4">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
           <div className="md:col-span-5">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
+            <label className="ui-label">Search</label>
             <input
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="Search by invoice #, customer, ref no"
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input"
             />
           </div>
           <div className="md:col-span-3">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <label className="ui-label">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg bg-white"
+              className="ui-select"
             >
               <option value="">All</option>
               <option value="Draft">Draft</option>
@@ -587,29 +587,29 @@ export const InvoicesList = ({
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-600 mb-1">From</label>
+            <label className="ui-label">From</label>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input"
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-600 mb-1">To</label>
+            <label className="ui-label">To</label>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input"
             />
           </div>
         </div>
 
         <div className="mt-3 flex items-center justify-between">
-          <div className="text-xs text-gray-500">
-            Showing <span className="font-medium text-gray-700">{filteredInvoices.length}</span> of{' '}
-            <span className="font-medium text-gray-700">{invoices.length}</span>
+          <div className="ui-subtle text-xs">
+            Showing <span className="ui-title">{filteredInvoices.length}</span> of{' '}
+            <span className="ui-title">{invoices.length}</span>
           </div>
           <button
             type="button"
@@ -619,32 +619,37 @@ export const InvoicesList = ({
               setDateFrom('');
               setDateTo('');
             }}
-            className="px-3 py-2 rounded-lg text-sm border bg-white hover:bg-gray-50 border-gray-200"
+            className="ui-btn ui-btn-secondary"
           >
             Clear
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+      <div className="ui-card overflow-hidden">
+        <div className="overflow-x-auto">
+        <table className="ui-table">
+          <thead>
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th scope="col">Invoice #</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Warehouse</th>
+              <th scope="col">Date</th>
+              <th scope="col">Due</th>
+              <th scope="col" className="ui-num">Total</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody>
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
-                  No invoices found
+                <td colSpan="8">
+                  <EmptyState
+                    icon={FileText}
+                    title="No invoices found"
+                    description="Adjust the filters above, or create the first invoice for this branch."
+                  />
                 </td>
               </tr>
             ) : (
@@ -653,21 +658,11 @@ export const InvoicesList = ({
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 const derived = getDerivedStatus(inv);
-                const statusPillClass =
-                  derived === 'Paid'
-                    ? 'bg-green-100 text-green-700'
-                    : derived === 'Over due'
-                      ? 'bg-red-100 text-red-700'
-                      : derived === 'Cancelled'
-                        ? 'bg-gray-100 text-gray-700'
-                      : derived === 'Draft'
-                        ? 'bg-gray-100 text-gray-700'
-                        : 'bg-yellow-100 text-yellow-700';
 
                 return (
                   <tr
                     key={inv.id}
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="cursor-pointer"
                     onClick={(e) => {
                       const el = e.target;
                       if (el?.closest?.('[data-invoice-menu-button]')) return;
@@ -675,17 +670,17 @@ export const InvoicesList = ({
                       openViewInvoice(inv);
                     }}
                   >
-                    <td className="px-6 py-4 font-medium">{inv.number}</td>
-                    <td className="px-6 py-4">{inv.customerName || '-'}</td>
-                    <td className="px-6 py-4">{whLabel}</td>
-                    <td className="px-6 py-4">{inv.date || '-'}</td>
-                    <td className="px-6 py-4">{inv.dueDate || '-'}</td>
-                    <td className="px-6 py-4 font-semibold">{formatMoney(inv.total || 0, currentCompany)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusPillClass}`}>{derived}</span>
+                    <td className="ui-mono font-medium whitespace-nowrap">{inv.number}</td>
+                    <td className="font-medium">{inv.customerName || '-'}</td>
+                    <td className="ui-muted">{whLabel}</td>
+                    <td className="ui-muted whitespace-nowrap">{inv.date || '-'}</td>
+                    <td className="ui-muted whitespace-nowrap">{inv.dueDate || '-'}</td>
+                    <td className="ui-num ui-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
+                    <td>
+                      <StatusPill status={derived} />
                     </td>
                     <td
-                      className="px-6 py-4 relative"
+                      className="relative w-10"
                       onMouseDown={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
@@ -706,7 +701,7 @@ export const InvoicesList = ({
                             openInvoiceMenu(inv.id, e.currentTarget);
                           }
                         }}
-                        className="p-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                        className="ui-btn ui-btn-ghost !px-1.5"
                         aria-label="Invoice actions"
                         data-invoice-menu-button={inv.id}
                       >
@@ -719,12 +714,13 @@ export const InvoicesList = ({
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[9999]"
+          className="fixed w-56 ui-card overflow-hidden z-[9999]" style={{ boxShadow: 'var(--shadow-pop)' }}
           style={{ left: openMenu.left, top: openMenu.top }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -1093,7 +1089,7 @@ export const EstimatesList = ({
                           openEstimateMenu(est.id, e.currentTarget);
                         }
                       }}
-                      className="p-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                      className="ui-btn ui-btn-ghost !px-1.5"
                       aria-label="Estimate actions"
                       data-estimate-menu-button={est.id}
                     >
@@ -1111,7 +1107,7 @@ export const EstimatesList = ({
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[9999]"
+          className="fixed w-56 ui-card overflow-hidden z-[9999]" style={{ boxShadow: 'var(--shadow-pop)' }}
           style={{ left: openMenu.left, top: openMenu.top }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -1722,7 +1718,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             type="text"
             value={formData.number}
             onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg ${lockInvoiceNumberOnCreate ? 'bg-gray-50' : ''}`}
+            className="ui-input"
             disabled={lockInvoiceNumberOnCreate}
             required
           />
@@ -1733,7 +1729,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <select
             value={formData.warehouseId}
             onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg bg-white"
+            className="ui-select"
             required
           >
             <option value="">Select Warehouse</option>
@@ -1761,7 +1757,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
             required
           />
         </div>
@@ -1772,7 +1768,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             type="date"
             value={formData.dueDate}
             onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
             required
           />
         </div>
@@ -1783,7 +1779,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             type="date"
             value={formData.refDate}
             onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
           />
         </div>
 
@@ -1793,7 +1789,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             type="text"
             value={formData.refNo}
             onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
             placeholder="Estimate / Quotation / Sales Order"
           />
         </div>
@@ -2150,7 +2146,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
             required
           />
         </div>
@@ -2160,7 +2156,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             type="date"
             value={formData.dueDate}
             onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
             required
           />
         </div>
@@ -2565,7 +2561,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
               onOriginalInvoiceQueryChange(originalInvoiceQuery);
             }}
             list="creditnote-original-invoice-options"
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
             placeholder="Search / paste invoice number"
             required
           />
@@ -2581,7 +2577,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input"
             required
           />
         </div>
@@ -2591,7 +2587,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           <select
             value={formData.warehouseId}
             onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg bg-white"
+            className="ui-select"
             required
           >
             <option value="">Select Warehouse</option>
