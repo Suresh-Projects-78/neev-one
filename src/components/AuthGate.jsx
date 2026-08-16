@@ -198,6 +198,12 @@ const AuthGate = ({ onAuth }) => {
         if (res.data.company?.orgId) {
           localStorage.setItem('activeOrgId', String(res.data.company.orgId));
         }
+        // setup-company creates the head-office branch; store it, or the very
+        // first protected request has no x-branch-id and 400s.
+        if (res.data.branch?.id) {
+          localStorage.setItem('activeBranchId', String(res.data.branch.id));
+          localStorage.setItem('branchId', String(res.data.branch.id));
+        }
         setSuccess('Company created');
         localStorage.setItem('token', signupToken);
         setTimeout(() => {
