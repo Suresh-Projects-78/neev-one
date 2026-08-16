@@ -329,7 +329,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
@@ -431,7 +431,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
           Create Bill
         </button>
       </div>
@@ -455,7 +455,7 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Purchase Orders</h3>
-        <button onClick={createPo} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+        <button onClick={createPo} className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700">
           <Plus size={20} /> New PO
         </button>
       </div>
@@ -667,7 +667,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
@@ -746,7 +746,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
           Create PO
         </button>
       </div>
@@ -977,7 +977,7 @@ export const BillsList = ({
               />
             );
           }}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
         >
           <Plus size={20} /> New Bill
         </button>
@@ -1566,7 +1566,7 @@ export const DebitNoteForm = ({
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
@@ -1661,7 +1661,7 @@ export const DebitNoteForm = ({
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
           Create Debit Note
         </button>
       </div>
@@ -1698,7 +1698,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               />
             );
           }}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
         >
           <Plus size={20} /> New Debit Note
         </button>

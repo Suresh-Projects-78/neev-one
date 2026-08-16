@@ -122,7 +122,7 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
         <button
           type="button"
           onClick={save}
-          className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700"
+          className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700"
         >
           Save
         </button>
@@ -403,7 +403,7 @@ export const InvoicesList = ({
               type="button"
               onClick={doDownload}
               disabled={downloading}
-              className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2"
+              className="px-3 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 flex items-center gap-2"
             >
               <Download size={16} /> {downloading ? 'Preparing...' : 'Download'}
             </button>
@@ -641,7 +641,7 @@ export const InvoicesList = ({
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="ui-rows">
             {filteredInvoices.length === 0 ? (
               <tr>
                 <td colSpan="8">
@@ -720,7 +720,7 @@ export const InvoicesList = ({
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 ui-card overflow-hidden z-[9999]" style={{ boxShadow: 'var(--shadow-pop)' }}
+          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop" style={{ boxShadow: 'var(--shadow-pop)' }}
           style={{ left: openMenu.left, top: openMenu.top }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -1019,7 +1019,7 @@ export const EstimatesList = ({
         <button
           type="button"
           onClick={openNewEstimate}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
         >
           <Plus size={20} /> New Estimate
         </button>
@@ -1107,7 +1107,7 @@ export const EstimatesList = ({
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 ui-card overflow-hidden z-[9999]" style={{ boxShadow: 'var(--shadow-pop)' }}
+          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop" style={{ boxShadow: 'var(--shadow-pop)' }}
           style={{ left: openMenu.left, top: openMenu.top }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -1225,7 +1225,7 @@ export const CreditNotesList = ({
         <button
           type="button"
           onClick={openNewCreditNote}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
         >
           <Plus size={20} /> New Credit Note
         </button>
@@ -1801,7 +1801,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <button
             type="button"
             onClick={addItem}
-            className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+            className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1"
           >
             <Plus size={16} /> Add Item
           </button>
@@ -1903,7 +1903,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
           {isEdit ? 'Update Invoice' : 'Create Invoice'}
         </button>
       </div>
@@ -2165,7 +2165,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
@@ -2266,7 +2266,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
           {isEdit ? 'Update Estimate' : 'Create Estimate'}
         </button>
       </div>
@@ -2612,7 +2612,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
@@ -2713,7 +2713,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button type="submit" className="px-6 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
           Create Credit Note
         </button>
       </div>

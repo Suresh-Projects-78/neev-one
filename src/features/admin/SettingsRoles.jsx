@@ -397,7 +397,7 @@ export function SettingsRoles({ orgId }) {
         <button
           type="button"
           onClick={openCreate}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
         >
           + Create Role
         </button>
@@ -600,7 +600,7 @@ export function SettingsRoles({ orgId }) {
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
               {saving ? 'Saving…' : editRole ? 'Update Role' : 'Create Role'}
             </button>
           </div>

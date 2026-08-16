@@ -9,11 +9,12 @@
    Generated from the ui-ux-pro-max design system; see
    design-system/accounting-suite/MASTER.md.
 
-   Deviation from the generated palette, deliberately: the dataset proposed
-   green as the CTA accent. In an accounting product green already means
-   "money in / paid", so a green CTA next to a green amount is ambiguous.
-   Interactive accent is indigo; green and red are reserved for financial
-   semantics only.
+   Deviations from the generated palette, deliberately:
+   1. The dataset proposed green as the CTA accent. In an accounting product
+      green already means "money in / paid", so a green CTA next to a green
+      amount is ambiguous.
+   2. No blue anywhere, by request. The interactive accent is violet; green,
+      amber and red are reserved for financial meaning only.
 --------------------------------------------------------------------------- */
 
 :root {
@@ -33,11 +34,11 @@
   /* Brand / interactive */
   --primary: 15 23 42;
   --on-primary: 255 255 255;
-  --accent: 79 70 229;
-  --accent-hover: 67 56 202;
-  --accent-soft: 238 242 255;
+  --accent: 124 58 237;
+  --accent-hover: 109 40 217;
+  --accent-soft: 245 243 255;
   --on-accent: 255 255 255;
-  --ring: 99 102 241;
+  --ring: 139 92 246;
 
   /* Financial semantics — never used for generic UI */
   --pos: 22 163 74;
@@ -46,8 +47,8 @@
   --neg-soft: 254 242 242;
   --warn: 217 119 6;
   --warn-soft: 255 251 235;
-  --info: 2 132 199;
-  --info-soft: 240 249 255;
+  --info: 124 58 237;
+  --info-soft: 245 243 255;
 
   /* Dense dashboard spacing scale (density 8/10) */
   --space-1: 0.25rem;
@@ -76,11 +77,11 @@
 
   --primary: 248 250 252;
   --on-primary: 15 23 42;
-  --accent: 129 140 248;
-  --accent-hover: 165 180 252;
-  --accent-soft: 30 41 59;
+  --accent: 167 139 250;
+  --accent-hover: 196 181 253;
+  --accent-soft: 46 16 101;
   --on-accent: 15 23 42;
-  --ring: 165 180 252;
+  --ring: 196 181 253;
 
   --pos: 74 222 128;
   --pos-soft: 5 46 22;
@@ -88,8 +89,8 @@
   --neg-soft: 69 10 10;
   --warn: 251 191 36;
   --warn-soft: 69 39 3;
-  --info: 56 189 248;
-  --info-soft: 8 47 73;
+  --info: 167 139 250;
+  --info-soft: 46 16 101;
 
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-pop: 0 10px 30px -10px rgb(0 0 0 / 0.6);
@@ -350,6 +351,142 @@
   .ui-num {
     text-align: right;
     font-variant-numeric: tabular-nums;
+  }
+}
+
+
+/* ---------------------------------------------------------------------------
+   Motion
+   Every animation below expresses a cause: content arriving, a value
+   changing, a press registering. Transform and opacity only, so nothing
+   reflows. Durations are short on exit, longer on enter. All of it is
+   switched off by the reduced-motion block at the end of this file.
+--------------------------------------------------------------------------- */
+
+@keyframes ui-rise {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes ui-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ui-pop {
+  0%   { opacity: 0; transform: scale(0.96); }
+  60%  { transform: scale(1.008); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ui-slide-left {
+  from { opacity: 0; transform: translate3d(-8px, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes ui-shimmer {
+  from { background-position: -180% 0; }
+  to   { background-position: 180% 0; }
+}
+@keyframes ui-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes ui-spin {
+  to { transform: rotate(360deg); }
+}
+
+@layer components {
+  /* Content arriving: 320ms, decelerating, because it is coming to rest. */
+  .ui-in {
+    animation: ui-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .ui-in-fade {
+    animation: ui-fade 240ms ease-out both;
+  }
+  /* Surfaces that own the screen (modals, menus) scale in from their origin. */
+  .ui-in-pop {
+    animation: ui-pop 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: var(--pop-origin, top center);
+  }
+  .ui-in-left {
+    animation: ui-slide-left 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Stagger: 40ms per item, capped so a long list never crawls. */
+  .ui-stagger > * {
+    animation: ui-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .ui-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .ui-stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .ui-stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .ui-stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .ui-stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .ui-stagger > *:nth-child(6) { animation-delay: 200ms; }
+  .ui-stagger > *:nth-child(n + 7) { animation-delay: 240ms; }
+
+  /* Table rows: fade only. Rows must not move, or scanning a column breaks. */
+  .ui-rows > tr {
+    animation: ui-fade 260ms ease-out both;
+  }
+  .ui-rows > tr:nth-child(1) { animation-delay: 0ms; }
+  .ui-rows > tr:nth-child(2) { animation-delay: 25ms; }
+  .ui-rows > tr:nth-child(3) { animation-delay: 50ms; }
+  .ui-rows > tr:nth-child(4) { animation-delay: 75ms; }
+  .ui-rows > tr:nth-child(5) { animation-delay: 100ms; }
+  .ui-rows > tr:nth-child(6) { animation-delay: 125ms; }
+  .ui-rows > tr:nth-child(7) { animation-delay: 150ms; }
+  .ui-rows > tr:nth-child(8) { animation-delay: 175ms; }
+  .ui-rows > tr:nth-child(n + 9) { animation-delay: 200ms; }
+
+  /* Press feedback. Exit (release) is faster than enter, so it feels snappy. */
+  .ui-btn:active:not(:disabled),
+  .ui-nav-item:active {
+    transform: scale(0.975);
+    transition-duration: 90ms;
+  }
+  .ui-btn,
+  .ui-nav-item {
+    transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease,
+      transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Cards lift slightly on hover to signal they are interactive. */
+  .ui-card-interactive {
+    transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 200ms ease;
+  }
+  .ui-card-interactive:hover {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: var(--shadow-pop);
+  }
+
+  /* Progress meter fills from the left on first paint. */
+  .ui-bar-fill {
+    transform-origin: left center;
+    animation: ui-bar-grow 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Loading placeholder: a moving sheen, not a spinner. */
+  .ui-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--surface-sunken)) 0%,
+      rgb(var(--border)) 50%,
+      rgb(var(--surface-sunken)) 100%
+    );
+    background-size: 180% 100%;
+    animation: ui-shimmer 1.4s linear infinite;
+  }
+
+  .ui-spinner {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    animation: ui-spin 700ms linear infinite;
+  }
+
+  /* Nav indicator grows from the centre when an item becomes active. */
+  .ui-nav-item[data-active='true']::before {
+    animation: ui-bar-grow 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: center;
   }
 }
 

@@ -222,7 +222,7 @@ export function SettingsBranches({ orgId }) {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
         >
           + Create Branch
         </button>
@@ -359,7 +359,7 @@ export function SettingsBranches({ orgId }) {
                 <button type="button" onClick={() => setEditingBranchId(null)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
                   Cancel
                 </button>
-                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
                   {editSaving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
@@ -471,7 +471,7 @@ export function SettingsBranches({ orgId }) {
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Branch'}
             </button>
           </div>

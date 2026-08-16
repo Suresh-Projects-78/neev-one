@@ -37,7 +37,7 @@ const getStatusPillClass = (status) => {
   if (s === 'Approved') return 'bg-green-100 text-green-700';
   if (s === 'Rejected') return 'bg-red-100 text-red-700';
   if (s === 'Cancelled') return 'bg-gray-100 text-gray-700';
-  if (s === 'Submitted') return 'bg-blue-100 text-blue-700';
+  if (s === 'Submitted') return 'bg-violet-100 text-violet-700';
   return 'bg-gray-100 text-gray-700';
 };
 
@@ -614,7 +614,7 @@ export const StockTransferEditor = ({
           <button
             type="button"
             onClick={addLine}
-            className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+            className="text-violet-600 hover:text-violet-700 text-sm flex items-center gap-1"
             disabled={readOnly}
           >
             <Plus size={16} /> Add Item
@@ -686,7 +686,7 @@ export const StockTransferEditor = ({
         <button type="button" onClick={() => onBack?.()} className="px-3 py-2 rounded-lg text-sm border bg-white hover:bg-gray-50 border-gray-200">
           Back
         </button>
-        <button type="submit" disabled={saving || readOnly} className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+        <button type="submit" disabled={saving || readOnly} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50">
           {saving ? 'Saving…' : isEdit ? 'Save' : 'Create'}
         </button>
       </div>
@@ -797,7 +797,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           <button
             type="button"
             onClick={() => onAction?.('submit')}
-            className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700"
+            className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700"
           >
             Submit
           </button>
@@ -1007,7 +1007,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            className="flex items-center gap-2 bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700"
           >
           <Plus size={18} /> New Transfer
           </button>

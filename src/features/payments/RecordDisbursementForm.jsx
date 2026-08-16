@@ -499,7 +499,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button type="submit" className="px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
           Record Payment
         </button>
       </div>

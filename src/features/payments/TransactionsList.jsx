@@ -149,7 +149,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
           className={`px-4 py-2 rounded-lg ${
             !selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })
               ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
+              : 'bg-violet-600 text-white hover:bg-violet-700'
           }`}
         >
           {title}
@@ -232,7 +232,7 @@ const TransactionView = ({ title, payload }) => {
           <button
             type="button"
             onClick={doShare}
-            className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            className="px-3 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
           >
             Share
           </button>
@@ -437,7 +437,7 @@ export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Receipt', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
         >
           Record Receipt
         </button>
@@ -514,7 +514,7 @@ export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Payment', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          className="px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
         >
           Record Payment
         </button>

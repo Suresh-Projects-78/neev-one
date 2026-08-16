@@ -363,7 +363,7 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
           <button type="button" onClick={exportPdf} className="px-3 py-2 border rounded-lg hover:bg-gray-50">
             Export PDF
           </button>
-          <button type="button" onClick={exportCsv} className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <button type="button" onClick={exportCsv} className="px-3 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700">
             Export Excel
           </button>
         </div>
