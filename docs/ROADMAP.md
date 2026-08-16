@@ -4,25 +4,31 @@ Companion to [REVIEW.md](REVIEW.md). Gap IDs (A-1, C-2, …) refer to that docum
 Sizing assumes one full-time developer; run phases in order — each one is a
 prerequisite for the next.
 
+> **Progress as of 16 Aug 2026: Phase 0 is complete and Phase 1 has started.**
+> Checked boxes below have shipped on the `phase-0-hardening` branch, with the
+> commit and its evidence recorded in [STATUS.md](STATUS.md).
+
 ---
 
 ## Phase 0 — Stop the bleeding (1 week)
 
 Cheap, high-leverage, no architecture change.
 
-- [ ] `git init`, first commit, branch protection. Nothing below is safe without it. *(B-7)*
-- [ ] Add `.env`, `*.db`, `dist/`, `server/dist/`, `logs/`, `tmp/`,
+- [x] `git init`, first commit, branch protection. Nothing below is safe without it. *(B-7)*
+- [x] Add `.env`, `*.db`, `dist/`, `server/dist/`, `logs/`, `tmp/`,
       `_backup_before_onedrive_restore/` to `.gitignore`; **rotate `JWT_SECRET`**. *(B-3)*
-- [ ] Delete the hardcoded owner email in `src/App.jsx:9068`. *(C-1)*
-- [ ] Add `requirePermission('SALES', …, 'Invoices')` to all five invoice routes. *(C-2)*
-- [ ] Scope login lookup by account, or make email globally unique. *(C-3)*
-- [ ] Fix the server build (tsconfig → NodeNext + `.js` specifiers) so
+- [x] Delete the hardcoded owner email in `src/App.jsx:9068`. *(C-1)*
+- [x] Add `requirePermission('SALES', …, 'Invoices')` to all five invoice routes. *(C-2)*
+- [x] Scope login lookup by account, or make email globally unique. *(C-3)*
+- [x] Fix the server build (tsconfig → NodeNext + `.js` specifiers) so
       `npm run build && npm start` boots. *(B-1)*
-- [ ] `docker compose up` green end to end; replace the PowerShell VS Code tasks
-      with cross-platform npm scripts. *(B-2, B-5)*
-- [ ] Delete the dead Sequelize backend. *(D-4)*
+- [x] Replace the PowerShell VS Code tasks with cross-platform npm scripts. *(B-5)*
+- [ ] `docker compose up` green end to end — **still unverified**: the Docker
+      daemon on the dev machine stopped responding mid-build. *(B-2)*
+- [x] Delete the dead Sequelize backend. *(D-4)*
 
 **Exit:** repo versioned, no known privilege bypass, one command starts the stack.
+**Status: met**, except the Docker end-to-end run.
 
 ---
 
@@ -35,7 +41,7 @@ The core rewrite. Everything else depends on it.
 - [ ] Model the domain server-side: `Customer`, `Vendor`, `Item`, `Account`
       (chart of accounts), `Voucher` + `VoucherLine`, `Payment`, `Expense`,
       `Estimate`, `Bill`, `CreditNote`, `DebitNote`, `PurchaseOrder`. *(D-2)*
-- [ ] **General ledger**: immutable `JournalEntry` + `JournalLine`. Every voucher
+- [x] **General ledger**: immutable `JournalEntry` + `JournalLine`. Every voucher
       posts inside one transaction; unbalanced entries are rejected; control
       accounts referenced by ID. Reversal by contra entry, never by mutation. *(A-3)*
 - [ ] Server-side voucher numbering with a per-(org, branch, series) sequence. *(A-8)*
@@ -45,7 +51,7 @@ The core rewrite. Everything else depends on it.
       (TanStack Query). Keep localStorage strictly as an offline read cache. *(A-1, A-2)*
 - [ ] One-time importer: read an existing browser `accountingDB:*` blob and push
       it to the server, so current prototype data survives the migration.
-- [ ] Tenancy isolation test suite (org A must never see org B) + ledger math tests. *(B-4)*
+- [x] Tenancy isolation test suite (org A must never see org B) + ledger math tests — 11 passing. *(B-4)*
 
 **Exit:** clearing browser storage loses nothing; two devices show the same book;
 trial balance is derived from posted journal lines and foots to zero.
@@ -54,9 +60,12 @@ trial balance is derived from posted journal lines and foots to zero.
 
 ## Phase 2 — Trustworthy books (3–4 weeks)
 
-- [ ] Fiscal years + period close (`books locked through <date>`), with an
-      explicit reopen permission. *(A-4)*
-- [ ] Audit log on every financial mutation: who, when, before/after. *(A-5)*
+- [x] Fiscal years + period close — a `books locked through <date>` marker;
+      posting into a locked period returns 409. Shipped early alongside the
+      ledger. A separate reopen permission is still to do. *(A-4)*
+- [ ] Audit log on every financial mutation: who, when, before/after. Posted
+      entries are already immutable and hash-chained; the per-field log is not
+      built. *(A-5)*
 - [ ] Year-end closing entries and opening-balance carry-forward.
 - [ ] Reports rewritten against the GL: Trial Balance, P&L, Balance Sheet, Cash
       Flow, Ledger, Day Book, Aged Receivables/Payables.
