@@ -506,14 +506,14 @@ export function SettingsBranches({ orgId }) {
                       <div className="text-xs ui-muted">{b.branchName || ''}</div>
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm ui-fg">{[b.city, b.state].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-sm ui-fg">{b.addressLine1 || '—'}</td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[b.city, b.state].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{b.addressLine1 || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${b.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {b.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-sm ui-fg font-mono">{b.gstin || '—'}</td>
+                  <td className="ui-col-id px-4 py-3 text-sm ui-fg font-mono">{b.gstin || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="relative inline-block text-left" data-branch-actions>
                       <button

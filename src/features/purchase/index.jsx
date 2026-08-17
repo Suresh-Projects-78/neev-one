@@ -5,7 +5,7 @@ import VendorPicker from '../../components/pickers/VendorPicker';
 import { dueDateFor } from '../../utils/paymentTerms';
 import ItemPicker from '../../components/pickers/ItemPicker';
 
-import RecordPaymentForm from '../payments/RecordPaymentForm';
+import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import { getVendorDisplayName } from '../../utils/contacts';
 import { formatMoney, round2 } from '../../utils/money';
@@ -361,7 +361,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             <tbody>
               {computed.lines.map((item, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -399,7 +399,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                       step="0.01"
                     />
                   </td>
-                  <td className="px-3 py-2 font-semibold">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
                       <Trash2 size={16} />
@@ -498,12 +498,12 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={po.id} className="ui-hover-sunken">
-                    <td className="px-6 py-4 font-medium">{po.number}</td>
-                    <td className="px-6 py-4">{po.vendorName}</td>
-                    <td className="px-6 py-4">{whLabel}</td>
-                    <td className="px-6 py-4">{po.date}</td>
-                    <td className="px-6 py-4 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
-                    <td className="px-6 py-4">
+                    <td className="ui-col-id px-6 py-4 font-medium">{po.number}</td>
+                    <td className="ui-col-entity px-6 py-4">{po.vendorName}</td>
+                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
+                    <td className="ui-col-date px-6 py-4">{po.date}</td>
+                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
+                    <td className="ui-col-meta px-6 py-4">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">{po.status || 'Draft'}</span>
                     </td>
                   </tr>
@@ -699,7 +699,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
             <tbody>
               {formData.items.map((item, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -730,7 +730,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
                       step="0.01"
                     />
                   </td>
-                  <td className="px-3 py-2 font-semibold">{formatMoney(item.amount || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.amount || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
                       <Trash2 size={16} />
@@ -844,16 +844,20 @@ export const BillsList = ({
   });
 
   const openRecordPayment = (bill) => {
+    // The server-posting disbursement form, same as the Payments screen, so a
+    // payment recorded from a bill row reaches the ledger like any other.
     openModal(
-      <RecordPaymentForm
+      <RecordDisbursementForm
         db={db}
         setDb={setDb}
         currentCompany={currentCompany}
-        voucherType="bill"
-        voucher={bill}
+        initialData={{
+          vendorId: bill?.vendorId,
+          amount: Math.max(0, Number(bill?.total ?? 0) - Number(bill?.paidAmount ?? 0)),
+        }}
         onClose={() => openModal(null)}
       />,
-      { title: `Record Payment ${bill?.number || ''}`.trim(), maxWidthClass: 'max-w-3xl' }
+      { title: `Record Payment ${bill?.number || ''}`.trim(), maxWidthClass: 'max-w-4xl' }
     );
   };
 
@@ -1052,14 +1056,14 @@ export const BillsList = ({
 
                 return (
                   <tr key={b.id} className="ui-hover-sunken">
-                    <td className="px-6 py-4 font-medium">{b.number}</td>
-                    <td className="px-6 py-4">{b.vendorName}</td>
-                    <td className="px-6 py-4">{whLabel}</td>
-                    <td className="px-6 py-4">{b.date}</td>
-                    <td className="px-6 py-4">{b.refNo || '-'}</td>
-                    <td className="px-6 py-4">{b.refDate || '-'}</td>
-                    <td className="px-6 py-4 font-semibold">{formatMoney(b.total || 0, currentCompany)}</td>
-                    <td className="px-6 py-4">
+                    <td className="ui-col-id px-6 py-4 font-medium">{b.number}</td>
+                    <td className="ui-col-entity px-6 py-4">{b.vendorName}</td>
+                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
+                    <td className="ui-col-date px-6 py-4">{b.date}</td>
+                    <td className="ui-col-id px-6 py-4">{b.refNo || '-'}</td>
+                    <td className="ui-col-date px-6 py-4">{b.refDate || '-'}</td>
+                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(b.total || 0, currentCompany)}</td>
+                    <td className="ui-col-meta px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusPillClass}`}>{derived}</span>
                     </td>
                     <td
@@ -1598,7 +1602,7 @@ export const DebitNoteForm = ({
             <tbody>
               {formData.items.map((item, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -1629,7 +1633,7 @@ export const DebitNoteForm = ({
                       step="0.01"
                     />
                   </td>
-                  <td className="px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
                       <Trash2 size={16} />
@@ -1743,13 +1747,13 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={dn.id} className="ui-hover-sunken">
-                    <td className="px-6 py-4 font-medium">{dn.number}</td>
-                    <td className="px-6 py-4">{dn.originalBillNumber}</td>
-                    <td className="px-6 py-4">{dn.vendorName}</td>
-                    <td className="px-6 py-4">{whLabel}</td>
-                    <td className="px-6 py-4">{dn.date}</td>
-                    <td className="px-6 py-4 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
-                    <td className="px-6 py-4">
+                    <td className="ui-col-id px-6 py-4 font-medium">{dn.number}</td>
+                    <td className="ui-col-meta px-6 py-4">{dn.originalBillNumber}</td>
+                    <td className="ui-col-entity px-6 py-4">{dn.vendorName}</td>
+                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
+                    <td className="ui-col-date px-6 py-4">{dn.date}</td>
+                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-meta px-6 py-4">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">{dn.status || 'Draft'}</span>
                     </td>
                   </tr>

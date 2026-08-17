@@ -523,8 +523,8 @@ export const SecuritySettings = () => {
                   <tbody>
                     {sessions.map((s) => (
                       <tr key={s.id}>
-                        <td className="max-w-md truncate">{s.userAgent || 'Unknown device'}</td>
-                        <td className="ui-mono text-xs">{s.ip || '—'}</td>
+                        <td className="ui-col-meta max-w-md truncate">{s.userAgent || 'Unknown device'}</td>
+                        <td className="ui-col-meta ui-mono text-xs">{s.ip || '—'}</td>
                         <td className="ui-col-date">{new Date(s.createdAt).toLocaleString()}</td>
                         <td className="ui-col-date">{new Date(s.lastSeenAt).toLocaleString()}</td>
                       </tr>
@@ -569,9 +569,9 @@ export const SecuritySettings = () => {
                         />
                         <span className="ui-mono text-xs ml-2">{e.eventType}</span>
                       </td>
-                      <td>{e.userName || e.userEmail || '—'}</td>
-                      <td className="ui-mono text-xs">{e.ip || '—'}</td>
-                      <td className="ui-muted text-xs">{e.detail || ''}</td>
+                      <td className="ui-col-meta">{e.userName || e.userEmail || '—'}</td>
+                      <td className="ui-col-meta ui-mono text-xs">{e.ip || '—'}</td>
+                      <td className="ui-col-meta ui-muted text-xs">{e.detail || ''}</td>
                     </tr>
                   ))}
                 </tbody>

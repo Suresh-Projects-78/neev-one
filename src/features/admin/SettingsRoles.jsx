@@ -633,9 +633,9 @@ export function SettingsRoles({ orgId }) {
                       {r.name}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm ui-fg">{r.description || '-'}</td>
-                  <td className="px-4 py-3 text-sm ui-fg">{Number(r.assignedUsersCount || 0)}</td>
-                  <td className="px-4 py-3">
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.description || '-'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{Number(r.assignedUsersCount || 0)}</td>
+                  <td className="ui-col-meta px-4 py-3">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                       Active
                     </span>

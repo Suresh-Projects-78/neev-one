@@ -287,11 +287,11 @@ const TransactionView = ({ title, payload }) => {
                 <tbody className="divide-y">
                   {payload.allocations.map((a, idx) => (
                     <tr key={idx}>
-                      <td className="px-3 py-2">
+                      <td className="ui-col-id px-3 py-2">
                         {a?.voucherType ? `${getVoucherLabel(a.voucherType)}: ` : ''}
                         {a?.documentNumber || a?.voucherId || '-'}
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold">
+                      <td className="ui-col-amount px-3 py-2 text-right font-semibold">
                         {formatMoney(Number(a?.amount ?? 0), payload?.currentCompany)}
                       </td>
                     </tr>
@@ -350,13 +350,13 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
                     if (typeof onView === 'function') onView(r);
                   }}
                 >
-                  <td className="px-6 py-4">{r.date || '-'}</td>
-                  <td className="px-6 py-4">{r.typeLabel}</td>
-                  <td className="px-6 py-4 font-medium">{r.documentNumber || '-'}</td>
-                  <td className="px-6 py-4">{r.partyName || '-'}</td>
-                  <td className="px-6 py-4">{r.mode || '-'}</td>
-                  <td className="px-6 py-4">{r.reference || '-'}</td>
-                  <td className="px-6 py-4 text-right font-semibold">{formatMoney(r.amount || 0, currentCompany)}</td>
+                  <td className="ui-col-date px-6 py-4">{r.date || '-'}</td>
+                  <td className="ui-col-meta px-6 py-4">{r.typeLabel}</td>
+                  <td className="ui-col-id px-6 py-4 font-medium">{r.documentNumber || '-'}</td>
+                  <td className="ui-col-entity px-6 py-4">{r.partyName || '-'}</td>
+                  <td className="ui-col-meta px-6 py-4">{r.mode || '-'}</td>
+                  <td className="ui-col-meta px-6 py-4">{r.reference || '-'}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(r.amount || 0, currentCompany)}</td>
                 </tr>
               ))
             )}

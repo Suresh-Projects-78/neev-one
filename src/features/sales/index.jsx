@@ -10,7 +10,7 @@ import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '..
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { getNextNumericId } from '../../utils/ids';
 import { formatMoney } from '../../utils/money';
-import RecordPaymentForm from '../payments/RecordPaymentForm';
+import RecordReceiptForm from '../payments/RecordReceiptForm';
 import InvoicePreview from './InvoicePreview';
 import {
   canDetermineSupplyType,
@@ -302,16 +302,21 @@ export const InvoicesList = ({
   };
 
   const openRecordReceipt = (invoice) => {
+    // The same form the Receipts screen uses, so money recorded from an
+    // invoice row reaches the general ledger too. The old quick form wrote
+    // only to the local store: two entrances, and only one of them posted.
     openModal(
-      <RecordPaymentForm
+      <RecordReceiptForm
         db={db}
         setDb={setDb}
         currentCompany={currentCompany}
-        voucherType="invoice"
-        voucher={invoice}
+        initialData={{
+          customerId: invoice?.customerId,
+          amount: Math.max(0, Number(invoice?.total ?? 0) - Number(invoice?.paidAmount ?? 0)),
+        }}
         onClose={() => openModal(null)}
       />,
-      { title: `Record Receipt ${invoice?.number || ''}`.trim(), maxWidthClass: 'max-w-3xl' }
+      { title: `Record Receipt ${invoice?.number || ''}`.trim(), maxWidthClass: 'max-w-4xl' }
     );
   };
 
@@ -1081,12 +1086,12 @@ export const EstimatesList = ({
                     openEditEstimate(est);
                   }}
                 >
-                  <td className="px-6 py-4 font-medium">{est.number}</td>
-                  <td className="px-6 py-4">{est.customerName || '-'}</td>
-                  <td className="px-6 py-4">{whLabel}</td>
-                  <td className="px-6 py-4">{est.date || '-'}</td>
-                  <td className="px-6 py-4">{est.dueDate || '-'}</td>
-                  <td className="px-6 py-4 font-semibold">{formatMoney(est.total || 0, currentCompany)}</td>
+                  <td className="ui-col-id px-6 py-4 font-medium">{est.number}</td>
+                  <td className="ui-col-entity px-6 py-4">{est.customerName || '-'}</td>
+                  <td className="ui-col-meta px-6 py-4">{whLabel}</td>
+                  <td className="ui-col-date px-6 py-4">{est.date || '-'}</td>
+                  <td className="ui-col-date px-6 py-4">{est.dueDate || '-'}</td>
+                  <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(est.total || 0, currentCompany)}</td>
                   <td
                     className="px-6 py-4 relative"
                     onMouseDown={(e) => e.stopPropagation()}
@@ -1276,12 +1281,12 @@ export const CreditNotesList = ({
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={cn.id} className="ui-hover-sunken">
-                    <td className="px-6 py-4 font-medium">{cn.number}</td>
-                    <td className="px-6 py-4">{cn.originalInvoiceNumber || '-'}</td>
-                    <td className="px-6 py-4">{cn.customerName || '-'}</td>
-                    <td className="px-6 py-4">{whLabel}</td>
-                    <td className="px-6 py-4">{cn.date || '-'}</td>
-                    <td className="px-6 py-4 font-semibold">{formatMoney(cn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-id px-6 py-4 font-medium">{cn.number}</td>
+                    <td className="ui-col-meta px-6 py-4">{cn.originalInvoiceNumber || '-'}</td>
+                    <td className="ui-col-entity px-6 py-4">{cn.customerName || '-'}</td>
+                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
+                    <td className="ui-col-date px-6 py-4">{cn.date || '-'}</td>
+                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(cn.total || 0, currentCompany)}</td>
                   </tr>
                 );
               })
@@ -1851,7 +1856,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <tbody>
               {formData.items.map((item, idx) => (
                 <tr key={idx} className="border-t" onKeyDown={(e) => handleRowKeyDown(e, idx)}>
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -1889,7 +1894,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       step="0.01"
                     />
                   </td>
-                  <td className="px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
                       <Trash2 size={16} />
@@ -2222,7 +2227,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             <tbody>
               {formData.items.map((item, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -2259,7 +2264,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                       step="0.01"
                     />
                   </td>
-                  <td className="px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
                       <Trash2 size={16} />
@@ -2669,7 +2674,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
             <tbody>
               {formData.items.map((item, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -2706,7 +2711,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       step="0.01"
                     />
                   </td>
-                  <td className="px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
                       <Trash2 size={16} />

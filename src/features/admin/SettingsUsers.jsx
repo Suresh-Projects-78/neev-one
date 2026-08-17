@@ -677,9 +677,9 @@ export function SettingsUsers({ orgId }) {
                       {u.fullName || u.name}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm ui-fg">{u.email}</td>
-                  <td className="px-4 py-3 text-sm ui-fg">{getRoleName(u.roleId)}</td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="ui-col-entity px-4 py-3 text-sm ui-fg">{u.email}</td>
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{getRoleName(u.roleId)}</td>
+                  <td className="ui-col-meta px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${u.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {u.isActive !== false ? 'Active' : 'Inactive'}
                     </span>

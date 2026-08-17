@@ -634,7 +634,7 @@ export const StockTransferEditor = ({
             <tbody>
               {safeArray(form.lines).map((l, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -778,11 +778,11 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
             ) : (
               lines.map((l, idx) => (
                 <tr key={idx} className="ui-hover-sunken">
-                  <td className="px-4 py-3">
+                  <td className="ui-col-entity px-4 py-3">
                     <div className="font-medium">{l.name}</div>
                     <div className="text-xs ui-muted">{l.itemId}</div>
                   </td>
-                  <td className="px-4 py-3 text-right font-semibold">
+                  <td className="ui-col-meta px-4 py-3 text-right font-semibold">
                     {l.qty}{l.unit ? ` ${l.unit}` : ''}
                   </td>
                 </tr>
@@ -1086,10 +1086,10 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                         openEdit(t);
                       }}
                     >
-                      <td className="px-6 py-4 font-medium">{t?.number || '-'}</td>
-                      <td className="px-6 py-4">{fromLabel || '-'}</td>
-                      <td className="px-6 py-4">{toLabel || '-'}</td>
-                      <td className="px-6 py-4">{t?.date || '-'}</td>
+                      <td className="ui-col-meta px-6 py-4 font-medium">{t?.number || '-'}</td>
+                      <td className="ui-col-meta px-6 py-4">{fromLabel || '-'}</td>
+                      <td className="ui-col-meta px-6 py-4">{toLabel || '-'}</td>
+                      <td className="ui-col-date px-6 py-4">{t?.date || '-'}</td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(status)}`}>{status}</span>
                       </td>

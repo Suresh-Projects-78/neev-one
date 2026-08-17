@@ -498,7 +498,7 @@ export const EmailSettings = () => {
                           </div>
                         ) : null}
                       </td>
-                      <td className="ui-mono text-xs">{m.templateKey}</td>
+                      <td className="ui-col-meta ui-mono text-xs">{m.templateKey}</td>
                       <td>
                         <StatusPill status={m.status === 'SENT' ? 'Sent' : m.status === 'FAILED' ? 'Failed' : m.status} />
                       </td>

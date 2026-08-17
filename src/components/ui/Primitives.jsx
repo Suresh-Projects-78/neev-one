@@ -87,7 +87,7 @@ export const SkeletonRows = ({ rows = 5, cols = 4 }) => (
     {Array.from({ length: rows }).map((_, r) => (
       <tr key={r} aria-hidden="true">
         {Array.from({ length: cols }).map((__, c) => (
-          <td key={c} className="px-3 py-2">
+          <td key={c} className="ui-col-meta px-3 py-2">
             <div className="ui-skel ui-skel-text" style={{ width: c === 0 ? '60%' : '80%' }} />
           </td>
         ))}

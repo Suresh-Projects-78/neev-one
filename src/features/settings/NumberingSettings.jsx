@@ -309,7 +309,7 @@ export const NumberingSettings = () => {
                             aria-label={`Allow typing a number for ${s.name}`}
                           />
                         </td>
-                        <td className="ui-mono text-xs">{preview(edited)}</td>
+                        <td className="ui-col-meta ui-mono text-xs">{preview(edited)}</td>
                         <td>
                           <button
                             type="button"

@@ -54,15 +54,15 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
             ) : (
               ledger.rows.map((r, idx) => (
                 <tr key={idx} className="ui-hover-sunken">
-                  <td className="px-4 py-3">{r.date || '-'}</td>
-                  <td className="px-4 py-3">
+                  <td className="ui-col-date px-4 py-3">{r.date || '-'}</td>
+                  <td className="ui-col-id px-4 py-3">
                     <div>{String(r.voucherType || '')}</div>
                     {r.voucherNote ? <div className="text-xs ui-muted">{String(r.voucherNote)}</div> : null}
                   </td>
-                  <td className="px-4 py-3">{r.voucherNumber || '-'}</td>
-                  <td className="px-4 py-3 text-right">{r.qtyIn ? r.qtyIn : '-'}</td>
-                  <td className="px-4 py-3 text-right">{r.qtyOut ? r.qtyOut : '-'}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{r.balanceQty}</td>
+                  <td className="ui-col-meta px-4 py-3">{r.voucherNumber || '-'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-right">{r.qtyIn ? r.qtyIn : '-'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-right">{r.qtyOut ? r.qtyOut : '-'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-right font-semibold">{r.balanceQty}</td>
                 </tr>
               ))
             )}
@@ -285,15 +285,15 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
                 .map(
                   (r) => `
                     <tr>
-                      <td>${String(r.name).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
-                      <td>${String(r.code).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
-                      <td>${String(r.unit).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
-                      <td class="num">${moneyOrNum(r.opening)}</td>
-                      <td class="num">${moneyOrNum(r.purchases)}</td>
-                      <td class="num">${moneyOrNum(r.sales)}</td>
-                      <td class="num">${moneyOrNum(r.dn)}</td>
-                      <td class="num">${moneyOrNum(r.cn)}</td>
-                      <td class="num">${moneyOrNum(r.closing)}</td>
+                      <td className="ui-col-meta">${String(r.name).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
+                      <td className="ui-col-meta">${String(r.code).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
+                      <td className="ui-col-meta">${String(r.unit).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
+                      <td className="ui-col-meta" class="num">${moneyOrNum(r.opening)}</td>
+                      <td className="ui-col-meta" class="num">${moneyOrNum(r.purchases)}</td>
+                      <td className="ui-col-meta" class="num">${moneyOrNum(r.sales)}</td>
+                      <td className="ui-col-meta" class="num">${moneyOrNum(r.dn)}</td>
+                      <td className="ui-col-meta" class="num">${moneyOrNum(r.cn)}</td>
+                      <td className="ui-col-meta" class="num">${moneyOrNum(r.closing)}</td>
                     </tr>
                   `
                 )
@@ -436,16 +436,16 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
                   onClick={() => openLedger(it)}
                   title="Click to view ledger"
                 >
-                  <td className="px-6 py-4">
+                  <td className="ui-col-entity px-6 py-4">
                     <div className="font-medium">{it.name}</div>
                     <div className="text-xs ui-muted">{it.code || ''}</div>
                   </td>
-                  <td className="px-6 py-4 text-right">{fmt(opening)}</td>
-                  <td className="px-6 py-4 text-right">{fmt(purchases)}</td>
-                  <td className="px-6 py-4 text-right">{fmt(sales)}</td>
-                  <td className="px-6 py-4 text-right">{fmt(dn)}</td>
-                  <td className="px-6 py-4 text-right">{fmt(cn)}</td>
-                  <td className="px-6 py-4 text-right font-semibold">{fmt(closing)}</td>
+                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(opening)}</td>
+                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(purchases)}</td>
+                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(sales)}</td>
+                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(dn)}</td>
+                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(cn)}</td>
+                  <td className="ui-col-meta px-6 py-4 text-right font-semibold">{fmt(closing)}</td>
                 </tr>
               );
             })}

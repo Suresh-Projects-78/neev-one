@@ -215,9 +215,9 @@ export default function CurrencySettings() {
                 ) : (
                   rates.map((r) => (
                     <tr key={r.id} className="border-t">
-                      <td className="px-4 py-2 font-medium">{r.code}</td>
-                      <td className="px-4 py-2">{r.date}</td>
-                      <td className="px-4 py-2 text-right tabular-nums">{r.rate}</td>
+                      <td className="ui-col-id px-4 py-2 font-medium">{r.code}</td>
+                      <td className="ui-col-date px-4 py-2">{r.date}</td>
+                      <td className="ui-col-meta px-4 py-2 text-right tabular-nums">{r.rate}</td>
                     </tr>
                   ))
                 )}

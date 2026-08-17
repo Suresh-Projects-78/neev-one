@@ -922,7 +922,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                   <td className="px-6 py-4 ui-col-meta">{expense.dueDate || '-'}</td>
                   <td className="px-6 py-4 ui-col-meta truncate" title={expense.description || ''}>{expense.description}</td>
                   <td className="px-6 py-4 ui-col-meta">{expense.category}</td>
-                  <td className="px-6 py-4 ui-col-meta">{expense.refNo || '-'}</td>
+                  <td className="px-6 py-4 ui-col-id">{expense.refNo || '-'}</td>
                   <td className="px-6 py-4 ui-col-meta">{expense.refDate || '-'}</td>
                   <td className="px-6 py-4 ui-col-amount">{formatMoney(expense.total, currentCompany)}</td>
                   <td className="px-6 py-4 ui-col-meta">
@@ -1336,7 +1336,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
                 <td className="px-6 py-4 ui-col-entity">{item.code}</td>
                 <td className="px-6 py-4 ui-col-meta">{item.name}</td>
                 <td className="px-6 py-4 ui-col-meta">{item.type}</td>
-                <td className="px-6 py-4 ui-col-meta">{item.hsnSac || '-'}</td>
+                <td className="px-6 py-4 ui-col-id">{item.hsnSac || '-'}</td>
                 <td className="px-6 py-4 ui-col-meta">{Number.isFinite(Number(item.gstRate)) ? Number(item.gstRate) : 0}</td>
                 <td className="px-6 py-4 ui-col-meta">{formatMoney(item.salePrice || 0, currentCompany)}</td>
                 <td className="px-6 py-4 ui-col-meta">
@@ -2102,9 +2102,9 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     return (
                       <tr key={a.id} className="ui-hover-sunken">
                         <td className="px-6 py-4 ui-col-entity">{a.name}</td>
-                        <td className="px-6 py-4 text-sm ui-fg">{a._groupName || '-'}</td>
-                        <td className="px-6 py-4 text-sm ui-fg">{a._parent || '-'}</td>
-                        <td className="px-6 py-4 text-right font-semibold">{formatMoney(a.balance || 0, currentCompany)}</td>
+                        <td className="ui-col-meta px-6 py-4 text-sm ui-fg">{a._groupName || '-'}</td>
+                        <td className="ui-col-meta px-6 py-4 text-sm ui-fg">{a._parent || '-'}</td>
+                        <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(a.balance || 0, currentCompany)}</td>
                         <td
                           className="px-6 py-4 text-right"
                           onMouseDown={(e) => e.stopPropagation()}
@@ -2174,8 +2174,8 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     return (
                       <tr key={g.id} className="ui-hover-sunken">
                         <td className="px-6 py-4 ui-col-entity">{g.name}</td>
-                        <td className="px-6 py-4 text-sm ui-fg">{g._parent || '-'}</td>
-                        <td className="px-6 py-4 text-sm ui-fg">{String(g.groupCategory || 'General')}</td>
+                        <td className="ui-col-meta px-6 py-4 text-sm ui-fg">{g._parent || '-'}</td>
+                        <td className="ui-col-meta px-6 py-4 text-sm ui-fg">{String(g.groupCategory || 'General')}</td>
                         <td
                           className="px-6 py-4 text-right"
                           onMouseDown={(e) => e.stopPropagation()}
@@ -2864,8 +2864,8 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                     <div className="font-medium">{jv.narration || '-'}</div>
                     <div className="text-xs ui-muted">{(jv.lines || []).length} lines</div>
                   </td>
-                  <td className="px-6 py-4 text-right font-semibold">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
-                  <td className="px-6 py-4 text-right font-semibold">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
                   <td className="px-6 py-4 ui-col-meta">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
@@ -3144,7 +3144,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
             <tbody>
               {formData.lines.map((line, idx) => (
                 <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
+                  <td className="ui-col-meta px-3 py-2">
                     <PopupSelect
                       label={null}
                       value={line.accountId}
@@ -3300,20 +3300,20 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
                     {account.name}
                   </button>
                 </td>
-                <td className="px-6 py-4 text-sm ui-muted">{account._group || '-'}</td>
-                <td className="px-6 py-4 text-right">
+                <td className="ui-col-meta px-6 py-4 text-sm ui-muted">{account._group || '-'}</td>
+                <td className="ui-col-amount px-6 py-4 text-right">
                   {account._debit > 0 ? formatMoney(account._debit, currentCompany) : '-'}
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="ui-col-amount px-6 py-4 text-right">
                   {account._credit > 0 ? formatMoney(account._credit, currentCompany) : '-'}
                 </td>
               </tr>
             ))}
             <tr className="ui-sunken font-bold border-t-2">
               <td className="px-6 py-4 ui-col-meta">TOTAL</td>
-              <td className="px-6 py-4" />
+              <td className="ui-col-amount px-6 py-4" />
               <td className="px-6 py-4 text-right">{formatMoney(totalDebit, currentCompany)}</td>
-              <td className="px-6 py-4 text-right">{formatMoney(totalCredit, currentCompany)}</td>
+              <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(totalCredit, currentCompany)}</td>
             </tr>
           </tbody>
         </table>
@@ -4377,28 +4377,28 @@ const LedgerView = ({
               {visibleColumns.map((c, idx) => {
                 if (c.key === 'debit') {
                   return (
-                    <td key={c.key} className="px-4 py-3 text-right">
+                    <td key={c.key} className="ui-col-amount px-4 py-3 text-right">
                       {formatMoney(totalDebit, currentCompany)}
                     </td>
                   );
                 }
                 if (c.key === 'credit') {
                   return (
-                    <td key={c.key} className="px-4 py-3 text-right">
+                    <td key={c.key} className="ui-col-amount px-4 py-3 text-right">
                       {formatMoney(totalCredit, currentCompany)}
                     </td>
                   );
                 }
                 if (c.key === 'runningBalance') {
                   return (
-                    <td key={c.key} className="px-4 py-3 text-right">
+                    <td key={c.key} className="ui-col-amount px-4 py-3 text-right">
                       {formatMoney(Number(account?.balance ?? 0), currentCompany)}
                     </td>
                   );
                 }
                 if (idx === 0) {
                   return (
-                    <td key={c.key} className="px-4 py-3">
+                    <td key={c.key} className="ui-col-meta px-4 py-3">
                       TOTAL
                     </td>
                   );
@@ -4907,15 +4907,15 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
         <tbody className="divide-y">
           <tr>
             <td className="px-3 py-2">Sample Item A</td>
-            <td className="px-3 py-2 text-right">1</td>
-            <td className="px-3 py-2 text-right">₹1,000</td>
-            <td className="px-3 py-2 text-right font-medium">₹1,000</td>
+            <td className="ui-col-meta px-3 py-2 text-right">1</td>
+            <td className="ui-col-meta px-3 py-2 text-right">₹1,000</td>
+            <td className="ui-col-meta px-3 py-2 text-right font-medium">₹1,000</td>
           </tr>
           <tr>
-            <td className="px-3 py-2">Sample Item B</td>
-            <td className="px-3 py-2 text-right">2</td>
-            <td className="px-3 py-2 text-right">₹500</td>
-            <td className="px-3 py-2 text-right font-medium">₹1,000</td>
+            <td className="ui-col-meta px-3 py-2">Sample Item B</td>
+            <td className="ui-col-meta px-3 py-2 text-right">2</td>
+            <td className="ui-col-meta px-3 py-2 text-right">₹500</td>
+            <td className="ui-col-meta px-3 py-2 text-right font-medium">₹1,000</td>
           </tr>
         </tbody>
       </table>
@@ -5091,15 +5091,15 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-1 border-r border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r border-gray-900">Sample Item A</td>
-                  <td className="p-1 border-r border-gray-900 text-center">8302</td>
-                  <td className="p-1 border-r border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r border-gray-900 text-right">₹1,000</td>
-                  <td className="p-1 border-r border-gray-900 text-right">₹1,000</td>
-                  <td className="p-1 border-r border-gray-900 text-center">18</td>
-                  <td className="p-1 border-r border-gray-900 text-right">₹180</td>
-                  <td className="p-1 text-right">₹1,180</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900">Sample Item A</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">8302</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-right">₹1,000</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-right">₹1,000</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">18</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-right">₹180</td>
+                  <td className="ui-col-meta p-1 text-right">₹1,180</td>
                 </tr>
               </tbody>
             </table>
@@ -5179,12 +5179,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-1 border-r border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r border-gray-900">Sample Item A</td>
-                  <td className="p-1 border-r border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r border-gray-900 text-right">₹1,000</td>
-                  <td className="p-1 border-r border-gray-900 text-center">18</td>
-                  <td className="p-1 text-right">₹1,180</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900">Sample Item A</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-right">₹1,000</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">18</td>
+                  <td className="ui-col-meta p-1 text-right">₹1,180</td>
                 </tr>
               </tbody>
             </table>
@@ -5270,13 +5270,13 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-1 border-r border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r border-gray-900">Sample Item A</td>
-                  <td className="p-1 border-r border-gray-900 text-center">8302</td>
-                  <td className="p-1 border-r border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r border-gray-900 text-right">₹1,000</td>
-                  <td className="p-1 border-r border-gray-900 text-center">18</td>
-                  <td className="p-1 text-right">₹1,180</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900">Sample Item A</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">8302</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-right">₹1,000</td>
+                  <td className="ui-col-meta p-1 border-r border-gray-900 text-center">18</td>
+                  <td className="ui-col-meta p-1 text-right">₹1,180</td>
                 </tr>
               </tbody>
             </table>
@@ -5357,13 +5357,13 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               </thead>
               <tbody>
                 <tr>
-                  <td className="p-1 border-r-2 border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r-2 border-gray-900">Sample Item A</td>
-                  <td className="p-1 border-r-2 border-gray-900 text-center">8302</td>
-                  <td className="p-1 border-r-2 border-gray-900 text-center">1</td>
-                  <td className="p-1 border-r-2 border-gray-900 text-right">₹1,000</td>
-                  <td className="p-1 border-r-2 border-gray-900 text-center">18</td>
-                  <td className="p-1 text-right">₹1,180</td>
+                  <td className="ui-col-meta p-1 border-r-2 border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r-2 border-gray-900">Sample Item A</td>
+                  <td className="ui-col-meta p-1 border-r-2 border-gray-900 text-center">8302</td>
+                  <td className="ui-col-meta p-1 border-r-2 border-gray-900 text-center">1</td>
+                  <td className="ui-col-meta p-1 border-r-2 border-gray-900 text-right">₹1,000</td>
+                  <td className="ui-col-meta p-1 border-r-2 border-gray-900 text-center">18</td>
+                  <td className="ui-col-meta p-1 text-right">₹1,180</td>
                 </tr>
               </tbody>
             </table>
@@ -5456,15 +5456,15 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
                 </thead>
                 <tbody className="divide-y">
                   <tr>
-                    <td className="px-3 py-2">1</td>
-                    <td className="px-3 py-2">Sample Item A</td>
-                    <td className="px-3 py-2">8302</td>
-                    <td className="px-3 py-2 text-right">1</td>
-                    <td className="px-3 py-2 text-right">₹1,000</td>
-                    <td className="px-3 py-2 text-right">₹1,000</td>
-                    <td className="px-3 py-2 text-right">18</td>
-                    <td className="px-3 py-2 text-right">₹180</td>
-                    <td className="px-3 py-2 text-right font-semibold">₹1,180</td>
+                    <td className="ui-col-meta px-3 py-2">1</td>
+                    <td className="ui-col-meta px-3 py-2">Sample Item A</td>
+                    <td className="ui-col-meta px-3 py-2">8302</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">1</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">₹1,000</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">₹1,000</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">18</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">₹180</td>
+                    <td className="ui-col-meta px-3 py-2 text-right font-semibold">₹1,180</td>
                   </tr>
                 </tbody>
               </table>
@@ -5548,16 +5548,16 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
                 </thead>
                 <tbody className="divide-y">
                   <tr>
-                    <td className="px-2 py-2 border-r-2 border-gray-900">1</td>
-                    <td className="px-2 py-2 border-r-2 border-gray-900">Sample Item A</td>
-                    <td className="px-2 py-2 border-r-2 border-gray-900">8302</td>
-                    <td className="px-2 py-2 text-right border-r-2 border-gray-900">1</td>
-                    <td className="px-2 py-2 text-right border-r-2 border-gray-900">₹1,000</td>
-                    <td className="px-2 py-2 text-right border-r-2 border-gray-900">₹1,000</td>
-                    <td className="px-2 py-2 text-right border-r-2 border-gray-900">18</td>
-                    <td className="px-2 py-2 text-right border-r-2 border-gray-900">₹90</td>
-                    <td className="px-2 py-2 text-right border-r-2 border-gray-900">₹90</td>
-                    <td className="px-2 py-2 text-right font-semibold">₹1,180</td>
+                    <td className="ui-col-meta px-2 py-2 border-r-2 border-gray-900">1</td>
+                    <td className="ui-col-meta px-2 py-2 border-r-2 border-gray-900">Sample Item A</td>
+                    <td className="ui-col-meta px-2 py-2 border-r-2 border-gray-900">8302</td>
+                    <td className="ui-col-meta px-2 py-2 text-right border-r-2 border-gray-900">1</td>
+                    <td className="ui-col-meta px-2 py-2 text-right border-r-2 border-gray-900">₹1,000</td>
+                    <td className="ui-col-meta px-2 py-2 text-right border-r-2 border-gray-900">₹1,000</td>
+                    <td className="ui-col-meta px-2 py-2 text-right border-r-2 border-gray-900">18</td>
+                    <td className="ui-col-meta px-2 py-2 text-right border-r-2 border-gray-900">₹90</td>
+                    <td className="ui-col-meta px-2 py-2 text-right border-r-2 border-gray-900">₹90</td>
+                    <td className="ui-col-meta px-2 py-2 text-right font-semibold">₹1,180</td>
                   </tr>
                 </tbody>
               </table>
@@ -5638,12 +5638,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
                 </thead>
                 <tbody className="divide-y">
                   <tr>
-                    <td className="px-3 py-2">1</td>
-                    <td className="px-3 py-2">Sample Item A</td>
-                    <td className="px-3 py-2 text-right">1</td>
-                    <td className="px-3 py-2 text-right">₹1,000</td>
-                    <td className="px-3 py-2 text-right">18</td>
-                    <td className="px-3 py-2 text-right font-semibold">₹1,180</td>
+                    <td className="ui-col-meta px-3 py-2">1</td>
+                    <td className="ui-col-meta px-3 py-2">Sample Item A</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">1</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">₹1,000</td>
+                    <td className="ui-col-meta px-3 py-2 text-right">18</td>
+                    <td className="ui-col-meta px-3 py-2 text-right font-semibold">₹1,180</td>
                   </tr>
                 </tbody>
               </table>
@@ -7729,9 +7729,9 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                               className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedUserId(String(u.userId))}
                             >
-                              <td className="px-4 py-3 text-sm font-medium ui-fg">{u.name || '-'}</td>
-                              <td className="px-4 py-3 text-sm ui-fg">{u.email || '-'}</td>
-                              <td className="px-4 py-3 text-sm ui-fg">{u.roleLabel || u.roleKey || '-'}</td>
+                              <td className="ui-col-entity px-4 py-3 text-sm font-medium ui-fg">{u.name || '-'}</td>
+                              <td className="ui-col-entity px-4 py-3 text-sm ui-fg">{u.email || '-'}</td>
+                              <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{u.roleLabel || u.roleKey || '-'}</td>
                             </tr>
                           );
                         })
@@ -7967,8 +7967,8 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                               className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedRoleId(String(r.id))}
                             >
-                              <td className="px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
-                              <td className="px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
+                              <td className="ui-col-meta px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
+                              <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                             </tr>
                           );
                         })
@@ -8138,9 +8138,9 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         const active = String(r.id) === String(selectedRoleId);
                         return (
                           <tr key={String(r.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedRoleId(String(r.id))}>
-                            <td className="px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
-                            <td className="px-4 py-3 text-sm ui-muted">{r.description || '-'}</td>
-                            <td className="px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{r.description || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                           </tr>
                         );
                       })
@@ -8246,10 +8246,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         const active = String(b.id) === String(selectedBranchId);
                         return (
                           <tr key={String(b.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedBranchId(String(b.id))}>
-                            <td className="px-4 py-3 text-sm font-medium ui-fg">{b.name}</td>
-                            <td className="px-4 py-3 text-sm ui-fg">{b.code || '-'}</td>
-                            <td className="px-4 py-3 text-sm ui-muted">{b.address || '-'}</td>
-                            <td className="px-4 py-3 text-sm">{b.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
+                            <td className="ui-col-entity px-4 py-3 text-sm font-medium ui-fg">{b.name}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{b.code || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{b.address || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm">{b.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
                           </tr>
                         );
                       })
@@ -8387,11 +8387,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         const active = String(w.id) === String(selectedWarehouseId);
                         return (
                           <tr key={String(w.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedWarehouseId(String(w.id))}>
-                            <td className="px-4 py-3 text-sm font-medium ui-fg">{w.name}</td>
-                            <td className="px-4 py-3 text-sm ui-fg">{w.code || '-'}</td>
-                            <td className="px-4 py-3 text-sm ui-muted">{w.location || '-'}</td>
-                            <td className="px-4 py-3 text-sm ui-muted">{w.branchName || '-'}</td>
-                            <td className="px-4 py-3 text-sm">{w.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
+                            <td className="ui-col-entity px-4 py-3 text-sm font-medium ui-fg">{w.name}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{w.code || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{w.location || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{w.branchName || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm">{w.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
                           </tr>
                         );
                       })
@@ -8839,12 +8839,12 @@ const Gstr1Report = ({ db, currentCompany }) => {
               rateRows.map((r) => (
                 <tr key={`${r.taxType}-${r.gstRate}`} className="ui-hover-sunken">
                   <td className="px-6 py-4 ui-col-meta">{r.taxType}</td>
-                  <td className="px-6 py-4 text-right">{Number(r.gstRate || 0).toFixed(2)}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.taxableAmount || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.cgstAmount || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.sgstAmount || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.igstAmount || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right font-semibold">{formatMoney(Number(r.gstAmount || 0), currentCompany)}</td>
+                  <td className="ui-col-meta px-6 py-4 text-right">{Number(r.gstRate || 0).toFixed(2)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.taxableAmount || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.cgstAmount || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.sgstAmount || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.igstAmount || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(Number(r.gstAmount || 0), currentCompany)}</td>
                 </tr>
               ))
             )}
@@ -8888,11 +8888,11 @@ const Gstr1Report = ({ db, currentCompany }) => {
                   <td className="px-6 py-4 ui-col-meta">{r.partyName}</td>
                   <td className="px-6 py-4 ui-col-meta">{r.partyGstin}</td>
                   <td className="px-6 py-4 ui-col-meta">{r.placeOfSupply}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.taxable || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.cgst || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.sgst || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right">{formatMoney(Number(r.igst || 0), currentCompany)}</td>
-                  <td className="px-6 py-4 text-right font-semibold">{formatMoney(Number(r.total || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.taxable || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.cgst || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.sgst || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right">{formatMoney(Number(r.igst || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(Number(r.total || 0), currentCompany)}</td>
                 </tr>
               ))
             )}

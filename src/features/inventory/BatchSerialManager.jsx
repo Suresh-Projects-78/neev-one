@@ -285,11 +285,11 @@ export default function BatchSerialManager() {
                     ) : (
                       batches.map((b) => (
                         <tr key={b.id} className="border-t">
-                          <td className="px-4 py-2 font-medium">{b.batchNo}</td>
-                          <td className="px-4 py-2">
+                          <td className="ui-col-id px-4 py-2 font-medium">{b.batchNo}</td>
+                          <td className="ui-col-date px-4 py-2">
                             <ExpiryCell expiryDate={b.expiryDate} />
                           </td>
-                          <td className="px-4 py-2 text-right tabular-nums">{b.qtyOnHand}</td>
+                          <td className="ui-col-amount px-4 py-2 text-right tabular-nums">{b.qtyOnHand}</td>
                           <td className="px-4 py-2 text-right">
                             <button
                               type="button"
@@ -371,9 +371,9 @@ export default function BatchSerialManager() {
                     ) : (
                       serials.map((s) => (
                         <tr key={s.id} className="border-t">
-                          <td className="px-4 py-2 font-mono">{s.serialNo}</td>
-                          <td className="px-4 py-2">{s.status}</td>
-                          <td className="px-4 py-2 ui-muted">
+                          <td className="ui-col-id px-4 py-2 font-mono">{s.serialNo}</td>
+                          <td className="ui-col-meta px-4 py-2">{s.status}</td>
+                          <td className="ui-col-meta px-4 py-2 ui-muted">
                             {s.issuedDocType ? `${s.issuedDocType} ${s.issuedDocId || ''}` : '—'}
                           </td>
                         </tr>

@@ -249,8 +249,8 @@ export default function ImportCenter() {
                 <tbody>
                   {issues.slice(0, 200).map((i) => (
                     <tr key={i.rowNumber} className="border-t">
-                      <td className="px-3 py-2 tabular-nums">{i.rowNumber}</td>
-                      <td className="px-3 py-2">{i.error}</td>
+                      <td className="ui-col-meta px-3 py-2 tabular-nums">{i.rowNumber}</td>
+                      <td className="ui-col-meta px-3 py-2">{i.error}</td>
                     </tr>
                   ))}
                 </tbody>

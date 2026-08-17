@@ -1218,9 +1218,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                                 onChange={(e) => toggleKnockoffRow(key, e.target.checked, suggested)}
                               />
                             </td>
-                            <td className="px-4 py-3 text-sm">{inv.number || `INV-${inv.id}`}</td>
-                            <td className="px-4 py-3 text-sm">{inv.date}</td>
-                            <td className="px-4 py-3 text-sm text-right">{formatMoney(balance, currentCompany)}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm">{inv.number || `INV-${inv.id}`}</td>
+                            <td className="ui-col-date px-4 py-3 text-sm">{inv.date}</td>
+                            <td className="ui-col-amount px-4 py-3 text-sm text-right">{formatMoney(balance, currentCompany)}</td>
                             <td className="px-4 py-3 text-sm text-right">
                               <input
                                 type="number"
@@ -1300,9 +1300,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                                 onChange={(e) => toggleKnockoffRow(key, e.target.checked, suggested)}
                               />
                             </td>
-                            <td className="px-4 py-3 text-sm">{d.number || `${d.voucherType}-${d.id}`}</td>
-                            <td className="px-4 py-3 text-sm">{d.date}</td>
-                            <td className="px-4 py-3 text-sm text-right">{formatMoney(d.balance, currentCompany)}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm">{d.number || `${d.voucherType}-${d.id}`}</td>
+                            <td className="ui-col-date px-4 py-3 text-sm">{d.date}</td>
+                            <td className="ui-col-amount px-4 py-3 text-sm text-right">{formatMoney(d.balance, currentCompany)}</td>
                             <td className="px-4 py-3 text-sm text-right">
                               <input
                                 type="number"
@@ -1900,14 +1900,14 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                             onChange={(e) => toggleSelectTxn(t.id, e.target.checked)}
                           />
                         </td>
-                        <td className="px-4 py-3 text-sm">{t.date}</td>
-                        <td className="px-4 py-3 text-sm">{String(t.description || '').trim() || '-'}</td>
-                        <td className="px-4 py-3 text-sm">{ledgerName}</td>
-                        <td className="px-4 py-3 text-sm">{String(t.narration || '').trim() || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-right font-semibold text-red-600">
+                        <td className="ui-col-date px-4 py-3 text-sm">{t.date}</td>
+                        <td className="ui-col-meta px-4 py-3 text-sm">{String(t.description || '').trim() || '-'}</td>
+                        <td className="ui-col-meta px-4 py-3 text-sm">{ledgerName}</td>
+                        <td className="ui-col-meta px-4 py-3 text-sm">{String(t.narration || '').trim() || '-'}</td>
+                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-red-600">
                           {isOut ? formatMoney(Number(t.amount ?? 0), currentCompany) : '-'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-700">
+                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-green-700">
                           {isOut ? '-' : formatMoney(Number(t.amount ?? 0), currentCompany)}
                         </td>
                         <td className="px-4 py-3 text-sm">

@@ -624,7 +624,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             <tbody className="divide-y">
               {filteredWarehouses.map((w) => (
                 <tr key={w.id} className="ui-hover-sunken">
-                  <td className="px-4 py-3 text-sm ui-fg">
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">
                     {(() => {
                       const b = branchLookup.get(String(w.branchId || ''));
                       return (b && (b.branchName || b.name)) ? String(b.branchName || b.name) : '—';
@@ -635,9 +635,9 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                       {w.name || '—'}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm ui-fg">{[w.city, w.state].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-sm ui-fg">{[w.addressLine1, w.addressLine2].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-sm ui-fg">{w.gstin || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[w.city, w.state].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[w.addressLine1, w.addressLine2].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="ui-col-id px-4 py-3 text-sm ui-fg">{w.gstin || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="relative inline-block text-left" data-warehouse-actions>
                       <button

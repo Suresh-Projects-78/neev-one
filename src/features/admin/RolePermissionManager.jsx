@@ -329,7 +329,7 @@ export const RolePermissionManager = () => {
                         const rowAll = rowKeys.every((k) => granted.has(k));
                         return (
                           <tr key={r.key}>
-                            <td>
+                            <td className="ui-col-meta">
                               <div className="font-medium">{r.label}</div>
                               {r.description ? <div className="ui-subtle text-xs">{r.description}</div> : null}
                             </td>

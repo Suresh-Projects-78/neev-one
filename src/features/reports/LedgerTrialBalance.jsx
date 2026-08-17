@@ -95,7 +95,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                     <tr key={r.accountId}>
                       <td className="ui-col-id">{r.code}</td>
                       <td className="ui-col-entity">{r.name}</td>
-                      <td className="ui-muted text-xs">{r.accountType}</td>
+                      <td className="ui-col-meta ui-muted text-xs">{r.accountType}</td>
                       <td className="ui-col-amount">{r.debit ? formatMoney(r.debit, currentCompany) : '—'}</td>
                       <td className="ui-col-amount">{r.credit ? formatMoney(r.credit, currentCompany) : '—'}</td>
                       <td className="ui-col-amount">
