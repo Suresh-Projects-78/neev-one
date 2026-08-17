@@ -23,8 +23,12 @@ async function makeOwner(): Promise<Ctx> {
   const setup = await request(app)
     .post('/api/auth/setup-company')
     .set('Authorization', `Bearer ${signup.body.token}`)
-    .send({ companyName: `Party Co ${Date.now()}` })
-    .expect(200);
+    .send({ companyName: `Party Co ${Date.now()}-${rnd()}` });
+  if (setup.status !== 200) {
+    // eslint-disable-next-line no-console
+    console.log('SETUP FAILED', setup.status, JSON.stringify(setup.body), 'signup was', signup.status);
+  }
+  expect(setup.status).toBe(200);
   return { token: signup.body.token, orgId: setup.body.company.orgId, branchId: setup.body.branch.id };
 }
 
