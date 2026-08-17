@@ -115,12 +115,22 @@ describe('templates', () => {
     expect(debit).toBe(credit);
   });
 
-  it('explains why bills cannot be imported yet instead of failing vaguely', async () => {
+  it('offers a bill template now that bills exist on the server', async () => {
     const res = await request(app)
       .get(`/api/orgs/${owner.orgId}/imports/template/BILL`)
       .set(auth(owner))
+      .expect(200);
+
+    const { headers } = parseCsv(res.text);
+    expect(headers).toContain('bill_no');
+    expect(headers).toContain('vendor_name');
+  });
+
+  it('still refuses a document type that does not exist at all', async () => {
+    await request(app)
+      .get(`/api/orgs/${owner.orgId}/imports/template/NONSENSE`)
+      .set(auth(owner))
       .expect(400);
-    expect(String(res.body.error)).toMatch(/not stored on the server yet/i);
   });
 });
 

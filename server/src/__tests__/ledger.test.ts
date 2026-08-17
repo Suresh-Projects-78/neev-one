@@ -137,6 +137,11 @@ describe('double-entry posting', () => {
 
     const invoiceId = created.body.invoice.id;
 
+    const beforeDelete = await request(app)
+      .get(`/api/orgs/${A.orgId}/ledger/trial-balance`)
+      .set(auth(A))
+      .expect(200);
+
     const del = await request(app)
       .delete(`/api/orgs/${A.orgId}/invoices/${invoiceId}`)
       .set(auth(A))
@@ -152,6 +157,22 @@ describe('double-entry posting', () => {
     expect(entries).toHaveLength(2);
     expect(entries.filter((e) => e.status === 'REVERSED')).toHaveLength(1);
     expect(entries.filter((e) => e.status === 'POSTED')).toHaveLength(1);
+
+    // Regression: the trial balance counted POSTED entries only, so the
+    // original vanished from the books while its contra still applied, and a
+    // deleted invoice moved the balance by twice its value. Both entries are
+    // real postings — gross totals grow, but the net per account must return
+    // to exactly where it started.
+    const after = await request(app).get(`/api/orgs/${A.orgId}/ledger/trial-balance`).set(auth(A)).expect(200);
+    const netOf = (body: any, kind: string) => {
+      const row = body.rows.find((r: any) => r.controlKind === kind) || { debit: 0, credit: 0 };
+      return Math.round((Number(row.debit) - Number(row.credit)) * 100) / 100;
+    };
+
+    expect(after.body.totals.balanced).toBe(true);
+    // The invoice put 1,180 on AR; reversing it takes exactly that back off.
+    expect(netOf(after.body, 'AR') - netOf(beforeDelete.body, 'AR')).toBe(-1180);
+    expect(netOf(after.body, 'SALES') - netOf(beforeDelete.body, 'SALES')).toBe(1000);
 
     const tb = await request(app).get(`/api/orgs/${A.orgId}/ledger/trial-balance`).set(auth(A)).expect(200);
     expect(tb.body.totals.balanced).toBe(true);

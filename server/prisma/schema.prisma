@@ -470,6 +470,163 @@ model Invoice {
   @@index([accountId, orgId, branchId, date])
 }
 
+
+/// A purchase bill from a vendor. The mirror of Invoice: it debits purchases and input GST, and credits the vendor.
+model Bill {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  warehouseId String?
+  number      String
+  date        String
+  dueDate     String?
+  refNo       String?
+  refDate     String?
+
+  /// The invoice or bill this note is raised against, when there is one.
+  againstDocId String?
+
+  partyId            String?
+  partyName          String
+  partyGstin         String?
+  placeOfSupplyState String?
+  taxType            String?
+
+  subtotal    Decimal @default(0)
+  cgstTotal   Decimal @default(0)
+  sgstTotal   Decimal @default(0)
+  igstTotal   Decimal @default(0)
+  gstTotal    Decimal @default(0)
+  total       Decimal @default(0)
+  settledAmount Decimal @default(0)
+
+  status    String  @default("Draft")
+  itemsJson String
+
+  /// Same single-currency rule as invoices: the books are kept in the base
+  /// currency, and this is the rate the document was translated at.
+  currency     String  @default("INR")
+  exchangeRate Decimal @default(1)
+  baseTotal    Decimal @default(0)
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@unique([orgId, sourceSystem, sourceKey])
+  @@index([accountId, orgId, branchId, date])
+}
+
+/// A sales return. Reverses part or all of a sales invoice: revenue and output GST come back down, and the customer is credited.
+model CreditNote {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  warehouseId String?
+  number      String
+  date        String
+  dueDate     String?
+  refNo       String?
+  refDate     String?
+
+  /// The invoice or bill this note is raised against, when there is one.
+  againstDocId String?
+
+  partyId            String?
+  partyName          String
+  partyGstin         String?
+  placeOfSupplyState String?
+  taxType            String?
+
+  subtotal    Decimal @default(0)
+  cgstTotal   Decimal @default(0)
+  sgstTotal   Decimal @default(0)
+  igstTotal   Decimal @default(0)
+  gstTotal    Decimal @default(0)
+  total       Decimal @default(0)
+  settledAmount Decimal @default(0)
+
+  status    String  @default("Draft")
+  itemsJson String
+
+  /// Same single-currency rule as invoices: the books are kept in the base
+  /// currency, and this is the rate the document was translated at.
+  currency     String  @default("INR")
+  exchangeRate Decimal @default(1)
+  baseTotal    Decimal @default(0)
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@unique([orgId, sourceSystem, sourceKey])
+  @@index([accountId, orgId, branchId, date])
+}
+
+/// A purchase return. The mirror of a credit note: the vendor is debited and purchases and input GST come back down.
+model DebitNote {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  warehouseId String?
+  number      String
+  date        String
+  dueDate     String?
+  refNo       String?
+  refDate     String?
+
+  /// The invoice or bill this note is raised against, when there is one.
+  againstDocId String?
+
+  partyId            String?
+  partyName          String
+  partyGstin         String?
+  placeOfSupplyState String?
+  taxType            String?
+
+  subtotal    Decimal @default(0)
+  cgstTotal   Decimal @default(0)
+  sgstTotal   Decimal @default(0)
+  igstTotal   Decimal @default(0)
+  gstTotal    Decimal @default(0)
+  total       Decimal @default(0)
+  settledAmount Decimal @default(0)
+
+  status    String  @default("Draft")
+  itemsJson String
+
+  /// Same single-currency rule as invoices: the books are kept in the base
+  /// currency, and this is the rate the document was translated at.
+  currency     String  @default("INR")
+  exchangeRate Decimal @default(1)
+  baseTotal    Decimal @default(0)
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@unique([orgId, sourceSystem, sourceKey])
+  @@index([accountId, orgId, branchId, date])
+}
+
 // ----------------------------
 // Audit log
 // ----------------------------

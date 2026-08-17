@@ -62,15 +62,76 @@ export const IMPORT_SPECS: Record<string, ImportSpec> = {
       { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '1' },
       { key: 'rate', label: 'Rate', required: true, hint: 'Per unit, before tax', sample: '10000.00' },
       { key: 'gst_rate', label: 'GST %', required: false, hint: '0, 5, 12, 18 or 28', sample: '18' },
+      { key: 'tax_type', label: 'Tax type', required: false, hint: 'CGST_SGST (default) or IGST for inter-state', sample: 'CGST_SGST' },
+    ],
+  },
+
+  BILL: {
+    docType: 'BILL',
+    label: 'Purchase bills',
+    groupBy: 'bill_no',
+    description:
+      'One row per bill line. Rows sharing a bill_no become a single bill, posted against the vendor.',
+    columns: [
+      { key: 'bill_no', label: 'Bill no', required: true, hint: 'Groups lines into one bill', sample: 'BILL-2001' },
+      { key: 'date', label: 'Date', required: true, hint: 'YYYY-MM-DD', sample: '2026-04-06' },
+      { key: 'vendor_name', label: 'Vendor', required: true, hint: 'Matched by name', sample: 'Supplier Co' },
+      { key: 'vendor_gstin', label: 'Vendor GSTIN', required: false, hint: 'Optional', sample: '' },
+      { key: 'description', label: 'Description', required: true, hint: 'Line description', sample: 'Raw material' },
+      { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '10' },
+      { key: 'rate', label: 'Rate', required: true, hint: 'Per unit, before tax', sample: '500.00' },
+      { key: 'gst_rate', label: 'GST %', required: false, hint: '0, 5, 12, 18 or 28', sample: '18' },
+      { key: 'tax_type', label: 'Tax type', required: false, hint: 'CGST_SGST (default) or IGST for inter-state', sample: 'CGST_SGST' },
+    ],
+  },
+
+  CREDIT_NOTE: {
+    docType: 'CREDIT_NOTE',
+    label: 'Credit notes (sales returns)',
+    groupBy: 'note_no',
+    description:
+      'One row per note line. Rows sharing a note_no become a single credit note, which reduces revenue and the customer balance.',
+    columns: [
+      { key: 'note_no', label: 'Note no', required: true, hint: 'Groups lines into one note', sample: 'CN-3001' },
+      { key: 'date', label: 'Date', required: true, hint: 'YYYY-MM-DD', sample: '2026-04-07' },
+      { key: 'customer_name', label: 'Customer', required: true, hint: 'Matched by name', sample: 'Acme Ltd' },
+      { key: 'against_invoice', label: 'Against invoice', required: false, hint: 'Original invoice number', sample: 'INV-1001' },
+      { key: 'description', label: 'Description', required: true, hint: 'Line description', sample: 'Returned goods' },
+      { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '1' },
+      { key: 'rate', label: 'Rate', required: true, hint: 'Per unit, before tax', sample: '1000.00' },
+      { key: 'gst_rate', label: 'GST %', required: false, hint: '0, 5, 12, 18 or 28', sample: '18' },
+      { key: 'tax_type', label: 'Tax type', required: false, hint: 'CGST_SGST (default) or IGST for inter-state', sample: 'CGST_SGST' },
+    ],
+  },
+
+  DEBIT_NOTE: {
+    docType: 'DEBIT_NOTE',
+    label: 'Debit notes (purchase returns)',
+    groupBy: 'note_no',
+    description:
+      'One row per note line. Rows sharing a note_no become a single debit note, which reduces purchases and the vendor balance.',
+    columns: [
+      { key: 'note_no', label: 'Note no', required: true, hint: 'Groups lines into one note', sample: 'DN-4001' },
+      { key: 'date', label: 'Date', required: true, hint: 'YYYY-MM-DD', sample: '2026-04-08' },
+      { key: 'vendor_name', label: 'Vendor', required: true, hint: 'Matched by name', sample: 'Supplier Co' },
+      { key: 'against_bill', label: 'Against bill', required: false, hint: 'Original bill number', sample: 'BILL-2001' },
+      { key: 'description', label: 'Description', required: true, hint: 'Line description', sample: 'Returned material' },
+      { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '2' },
+      { key: 'rate', label: 'Rate', required: true, hint: 'Per unit, before tax', sample: '500.00' },
+      { key: 'gst_rate', label: 'GST %', required: false, hint: '0, 5, 12, 18 or 28', sample: '18' },
+      { key: 'tax_type', label: 'Tax type', required: false, hint: 'CGST_SGST (default) or IGST for inter-state', sample: 'CGST_SGST' },
     ],
   },
 };
 
-/** Document types that have no server-side model to import into yet. */
-export const UNSUPPORTED_DOC_TYPES: Record<string, string> = {
-  BILL: 'Purchase bills are not stored on the server yet, so there is nothing to import them into.',
-  CREDIT_NOTE: 'Credit notes are not stored on the server yet, so there is nothing to import them into.',
-  DEBIT_NOTE: 'Debit notes are not stored on the server yet, so there is nothing to import them into.',
-};
+
+/**
+ * Document types with no server-side model to import into.
+ *
+ * Empty now that bills, credit notes and debit notes exist. Kept because the
+ * import screen reads it to explain absences rather than leaving a gap the user
+ * has to guess about.
+ */
+export const UNSUPPORTED_DOC_TYPES: Record<string, string> = {};
 
 export const specFor = (docType: string) => IMPORT_SPECS[String(docType || '').toUpperCase()] || null;

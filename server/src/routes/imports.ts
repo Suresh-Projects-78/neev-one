@@ -8,7 +8,14 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { parseCsv, toCsv } from '../services/csv.js';
 import { IMPORT_SPECS, UNSUPPORTED_DOC_TYPES, specFor } from '../services/importSpecs.js';
-import { ensureLedgerSetup, postEntry } from '../services/ledger.js';
+import {
+  billPostingLines,
+  invoicePostingLines,
+  creditNotePostingLines,
+  debitNotePostingLines,
+  ensureLedgerSetup,
+  postEntry,
+} from '../services/ledger.js';
 import { isFeatureEnabled } from '../services/features.js';
 
 /**
@@ -52,6 +59,52 @@ const money = (v: string) => {
 };
 
 const isDate = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || '').trim());
+
+/**
+ * Splits a combined GST amount into the accounts it belongs in.
+ *
+ * Intra-state supply is half CGST and half SGST; inter-state is all IGST.
+ * Posting the whole amount to one of them would misstate the returns even
+ * though the ledger would still balance, so the file says which it is.
+ */
+const splitGst = (gstTotal: number, taxType: string) => {
+  const t = String(taxType || '').trim().toUpperCase();
+  if (t === 'IGST' || t === 'INTER' || t === 'INTERSTATE') {
+    return { cgst: 0, sgst: 0, igst: Math.round(gstTotal * 100) / 100 };
+  }
+  const half = Math.round((gstTotal / 2) * 100) / 100;
+  // The remainder keeps the two halves summing to the whole on odd paise.
+  return { cgst: half, sgst: Math.round((gstTotal - half) * 100) / 100, igst: 0 };
+};
+
+/** Which column names the party, per document type. */
+const PARTY_COLUMN: Record<string, string> = {
+  INVOICE: 'customer_name',
+  BILL: 'vendor_name',
+  CREDIT_NOTE: 'customer_name',
+  DEBIT_NOTE: 'vendor_name',
+};
+
+const PARTY_LABEL: Record<string, string> = {
+  INVOICE: 'Customer',
+  BILL: 'Vendor',
+  CREDIT_NOTE: 'Customer',
+  DEBIT_NOTE: 'Vendor',
+};
+
+/** The Prisma model each document type is written into. */
+const DOC_MODEL: Record<string, 'bill' | 'creditNote' | 'debitNote'> = {
+  BILL: 'bill',
+  CREDIT_NOTE: 'creditNote',
+  DEBIT_NOTE: 'debitNote',
+};
+
+/** The posting lines each type contributes, and which journal it belongs in. */
+const DOC_POSTING: Record<string, { journalCode: string; lines: typeof billPostingLines }> = {
+  BILL: { journalCode: 'PUR', lines: billPostingLines },
+  CREDIT_NOTE: { journalCode: 'SAL', lines: creditNotePostingLines },
+  DEBIT_NOTE: { journalCode: 'PUR', lines: debitNotePostingLines },
+};
 
 // ---------------------------------------------------------------------------
 // Templates (requirement 16)
@@ -216,9 +269,12 @@ function validateGroups(docType: string, groups: Grouped[], accountCodes: Set<st
       }
     }
 
-    if (docType === 'INVOICE') {
+    // Invoices, bills and both notes share a line shape; only the column
+    // naming the party differs.
+    const partyColumn = PARTY_COLUMN[docType];
+    if (partyColumn) {
       for (const r of g.rows) {
-        if (!String(r.data.customer_name || '').trim()) fail(r.id, 'Customer is required');
+        if (!String(r.data[partyColumn] || '').trim()) fail(r.id, `${PARTY_LABEL[docType]} is required`);
         if (!String(r.data.description || '').trim()) fail(r.id, 'Description is required');
         const qty = money(r.data.quantity);
         const rate = money(r.data.rate);
@@ -371,8 +427,10 @@ importsRouter.post('/orgs/:orgId/imports/:batchId/commit', CREATE, async (req, r
           };
         });
 
-        const subtotal = items.reduce((s, i) => s + i.taxableAmount, 0);
-        const gstTotal = items.reduce((s, i) => s + i.gstAmount, 0);
+        const subtotal = items.reduce((s2, i) => s2 + i.taxableAmount, 0);
+        const gstTotal = items.reduce((s2, i) => s2 + i.gstAmount, 0);
+        const total = subtotal + gstTotal;
+        const tax = splitGst(gstTotal, first.tax_type);
 
         // Historical numbers are kept exactly as supplied: renumbering an
         // imported year makes it impossible to tie back to the old system.
@@ -386,14 +444,126 @@ importsRouter.post('/orgs/:orgId/imports/:batchId/commit', CREATE, async (req, r
             customerName: String(first.customer_name).trim(),
             customerGstin: String(first.customer_gstin || '').trim() || null,
             subtotal: new Prisma.Decimal(subtotal.toFixed(2)),
+            cgstTotal: new Prisma.Decimal(tax.cgst.toFixed(2)),
+            sgstTotal: new Prisma.Decimal(tax.sgst.toFixed(2)),
+            igstTotal: new Prisma.Decimal(tax.igst.toFixed(2)),
             gstTotal: new Prisma.Decimal(gstTotal.toFixed(2)),
-            total: new Prisma.Decimal((subtotal + gstTotal).toFixed(2)),
+            total: new Prisma.Decimal(total.toFixed(2)),
+            baseTotal: new Prisma.Decimal(total.toFixed(2)),
             status: 'Unpaid',
             itemsJson: JSON.stringify(items),
             sourceSystem: batch.sourceSystem,
             sourceKey: g.key,
             createdByUserId: userId,
           },
+        });
+
+        // An imported invoice posts to the ledger exactly as a keyed-in one
+        // does. Without this the books were quietly short by everything that
+        // had been imported, while the invoice list looked complete.
+        await postEntry({
+          accountId,
+          orgId,
+          branchId,
+          userId,
+          date: String(first.date).trim(),
+          journalCode: 'SAL',
+          narration: `Imported invoice ${g.key}`,
+          sourceDocType: 'INVOICE',
+          sourceDocId: created.id,
+          lines: invoicePostingLines({
+            customerName: String(first.customer_name).trim(),
+            subtotal,
+            cgstTotal: tax.cgst,
+            sgstTotal: tax.sgst,
+            igstTotal: tax.igst,
+            total,
+          }),
+        });
+
+        await prisma.$transaction(
+          g.rows.map((r) =>
+            prisma.importRow.update({
+              where: { id: r.id },
+              data: { status: 'COMMITTED', targetId: created.id, error: null },
+            })
+          )
+        );
+        committed += g.rows.length;
+      }
+
+      const model = DOC_MODEL[batch.docType];
+      if (model) {
+        const first = g.rows[0].data;
+        const partyColumn = PARTY_COLUMN[batch.docType];
+        const items = g.rows.map((r) => {
+          const qty = money(r.data.quantity);
+          const rate = money(r.data.rate);
+          const gstRate = money(r.data.gst_rate) || 0;
+          const taxable = qty * rate;
+          return {
+            description: String(r.data.description || '').trim(),
+            quantity: qty,
+            rate,
+            gstRate,
+            taxableAmount: taxable,
+            gstAmount: (taxable * gstRate) / 100,
+            lineTotal: taxable + (taxable * gstRate) / 100,
+          };
+        });
+
+        const subtotal = items.reduce((s2, i) => s2 + i.taxableAmount, 0);
+        const gstTotal = items.reduce((s2, i) => s2 + i.gstAmount, 0);
+        const total = subtotal + gstTotal;
+        const tax = splitGst(gstTotal, first.tax_type);
+
+        const created = await (prisma as any)[model].create({
+          data: {
+            accountId,
+            orgId,
+            branchId,
+            number: g.key,
+            date: String(first.date).trim(),
+            againstDocId: String(first.against_invoice || first.against_bill || '').trim() || null,
+            partyName: String(first[partyColumn] || '').trim(),
+            partyGstin: String(first.vendor_gstin || first.customer_gstin || '').trim() || null,
+            subtotal: new Prisma.Decimal(subtotal.toFixed(2)),
+            cgstTotal: new Prisma.Decimal(tax.cgst.toFixed(2)),
+            sgstTotal: new Prisma.Decimal(tax.sgst.toFixed(2)),
+            igstTotal: new Prisma.Decimal(tax.igst.toFixed(2)),
+            gstTotal: new Prisma.Decimal(gstTotal.toFixed(2)),
+            total: new Prisma.Decimal(total.toFixed(2)),
+            baseTotal: new Prisma.Decimal(total.toFixed(2)),
+            status: 'Unpaid',
+            itemsJson: JSON.stringify(items),
+            sourceSystem: batch.sourceSystem,
+            sourceKey: g.key,
+            createdByUserId: userId,
+          },
+        });
+
+        // Imported documents post to the ledger exactly as ones keyed in by
+        // hand do. A type that skipped posting would leave the books quietly
+        // short by whatever was imported.
+        const posting = DOC_POSTING[batch.docType];
+        await postEntry({
+          accountId,
+          orgId,
+          branchId,
+          userId,
+          date: String(first.date).trim(),
+          journalCode: posting.journalCode,
+          narration: `Imported ${batch.docType} ${g.key}`,
+          sourceDocType: batch.docType,
+          sourceDocId: created.id,
+          lines: posting.lines({
+            partyName: String(first[partyColumn] || '').trim(),
+            subtotal,
+            cgstTotal: tax.cgst,
+            sgstTotal: tax.sgst,
+            igstTotal: tax.igst,
+            total,
+          }),
         });
 
         await prisma.$transaction(

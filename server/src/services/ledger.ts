@@ -454,6 +454,133 @@ export function invoicePostingLines(invoice: {
   return lines;
 }
 
+/**
+ * Posting lines for a purchase bill — the mirror of an invoice.
+ *
+ * Purchases and input GST are debited and the vendor credited: the business
+ * owes money and has acquired cost, where a sale earns revenue and creates a
+ * receivable.
+ */
+export function billPostingLines(bill: {
+  partyId?: string | null;
+  partyName?: string | null;
+  subtotal?: number | null;
+  cgstTotal?: number | null;
+  sgstTotal?: number | null;
+  igstTotal?: number | null;
+  total?: number | null;
+}): PostingLine[] {
+  const subtotal = Number(bill.subtotal ?? 0);
+  const cgst = Number(bill.cgstTotal ?? 0);
+  const sgst = Number(bill.sgstTotal ?? 0);
+  const igst = Number(bill.igstTotal ?? 0);
+  const computed = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
+  const total = Number(bill.total ?? 0) || computed;
+  const rounding = Math.round((total - computed) * 100) / 100;
+
+  const lines: PostingLine[] = [];
+  if (subtotal) lines.push({ controlKind: 'PURCHASES', debit: subtotal, description: 'Purchases' });
+  if (cgst) lines.push({ controlKind: 'CGST_IN', debit: cgst, taxCode: 'CGST', description: 'Input CGST' });
+  if (sgst) lines.push({ controlKind: 'SGST_IN', debit: sgst, taxCode: 'SGST', description: 'Input SGST' });
+  if (igst) lines.push({ controlKind: 'IGST_IN', debit: igst, taxCode: 'IGST', description: 'Input IGST' });
+
+  if (rounding > 0) lines.push({ controlKind: 'ROUNDING', debit: rounding, description: 'Rounding difference' });
+  if (rounding < 0) lines.push({ controlKind: 'ROUNDING', credit: Math.abs(rounding), description: 'Rounding difference' });
+
+  lines.push({
+    controlKind: 'AP',
+    credit: total,
+    partyType: 'VENDOR',
+    partyId: bill.partyId || null,
+    description: `Bill from ${bill.partyName || 'vendor'}`,
+  });
+
+  return lines;
+}
+
+/**
+ * Posting lines for a credit note — a sales return.
+ *
+ * Exactly the reverse of the invoice: revenue and output GST come back down,
+ * and the customer's balance is reduced. Posted as its own entry rather than by
+ * editing the original, so both documents remain in the audit trail.
+ */
+export function creditNotePostingLines(note: {
+  partyId?: string | null;
+  partyName?: string | null;
+  subtotal?: number | null;
+  cgstTotal?: number | null;
+  sgstTotal?: number | null;
+  igstTotal?: number | null;
+  total?: number | null;
+}): PostingLine[] {
+  const subtotal = Number(note.subtotal ?? 0);
+  const cgst = Number(note.cgstTotal ?? 0);
+  const sgst = Number(note.sgstTotal ?? 0);
+  const igst = Number(note.igstTotal ?? 0);
+  const computed = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
+  const total = Number(note.total ?? 0) || computed;
+  const rounding = Math.round((total - computed) * 100) / 100;
+
+  const lines: PostingLine[] = [];
+  if (subtotal) lines.push({ controlKind: 'SALES', debit: subtotal, description: 'Sales return' });
+  if (cgst) lines.push({ controlKind: 'CGST_OUT', debit: cgst, taxCode: 'CGST', description: 'Output CGST reversed' });
+  if (sgst) lines.push({ controlKind: 'SGST_OUT', debit: sgst, taxCode: 'SGST', description: 'Output SGST reversed' });
+  if (igst) lines.push({ controlKind: 'IGST_OUT', debit: igst, taxCode: 'IGST', description: 'Output IGST reversed' });
+
+  if (rounding > 0) lines.push({ controlKind: 'ROUNDING', debit: rounding, description: 'Rounding difference' });
+  if (rounding < 0) lines.push({ controlKind: 'ROUNDING', credit: Math.abs(rounding), description: 'Rounding difference' });
+
+  lines.push({
+    controlKind: 'AR',
+    credit: total,
+    partyType: 'CUSTOMER',
+    partyId: note.partyId || null,
+    description: `Credit note to ${note.partyName || 'customer'}`,
+  });
+
+  return lines;
+}
+
+/** Posting lines for a debit note — a purchase return, the mirror of the above. */
+export function debitNotePostingLines(note: {
+  partyId?: string | null;
+  partyName?: string | null;
+  subtotal?: number | null;
+  cgstTotal?: number | null;
+  sgstTotal?: number | null;
+  igstTotal?: number | null;
+  total?: number | null;
+}): PostingLine[] {
+  const subtotal = Number(note.subtotal ?? 0);
+  const cgst = Number(note.cgstTotal ?? 0);
+  const sgst = Number(note.sgstTotal ?? 0);
+  const igst = Number(note.igstTotal ?? 0);
+  const computed = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
+  const total = Number(note.total ?? 0) || computed;
+  const rounding = Math.round((total - computed) * 100) / 100;
+
+  const lines: PostingLine[] = [
+    {
+      controlKind: 'AP',
+      debit: total,
+      partyType: 'VENDOR',
+      partyId: note.partyId || null,
+      description: `Debit note to ${note.partyName || 'vendor'}`,
+    },
+  ];
+
+  if (subtotal) lines.push({ controlKind: 'PURCHASES', credit: subtotal, description: 'Purchase return' });
+  if (cgst) lines.push({ controlKind: 'CGST_IN', credit: cgst, taxCode: 'CGST', description: 'Input CGST reversed' });
+  if (sgst) lines.push({ controlKind: 'SGST_IN', credit: sgst, taxCode: 'SGST', description: 'Input SGST reversed' });
+  if (igst) lines.push({ controlKind: 'IGST_IN', credit: igst, taxCode: 'IGST', description: 'Input IGST reversed' });
+
+  if (rounding > 0) lines.push({ controlKind: 'ROUNDING', credit: rounding, description: 'Rounding difference' });
+  if (rounding < 0) lines.push({ controlKind: 'ROUNDING', debit: Math.abs(rounding), description: 'Rounding difference' });
+
+  return lines;
+}
+
 /** Trial balance from POSTED lines only. */
 export async function trialBalance(opts: {
   accountId: string;
@@ -467,7 +594,15 @@ export async function trialBalance(opts: {
     orgId: opts.orgId,
     ...(opts.branchId ? { branchId: opts.branchId } : {}),
     entry: {
-      status: 'POSTED',
+      // POSTED *and* REVERSED, both of which are real postings.
+      //
+      // reverseEntry writes a contra entry and marks the original REVERSED.
+      // Counting only POSTED therefore removed the original from the books
+      // while still applying its contra, so every reversal moved the trial
+      // balance by twice the amount: deleting a 1,000 invoice took 2,000 off
+      // sales. The original and its contra both belong in the books, where
+      // they cancel to zero; REVERSED is an audit label, not an exclusion.
+      status: { in: ['POSTED', 'REVERSED'] },
       ...(opts.fromDate || opts.toDate
         ? {
             date: {
