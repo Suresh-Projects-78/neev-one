@@ -3,6 +3,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
+    env: {
+      // Deterministic and fast: rate limiting is exercised by one test that
+      // enables it explicitly, and 4 bcrypt rounds keep the suite quick.
+      DISABLE_RATE_LIMIT: 'true',
+      BCRYPT_ROUNDS: '4',
+      JWT_SECRET: 'test-secret-do-not-use-in-production',
+    },
     include: ['src/**/*.test.ts'],
     // The suite shares one SQLite file; parallel files would deadlock on writes.
     fileParallelism: false,

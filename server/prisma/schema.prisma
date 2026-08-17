@@ -136,6 +136,12 @@ model User {
   passwordHash String
   isActive     Boolean @default(true)
 
+  // Lockout state. Cleared on a successful sign-in.
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  emailVerifiedAt  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -833,4 +839,66 @@ model Party {
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, partyType, isActive])
   @@index([accountId, orgId, gstin])
+}
+
+// ----------------------------
+// Sessions and auth hardening
+// ----------------------------
+// A refresh token is stored only as a hash: a leaked database row must not be
+// usable as a credential.
+model Session {
+  id        String @id @default(cuid())
+  accountId String
+  userId    String
+
+  refreshTokenHash String  @unique
+  userAgent        String?
+  ip               String?
+
+  createdAt     DateTime  @default(now())
+  lastSeenAt    DateTime  @default(now())
+  expiresAt     DateTime
+  revokedAt     DateTime?
+  revokedReason String?
+
+  // Set when this session is rotated, so a replayed old token is detectable.
+  replacedBySessionId String?
+
+  @@index([accountId, userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String @id @default(cuid())
+  accountId String
+  userId    String
+
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  requestedIp String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, usedAt])
+}
+
+/// Security-relevant authentication events, kept separately from the business
+/// audit log so a retention policy can differ.
+model AuthEvent {
+  id        String  @id @default(cuid())
+  accountId String?
+  userId    String?
+
+  email     String?
+  eventType String // LOGIN_SUCCESS | LOGIN_FAILED | LOCKED_OUT | LOGOUT |
+  // PASSWORD_RESET_REQUESTED | PASSWORD_RESET | TOKEN_REFRESHED | SESSION_REVOKED
+  ip        String?
+  userAgent String?
+  detail    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([email, eventType, createdAt])
 }

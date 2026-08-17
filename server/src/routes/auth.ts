@@ -7,11 +7,28 @@ import { prisma } from '../utils/prisma.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
 import { ensureLedgerSetup } from '../services/ledger.js';
 import { ensurePermissionCatalog } from './permissions.js';
+import { loginLimiter, resetLimiter, signupLimiter } from '../middleware/rateLimit.js';
+import {
+  AuthError,
+  clearFailedLogins,
+  clientIp,
+  consumePasswordResetToken,
+  createSession,
+  issuePasswordResetToken,
+  listSessions,
+  lockoutRemainingMs,
+  recordAuthEvent,
+  registerFailedLogin,
+  revokeAllSessions,
+  revokeSession,
+  rotateSession,
+  signAccessToken,
+} from '../services/auth.js';
 import { expandPreset, permKey } from '../constants/permissionCatalog.js';
 
 export const authRouter = Router();
 
-const RESET_TOKENS = new Map<string, { userId: string; expiresAt: number }>();
+const LOCKOUT_NOTICE = Number(process.env.LOCKOUT_MINUTES || 15);
 
 function getJwtSecret() {
   return process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'dev-secret');
@@ -95,7 +112,7 @@ async function bootstrapOwnerRole(accountId: string, orgId: string, userId: stri
   }
 }
 
-authRouter.post('/login', async (req: Request, res: Response) => {
+authRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
   const parsed = z
     .union([
       z.object({ emailOrUsername: z.string().min(1), password: z.string().min(1) }),
@@ -108,30 +125,67 @@ authRouter.post('/login', async (req: Request, res: Response) => {
   const body = parsed.data;
   const rawIdentity = 'emailOrUsername' in body ? body.emailOrUsername : body.email;
   const identity = rawIdentity.trim().toLowerCase();
+  const ip = clientIp(req);
+  const userAgent = req.headers['user-agent'] as string | undefined;
 
   const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ email: identity }, { username: rawIdentity.trim() }],
+    where: { OR: [{ email: identity }, { username: rawIdentity.trim() }] },
+    select: {
+      id: true,
+      accountId: true,
+      passwordHash: true,
+      isActive: true,
+      fullName: true,
+      email: true,
+      lockedUntil: true,
     },
-    select: { id: true, accountId: true, passwordHash: true, isActive: true, fullName: true, email: true },
   });
 
+  // One message for "no such user" and "wrong password": distinguishing them
+  // turns the login form into an account-existence oracle.
+  const invalid = () => res.status(401).json({ error: 'Invalid credentials' });
+
   if (!user || !user.isActive) {
-    const msg = process.env.NODE_ENV === 'production' ? 'Invalid credentials' : 'User not found. Please sign up first.';
-    return res.status(401).json({ error: msg });
+    await recordAuthEvent({ email: identity, eventType: 'LOGIN_FAILED', ip, userAgent, detail: 'No such active user' });
+    return invalid();
+  }
+
+  const lockedFor = lockoutRemainingMs(user.lockedUntil);
+  if (lockedFor > 0) {
+    await recordAuthEvent({ accountId: user.accountId, userId: user.id, email: identity, eventType: 'LOCKED_OUT', ip, userAgent });
+    return res.status(429).json({
+      error: `Too many failed attempts. Try again in ${Math.ceil(lockedFor / 60000)} minute(s).`,
+    });
   }
 
   const ok = await bcrypt.compare(body.password, user.passwordHash);
   if (!ok) {
-    const msg = process.env.NODE_ENV === 'production' ? 'Invalid credentials' : 'Wrong password. Please re-check and try again.';
-    return res.status(401).json({ error: msg });
+    const result = await registerFailedLogin(user.id);
+    await recordAuthEvent({
+      accountId: user.accountId,
+      userId: user.id,
+      email: identity,
+      eventType: result.locked ? 'LOCKED_OUT' : 'LOGIN_FAILED',
+      ip,
+      userAgent,
+    });
+    if (result.locked) {
+      return res.status(429).json({ error: `Too many failed attempts. Try again in ${LOCKOUT_NOTICE} minute(s).` });
+    }
+    return invalid();
   }
 
-  const token = signToken({ userId: user.id, accountId: user.accountId });
+  await clearFailedLogins(user.id);
+  const { session, refreshToken } = await createSession({
+    accountId: user.accountId,
+    userId: user.id,
+    ip,
+    userAgent,
+  });
+  await recordAuthEvent({ accountId: user.accountId, userId: user.id, email: identity, eventType: 'LOGIN_SUCCESS', ip, userAgent });
 
-  // The client needs an active org immediately after login: apiFetch sends
-  // x-org-id on every protected call. Returning memberships here means a
-  // returning user on a fresh browser can work without re-running setup.
+  const token = signAccessToken({ userId: user.id, accountId: user.accountId, sid: session.id });
+
   const memberships = await prisma.userOrgMembership.findMany({
     where: { accountId: user.accountId, userId: user.id },
     select: { orgId: true, org: { select: { id: true, name: true } } },
@@ -156,11 +210,79 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
   return res.json({
     token,
+    refreshToken,
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     user: { id: user.id, email: user.email, fullName: user.fullName, accountId: user.accountId },
     companies,
     activeOrgId: firstOrgId,
     activeBranchId: branches[0]?.branchId ?? null,
   });
+});
+
+/** Exchange a refresh token for a new pair. The old one is retired. */
+authRouter.post('/refresh', async (req: Request, res: Response) => {
+  const body = z.object({ refreshToken: z.string().min(10) }).safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: 'Missing refresh token' });
+
+  try {
+    const rotated = await rotateSession(body.data.refreshToken, {
+      ip: clientIp(req),
+      userAgent: req.headers['user-agent'] as string | undefined,
+    });
+    await recordAuthEvent({
+      accountId: rotated.session.accountId,
+      userId: rotated.session.userId,
+      eventType: 'TOKEN_REFRESHED',
+      ip: clientIp(req),
+    });
+    return res.json({ token: rotated.accessToken, refreshToken: rotated.refreshToken });
+  } catch (e: any) {
+    if (e instanceof AuthError) return res.status(e.status).json({ error: e.message });
+    throw e;
+  }
+});
+
+/** Real logout: the session is revoked server-side, not just forgotten locally. */
+authRouter.post('/logout', async (req: Request, res: Response) => {
+  const body = z.object({ refreshToken: z.string().optional() }).safeParse(req.body);
+  const refreshToken = body.success ? body.data.refreshToken : undefined;
+
+  if (refreshToken) {
+    const revoked = await revokeSession(refreshToken, 'LOGOUT');
+    if (revoked) {
+      await recordAuthEvent({
+        accountId: revoked.accountId,
+        userId: revoked.userId,
+        eventType: 'LOGOUT',
+        ip: clientIp(req),
+      });
+    }
+  }
+  return res.json({ ok: true });
+});
+
+/** Devices currently signed in, and a way to end them. */
+authRouter.get('/sessions', async (req: Request, res: Response) => {
+  let auth;
+  try {
+    auth = requireAuth(req);
+  } catch (e: any) {
+    return res.status(401).json({ error: String(e?.message || 'Unauthorized') });
+  }
+  const sessions = await listSessions(auth.accountId, auth.userId);
+  return res.json({ sessions });
+});
+
+authRouter.post('/sessions/revoke-all', async (req: Request, res: Response) => {
+  let auth;
+  try {
+    auth = requireAuth(req);
+  } catch (e: any) {
+    return res.status(401).json({ error: String(e?.message || 'Unauthorized') });
+  }
+  const result = await revokeAllSessions(auth.userId, 'USER_REVOKED_ALL');
+  await recordAuthEvent({ accountId: auth.accountId, userId: auth.userId, eventType: 'SESSION_REVOKED', detail: 'User revoked all sessions' });
+  return res.json({ ok: true, revoked: result.count });
 });
 
 authRouter.get('/me', async (req: Request, res: Response) => {
@@ -224,7 +346,7 @@ authRouter.get('/me', async (req: Request, res: Response) => {
   });
 });
 
-authRouter.post('/signup', async (req: Request, res: Response) => {
+authRouter.post('/signup', signupLimiter, async (req: Request, res: Response) => {
   const body = z
     .object({
       email: z.string().email(),
@@ -258,8 +380,16 @@ authRouter.post('/signup', async (req: Request, res: Response) => {
     select: { id: true, accountId: true, email: true, fullName: true },
   });
 
-  const token = signToken({ userId: user.id, accountId: user.accountId });
-  return res.json({ token, user });
+  const { session, refreshToken } = await createSession({
+    accountId: user.accountId,
+    userId: user.id,
+    ip: clientIp(req),
+    userAgent: req.headers['user-agent'] as string | undefined,
+  });
+  await recordAuthEvent({ accountId: user.accountId, userId: user.id, email, eventType: 'LOGIN_SUCCESS', ip: clientIp(req), detail: 'Signup' });
+
+  const token = signAccessToken({ userId: user.id, accountId: user.accountId, sid: session.id });
+  return res.json({ token, refreshToken, user });
 });
 
 authRouter.post('/setup-company', async (req: Request, res: Response) => {
@@ -326,38 +456,66 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
   });
 });
 
-authRouter.post('/forgot-password', async (req: Request, res: Response) => {
+authRouter.post('/forgot-password', resetLimiter, async (req: Request, res: Response) => {
   const body = z.object({ email: z.string().email() }).parse(req.body);
   const email = body.email.trim().toLowerCase();
+  const ip = clientIp(req);
 
-  const user = await prisma.user.findFirst({ where: { email }, select: { id: true, isActive: true } });
-  // Always respond OK to avoid user enumeration.
+  const user = await prisma.user.findFirst({
+    where: { email },
+    select: { id: true, accountId: true, isActive: true },
+  });
+
+  // Always the same answer, so this endpoint cannot be used to discover which
+  // addresses have accounts.
+  const generic = { message: 'If an account exists, a reset link has been sent to your email.' };
+
   if (!user || !user.isActive) {
-    return res.json({ message: 'If an account exists, a reset link has been sent to your email.' });
+    await recordAuthEvent({ email, eventType: 'PASSWORD_RESET_REQUESTED', ip, detail: 'No such active user' });
+    return res.json(generic);
   }
 
-  const token = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-  const ttlMs = 15 * 60 * 1000;
-  RESET_TOKENS.set(token, { userId: user.id, expiresAt: Date.now() + ttlMs });
+  const token = await issuePasswordResetToken({ id: user.id, accountId: user.accountId }, ip);
+  await recordAuthEvent({ accountId: user.accountId, userId: user.id, email, eventType: 'PASSWORD_RESET_REQUESTED', ip });
 
-  // Dev-only: return token so you can test the reset flow without SMTP.
+  // Until SMTP is wired the token is returned outside production so the flow is
+  // testable. It is a cryptographically random, single-use, 30-minute token
+  // stored only as a hash.
   return res.json({
-    message: 'If an account exists, a reset link has been sent to your email.',
+    ...generic,
     devToken: process.env.NODE_ENV === 'production' ? undefined : token,
   });
 });
 
-authRouter.post('/reset-password', async (req: Request, res: Response) => {
+authRouter.post('/reset-password', resetLimiter, async (req: Request, res: Response) => {
   const body = z.object({ token: z.string().min(10), password: z.string().min(8) }).parse(req.body);
-  const record = RESET_TOKENS.get(body.token);
-  if (!record || record.expiresAt < Date.now()) {
-    return res.status(400).json({ error: 'Invalid or expired reset token' });
+
+  let record;
+  try {
+    record = await consumePasswordResetToken(body.token);
+  } catch (e: any) {
+    if (e instanceof AuthError) return res.status(e.status).json({ error: e.message });
+    throw e;
   }
 
   const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
   const passwordHash = await bcrypt.hash(body.password, rounds);
-  await prisma.user.update({ where: { id: record.userId }, data: { passwordHash } });
-  RESET_TOKENS.delete(body.token);
 
-  return res.json({ message: 'Password reset successfully' });
+  await prisma.user.update({
+    where: { id: record.userId },
+    data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+  });
+
+  // Changing the password ends every existing session: if the reset was because
+  // the account was compromised, leaving the attacker signed in defeats it.
+  await revokeAllSessions(record.userId, 'PASSWORD_RESET');
+  await recordAuthEvent({
+    accountId: record.accountId,
+    userId: record.userId,
+    eventType: 'PASSWORD_RESET',
+    ip: clientIp(req),
+    detail: 'All sessions revoked',
+  });
+
+  return res.json({ message: 'Password reset successfully. Please sign in again.' });
 });

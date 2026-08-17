@@ -6,6 +6,66 @@ function getToken() {
   return String(localStorage.getItem('token') || '').trim();
 }
 
+function getRefreshToken() {
+  return String(localStorage.getItem('refreshToken') || '').trim();
+}
+
+/**
+ * Exchanges the refresh token for a new pair.
+ *
+ * Concurrent 401s must not each start their own refresh: the first rotation
+ * would invalidate the token the others are holding, which the server treats as
+ * theft and responds to by ending every session. One in-flight promise is
+ * shared by all callers.
+ */
+let refreshInFlight = null;
+
+async function refreshSession() {
+  if (refreshInFlight) return refreshInFlight;
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return null;
+
+  refreshInFlight = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data?.token) return null;
+      localStorage.setItem('token', data.token);
+      if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+      return data.token;
+    } catch {
+      return null;
+    } finally {
+      // Cleared on the next tick so callers awaiting this promise all see it.
+      setTimeout(() => {
+        refreshInFlight = null;
+      }, 0);
+    }
+  })();
+
+  return refreshInFlight;
+}
+
+function endSession(message) {
+  try {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+  } catch {
+    // ignore
+  }
+  const err = new Error(message || 'Your session has expired. Please sign in again.');
+  err.status = 401;
+  err.sessionExpired = true;
+  window.dispatchEvent(new CustomEvent('auth:session-expired'));
+  return err;
+}
+
 function getOrgId() {
   return String(localStorage.getItem('activeOrgId') || '').trim();
 }
@@ -26,6 +86,7 @@ export async function apiFetch(
     headers,
     skipBranchHeader = false,
     skipWarehouseHeader = false,
+    isRetry = false,
   } = {}
 ) {
   const token = getToken();
@@ -60,20 +121,18 @@ export async function apiFetch(
   } catch {
     data = null;
   }
-  if (res.status === 401) {
-    // The session is gone (expired or revoked). Without this the app keeps
-    // running with an empty permission set, which looks like "everything
-    // disappeared" rather than "you are signed out".
-    try {
-      localStorage.removeItem('token');
-    } catch {
-      // ignore
+  if (res.status === 401 && !isRetry) {
+    // The access token is short-lived by design. Try one silent refresh before
+    // treating this as a sign-out.
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      return apiFetch(path, { method, body, headers, skipBranchHeader, skipWarehouseHeader, isRetry: true });
     }
-    const err = new Error(data?.error || 'Your session has expired. Please sign in again.');
-    err.status = 401;
-    err.sessionExpired = true;
-    window.dispatchEvent(new CustomEvent('auth:session-expired'));
-    throw err;
+    throw endSession(data?.error);
+  }
+
+  if (res.status === 401) {
+    throw endSession(data?.error);
   }
 
   if (!res.ok) {

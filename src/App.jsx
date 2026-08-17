@@ -9069,9 +9069,24 @@ const AppShell = () => {
     return () => window.removeEventListener('auth:session-expired', onExpired);
   }, []);
 
-  const logout = () => {
+  const logout = async () => {
+    // Tell the server first: without this the refresh token stays valid and
+    // "sign out" only clears this browser.
+    try {
+      const refreshToken = String(localStorage.getItem('refreshToken') || '').trim();
+      if (refreshToken) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+      }
+    } catch (e) {
+      // A failed call must not trap the user in a signed-in shell.
+    }
     try {
       localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
     } catch (e) {
       // ignore
     }
