@@ -360,7 +360,10 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
     setSearch('');
   };
 
-  const CreateChooser = () => {
+  // A plain render function, not a component defined during render: the
+  // latter gets a fresh component type on every parent render, so React
+  // unmounts and remounts the whole subtree (and any state in it) each time.
+  const renderCreateChooser = () => {
     return (
       <div className="space-y-4">
         <div className="text-sm text-gray-600">Choose what you want to create:</div>
@@ -466,7 +469,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
               )}
             </div>
           ) : mode === 'choose' ? (
-            <CreateChooser />
+            renderCreateChooser()
           ) : mode === 'createVendor' ? (
             <VendorForm
               db={db}

@@ -920,7 +920,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
   const formRef = useRef(null);
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     number: generateVoucherNumber({ db, company: currentCompany, voucherKey: 'expense', branchId: activeBranchId || null }) || '',
     date: new Date().toISOString().split('T')[0],
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -932,7 +932,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
     refDate: '',
     amount: 0,
     gstRate: 0,
-  });
+  }));
 
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
   const gstRates = (db.gstRates || [])
@@ -2881,7 +2881,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
 
   const isEdit = Boolean(initialData && initialData.id);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     number: isEdit ? String(initialData?.number || '').trim() : generatedJvNumber || `JV-${Date.now()}`,
     date: isEdit ? (initialData?.date || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
     narration: isEdit ? (initialData?.narration || '') : '',
@@ -2896,7 +2896,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
             { accountId: '', debit: 0, credit: 0 },
             { accountId: '', debit: 0, credit: 0 },
           ],
-  });
+  }));
 
   const addLine = () => {
     setFormData((p) => ({ ...p, lines: [...p.lines, { accountId: '', debit: 0, credit: 0 }] }));
@@ -3544,7 +3544,7 @@ const LedgerView = ({
           const nextId = ((Array.isArray(db.journalEntries) ? db.journalEntries : []).reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0) || 0) + 1;
           const je = { id: nextId, companyId: currentCompany.id, date, narration, lines: [{ accountId: String(ledgerId), debit, credit }], createdAt: new Date().toISOString() };
           setDb((prev) => ({ ...prev, journalEntries: [...(Array.isArray(prev.journalEntries) ? prev.journalEntries : []), je] }));
-        } catch (e) {
+        } catch {
           alert('Invalid JSON');
         }
         return;
@@ -3855,7 +3855,7 @@ const LedgerView = ({
         const arr = JSON.parse(raw);
         if (Array.isArray(arr)) setExpandedGroups(new Set(arr));
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [ledgerId]);
@@ -3864,7 +3864,7 @@ const LedgerView = ({
     try {
       const key = `ledger_expanded_${String(ledgerId || '')}`;
       localStorage.setItem(key, JSON.stringify(Array.from(expandedGroups)));
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [expandedGroups, ledgerId]);
@@ -6966,7 +6966,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
       // Local-only for now — see the note on the tax & compliances save above.
       alert('Company settings saved.');
-    } catch (e) {
+    } catch {
       alert('Failed to save company settings.');
     } finally {
       setSaving(false);
@@ -9106,13 +9106,13 @@ const AppShell = () => {
           body: JSON.stringify({ refreshToken }),
         });
       }
-    } catch (e) {
+    } catch {
       // A failed call must not trap the user in a signed-in shell.
     }
     try {
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
-    } catch (e) {
+    } catch {
       // ignore
     }
     setIsAuthenticated(false);
@@ -9230,7 +9230,7 @@ const AppShell = () => {
       localStorage.removeItem('activeBranchId');
       localStorage.removeItem('branchId');
       localStorage.removeItem('activeWarehouseId');
-    } catch (e) {
+    } catch {
       // ignore
     }
     window.location.reload();
@@ -10834,6 +10834,17 @@ const AppShell = () => {
         </aside>
 
         <main id="main-content" key={active} className="min-w-0 flex-1 ui-in-fade">
+          {/*
+            A failed warehouse load used to be silent: the dropdown was simply
+            empty, which reads as "no warehouses configured" when the truth may
+            be an expired session or a server that is down. Branch errors were
+            already surfaced; this is the warehouse counterpart.
+          */}
+          {warehousesError ? (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              Could not load warehouses: {warehousesError}
+            </div>
+          ) : null}
           {reportPageKeys.has(String(active)) && active !== 'reports' ? (
             <div className="space-y-4">
               <div>

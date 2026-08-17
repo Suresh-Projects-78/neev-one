@@ -48,7 +48,7 @@ const AuthGate = ({ onAuth }) => {
       let data = null;
       try {
         data = text ? JSON.parse(text) : null;
-      } catch (e) {
+      } catch {
         data = null;
       }
       return { ok: res.ok, status: res.status, data, text };

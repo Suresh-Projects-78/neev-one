@@ -46,7 +46,8 @@ const normalizeDate = (value) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
   // dd-mm-yyyy / dd/mm/yyyy (also accepts mm-dd-yyyy when unambiguous)
-  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  // `/` and `-` need no escaping inside a character class.
+  const m = s.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
   if (m) {
     const a = Number(m[1]);
     const b = Number(m[2]);

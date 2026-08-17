@@ -451,7 +451,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   );
 };
 
-export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, warehouses = [], defaultWarehouseId = '' }) => {
+export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) => {
   const purchaseOrders = db.purchaseOrders.filter((po) => po.companyId === currentCompany.id);
 
   const warehouseById = React.useMemo(() => {
@@ -1042,7 +1042,6 @@ export const BillsList = ({
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 const derived = getDerivedStatus(b);
-                const canRecordPayment = !(derived === 'Paid' || derived === 'Draft');
                 const statusPillClass =
                   derived === 'Paid'
                     ? 'bg-green-100 text-green-700'

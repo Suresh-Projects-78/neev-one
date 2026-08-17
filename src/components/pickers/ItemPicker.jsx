@@ -63,7 +63,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   );
   const gstRateValues = useMemo(() => gstRates.map((r) => String(Number(r.rate))), [gstRates]);
 
-  const [newItem, setNewItem] = useState({
+  const [newItem, setNewItem] = useState(() => ({
     code: `ITM${Date.now()}`,
     name: '',
     type: 'Goods',
@@ -72,7 +72,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
     gstRate: 0,
     salePrice: 0,
     purchasePrice: 0,
-  });
+  }));
 
   const resetNewItem = () => {
     setNewItem({
