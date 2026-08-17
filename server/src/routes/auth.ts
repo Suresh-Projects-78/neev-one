@@ -300,7 +300,7 @@ authRouter.get('/me', async (req: Request, res: Response) => {
 
   const user = await prisma.user.findFirst({
     where: { id: auth.userId, accountId: auth.accountId, isActive: true },
-    select: { id: true, email: true, fullName: true, accountId: true },
+    select: { id: true, email: true, fullName: true, accountId: true, emailVerifiedAt: true },
   });
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 

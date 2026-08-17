@@ -100,6 +100,8 @@ import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
+import EmailSettings from './features/settings/EmailSettings';
+import { resendVerification } from './api/email';
 import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
 import { useTheme } from './components/ui/useTheme';
@@ -9162,6 +9164,9 @@ const AppShell = () => {
   }, [isAuthenticated, activeOrgId]);
 
   const isOrgAdmin = Boolean(authCtx?.data?.isOrgAdmin);
+  const emailVerified = Boolean(authCtx?.data?.user?.emailVerifiedAt);
+  const [verifyNotice, setVerifyNotice] = useState('');
+  const [verifySending, setVerifySending] = useState(false);
   const allowedBranchIds = useMemo(() => {
     const ids = authCtx?.data?.allowedBranchIds;
     return Array.isArray(ids) ? ids.map((x) => String(x)) : [];
@@ -9407,6 +9412,7 @@ const AppShell = () => {
           { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsPermissions', label: 'Role Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications' },
           { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
         ],
       },
@@ -10350,6 +10356,8 @@ const AppShell = () => {
         return <RolePermissionManager />;
       case 'settingsFeatures':
         return <FeatureSettings />;
+      case 'settingsEmail':
+        return <EmailSettings />;
       case 'settingsUsersRoles': {
         const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
         return <SettingsUsersRoles orgId={orgId} />;
@@ -10557,6 +10565,38 @@ const AppShell = () => {
           </div>
         </div>
       </header>
+
+      {isAuthenticated && authCtx.data && !emailVerified && isEnabled('emailVerification') ? (
+        <div
+          className="w-full px-4 lg:px-6 py-2 text-sm flex flex-wrap items-center gap-x-3 gap-y-1"
+          role="status"
+          style={{ backgroundColor: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn))' }}
+        >
+          <span>Confirm your email address to secure this account.</span>
+          {verifyNotice ? (
+            <span className="ui-title text-xs">{verifyNotice}</span>
+          ) : (
+            <button
+              type="button"
+              className="ui-btn ui-btn-ghost !min-h-0 !py-0.5 !px-2 text-xs"
+              disabled={verifySending}
+              onClick={async () => {
+                setVerifySending(true);
+                try {
+                  await resendVerification();
+                  setVerifyNotice('Sent — check your inbox.');
+                } catch (e) {
+                  setVerifyNotice(String(e?.message || e));
+                } finally {
+                  setVerifySending(false);
+                }
+              }}
+            >
+              {verifySending ? 'Sending…' : 'Resend the link'}
+            </button>
+          )}
+        </div>
+      ) : null}
 
       <div className="w-full px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5">
         <aside className="w-full md:w-56 lg:w-60 shrink-0">
