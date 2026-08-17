@@ -56,6 +56,21 @@ Web on 5173, API on 4001.
 
 ---
 
+## 17 Aug 2026 — payments reach the ledger
+
+| Item | Commit | Verified by |
+|---|---|---|
+| Receipts/payments UI wired to the server API (req. 14) | `dde9c70` | live server: `/payment-modes` returns 1200 Cash-in-Hand + 1300 Bank Accounts; a 5000 receipt posts as `RCP-2627-00001`; trial balance Bank Dr 5000 / AR Cr 5000, balanced |
+| IPv6 clients could not sign in, sign up or reset a password | `f52620d` | regression test sends `X-Forwarded-For: 2001:db8::1` with the limiter on — fails on the old code, passes on the fix |
+| `npm run typecheck` (and so `npm run verify`) exited TS5058 | `f52620d` | `npm run typecheck` clean |
+
+The auth bug is the one worth remembering: `ipKeyGenerator`'s second argument
+is an IPv6 subnet mask, and the code passed the response object, so every
+rate-limited route replied `{"error":"Invalid subnet mask."}`. It never showed
+up in tests because supertest connects over IPv4 and the mask is only consulted
+for IPv6 — but a browser on `localhost` (macOS resolves it to ::1) hit it every
+time. Found by exercising the running server rather than by reading the code.
+
 ## Known blockers and caveats
 
 - **Docker stack is still unverified, and it is an environment problem, not a
