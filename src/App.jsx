@@ -32,6 +32,23 @@ import {
   Upload,
   Search as SearchIcon,
 } from 'lucide-react';
+/* Duotone icons for the module rail — the two-tone fill is what reads as a
+   "coloured icon" rather than a tinted outline. Leaf items stay lucide, tinted
+   with their module colour, so the two sets never mix at the same level. */
+import {
+  Bank as PhBank,
+  ChartBar as PhReports,
+  Database as PhMaster,
+  GearSix as PhSettings,
+  Notebook as PhJournal,
+  Package as PhInventory,
+  Receipt as PhSales,
+  Scales as PhTrialBalance,
+  ShieldCheck as PhApprovals,
+  ShoppingCartSimple as PhPurchases,
+  SquaresFour as PhDashboard,
+  Wallet as PhExpenses,
+} from '@phosphor-icons/react';
 import Modal from './components/ui/Modal';
 import PopupSelect from './components/pickers/PopupSelect';
 import AccountPicker from './components/pickers/AccountPicker';
@@ -9424,12 +9441,14 @@ const AppShell = () => {
 
   const navModel = useMemo(
     () => [
-      { type: 'item', key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { type: 'item', key: 'dashboard', label: 'Dashboard', icon: PhDashboard, ph: true, tint: 'dashboard' },
       {
         type: 'group',
         key: 'salesMenu',
         label: 'Sales',
-        icon: FileText,
+        icon: PhSales,
+        ph: true,
+        tint: 'sales',
         items: [
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
           { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW', feature: 'standaloneReceiptsPayments' },
@@ -9441,7 +9460,9 @@ const AppShell = () => {
         type: 'group',
         key: 'purchasesMenu',
         label: 'Purchases',
-        icon: ShoppingCart,
+        icon: PhPurchases,
+        ph: true,
+        tint: 'purchases',
         items: [
           { key: 'bills', label: 'Bills', icon: FileStack, perm: 'PURCHASE::Bills::VIEW' },
           { key: 'payments', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW', feature: 'standaloneReceiptsPayments' },
@@ -9449,12 +9470,14 @@ const AppShell = () => {
           { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW', feature: 'debitNotes' },
         ],
       },
-      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: BookOpen, perm: 'CASHBANK::Cash & Bank::VIEW' },
+      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, tint: 'cash', perm: 'CASHBANK::Cash & Bank::VIEW' },
       {
         type: 'group',
         key: 'expensesMenu',
         label: 'Expenses',
-        icon: Receipt,
+        icon: PhExpenses,
+        ph: true,
+        tint: 'expenses',
         items: [
           { key: 'expenses', label: 'Expenses', icon: Receipt, perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
           { key: 'paymentsExpense', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW', feature: 'standaloneReceiptsPayments' },
@@ -9464,7 +9487,9 @@ const AppShell = () => {
         type: 'group',
         key: 'inventoryMenu',
         label: 'Inventory',
-        icon: Package,
+        icon: PhInventory,
+        ph: true,
+        tint: 'inventory',
         items: [
           { key: 'inventory', label: 'Inventory', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'inventory' },
           { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
@@ -9472,15 +9497,17 @@ const AppShell = () => {
           { key: 'batchSerial', label: 'Batches & Serials', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchSerial' },
         ],
       },
-      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: NotebookPen, perm: 'ACCOUNTING::Journal Entries::VIEW' },
-      { type: 'item', key: 'approvals', label: 'Approvals', icon: Shield, feature: 'approvals' },
-      { type: 'item', key: 'ledgerTrialBalance', label: 'Trial Balance', icon: BookOpen, perm: 'ACCOUNTING::Ledger::VIEW' },
-      { type: 'item', key: 'reports', label: 'Reports', icon: BarChart3, permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
+      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tint: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
+      { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, tint: 'approvals', feature: 'approvals' },
+      { type: 'item', key: 'ledgerTrialBalance', label: 'Trial Balance', icon: PhTrialBalance, ph: true, tint: 'tb', perm: 'ACCOUNTING::Ledger::VIEW' },
+      { type: 'item', key: 'reports', label: 'Reports', icon: PhReports, ph: true, tint: 'reports', permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
       {
         type: 'group',
         key: 'mdmMenu',
         label: 'Master Data',
-        icon: Tags,
+        icon: PhMaster,
+        ph: true,
+        tint: 'master',
         items: [
           { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
           { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
@@ -9496,7 +9523,9 @@ const AppShell = () => {
         type: 'group',
         key: 'settingsMenu',
         label: 'Settings',
-        icon: Settings,
+        icon: PhSettings,
+        ph: true,
+        tint: 'settings',
         items: [
           { key: 'settingsCompany', label: 'Company', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches' },
@@ -10649,65 +10678,6 @@ const AppShell = () => {
       >
         <div className="w-full px-4 lg:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="relative" ref={profileMenuRef}>
-              <button
-                type="button"
-                onClick={() => setProfileMenuOpen((v) => !v)}
-                className="ui-btn ui-btn-ghost !px-2"
-                aria-haspopup="menu"
-                aria-expanded={profileMenuOpen}
-                aria-label="Account menu"
-              >
-                <span
-                  className="h-7 w-7 rounded-full inline-flex items-center justify-center text-[11px] font-bold"
-                  style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--accent))' }}
-                  aria-hidden="true"
-                >
-                  {userInitials}
-                </span>
-                <ChevronDown size={14} aria-hidden="true" />
-              </button>
-              {profileMenuOpen && (
-                <div
-                  role="menu"
-                  className="absolute left-0 mt-2 w-64 rounded-lg overflow-hidden z-50 ui-card ui-in-pop"
-                  style={{ boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top left' }}
-                >
-                  <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
-                    <div className="text-sm font-semibold ui-title truncate">{userEmail}</div>
-                    <div className="ui-subtle text-[11px] mt-0.5 ui-mono truncate">
-                      org {String(localStorage.getItem('activeOrgId') || '-')}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setActive('settingsProfile');
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--surface-sunken))]"
-                  >
-                    My profile
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      logout();
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--neg-soft))]"
-                    style={{ color: 'rgb(var(--neg))' }}
-                  >
-                    Sign out
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="h-5 w-px shrink-0" style={{ backgroundColor: 'rgb(var(--border))' }} aria-hidden="true" />
-
             <Building2 size={17} style={{ color: 'rgb(var(--accent))' }} aria-hidden="true" />
 
             {availableOrgs.length > 1 ? (
@@ -10814,8 +10784,11 @@ const AppShell = () => {
 
       <div className="w-full px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5">
         <aside className="w-full md:w-56 lg:w-60 shrink-0">
-          <nav aria-label="Main" className="ui-panel p-2 md:sticky md:top-[4.5rem]">
-            <div className="space-y-0.5">
+          <nav
+            aria-label="Main"
+            className="ui-panel p-2 md:sticky md:top-[4.5rem] flex flex-col md:max-h-[calc(100dvh-5rem)]"
+          >
+            <div className="space-y-0.5 min-h-0 flex-1 overflow-y-auto">
               {visibleNav.map((entry) => {
                 if (entry.type === 'item') {
                   const Icon = entry.icon;
@@ -10840,7 +10813,12 @@ const AppShell = () => {
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      <Icon size={16} aria-hidden="true" />
+                      <Icon
+                        size={16}
+                        aria-hidden="true"
+                        {...(entry.ph ? { weight: 'duotone' } : {})}
+                        style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                      />
                       <span>{entry.label}</span>
                     </button>
                   );
@@ -10865,7 +10843,12 @@ const AppShell = () => {
                       style={isGroupActive ? { color: 'rgb(var(--fg))' } : undefined}
                     >
                       <span className="flex items-center gap-2.5">
-                        <GroupIcon size={16} aria-hidden="true" />
+                        <GroupIcon
+                          size={16}
+                          aria-hidden="true"
+                          {...(entry.ph ? { weight: 'duotone' } : {})}
+                          style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                        />
                         <span>{entry.label}</span>
                       </span>
                       <ChevronDown
@@ -10889,7 +10872,11 @@ const AppShell = () => {
                               data-active={isActive}
                               aria-current={isActive ? 'page' : undefined}
                             >
-                              <Icon size={15} aria-hidden="true" />
+                              <Icon
+                                size={15}
+                                aria-hidden="true"
+                                style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                              />
                               <span>{item.label}</span>
                             </button>
                           );
@@ -10899,6 +10886,73 @@ const AppShell = () => {
                   </div>
                 );
               })}
+            </div>
+
+            {/* Account, pinned to the bottom of the rail like Linear or Slack:
+                identity travels with navigation, and the header keeps to search
+                and workspace. The menu opens upward, because downward from here
+                is off the bottom of the screen. */}
+            <div
+              className="relative mt-2 pt-2 shrink-0"
+              style={{ borderTop: '1px solid rgb(var(--border))' }}
+              ref={profileMenuRef}
+            >
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((v) => !v)}
+                className="ui-nav-item w-full"
+                aria-haspopup="menu"
+                aria-expanded={profileMenuOpen}
+                aria-label="Account menu"
+              >
+                <span
+                  className="h-6 w-6 rounded-full inline-flex items-center justify-center text-[10px] font-bold shrink-0"
+                  style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--accent))' }}
+                  aria-hidden="true"
+                >
+                  {userInitials}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-left">{userEmail}</span>
+                <ChevronDown size={14} aria-hidden="true" className="rotate-180" />
+              </button>
+
+              {profileMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute left-0 bottom-full mb-2 w-60 rounded-lg overflow-hidden z-50 ui-card ui-in-pop"
+                  style={{ boxShadow: 'var(--shadow-pop)', '--pop-origin': 'bottom left' }}
+                >
+                  <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+                    <div className="text-sm font-semibold ui-title truncate">{userEmail}</div>
+                    <div className="ui-subtle text-[11px] mt-0.5 ui-mono truncate">
+                      org {String(localStorage.getItem('activeOrgId') || '-')}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setActive('settingsProfile');
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--surface-sunken))]"
+                  >
+                    My profile
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      logout();
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--neg-soft))]"
+                    style={{ color: 'rgb(var(--neg))' }}
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
             </div>
           </nav>
         </aside>

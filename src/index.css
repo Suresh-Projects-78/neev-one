@@ -58,11 +58,32 @@
   --on-accent: 255 255 255;
   --ring: 249 115 22;
 
-  /* No second accent. Orange carries every highlight; anything informational
-     is neutral, per the brief's "everything else should remain grayscale".
-     Success/warning/danger below exist for status only, never decoration. */
+  /* No second accent on chrome. Success/warning/danger exist for status. */
   --info: 107 114 128;
   --info-soft: 245 245 245;
+
+  /* Column hues — requested explicitly: document numbers and party names get
+     their own colours so a row reads as fields, not prose. Both are AA on
+     white (orange-700 4.8:1, teal-700 4.9:1) and deliberately distinct from
+     the money greens/reds so status colour keeps its meaning. */
+  --col-doc: 194 65 12;
+  --col-party: 15 118 110;
+
+  /* Module tints for navigation icons. One hue per module, so the rail can be
+     scanned by colour before a single label is read. All AA-adjacent shades on
+     white; the labels beside them stay neutral. */
+  --mod-dashboard: 234 88 12;
+  --mod-sales: 13 148 136;
+  --mod-purchases: 124 58 237;
+  --mod-cash: 22 163 74;
+  --mod-expenses: 225 29 72;
+  --mod-inventory: 217 119 6;
+  --mod-journal: 79 70 229;
+  --mod-approvals: 2 132 199;
+  --mod-tb: 87 83 78;
+  --mod-reports: 192 38 211;
+  --mod-master: 8 145 178;
+  --mod-settings: 107 114 128;
 
   /* Money semantics */
   --pos: 22 163 74;             /* #16A34A */
@@ -147,6 +168,22 @@
 
   --info: 161 161 170;
   --info-soft: 39 39 42;
+
+  --col-doc: 253 186 116;   /* orange-300 on the dark card ~9:1 */
+  --col-party: 94 234 212;  /* teal-300 ~11:1 */
+
+  --mod-dashboard: 251 146 60;
+  --mod-sales: 45 212 191;
+  --mod-purchases: 167 139 250;
+  --mod-cash: 74 222 128;
+  --mod-expenses: 251 113 133;
+  --mod-inventory: 251 191 36;
+  --mod-journal: 129 140 248;
+  --mod-approvals: 56 189 248;
+  --mod-tb: 168 162 158;
+  --mod-reports: 232 121 249;
+  --mod-master: 34 211 238;
+  --mod-settings: 161 161 170;
 
   --pos: 74 222 128;
   --pos-soft: 5 46 22;
@@ -967,7 +1004,7 @@
     font-size: 0.8125rem;
     font-weight: 500;
     letter-spacing: -0.01em;
-    color: rgb(var(--fg));
+    color: rgb(var(--col-doc));
     white-space: nowrap;
   }
 
@@ -979,7 +1016,7 @@
        should be able to find the name without reading the row. */
     font-size: 0.875rem;
     font-weight: 600;
-    color: rgb(var(--fg));
+    color: rgb(var(--col-party));
     white-space: nowrap;
   }
 
