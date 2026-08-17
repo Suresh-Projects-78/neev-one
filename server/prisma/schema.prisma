@@ -997,3 +997,72 @@ model NotificationSetting {
   @@unique([orgId, eventKey])
   @@index([accountId, orgId])
 }
+
+// ----------------------------
+// Security policy and sign-in methods
+// ----------------------------
+model AuthPolicy {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String @unique
+
+  maxFailedLogins    Int @default(8)
+  lockoutMinutes     Int @default(15)
+  sessionDays        Int @default(30)
+  accessTokenMinutes Int @default(15)
+
+  passwordMinLength        Int     @default(8)
+  passwordRequireMixedCase Boolean @default(false)
+  passwordRequireNumber    Boolean @default(false)
+  passwordRequireSymbol    Boolean @default(false)
+
+  requireVerifiedEmail Boolean @default(false)
+  /// Comma-separated domains; empty means any address may be invited.
+  allowedEmailDomains  String?
+
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([accountId, orgId])
+}
+
+/// A configured way to sign in. LOCAL always exists implicitly; rows here are
+/// the external identity providers an organisation has set up.
+model AuthProvider {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+
+  kind    String // OIDC | SAML
+  name    String
+  enabled Boolean @default(false)
+
+  /// OIDC
+  issuer          String?
+  clientId        String?
+  clientSecretEnc String?
+  discoveryUrl    String?
+  scopes          String? @default("openid email profile")
+
+  /// SAML
+  entryPoint  String?
+  entityId    String?
+  certificate String?
+
+  /// Restricts which addresses may use this provider.
+  emailDomains  String?
+  /// Create a user on first successful sign-in instead of refusing.
+  autoProvision Boolean @default(false)
+  defaultRoleId String?
+
+  lastUsedAt DateTime?
+  lastError  String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, name])
+  @@index([accountId, orgId, enabled])
+}

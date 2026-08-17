@@ -101,6 +101,7 @@ import { usePermissions } from './permissions/usePermissions';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import EmailSettings from './features/settings/EmailSettings';
+import SecuritySettings from './features/settings/SecuritySettings';
 import { resendVerification } from './api/email';
 import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
@@ -9413,6 +9414,7 @@ const AppShell = () => {
           { key: 'settingsPermissions', label: 'Role Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications' },
+          { key: 'settingsSecurity', label: 'Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
           { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
         ],
       },
@@ -10358,6 +10360,8 @@ const AppShell = () => {
         return <FeatureSettings />;
       case 'settingsEmail':
         return <EmailSettings />;
+      case 'settingsSecurity':
+        return <SecuritySettings />;
       case 'settingsUsersRoles': {
         const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
         return <SettingsUsersRoles orgId={orgId} />;

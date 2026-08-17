@@ -27,6 +27,7 @@ import {
   consumeEmailVerificationToken,
 } from '../services/auth.js';
 import { sendTemplate } from '../services/mailer.js';
+import { policyForUser, validatePassword, getAuthPolicy } from '../services/policy.js';
 import { expandPreset, permKey } from '../constants/permissionCatalog.js';
 
 export const authRouter = Router();
@@ -161,9 +162,11 @@ authRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
     });
   }
 
+  const policy = await policyForUser(user.accountId, user.id);
+
   const ok = await bcrypt.compare(body.password, user.passwordHash);
   if (!ok) {
-    const result = await registerFailedLogin(user.id);
+    const result = await registerFailedLogin(user.id, policy.maxFailedLogins, policy.lockoutMinutes);
     await recordAuthEvent({
       accountId: user.accountId,
       userId: user.id,
@@ -173,7 +176,7 @@ authRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
       userAgent,
     });
     if (result.locked) {
-      return res.status(429).json({ error: `Too many failed attempts. Try again in ${LOCKOUT_NOTICE} minute(s).` });
+      return res.status(429).json({ error: `Too many failed attempts. Try again in ${policy.lockoutMinutes} minute(s).` });
     }
     return invalid();
   }

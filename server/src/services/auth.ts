@@ -179,24 +179,28 @@ export function lockoutRemainingMs(lockedUntil: Date | null | undefined) {
   return Math.max(0, lockedUntil.getTime() - Date.now());
 }
 
-export async function registerFailedLogin(userId: string) {
+export async function registerFailedLogin(
+  userId: string,
+  maxFailed = MAX_FAILED_LOGINS,
+  lockoutMinutes = LOCKOUT_MINUTES
+) {
   const user = await prisma.user.update({
     where: { id: userId },
     data: { failedLoginCount: { increment: 1 } },
     select: { failedLoginCount: true },
   });
 
-  if (user.failedLoginCount >= MAX_FAILED_LOGINS) {
+  if (user.failedLoginCount >= maxFailed) {
     await prisma.user.update({
       where: { id: userId },
       data: {
-        lockedUntil: new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000),
+        lockedUntil: new Date(Date.now() + lockoutMinutes * 60 * 1000),
         failedLoginCount: 0,
       },
     });
     return { locked: true };
   }
-  return { locked: false, remaining: MAX_FAILED_LOGINS - user.failedLoginCount };
+  return { locked: false, remaining: maxFailed - user.failedLoginCount };
 }
 
 export async function clearFailedLogins(userId: string) {
