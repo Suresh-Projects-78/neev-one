@@ -36,7 +36,7 @@
   /* Text */
   --fg: 17 24 39;               /* #111827 */
   --fg-muted: 107 114 128;      /* #6B7280 */
-  --fg-subtle: 156 163 175;
+  --fg-subtle: 107 114 128;   /* 4.83:1 on white — was 2.54:1 */
 
   /* Brand — orange. The primary action and the active state. */
   --brand: 249 115 22;          /* #F97316 */
@@ -124,7 +124,7 @@
 
   --fg: 241 245 249;
   --fg-muted: 148 163 184;
-  --fg-subtle: 100 116 139;
+  --fg-subtle: 161 161 170;   /* 6.5:1 on the dark card — was 3.72:1 */
 
   /* Orange lifts slightly in dark so it keeps its contrast against a dark
      surface without turning fluorescent. */
@@ -950,11 +950,18 @@
      a different colour would make a table look like a spreadsheet with
      conditional formatting left on; the only colour that appears here carries
      meaning (an overdue date, a negative amount).
+
+     Each selector is doubled deliberately. `.ui-table tbody td` already sets a
+     colour at specificity (0,1,2); a single class is (0,1,0) and loses to it,
+     which is why the roles had no visible effect at first. Doubling the class
+     makes it (0,2,0) — more classes wins before element count is considered —
+     so the role holds inside a .ui-table and in the plain tables elsewhere,
+     without resorting to !important or hard-coding a parent selector.
   --------------------------------------------------------------------------- */
 
   /* The scan anchor. Mono so digits align down the column and the eye can run
      it like a list of codes rather than prose. */
-  .ui-col-id {
+  .ui-col-id.ui-col-id {
     font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-feature-settings: 'calt' 0;
     font-size: 0.8125rem;
@@ -966,50 +973,49 @@
 
   /* The party. Darkest and heaviest thing in the row, because a person
      recognises a name faster than a number. */
-  .ui-col-entity {
-    font-weight: 500;
+  .ui-col-entity.ui-col-entity {
+    font-weight: 600;
     color: rgb(var(--fg));
+    white-space: nowrap;
   }
 
-
   /* Supporting context — warehouse, branch, category. Present, not competing. */
-  .ui-col-meta {
+  .ui-col-meta.ui-col-meta {
     color: rgb(var(--fg-muted));
     font-weight: 400;
     white-space: nowrap;
   }
 
-  .ui-col-entity { white-space: nowrap; }
-
-  /* Below this the columns would squeeze names onto two lines, which doubles
-     row height and destroys the scan rhythm. The card scrolls sideways
-     instead; the page itself never does. */
-  .ui-table-wide { min-width: 60rem; }
-
-  /* Dates recede: they qualify the row, they are rarely what you came for. */
-  .ui-col-date {
+  /* Dates recede further still: they qualify the row, they are rarely what you
+     came for, and there are usually two of them competing for the same glance. */
+  .ui-col-date.ui-col-date {
     color: rgb(var(--fg-muted));
     font-variant-numeric: tabular-nums;
     font-size: 0.8125rem;
     white-space: nowrap;
   }
   /* A due date in the past is the one date that earns colour. */
-  .ui-col-date-late {
+  .ui-col-date-late.ui-col-date-late {
     color: rgb(var(--neg));
     font-weight: 500;
   }
 
   /* Money: tabular and right-aligned so magnitudes line up by digit, heavier
      than its neighbours because it is the third thing every reader checks. */
-  .ui-col-amount {
+  .ui-col-amount.ui-col-amount {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     color: rgb(var(--fg));
     text-align: right;
     white-space: nowrap;
   }
-  .ui-col-amount-zero { color: rgb(var(--fg-subtle)); font-weight: 400; }
-  .ui-col-amount-neg { color: rgb(var(--neg)); }
+  .ui-col-amount-zero.ui-col-amount-zero { color: rgb(var(--fg-subtle)); font-weight: 400; }
+  .ui-col-amount-neg.ui-col-amount-neg { color: rgb(var(--neg)); }
+
+  /* Below this the columns would squeeze names onto two lines, which doubles
+     row height and destroys the scan rhythm. The card scrolls sideways
+     instead; the page itself never does. */
+  .ui-table-wide { min-width: 60rem; }
 
   /* Column headings: quiet, uppercase, wide-tracked — a label for the column,
      not a competitor to the data under it. */
