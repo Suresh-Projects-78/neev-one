@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
+import ChartCard from '../../components/charts/ChartCard';
 /**
  * ECharts is ~2 MB unminified and belongs nowhere near first paint. Loading the
  * chart module on demand keeps the initial bundle for the shell and the tables,
@@ -25,8 +26,10 @@ const CircularCharts = {
   CompositionPie: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.CompositionPie }))),
   DonutChart: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.DonutChart }))),
   RadialGauge: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.RadialGauge }))),
+  PeriodBars: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.PeriodBars }))),
+  RankedBars: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.RankedBars }))),
 };
-const { ChartLegend, CompositionPie, DonutChart, RadialGauge } = CircularCharts;
+const { ChartLegend, CompositionPie, DonutChart, RadialGauge, PeriodBars, RankedBars } = CircularCharts;
 
 /** Reserves the chart's height so nothing below it jumps when it arrives. */
 const ChartFallback = ({ height = 220 }) => (
@@ -187,13 +190,12 @@ function RevenueChart({ buckets, company }) {
     return l ? `${l} L ${w} ${h} L 0 ${h} Z` : '';
   };
 
+  // Chart only — ChartCard supplies the surface, the title and the footer.
+  // Keeping a card in here as well produced a tile inside a tile with the
+  // heading printed twice.
   return (
-    <section className="ui-card p-5">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="ui-title text-sm">Billed and collected</h2>
-          <p className="ui-subtle text-xs mt-0.5">Per period, in {company?.currency || 'INR'}</p>
-        </div>
+    <div>
+      <header className="flex flex-wrap items-center justify-end gap-3">
         <div className="flex items-center gap-4 text-xs">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'rgb(var(--brand))' }} />
@@ -236,7 +238,7 @@ function RevenueChart({ buckets, company }) {
           </ul>
         </>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -310,6 +312,7 @@ export default function DashboardOverview({
   onNewInvoice,
   onOpenInvoices,
   onOpenReceipts,
+  onOpenCustomers,
   onOpenBranches,
   branchFilterLabel = 'All',
   invoices: invoicesProp = null,
@@ -417,6 +420,37 @@ export default function DashboardOverview({
       .sort((a, b) => b.outstanding - a.outstanding)
       .slice(0, 5);
   }, [current]);
+
+  const agingRows = useMemo(
+    () => aging.filter((b) => b.amount > 0).map((b) => ({ name: b.label, value: b.amount, color: b.color })),
+    [aging]
+  );
+  const agingTotal = useMemo(() => aging.reduce((sum, b) => sum + b.amount, 0), [aging]);
+
+  /**
+   * How long the average unpaid invoice has been sitting, per customer.
+   *
+   * Age of the debt rather than size of it: a customer owing a little for 90
+   * days is a different problem from one owing a lot since yesterday, and the
+   * size question is already answered by the tile beside this one.
+   */
+  const daysOutstanding = useMemo(() => {
+    const byName = new Map();
+    for (const inv of current) {
+      const due = Math.max(0, num(inv.total) - num(inv.paidAmount));
+      if (due <= 0) continue;
+      const d = toDate(inv.date);
+      if (!d) continue;
+      const age = Math.max(0, Math.floor((now - d.getTime()) / DAY));
+      const name = String(inv.customerName || 'Unnamed').trim() || 'Unnamed';
+      const prev = byName.get(name) || { total: 0, count: 0 };
+      byName.set(name, { total: prev.total + age, count: prev.count + 1 });
+    }
+    return [...byName.entries()]
+      .map(([label, v]) => ({ label, value: v.total / v.count }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [current, now]);
 
   const sparkOf = (key) => buckets.map((b) => b[key]);
   const collectedPct = billed > 0 ? Math.round((collected / billed) * 100) : 0;
@@ -531,39 +565,108 @@ export default function DashboardOverview({
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
-            <RevenueChart buckets={buckets} company={currentCompany} />
+          {/* Three-column grid of equal tiles. One shape repeated, because a
+              dashboard's job is comparison and comparison breaks the moment
+              two tiles are built differently. Collapses to two columns on a
+              tablet and one on a phone. */}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ChartCard
+              title="Outstanding by age"
+              subtitle="Where the receivable book is sitting"
+              actionLabel="View invoices"
+              onAction={onOpenInvoices}
+            >
+              {agingTotal <= 0 ? (
+                <EmptyState icon={CircleSlash} title="Nothing outstanding" description="Every invoice in view is settled." />
+              ) : (
+                <>
+                  <Suspense fallback={<ChartFallback height={200} />}>
+                    <DonutChart
+                      data={agingRows}
+                      centerLabel="Outstanding"
+                      centerValue={formatMoneyCompact(agingTotal, currentCompany)}
+                      height={200}
+                    />
+                  </Suspense>
+                  <Suspense fallback={<ChartFallback height={80} />}>
+                    <ChartLegend
+                      rows={agingRows}
+                      total={agingTotal}
+                      formatter={(v) => formatMoneyCompact(v, currentCompany)}
+                    />
+                  </Suspense>
+                </>
+              )}
+            </ChartCard>
 
-            {/* A gauge rather than a bar: the arc has a visible end, so the
-                distance still to collect is as readable as the part already
-                collected. */}
-            <section className="ui-card p-5 flex flex-col">
-              <h2 className="ui-title text-sm">Collection rate</h2>
-              <p className="ui-subtle text-xs mt-0.5">Of everything billed this period</p>
-              <div className="flex-1 flex flex-col justify-center">
-                <Suspense fallback={<ChartFallback height={190} />}>
-                  <RadialGauge
-                    value={collectedPct}
-                    label="Collection rate"
-                    tone={collectedPct >= 70 ? 'pos' : collectedPct >= 40 ? undefined : 'neg'}
-                    height={190}
+            <ChartCard title="Billed by period" subtitle={`Last ${range.label.toLowerCase()}`}>
+              <Suspense fallback={<ChartFallback height={240} />}>
+                <PeriodBars
+                  data={buckets.map((b) => ({ label: b.label, value: b.billed }))}
+                  height={240}
+                  formatter={(v) => formatMoneyCompact(v, currentCompany)}
+                />
+              </Suspense>
+            </ChartCard>
+
+            <ChartCard
+              title="Where the money is owed"
+              subtitle="Share of outstanding, by customer"
+              actionLabel="View customers"
+              onAction={onOpenCustomers}
+            >
+              {topCustomers.length === 0 ? (
+                <EmptyState icon={Wallet} title="Nobody owes you" description="Balances appear here as invoices go unpaid." />
+              ) : (
+                <Suspense fallback={<ChartFallback height={300} />}>
+                  <CompositionPie
+                    data={topCustomers.map((r) => ({ name: r.name, value: r.outstanding }))}
+                    height={200}
+                    formatter={(v) => formatMoneyCompact(v, currentCompany)}
                   />
                 </Suspense>
-                <p className="text-center text-sm ui-muted -mt-2">
-                  <span className="ui-fg font-medium">{formatMoney(collected, currentCompany)}</span> collected of{' '}
-                  {formatMoney(billed, currentCompany)}
-                </p>
-              </div>
-            </section>
-          </div>
+              )}
+            </ChartCard>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <AgingPanel
-              buckets={aging}
-              total={aging.reduce((s, b) => s + b.amount, 0)}
-              company={currentCompany}
-            />
-            <TopCustomers rows={topCustomers} company={currentCompany} />
+            <ChartCard title="Collection rate" subtitle="Of everything billed this period">
+              <Suspense fallback={<ChartFallback height={200} />}>
+                <RadialGauge
+                  value={collectedPct}
+                  label="Collection rate"
+                  tone={collectedPct >= 70 ? 'pos' : collectedPct >= 40 ? undefined : 'neg'}
+                  height={200}
+                />
+              </Suspense>
+              <p className="text-center ui-caption -mt-3">
+                <span style={{ color: 'rgb(var(--fg))' }} className="font-medium">
+                  {formatMoneyCompact(collected, currentCompany)}
+                </span>{' '}
+                of {formatMoneyCompact(billed, currentCompany)}
+              </p>
+            </ChartCard>
+
+            <ChartCard title="Billed and collected" subtitle="Per period, in INR">
+              <RevenueChart buckets={buckets} company={currentCompany} />
+            </ChartCard>
+
+            <ChartCard
+              title="Longest outstanding"
+              subtitle="Average age of unpaid invoices, by customer"
+              actionLabel="Chase payment"
+              onAction={onOpenInvoices}
+            >
+              {daysOutstanding.length === 0 ? (
+                <EmptyState icon={CircleSlash} title="Nothing overdue" description="No unpaid invoices in this period." />
+              ) : (
+                <Suspense fallback={<ChartFallback height={240} />}>
+                  <RankedBars
+                    data={daysOutstanding}
+                    height={240}
+                    formatter={(v) => `${Math.round(v)}d`}
+                  />
+                </Suspense>
+              )}
+            </ChartCard>
           </div>
         </>
       )}

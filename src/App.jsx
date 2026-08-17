@@ -9883,6 +9883,7 @@ const AppShell = () => {
             onNewInvoice={() => setActive('invoices')}
             onOpenInvoices={() => setActive('invoices')}
             onOpenReceipts={() => setActive('receipts')}
+            onOpenCustomers={() => setActive('customers')}
           />
         );
       case 'sales':

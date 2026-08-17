@@ -125,7 +125,7 @@ export function RadialGauge({ value = 0, label, height = 230, tone }) {
         },
       ],
     }),
-    [t, pct, label, color]
+    [t, pct, color]
   );
 
   return (
@@ -227,4 +227,111 @@ export function ChartLegend({ rows = [], total, formatter }) {
       })}
     </ul>
   );
+}
+
+/**
+ * Vertical bars for a value per period.
+ *
+ * Minimal axis and no grid: the bars carry the comparison, and gridlines at
+ * this size compete with them. Values arrive on hover rather than as permanent
+ * labels, which keeps a twelve-bar series readable.
+ */
+export function PeriodBars({ data = [], height = 240, formatter }) {
+  const t = useChartTheme();
+
+  const option = useMemo(
+    () => ({
+      ...common(t),
+      grid: { left: 8, right: 8, top: 16, bottom: 4, containLabel: true },
+      tooltip: {
+        ...tooltipStyle(t),
+        trigger: 'axis',
+        axisPointer: { type: 'shadow', shadowStyle: { color: `${t.sunken}` } },
+        valueFormatter: (v) => (formatter ? formatter(v) : v),
+      },
+      xAxis: {
+        type: 'category',
+        data: data.map((d) => d.label),
+        axisLine: { lineStyle: { color: t.border } },
+        axisTick: { show: false },
+        axisLabel: { color: t.subtle, fontSize: 11, interval: 0, hideOverlap: true },
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: t.border, type: 'dashed' } },
+        axisLabel: {
+          color: t.subtle,
+          fontSize: 11,
+          formatter: (v) => (formatter ? formatter(v) : v),
+        },
+      },
+      series: [
+        {
+          type: 'bar',
+          data: data.map((d) => d.value),
+          barMaxWidth: 26,
+          itemStyle: { color: t.brand, borderRadius: [6, 6, 0, 0] },
+          emphasis: { itemStyle: { color: t.brand, opacity: 0.85 } },
+        },
+      ],
+    }),
+    [t, data, formatter]
+  );
+
+  return <ReactECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} notMerge />;
+}
+
+/**
+ * Horizontal bars for a ranked comparison.
+ *
+ * Horizontal because the labels are names: rotating a customer name to fit
+ * under a vertical bar is how a chart stops being readable. Sorted descending,
+ * so the eye starts at the value that matters.
+ */
+export function RankedBars({ data = [], height = 240, formatter }) {
+  const t = useChartTheme();
+  const rows = useMemo(() => [...data].sort((a, b) => a.value - b.value), [data]);
+
+  const option = useMemo(
+    () => ({
+      ...common(t),
+      grid: { left: 8, right: 24, top: 8, bottom: 4, containLabel: true },
+      tooltip: {
+        ...tooltipStyle(t),
+        trigger: 'axis',
+        axisPointer: { type: 'shadow', shadowStyle: { color: `${t.sunken}` } },
+        valueFormatter: (v) => (formatter ? formatter(v) : v),
+      },
+      xAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: t.border, type: 'dashed' } },
+        axisLabel: { color: t.subtle, fontSize: 11, formatter: (v) => (formatter ? formatter(v) : v) },
+      },
+      yAxis: {
+        type: 'category',
+        data: rows.map((d) => d.label),
+        axisLine: { show: false },
+        axisTick: { show: false },
+        axisLabel: { color: t.muted, fontSize: 12 },
+      },
+      series: [
+        {
+          type: 'bar',
+          data: rows.map((d) => d.value),
+          barMaxWidth: 18,
+          itemStyle: { color: t.brand, borderRadius: [0, 6, 6, 0] },
+          label: {
+            show: true,
+            position: 'right',
+            color: t.muted,
+            fontSize: 11,
+            formatter: ({ value }) => (formatter ? formatter(value) : value),
+          },
+        },
+      ],
+    }),
+    [t, rows, formatter]
+  );
+
+  return <ReactECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} notMerge />;
 }
