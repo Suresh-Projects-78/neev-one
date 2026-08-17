@@ -25,14 +25,14 @@ needs server masters first.
 | 5 | Warehouse/Branch toggles in settings; hide when off | **Missing** | 1.5 d | Feature flags per org |
 | 6 | Number + date on top, small, focused on entry | **Missing** | 1 d | Pure form layout; highest value per hour of the whole list |
 | 7 | Dr/Cr columns in journal entry, enforce Dr = Cr | **Partial** | 1.5 d | Server already rejects unbalanced entries; the UI does not show Dr/Cr columns |
-| 8 | Multi-currency | **Partial** | — | Currencies, dated rates and translated posting done (`a6e9f9c`); revaluation and settlement posting still open |
+| 8 | Multi-currency | **Done (API)** | — | Dated rates, translated posting, realised gain/loss on settlement and revaluation (`a6e9f9c`, `d4f7528`); UI in Settings → Currencies |
 | 9 | Multi-user | **Done** | — | Users, roles, profiles, permissions all shipped |
 | 10 | Multi-company | **Partial** | 2 d | Multiple orgs exist server-side; there is no company switcher in the UI |
 | 11 | Batch / serial numbers in inventory | **Done (API)** | — | Batch and SerialNumber models, FEFO listing, double-sale refused (`d0ed203`); no UI yet |
 | 12 | Due date computed from customer/vendor terms | **Done** | — | Credit period on the party; invoice and bill due dates follow it, recomputed server-side; toggleable as `paymentTerms` |
 | 13 | Next SKU row adds *below* the previous one | **Partial** | 0.5 d | "Add Item" exists; the placement and focus behaviour is the complaint |
 | 14 | Payment mode from created bank/cash ledgers | **Done** | — | Mode is the org's real CASH/BANK ledgers; receipts and payments post to the GL (`dde9c70`) |
-| 15 | Import for invoices, purchases, notes | **Partial** | — | Invoices import (`24ca335`); bills and notes have no server model to import into |
+| 15 | Import for invoices, purchases, notes | **Done (API)** | — | Bills, credit and debit notes now exist server-side and import (`c87fb2f`); UI in Settings → Import Data |
 | 16 | Import + downloadable template for journals | **Done (API)** | — | Staged validate-then-commit with CSV template (`24ca335`); no UI yet |
 
 Roughly **7–9 weeks** of work in total, of which about three weeks only becomes
