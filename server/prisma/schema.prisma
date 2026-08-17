@@ -1391,6 +1391,12 @@ model Payment {
   amount Decimal @default(0)
   notes  String?
 
+  /// The currency the money actually moved in, and the rate used to bring it
+  /// into the books. Settling a foreign invoice at a different rate from the
+  /// one it was booked at is a real gain or loss, and needs both to compute.
+  currency     String  @default("INR")
+  exchangeRate Decimal @default(1)
+
   status String @default("POSTED") // POSTED | REVERSED
 
   /// Reconciliation, when the feature is on.

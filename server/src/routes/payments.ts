@@ -9,6 +9,7 @@ import { PermissionAction } from '../constants/enums.js';
 import { ensureLedgerSetup, postEntry, reverseEntry } from '../services/ledger.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
+import { baseCurrencyFor, isBase, rateFor, round2, toBase } from '../services/fx.js';
 
 /**
  * Receipts and payments.
@@ -41,6 +42,8 @@ const paymentSchema = z.object({
   partyName: z.string().max(200).optional().nullable(),
   /** Requirement 14: the mode is a real cash or bank ledger, not a free label. */
   ledgerAccountId: z.string().min(1),
+  /** Omit for the base currency. */
+  currency: z.string().length(3).optional(),
   instrumentRef: z.string().max(100).optional().nullable(),
   instrumentDate: z.string().max(20).optional().nullable(),
   amount: z.number().positive(),
@@ -127,6 +130,45 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
     return res.status(400).json({ error: 'Allocated amount is more than the payment' });
   }
 
+  // Requirement 8. The ledger is kept in the base currency, so the rate is
+  // resolved before anything is written — a payment whose rate cannot be found
+  // must not reach the books at a wrong number.
+  const baseCurrency = await baseCurrencyFor(accountId, orgId);
+  const payCurrency = String(body.currency || baseCurrency).toUpperCase();
+  let payRate = 1;
+  try {
+    payRate = isBase(payCurrency, baseCurrency)
+      ? 1
+      : await rateFor({ accountId, orgId, currency: payCurrency, date: body.date, baseCurrency });
+  } catch (e: any) {
+    return res.status(400).json({ error: String(e?.message || e) });
+  }
+
+  // Each allocated invoice was booked at its own rate. Settling it at a
+  // different one is a realised gain or loss, and it belongs in its own account
+  // rather than quietly adjusting revenue or the bank.
+  const invoiceIds = (body.allocations || []).filter((a) => a.docType === 'INVOICE').map((a) => a.docId);
+  const bookedRates = new Map<string, number>();
+  if (invoiceIds.length) {
+    const rows = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT id, exchangeRate FROM Invoice WHERE orgId = ? AND id IN (${invoiceIds.map(() => '?').join(',')})`,
+      orgId,
+      ...invoiceIds
+    );
+    for (const r of rows) bookedRates.set(String(r.id), Number(r.exchangeRate) || 1);
+  }
+
+  // Positive is a gain: more base currency came in than the receivable was
+  // carried at. Summing per allocation is what makes the entry balance —
+  // the difference is exactly bank-side minus party-side.
+  const fxDifference = round2(
+    (body.allocations || []).reduce((sum, a) => {
+      const booked = bookedRates.get(String(a.docId));
+      if (!booked) return sum;
+      return sum + (toBase(a.amount, payRate) - toBase(a.amount, booked));
+    }, 0)
+  );
+
   await ensureDefaultSeries({ accountId, orgId, branchId, docType: body.direction, userId });
 
   const created = await prisma.$transaction(async (tx) => {
@@ -158,6 +200,8 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
         instrumentRef: body.instrumentRef ?? null,
         instrumentDate: body.instrumentDate ?? null,
         amount: new Prisma.Decimal(body.amount.toFixed(2)),
+        currency: payCurrency,
+        exchangeRate: new Prisma.Decimal(String(payRate)),
         notes: body.notes ?? null,
         createdByUserId: userId,
         allocations: {
@@ -194,24 +238,42 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
       lines:
         body.direction === 'RECEIPT'
           ? [
-              { ledgerAccountId: mode.id, debit: body.amount, description: 'Money received' },
+              // Cash side at the payment's own rate; party side at the rate the
+              // receivable was carried at, with the difference taken to
+              // exchange gain/loss. The three always foot to zero because the
+              // difference is defined as the gap between the first two.
+              { ledgerAccountId: mode.id, debit: toBase(body.amount, payRate), description: 'Money received' },
               {
                 controlKind: 'AR',
-                credit: body.amount,
+                credit: round2(toBase(body.amount, payRate) - fxDifference),
                 partyType: 'CUSTOMER',
                 partyId: body.partyId || null,
                 description: `From ${body.partyName || 'customer'}`,
               },
+              ...(fxDifference === 0
+                ? []
+                : [
+                    fxDifference > 0
+                      ? { controlKind: 'FX_GAIN_LOSS' as const, credit: fxDifference, description: 'Exchange gain on settlement' }
+                      : { controlKind: 'FX_GAIN_LOSS' as const, debit: -fxDifference, description: 'Exchange loss on settlement' },
+                  ]),
             ]
           : [
               {
                 controlKind: 'AP',
-                debit: body.amount,
+                debit: round2(toBase(body.amount, payRate) - fxDifference),
                 partyType: 'VENDOR',
                 partyId: body.partyId || null,
                 description: `To ${body.partyName || 'vendor'}`,
               },
-              { ledgerAccountId: mode.id, credit: body.amount, description: 'Money paid' },
+              { ledgerAccountId: mode.id, credit: toBase(body.amount, payRate), description: 'Money paid' },
+              ...(fxDifference === 0
+                ? []
+                : [
+                    fxDifference > 0
+                      ? { controlKind: 'FX_GAIN_LOSS' as const, credit: fxDifference, description: 'Exchange gain on settlement' }
+                      : { controlKind: 'FX_GAIN_LOSS' as const, debit: -fxDifference, description: 'Exchange loss on settlement' },
+                  ]),
             ],
     });
   } catch (e: any) {
