@@ -67,6 +67,26 @@ Web on 5173, API on 4001.
   context, but the engine never answers, so `docker info` hangs on the Server
   section. Two attempts, hours apart.
 
+  Three defects found and fixed by inspection while the daemon was down:
+
+  1. **The api build shipped 536 MB of context.** Its context is `./server`,
+     and Docker reads the `.dockerignore` beside the context — the root one
+     does not apply. Added `server/.dockerignore`; context is now 0.5 MB
+     across 49 files, and `prisma/dev.db` (48 MB) can no longer leak into an
+     image.
+  2. **Emailed links pointed at a dead port.** Compose never set `APP_URL`, so
+     the server fell back to `http://localhost:5173` — the Vite dev port,
+     which nothing serves under Docker. Every password-reset and verification
+     link would have 404'd. Now defaults to `http://localhost:8080`.
+  3. **`MAIL_SECRET_KEY` was unset**, so SMTP-password encryption silently fell
+     back to `JWT_SECRET`; rotating the JWT secret would have made every stored
+     SMTP password undecryptable. Now a separate generated secret.
+
+  Known and deliberate: under `--profile postgres`, `api` has no `depends_on`
+  on `db`. Adding one would implicitly activate the postgres profile on every
+  default (SQLite) run. `restart: unless-stopped` covers the startup race
+  instead.
+
   To finish it on a machine with a working daemon:
 
   ```bash

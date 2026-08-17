@@ -22,7 +22,8 @@ COPY --from=build /app/dist ./dist
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 
-# server/ has no .dockerignore in this checkout, so drop the committed dev DB.
+# server/.dockerignore already keeps the dev DB out of the build context; this
+# is a cheap guard in case someone builds with an older or missing ignore file.
 RUN rm -f prisma/dev.db
 
 EXPOSE 4001

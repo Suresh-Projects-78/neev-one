@@ -33,6 +33,33 @@ services:
       # Requests arrive from the browser via nginx on the same origin, so this
       # only matters if you call the API directly from another origin.
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+
+      # Login hardening (server defaults are used when these are unset).
+      MAX_FAILED_LOGINS: ${MAX_FAILED_LOGINS:-5}
+      LOCKOUT_MINUTES: ${LOCKOUT_MINUTES:-15}
+      REFRESH_TOKEN_DAYS: ${REFRESH_TOKEN_DAYS:-30}
+
+      # Branding, and the base URL baked into password-reset and email
+      # verification links. The server's own fallback is http://localhost:5173
+      # (the Vite dev port) — wrong here, where nginx serves on WEB_PORT, so
+      # every emailed link would 404. Set it to whatever host users browse to.
+      APP_NAME: ${APP_NAME:-Accounting}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+
+      # Encrypts stored SMTP passwords (AES-256-GCM). Kept separate from
+      # JWT_SECRET on purpose: sharing them means rotating the JWT secret
+      # silently makes every saved SMTP password undecryptable.
+      MAIL_SECRET_KEY: ${MAIL_SECRET_KEY:?set MAIL_SECRET_KEY in .env (npm run env:init generates one)}
+
+      # Platform-wide fallback SMTP. Leave blank to use per-org SMTP settings
+      # configured in the UI, or the capture transport when none exist.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_TIMEOUT_MS: ${SMTP_TIMEOUT_MS:-10000}
     volumes:
       - api-data:/data
     ports:

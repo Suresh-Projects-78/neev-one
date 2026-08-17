@@ -22,6 +22,9 @@ const examplePath = resolve(root, '.env.docker.example');
 /** Keys that must hold a secret, and how to generate one. */
 const GENERATED = {
   JWT_SECRET: () => randomBytes(48).toString('base64'),
+  // Separate from JWT_SECRET so rotating one does not invalidate the other:
+  // this key decrypts stored SMTP passwords.
+  MAIL_SECRET_KEY: () => randomBytes(32).toString('base64'),
   POSTGRES_PASSWORD: () => randomBytes(24).toString('base64url'),
 };
 
