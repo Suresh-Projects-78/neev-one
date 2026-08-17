@@ -622,13 +622,13 @@ export const StockTransferEditor = ({
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full table-fixed">
+          <table className="w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[55%]">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[30%]">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[10%]">Qty</th>
-                <th className="px-3 py-2 w-[5%]"></th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>

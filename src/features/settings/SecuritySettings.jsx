@@ -511,7 +511,7 @@ export const SecuritySettings = () => {
               <EmptyState icon={Monitor} title="No active sessions" description="Nothing to show." />
             ) : (
               <div className="overflow-x-auto">
-                <table className="ui-table">
+                <table className="ui-table ui-table-wide">
                   <thead>
                     <tr>
                       <th scope="col">Device</th>
@@ -525,8 +525,8 @@ export const SecuritySettings = () => {
                       <tr key={s.id}>
                         <td className="max-w-md truncate">{s.userAgent || 'Unknown device'}</td>
                         <td className="ui-mono text-xs">{s.ip || '—'}</td>
-                        <td className="ui-muted whitespace-nowrap">{new Date(s.createdAt).toLocaleString()}</td>
-                        <td className="ui-muted whitespace-nowrap">{new Date(s.lastSeenAt).toLocaleString()}</td>
+                        <td className="ui-col-date">{new Date(s.createdAt).toLocaleString()}</td>
+                        <td className="ui-col-date">{new Date(s.lastSeenAt).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -543,7 +543,7 @@ export const SecuritySettings = () => {
             <EmptyState icon={Shield} title="Nothing recorded yet" description="Sign-in activity will appear here." />
           ) : (
             <div className="overflow-x-auto">
-              <table className="ui-table">
+              <table className="ui-table ui-table-wide">
                 <thead>
                   <tr>
                     <th scope="col">When</th>
@@ -556,7 +556,7 @@ export const SecuritySettings = () => {
                 <tbody>
                   {events.map((e) => (
                     <tr key={e.id}>
-                      <td className="ui-muted whitespace-nowrap">{new Date(e.createdAt).toLocaleString()}</td>
+                      <td className="ui-col-date">{new Date(e.createdAt).toLocaleString()}</td>
                       <td>
                         <StatusPill
                           status={

@@ -79,7 +79,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
         <>
           <div className="ui-card overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="ui-table">
+              <table className="ui-table ui-table-wide">
                 <thead>
                   <tr>
                     <th scope="col">Code</th>
@@ -93,12 +93,12 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                 <tbody>
                   {data.rows.map((r) => (
                     <tr key={r.accountId}>
-                      <td className="ui-mono">{r.code}</td>
-                      <td className="font-medium">{r.name}</td>
+                      <td className="ui-col-id">{r.code}</td>
+                      <td className="ui-col-entity">{r.name}</td>
                       <td className="ui-muted text-xs">{r.accountType}</td>
-                      <td className="ui-num ui-amount">{r.debit ? formatMoney(r.debit, currentCompany) : '—'}</td>
-                      <td className="ui-num ui-amount">{r.credit ? formatMoney(r.credit, currentCompany) : '—'}</td>
-                      <td className="ui-num ui-amount">
+                      <td className="ui-col-amount">{r.debit ? formatMoney(r.debit, currentCompany) : '—'}</td>
+                      <td className="ui-col-amount">{r.credit ? formatMoney(r.credit, currentCompany) : '—'}</td>
+                      <td className="ui-col-amount">
                         {r.closingDebit
                           ? `${formatMoney(r.closingDebit, currentCompany)} Dr`
                           : r.closingCredit

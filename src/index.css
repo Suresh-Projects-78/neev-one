@@ -940,6 +940,88 @@
   .ui-content { max-width: var(--content-max); margin-inline: auto; }
 }
 
+@layer components {
+  /* --- table column roles --------------------------------------------------
+     A financial row is read in a fixed order: find the document, recognise the
+     party, check the amount. These classes encode that order so every list in
+     the product scans the same way.
+
+     Differentiation is by WEIGHT and VALUE, not by hue. Colouring each column
+     a different colour would make a table look like a spreadsheet with
+     conditional formatting left on; the only colour that appears here carries
+     meaning (an overdue date, a negative amount).
+  --------------------------------------------------------------------------- */
+
+  /* The scan anchor. Mono so digits align down the column and the eye can run
+     it like a list of codes rather than prose. */
+  .ui-col-id {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-feature-settings: 'calt' 0;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: rgb(var(--fg));
+    white-space: nowrap;
+  }
+
+  /* The party. Darkest and heaviest thing in the row, because a person
+     recognises a name faster than a number. */
+  .ui-col-entity {
+    font-weight: 500;
+    color: rgb(var(--fg));
+  }
+
+
+  /* Supporting context — warehouse, branch, category. Present, not competing. */
+  .ui-col-meta {
+    color: rgb(var(--fg-muted));
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  .ui-col-entity { white-space: nowrap; }
+
+  /* Below this the columns would squeeze names onto two lines, which doubles
+     row height and destroys the scan rhythm. The card scrolls sideways
+     instead; the page itself never does. */
+  .ui-table-wide { min-width: 60rem; }
+
+  /* Dates recede: they qualify the row, they are rarely what you came for. */
+  .ui-col-date {
+    color: rgb(var(--fg-muted));
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+  /* A due date in the past is the one date that earns colour. */
+  .ui-col-date-late {
+    color: rgb(var(--neg));
+    font-weight: 500;
+  }
+
+  /* Money: tabular and right-aligned so magnitudes line up by digit, heavier
+     than its neighbours because it is the third thing every reader checks. */
+  .ui-col-amount {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: rgb(var(--fg));
+    text-align: right;
+    white-space: nowrap;
+  }
+  .ui-col-amount-zero { color: rgb(var(--fg-subtle)); font-weight: 400; }
+  .ui-col-amount-neg { color: rgb(var(--neg)); }
+
+  /* Column headings: quiet, uppercase, wide-tracked — a label for the column,
+     not a competitor to the data under it. */
+  .ui-table thead th {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgb(var(--fg-subtle));
+  }
+}
+
 /* Honour the user's motion preference. */
 @media (prefers-reduced-motion: reduce) {
   *,

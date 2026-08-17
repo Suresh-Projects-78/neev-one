@@ -475,7 +475,7 @@ export const EmailSettings = () => {
             <EmptyState icon={Mail} title="Nothing sent yet" description="Messages will appear here once sent." />
           ) : (
             <div className="overflow-x-auto">
-              <table className="ui-table">
+              <table className="ui-table ui-table-wide">
                 <thead>
                   <tr>
                     <th scope="col">To</th>
@@ -489,8 +489,8 @@ export const EmailSettings = () => {
                 <tbody>
                   {messages.map((m) => (
                     <tr key={m.id}>
-                      <td className="font-medium">{m.toEmail}</td>
-                      <td className="ui-muted">
+                      <td className="ui-col-entity">{m.toEmail}</td>
+                      <td className="ui-col-meta">
                         {m.subject}
                         {m.lastError ? (
                           <div className="text-xs" style={{ color: 'rgb(var(--neg))' }}>
@@ -502,8 +502,8 @@ export const EmailSettings = () => {
                       <td>
                         <StatusPill status={m.status === 'SENT' ? 'Sent' : m.status === 'FAILED' ? 'Failed' : m.status} />
                       </td>
-                      <td className="ui-num">{m.attempts}</td>
-                      <td className="ui-muted whitespace-nowrap">
+                      <td className="ui-col-amount">{m.attempts}</td>
+                      <td className="ui-col-date">
                         {new Date(m.sentAt || m.createdAt).toLocaleString()}
                       </td>
                     </tr>

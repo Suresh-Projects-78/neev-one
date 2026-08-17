@@ -512,16 +512,16 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full table-fixed">
+        <table className="w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[26%]">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[16%]">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[22%]">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[12%]">GST Reg.</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[14%]">GSTIN</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Balance</th>
-              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase w-[12%]">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Phone</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">GST Reg.</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">GSTIN</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Balance</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -534,19 +534,19 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
             ) : (
               vendors.map((vendor) => (
                 <tr key={vendor.id} className="ui-hover-sunken">
-                  <td className="px-6 py-4 font-medium truncate" title={getVendorDisplayName(vendor) || ''}>
+                  <td className="px-6 py-4 ui-col-entity truncate" title={getVendorDisplayName(vendor) || ''}>
                     {getVendorDisplayName(vendor) || '-'}
                   </td>
-                  <td className="px-6 py-4">{vendor.phone || '-'}</td>
-                  <td className="px-6 py-4 truncate" title={vendor.email || ''}>
+                  <td className="px-6 py-4 ui-col-meta">{vendor.phone || '-'}</td>
+                  <td className="px-6 py-4 ui-col-meta truncate" title={vendor.email || ''}>
                     {vendor.email || '-'}
                   </td>
-                  <td className="px-6 py-4">{vendor.gstRegistration || 'Unregistered'}</td>
-                  <td className="px-6 py-4 truncate" title={vendor.gstin || ''}>
+                  <td className="px-6 py-4 ui-col-meta">{vendor.gstRegistration || 'Unregistered'}</td>
+                  <td className="px-6 py-4 ui-col-meta truncate" title={vendor.gstin || ''}>
                     {vendor.gstin || '-'}
                   </td>
-                  <td className="px-6 py-4 font-semibold">{formatMoney(vendor.balance || 0, currentCompany)}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 ui-col-amount">{formatMoney(vendor.balance || 0, currentCompany)}</td>
+                  <td className="px-6 py-4 ui-col-meta">
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
@@ -696,16 +696,16 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full table-fixed">
+        <table className="w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[26%]">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[16%]">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[22%]">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[12%]">GST Reg.</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[14%]">GSTIN</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Balance</th>
-              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase w-[12%]">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Phone</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">GST Reg.</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">GSTIN</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Balance</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -718,21 +718,21 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
             ) : (
               customers.map((customer) => (
                 <tr key={customer.id} className="ui-hover-sunken">
-                  <td className="px-6 py-4 font-medium truncate" title={getCustomerDisplayName(customer)}>
+                  <td className="px-6 py-4 ui-col-entity truncate" title={getCustomerDisplayName(customer)}>
                     {getCustomerDisplayName(customer)}
                   </td>
-                  <td className="px-6 py-4 truncate" title={customer.mobile || customer.phone || ''}>
+                  <td className="px-6 py-4 ui-col-meta truncate" title={customer.mobile || customer.phone || ''}>
                     {customer.mobile || customer.phone || '-'}
                   </td>
-                  <td className="px-6 py-4 truncate" title={customer.email || ''}>
+                  <td className="px-6 py-4 ui-col-meta truncate" title={customer.email || ''}>
                     {customer.email || '-'}
                   </td>
-                  <td className="px-6 py-4">{customer.gstRegistration || 'Unregistered'}</td>
-                  <td className="px-6 py-4 truncate" title={customer.gstin || ''}>
+                  <td className="px-6 py-4 ui-col-meta">{customer.gstRegistration || 'Unregistered'}</td>
+                  <td className="px-6 py-4 ui-col-meta truncate" title={customer.gstin || ''}>
                     {customer.gstin || '-'}
                   </td>
-                  <td className="px-6 py-4 font-semibold">{formatMoney(customer.balance || 0, currentCompany)}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 ui-col-amount">{formatMoney(customer.balance || 0, currentCompany)}</td>
+                  <td className="px-6 py-4 ui-col-meta">
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
@@ -865,19 +865,19 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full table-fixed">
+        <table className="w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Voucher #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[9%]">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[9%]">Due Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[16%]">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Ref No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Ref Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[8%]">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[8%]">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Voucher #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Due Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Category</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ref No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ref Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -900,18 +900,18 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                         : 'bg-yellow-100 text-yellow-700';
                 return (
                   <tr key={expense.id} className="ui-hover-sunken">
-                  <td className="px-6 py-4 font-medium">{expense.number || '-'}</td>
-                  <td className="px-6 py-4">{expense.date}</td>
-                  <td className="px-6 py-4">{expense.dueDate || '-'}</td>
-                  <td className="px-6 py-4 truncate" title={expense.description || ''}>{expense.description}</td>
-                  <td className="px-6 py-4">{expense.category}</td>
-                  <td className="px-6 py-4">{expense.refNo || '-'}</td>
-                  <td className="px-6 py-4">{expense.refDate || '-'}</td>
-                  <td className="px-6 py-4 font-semibold">{formatMoney(expense.total, currentCompany)}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 ui-col-entity">{expense.number || '-'}</td>
+                  <td className="px-6 py-4 ui-col-meta">{expense.date}</td>
+                  <td className="px-6 py-4 ui-col-meta">{expense.dueDate || '-'}</td>
+                  <td className="px-6 py-4 ui-col-meta truncate" title={expense.description || ''}>{expense.description}</td>
+                  <td className="px-6 py-4 ui-col-meta">{expense.category}</td>
+                  <td className="px-6 py-4 ui-col-meta">{expense.refNo || '-'}</td>
+                  <td className="px-6 py-4 ui-col-meta">{expense.refDate || '-'}</td>
+                  <td className="px-6 py-4 ui-col-amount">{formatMoney(expense.total, currentCompany)}</td>
+                  <td className="px-6 py-4 ui-col-meta">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusPillClass}`}>{derived}</span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 ui-col-meta">
                     <button
                       type="button"
                       onClick={() => openRecordPayment(expense)}
@@ -1316,13 +1316,13 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
             ) : null}
             {items.map((item) => (
               <tr key={item.id} className="ui-hover-sunken">
-                <td className="px-6 py-4 font-medium">{item.code}</td>
-                <td className="px-6 py-4">{item.name}</td>
-                <td className="px-6 py-4">{item.type}</td>
-                <td className="px-6 py-4">{item.hsnSac || '-'}</td>
-                <td className="px-6 py-4">{Number.isFinite(Number(item.gstRate)) ? Number(item.gstRate) : 0}</td>
-                <td className="px-6 py-4">{formatMoney(item.salePrice || 0, currentCompany)}</td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 ui-col-entity">{item.code}</td>
+                <td className="px-6 py-4 ui-col-meta">{item.name}</td>
+                <td className="px-6 py-4 ui-col-meta">{item.type}</td>
+                <td className="px-6 py-4 ui-col-meta">{item.hsnSac || '-'}</td>
+                <td className="px-6 py-4 ui-col-meta">{Number.isFinite(Number(item.gstRate)) ? Number(item.gstRate) : 0}</td>
+                <td className="px-6 py-4 ui-col-meta">{formatMoney(item.salePrice || 0, currentCompany)}</td>
+                <td className="px-6 py-4 ui-col-meta">
                   {isStockItem(item) ? (
                     <>
                       {(inventoryByItemId.get(String(item.id))?.closingQty ?? 0)} {item.unit}
@@ -1331,7 +1331,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
                     '-'
                   )}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 ui-col-meta">
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
@@ -2084,7 +2084,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     const buttonKey = `ledger:${String(a.id)}`;
                     return (
                       <tr key={a.id} className="ui-hover-sunken">
-                        <td className="px-6 py-4 font-medium">{a.name}</td>
+                        <td className="px-6 py-4 ui-col-entity">{a.name}</td>
                         <td className="px-6 py-4 text-sm ui-fg">{a._groupName || '-'}</td>
                         <td className="px-6 py-4 text-sm ui-fg">{a._parent || '-'}</td>
                         <td className="px-6 py-4 text-right font-semibold">{formatMoney(a.balance || 0, currentCompany)}</td>
@@ -2156,7 +2156,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     const buttonKey = `group:${String(g.id)}`;
                     return (
                       <tr key={g.id} className="ui-hover-sunken">
-                        <td className="px-6 py-4 font-medium">{g.name}</td>
+                        <td className="px-6 py-4 ui-col-entity">{g.name}</td>
                         <td className="px-6 py-4 text-sm ui-fg">{g._parent || '-'}</td>
                         <td className="px-6 py-4 text-sm ui-fg">{String(g.groupCategory || 'General')}</td>
                         <td
@@ -2841,22 +2841,22 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
             ) : (
               journalEntries.map((jv) => (
                 <tr key={jv.id} className="ui-hover-sunken">
-                  <td className="px-6 py-4 font-medium">{jv.number}</td>
-                  <td className="px-6 py-4">{jv.date}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 ui-col-entity">{jv.number}</td>
+                  <td className="px-6 py-4 ui-col-meta">{jv.date}</td>
+                  <td className="px-6 py-4 ui-col-meta">
                     <div className="font-medium">{jv.narration || '-'}</div>
                     <div className="text-xs ui-muted">{(jv.lines || []).length} lines</div>
                   </td>
                   <td className="px-6 py-4 text-right font-semibold">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
                   <td className="px-6 py-4 text-right font-semibold">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 ui-col-meta">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-medium ${(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
                     >
                       {(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'Balanced' : 'Unbalanced'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 ui-col-meta">
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
@@ -3274,7 +3274,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
           <tbody className="divide-y">
             {rows.map((account) => (
               <tr key={account.id} className="ui-hover-sunken">
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 ui-col-meta">
                   <button
                     type="button"
                     onClick={() => onOpenLedger && onOpenLedger(account.id)}
@@ -3293,7 +3293,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
               </tr>
             ))}
             <tr className="ui-sunken font-bold border-t-2">
-              <td className="px-6 py-4">TOTAL</td>
+              <td className="px-6 py-4 ui-col-meta">TOTAL</td>
               <td className="px-6 py-4" />
               <td className="px-6 py-4 text-right">{formatMoney(totalDebit, currentCompany)}</td>
               <td className="px-6 py-4 text-right">{formatMoney(totalCredit, currentCompany)}</td>
@@ -5061,15 +5061,15 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-900">
-                  <th className="p-1 border-r border-gray-900 w-[6%]">Sr</th>
+                  <th className="p-1 border-r border-gray-900">Sr</th>
                   <th className="p-1 border-r border-gray-900">Name of Product / Service</th>
-                  <th className="p-1 border-r border-gray-900 w-[12%]">HSN/SAC</th>
-                  <th className="p-1 border-r border-gray-900 w-[10%]">Qty</th>
-                  <th className="p-1 border-r border-gray-900 w-[12%]">Rate</th>
-                  <th className="p-1 border-r border-gray-900 w-[14%]">Taxable</th>
-                  <th className="p-1 border-r border-gray-900 w-[12%]">GST %</th>
-                  <th className="p-1 border-r border-gray-900 w-[14%]">GST Amt</th>
-                  <th className="p-1 w-[14%]">Total</th>
+                  <th className="p-1 border-r border-gray-900">HSN/SAC</th>
+                  <th className="p-1 border-r border-gray-900">Qty</th>
+                  <th className="p-1 border-r border-gray-900">Rate</th>
+                  <th className="p-1 border-r border-gray-900">Taxable</th>
+                  <th className="p-1 border-r border-gray-900">GST %</th>
+                  <th className="p-1 border-r border-gray-900">GST Amt</th>
+                  <th className="p-1">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -5152,12 +5152,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-900">
-                  <th className="p-1 border-r border-gray-900 w-[6%]">Sr</th>
+                  <th className="p-1 border-r border-gray-900">Sr</th>
                   <th className="p-1 border-r border-gray-900">Item</th>
-                  <th className="p-1 border-r border-gray-900 w-[10%]">Qty</th>
-                  <th className="p-1 border-r border-gray-900 w-[14%]">Taxable</th>
-                  <th className="p-1 border-r border-gray-900 w-[10%]">GST%</th>
-                  <th className="p-1 w-[14%]">Total</th>
+                  <th className="p-1 border-r border-gray-900">Qty</th>
+                  <th className="p-1 border-r border-gray-900">Taxable</th>
+                  <th className="p-1 border-r border-gray-900">GST%</th>
+                  <th className="p-1">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -5242,13 +5242,13 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-900">
-                  <th className="p-1 border-r border-gray-900 w-[6%]">Sr</th>
+                  <th className="p-1 border-r border-gray-900">Sr</th>
                   <th className="p-1 border-r border-gray-900">Name</th>
-                  <th className="p-1 border-r border-gray-900 w-[12%]">HSN</th>
-                  <th className="p-1 border-r border-gray-900 w-[10%]">Qty</th>
-                  <th className="p-1 border-r border-gray-900 w-[12%]">Taxable</th>
-                  <th className="p-1 border-r border-gray-900 w-[10%]">GST%</th>
-                  <th className="p-1 w-[14%]">Total</th>
+                  <th className="p-1 border-r border-gray-900">HSN</th>
+                  <th className="p-1 border-r border-gray-900">Qty</th>
+                  <th className="p-1 border-r border-gray-900">Taxable</th>
+                  <th className="p-1 border-r border-gray-900">GST%</th>
+                  <th className="p-1">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -5329,13 +5329,13 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b-2 border-gray-900">
-                  <th className="p-1 border-r-2 border-gray-900 w-[6%]">Sr</th>
+                  <th className="p-1 border-r-2 border-gray-900">Sr</th>
                   <th className="p-1 border-r-2 border-gray-900">Product / Service</th>
-                  <th className="p-1 border-r-2 border-gray-900 w-[12%]">HSN</th>
-                  <th className="p-1 border-r-2 border-gray-900 w-[10%]">Qty</th>
-                  <th className="p-1 border-r-2 border-gray-900 w-[14%]">Taxable</th>
-                  <th className="p-1 border-r-2 border-gray-900 w-[10%]">GST%</th>
-                  <th className="p-1 w-[14%]">Total</th>
+                  <th className="p-1 border-r-2 border-gray-900">HSN</th>
+                  <th className="p-1 border-r-2 border-gray-900">Qty</th>
+                  <th className="p-1 border-r-2 border-gray-900">Taxable</th>
+                  <th className="p-1 border-r-2 border-gray-900">GST%</th>
+                  <th className="p-1">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -5426,15 +5426,15 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               <table className="w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-[5%]">Sr</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Sr</th>
                     <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Product / Service</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-[10%]">HSN/SAC</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[8%]">Qty</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">Rate</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">Taxable</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[8%]">GST%</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">GST Amt</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[13%]">Total</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">HSN/SAC</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Qty</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Rate</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST%</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST Amt</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -5517,16 +5517,16 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               <table className="w-full">
                 <thead className="ui-sunken border-b-2 border-gray-900">
                   <tr>
-                    <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900 w-[5%]">Sr</th>
+                    <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900">Sr</th>
                     <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900">Item</th>
-                    <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900 w-[10%]">HSN</th>
-                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900 w-[8%]">Qty</th>
-                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900 w-[10%]">Rate</th>
-                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900 w-[12%]">Taxable</th>
-                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900 w-[7%]">GST%</th>
-                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900 w-[10%]">CGST</th>
-                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900 w-[10%]">SGST</th>
-                    <th className="px-2 py-2 text-right text-xs font-semibold w-[12%]">Total</th>
+                    <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900">HSN</th>
+                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900">Qty</th>
+                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900">Rate</th>
+                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900">Taxable</th>
+                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900">GST%</th>
+                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900">CGST</th>
+                    <th className="px-2 py-2 text-right text-xs font-semibold border-r-2 border-gray-900">SGST</th>
+                    <th className="px-2 py-2 text-right text-xs font-semibold">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -5611,12 +5611,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               <table className="w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-[5%]">Sr</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Sr</th>
                     <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Product / Service</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[10%]">Qty</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">Taxable</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[10%]">GST%</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[13%]">Total</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Qty</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST%</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -5751,7 +5751,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
               ) : (
                 uoms.map((u) => (
                   <tr key={u.id} className="ui-hover-sunken">
-                    <td className="px-6 py-4 font-medium">{u.name}</td>
+                    <td className="px-6 py-4 ui-col-entity">{u.name}</td>
                     <td className="px-6 py-4 text-right">
                       <button type="button" onClick={() => deleteUom(u.id)} className="text-red-600 hover:text-red-700">
                         <Trash2 size={16} />
@@ -5862,7 +5862,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
               ) : (
                 gstRates.map((r) => (
                   <tr key={r.id} className="ui-hover-sunken">
-                    <td className="px-6 py-4 font-medium">{Number(r.rate)}%</td>
+                    <td className="px-6 py-4 ui-col-entity">{Number(r.rate)}%</td>
                     <td className="px-6 py-4 text-right">
                       <button type="button" onClick={() => deleteRate(r.id)} className="text-red-600 hover:text-red-700">
                         <Trash2 size={16} />
@@ -8821,7 +8821,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
             ) : (
               rateRows.map((r) => (
                 <tr key={`${r.taxType}-${r.gstRate}`} className="ui-hover-sunken">
-                  <td className="px-6 py-4">{r.taxType}</td>
+                  <td className="px-6 py-4 ui-col-meta">{r.taxType}</td>
                   <td className="px-6 py-4 text-right">{Number(r.gstRate || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-right">{formatMoney(Number(r.taxableAmount || 0), currentCompany)}</td>
                   <td className="px-6 py-4 text-right">{formatMoney(Number(r.cgstAmount || 0), currentCompany)}</td>
@@ -8865,12 +8865,12 @@ const Gstr1Report = ({ db, currentCompany }) => {
             ) : (
               docRows.map((r, idx) => (
                 <tr key={`${r.type}-${r.number}-${idx}`} className="ui-hover-sunken">
-                  <td className="px-6 py-4">{r.type}</td>
-                  <td className="px-6 py-4 font-medium">{r.number}</td>
-                  <td className="px-6 py-4">{r.date}</td>
-                  <td className="px-6 py-4">{r.partyName}</td>
-                  <td className="px-6 py-4">{r.partyGstin}</td>
-                  <td className="px-6 py-4">{r.placeOfSupply}</td>
+                  <td className="px-6 py-4 ui-col-meta">{r.type}</td>
+                  <td className="px-6 py-4 ui-col-entity">{r.number}</td>
+                  <td className="px-6 py-4 ui-col-meta">{r.date}</td>
+                  <td className="px-6 py-4 ui-col-meta">{r.partyName}</td>
+                  <td className="px-6 py-4 ui-col-meta">{r.partyGstin}</td>
+                  <td className="px-6 py-4 ui-col-meta">{r.placeOfSupply}</td>
                   <td className="px-6 py-4 text-right">{formatMoney(Number(r.taxable || 0), currentCompany)}</td>
                   <td className="px-6 py-4 text-right">{formatMoney(Number(r.cgst || 0), currentCompany)}</td>
                   <td className="px-6 py-4 text-right">{formatMoney(Number(r.sgst || 0), currentCompany)}</td>

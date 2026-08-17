@@ -309,7 +309,7 @@ export const RolePermissionManager = () => {
 
               {isOpen ? (
                 <div className="overflow-x-auto">
-                  <table className="ui-table">
+                  <table className="ui-table ui-table-wide">
                     <thead>
                       <tr>
                         <th scope="col">Resource</th>

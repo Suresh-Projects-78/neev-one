@@ -133,6 +133,20 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
   );
 };
 
+/**
+ * Past its due date and still carrying a balance.
+ *
+ * Both halves matter: a paid invoice whose due date has passed is not overdue,
+ * and colouring it red would train people to ignore the colour.
+ */
+const isOverdue = (doc) => {
+  const due = String(doc?.dueDate || '').slice(0, 10);
+  if (!due) return false;
+  const outstanding = Number(doc?.total ?? 0) - Number(doc?.paidAmount ?? 0);
+  if (outstanding <= 0.005) return false;
+  return due < new Date().toISOString().slice(0, 10);
+};
+
 export const InvoicesList = ({
   db,
   setDb,
@@ -626,7 +640,7 @@ export const InvoicesList = ({
         </div>
 
         <div className="overflow-x-auto">
-        <table className="ui-table">
+        <table className="ui-table ui-table-wide">
           <thead>
             <tr>
               <th scope="col">Invoice #</th>
@@ -668,12 +682,15 @@ export const InvoicesList = ({
                       openViewInvoice(inv);
                     }}
                   >
-                    <td className="ui-mono font-medium whitespace-nowrap">{inv.number}</td>
-                    <td className="font-medium">{inv.customerName || '-'}</td>
-                    <td className="ui-muted">{whLabel}</td>
-                    <td className="ui-muted whitespace-nowrap">{inv.date || '-'}</td>
-                    <td className="ui-muted whitespace-nowrap">{inv.dueDate || '-'}</td>
-                    <td className="ui-num ui-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
+                    <td className="ui-col-id">{inv.number}</td>
+                    <td className="ui-col-entity">{inv.customerName || '-'}</td>
+                    <td className="ui-col-meta">{whLabel}</td>
+                    <td className="ui-col-date">{inv.date || '-'}</td>
+                    {/* The only date that earns colour: past due, still owed. */}
+                    <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>
+                      {inv.dueDate || '-'}
+                    </td>
+                    <td className="ui-col-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
                     <td>
                       <StatusPill status={derived} />
                     </td>
@@ -1820,15 +1837,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full table-fixed">
+          <table className="w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[10%]">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[12%]">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[14%]">Line Total</th>
-                <th className="px-3 py-2 w-[4%]"></th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -2191,15 +2208,15 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full table-fixed">
+          <table className="w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[10%]">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[12%]">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[14%]">Line Total</th>
-                <th className="px-3 py-2 w-[4%]"></th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
@@ -2638,15 +2655,15 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full table-fixed">
+          <table className="w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[10%]">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[12%]">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium w-[14%]">Line Total</th>
-                <th className="px-3 py-2 w-[4%]"></th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
+                <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>

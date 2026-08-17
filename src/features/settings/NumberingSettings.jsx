@@ -233,7 +233,7 @@ export const NumberingSettings = () => {
               {d.label}
             </div>
             <div className="overflow-x-auto">
-              <table className="ui-table">
+              <table className="ui-table ui-table-wide">
                 <thead>
                   <tr>
                     <th scope="col">Series</th>
@@ -254,7 +254,7 @@ export const NumberingSettings = () => {
 
                     return (
                       <tr key={s.id}>
-                        <td className="font-medium">
+                        <td className="ui-col-entity">
                           {s.name}
                           {s.isDefault ? <span className="ui-pill ui-pill-neutral ml-2">Default</span> : null}
                         </td>
@@ -266,7 +266,7 @@ export const NumberingSettings = () => {
                             aria-label={`Prefix for ${s.name}`}
                           />
                         </td>
-                        <td className="ui-num">
+                        <td className="ui-col-amount">
                           <input
                             type="number"
                             min={1}
@@ -277,7 +277,7 @@ export const NumberingSettings = () => {
                             aria-label={`Padding for ${s.name}`}
                           />
                         </td>
-                        <td className="ui-num">
+                        <td className="ui-col-amount">
                           <input
                             type="number"
                             min={1}
