@@ -14,6 +14,7 @@ import { invoicesRouter } from './routes/invoices.js';
 import { ledgerRouter } from './routes/ledger.js';
 import { permissionsRouter } from './routes/permissions.js';
 import { governanceRouter } from './routes/governance.js';
+import { featuresRouter } from './routes/features.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 export function buildApp() {
@@ -58,6 +59,7 @@ export function buildApp() {
   app.use('/api', ledgerRouter);
   app.use('/api', permissionsRouter);
   app.use('/api', governanceRouter);
+  app.use('/api', featuresRouter);
 
   app.use(notFound);
   app.use(errorHandler);

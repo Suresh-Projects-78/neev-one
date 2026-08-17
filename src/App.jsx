@@ -99,6 +99,9 @@ import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
 import RolePermissionManager from './features/admin/RolePermissionManager';
+import FeatureSettings from './features/settings/FeatureSettings';
+import { FeatureProvider } from './permissions/FeatureProvider';
+import { useFeatures } from './permissions/useFeatures';
 import { useTheme } from './components/ui/useTheme';
 const normalizeId = (v) => String(v ?? '').trim();
 
@@ -8930,6 +8933,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
 
 const AppShell = () => {
   const { can, loading: permsLoading } = usePermissions();
+  const { isEnabled } = useFeatures();
   const { theme, toggle: toggleTheme } = useTheme();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -9320,8 +9324,8 @@ const AppShell = () => {
         items: [
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
           { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW' },
-          { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW' },
-          { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW' },
+          { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW', feature: 'estimates' },
+          { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
         ],
       },
       {
@@ -9332,8 +9336,8 @@ const AppShell = () => {
         items: [
           { key: 'bills', label: 'Bills', icon: FileStack, perm: 'PURCHASE::Bills::VIEW' },
           { key: 'payments', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW' },
-          { key: 'purchaseOrders', label: 'Purchase Orders', icon: ShoppingCart, perm: 'PURCHASE::Purchase Orders::VIEW' },
-          { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW' },
+          { key: 'purchaseOrders', label: 'Purchase Orders', icon: ShoppingCart, perm: 'PURCHASE::Purchase Orders::VIEW', feature: 'purchaseOrders' },
+          { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW', feature: 'debitNotes' },
         ],
       },
       { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: BookOpen, perm: 'CASHBANK::Cash & Bank::VIEW' },
@@ -9343,7 +9347,7 @@ const AppShell = () => {
         label: 'Expenses',
         icon: Receipt,
         items: [
-          { key: 'expenses', label: 'Expenses', icon: Receipt, perm: 'EXPENSES::Expenses::VIEW' },
+          { key: 'expenses', label: 'Expenses', icon: Receipt, perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
           { key: 'paymentsExpense', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW' },
         ],
       },
@@ -9353,9 +9357,9 @@ const AppShell = () => {
         label: 'Inventory',
         icon: Package,
         items: [
-          { key: 'inventory', label: 'Inventory', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW' },
-          { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW' },
-          { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW' },
+          { key: 'inventory', label: 'Inventory', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'inventory' },
+          { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
+          { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', feature: 'stockTransfers' },
         ],
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: NotebookPen, perm: 'ACCOUNTING::Journal Entries::VIEW' },
@@ -9382,11 +9386,12 @@ const AppShell = () => {
         icon: Settings,
         items: [
           { key: 'settingsCompany', label: 'Company', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW' },
-          { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW' },
+          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches' },
+          { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'warehouses' },
           { key: 'settingsUsers', label: 'Users', icon: Users, perm: 'SETTINGS::Users::VIEW' },
           { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsPermissions', label: 'Role Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
+          { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
         ],
       },
@@ -9398,8 +9403,11 @@ const AppShell = () => {
   // this only stops the UI offering doors that are locked.
   const visibleNav = useMemo(() => {
     if (permsLoading) return navModel;
+    // Hidden when the user lacks the permission OR the org has the feature off.
     const allow = (entry) =>
-      (!entry.perm || can(entry.perm)) && (!entry.permAny || entry.permAny.some((k) => can(k)));
+      (!entry.perm || can(entry.perm)) &&
+      (!entry.permAny || entry.permAny.some((k) => can(k))) &&
+      isEnabled(entry.feature);
     return navModel
       .map((entry) => {
         if (entry.type !== 'group') return allow(entry) ? entry : null;
@@ -9407,7 +9415,7 @@ const AppShell = () => {
         return items.length ? { ...entry, items } : null;
       })
       .filter(Boolean);
-  }, [navModel, can, permsLoading]);
+  }, [navModel, can, permsLoading, isEnabled]);
 
   const activeGroupKey = useMemo(() => {
     for (const entry of navModel) {
@@ -10325,6 +10333,8 @@ const AppShell = () => {
       }
       case 'settingsPermissions':
         return <RolePermissionManager />;
+      case 'settingsFeatures':
+        return <FeatureSettings />;
       case 'settingsUsersRoles': {
         const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
         return <SettingsUsersRoles orgId={orgId} />;
@@ -10681,7 +10691,9 @@ const App = () => {
 
   return (
     <PermissionProvider key={sessionKey} enabled={Boolean(hasSession)}>
-      <AppShell />
+      <FeatureProvider key={`f:${sessionKey}`} enabled={Boolean(hasSession)}>
+        <AppShell />
+      </FeatureProvider>
     </PermissionProvider>
   );
 };

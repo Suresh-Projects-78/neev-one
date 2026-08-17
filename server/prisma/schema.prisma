@@ -749,3 +749,22 @@ model UserPermission {
   @@unique([accountId, orgId, userId, entityType, entityId])
   @@index([accountId, orgId, userId, entityType])
 }
+
+// ----------------------------
+// Feature toggles, per organisation
+// ----------------------------
+model FeatureSetting {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+
+  key     String
+  enabled Boolean
+
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, key])
+  @@index([accountId, orgId])
+}
