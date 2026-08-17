@@ -21,6 +21,7 @@ import {
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { PageHeader, StatusPill, EmptyState } from '../../components/ui/Primitives';
+import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 
 const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
   const initial = String(invoice?.status || '').trim();
@@ -1366,11 +1367,26 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const { state: customerState, gstin: customerGstin } = getPartyGstProfile(selectedCustomer);
   const isIntra = isIntraStateSupply({ companyState, partyState: customerState });
 
+  // Index of a row that was just added, so focus can land in it. Entry is
+  // keyboard-driven: adding a line and then reaching for the mouse defeats it.
+  const [focusRowIndex, setFocusRowIndex] = useState(-1);
+
   const addItem = () => {
-    setFormData({
-      ...formData,
-      items: [...formData.items, { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
+    setFormData((prev) => {
+      const next = [...prev.items, { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }];
+      setFocusRowIndex(next.length - 1);
+      return { ...prev, items: next };
     });
+  };
+
+  // Tab out of the last cell of the last row starts the next line, the way a
+  // Tally operator expects.
+  const handleRowKeyDown = (e, idx) => {
+    const isLastRow = idx === formData.items.length - 1;
+    if (e.key === 'Tab' && !e.shiftKey && isLastRow) {
+      e.preventDefault();
+      addItem();
+    }
   };
 
   const updateItem = (index, field, value, pickedItem = null) => {
@@ -1711,19 +1727,19 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           </button>
         </div>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Invoice Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className="ui-input"
-            disabled={lockInvoiceNumberOnCreate}
-            required
-          />
-        </div>
+      <DocHeaderStrip
+        numberLabel="Invoice No."
+        number={formData.number}
+        onNumberChange={(v) => setFormData((p) => ({ ...p, number: v }))}
+        numberLocked={lockInvoiceNumberOnCreate}
+        numberHint={lockInvoiceNumberOnCreate ? 'Numbered automatically from the series' : ''}
+        date={formData.date}
+        onDateChange={(v) => setFormData((p) => ({ ...p, date: v }))}
+        dueDate={formData.dueDate}
+        onDueDateChange={(v) => setFormData((p) => ({ ...p, dueDate: v }))}
+      />
 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Warehouse *</label>
           <select
@@ -1752,28 +1768,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Invoice Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="ui-input"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Due Date</label>
-          <input
-            type="date"
-            value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className="ui-input"
-            required
-          />
-        </div>
-
-        <div>
           <label className="block text-sm font-medium mb-1">Ref Date</label>
           <input
             type="date"
@@ -1796,15 +1790,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-2">
+        <div className="mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button
-            type="button"
-            onClick={addItem}
-            className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1"
-          >
-            <Plus size={16} /> Add Item
-          </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -1821,7 +1808,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             </thead>
             <tbody>
               {formData.items.map((item, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t" onKeyDown={(e) => handleRowKeyDown(e, idx)}>
                   <td className="px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -1830,6 +1817,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       value={item.itemId}
                       onChange={(itemId, picked) => updateItem(idx, 'itemId', itemId, picked)}
                       label={null}
+                      autoFocus={idx === focusRowIndex}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -1869,6 +1857,13 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-2">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+            <Plus size={15} aria-hidden="true" /> Add Item
+            <span className="ui-subtle text-[11px] ml-1">or press Tab on the last row</span>
+          </button>
         </div>
 
         <div className="mt-4 flex justify-end">

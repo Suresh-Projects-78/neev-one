@@ -1,9 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../ui/Modal';
 
-const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item' }) => {
+const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item', autoFocus = false }) => {
   const items = db.items.filter((i) => i.companyId === currentCompany.id);
+  const triggerRef = useRef(null);
   const [showItemPopup, setShowItemPopup] = useState(false);
+
+  // autoFocus on a <button> is not honoured consistently across browsers, so a
+  // newly added line focuses its item field explicitly.
+  useEffect(() => {
+    if (autoFocus) triggerRef.current?.focus();
+  }, [autoFocus]);
   const [itemSearch, setItemSearch] = useState('');
   const [mode, setMode] = useState('select');
   const canCreate = typeof setDb === 'function';
@@ -74,12 +81,13 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
       {label ? <label className="block text-xs font-medium mb-1">{label}</label> : null}
       <button
         type="button"
+        ref={triggerRef}
         onClick={() => {
           setItemSearch('');
           resetNewItem();
           setShowItemPopup(true);
         }}
-        className="w-full px-2 py-1 border rounded bg-white text-left"
+        className="ui-input text-left !py-1 !min-h-0"
       >
         {selectedItemName || 'Select Item'}
       </button>

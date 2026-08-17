@@ -95,6 +95,7 @@ import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
 import { PageHeader, StatTile, ThemeToggle } from './components/ui/Primitives';
+import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
 import RolePermissionManager from './features/admin/RolePermissionManager';
@@ -2939,6 +2940,8 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
 
   const totalDebit = round2((formData.lines || []).reduce((sum, l) => sum + Number(l.debit || 0), 0));
   const totalCredit = round2((formData.lines || []).reduce((sum, l) => sum + Number(l.credit || 0), 0));
+  const difference = round2(totalDebit - totalCredit);
+  const isBalanced = Math.abs(difference) < 0.005 && totalDebit > 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -3048,30 +3051,15 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Journal Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg ${lockJvNumber ? 'bg-gray-50' : ''}`}
-            disabled={lockJvNumber}
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
-            required
-          />
-        </div>
-      </div>
+      <DocHeaderStrip
+        numberLabel="Journal No."
+        number={formData.number}
+        onNumberChange={(v) => setFormData((p) => ({ ...p, number: v }))}
+        numberLocked={lockJvNumber}
+        numberHint={lockJvNumber ? 'Numbered automatically from the series' : ''}
+        date={formData.date}
+        onDateChange={(v) => setFormData((p) => ({ ...p, date: v }))}
+      />
 
       <div>
         <label className="block text-sm font-medium mb-1">Narration</label>
@@ -3157,25 +3145,49 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
           </table>
         </div>
 
-        <div className="mt-4 flex justify-end">
-          <div className="w-72 space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Debit:</span>
-              <span className="font-semibold">{formatMoney(totalDebit, currentCompany)}</span>
+        <div className="mt-3 flex justify-end">
+          <div className="ui-card p-3 w-80" aria-live="polite">
+            <div className="flex justify-between text-sm">
+              <span className="ui-muted">Total Dr</span>
+              <span className="ui-amount">{formatMoney(totalDebit, currentCompany)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Credit:</span>
-              <span className="font-semibold">{formatMoney(totalCredit, currentCompany)}</span>
+            <div className="flex justify-between text-sm mt-1">
+              <span className="ui-muted">Total Cr</span>
+              <span className="ui-amount">{formatMoney(totalCredit, currentCompany)}</span>
             </div>
-            <div className={`text-sm font-medium ${Math.abs(totalDebit - totalCredit) < 0.01 ? 'text-green-700' : 'text-red-700'}`}>
-              {Math.abs(totalDebit - totalCredit) < 0.01 ? '✓ Balanced' : '✗ Not balanced'}
+            <div
+              className="flex justify-between text-sm mt-2 pt-2"
+              style={{ borderTop: '1px solid rgb(var(--border))' }}
+            >
+              <span className="ui-muted">Difference</span>
+              <span className={`ui-amount ${isBalanced ? 'ui-amount-pos' : 'ui-amount-neg'}`}>
+                {formatMoney(Math.abs(difference), currentCompany)}
+                {difference > 0 ? ' Dr' : difference < 0 ? ' Cr' : ''}
+              </span>
+            </div>
+            <div className="mt-2">
+              {isBalanced ? (
+                <span className="ui-pill ui-pill-pos">Dr = Cr</span>
+              ) : (
+                <span className="ui-pill ui-pill-neg">
+                  {totalDebit === 0 && totalCredit === 0 ? 'Nothing entered yet' : 'Does not balance'}
+                </span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+      <div className="flex justify-end items-center gap-3">
+        {!isBalanced ? (
+          <span className="ui-subtle text-xs">Debits and credits must match before this can be saved</span>
+        ) : null}
+        <button
+          type="submit"
+          className="ui-btn ui-btn-primary"
+          disabled={!isBalanced}
+          title={isBalanced ? undefined : 'Journal entry must balance'}
+        >
           {isEdit ? 'Update Entry' : 'Create Entry'}
         </button>
       </div>

@@ -786,13 +786,23 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
         >
           {vendorPopupMode === 'select' ? (
             <div className="space-y-3">
-              <input
-                type="text"
-                value={vendorSearch}
-                onChange={(e) => setVendorSearch(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                placeholder="Search vendor (name, phone, GSTIN)"
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={vendorSearch}
+                  onChange={(e) => setVendorSearch(e.target.value)}
+                  className="ui-input"
+                  placeholder="Search vendor (name, phone, GSTIN)"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setVendorPopupMode('create')}
+                  className="ui-btn ui-btn-secondary"
+                >
+                  New
+                </button>
+              </div>
 
               <div className="max-h-80 overflow-y-auto space-y-1">
                 {filteredVendors.length === 0 ? (

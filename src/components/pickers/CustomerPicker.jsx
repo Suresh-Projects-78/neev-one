@@ -902,13 +902,25 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
         >
           {customerPopupMode === 'select' ? (
             <div className="space-y-3">
-              <input
-                type="text"
-                value={customerSearch}
-                onChange={(e) => setCustomerSearch(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
-                placeholder="Search customer (name, email, phone, GSTIN)"
-              />
+              {/* Create is always available, not only after a fruitless search:
+                  the operator usually knows the customer is new. */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className="ui-input"
+                  placeholder="Search customer (name, email, phone, GSTIN)"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setCustomerPopupMode('create')}
+                  className="ui-btn ui-btn-secondary"
+                >
+                  New
+                </button>
+              </div>
 
               <div className="max-h-80 overflow-y-auto space-y-1">
                 {filteredCustomers.length === 0 ? (
@@ -941,9 +953,9 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                 <button
                   type="button"
                   onClick={() => setCustomerPopupMode('create')}
-                  className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
+                  className="ui-btn ui-btn-primary w-full"
                 >
-                  Create new customer
+                  Create &ldquo;{customerSearch.trim()}&rdquo;
                 </button>
               )}
             </div>
