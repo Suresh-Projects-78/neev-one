@@ -60,6 +60,22 @@ export async function apiFetch(
   } catch {
     data = null;
   }
+  if (res.status === 401) {
+    // The session is gone (expired or revoked). Without this the app keeps
+    // running with an empty permission set, which looks like "everything
+    // disappeared" rather than "you are signed out".
+    try {
+      localStorage.removeItem('token');
+    } catch {
+      // ignore
+    }
+    const err = new Error(data?.error || 'Your session has expired. Please sign in again.');
+    err.status = 401;
+    err.sessionExpired = true;
+    window.dispatchEvent(new CustomEvent('auth:session-expired'));
+    throw err;
+  }
+
   if (!res.ok) {
     const raw = String(text || '').trim();
     const msg =

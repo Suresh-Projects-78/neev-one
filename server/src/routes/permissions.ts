@@ -188,6 +188,64 @@ permissionsRouter.post(
 );
 
 /**
+ * Lockout protection for the org creator.
+ *
+ * Two distinct cases, deliberately kept apart:
+ *  1. The creator's ADMIN role holds nothing yet (a pre-catalog org, or a fresh
+ *     bootstrap that failed): grant the whole Administrator preset once.
+ *  2. Otherwise only re-grant the handful of administration permissions needed
+ *     to reach this screen again. Re-applying the full preset on every load
+ *     would silently undo a deliberate reduction the admin just saved.
+ */
+const LOCKOUT_GUARD = [
+  'SETTINGS::Roles::VIEW',
+  'SETTINGS::Roles::EDIT',
+  'SETTINGS::Users::VIEW',
+];
+
+async function syncOwnerRoleIfCreator(accountId: string, orgId: string, userId: string) {
+  const org = await prisma.org.findFirst({ where: { accountId, id: orgId }, select: { createdByUserId: true } });
+  if (!org || org.createdByUserId !== userId) return;
+
+  const adminAssignment = await prisma.userRoleAssignment.findFirst({
+    where: { accountId, orgId, userId, role: { roleType: 'ADMIN' } },
+    select: { roleId: true },
+  });
+  if (!adminAssignment) return;
+
+  const held = await prisma.rolePermission.findMany({
+    where: { roleId: adminAssignment.roleId, allowed: true },
+    select: { permission: { select: { module: true, subModule: true, action: true } } },
+  });
+  const heldKeys = new Set(held.map((h) => permKey(h.permission.module, h.permission.subModule, h.permission.action)));
+
+  const wanted = heldKeys.size === 0
+    ? new Set(expandPreset('ADMIN').map((r) => permKey(r.module, r.subModule, r.action)))
+    : new Set(LOCKOUT_GUARD);
+
+  const missing = [...wanted].filter((k) => !heldKeys.has(k));
+  if (missing.length === 0) return;
+
+  await ensurePermissionCatalog();
+  const permissions = await prisma.permission.findMany({
+    select: { id: true, module: true, subModule: true, action: true },
+  });
+
+  for (const p of permissions) {
+    const k = permKey(p.module, p.subModule, p.action);
+    if (!wanted.has(k) || heldKeys.has(k)) continue;
+    try {
+      await prisma.rolePermission.create({
+        data: { accountId, orgId, roleId: adminAssignment.roleId, permissionId: p.id, allowed: true },
+        select: { id: true },
+      });
+    } catch (err: any) {
+      if (String(err?.code || '') !== 'P2002') throw err;
+    }
+  }
+}
+
+/**
  * The effective permission set for the signed-in user in this org and branch,
  * plus the document-level restrictions (branch and warehouse) that scope it.
  * The client renders navigation and buttons from this.
@@ -198,6 +256,11 @@ permissionsRouter.get('/orgs/:orgId/permissions/me', async (req, res) => {
   const orgId = req.tenant!.orgId;
   const branchId = req.tenant!.branchId;
   const userId = req.auth!.userId;
+
+  // Orgs created before the catalog existed hold a hand-written subset on their
+  // Owner role, which would hide most of the product from the person who owns
+  // it. Bring the creator's ADMIN role up to the full preset, once.
+  await syncOwnerRoleIfCreator(accountId, orgId, userId);
 
   const assignments = await prisma.userRoleAssignment.findMany({
     where: { accountId, orgId, userId, OR: [{ branchId: null }, { branchId }] },

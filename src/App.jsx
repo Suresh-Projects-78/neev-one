@@ -95,6 +95,9 @@ import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
 import { PageHeader, StatTile, ThemeToggle } from './components/ui/Primitives';
+import { PermissionProvider } from './permissions/PermissionContext';
+import { usePermissions } from './permissions/usePermissions';
+import RolePermissionManager from './features/admin/RolePermissionManager';
 import { useTheme } from './components/ui/useTheme';
 const normalizeId = (v) => String(v ?? '').trim();
 
@@ -8913,7 +8916,8 @@ const Gstr3bReport = ({ db, currentCompany }) => {
   );
 };
 
-const App = () => {
+const AppShell = () => {
+  const { can, loading: permsLoading } = usePermissions();
   const { theme, toggle: toggleTheme } = useTheme();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -9041,6 +9045,14 @@ const App = () => {
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [profileMenuOpen]);
 
+  // A 401 from any API call means the session is over; drop back to sign-in
+  // instead of rendering a shell with no permissions.
+  useEffect(() => {
+    const onExpired = () => setIsAuthenticated(false);
+    window.addEventListener('auth:session-expired', onExpired);
+    return () => window.removeEventListener('auth:session-expired', onExpired);
+  }, []);
+
   const logout = () => {
     try {
       localStorage.removeItem('token');
@@ -9148,7 +9160,10 @@ const App = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     if (!hasBranchRestriction) return;
-    if (authCtx.loading) return;
+    // authCtx starts as { loading: false, data: null }, so "not loading" is not
+    // the same as "answered". Acting before /auth/me returns would clear the
+    // active branch on every page load, because allowedBranchIds is still empty.
+    if (authCtx.loading || !authCtx.data) return;
 
     const existing = String(localStorage.getItem('activeBranchId') || '').trim();
     if (existing && allowedBranchIdSet.has(existing)) return;
@@ -9291,10 +9306,10 @@ const App = () => {
         label: 'Sales',
         icon: FileText,
         items: [
-          { key: 'invoices', label: 'Invoices', icon: FileText },
-          { key: 'receipts', label: 'Receipts', icon: Receipt },
-          { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList },
-          { key: 'creditNotes', label: 'Sales Returns', icon: Receipt },
+          { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
+          { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW' },
+          { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW' },
+          { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW' },
         ],
       },
       {
@@ -9303,21 +9318,21 @@ const App = () => {
         label: 'Purchases',
         icon: ShoppingCart,
         items: [
-          { key: 'bills', label: 'Bills', icon: FileStack },
-          { key: 'payments', label: 'Payments', icon: NotebookPen },
-          { key: 'purchaseOrders', label: 'Purchase Orders', icon: ShoppingCart },
-          { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen },
+          { key: 'bills', label: 'Bills', icon: FileStack, perm: 'PURCHASE::Bills::VIEW' },
+          { key: 'payments', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW' },
+          { key: 'purchaseOrders', label: 'Purchase Orders', icon: ShoppingCart, perm: 'PURCHASE::Purchase Orders::VIEW' },
+          { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW' },
         ],
       },
-      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: BookOpen },
+      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: BookOpen, perm: 'CASHBANK::Cash & Bank::VIEW' },
       {
         type: 'group',
         key: 'expensesMenu',
         label: 'Expenses',
         icon: Receipt,
         items: [
-          { key: 'expenses', label: 'Expenses', icon: Receipt },
-          { key: 'paymentsExpense', label: 'Payments', icon: NotebookPen },
+          { key: 'expenses', label: 'Expenses', icon: Receipt, perm: 'EXPENSES::Expenses::VIEW' },
+          { key: 'paymentsExpense', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW' },
         ],
       },
       {
@@ -9326,26 +9341,26 @@ const App = () => {
         label: 'Inventory',
         icon: Package,
         items: [
-          { key: 'inventory', label: 'Inventory', icon: Package },
-          { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck },
-          { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck },
+          { key: 'inventory', label: 'Inventory', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW' },
+          { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW' },
+          { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW' },
         ],
       },
-      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: NotebookPen },
-      { type: 'item', key: 'reports', label: 'Reports', icon: BarChart3 },
+      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: NotebookPen, perm: 'ACCOUNTING::Journal Entries::VIEW' },
+      { type: 'item', key: 'reports', label: 'Reports', icon: BarChart3, permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
       {
         type: 'group',
         key: 'mdmMenu',
         label: 'Master Data',
         icon: Tags,
         items: [
-          { key: 'items', label: 'Items', icon: Tags },
-          { key: 'customers', label: 'Customers', icon: Users },
-          { key: 'vendors', label: 'Vendors', icon: Truck },
-          { key: 'bankCash', label: 'Chart of Accounts', icon: Building2 },
-          { key: 'gstRates', label: 'GST Rates', icon: BadgePercent },
-          { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText },
-          { key: 'docNumbering', label: 'Numbering', icon: Settings },
+          { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
+          { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
+          { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
+          { key: 'bankCash', label: 'Chart of Accounts', icon: Building2, perm: 'ACCOUNTING::Chart of Accounts::VIEW' },
+          { key: 'gstRates', label: 'GST Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
+          { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
+          { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
         ],
       },
       {
@@ -9354,17 +9369,33 @@ const App = () => {
         label: 'Settings',
         icon: Settings,
         items: [
-          { key: 'settingsCompany', label: 'Company', icon: Building2 },
-          { key: 'settingsBranches', label: 'Branches', icon: Building2 },
-          { key: 'settingsWarehouses', label: 'Warehouses', icon: Package },
-          { key: 'settingsUsers', label: 'Users', icon: Users },
-          { key: 'settingsRoles', label: 'Roles', icon: Shield },
-          { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent },
+          { key: 'settingsCompany', label: 'Company', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW' },
+          { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW' },
+          { key: 'settingsUsers', label: 'Users', icon: Users, perm: 'SETTINGS::Users::VIEW' },
+          { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
+          { key: 'settingsPermissions', label: 'Role Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
+          { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
         ],
       },
     ],
     []
   );
+
+  // Hide anything the user cannot open. The server re-checks on every request;
+  // this only stops the UI offering doors that are locked.
+  const visibleNav = useMemo(() => {
+    if (permsLoading) return navModel;
+    const allow = (entry) =>
+      (!entry.perm || can(entry.perm)) && (!entry.permAny || entry.permAny.some((k) => can(k)));
+    return navModel
+      .map((entry) => {
+        if (entry.type !== 'group') return allow(entry) ? entry : null;
+        const items = entry.items.filter(allow);
+        return items.length ? { ...entry, items } : null;
+      })
+      .filter(Boolean);
+  }, [navModel, can, permsLoading]);
 
   const activeGroupKey = useMemo(() => {
     for (const entry of navModel) {
@@ -10280,6 +10311,8 @@ const App = () => {
         const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
         return <SettingsRoles orgId={orgId} />;
       }
+      case 'settingsPermissions':
+        return <RolePermissionManager />;
       case 'settingsUsersRoles': {
         const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
         return <SettingsUsersRoles orgId={orgId} />;
@@ -10492,7 +10525,7 @@ const App = () => {
         <aside className="w-full md:w-56 lg:w-60 shrink-0">
           <nav aria-label="Main" className="ui-panel p-2 md:sticky md:top-[4.5rem]">
             <div className="space-y-0.5">
-              {navModel.map((entry) => {
+              {visibleNav.map((entry) => {
                 if (entry.type === 'item') {
                   const Icon = entry.icon;
                   const reportKeys = new Set([
@@ -10605,6 +10638,39 @@ const App = () => {
         </Modal>
       )}
     </div>
+  );
+};
+
+/**
+ * The permission set is fetched once per session and shared by the whole shell.
+ * `enabled` keeps the request from firing before there is a token and an org to
+ * ask about, and the session key remounts the provider when either changes.
+ */
+const App = () => {
+  const [sessionKey, setSessionKey] = useState(() => {
+    const token = String(localStorage.getItem('token') || '').trim();
+    const org = String(localStorage.getItem('activeOrgId') || '').trim();
+    return `${token ? 'auth' : 'anon'}:${org}`;
+  });
+
+  useEffect(() => {
+    // Login and org switching both happen through localStorage in this app, so
+    // poll cheaply rather than threading a callback through every call site.
+    const id = setInterval(() => {
+      const token = String(localStorage.getItem('token') || '').trim();
+      const org = String(localStorage.getItem('activeOrgId') || '').trim();
+      const next = `${token ? 'auth' : 'anon'}:${org}`;
+      setSessionKey((prev) => (prev === next ? prev : next));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const hasSession = sessionKey.startsWith('auth:') && sessionKey.split(':')[1];
+
+  return (
+    <PermissionProvider key={sessionKey} enabled={Boolean(hasSession)}>
+      <AppShell />
+    </PermissionProvider>
   );
 };
 
