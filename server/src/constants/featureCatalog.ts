@@ -213,7 +213,8 @@ export const FEATURE_CATALOG: FeatureDef[] = [
   {
     key: 'imports',
     label: 'Data import',
-    description: 'Import documents and masters from a spreadsheet, with a dry run before committing.',
+    description:
+      'Import journal entries and sales invoices from a CSV file, with a downloadable template. Files are staged and validated first, so you see every problem before anything is written.',
     defaultEnabled: false,
     category: 'Data',
   },

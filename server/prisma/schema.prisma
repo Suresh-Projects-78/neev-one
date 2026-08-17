@@ -444,11 +444,17 @@ model Invoice {
   sourceEstimateId String?
   itemsJson        String
 
+  /// Migration identity: where this row came from, and its key in that system.
+  /// Re-running an import maps to the same row instead of duplicating it.
+  sourceSystem String?
+  sourceKey    String?
+
   createdByUserId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@unique([orgId, branchId, number])
+  @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
 }
 
@@ -1188,6 +1194,73 @@ model SerialNumber {
   @@unique([orgId, itemId, serialNo])
   @@index([accountId, orgId, branchId, warehouseId, status])
   @@index([accountId, orgId, itemId, status])
+}
+
+/// A file being imported — requirements 15 and 16.
+///
+/// Import is two steps on purpose: rows are staged and validated first, and
+/// only committed once the operator has seen what would happen. An importer
+/// that writes as it parses leaves half a ledger behind when row 400 turns out
+/// to be malformed.
+model ImportBatch {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  /// INVOICE | BILL | CREDIT_NOTE | DEBIT_NOTE | JOURNAL
+  docType String
+  /// Where the data came from, so a re-run maps to the same rows.
+  sourceSystem String @default("CSV")
+  fileName     String?
+
+  status String @default("STAGED") // STAGED | VALIDATED | COMMITTED | FAILED
+
+  totalRows     Int @default(0)
+  validRows     Int @default(0)
+  errorRows     Int @default(0)
+  committedRows Int @default(0)
+
+  committedAt DateTime?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rows ImportRow[]
+
+  @@index([accountId, orgId, branchId, docType, status])
+}
+
+/// One line of the file, kept with whatever was wrong with it.
+///
+/// The raw payload is retained so an operator can see the row as they supplied
+/// it rather than a normalised version they never typed.
+model ImportRow {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  batchId   String
+
+  rowNumber Int
+  /// The parsed source row, as JSON.
+  raw String
+
+  status String  @default("PENDING") // PENDING | VALID | ERROR | COMMITTED | SKIPPED
+  error  String?
+
+  /// Natural key from the file, used to make a re-run idempotent.
+  sourceKey String?
+  /// The record this row became.
+  targetId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  batch ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@unique([batchId, rowNumber])
+  @@index([accountId, orgId, batchId, status])
 }
 
 // ----------------------------
