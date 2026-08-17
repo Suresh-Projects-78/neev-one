@@ -1,6 +1,8 @@
 // In dev, Vite proxies `/api` to the backend (see vite.config.js).
 // Use a relative default to avoid CORS/mixed-content issues that often show up as "Failed to fetch".
-const API_BASE = import.meta.env?.VITE_API_BASE || '/api';
+// Exported so callers that must bypass apiFetch — a file download, where the
+// response is CSV rather than JSON — still hit the same origin.
+export const API_BASE = import.meta.env?.VITE_API_BASE || '/api';
 
 function getToken() {
   return String(localStorage.getItem('token') || '').trim();

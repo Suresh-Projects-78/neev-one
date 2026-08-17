@@ -27,6 +27,9 @@ import {
   Trash2,
   Truck,
   Users,
+  Boxes,
+  Coins,
+  Upload,
 } from 'lucide-react';
 import Modal from './components/ui/Modal';
 import PopupSelect from './components/pickers/PopupSelect';
@@ -105,6 +108,9 @@ import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
 import NumberingSettings from './features/settings/NumberingSettings';
+import CurrencySettings from './features/settings/CurrencySettings';
+import BatchSerialManager from './features/inventory/BatchSerialManager';
+import ImportCenter from './features/data/ImportCenter';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
@@ -9449,6 +9455,7 @@ const AppShell = () => {
           { key: 'inventory', label: 'Inventory', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'inventory' },
           { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
           { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', feature: 'stockTransfers' },
+          { key: 'batchSerial', label: 'Batches & Serials', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchSerial' },
         ],
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: NotebookPen, perm: 'ACCOUNTING::Journal Entries::VIEW' },
@@ -9489,6 +9496,8 @@ const AppShell = () => {
           { key: 'settingsGovernance', label: 'Governance', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsProfile', label: 'My Profile', icon: Users },
           { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
+          { key: 'settingsCurrencies', label: 'Currencies', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
+          { key: 'dataImport', label: 'Import Data', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports' },
         ],
       },
     ],
@@ -10445,6 +10454,12 @@ const AppShell = () => {
         return <ProfileSettings />;
       case 'settingsNumbering':
         return <NumberingSettings />;
+      case 'settingsCurrencies':
+        return <CurrencySettings />;
+      case 'dataImport':
+        return <ImportCenter />;
+      case 'batchSerial':
+        return <BatchSerialManager />;
       case 'approvals':
         return <ApprovalsInbox currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':
