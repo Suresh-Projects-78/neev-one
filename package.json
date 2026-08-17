@@ -22,6 +22,8 @@
     "env:init": "node scripts/init-env.mjs"
   },
   "dependencies": {
+    "echarts": "^6.1.0",
+    "echarts-for-react": "^3.0.6",
     "jspdf": "^3.0.4",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.561.0",

@@ -3,152 +3,159 @@
    text — narrow enough for dense tables without feeling condensed. JetBrains
    Mono is kept for document numbers and codes only.
    display=swap so text is never invisible while fonts load. */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Inter is the brief's choice and the right one for dense financial UI: it has
+   tabular figures, a large x-height and a wide weight range. JetBrains Mono is
+   kept for document numbers and codes. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ---------------------------------------------------------------------------
-   Design tokens — Minimalism & Swiss, dense/dashboard scale.
-   Generated from the ui-ux-pro-max design system; see
-   design-system/accounting-suite/MASTER.md.
+   Neev Ledger — design tokens.
 
-   Palette: graphite + warm sand, near-monochrome.
-   - Primary actions are near-black (inverted to near-white in dark mode), not
-     a colour. Coloured CTAs compete with the financial colours.
-   - Amber is the single accent: focus rings, the active-nav indicator, links,
-     and the "partial" money state. Reusing one hue keeps the hue count down.
-   - Green and red mean money in and money out. Nothing else uses them.
-   - No blue anywhere, by request. The neutrals are warm stone, not cool grey.
+   Palette per the product brief: orange carries the identity, blue is
+   informational only. Blue never appears on chrome, navigation or a call to
+   action — it marks links and neutral information, so the one saturated colour
+   a user learns to look for stays orange.
+
+   Semantic money colours are separate from brand colours and never reused for
+   decoration: green is money in, red is money out, amber is attention.
 --------------------------------------------------------------------------- */
 
 :root {
-  /* Surfaces — warm neutral (stone), not cool grey */
-  --app-bg: 250 250 249;
-  --surface: 255 255 255;
+  /* Surfaces */
+  --app-bg: 248 250 252;        /* #F8FAFC */
+  --surface: 255 255 255;       /* #FFFFFF */
   --surface-raised: 255 255 255;
-  --surface-sunken: 245 245 244;
-  --border: 231 229 228;
-  --border-strong: 214 211 209;
+  --surface-sunken: 248 250 252;
+  --border: 229 231 235;        /* #E5E7EB */
+  --border-strong: 209 213 219;
 
   /* Text */
-  --fg: 28 25 23;
-  --fg-muted: 87 83 78;
-  --fg-subtle: 120 113 108;
+  --fg: 17 24 39;               /* #111827 */
+  --fg-muted: 107 114 128;      /* #6B7280 */
+  --fg-subtle: 156 163 175;
 
-  /* Primary action — near-black, not a colour. Colour is reserved for meaning. */
-  --primary: 28 25 23;
-  --on-primary: 255 255 255;
-  --primary-hover: 41 37 36;
-
-  /* Brand — deep pine. The one saturated hue with a job: marketing surfaces,
-     the mark, and the primary CTA outside the app shell. Chosen over the usual
-     SaaS blue because ledgers, money and India's own accounting tradition read
-     green and brass, and because blue is the default nobody chose. */
-  --brand: 26 74 58;
-  --brand-hover: 20 60 47;
-  --brand-soft: 236 244 240;
+  /* Brand — orange. The primary action and the active state. */
+  --brand: 249 115 22;          /* #F97316 */
+  --brand-hover: 234 88 12;
+  --brand-soft: 255 247 237;
   --on-brand: 255 255 255;
-  /* Ink for text on brand-soft backgrounds. Flips with the theme. */
-  --brand-ink: 12 38 29;
-  /* A brand SURFACE that always carries white text, so it must stay dark in
-     both themes. Kept separate from --brand-ink, which is a text colour and
-     inverts: reusing it here turned the sign-in panel pale mint in dark mode,
-     with white text on top of it. */
-  --brand-panel: 12 38 29;
+  --brand-ink: 124 45 18;
+  --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
 
-  /* Accent: focus rings, active nav indicator, links. Used sparingly. */
-  --accent: 180 83 9;
-  --accent-hover: 146 64 14;
-  --accent-soft: 245 245 244;
+  /* Primary action == brand, so there is one obvious next step per screen. */
+  --primary: 249 115 22;
+  --on-primary: 255 255 255;
+  --primary-hover: 234 88 12;
+
+  /* Accent + focus ring follow the brand rather than introducing a third hue. */
+  --accent: 249 115 22;
+  --accent-hover: 234 88 12;
+  --accent-soft: 255 247 237;
   --on-accent: 255 255 255;
-  --ring: 180 83 9;
+  --ring: 249 115 22;
 
-  /* Financial semantics — the only other colour on screen */
-  --pos: 21 128 61;
+  /* Informational blue. Links and neutral notices only. */
+  --info: 37 99 235;            /* #2563EB */
+  --info-soft: 239 246 255;
+
+  /* Money semantics */
+  --pos: 22 163 74;             /* #16A34A */
   --pos-soft: 240 253 244;
-  --neg: 185 28 28;
+  --neg: 220 38 38;             /* #DC2626 */
   --neg-soft: 254 242 242;
-  --warn: 180 83 9;
+  --warn: 245 158 11;           /* #F59E0B */
   --warn-soft: 255 251 235;
-  --info: 87 83 78;
-  --info-soft: 245 245 244;
 
-  /* Dense dashboard spacing scale (density 8/10) */
+  /* Spacing — 4px base */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.5rem;
   --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Type scale: 12 14 16 18 20 24 32 40 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.5rem;
 
   --radius-sm: 0.375rem;
   --radius: 0.625rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.25rem;
 
-  /* Warm-tinted shadows. A neutral black shadow over warm surfaces reads grey
-     and slightly dirty; tinting it with the ink colour keeps the page warm. */
-  --shadow-card: 0 1px 2px 0 rgb(28 25 23 / 0.04), 0 1px 3px 0 rgb(28 25 23 / 0.06);
-  --shadow-pop: 0 4px 6px -1px rgb(28 25 23 / 0.08), 0 10px 24px -6px rgb(28 25 23 / 0.14);
-  --shadow-lift: 0 12px 32px -12px rgb(28 25 23 / 0.22), 0 2px 8px -2px rgb(28 25 23 / 0.08);
+  /* Layout */
+  --sidebar-w: 260px;
+  --sidebar-w-collapsed: 72px;
+  --topbar-h: 56px;
 
-  /* One easing for arrivals, one for exits. Everything shares them. */
+  --shadow-card: 0 1px 2px 0 rgb(17 24 39 / 0.04), 0 1px 3px 0 rgb(17 24 39 / 0.06);
+  --shadow-pop: 0 4px 6px -1px rgb(17 24 39 / 0.08), 0 10px 24px -6px rgb(17 24 39 / 0.14);
+  --shadow-lift: 0 12px 32px -12px rgb(17 24 39 / 0.18), 0 2px 8px -2px rgb(17 24 39 / 0.06);
+
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
 }
 
 :root[data-theme='dark'] {
-  --app-bg: 12 10 9;
-  --surface: 28 25 23;
-  /* Raised and sunken are both LIGHTER than the surface in dark mode; a sunken
-     tone equal to the page background flattens table headers into the page. */
-  --surface-raised: 41 37 36;
-  --surface-sunken: 41 37 36;
-  --border: 68 64 60;
-  --border-strong: 87 83 78;
+  --app-bg: 9 11 17;
+  --surface: 17 20 28;
+  --surface-raised: 24 28 38;
+  --surface-sunken: 24 28 38;
+  --border: 39 44 58;
+  --border-strong: 55 61 78;
 
-  --brand: 122 183 160;
-  --brand-hover: 149 199 179;
-  --brand-soft: 24 38 33;
-  --on-brand: 12 38 29;
-  --brand-ink: 214 235 227;
-  --brand-panel: 8 26 20;
+  --fg: 241 245 249;
+  --fg-muted: 148 163 184;
+  --fg-subtle: 100 116 139;
 
-  --shadow-lift: 0 12px 32px -12px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  /* Orange lifts slightly in dark so it keeps its contrast against a dark
+     surface without turning fluorescent. */
+  --brand: 251 146 60;
+  --brand-hover: 253 186 116;
+  --brand-soft: 43 26 14;
+  --on-brand: 26 12 3;
+  --brand-ink: 254 215 170;
+  --brand-panel: 9 11 17;
 
-  --fg: 250 250 249;
-  --fg-muted: 168 162 158;
-  --fg-subtle: 120 113 108;
+  --primary: 249 115 22;
+  --on-primary: 255 255 255;
+  --primary-hover: 251 146 60;
 
-  /* Inverted in dark: a near-black button on a near-black page is invisible. */
-  --primary: 250 250 249;
-  --on-primary: 28 25 23;
-  --primary-hover: 231 229 228;
+  --accent: 251 146 60;
+  --accent-hover: 253 186 116;
+  --accent-soft: 43 26 14;
+  --on-accent: 26 12 3;
+  --ring: 251 146 60;
 
-  --accent: 245 158 11;
-  --accent-hover: 251 191 36;
-  --accent-soft: 41 37 36;
-  --on-accent: 28 25 23;
-  --ring: 245 158 11;
+  --info: 96 165 250;
+  --info-soft: 23 37 66;
 
   --pos: 74 222 128;
   --pos-soft: 5 46 22;
   --neg: 248 113 113;
-  --neg-soft: 69 10 10;
+  --neg-soft: 60 12 12;
   --warn: 251 191 36;
-  --warn-soft: 69 39 3;
-  --info: 168 162 158;
-  --info-soft: 41 37 36;
+  --warn-soft: 56 33 6;
 
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.5);
   --shadow-pop: 0 10px 30px -10px rgb(0 0 0 / 0.7);
+  --shadow-lift: 0 12px 32px -12px rgb(0 0 0 / 0.65), 0 2px 8px -2px rgb(0 0 0 / 0.4);
 }
 
 @layer base {
   html {
-    font-family: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     /* Tabular figures everywhere: money columns must not jitter between rows. */
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
@@ -550,8 +557,8 @@
      Fraunces only for headline moments. Body copy stays in Inter Tight: a
      serif at 15px in a data table is harder to scan, not more characterful. */
   .ui-display {
-    font-family: 'Fraunces', ui-serif, Georgia, serif;
-    font-optical-sizing: auto;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: 1.05;
@@ -832,6 +839,43 @@
     text-transform: uppercase;
     color: rgb(var(--fg-subtle));
     margin-bottom: var(--space-3);
+  }
+}
+
+@layer components {
+  /* Keyboard hint, used in the palette and in menus that advertise a shortcut. */
+  .ui-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5rem;
+    height: 1.375rem;
+    padding: 0 0.375rem;
+    border-radius: 0.375rem;
+    border: 1px solid rgb(var(--border));
+    background-color: rgb(var(--surface-sunken));
+    color: rgb(var(--fg-subtle));
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-family: inherit;
+    line-height: 1;
+  }
+
+  /* Informational blue: links and neutral notices only, never a CTA. */
+  .ui-info { color: rgb(var(--info)); }
+  .ui-badge-info {
+    background-color: rgb(var(--info-soft));
+    color: rgb(var(--info));
+    border-color: rgb(var(--info) / 0.2);
+  }
+
+  /* KPI figure: 40px, tabular, tight. The number is the point of the card. */
+  .ui-kpi {
+    font-size: clamp(1.75rem, 2.4vw, 2.5rem);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
   }
 }
 

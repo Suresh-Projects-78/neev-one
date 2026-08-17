@@ -30,6 +30,7 @@ import {
   Boxes,
   Coins,
   Upload,
+  Search as SearchIcon,
 } from 'lucide-react';
 import Modal from './components/ui/Modal';
 import PopupSelect from './components/pickers/PopupSelect';
@@ -112,6 +113,8 @@ import CurrencySettings from './features/settings/CurrencySettings';
 import BatchSerialManager from './features/inventory/BatchSerialManager';
 import ImportCenter from './features/data/ImportCenter';
 import DashboardOverview from './features/dashboard/DashboardOverview';
+import CommandPalette from './components/ui/CommandPalette';
+import { useCommandPalette } from './components/ui/useCommandPalette';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
@@ -9517,6 +9520,8 @@ const AppShell = () => {
 
   // Hide anything the user cannot open. The server re-checks on every request;
   // this only stops the UI offering doors that are locked.
+  const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
+
   const visibleNav = useMemo(() => {
     if (permsLoading) return navModel;
     // Hidden when the user lacks the permission OR the org has the feature off.
@@ -9532,6 +9537,25 @@ const AppShell = () => {
       })
       .filter(Boolean);
   }, [navModel, can, permsLoading, isEnabled]);
+
+  /**
+   * Palette entries come from the already permission- and feature-filtered nav,
+   * so the palette can never offer a destination the sidebar hides. One source,
+   * two surfaces.
+   */
+  const paletteItems = useMemo(() => {
+    const out = [];
+    for (const entry of visibleNav) {
+      if (entry.type === 'group') {
+        for (const item of entry.items) {
+          out.push({ key: item.key, label: item.label, group: entry.label, icon: item.icon });
+        }
+      } else {
+        out.push({ key: entry.key, label: entry.label, group: 'Go to', icon: entry.icon });
+      }
+    }
+    return out;
+  }, [visibleNav]);
 
   const activeGroupKey = useMemo(() => {
     for (const entry of navModel) {
@@ -10728,7 +10752,26 @@ const AppShell = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="ui-pill ui-pill-neutral hidden sm:inline-flex">{activeLabel}</span>
+            {/* The shortcut is advertised rather than hidden: a command palette
+                nobody knows about is a command palette nobody uses. On small
+                screens it collapses to the icon alone. */}
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="group flex items-center gap-2 rounded-lg pl-2.5 pr-1.5 h-9 transition-colors"
+              style={{
+                border: '1px solid rgb(var(--border))',
+                backgroundColor: 'rgb(var(--surface-sunken))',
+                color: 'rgb(var(--fg-muted))',
+              }}
+              aria-label="Search — press Control or Command plus K"
+            >
+              <SearchIcon size={15} aria-hidden="true" />
+              <span className="hidden md:inline text-sm">Search</span>
+              <kbd className="ui-kbd hidden md:inline-flex">⌘K</kbd>
+            </button>
+
+            <span className="ui-pill ui-pill-neutral hidden lg:inline-flex">{activeLabel}</span>
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
         </div>
@@ -10856,6 +10899,14 @@ const AppShell = () => {
             </div>
           </nav>
         </aside>
+
+        {paletteOpen ? (
+        <CommandPalette
+          onClose={() => setPaletteOpen(false)}
+          items={paletteItems}
+          onSelect={(item) => setActive(item.key)}
+        />
+        ) : null}
 
         <main id="main-content" key={active} className="min-w-0 flex-1 ui-in-fade">
           {/*
