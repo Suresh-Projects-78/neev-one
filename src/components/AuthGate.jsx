@@ -1,7 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import LandingPage from '../features/marketing/LandingPage';
+
+/* Inline marks rather than an icon package: this screen renders before the app
+   shell loads, and the two glyphs it needs are not worth the import. Both are
+   decorative — the text beside them already says what they mean. */
+const BookIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden="true" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+    <path strokeLinecap="round" d="M8 8h7M8 11.5h7" />
+  </svg>
+);
+
+const CheckIcon = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
+  </svg>
+);
 
 const AuthGate = ({ onAuth }) => {
   const [mode, setMode] = useState('login'); // login | signup | forgot | reset
+  // The public page is what a first-time visitor should meet, not a password
+  // box. Anyone arriving with a reset link skips straight past it (see below).
+  const [showLanding, setShowLanding] = useState(true);
   const [signupStep, setSignupStep] = useState(1);
   
   // Form fields
@@ -29,6 +49,7 @@ const AuthGate = ({ onAuth }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
+    if (token) setShowLanding(false);
     if (token) {
       setResetToken(token);
       setMode('reset');
@@ -339,72 +360,97 @@ const AuthGate = ({ onAuth }) => {
     return '';
   };
 
+  if (showLanding) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <LandingPage
+          onSignIn={() => {
+            setMode('login');
+            setShowLanding(false);
+          }}
+          onGetStarted={() => {
+            setMode('signup');
+            setShowLanding(false);
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div className="fixed inset-0 z-50 overflow-y-auto" style={{ backgroundColor: 'rgb(var(--app-bg))' }}>
       <div className="min-h-screen flex">
-        {/* Left side - Branding */}
-        <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-stone-600/20 to-indigo-600/20" />
-          <div className="absolute inset-0" style={{
-            backgroundImage: 'radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.3) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(99, 102, 241, 0.3) 0%, transparent 50%)',
-          }} />
-          
-          <div className="relative z-10 p-12 flex flex-col justify-between w-full">
+        {/* Left: the brand side.
+            Deep pine rather than the usual slate/indigo — this screen used to
+            open on blue-500 and indigo-500 washes, which is the default nobody
+            picked. Warm ink and brass instead, matching the app behind it. */}
+        <div
+          className="hidden lg:flex lg:w-[46%] relative overflow-hidden"
+          style={{ backgroundColor: 'rgb(var(--brand-panel))' }}
+        >
+          <div
+            className="absolute inset-0"
+            aria-hidden="true"
+            style={{
+              backgroundImage:
+                'radial-gradient(38rem 24rem at 20% 10%, rgb(var(--brand) / 0.55), transparent 62%),' +
+                'radial-gradient(30rem 20rem at 90% 85%, rgb(var(--accent) / 0.28), transparent 60%)',
+            }}
+          />
+          {/* Faint ledger ruling. Decorative, so it is hidden from assistive tech. */}
+          <div
+            className="absolute inset-0 opacity-[0.06]"
+            aria-hidden="true"
+            style={{
+              backgroundImage: 'repeating-linear-gradient(180deg, #fff 0 1px, transparent 1px 2.25rem)',
+            }}
+          />
+
+          <div className="relative z-10 p-12 flex flex-col justify-between w-full text-white">
             <div>
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
+                <div className="w-11 h-11 rounded-xl grid place-items-center bg-white/10 backdrop-blur-sm ring-1 ring-white/15">
+                  <BookIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-white tracking-tight">Accounting</h1>
-                  <p className="text-white/60 text-sm">Business Management Suite</p>
+                  <p className="ui-display text-2xl">Ledgerly</p>
+                  <p className="text-white/55 text-xs tracking-wide">GST accounting, kept straight</p>
                 </div>
               </div>
-              
-              <div className="mt-16 space-y-8">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold">Multi-Company Support</h3>
-                    <p className="text-white/60 text-sm mt-1">Manage multiple businesses from one account</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold">Secure & Private</h3>
-                    <p className="text-white/60 text-sm mt-1">Your data is isolated and protected</p>
-                  </div>
-                </div>
-                
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-white font-semibold">Role-Based Access</h3>
-                    <p className="text-white/60 text-sm mt-1">Control who can access what</p>
-                  </div>
-                </div>
-              </div>
+
+              <h2 className="ui-display mt-16 text-[2.75rem] leading-[1.05] max-w-[16ch]">
+                Books that balance themselves.
+              </h2>
+              <p className="mt-5 text-white/65 leading-relaxed max-w-[46ch]">
+                Every invoice, receipt and journal posts to a real double-entry ledger the moment
+                you save it. No month-end reconciliation ritual.
+              </p>
+
+              <ul className="mt-12 space-y-5">
+                {[
+                  ['Balanced or rejected', 'An entry that does not foot to zero is never stored.'],
+                  ['Multi-company, multi-branch', 'One sign-in across every book you keep.'],
+                  ['Role-based access', 'Down to individual fields and approval limits.'],
+                ].map(([title, body]) => (
+                  <li key={title} className="flex items-start gap-3.5">
+                    <span
+                      className="mt-0.5 w-6 h-6 rounded-md grid place-items-center bg-white/10 ring-1 ring-white/15 flex-shrink-0"
+                      aria-hidden="true"
+                    >
+                      <CheckIcon className="w-3.5 h-3.5" />
+                    </span>
+                    <span>
+                      <span className="block font-semibold text-[0.9375rem]">{title}</span>
+                      <span className="block text-white/55 text-sm mt-0.5">{body}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
-            
-            <div className="text-white/40 text-sm">
-              © 2025 Accounting Suite · Secure Sign-in
-            </div>
+
+            <p className="text-white/40 text-xs">
+              © 2026 Ledgerly · Books stay on your server
+            </p>
           </div>
         </div>
 
@@ -414,19 +460,19 @@ const AuthGate = ({ onAuth }) => {
             {/* Mobile logo */}
             <div className="lg:hidden mb-8 text-center">
               <div className="inline-flex items-center gap-2">
-                <div className="w-10 h-10 bg-stone-900 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl grid place-items-center" style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}>
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="text-xl font-bold text-white">Accounting</span>
+                <span className="ui-display text-xl">Ledgerly</span>
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-2xl p-8">
+            <div className="ui-card p-8 ui-in">
               <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900">{getTitle()}</h2>
-                <p className="text-gray-500 mt-2">{getSubtitle()}</p>
+                <h2 className="ui-display text-[1.75rem]">{getTitle()}</h2>
+                <p className="ui-muted mt-2 text-sm">{getSubtitle()}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -434,7 +480,7 @@ const AuthGate = ({ onAuth }) => {
                 {mode === 'login' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                      <label className="ui-label">Email Address</label>
                       <input
                         type="email"
                         value={email}
@@ -442,14 +488,14 @@ const AuthGate = ({ onAuth }) => {
                           setEmail(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="you@example.com"
                         autoComplete="email"
                         autoFocus
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                      <label className="ui-label">Password</label>
                       <div className="relative">
                         <input
                           type={showPassword ? 'text' : 'password'}
@@ -458,14 +504,14 @@ const AuthGate = ({ onAuth }) => {
                             setPassword(e.target.value);
                             if (error) setError('');
                           }}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none pr-12"
+                          className="ui-input h-11 pr-12"
                           placeholder="Enter your password"
                           autoComplete="current-password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 ui-icon-btn"
                         >
                           {showPassword ? (
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -487,7 +533,7 @@ const AuthGate = ({ onAuth }) => {
                 {mode === 'signup' && signupStep === 1 && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+                      <label className="ui-label">Full Name</label>
                       <input
                         type="text"
                         value={name}
@@ -495,13 +541,13 @@ const AuthGate = ({ onAuth }) => {
                           setName(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="John Doe"
                         autoFocus
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                      <label className="ui-label">Email Address</label>
                       <input
                         type="email"
                         value={email}
@@ -509,13 +555,13 @@ const AuthGate = ({ onAuth }) => {
                           setEmail(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="you@example.com"
                         autoComplete="email"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Mobile (Optional)</label>
+                      <label className="ui-label">Mobile (Optional)</label>
                       <input
                         type="tel"
                         value={mobile}
@@ -523,12 +569,12 @@ const AuthGate = ({ onAuth }) => {
                           setMobile(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="+91 98765 43210"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+                      <label className="ui-label">Password</label>
                       <input
                         type="password"
                         value={password}
@@ -536,13 +582,13 @@ const AuthGate = ({ onAuth }) => {
                           setPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="Min 8 characters"
                         autoComplete="new-password"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+                      <label className="ui-label">Confirm Password</label>
                       <input
                         type="password"
                         value={confirmPassword}
@@ -550,7 +596,7 @@ const AuthGate = ({ onAuth }) => {
                           setConfirmPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="Re-enter password"
                         autoComplete="new-password"
                       />
@@ -561,7 +607,7 @@ const AuthGate = ({ onAuth }) => {
                 {/* Signup Step 2 Form */}
                 {mode === 'signup' && signupStep === 2 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Company / Organization Name</label>
+                    <label className="ui-label">Company / Organization Name</label>
                     <input
                       type="text"
                       value={companyName}
@@ -569,18 +615,18 @@ const AuthGate = ({ onAuth }) => {
                         setCompanyName(e.target.value);
                         if (error) setError('');
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                      className="ui-input h-11"
                       placeholder="My Business Pvt Ltd"
                       autoFocus
                     />
-                    <p className="mt-2 text-sm text-gray-500">This will be your first organization. You can add more later.</p>
+                    <p className="mt-2 text-sm ui-muted">This will be your first organization. You can add more later.</p>
                   </div>
                 )}
 
                 {/* Forgot Password Form */}
                 {mode === 'forgot' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address</label>
+                    <label className="ui-label">Email Address</label>
                     <input
                       type="email"
                       value={email}
@@ -588,7 +634,7 @@ const AuthGate = ({ onAuth }) => {
                         setEmail(e.target.value);
                         if (error) setError('');
                       }}
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                      className="ui-input h-11"
                       placeholder="you@example.com"
                       autoFocus
                     />
@@ -599,7 +645,7 @@ const AuthGate = ({ onAuth }) => {
                 {mode === 'reset' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+                      <label className="ui-label">New Password</label>
                       <input
                         type="password"
                         value={password}
@@ -607,13 +653,13 @@ const AuthGate = ({ onAuth }) => {
                           setPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="Min 8 characters"
                         autoFocus
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
+                      <label className="ui-label">Confirm New Password</label>
                       <input
                         type="password"
                         value={confirmPassword}
@@ -621,7 +667,7 @@ const AuthGate = ({ onAuth }) => {
                           setConfirmPassword(e.target.value);
                           if (error) setError('');
                         }}
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-400/20 transition-all outline-none"
+                        className="ui-input h-11"
                         placeholder="Re-enter password"
                       />
                     </div>
@@ -652,11 +698,7 @@ const AuthGate = ({ onAuth }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full py-3 px-4 rounded-xl font-semibold text-white transition-all ${
-                    loading 
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-stone-900 hover:bg-stone-900 active:scale-[0.98] shadow-lg shadow-stone-600/25'
-                  }`}
+                  className="ui-btn ui-btn-brand ui-btn-lg w-full" 
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -684,11 +726,11 @@ const AuthGate = ({ onAuth }) => {
                       <button
                         type="button"
                         onClick={() => switchMode('forgot')}
-                        className="w-full text-center text-sm text-gray-500 hover:text-stone-900 transition-colors"
+                        className="w-full text-center text-sm ui-muted hover:text-[rgb(var(--fg))] transition-colors"
                       >
                         Forgot your password?
                       </button>
-                      <div className="text-center text-sm text-gray-500">
+                      <div className="text-center text-sm ui-muted">
                         Don't have an account?{' '}
                         <button
                           type="button"
@@ -702,7 +744,7 @@ const AuthGate = ({ onAuth }) => {
                   )}
 
                   {mode === 'signup' && signupStep === 1 && (
-                    <div className="text-center text-sm text-gray-500">
+                    <div className="text-center text-sm ui-muted">
                       Already have an account?{' '}
                       <button
                         type="button"
@@ -718,7 +760,7 @@ const AuthGate = ({ onAuth }) => {
                     <button
                       type="button"
                       onClick={() => { setSignupStep(1); clearMessages(); }}
-                      className="w-full text-center text-sm text-gray-500 hover:text-stone-900 transition-colors"
+                      className="w-full text-center text-sm ui-muted hover:text-[rgb(var(--fg))] transition-colors"
                     >
                       ← Back to account details
                     </button>
@@ -728,7 +770,7 @@ const AuthGate = ({ onAuth }) => {
                     <button
                       type="button"
                       onClick={() => switchMode('login')}
-                      className="w-full text-center text-sm text-gray-500 hover:text-stone-900 transition-colors"
+                      className="w-full text-center text-sm ui-muted hover:text-[rgb(var(--fg))] transition-colors"
                     >
                       ← Back to sign in
                     </button>

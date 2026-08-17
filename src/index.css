@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+/* Fraunces carries the brand voice: a variable serif with real optical sizing,
+   so headings look drawn rather than defaulted. Inter Tight does the working
+   text — narrow enough for dense tables without feeling condensed. JetBrains
+   Mono is kept for document numbers and codes only.
+   display=swap so text is never invisible while fonts load. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -37,6 +42,22 @@
   --on-primary: 255 255 255;
   --primary-hover: 41 37 36;
 
+  /* Brand — deep pine. The one saturated hue with a job: marketing surfaces,
+     the mark, and the primary CTA outside the app shell. Chosen over the usual
+     SaaS blue because ledgers, money and India's own accounting tradition read
+     green and brass, and because blue is the default nobody chose. */
+  --brand: 26 74 58;
+  --brand-hover: 20 60 47;
+  --brand-soft: 236 244 240;
+  --on-brand: 255 255 255;
+  /* Ink for text on brand-soft backgrounds. Flips with the theme. */
+  --brand-ink: 12 38 29;
+  /* A brand SURFACE that always carries white text, so it must stay dark in
+     both themes. Kept separate from --brand-ink, which is a text colour and
+     inverts: reusing it here turned the sign-in panel pale mint in dark mode,
+     with white text on top of it. */
+  --brand-panel: 12 38 29;
+
   /* Accent: focus rings, active nav indicator, links. Used sparingly. */
   --accent: 180 83 9;
   --accent-hover: 146 64 14;
@@ -62,9 +83,20 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
 
+  --radius-sm: 0.375rem;
   --radius: 0.625rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* Warm-tinted shadows. A neutral black shadow over warm surfaces reads grey
+     and slightly dirty; tinting it with the ink colour keeps the page warm. */
   --shadow-card: 0 1px 2px 0 rgb(28 25 23 / 0.04), 0 1px 3px 0 rgb(28 25 23 / 0.06);
   --shadow-pop: 0 4px 6px -1px rgb(28 25 23 / 0.08), 0 10px 24px -6px rgb(28 25 23 / 0.14);
+  --shadow-lift: 0 12px 32px -12px rgb(28 25 23 / 0.22), 0 2px 8px -2px rgb(28 25 23 / 0.08);
+
+  /* One easing for arrivals, one for exits. Everything shares them. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
 }
 
 :root[data-theme='dark'] {
@@ -76,6 +108,15 @@
   --surface-sunken: 41 37 36;
   --border: 68 64 60;
   --border-strong: 87 83 78;
+
+  --brand: 122 183 160;
+  --brand-hover: 149 199 179;
+  --brand-soft: 24 38 33;
+  --on-brand: 12 38 29;
+  --brand-ink: 214 235 227;
+  --brand-panel: 8 26 20;
+
+  --shadow-lift: 0 12px 32px -12px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.4);
 
   --fg: 250 250 249;
   --fg-muted: 168 162 158;
@@ -107,10 +148,15 @@
 
 @layer base {
   html {
-    font-family: 'Fira Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: 'Inter Tight', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     /* Tabular figures everywhere: money columns must not jitter between rows. */
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
+    /* In-page anchors must clear the sticky header, or the heading they jump
+       to lands underneath it. The reduced-motion block below resets the
+       smooth behaviour for anyone who asks for less movement. */
+    scroll-padding-top: 5.5rem;
+    scroll-behavior: smooth;
   }
 
   body {
@@ -158,7 +204,7 @@
     color: rgb(var(--fg-subtle));
   }
   .ui-mono {
-    font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-feature-settings: 'calt' 0; /* no ligatures in IDs and codes */
   }
   .ui-amount {
@@ -496,6 +542,188 @@
   .ui-nav-item[data-active='true']::before {
     animation: ui-bar-grow 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
     transform-origin: center;
+  }
+}
+
+@layer components {
+  /* --- display type -------------------------------------------------------
+     Fraunces only for headline moments. Body copy stays in Inter Tight: a
+     serif at 15px in a data table is harder to scan, not more characterful. */
+  .ui-display {
+    font-family: 'Fraunces', ui-serif, Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+  .ui-eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(var(--fg-subtle));
+  }
+  .ui-lede {
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: rgb(var(--fg-muted));
+    max-width: 62ch; /* keeps the measure inside the readable band */
+  }
+
+  /* --- brand surfaces --- */
+  .ui-btn-brand {
+    background-color: rgb(var(--brand));
+    color: rgb(var(--on-brand));
+    border: 1px solid rgb(var(--brand));
+  }
+  .ui-btn-brand:hover:not(:disabled) {
+    background-color: rgb(var(--brand-hover));
+    border-color: rgb(var(--brand-hover));
+  }
+  .ui-btn-lg {
+    min-height: 2.875rem;
+    padding: 0 1.375rem;
+    font-size: 0.9375rem;
+    border-radius: var(--radius);
+  }
+  /* Icon-only control. 40px keeps it above the 24px minimum pointer target
+     with room to spare, and matches the height of a small button beside it. */
+  .ui-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: calc(var(--radius) - 2px);
+    color: rgb(var(--fg-muted));
+    cursor: pointer;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+  .ui-icon-btn:hover {
+    background-color: rgb(var(--surface-sunken));
+    color: rgb(var(--fg));
+  }
+
+  .ui-brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background-color: rgb(var(--brand));
+    color: rgb(var(--on-brand));
+  }
+
+  /* --- badges --- */
+  .ui-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    border: 1px solid transparent;
+  }
+  .ui-badge-brand {
+    background-color: rgb(var(--brand-soft));
+    color: rgb(var(--brand));
+    border-color: rgb(var(--brand) / 0.2);
+  }
+  .ui-badge-neutral {
+    background-color: rgb(var(--surface-sunken));
+    color: rgb(var(--fg-muted));
+    border-color: rgb(var(--border));
+  }
+
+  /* --- skeletons ----------------------------------------------------------
+     Shaped like the content they replace, so the layout does not jump when
+     real data arrives. A spinner in the same place would reserve nothing. */
+  .ui-skel {
+    border-radius: var(--radius-sm);
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--surface-sunken)) 0%,
+      rgb(var(--border)) 50%,
+      rgb(var(--surface-sunken)) 100%
+    );
+    background-size: 180% 100%;
+    animation: ui-shimmer 1.4s linear infinite;
+  }
+  .ui-skel-text { height: 0.75rem; width: 100%; }
+  .ui-skel-title { height: 1.25rem; width: 40%; border-radius: var(--radius-sm); }
+  .ui-skel-amount { height: 1.5rem; width: 6rem; }
+  .ui-skel-circle { border-radius: 999px; width: 2.25rem; height: 2.25rem; }
+
+  /* --- stat tile --- */
+  .ui-stat {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius);
+    padding: var(--space-4);
+    box-shadow: var(--shadow-card);
+    transition: transform 200ms var(--ease-out), box-shadow 200ms ease,
+      border-color 200ms ease;
+  }
+  .ui-stat:hover {
+    transform: translate3d(0, -2px, 0);
+    box-shadow: var(--shadow-lift);
+    border-color: rgb(var(--border-strong));
+  }
+  /* A hairline of brand colour on the top edge, revealed on hover. Enough to
+     acknowledge the pointer without repainting the card. */
+  .ui-stat::after {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 2px;
+    background: rgb(var(--brand));
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 260ms var(--ease-out);
+  }
+  .ui-stat:hover::after { transform: scaleX(1); }
+
+  /* --- marketing sections --- */
+  .ui-section {
+    padding-block: clamp(3.5rem, 8vw, 7rem);
+  }
+  .ui-container {
+    width: 100%;
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: clamp(1rem, 4vw, 2rem);
+  }
+  /* Paper grain behind the hero: two very low-opacity radial washes, no image
+     request. Warm hues only, so it reads as aged paper rather than a gradient. */
+  .ui-hero-wash {
+    background-image:
+      radial-gradient(60rem 30rem at 15% -10%, rgb(var(--brand) / 0.07), transparent 60%),
+      radial-gradient(45rem 26rem at 95% 0%, rgb(var(--accent) / 0.07), transparent 62%);
+  }
+  .ui-rule {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(var(--border)), transparent);
+  }
+
+  /* --- link with a drawn underline --- */
+  .ui-link {
+    color: rgb(var(--fg));
+    text-decoration: none;
+    background-image: linear-gradient(rgb(var(--accent)), rgb(var(--accent)));
+    background-size: 0% 1.5px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 220ms var(--ease-out), color 180ms ease;
+  }
+  .ui-link:hover {
+    color: rgb(var(--accent));
+    background-size: 100% 1.5px;
   }
 }
 

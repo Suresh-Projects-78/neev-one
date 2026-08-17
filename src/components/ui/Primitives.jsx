@@ -31,7 +31,7 @@ export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = nu
   const shown = amount !== null && typeof format === 'function' ? format(counted) : value;
 
   return (
-    <div className="ui-card ui-card-interactive p-4">
+    <div className="ui-stat">
       <div className="flex items-center justify-between gap-2">
         <span className="ui-muted text-xs font-semibold uppercase tracking-wide">{label}</span>
         {Icon ? <Icon size={15} className="ui-subtle" aria-hidden="true" /> : null}
@@ -74,6 +74,13 @@ export const EmptyState = ({ icon: Icon = null, title, description, action = nul
   </div>
 );
 
+/* --- loading placeholders -------------------------------------------------
+   Every skeleton mirrors the shape of the thing it stands in for, so the
+   layout does not jump when real data lands. They are hidden from assistive
+   technology and announced once through a live region instead: a screen
+   reader hearing twenty shimmering boxes learns nothing.
+--------------------------------------------------------------------------- */
+
 /** Skeleton row for tables — reserves height so loading does not shift layout. */
 export const SkeletonRows = ({ rows = 5, cols = 4 }) => (
   <>
@@ -81,12 +88,52 @@ export const SkeletonRows = ({ rows = 5, cols = 4 }) => (
       <tr key={r} aria-hidden="true">
         {Array.from({ length: cols }).map((__, c) => (
           <td key={c} className="px-3 py-2">
-            <div className="h-3 rounded ui-shimmer" style={{ width: c === 0 ? '60%' : '80%' }} />
+            <div className="ui-skel ui-skel-text" style={{ width: c === 0 ? '60%' : '80%' }} />
           </td>
         ))}
       </tr>
     ))}
   </>
+);
+
+/** Placeholder for a metric tile, matching StatTile's height exactly. */
+export const SkeletonStats = ({ count = 4 }) => (
+  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} className="ui-card p-4">
+        <div className="ui-skel ui-skel-text" style={{ width: '45%' }} />
+        <div className="ui-skel ui-skel-amount mt-3" />
+        <div className="ui-skel ui-skel-text mt-2" style={{ width: '30%' }} />
+      </div>
+    ))}
+  </div>
+);
+
+/** Placeholder for a card of prose or form fields. */
+export const SkeletonCard = ({ lines = 3 }) => (
+  <div className="ui-card p-4" aria-hidden="true">
+    <div className="ui-skel ui-skel-title" />
+    <div className="mt-4 space-y-2.5">
+      {Array.from({ length: lines }).map((_, i) => (
+        <div
+          key={i}
+          className="ui-skel ui-skel-text"
+          style={{ width: i === lines - 1 ? '65%' : '100%' }}
+        />
+      ))}
+    </div>
+  </div>
+);
+
+/**
+ * Wraps a loading region so the wait is announced once, politely, instead of
+ * leaving a screen reader in silence while the page fills in.
+ */
+export const LoadingRegion = ({ label = 'Loading', children }) => (
+  <div role="status" aria-live="polite" aria-busy="true">
+    <span className="sr-only">{label}</span>
+    {children}
+  </div>
 );
 
 export const ThemeToggle = ({ theme, onToggle }) => (

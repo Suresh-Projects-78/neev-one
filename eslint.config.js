@@ -50,7 +50,11 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Capitalised identifiers are components. Without eslint-plugin-react,
+      // ESLint cannot see that JSX uses them, so a component destructured from
+      // props or a config object reads as unused. The vars pattern already
+      // covered imports; args covers `({ icon: Icon }) => <Icon />`.
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
     },
   },
 ])
