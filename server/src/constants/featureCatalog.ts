@@ -98,6 +98,14 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     category: 'Accounting',
   },
   {
+    key: 'paymentTerms',
+    label: 'Payment terms and automatic due dates',
+    description:
+      "Give each customer and vendor a credit period, and set a document's due date from it. When off, the due date stays a plain field the operator fills in.",
+    defaultEnabled: true,
+    category: 'Accounting',
+  },
+  {
     key: 'periodLock',
     label: 'Period lock',
     description: 'Close a period so nothing can post into it after the fact.',

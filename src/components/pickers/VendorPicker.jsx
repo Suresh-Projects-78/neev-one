@@ -48,6 +48,10 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         gstRegistration: String(initialData.gstRegistration || 'Unregistered'),
         gstin: String(initialData.gstin || ''),
         pan: String(initialData.pan || ''),
+        paymentTermDays:
+          initialData.paymentTermDays === undefined || initialData.paymentTermDays === null
+            ? ''
+            : String(initialData.paymentTermDays),
         billingAddress: {
           ...billing,
           state: String(billing.state || ''),
@@ -75,6 +79,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       gstRegistration: 'Unregistered',
       gstin: '',
       pan: '',
+      paymentTermDays: '',
       billingAddress: {
         ...emptyAddress,
         country: INDIA_COUNTRY,
@@ -312,6 +317,11 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       phone: String(formData.mobile || '').trim(),
       gstin: effectiveGstin,
       pan: effectivePan,
+      // Stored as a number so the due-date maths never sees "30" as a string.
+      paymentTermDays:
+        String(formData.paymentTermDays ?? '').trim() === ''
+          ? undefined
+          : Math.min(365, Math.max(0, Math.trunc(Number(formData.paymentTermDays) || 0))),
       billingAddress: {
         ...formData.billingAddress,
         state: billingStateFinal,
@@ -592,6 +602,21 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             />
           </div>
           <div>
+            <label className="block text-sm font-medium mb-1">Credit period (days)</label>
+            <input
+              type="number"
+              min="0"
+              max="365"
+              value={formData.paymentTermDays}
+              onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="30"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Sets the due date on this vendor&apos;s bills. Blank uses 30 days; 0 means due on receipt.
+            </p>
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">State</label>
             <PopupSelect
               label={null}
@@ -870,6 +895,10 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
                     phone: vendor.mobile || vendor.phone || undefined,
                     email: vendor.email || undefined,
                     billingState: vendor.billingAddress?.state || undefined,
+                    paymentTermDays:
+                      vendor.paymentTermDays === undefined || vendor.paymentTermDays === null
+                        ? undefined
+                        : Number(vendor.paymentTermDays),
                   });
                   await serverVendors.reload();
 

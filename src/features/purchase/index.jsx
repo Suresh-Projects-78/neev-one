@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Copy, CreditCard, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
+import { dueDateFor } from '../../utils/paymentTerms';
 import ItemPicker from '../../components/pickers/ItemPicker';
 
 import RecordPaymentForm from '../payments/RecordPaymentForm';
@@ -261,7 +262,18 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             setDb={setDb}
             currentCompany={currentCompany}
             value={formData.vendorId}
-            onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
+            onChange={(vendorId) =>
+              setFormData((prev) => {
+                // Requirement 12: the bill due date follows the vendor's agreed
+                // credit period rather than a blanket +30 days.
+                const picked = vendors.find((v) => String(v.id) === String(vendorId));
+                return {
+                  ...prev,
+                  vendorId,
+                  dueDate: picked ? dueDateFor(prev.date, picked) || prev.dueDate : prev.dueDate,
+                };
+              })
+            }
           />
         </div>
 

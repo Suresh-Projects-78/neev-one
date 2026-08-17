@@ -29,7 +29,7 @@ needs server masters first.
 | 9 | Multi-user | **Done** | — | Users, roles, profiles, permissions all shipped |
 | 10 | Multi-company | **Partial** | 2 d | Multiple orgs exist server-side; there is no company switcher in the UI |
 | 11 | Batch / serial numbers in inventory | **Blocked** | 6–8 d | Needs the server item and stock model |
-| 12 | Due date computed from customer/vendor terms | **Blocked** | 2 d | Needs payment terms on the server party record |
+| 12 | Due date computed from customer/vendor terms | **Done** | — | Credit period on the party; invoice and bill due dates follow it, recomputed server-side; toggleable as `paymentTerms` |
 | 13 | Next SKU row adds *below* the previous one | **Partial** | 0.5 d | "Add Item" exists; the placement and focus behaviour is the complaint |
 | 14 | Payment mode from created bank/cash ledgers | **Done** | — | Mode is the org's real CASH/BANK ledgers; receipts and payments post to the GL (`dde9c70`) |
 | 15 | Import for invoices, purchases, notes | **Blocked** | 5–7 d | Shares the migration engine already designed |

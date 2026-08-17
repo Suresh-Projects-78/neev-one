@@ -49,6 +49,10 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         gstRegistration: String(initialData.gstRegistration || 'Unregistered'),
         gstin: String(initialData.gstin || ''),
         pan: String(initialData.pan || ''),
+        paymentTermDays:
+          initialData.paymentTermDays === undefined || initialData.paymentTermDays === null
+            ? ''
+            : String(initialData.paymentTermDays),
         billingAddress: {
           ...billing,
           state: String(billing.state || ''),
@@ -76,6 +80,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       gstRegistration: 'Unregistered',
       gstin: '',
       pan: '',
+      paymentTermDays: '',
       billingAddress: {
         ...emptyAddress,
         country: INDIA_COUNTRY,
@@ -327,6 +332,12 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       name: formData.displayName.trim(),
       gstin: effectiveGstin,
       pan: effectivePan,
+      // Stored as a number so the due-date maths never sees "30" as a string.
+      // Blank stays undefined, which the due-date helper reads as the default.
+      paymentTermDays:
+        String(formData.paymentTermDays ?? '').trim() === ''
+          ? undefined
+          : Math.min(365, Math.max(0, Math.trunc(Number(formData.paymentTermDays) || 0))),
       billingAddress: {
         ...formData.billingAddress,
         state: billingStateFinal,
@@ -606,6 +617,21 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               className="w-full px-3 py-2 border rounded-lg"
               placeholder={gstRegistrationRequiresGstinUi ? 'PAN required' : 'Optional'}
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Credit period (days)</label>
+            <input
+              type="number"
+              min="0"
+              max="365"
+              value={formData.paymentTermDays}
+              onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
+              className="w-full px-3 py-2 border rounded-lg"
+              placeholder="30"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Sets the due date on this customer&apos;s invoices. Blank uses 30 days; 0 means due on receipt.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">State</label>
@@ -995,6 +1021,13 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                     phone: customer.mobile || customer.phone || undefined,
                     email: customer.email || undefined,
                     billingState: customer.billingAddress?.state || undefined,
+                    // The server recomputes invoice due dates from this, so it
+                    // has to travel with the record rather than staying a
+                    // browser-only field.
+                    paymentTermDays:
+                      customer.paymentTermDays === undefined || customer.paymentTermDays === null
+                        ? undefined
+                        : Number(customer.paymentTermDays),
                   });
                   await serverCustomers.reload();
 

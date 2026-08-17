@@ -12,6 +12,7 @@ import { evaluateApproval, isPending } from '../services/approvals.js';
 import { fieldsFor } from '../constants/permissionCatalog.js';
 import { dueDateFor } from './parties.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
+import { isFeatureEnabled } from '../services/features.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -160,8 +161,11 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
 
   // Requirement 12: the due date comes from the customer's payment terms, on
   // the server, so it cannot be quietly extended in the browser.
+  // Gated on the paymentTerms feature: an org that switches it off keeps the
+  // due date the operator typed instead of having it recomputed underneath
+  // them.
   let resolvedDueDate = String(body.dueDate || '').trim() || null;
-  if (body.customerId) {
+  if (body.customerId && (await isFeatureEnabled(accountId, orgId, 'paymentTerms'))) {
     const party = await prisma.party.findFirst({
       where: { id: String(body.customerId), accountId, orgId },
       select: { paymentTermDays: true },

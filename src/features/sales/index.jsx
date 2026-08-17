@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2 } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
+import { dueDateFor, termsLabel } from '../../utils/paymentTerms';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '../../api/invoices';
 
@@ -1734,7 +1735,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         numberLocked={lockInvoiceNumberOnCreate}
         numberHint={lockInvoiceNumberOnCreate ? 'Numbered automatically from the series' : ''}
         date={formData.date}
-        onDateChange={(v) => setFormData((p) => ({ ...p, date: v }))}
+        onDateChange={(v) =>
+          setFormData((p) => ({
+            ...p,
+            date: v,
+            // Terms are counted from the document date, so moving the date
+            // moves the due date with it.
+            dueDate: selectedCustomer ? dueDateFor(v, selectedCustomer) || p.dueDate : p.dueDate,
+          }))
+        }
         dueDate={formData.dueDate}
         onDueDateChange={(v) => setFormData((p) => ({ ...p, dueDate: v }))}
       />
@@ -1763,8 +1772,24 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             setDb={setDb}
             currentCompany={currentCompany}
             value={formData.customerId}
-            onChange={(customerId) => setFormData((prev) => ({ ...prev, customerId }))}
+            onChange={(customerId) =>
+              setFormData((prev) => {
+                // Requirement 12: the due date follows the customer's agreed
+                // terms instead of a blanket +30 days. The server recomputes
+                // this on save from the same terms, so showing anything else
+                // here would just be a number that changes after saving.
+                const picked = customers.find((c) => String(c.id) === String(customerId));
+                return {
+                  ...prev,
+                  customerId,
+                  dueDate: picked ? dueDateFor(prev.date, picked) || prev.dueDate : prev.dueDate,
+                };
+              })
+            }
           />
+          {selectedCustomer ? (
+            <p className="mt-1 text-xs ui-muted">Terms: {termsLabel(selectedCustomer)}</p>
+          ) : null}
         </div>
 
         <div>
