@@ -1145,3 +1145,73 @@ model NumberSeries {
   @@unique([orgId, branchId, docType, name])
   @@index([accountId, orgId, docType, isActive])
 }
+
+// ----------------------------
+// Receipts and payments
+// ----------------------------
+/// One record whichever screen entered it — a receipt voucher and a bank-book
+/// line are the same payment, so there is nothing to reconcile against itself.
+model Payment {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  /// RECEIPT takes money in, PAYMENT sends it out.
+  direction String
+
+  number String
+  date   String
+
+  partyType String? // CUSTOMER | VENDOR
+  partyId   String?
+  partyName String?
+
+  /// The cash or bank ledger the money actually moved through.
+  ledgerAccountId String
+  /// Free text kept for display: cheque number, UPI reference, and so on.
+  instrumentRef   String?
+  instrumentDate  String?
+
+  amount Decimal @default(0)
+  notes  String?
+
+  status String @default("POSTED") // POSTED | REVERSED
+
+  /// Reconciliation, when the feature is on.
+  bankDate     DateTime?
+  reconciled   Boolean   @default(false)
+  statementRef String?
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  allocations PaymentAllocation[]
+
+  @@unique([orgId, branchId, number])
+  @@index([accountId, orgId, branchId, date])
+  @@index([accountId, orgId, reconciled])
+}
+
+model PaymentAllocation {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  paymentId String
+  docType   String // INVOICE | BILL
+  docId     String
+  amount    Decimal
+
+  createdAt DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, orgId, docType, docId])
+  @@index([paymentId])
+}
