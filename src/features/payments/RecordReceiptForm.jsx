@@ -234,11 +234,11 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           direction: 'RECEIPT',
           date: formData.date,
           partyType: 'CUSTOMER',
-          // Only a server party id is meaningful here. The picker returns a
-          // cuid for server-backed customers and a local numeric id for the
-          // rest; sending the numeric one would point at nothing. The name is
-          // carried either way, so the ledger line still reads correctly.
-          partyId: /^\d+$/.test(String(formData.customerId).trim()) ? null : String(formData.customerId).trim() || null,
+          // Only a server party id is meaningful here. The local row carries
+          // backendPartyId once it has been written through; customers that
+          // predate that are sent by name alone, so the ledger line still reads
+          // correctly.
+          partyId: customer?.backendPartyId ? String(customer.backendPartyId) : null,
           partyName: customerName || null,
           ledgerAccountId: String(ledgerAccountId).trim(),
           instrumentRef: formData.reference || null,

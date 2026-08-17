@@ -51,3 +51,4 @@ _backup_before_onedrive_restore
 
 # Test env
 .env.test
+prisma/test.db

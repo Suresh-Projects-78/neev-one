@@ -857,6 +857,12 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
               setDb={setDb}
               currentCompany={currentCompany}
               onCreated={async (vendor) => {
+                // Selecting the server id here made the selection a cuid, which
+                // is NaN to every screen that resolves it with
+                // Number(vendorId) against db.vendors — the vendor came back as
+                // "Party (Vendor) is required". The local numeric id stays the
+                // selection; backendPartyId carries the server identity for API
+                // calls.
                 try {
                   const created = await createVendor({
                     name: getVendorDisplayName(vendor) || vendor.name || 'Vendor',
@@ -866,10 +872,20 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
                     billingState: vendor.billingAddress?.state || undefined,
                   });
                   await serverVendors.reload();
-                  onChange(String(created?.party?.id || vendor.id));
+
+                  const serverId = String(created?.party?.id || '').trim();
+                  if (serverId && typeof setDb === 'function') {
+                    setDb((prev) => ({
+                      ...prev,
+                      vendors: (Array.isArray(prev?.vendors) ? prev.vendors : []).map((v) =>
+                        String(v.id) === String(vendor.id) ? { ...v, backendPartyId: serverId } : v
+                      ),
+                    }));
+                  }
                 } catch {
-                  onChange(String(vendor.id));
+                  // Offline or refused: keep the local record so entry continues.
                 }
+                onChange(String(vendor.id));
               }}
               onClose={closePopup}
             />

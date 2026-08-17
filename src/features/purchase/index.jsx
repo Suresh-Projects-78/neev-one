@@ -82,7 +82,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const billDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const billNumbering = billDocSettings?.numbering?.bill;
   const isBillAuto = String(billNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockBillNumber = isBillAuto && !Boolean(billNumbering?.allowManualOverride);
+  const lockBillNumber = isBillAuto && !billNumbering?.allowManualOverride;
   const generatedBillNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'bill', branchId: branchIdForNumbering });
 
   const warehouseOptions = React.useMemo(() => {
@@ -513,7 +513,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
   const poDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
   const poNumbering = poDocSettings?.numbering?.purchaseOrder;
   const isPoAuto = String(poNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockPoNumber = isPoAuto && !Boolean(poNumbering?.allowManualOverride);
+  const lockPoNumber = isPoAuto && !poNumbering?.allowManualOverride;
   const generatedPoNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null });
 
   const [formData, setFormData] = useState({
@@ -761,6 +761,10 @@ export const BillsList = ({
   currentCompany,
   onNewBill,
   onRaiseDebitNote,
+  // Optional override for duplicating a bill. The code below already checked
+  // for it but it was never a prop, so the branch was unreachable and a parent
+  // could not hook into duplication at all.
+  onDuplicateBill,
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
@@ -1248,7 +1252,7 @@ export const DebitNoteForm = ({
   const debitDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const debitNumbering = debitDocSettings?.numbering?.debitNote;
   const isDebitAuto = String(debitNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockDebitNumber = isDebitAuto && !Boolean(debitNumbering?.allowManualOverride);
+  const lockDebitNumber = isDebitAuto && !debitNumbering?.allowManualOverride;
   const generatedDebitNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'debitNote', branchId: branchIdForNumbering });
 
   const vendor = formData.vendorId ? vendors.find((v) => v.id === parseInt(formData.vendorId)) : null;

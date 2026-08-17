@@ -381,7 +381,7 @@ export const StockTransferEditor = ({
   const transferDocSettings = getDocSettings(db, currentCompany, { branchId: numberingBranchId });
   const transferNumbering = transferDocSettings?.numbering?.[voucherKey];
   const isTransferAuto = String(transferNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockTransferNumberOnCreate = !isEdit && isTransferAuto && !Boolean(transferNumbering?.allowManualOverride);
+  const lockTransferNumberOnCreate = !isEdit && isTransferAuto && !transferNumbering?.allowManualOverride;
   const generatedTransferNumber = !isEdit
     ? generateVoucherNumber({ db, company: currentCompany, voucherKey, branchId: numberingBranchId })
     : '';

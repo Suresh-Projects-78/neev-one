@@ -1349,7 +1349,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const invoiceDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const invoiceNumbering = invoiceDocSettings?.numbering?.invoice;
   const isInvoiceAuto = String(invoiceNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockInvoiceNumberOnCreate = !isEdit && isInvoiceAuto && !Boolean(invoiceNumbering?.allowManualOverride);
+  const lockInvoiceNumberOnCreate = !isEdit && isInvoiceAuto && !invoiceNumbering?.allowManualOverride;
   const generatedInvoiceNumber = !isEdit ? generateVoucherNumber({ db, company: currentCompany, voucherKey: 'invoice', branchId: branchIdForNumbering }) : '';
 
   const warehouseOptions = useMemo(() => {
@@ -1912,7 +1912,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
   const estimateDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
   const estimateNumbering = estimateDocSettings?.numbering?.estimate;
   const isEstimateAuto = String(estimateNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockEstimateNumberOnCreate = !isEdit && isEstimateAuto && !Boolean(estimateNumbering?.allowManualOverride);
+  const lockEstimateNumberOnCreate = !isEdit && isEstimateAuto && !estimateNumbering?.allowManualOverride;
   const generatedEstimateNumber = !isEdit
     ? generateVoucherNumber({ db, company: currentCompany, voucherKey: 'estimate', branchId: activeBranchId || null })
     : '';
@@ -2303,7 +2303,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
   const creditDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const creditNumbering = creditDocSettings?.numbering?.creditNote;
   const isCreditAuto = String(creditNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockCreditNumber = isCreditAuto && !Boolean(creditNumbering?.allowManualOverride);
+  const lockCreditNumber = isCreditAuto && !creditNumbering?.allowManualOverride;
   const generatedCreditNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'creditNote', branchId: branchIdForNumbering });
 
   const warehouseOptions = useMemo(() => {

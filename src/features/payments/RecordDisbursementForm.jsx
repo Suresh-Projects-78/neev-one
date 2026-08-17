@@ -255,7 +255,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
           direction: 'PAYMENT',
           date: formData.date,
           partyType: 'VENDOR',
-          partyId: /^\d+$/.test(String(formData.vendorId).trim()) ? null : String(formData.vendorId).trim() || null,
+          partyId: vendor?.backendPartyId ? String(vendor.backendPartyId) : null,
           partyName: vendorName || null,
           ledgerAccountId: String(ledgerAccountId).trim(),
           instrumentRef: formData.reference || null,

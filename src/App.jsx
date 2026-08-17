@@ -914,7 +914,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
   const expenseDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
   const expenseNumbering = expenseDocSettings?.numbering?.expense;
   const isExpenseAuto = String(expenseNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockExpenseNumber = isExpenseAuto && !Boolean(expenseNumbering?.allowManualOverride);
+  const lockExpenseNumber = isExpenseAuto && !expenseNumbering?.allowManualOverride;
   const generatedExpenseNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'expense', branchId: activeBranchId || null });
 
   const formRef = useRef(null);
@@ -2876,7 +2876,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
   const jvDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
   const jvNumbering = jvDocSettings?.numbering?.journalEntry;
   const isJvAuto = String(jvNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockJvNumber = isJvAuto && !Boolean(jvNumbering?.allowManualOverride);
+  const lockJvNumber = isJvAuto && !jvNumbering?.allowManualOverride;
   const generatedJvNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'journalEntry', branchId: activeBranchId || null });
 
   const isEdit = Boolean(initialData && initialData.id);
@@ -3289,7 +3289,20 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
   );
 };
 
-const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) => {
+// warehouses/activeWarehouseId are needed by the invoice, bill and note editors
+// this view opens from a ledger row. They were referenced below without ever
+// being props, so opening any of those editors from a ledger threw
+// "warehouses is not defined" and the modal never appeared.
+const LedgerView = ({
+  db,
+  setDb,
+  currentCompany,
+  ledgerId,
+  onBack,
+  openModal,
+  warehouses = [],
+  activeWarehouseId = '',
+}) => {
   const LEDGER_COLUMN_DEFS = [
     { key: 'date', label: 'Date', align: 'left' },
     { key: 'particulars', label: 'Particulars', align: 'left' },
@@ -3910,6 +3923,24 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
     return Number(rows[idx - 1]?.runningBalance ?? opening);
   }, [filterFrom, filterTo, filteredRows, rows, opening]);
 
+  // Must sit above the `!account` early return below: a hook skipped on the
+  // "ledger not found" render changes the hook order, and React then throws
+  // "rendered fewer hooks than expected" as soon as a ledger does resolve.
+  const periodLabel = useMemo(() => {
+    if (!filterFrom && !filterTo) return 'Period';
+    const fmt = (s) => {
+      if (!s) return '';
+      try {
+        return new Date(s).toLocaleDateString();
+      } catch {
+        return String(s);
+      }
+    };
+    if (filterFrom && filterTo) return `${fmt(filterFrom)} → ${fmt(filterTo)}`;
+    if (filterFrom) return `From ${fmt(filterFrom)}`;
+    return `To ${fmt(filterTo)}`;
+  }, [filterFrom, filterTo]);
+
   if (!account) {
     return (
       <div className="space-y-4">
@@ -4055,21 +4086,6 @@ const LedgerView = ({ db, setDb, currentCompany, ledgerId, onBack, openModal }) 
 
     openModal(<PeriodModal />, { title: 'Period', maxWidthClass: 'max-w-md' });
   };
-
-  const periodLabel = useMemo(() => {
-    if (!filterFrom && !filterTo) return 'Period';
-    const fmt = (s) => {
-      if (!s) return '';
-      try {
-        return new Date(s).toLocaleDateString();
-      } catch (e) {
-        return String(s);
-      }
-    };
-    if (filterFrom && filterTo) return `${fmt(filterFrom)} → ${fmt(filterTo)}`;
-    if (filterFrom) return `From ${fmt(filterFrom)}`;
-    return `To ${fmt(filterTo)}`;
-  }, [filterFrom, filterTo]);
 
   return (
     <div className="space-y-4">
@@ -9015,7 +9031,7 @@ const AppShell = () => {
       const companyId = Number(first?.id || 0);
 
       const existingMigrations = first?.docSettings?.migrations || {};
-      if (Boolean(existingMigrations.dummySeedV1Applied)) return prev;
+      if (existingMigrations.dummySeedV1Applied) return prev;
 
       // If tenant DB has no local company row yet (normal login path), create one.
       if (!companyId) {
@@ -9535,8 +9551,9 @@ const AppShell = () => {
         setWarehouses([]);
         setWarehousesError(String(e?.message || e));
       } finally {
-        if (cancelled) return;
-        setWarehousesLoading(false);
+        // Guarded rather than returned from: a return inside finally discards
+        // whatever the try/catch was propagating.
+        if (!cancelled) setWarehousesLoading(false);
       }
     };
 
@@ -9565,8 +9582,9 @@ const AppShell = () => {
         setBranches([]);
         setBranchesError(String(e?.message || e));
       } finally {
-        if (cancelled) return;
-        setBranchesLoading(false);
+        // Guarded rather than returned from: a return inside finally discards
+        // whatever the try/catch was propagating.
+        if (!cancelled) setBranchesLoading(false);
       }
     };
 
@@ -9623,7 +9641,7 @@ const AppShell = () => {
 
     const companyId = currentCompany.id;
     const migrations = currentCompany?.docSettings?.migrations || {};
-    if (Boolean(migrations.headWarehouseBackfillV1Applied)) return;
+    if (migrations.headWarehouseBackfillV1Applied) return;
 
     const hasMissingWarehouse = (list) => {
       const rows = Array.isArray(list) ? list : [];
@@ -10369,6 +10387,8 @@ const AppShell = () => {
             currentCompany={currentCompany}
             ledgerId={ledgerNav.ledgerId}
             openModal={openModal}
+            warehouses={warehouses}
+            activeWarehouseId={activeWarehouseId}
             onBack={() => setActive(ledgerNav.returnTo || 'trialBalance')}
           />
         );

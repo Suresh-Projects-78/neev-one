@@ -162,11 +162,14 @@ export const exportLedgerToPdf = ({
   doc.save(safeName);
 };
 
-export const printLedger = ({ companyName, ledgerName, openingBalance, closingBalance, rows }) => {
+export const printLedger = ({ companyName, ledgerName, openingBalance, closingBalance, rows, columns }) => {
   const safe = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-  const args = arguments?.[0] || {};
-  const cols = normalizeColumns(args.columns);
+  // `arguments` is not bound inside an arrow function, and this module is ESM
+  // (so strict mode): reading it threw ReferenceError on the first line of real
+  // work, meaning printing a ledger never worked at all. The columns it was
+  // reaching for are simply another property of the destructured argument.
+  const cols = normalizeColumns(columns);
 
   const headerHtml = cols
     .map((c) => {

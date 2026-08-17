@@ -367,7 +367,7 @@ export const seedDummyDataV1 = (db, { companyId, count = 75 } = {}) => {
 
   const doc = company?.docSettings && typeof company.docSettings === 'object' ? company.docSettings : getDefaultDocSettings();
   const migrations = doc?.migrations && typeof doc.migrations === 'object' ? doc.migrations : {};
-  if (Boolean(migrations.dummySeedV1Applied)) return db;
+  if (migrations.dummySeedV1Applied) return db;
 
   // Ensure some cash/bank ledgers exist for bank transactions + payments
   const groups = safeArray(next.accountGroups).filter((g) => Number(g.companyId) === cid);
@@ -2612,7 +2612,7 @@ export const normalizeDB = (db) => {
         if (!companyId) continue;
 
         const { docSettings, migrations } = getCompanyDocSettingsSafe(c);
-        if (Boolean(migrations.demoSeedOpeningBalancesResetV1Applied)) continue;
+        if (migrations.demoSeedOpeningBalancesResetV1Applied) continue;
 
         const seedRules = [
           { code: '1000', amount: 50000 },

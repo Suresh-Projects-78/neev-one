@@ -978,7 +978,16 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
               currentCompany={currentCompany}
               onCreated={async (customer) => {
                 // Write through to the server so the record exists for every
-                // device, then select whichever id came back.
+                // device, then record the server id ON the local row.
+                //
+                // Selecting the server id directly (what this used to do) broke
+                // every screen that resolves the selection with
+                // Number(customerId) against db.customers: a cuid is NaN there,
+                // so a customer created from this picker came back as
+                // "Party (Customer) is required" and could not be used. Keeping
+                // the local numeric id as the selection and carrying
+                // backendPartyId alongside satisfies both the local lookups and
+                // the API calls that need a real server party.
                 try {
                   const created = await createCustomer({
                     name: getCustomerDisplayName(customer) || customer.name || 'Customer',
@@ -988,11 +997,20 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                     billingState: customer.billingAddress?.state || undefined,
                   });
                   await serverCustomers.reload();
-                  onChange(String(created?.party?.id || customer.id));
+
+                  const serverId = String(created?.party?.id || '').trim();
+                  if (serverId && typeof setDb === 'function') {
+                    setDb((prev) => ({
+                      ...prev,
+                      customers: (Array.isArray(prev?.customers) ? prev.customers : []).map((c) =>
+                        String(c.id) === String(customer.id) ? { ...c, backendPartyId: serverId } : c
+                      ),
+                    }));
+                  }
                 } catch {
                   // Offline or refused: keep the local record so entry continues.
-                  onChange(String(customer.id));
                 }
+                onChange(String(customer.id));
               }}
               onClose={closePopup}
             />
