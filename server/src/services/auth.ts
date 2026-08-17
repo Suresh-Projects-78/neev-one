@@ -242,6 +242,42 @@ export async function consumePasswordResetToken(token: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Email verification
+// ---------------------------------------------------------------------------
+
+export async function issueEmailVerificationToken(user: { id: string; accountId: string; email: string }) {
+  await prisma.emailVerificationToken.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  const token = randomBytes(32).toString('base64url');
+  await prisma.emailVerificationToken.create({
+    data: {
+      accountId: user.accountId,
+      userId: user.id,
+      email: user.email,
+      tokenHash: sha256(token),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  });
+  return token;
+}
+
+export async function consumeEmailVerificationToken(token: string) {
+  const row = await prisma.emailVerificationToken.findUnique({
+    where: { tokenHash: sha256(String(token || '')) },
+  });
+  if (!row) throw new AuthError('Invalid or expired verification link', 400);
+  if (row.usedAt) throw new AuthError('That link has already been used', 400);
+  if (row.expiresAt.getTime() < Date.now()) throw new AuthError('That verification link has expired', 400);
+
+  await prisma.emailVerificationToken.update({ where: { id: row.id }, data: { usedAt: new Date() } });
+  await prisma.user.update({ where: { id: row.userId }, data: { emailVerifiedAt: new Date() } });
+  return row;
+}
+
+// ---------------------------------------------------------------------------
 // Audit
 // ---------------------------------------------------------------------------
 

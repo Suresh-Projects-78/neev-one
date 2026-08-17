@@ -16,6 +16,7 @@ import { permissionsRouter } from './routes/permissions.js';
 import { governanceRouter } from './routes/governance.js';
 import { featuresRouter } from './routes/features.js';
 import { partiesRouter } from './routes/parties.js';
+import { emailRouter } from './routes/email.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 export function buildApp() {
@@ -62,6 +63,7 @@ export function buildApp() {
   app.use('/api', governanceRouter);
   app.use('/api', featuresRouter);
   app.use('/api', partiesRouter);
+  app.use('/api', emailRouter);
 
   app.use(notFound);
   app.use(errorHandler);

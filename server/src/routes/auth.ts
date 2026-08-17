@@ -23,7 +23,10 @@ import {
   revokeSession,
   rotateSession,
   signAccessToken,
+  issueEmailVerificationToken,
+  consumeEmailVerificationToken,
 } from '../services/auth.js';
+import { sendTemplate } from '../services/mailer.js';
 import { expandPreset, permKey } from '../constants/permissionCatalog.js';
 
 export const authRouter = Router();
@@ -389,7 +392,32 @@ authRouter.post('/signup', signupLimiter, async (req: Request, res: Response) =>
   await recordAuthEvent({ accountId: user.accountId, userId: user.id, email, eventType: 'LOGIN_SUCCESS', ip: clientIp(req), detail: 'Signup' });
 
   const token = signAccessToken({ userId: user.id, accountId: user.accountId, sid: session.id });
-  return res.json({ token, refreshToken, user });
+
+  // Verification is sent but does not block sign-in: a new user should be able
+  // to look around while the message is in flight.
+  const verifyToken = await issueEmailVerificationToken({ id: user.id, accountId: user.accountId, email: user.email });
+  await sendTemplate({
+    templateKey: 'auth.verify_email',
+    to: user.email,
+    toName: user.fullName,
+    accountId: user.accountId,
+    data: {
+      userName: user.fullName,
+      email: user.email,
+      verifyUrl: `${process.env.APP_URL || 'http://localhost:5173'}/verify-email?token=${verifyToken}`,
+    },
+    relatedType: 'User',
+    relatedId: user.id,
+    transactional: true,
+  });
+
+  return res.json({
+    token,
+    refreshToken,
+    user,
+    emailVerificationSent: true,
+    ...(process.env.NODE_ENV === 'production' ? {} : { devVerifyToken: verifyToken }),
+  });
 });
 
 authRouter.post('/setup-company', async (req: Request, res: Response) => {
@@ -478,6 +506,19 @@ authRouter.post('/forgot-password', resetLimiter, async (req: Request, res: Resp
   const token = await issuePasswordResetToken({ id: user.id, accountId: user.accountId }, ip);
   await recordAuthEvent({ accountId: user.accountId, userId: user.id, email, eventType: 'PASSWORD_RESET_REQUESTED', ip });
 
+  await sendTemplate({
+    templateKey: 'auth.password_reset',
+    to: email,
+    accountId: user.accountId,
+    data: {
+      userName: email,
+      resetUrl: `${process.env.APP_URL || 'http://localhost:5173'}/?token=${token}`,
+    },
+    relatedType: 'User',
+    relatedId: user.id,
+    transactional: true,
+  });
+
   // Until SMTP is wired the token is returned outside production so the flow is
   // testable. It is a cryptographically random, single-use, 30-minute token
   // stored only as a hash.
@@ -518,4 +559,61 @@ authRouter.post('/reset-password', resetLimiter, async (req: Request, res: Respo
   });
 
   return res.json({ message: 'Password reset successfully. Please sign in again.' });
+});
+
+/** Confirms an address from the emailed link. */
+authRouter.post('/verify-email', async (req: Request, res: Response) => {
+  const body = z.object({ token: z.string().min(10) }).parse(req.body);
+  try {
+    const row = await consumeEmailVerificationToken(body.token);
+    await recordAuthEvent({
+      accountId: row.accountId,
+      userId: row.userId,
+      email: row.email,
+      eventType: 'EMAIL_VERIFIED',
+      ip: clientIp(req),
+    });
+    return res.json({ ok: true, email: row.email });
+  } catch (e: any) {
+    if (e instanceof AuthError) return res.status(e.status).json({ error: e.message });
+    throw e;
+  }
+});
+
+/** Sends a fresh link. Rate limited, and silent about whether it applied. */
+authRouter.post('/resend-verification', resetLimiter, async (req: Request, res: Response) => {
+  let auth;
+  try {
+    auth = requireAuth(req);
+  } catch (e: any) {
+    return res.status(401).json({ error: String(e?.message || 'Unauthorized') });
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { id: auth.userId, accountId: auth.accountId },
+    select: { id: true, accountId: true, email: true, fullName: true, emailVerifiedAt: true },
+  });
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  if (user.emailVerifiedAt) return res.json({ ok: true, alreadyVerified: true });
+
+  const token = await issueEmailVerificationToken(user);
+  await sendTemplate({
+    templateKey: 'auth.verify_email',
+    to: user.email,
+    toName: user.fullName,
+    accountId: user.accountId,
+    data: {
+      userName: user.fullName,
+      email: user.email,
+      verifyUrl: `${process.env.APP_URL || 'http://localhost:5173'}/verify-email?token=${token}`,
+    },
+    relatedType: 'User',
+    relatedId: user.id,
+    transactional: true,
+  });
+
+  return res.json({
+    ok: true,
+    ...(process.env.NODE_ENV === 'production' ? {} : { devVerifyToken: token }),
+  });
 });

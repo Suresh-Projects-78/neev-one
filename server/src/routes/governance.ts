@@ -6,7 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
-import { ApprovalError, decide } from '../services/approvals.js';
+import { ApprovalError, decide, notifyDecision } from '../services/approvals.js';
 import { ensureLedgerSetup, invoicePostingLines, postEntry } from '../services/ledger.js';
 
 /**
@@ -321,6 +321,18 @@ governanceRouter.post('/orgs/:orgId/approvals/:requestId/decide', async (req, re
     if (!body.approve && decided.docType === 'INVOICE') {
       await prisma.$executeRawUnsafe(`UPDATE Invoice SET status = ? WHERE id = ?`, 'Rejected', decided.docId);
     }
+
+    await notifyDecision({
+      accountId: req.tenant!.accountId,
+      orgId: req.tenant!.orgId,
+      requestedByUserId: decided.requestedByUserId,
+      deciderUserId: req.auth!.userId,
+      docType: decided.docType,
+      docId: decided.docId,
+      amount: Number(decided.amount),
+      approved: body.approve,
+      comment: body.comment,
+    });
 
     res.json({ request: { ...decided, amount: Number(decided.amount) }, posted });
   } catch (e: any) {

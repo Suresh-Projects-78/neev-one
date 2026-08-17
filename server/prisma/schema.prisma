@@ -902,3 +902,98 @@ model AuthEvent {
   @@index([userId, createdAt])
   @@index([email, eventType, createdAt])
 }
+
+// ----------------------------
+// Email: settings, outbox, verification
+// ----------------------------
+model EmailSetting {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String @unique
+
+  // SYSTEM uses the platform's own transport; SMTP uses the org's own server.
+  provider String @default("SYSTEM")
+
+  host        String?
+  port        Int?
+  secure      Boolean @default(true)
+  username    String?
+  // AES-256-GCM ciphertext. Never returned by the API.
+  passwordEnc String?
+
+  fromName  String?
+  fromEmail String?
+  replyTo   String?
+
+  verifiedAt DateTime?
+  lastError  String?
+
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([accountId, orgId])
+}
+
+/// Every message the product tries to send, with its outcome. Doubles as the
+/// retry queue and the "did the customer actually receive it" answer.
+model EmailOutbox {
+  id        String  @id @default(cuid())
+  accountId String?
+  orgId     String?
+
+  templateKey String
+  toEmail     String
+  toName      String?
+  subject     String
+  bodyText    String
+  bodyHtml    String?
+
+  status    String    @default("QUEUED") // QUEUED | SENT | FAILED | SUPPRESSED
+  attempts  Int       @default(0)
+  lastError String?
+  sentAt    DateTime?
+
+  relatedType String?
+  relatedId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountId, orgId, status])
+  @@index([templateKey, createdAt])
+}
+
+model EmailVerificationToken {
+  id        String @id @default(cuid())
+  accountId String
+  userId    String
+
+  tokenHash String    @unique
+  email     String
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, usedAt])
+}
+
+/// Which notifications an organisation wants, per event.
+model NotificationSetting {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+
+  eventKey        String
+  enabled         Boolean @default(true)
+  /// Extra addresses that receive this event, beyond its natural recipient.
+  extraRecipients String?
+
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, eventKey])
+  @@index([accountId, orgId])
+}

@@ -5,13 +5,14 @@ import { getFeatureCatalog, setFeatures } from '../../api/features';
 import { PageHeader, Spinner } from '../../components/ui/Primitives';
 import { useFeatures } from '../../permissions/useFeatures';
 
-const CATEGORY_ORDER = ['Operations', 'Accounting', 'Inventory', 'Governance', 'Data'];
+const CATEGORY_ORDER = ['Operations', 'Accounting', 'Inventory', 'Governance', 'Communication', 'Data'];
 
 const CATEGORY_BLURB = {
   Operations: 'Which documents and locations this company uses day to day',
   Accounting: 'How the books behave',
   Inventory: 'Stock tracking depth',
   Governance: 'Controls over who may do what',
+  Communication: 'What the product sends, and from where',
   Data: 'Getting information in and out',
 };
 

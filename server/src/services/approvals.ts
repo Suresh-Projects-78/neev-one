@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
 import { resolveRoleIds } from './access.js';
+import { sendTemplate } from './mailer.js';
 
 /**
  * Amount-based approval thresholds.
@@ -87,6 +88,8 @@ export async function evaluateApproval(opts: {
     },
   });
 
+  await notifyApprovers(rule, opts);
+
   return { required: true, ruleId: rule.id, ruleName: rule.name };
 }
 
@@ -142,5 +145,112 @@ export async function decide(opts: {
       comment: opts.comment || null,
     },
     include: { rule: true },
+  });
+}
+
+/**
+ * Tells everyone holding the approving role that something is waiting.
+ * Failures here are swallowed by sendTemplate: a mail outage must not stop a
+ * document being raised.
+ */
+async function notifyApprovers(
+  rule: { id: string; name: string; approverRoleId: string },
+  opts: { accountId: string; orgId: string; userId: string; docType: string; docId: string; amount: number }
+) {
+  const assignments = await prisma.userRoleAssignment.findMany({
+    where: { accountId: opts.accountId, orgId: opts.orgId, roleId: rule.approverRoleId },
+    select: { userId: true },
+  });
+
+  const profileRoles = await prisma.roleProfileRole.findMany({
+    where: { accountId: opts.accountId, orgId: opts.orgId, roleId: rule.approverRoleId },
+    select: { profileId: true },
+  });
+  const viaProfiles = profileRoles.length
+    ? await prisma.userRoleProfile.findMany({
+        where: {
+          accountId: opts.accountId,
+          orgId: opts.orgId,
+          profileId: { in: profileRoles.map((p) => p.profileId) },
+        },
+        select: { userId: true },
+      })
+    : [];
+
+  const userIds = Array.from(new Set([...assignments, ...viaProfiles].map((a) => a.userId))).filter(
+    (id) => id !== opts.userId
+  );
+  if (!userIds.length) return;
+
+  const [approvers, requester, org] = await Promise.all([
+    prisma.user.findMany({ where: { id: { in: userIds }, isActive: true }, select: { email: true, fullName: true } }),
+    prisma.user.findUnique({ where: { id: opts.userId }, select: { fullName: true } }),
+    prisma.org.findUnique({ where: { id: opts.orgId }, select: { name: true } }),
+  ]);
+
+  const docNumber = await documentNumber(opts.docType, opts.docId);
+
+  for (const approver of approvers) {
+    await sendTemplate({
+      templateKey: 'approval.requested',
+      to: approver.email,
+      toName: approver.fullName,
+      accountId: opts.accountId,
+      orgId: opts.orgId,
+      relatedType: opts.docType,
+      relatedId: opts.docId,
+      data: {
+        docType: opts.docType.toLowerCase(),
+        docNumber,
+        amount: opts.amount.toFixed(2),
+        ruleName: rule.name,
+        requesterName: requester?.fullName || 'A colleague',
+        orgName: org?.name || '',
+      },
+    });
+  }
+}
+
+/** Best-effort human-readable reference for the notification body. */
+async function documentNumber(docType: string, docId: string) {
+  if (docType !== 'INVOICE') return docId.slice(0, 8);
+  const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT number FROM Invoice WHERE id = ?`, docId);
+  return rows?.[0]?.number || docId.slice(0, 8);
+}
+
+/** Tells the raiser what happened to their document. */
+export async function notifyDecision(opts: {
+  accountId: string;
+  orgId: string;
+  requestedByUserId: string;
+  deciderUserId: string;
+  docType: string;
+  docId: string;
+  amount: number;
+  approved: boolean;
+  comment?: string | null;
+}) {
+  const [raiser, decider] = await Promise.all([
+    prisma.user.findUnique({ where: { id: opts.requestedByUserId }, select: { email: true, fullName: true } }),
+    prisma.user.findUnique({ where: { id: opts.deciderUserId }, select: { fullName: true } }),
+  ]);
+  if (!raiser) return;
+
+  await sendTemplate({
+    templateKey: 'approval.decided',
+    to: raiser.email,
+    toName: raiser.fullName,
+    accountId: opts.accountId,
+    orgId: opts.orgId,
+    relatedType: opts.docType,
+    relatedId: opts.docId,
+    data: {
+      docType: opts.docType.toLowerCase(),
+      docNumber: await documentNumber(opts.docType, opts.docId),
+      amount: opts.amount.toFixed(2),
+      decision: opts.approved ? 'approved' : 'rejected',
+      deciderName: decider?.fullName || 'An approver',
+      comment: opts.comment ? `Comment: ${opts.comment}` : '',
+    },
   });
 }

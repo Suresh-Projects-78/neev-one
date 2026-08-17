@@ -16,7 +16,7 @@ export type FeatureDef = {
   description: string;
   /** Value for an organisation that has never touched the setting. */
   defaultEnabled: boolean;
-  category: 'Operations' | 'Accounting' | 'Inventory' | 'Governance' | 'Data';
+  category: 'Operations' | 'Accounting' | 'Inventory' | 'Governance' | 'Communication' | 'Data';
   /** Turning the parent off forces these off too. */
   dependsOn?: string;
   /** Not switchable — listed so the screen can show why. */
@@ -165,6 +165,32 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     description: 'Limit a user to certain customers, vendors or cost centres.',
     defaultEnabled: false,
     category: 'Governance',
+  },
+
+  // ---- Communication ----------------------------------------------------
+  {
+    key: 'emailVerification',
+    label: 'Email verification',
+    description:
+      'Send a confirmation link when someone signs up, and show a reminder until the address is confirmed.',
+    defaultEnabled: true,
+    category: 'Communication',
+  },
+  {
+    key: 'notifications',
+    label: 'Email notifications',
+    description:
+      'Approval requests, decisions and reminders by email. Sign-in and password mail is always sent regardless.',
+    defaultEnabled: true,
+    category: 'Communication',
+  },
+  {
+    key: 'customSmtp',
+    label: 'Own mail server',
+    description: 'Send from your own SMTP server and address instead of the platform default.',
+    defaultEnabled: false,
+    category: 'Communication',
+    dependsOn: 'notifications',
   },
 
   // ---- Data -------------------------------------------------------------

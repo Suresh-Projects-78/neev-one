@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
+import { sendTemplate } from '../services/mailer.js';
 
 export const usersRouter = Router();
 usersRouter.use(requireAuth, requireTenantContext);
@@ -282,6 +283,28 @@ usersRouter.post('/users', requirePermission('SETTINGS', PermissionAction.CREATE
       action: 'CREATE',
       message: `User created: ${user.email}`,
       createdByUserId,
+    },
+  });
+
+  const [inviter, org] = await Promise.all([
+    prisma.user.findUnique({ where: { id: createdByUserId }, select: { fullName: true } }),
+    prisma.org.findUnique({ where: { id: req.tenant!.orgId }, select: { name: true } }),
+  ]);
+
+  await sendTemplate({
+    templateKey: 'auth.user_invited',
+    to: user.email,
+    toName: user.fullName,
+    accountId,
+    orgId: req.tenant!.orgId,
+    transactional: true,
+    relatedType: 'User',
+    relatedId: user.id,
+    data: {
+      userName: user.fullName,
+      email: user.email,
+      orgName: org?.name || '',
+      inviterName: inviter?.fullName || 'An administrator',
     },
   });
 
