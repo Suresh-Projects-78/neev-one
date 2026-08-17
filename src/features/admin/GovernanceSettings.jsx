@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Check, Layers, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { listRoles, listUsers } from '../../api/admin';
@@ -84,8 +84,6 @@ export const GovernanceSettings = () => {
       .then((d) => setRestrictions(d?.permissions || []))
       .catch((e) => setError(String(e?.message || e)));
   }, [restrictUser]);
-
-  const roleName = useMemo(() => new Map(roles.map((r) => [r.id, r.name])), [roles]);
 
   const run = async (key, fn, note) => {
     setBusy(key);
