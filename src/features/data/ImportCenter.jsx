@@ -160,12 +160,12 @@ export default function ImportCenter() {
             </select>
           </div>
           <div className="flex items-end">
-            <button type="button" onClick={onTemplate} disabled={busy || !docType} className="ui-btn-secondary disabled:opacity-50">
+            <button type="button" onClick={onTemplate} disabled={busy || !docType} className="ui-btn ui-btn-secondary disabled:opacity-50">
               <Download size={16} className="inline mr-1" /> Download template
             </button>
           </div>
           <div className="flex items-end">
-            <label className="ui-btn-secondary cursor-pointer">
+            <label className="ui-btn ui-btn-secondary cursor-pointer">
               <FileUp size={16} className="inline mr-1" /> Choose CSV
               <input type="file" accept=".csv,text/csv" onChange={onPickFile} className="hidden" />
             </label>
@@ -208,7 +208,7 @@ export default function ImportCenter() {
           type="button"
           onClick={onStageAndValidate}
           disabled={busy || !csv.trim() || !docType}
-          className="ui-btn-primary disabled:opacity-50"
+          className="ui-btn ui-btn-primary disabled:opacity-50"
         >
           <Upload size={16} className="inline mr-1" /> {busy ? 'Checking…' : 'Check the file'}
         </button>
@@ -269,7 +269,7 @@ export default function ImportCenter() {
             type="button"
             onClick={onCommit}
             disabled={busy || batch.validRows === 0}
-            className="ui-btn-primary disabled:opacity-50"
+            className="ui-btn ui-btn-primary disabled:opacity-50"
           >
             {busy ? 'Importing…' : `Import ${batch.validRows} row${batch.validRows === 1 ? '' : 's'}`}
           </button>

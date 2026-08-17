@@ -1850,7 +1850,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -1858,7 +1858,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="w-20 px-2 py-1 border rounded"
+                      className="ui-input w-20 px-2 py-1"
                       min="1"
                     />
                   </td>
@@ -1867,7 +1867,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="w-24 px-2 py-1 border rounded"
+                      className="ui-input w-24 px-2 py-1"
                       min="0"
                       step="0.01"
                     />
@@ -2220,7 +2220,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -2228,7 +2228,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="w-20 px-2 py-1 border rounded"
+                      className="ui-input w-20 px-2 py-1"
                       min="1"
                     />
                   </td>
@@ -2237,7 +2237,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="w-24 px-2 py-1 border rounded"
+                      className="ui-input w-24 px-2 py-1"
                       min="0"
                       step="0.01"
                     />
@@ -2667,7 +2667,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -2675,7 +2675,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="w-20 px-2 py-1 border rounded"
+                      className="ui-input w-20 px-2 py-1"
                       min="1"
                     />
                   </td>
@@ -2684,7 +2684,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="w-24 px-2 py-1 border rounded"
+                      className="ui-input w-24 px-2 py-1"
                       min="0"
                       step="0.01"
                     />

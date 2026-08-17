@@ -358,7 +358,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -368,7 +368,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             type="number"
             value={formData.amount}
             onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             min="0"
             step="0.01"
             required
@@ -396,7 +396,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             <select
               value={ledgerAccountId}
               onChange={(e) => setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-select w-full px-3 py-2"
               disabled={modesLoading}
               required
             >
@@ -422,7 +422,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             type="text"
             value={formData.reference}
             onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             placeholder="Txn / UTR / Cheque no"
           />
         </div>
@@ -501,7 +501,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                           type="number"
                           value={allocValue}
                           onChange={(e) => setInvoiceAmount(inv, e.target.value)}
-                          className="w-32 px-2 py-1 border rounded text-right"
+                          className="ui-input w-32 px-2 py-1 text-right"
                           min="0"
                           step="0.01"
                           disabled={!formData.amount}
@@ -521,7 +521,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           rows={3}
         />
       </div>

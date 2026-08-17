@@ -256,7 +256,7 @@ export default function BatchSerialManager() {
                     />
                   </div>
                 </div>
-                <button type="submit" disabled={busy || !itemId} className="ui-btn-primary disabled:opacity-50">
+                <button type="submit" disabled={busy || !itemId} className="ui-btn ui-btn-primary disabled:opacity-50">
                   {busy ? 'Saving…' : 'Receive'}
                 </button>
               </form>
@@ -295,7 +295,7 @@ export default function BatchSerialManager() {
                               type="button"
                               disabled={busy || Number(b.qtyOnHand) <= 0}
                               onClick={() => onIssueLot(b)}
-                              className="ui-btn-ghost disabled:opacity-40"
+                              className="ui-btn ui-btn-ghost disabled:opacity-40"
                             >
                               Issue
                             </button>
@@ -327,7 +327,7 @@ export default function BatchSerialManager() {
                     className="ui-input font-mono text-sm"
                     placeholder={'SN-0001\nSN-0002'}
                   />
-                  <button type="submit" disabled={busy || !itemId} className="ui-btn-primary disabled:opacity-50">
+                  <button type="submit" disabled={busy || !itemId} className="ui-btn ui-btn-primary disabled:opacity-50">
                     {busy ? 'Saving…' : 'Register'}
                   </button>
                 </form>
@@ -346,7 +346,7 @@ export default function BatchSerialManager() {
                     className="ui-input font-mono text-sm"
                     placeholder={'SN-0001'}
                   />
-                  <button type="submit" disabled={busy} className="ui-btn-secondary disabled:opacity-50">
+                  <button type="submit" disabled={busy} className="ui-btn ui-btn-secondary disabled:opacity-50">
                     {busy ? 'Saving…' : 'Issue'}
                   </button>
                 </form>

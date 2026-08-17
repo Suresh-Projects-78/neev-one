@@ -473,7 +473,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
           type="text"
           value={formData.displayName}
           onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           required
         />
       </div>
@@ -503,7 +503,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             type="text"
             value={formData.contactPerson}
             onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
           />
         </div>
         <div>
@@ -512,7 +512,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             type="tel"
             value={formData.mobile}
             onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
           />
         </div>
       </div>
@@ -524,7 +524,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
           />
         </div>
         <div>
@@ -533,7 +533,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             type="tel"
             value={formData.alternatePhone}
             onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
           />
         </div>
       </div>
@@ -555,7 +555,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
                   pan: requiresGstin ? prev.pan : '',
                 }));
               }}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-select w-full px-3 py-2"
             >
               <option value="Registered">Registered</option>
               <option value="Unregistered">Unregistered</option>
@@ -597,7 +597,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               type="text"
               value={formData.pan}
               onChange={(e) => setFormData({ ...formData, pan: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               placeholder={gstRegistrationRequiresGstinUi ? 'PAN required' : 'Optional'}
             />
           </div>
@@ -609,7 +609,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               max="365"
               value={formData.paymentTermDays}
               onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               placeholder="30"
             />
             <p className="mt-1 text-xs ui-muted">
@@ -649,7 +649,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               type="text"
               value={formData.billingAddress.line1}
               onChange={(e) => updateBilling('line1', e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
             />
           </div>
           <div>
@@ -658,7 +658,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               type="text"
               value={formData.billingAddress.line2}
               onChange={(e) => updateBilling('line2', e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
             />
           </div>
         </div>
@@ -670,7 +670,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               type="text"
               value={formData.billingAddress.city}
               onChange={(e) => updateBilling('city', e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
             />
           </div>
           <div>
@@ -679,7 +679,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               type="text"
               value={formData.billingAddress.district}
               onChange={(e) => updateBilling('district', e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
             />
           </div>
           <div>
@@ -688,7 +688,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               type="text"
               value={formData.billingAddress.pincode}
               onChange={(e) => updateBilling('pincode', e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
             />
           </div>
         </div>
@@ -736,7 +736,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
                 type="text"
                 value={groupDraftName}
                 onChange={(e) => setGroupDraftName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 placeholder="e.g., Local Suppliers"
                 autoFocus
                 required

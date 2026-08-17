@@ -639,7 +639,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 placeholder="Search ledger"
                 autoFocus
               />
@@ -1072,7 +1072,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               <select
                 value={form.cashBankAccountId}
                 onChange={(e) => setForm((p) => ({ ...p, cashBankAccountId: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-select w-full px-3 py-2"
                 required
               >
                 <option value="">Select</option>
@@ -1098,7 +1098,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 required
               />
             </div>
@@ -1108,7 +1108,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 <select
                   value={form.direction}
                   onChange={(e) => setForm((p) => ({ ...p, direction: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="ui-select w-full px-3 py-2"
                 >
                   <option value="IN">Receipt (Money In)</option>
                   <option value="OUT">Payment (Money Out)</option>
@@ -1150,7 +1150,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 type="number"
                 value={form.amount}
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 step="0.01"
                 required
               />
@@ -1224,7 +1224,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                             <td className="px-4 py-3 text-sm text-right">
                               <input
                                 type="number"
-                                className="w-28 px-2 py-1 border rounded-lg text-right"
+                                className="ui-input w-28 px-2 py-1 text-right"
                                 value={row.amount}
                                 min="0"
                                 step="0.01"
@@ -1306,7 +1306,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                             <td className="px-4 py-3 text-sm text-right">
                               <input
                                 type="number"
-                                className="w-28 px-2 py-1 border rounded-lg text-right"
+                                className="ui-input w-28 px-2 py-1 text-right"
                                 value={row.amount}
                                 min="0"
                                 step="0.01"
@@ -1329,7 +1329,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               type="text"
               value={form.narration}
               onChange={(e) => setForm((p) => ({ ...p, narration: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               placeholder="Narration"
             />
           </div>
@@ -1817,7 +1817,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         ref={uploadInputRef}
         type="file"
         accept=".csv,text/csv"
-        className="sr-only"
+        className="ui-input sr-only"
         onChange={(e) => {
           const f = e.target.files?.[0] || null;
           e.target.value = '';
@@ -1832,7 +1832,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-select w-full px-3 py-2"
             >
               <option value="">Select</option>
               {cashBankAccounts.map((a) => (
@@ -1845,7 +1845,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
           <div>
             <label className="block text-sm font-medium mb-1">View</label>
-            <select value={view} onChange={(e) => setView(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+            <select value={view} onChange={(e) => setView(e.target.value)} className="ui-select w-full px-3 py-2">
               <option value="uncategorised">Uncategorised ({uncategorisedCount})</option>
               <option value="categorised">Categorised ({categorisedCount})</option>
               <option value="all">All ({allTxns.length})</option>

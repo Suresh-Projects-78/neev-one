@@ -244,7 +244,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           placeholder="e.g., ABC Traders"
           required
         />
@@ -301,7 +301,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
           type="number"
           value={formData.openingBalance}
           onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           step="0.01"
         />
       </div>
@@ -428,7 +428,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 placeholder="Search account (code, name, type)"
                 autoFocus
               />

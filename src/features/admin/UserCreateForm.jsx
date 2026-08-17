@@ -50,22 +50,22 @@ export function UserCreateForm({ onCreated }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Email (User ID)</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.email} onChange={onChange('email')} required />
+          <input className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} required />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Username (optional)</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.username} onChange={onChange('username')} />
+          <input className="ui-input w-full px-3 py-2" value={form.username} onChange={onChange('username')} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Full Name</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.fullName} onChange={onChange('fullName')} required />
+          <input className="ui-input w-full px-3 py-2" value={form.fullName} onChange={onChange('fullName')} required />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Password</label>
-          <input type="password" className="w-full px-3 py-2 border rounded-lg" value={form.password} onChange={onChange('password')} required />
+          <input type="password" className="ui-input w-full px-3 py-2" value={form.password} onChange={onChange('password')} required />
         </div>
       </div>
 

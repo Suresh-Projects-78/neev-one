@@ -128,7 +128,7 @@ export default function CurrencySettings() {
             />
           </div>
         </div>
-        <button type="submit" disabled={busy} className="ui-btn-primary disabled:opacity-50">
+        <button type="submit" disabled={busy} className="ui-btn ui-btn-primary disabled:opacity-50">
           {busy ? 'Saving…' : 'Add currency'}
         </button>
       </form>
@@ -188,7 +188,7 @@ export default function CurrencySettings() {
                 />
               </div>
               <div className="flex items-end">
-                <button type="submit" disabled={busy} className="ui-btn-primary disabled:opacity-50">
+                <button type="submit" disabled={busy} className="ui-btn ui-btn-primary disabled:opacity-50">
                   {busy ? 'Saving…' : 'Save rate'}
                 </button>
               </div>

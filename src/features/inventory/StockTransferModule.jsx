@@ -435,7 +435,7 @@ export const StockTransferEditor = ({
             type="date"
             value={form.date}
             onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
             disabled={readOnly}
           />
@@ -456,7 +456,7 @@ export const StockTransferEditor = ({
                   targetWarehouseId: '',
                 }));
               }}
-              className="w-full px-3 py-2 border rounded-lg ui-surface"
+              className="ui-select w-full px-3 py-2 ui-surface"
               required
               disabled={readOnly}
             >
@@ -482,7 +482,7 @@ export const StockTransferEditor = ({
                     sourceWarehouseId: '',
                   }));
                 }}
-                className="w-full px-3 py-2 border rounded-lg ui-surface"
+                className="ui-select w-full px-3 py-2 ui-surface"
                 required
                 disabled={readOnly}
               >
@@ -507,7 +507,7 @@ export const StockTransferEditor = ({
                     targetWarehouseId: '',
                   }));
                 }}
-                className="w-full px-3 py-2 border rounded-lg ui-surface"
+                className="ui-select w-full px-3 py-2 ui-surface"
                 required
                 disabled={readOnly}
               >
@@ -537,7 +537,7 @@ export const StockTransferEditor = ({
                 };
               });
             }}
-            className="w-full px-3 py-2 border rounded-lg ui-surface"
+            className="ui-select w-full px-3 py-2 ui-surface"
             required
             disabled={readOnly || !normalizeId(form.sourceBranchId)}
           >
@@ -569,7 +569,7 @@ export const StockTransferEditor = ({
                 };
               });
             }}
-            className="w-full px-3 py-2 border rounded-lg ui-surface"
+            className="ui-select w-full px-3 py-2 ui-surface"
             required
             disabled={readOnly || !normalizeId(mode === 'warehouse' ? form.sourceBranchId : form.targetBranchId)}
           >
@@ -592,7 +592,7 @@ export const StockTransferEditor = ({
             type="text"
             value={form.reason}
             onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             placeholder="Optional"
             disabled={readOnly}
           />
@@ -649,7 +649,7 @@ export const StockTransferEditor = ({
                       type="text"
                       value={String(l.description || '')}
                       onChange={(e) => updateLine(idx, { description: e.target.value })}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                       disabled={readOnly}
                     />
                   </td>
@@ -658,7 +658,7 @@ export const StockTransferEditor = ({
                       type="number"
                       value={l.qty}
                       onChange={(e) => updateLine(idx, { qty: e.target.value })}
-                      className="w-20 px-2 py-1 border rounded"
+                      className="ui-input w-20 px-2 py-1"
                       min="1"
                       step="1"
                       disabled={readOnly}
@@ -1019,14 +1019,14 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
             <input
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-sm"
+              className="ui-input px-3 py-2 text-sm"
               placeholder="Transfer #, branch, warehouse"
             />
           </div>
 
           <div className="flex items-center gap-2">
             <div className="text-sm font-medium">Status:</div>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="ui-select px-3 py-2 text-sm">
               <option value="">All</option>
               <option value="Draft">Draft</option>
               <option value="Submitted">Submitted</option>

@@ -120,7 +120,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
         <select
           value={formData.parent}
           onChange={(e) => setFormData((p) => ({ ...p, parent: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-select w-full px-3 py-2"
         >
           {PARENT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -136,7 +136,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           placeholder="e.g., Current Liabilities"
           required
         />
@@ -265,7 +265,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           <select
             value={formData.typeId}
             onChange={(e) => setFormData((p) => ({ ...p, typeId: e.target.value, parentGroupId: '' }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             <option value="">Select</option>
             {accountTypes.map((t) => (
@@ -280,7 +280,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           <select
             value={formData.groupCategory}
             onChange={(e) => setFormData((p) => ({ ...p, groupCategory: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             <option value="Customer">Customer Group</option>
             <option value="Vendor">Vendor Group</option>
@@ -296,7 +296,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           placeholder="e.g., Sundry Debtors"
           required
         />

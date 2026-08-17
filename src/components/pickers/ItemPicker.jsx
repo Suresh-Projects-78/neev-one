@@ -112,7 +112,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   type="text"
                   value={itemSearch}
                   onChange={(e) => setItemSearch(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="ui-input w-full px-3 py-2"
                   placeholder="Search item (name, code, HSN/SAC)"
                   autoFocus
                 />
@@ -226,7 +226,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="text"
                       value={newItem.code}
                       onChange={(e) => setNewItem((p) => ({ ...p, code: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-input w-full px-3 py-2"
                       required
                     />
                   </div>
@@ -236,7 +236,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="text"
                       value={newItem.name}
                       onChange={(e) => setNewItem((p) => ({ ...p, name: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-input w-full px-3 py-2"
                       required
                       autoFocus
                     />
@@ -246,7 +246,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     <select
                       value={newItem.type}
                       onChange={(e) => setNewItem((p) => ({ ...p, type: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-select w-full px-3 py-2"
                     >
                       <option>Goods</option>
                       <option>Service</option>
@@ -257,7 +257,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     <select
                       value={String(newItem.unit ?? '').trim()}
                       onChange={(e) => setNewItem((p) => ({ ...p, unit: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-select w-full px-3 py-2"
                     >
                       {String(newItem.unit ?? '').trim() && !uomNames.includes(String(newItem.unit ?? '').trim()) ? (
                         <option value={String(newItem.unit ?? '').trim()}>{String(newItem.unit ?? '').trim()} (legacy)</option>
@@ -276,7 +276,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="text"
                       value={newItem.hsnSac}
                       onChange={(e) => setNewItem((p) => ({ ...p, hsnSac: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-input w-full px-3 py-2"
                     />
                   </div>
                   <div>
@@ -284,7 +284,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     <select
                       value={String(newItem.gstRate ?? 0)}
                       onChange={(e) => setNewItem((p) => ({ ...p, gstRate: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-select w-full px-3 py-2"
                     >
                       {!gstRateValues.includes(String(newItem.gstRate ?? 0)) ? (
                         <option value={String(newItem.gstRate ?? 0)}>{String(newItem.gstRate ?? 0)}% (legacy)</option>
@@ -306,7 +306,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="number"
                       value={newItem.salePrice}
                       onChange={(e) => setNewItem((p) => ({ ...p, salePrice: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-input w-full px-3 py-2"
                       min="0"
                       step="0.01"
                     />
@@ -317,7 +317,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="number"
                       value={newItem.purchasePrice}
                       onChange={(e) => setNewItem((p) => ({ ...p, purchasePrice: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="ui-input w-full px-3 py-2"
                       min="0"
                       step="0.01"
                     />

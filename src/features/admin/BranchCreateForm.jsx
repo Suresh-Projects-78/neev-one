@@ -78,23 +78,23 @@ export function BranchCreateForm({ orgId, onCreated }) {
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 sm:col-span-4">
           <label className="block text-sm font-medium mb-1">Branch Code</label>
-          <input className="w-full max-w-40 px-3 py-2 border rounded-lg" value={form.branchCode} onChange={onChange('branchCode')} required />
+          <input className="ui-input w-full max-w-40 px-3 py-2" value={form.branchCode} onChange={onChange('branchCode')} required />
         </div>
         <div className="col-span-12 sm:col-span-8">
           <label className="block text-sm font-medium mb-1">Branch Name</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.branchName} onChange={onChange('branchName')} required />
+          <input className="ui-input w-full px-3 py-2" value={form.branchName} onChange={onChange('branchName')} required />
         </div>
       </div>
 
       <div>
         <label className="block text-sm font-medium mb-1">Address</label>
-        <input className="w-full px-3 py-2 border rounded-lg" value={form.addressLine1} onChange={onChange('addressLine1')} required />
+        <input className="ui-input w-full px-3 py-2" value={form.addressLine1} onChange={onChange('addressLine1')} required />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">City</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.city} onChange={onChange('city')} />
+          <input className="ui-input w-full px-3 py-2" value={form.city} onChange={onChange('city')} />
         </div>
         <div>
           <PopupSelect
@@ -112,14 +112,14 @@ export function BranchCreateForm({ orgId, onCreated }) {
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Country</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.country} onChange={onChange('country')} required />
+          <input className="ui-input w-full px-3 py-2" value={form.country} onChange={onChange('country')} required />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">GST Registration</label>
-          <select className="w-full px-3 py-2 border rounded-lg" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+          <select className="ui-select w-full px-3 py-2" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
             <option value="REGULAR">Regular</option>
             <option value="COMPOSITION">Composition</option>
             <option value="UNREGISTERED">Unregistered</option>
@@ -127,22 +127,22 @@ export function BranchCreateForm({ orgId, onCreated }) {
         </div>
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">GSTIN</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
+          <input className="ui-input w-full px-3 py-2" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Phone</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.phone} onChange={onChange('phone')} />
+          <input className="ui-input w-full px-3 py-2" value={form.phone} onChange={onChange('phone')} />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Email</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.email} onChange={onChange('email')} />
+          <input className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Contact Person</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={form.contactPerson} onChange={onChange('contactPerson')} />
+          <input className="ui-input w-full px-3 py-2" value={form.contactPerson} onChange={onChange('contactPerson')} />
         </div>
       </div>
 

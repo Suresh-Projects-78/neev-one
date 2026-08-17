@@ -113,7 +113,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -123,7 +123,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
             type="number"
             value={formData.amount}
             onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             min="0"
             step="0.01"
             required
@@ -137,7 +137,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
           <select
             value={formData.mode}
             onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             <option>Cash</option>
             <option>Bank</option>
@@ -152,7 +152,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
             type="text"
             value={formData.reference}
             onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             placeholder="Txn / UTR / Cheque no"
           />
         </div>
@@ -163,7 +163,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           rows={3}
         />
       </div>

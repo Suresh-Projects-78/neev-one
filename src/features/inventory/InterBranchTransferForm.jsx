@@ -46,7 +46,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Source Branch</label>
-          <select className="w-full px-3 py-2 border rounded-lg" value={sourceBranchId} onChange={(e) => setSourceBranchId(e.target.value)} required>
+          <select className="ui-select w-full px-3 py-2" value={sourceBranchId} onChange={(e) => setSourceBranchId(e.target.value)} required>
             <option value="">Select</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -57,7 +57,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Destination Branch</label>
-          <select className="w-full px-3 py-2 border rounded-lg" value={targetBranchId} onChange={(e) => setTargetBranchId(e.target.value)} required>
+          <select className="ui-select w-full px-3 py-2" value={targetBranchId} onChange={(e) => setTargetBranchId(e.target.value)} required>
             <option value="">Select</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -75,7 +75,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
             <div key={idx} className="grid grid-cols-12 gap-3 items-end">
               <div className="col-span-8">
                 <label className="block text-xs ui-muted mb-1">Item</label>
-                <select className="w-full px-3 py-2 border rounded-lg" value={l.itemId} onChange={(e) => updateLine(idx, { itemId: e.target.value })}>
+                <select className="ui-select w-full px-3 py-2" value={l.itemId} onChange={(e) => updateLine(idx, { itemId: e.target.value })}>
                   <option value="">Select</option>
                   {items.map((it) => (
                     <option key={it.id} value={it.id}>
@@ -90,7 +90,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
                   type="number"
                   min="0"
                   step="1"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="ui-input w-full px-3 py-2"
                   value={l.qty}
                   onChange={(e) => updateLine(idx, { qty: e.target.value })}
                 />

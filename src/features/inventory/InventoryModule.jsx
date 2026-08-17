@@ -323,7 +323,7 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
           <select
             value={viewMode}
             onChange={(e) => setViewMode(e.target.value)}
-            className="px-3 py-2 border rounded-lg"
+            className="ui-select px-3 py-2"
           >
             <option value="qty">Qty</option>
             <option value="value">Value</option>
@@ -332,7 +332,7 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
 
         <div className="flex items-center gap-2">
           <div className="text-sm font-medium">Warehouse:</div>
-          <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="px-3 py-2 border rounded-lg">
+          <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} className="ui-select px-3 py-2">
             <option value="">All Warehouses</option>
             {warehouseOptions.map((w) => (
               <option key={String(w.id)} value={String(w.id)}>
@@ -344,9 +344,9 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
 
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-medium">Period:</div>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="px-3 py-2 border rounded-lg" />
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="ui-input px-3 py-2" />
           <span className="ui-subtle">to</span>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="px-3 py-2 border rounded-lg" />
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="ui-input px-3 py-2" />
           <button
             type="button"
             onClick={() => {

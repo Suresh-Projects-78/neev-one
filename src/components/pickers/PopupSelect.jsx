@@ -97,7 +97,7 @@ const PopupSelect = ({
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               placeholder="Search..."
               autoFocus
             />

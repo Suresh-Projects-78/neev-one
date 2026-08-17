@@ -1077,7 +1077,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -1088,7 +1088,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             type="date"
             value={formData.dueDate}
             onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -1099,7 +1099,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             type="text"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -1109,7 +1109,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
           <select
             value={formData.category}
             onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             <option>Operating</option>
             <option>Travel</option>
@@ -1124,7 +1124,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             type="text"
             value={formData.refNo}
             onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             placeholder="Customer invoice no"
           />
         </div>
@@ -1135,7 +1135,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             type="date"
             value={formData.refDate}
             onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
           />
         </div>
 
@@ -1145,7 +1145,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             type="number"
             value={formData.amount}
             onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             min="0"
             step="0.01"
             required
@@ -1157,7 +1157,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
           <select
             value={gstRateValue}
             onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             {!gstRateValues.includes(gstRateValue) && <option value={gstRateValue}>{gstRateValue}% (legacy)</option>}
             {gstRates.length === 0 ? (
@@ -1499,7 +1499,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             type="text"
             value={formData.code}
             onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -1509,7 +1509,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -1518,7 +1518,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           <select
             value={formData.type}
             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             <option>Goods</option>
             <option>Service</option>
@@ -1532,7 +1532,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
               type="number"
               value={formData.openingQty}
               onChange={(e) => setFormData({ ...formData, openingQty: e.target.value })}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               min="0"
               step="0.01"
             />
@@ -1546,7 +1546,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             type="text"
             value={formData.hsnSac}
             onChange={(e) => setFormData({ ...formData, hsnSac: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
           />
         </div>
         <div>
@@ -1554,7 +1554,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           <select
             value={gstRateValue}
             onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             {!gstRateValues.includes(gstRateValue) && <option value={gstRateValue}>{gstRateValue}% (legacy)</option>}
             {gstRates.length === 0 ? (
@@ -1573,7 +1573,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           <select
             value={unitValue}
             onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             {unitValue && !uomNames.includes(unitValue) && <option value={unitValue}>{unitValue} (legacy)</option>}
             {uoms.length === 0 ? <option value={unitValue || 'Pcs'}>{unitValue || 'Pcs'}</option> : null}
@@ -1590,7 +1590,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             type="number"
             value={formData.salePrice}
             onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             min="0"
             step="0.01"
           />
@@ -1601,7 +1601,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             type="number"
             value={formData.purchasePrice}
             onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             min="0"
             step="0.01"
           />
@@ -2054,7 +2054,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                   type="text"
                   value={ledgerSearch}
                   onChange={(e) => setLedgerSearch(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg ui-surface"
+                  className="ui-input w-full px-3 py-2 ui-surface"
                   placeholder="Search ledgers (name, code, group)"
                 />
               </div>
@@ -2127,7 +2127,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                   type="text"
                   value={groupSearch}
                   onChange={(e) => setGroupSearch(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg ui-surface"
+                  className="ui-input w-full px-3 py-2 ui-surface"
                   placeholder="Search groups (name, category)"
                 />
               </div>
@@ -2558,7 +2558,7 @@ const ChartAccountForm = ({
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           placeholder="e.g., ABC Traders"
           required
         />
@@ -2606,7 +2606,7 @@ const ChartAccountForm = ({
           type="number"
           value={formData.openingBalance}
           onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           step="0.01"
         />
       </div>
@@ -2621,7 +2621,7 @@ const ChartAccountForm = ({
                 type="text"
                 value={formData.bankName}
                 onChange={(e) => setFormData((p) => ({ ...p, bankName: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 placeholder="e.g., HDFC Bank"
                 required
               />
@@ -2632,7 +2632,7 @@ const ChartAccountForm = ({
                 type="text"
                 value={formData.bankAccountNumber}
                 onChange={(e) => setFormData((p) => ({ ...p, bankAccountNumber: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 placeholder="e.g., 1234567890"
                 required
               />
@@ -2643,7 +2643,7 @@ const ChartAccountForm = ({
                 type="text"
                 value={formData.bankBranch}
                 onChange={(e) => setFormData((p) => ({ ...p, bankBranch: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 placeholder="e.g., Andheri"
               />
             </div>
@@ -2653,7 +2653,7 @@ const ChartAccountForm = ({
                 type="text"
                 value={formData.bankIfsc}
                 onChange={(e) => setFormData((p) => ({ ...p, bankIfsc: e.target.value }))}
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 placeholder="e.g., HDFC0000123"
               />
             </div>
@@ -2758,7 +2758,7 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           placeholder="e.g., Bank Charges"
           required
         />
@@ -3098,7 +3098,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
           type="text"
           value={formData.narration}
           onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-input w-full px-3 py-2"
           placeholder="Optional"
         />
       </div>
@@ -3144,7 +3144,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
                       type="number"
                       value={line.debit}
                       onChange={(e) => updateLine(idx, 'debit', e.target.value)}
-                      className="w-32 px-2 py-1 border rounded text-right"
+                      className="ui-input w-32 px-2 py-1 text-right"
                       min="0"
                       step="0.01"
                     />
@@ -3154,7 +3154,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
                       type="number"
                       value={line.credit}
                       onChange={(e) => updateLine(idx, 'credit', e.target.value)}
-                      className="w-32 px-2 py-1 border rounded text-right"
+                      className="ui-input w-32 px-2 py-1 text-right"
                       min="0"
                       step="0.01"
                     />
@@ -3629,23 +3629,23 @@ const LedgerView = ({
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs ui-muted">Date</label>
-                  <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Particulars</label>
-                  <input value={form.particulars} onChange={(e) => setForm((p) => ({ ...p, particulars: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={form.particulars} onChange={(e) => setForm((p) => ({ ...p, particulars: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Debit</label>
-                  <input value={form.debit} onChange={(e) => setForm((p) => ({ ...p, debit: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={form.debit} onChange={(e) => setForm((p) => ({ ...p, debit: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Credit</label>
-                  <input value={form.credit} onChange={(e) => setForm((p) => ({ ...p, credit: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={form.credit} onChange={(e) => setForm((p) => ({ ...p, credit: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
               </div>
             ) : (
-              <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="w-full h-64 p-2 border rounded text-xs font-mono" />
+              <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="ui-input w-full h-64 p-2 text-xs font-mono" />
             )}
             <div className="flex gap-2">
               <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Cancel</button>
@@ -3788,19 +3788,19 @@ const LedgerView = ({
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="block text-xs ui-muted">Date</label>
-                  <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Number</label>
-                  <input value={form.number} onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={form.number} onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Total</label>
-                  <input value={form.total} onChange={(e) => setForm((p) => ({ ...p, total: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={form.total} onChange={(e) => setForm((p) => ({ ...p, total: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
               </div>
             ) : (
-              <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="w-full h-64 p-2 border rounded text-xs font-mono" />
+              <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="ui-input w-full h-64 p-2 text-xs font-mono" />
             )}
             <div className="flex gap-2">
               <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Cancel</button>
@@ -4063,11 +4063,11 @@ const LedgerView = ({
           <div className="flex gap-2">
             <div className="flex-1">
               <label className="block text-xs ui-muted">From</label>
-              <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} className="w-full px-3 py-2 rounded border" />
+              <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} className="ui-input w-full px-3 py-2" />
             </div>
             <div className="flex-1">
               <label className="block text-xs ui-muted">To</label>
-              <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} className="w-full px-3 py-2 rounded border" />
+              <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} className="ui-input w-full px-3 py-2" />
             </div>
           </div>
           <div className="flex gap-3">
@@ -5715,7 +5715,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
               type="text"
               value={newUom}
               onChange={(e) => setNewUom(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               placeholder="e.g. Pcs, Kg, Hours"
             />
           </div>
@@ -5823,7 +5823,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
               type="number"
               value={newRate}
               onChange={(e) => setNewRate(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               min="0"
               max="100"
               step="0.01"
@@ -5961,7 +5961,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
             <select
               value={scopeBranchId}
               onChange={(e) => setScopeBranchId(String(e.target.value || '').trim())}
-              className="w-full px-3 py-2 border rounded-lg ui-surface"
+              className="ui-select w-full px-3 py-2 ui-surface"
             >
               <option value="">Company default</option>
               {(Array.isArray(branches) ? branches : [])
@@ -6001,7 +6001,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                     <select
                       value={cfg?.mode || 'auto'}
                       onChange={(e) => updateNumberingSetting(v.key, { mode: e.target.value })}
-                      className="w-full px-2 py-2 border rounded-lg"
+                      className="ui-select w-full px-2 py-2"
                     >
                       <option value="auto">Auto</option>
                       <option value="manual">Manual</option>
@@ -6014,7 +6014,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       type="text"
                       value={cfg?.prefix || ''}
                       onChange={(e) => updateNumberingSetting(v.key, { prefix: e.target.value })}
-                      className="w-full px-2 py-2 border rounded-lg"
+                      className="ui-input w-full px-2 py-2"
                     />
                   </div>
 
@@ -6024,7 +6024,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       type="text"
                       value={cfg?.suffix || ''}
                       onChange={(e) => updateNumberingSetting(v.key, { suffix: e.target.value })}
-                      className="w-full px-2 py-2 border rounded-lg"
+                      className="ui-input w-full px-2 py-2"
                     />
                   </div>
 
@@ -6146,7 +6146,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
                     <select
                       value={cfg?.templateId || 'classic'}
                       onChange={(e) => updateTemplateSetting(v.key, { templateId: e.target.value })}
-                      className="w-full px-2 py-2 border rounded-lg"
+                      className="ui-select w-full px-2 py-2"
                     >
                       {TEMPLATE_OPTIONS.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -6161,7 +6161,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
                     <select
                       value={cfg?.accentId || 'blue'}
                       onChange={(e) => updateTemplateSetting(v.key, { accentId: e.target.value })}
-                      className="w-full px-2 py-2 border rounded-lg"
+                      className="ui-select w-full px-2 py-2"
                     >
                       {ACCENT_OPTIONS.map((a) => (
                         <option key={a.id} value={a.id}>
@@ -6258,7 +6258,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
           <select
             value={templateId}
             onChange={(e) => updateInvoiceTemplate({ templateId: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             {TEMPLATE_OPTIONS.map((t) => (
               <option key={t.id} value={t.id}>
@@ -6411,7 +6411,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
             />
           </div>
 
@@ -6421,7 +6421,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
               type="text"
               value={formData.currency}
               readOnly
-              className="w-full px-3 py-2 border rounded-lg ui-sunken"
+              className="ui-input w-full px-3 py-2 ui-sunken"
             />
           </div>
 
@@ -6430,7 +6430,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
             <select
               value={formData.gstRegistration}
               onChange={(e) => setFormData((p) => ({ ...p, gstRegistration: e.target.value }))}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-select w-full px-3 py-2"
             >
               <option value="Registered">Registered</option>
               <option value="Unregistered">Unregistered</option>
@@ -6453,7 +6453,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
                   state: stateFromGstin ? stateFromGstin : p.state,
                 }));
               }}
-              className="w-full px-3 py-2 border rounded-lg"
+              className="ui-input w-full px-3 py-2"
               placeholder="e.g. 29ABCDE1234F1Z5"
             />
           </div>
@@ -6660,7 +6660,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               type="checkbox"
               checked={gstEnabled}
               onChange={(e) => setGstEnabled(e.target.checked)}
-              className="h-4 w-4"
+              className="ui-input h-4 w-4"
             />
             <span>Enabled</span>
           </label>
@@ -6677,7 +6677,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               <select
                 value={gst.gstRegistration}
                 onChange={(e) => setGst((p) => ({ ...p, gstRegistration: e.target.value }))}
-                className="w-full px-3 py-2 rounded border ui-surface"
+                className="ui-select w-full px-3 py-2 ui-surface"
               >
                 <option value="Registered">Registered</option>
                 <option value="Unregistered">Unregistered</option>
@@ -6699,7 +6699,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                     state: stateFromGstin ? stateFromGstin : p.state,
                   }));
                 }}
-                className="w-full px-3 py-2 rounded border"
+                className="ui-input w-full px-3 py-2"
                 placeholder="e.g. 29ABCDE1234F1Z5"
               />
               <div className="text-xs ui-muted mt-1">State auto-fills from GSTIN (first 2 digits).</div>
@@ -6738,7 +6738,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               type="checkbox"
               checked={tdsEnabled}
               onChange={(e) => setTdsEnabled(e.target.checked)}
-              className="h-4 w-4"
+              className="ui-input h-4 w-4"
             />
             <span>Enabled</span>
           </label>
@@ -6755,7 +6755,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               <select
                 value={tds.registrationType}
                 onChange={(e) => setTds((p) => ({ ...p, registrationType: e.target.value }))}
-                className="w-full px-3 py-2 rounded border ui-surface"
+                className="ui-select w-full px-3 py-2 ui-surface"
               >
                 <option value="Applicable">Applicable</option>
                 <option value="Not Applicable">Not Applicable</option>
@@ -6770,7 +6770,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                   const maybeState = getGstStateFromGstin(next);
                   setTds((p) => ({ ...p, tan: next, state: maybeState ? maybeState : p.state }));
                 }}
-                className="w-full px-3 py-2 rounded border"
+                className="ui-input w-full px-3 py-2"
                 placeholder="Enter TAN"
               />
             </div>
@@ -6801,7 +6801,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               type="checkbox"
               checked={tcsEnabled}
               onChange={(e) => setTcsEnabled(e.target.checked)}
-              className="h-4 w-4"
+              className="ui-input h-4 w-4"
             />
             <span>Enabled</span>
           </label>
@@ -6818,7 +6818,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               <select
                 value={tcs.registrationType}
                 onChange={(e) => setTcs((p) => ({ ...p, registrationType: e.target.value }))}
-                className="w-full px-3 py-2 rounded border ui-surface"
+                className="ui-select w-full px-3 py-2 ui-surface"
               >
                 <option value="Applicable">Applicable</option>
                 <option value="Not Applicable">Not Applicable</option>
@@ -6833,7 +6833,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                   const maybeState = getGstStateFromGstin(next);
                   setTcs((p) => ({ ...p, tan: next, state: maybeState ? maybeState : p.state }));
                 }}
-                className="w-full px-3 py-2 rounded border"
+                className="ui-input w-full px-3 py-2"
                 placeholder="Enter TAN"
               />
             </div>
@@ -7625,7 +7625,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <input
                       value={newUser.email}
                       onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="user@example.com"
                     />
                   </div>
@@ -7634,7 +7634,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <input
                       value={newUser.name}
                       onChange={(e) => setNewUser((p) => ({ ...p, name: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="Full name"
                     />
                   </div>
@@ -7643,7 +7643,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <input
                       value={newUser.mobile}
                       onChange={(e) => setNewUser((p) => ({ ...p, mobile: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="Optional"
                     />
                   </div>
@@ -7653,7 +7653,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       type="password"
                       value={newUser.password}
                       onChange={(e) => setNewUser((p) => ({ ...p, password: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="Min 8 chars"
                     />
                   </div>
@@ -7662,7 +7662,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <select
                       value={newUser.roleId}
                       onChange={(e) => setNewUser((p) => ({ ...p, roleId: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border ui-surface"
+                      className="ui-select w-full px-3 py-2 ui-surface"
                     >
                       <option value="">Select role</option>
                       {roleOptions.map((o) => (
@@ -7730,14 +7730,14 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs ui-muted">Email</label>
-                        <input value={selectedUser.email || ''} disabled className="w-full px-3 py-2 rounded border ui-sunken" />
+                        <input value={selectedUser.email || ''} disabled className="ui-input w-full px-3 py-2 ui-sunken" />
                       </div>
                       <div>
                         <label className="block text-xs ui-muted">Role</label>
                         <select
                           value={userEdit.roleId}
                           onChange={(e) => setUserEdit((p) => ({ ...p, roleId: e.target.value }))}
-                          className="w-full px-3 py-2 rounded border ui-surface"
+                          className="ui-select w-full px-3 py-2 ui-surface"
                         >
                           <option value="">Select role</option>
                           {roleOptions.map((o) => (
@@ -7755,7 +7755,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         <input
                           value={userEdit.name}
                           onChange={(e) => setUserEdit((p) => ({ ...p, name: e.target.value }))}
-                          className="w-full px-3 py-2 rounded border"
+                          className="ui-input w-full px-3 py-2"
                         />
                       </div>
                       <div>
@@ -7763,7 +7763,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         <input
                           value={userEdit.mobile}
                           onChange={(e) => setUserEdit((p) => ({ ...p, mobile: e.target.value }))}
-                          className="w-full px-3 py-2 rounded border"
+                          className="ui-input w-full px-3 py-2"
                         />
                       </div>
                     </div>
@@ -7796,7 +7796,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.delete(b.id);
                                     setUserEdit((p) => ({ ...p, branchIds: Array.from(next) }));
                                   }}
-                                  className="h-4 w-4"
+                                  className="ui-input h-4 w-4"
                                 />
                                 <span>{b.name}</span>
                               </label>
@@ -7830,7 +7830,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.delete(w.id);
                                     setUserEdit((p) => ({ ...p, warehouseIds: Array.from(next) }));
                                   }}
-                                  className="h-4 w-4"
+                                  className="ui-input h-4 w-4"
                                 />
                                 <span>{w.name}</span>
                               </label>
@@ -7866,7 +7866,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <input
                       value={newRole.label}
                       onChange={(e) => setNewRole((p) => ({ ...p, label: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="e.g. Sales Executive"
                     />
                   </div>
@@ -7875,7 +7875,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <input
                       value={permSearch}
                       onChange={(e) => setPermSearch(e.target.value)}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="Search permissions"
                     />
                     <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 ui-surface">
@@ -7898,7 +7898,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.add(key);
                                     setNewRole((prev) => ({ ...prev, permissions: Array.from(next) }));
                                   }}
-                                  className="h-4 w-4 mt-0.5"
+                                  className="ui-input h-4 w-4 mt-0.5"
                                 />
                                 <div>
                                   <div className="font-medium">{p.label || key}</div>
@@ -7971,7 +7971,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       <input
                         value={roleEdit.label}
                         onChange={(e) => setRoleEdit((p) => ({ ...p, label: e.target.value }))}
-                        className="w-full px-3 py-2 rounded border"
+                        className="ui-input w-full px-3 py-2"
                       />
                     </div>
 
@@ -7997,7 +7997,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                       else next.add(key);
                                       setRoleEdit((prev) => ({ ...prev, permissions: Array.from(next) }));
                                     }}
-                                    className="h-4 w-4 mt-0.5"
+                                    className="ui-input h-4 w-4 mt-0.5"
                                   />
                                   <div>
                                     <div className="font-medium">{p.label || key}</div>
@@ -8043,7 +8043,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <input
                       value={newRole.label}
                       onChange={(e) => setNewRole((p) => ({ ...p, label: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="e.g. Sales Executive"
                     />
                   </div>
@@ -8052,7 +8052,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <input
                       value={newRole.description}
                       onChange={(e) => setNewRole((p) => ({ ...p, description: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border"
+                      className="ui-input w-full px-3 py-2"
                       placeholder="Optional description"
                     />
                   </div>
@@ -8062,7 +8062,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <input
                     value={permSearch}
                     onChange={(e) => setPermSearch(e.target.value)}
-                    className="w-full px-3 py-2 rounded border"
+                    className="ui-input w-full px-3 py-2"
                     placeholder="Search permissions"
                   />
                   <div className="mt-2 max-h-40 overflow-auto border rounded-lg p-2 ui-surface">
@@ -8080,7 +8080,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                 const next = new Set(newRole.permissions);
                                 if (next.has(key)) next.delete(key); else next.add(key);
                                 setNewRole((prev) => ({ ...prev, permissions: Array.from(next) }));
-                              }} className="h-4 w-4 mt-0.5" />
+                              }} className="ui-input h-4 w-4 mt-0.5" />
                               <div>
                                 <div className="font-medium">{p.label || key}</div>
                                 <div className="text-xs ui-muted">{key}</div>
@@ -8136,11 +8136,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs ui-muted">Role Name</label>
-                    <input value={roleEdit.label} onChange={(e) => setRoleEdit((p) => ({ ...p, label: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                    <input value={roleEdit.label} onChange={(e) => setRoleEdit((p) => ({ ...p, label: e.target.value }))} className="ui-input w-full px-3 py-2" />
                   </div>
                   <div>
                     <label className="block text-xs ui-muted">Description</label>
-                    <input value={roleEdit.description} onChange={(e) => setRoleEdit((p) => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                    <input value={roleEdit.description} onChange={(e) => setRoleEdit((p) => ({ ...p, description: e.target.value }))} className="ui-input w-full px-3 py-2" />
                   </div>
                 </div>
                 <div>
@@ -8156,7 +8156,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                             const next = new Set(roleEdit.permissions);
                             if (next.has(key)) next.delete(key); else next.add(key);
                             setRoleEdit((prev) => ({ ...prev, permissions: Array.from(next) }));
-                          }} className="h-4 w-4 mt-0.5" />
+                          }} className="ui-input h-4 w-4 mt-0.5" />
                           <div>
                             <div className="font-medium">{p.label || key}</div>
                             <div className="text-xs ui-muted">{key}</div>
@@ -8189,15 +8189,15 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                 <div>
                   <label className="block text-xs ui-muted">Branch Name *</label>
-                  <input value={newBranch.name} onChange={(e) => setNewBranch((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="Main Branch" />
+                  <input value={newBranch.name} onChange={(e) => setNewBranch((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="Main Branch" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Code</label>
-                  <input value={newBranch.code} onChange={(e) => setNewBranch((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="MAIN" />
+                  <input value={newBranch.code} onChange={(e) => setNewBranch((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="MAIN" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Address</label>
-                  <input value={newBranch.address} onChange={(e) => setNewBranch((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="123 Street..." />
+                  <input value={newBranch.address} onChange={(e) => setNewBranch((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="123 Street..." />
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
@@ -8244,19 +8244,19 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                 <div>
                   <label className="block text-xs ui-muted">Branch Name *</label>
-                  <input value={branchEdit.name} onChange={(e) => setBranchEdit((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={branchEdit.name} onChange={(e) => setBranchEdit((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Code</label>
-                  <input value={branchEdit.code} onChange={(e) => setBranchEdit((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={branchEdit.code} onChange={(e) => setBranchEdit((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Address</label>
-                  <input value={branchEdit.address} onChange={(e) => setBranchEdit((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={branchEdit.address} onChange={(e) => setBranchEdit((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Status</label>
-                  <select value={branchEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setBranchEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="w-full px-3 py-2 rounded border ui-surface">
+                  <select value={branchEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setBranchEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
@@ -8318,23 +8318,23 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                 <div>
                   <label className="block text-xs ui-muted">Warehouse Name *</label>
-                  <input value={newWarehouse.name} onChange={(e) => setNewWarehouse((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="Main Warehouse" />
+                  <input value={newWarehouse.name} onChange={(e) => setNewWarehouse((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="Main Warehouse" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Code</label>
-                  <input value={newWarehouse.code} onChange={(e) => setNewWarehouse((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="WH-001" />
+                  <input value={newWarehouse.code} onChange={(e) => setNewWarehouse((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="WH-001" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Location</label>
-                  <input value={newWarehouse.location} onChange={(e) => setNewWarehouse((p) => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="City, Zone..." />
+                  <input value={newWarehouse.location} onChange={(e) => setNewWarehouse((p) => ({ ...p, location: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="City, Zone..." />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Address</label>
-                  <input value={newWarehouse.address} onChange={(e) => setNewWarehouse((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="123 Street..." />
+                  <input value={newWarehouse.address} onChange={(e) => setNewWarehouse((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="123 Street..." />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Branch (optional)</label>
-                  <select value={newWarehouse.branchId} onChange={(e) => setNewWarehouse((p) => ({ ...p, branchId: e.target.value }))} className="w-full px-3 py-2 rounded border ui-surface">
+                  <select value={newWarehouse.branchId} onChange={(e) => setNewWarehouse((p) => ({ ...p, branchId: e.target.value }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="">No branch</option>
                     {branchOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
@@ -8386,30 +8386,30 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                 <div>
                   <label className="block text-xs ui-muted">Warehouse Name *</label>
-                  <input value={warehouseEdit.name} onChange={(e) => setWarehouseEdit((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={warehouseEdit.name} onChange={(e) => setWarehouseEdit((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Code</label>
-                  <input value={warehouseEdit.code} onChange={(e) => setWarehouseEdit((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={warehouseEdit.code} onChange={(e) => setWarehouseEdit((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Location</label>
-                  <input value={warehouseEdit.location} onChange={(e) => setWarehouseEdit((p) => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={warehouseEdit.location} onChange={(e) => setWarehouseEdit((p) => ({ ...p, location: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Address</label>
-                  <input value={warehouseEdit.address} onChange={(e) => setWarehouseEdit((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" />
+                  <input value={warehouseEdit.address} onChange={(e) => setWarehouseEdit((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Branch</label>
-                  <select value={warehouseEdit.branchId} onChange={(e) => setWarehouseEdit((p) => ({ ...p, branchId: e.target.value }))} className="w-full px-3 py-2 rounded border ui-surface">
+                  <select value={warehouseEdit.branchId} onChange={(e) => setWarehouseEdit((p) => ({ ...p, branchId: e.target.value }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="">No branch</option>
                     {branchOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs ui-muted">Status</label>
-                  <select value={warehouseEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setWarehouseEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="w-full px-3 py-2 rounded border ui-surface">
+                  <select value={warehouseEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setWarehouseEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
@@ -8481,15 +8481,15 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs ui-muted">Legal Company Name</label>
-                      <input value={form.legalName} onChange={(e) => updateForm({ legalName: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                      <input value={form.legalName} onChange={(e) => updateForm({ legalName: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div>
                       <label className="block text-xs ui-muted">Display / Trade Name</label>
-                      <input value={form.tradeName} onChange={(e) => updateForm({ tradeName: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                      <input value={form.tradeName} onChange={(e) => updateForm({ tradeName: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div>
                       <label className="block text-xs ui-muted">Business Type / Entity Type</label>
-                      <select value={form.entityType} onChange={(e) => updateForm({ entityType: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
+                      <select value={form.entityType} onChange={(e) => updateForm({ entityType: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                         {COMPANY_ENTITY_TYPES.map((x) => (
                           <option key={x} value={x}>{x}</option>
                         ))}
@@ -8512,7 +8512,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.delete(x);
                                     updateForm({ industries: Array.from(next) });
                                   }}
-                                  className="h-4 w-4"
+                                  className="ui-input h-4 w-4"
                                 />
                                 <span>{x}</span>
                               </label>
@@ -8525,21 +8525,21 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs ui-muted">Incorporation Date</label>
-                        <input type="date" value={form.incorporationDate} onChange={(e) => updateForm({ incorporationDate: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                        <input type="date" value={form.incorporationDate} onChange={(e) => updateForm({ incorporationDate: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
                         <label className="block text-xs ui-muted">Financial Year Start</label>
-                        <input type="date" value={form.financialYearStart} onChange={(e) => updateForm({ financialYearStart: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                        <input type="date" value={form.financialYearStart} onChange={(e) => updateForm({ financialYearStart: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs ui-muted">Books Begin Date</label>
-                        <input type="date" value={form.booksBeginDate} onChange={(e) => updateForm({ booksBeginDate: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                        <input type="date" value={form.booksBeginDate} onChange={(e) => updateForm({ booksBeginDate: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
                         <label className="block text-xs ui-muted">Base Currency</label>
-                        <select value={form.baseCurrency} onChange={(e) => updateForm({ baseCurrency: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
+                        <select value={form.baseCurrency} onChange={(e) => updateForm({ baseCurrency: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {CURRENCY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}
@@ -8549,7 +8549,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs ui-muted">Country</label>
-                        <select value={form.country} onChange={(e) => updateForm({ country: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
+                        <select value={form.country} onChange={(e) => updateForm({ country: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {COUNTRY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}
@@ -8557,7 +8557,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       </div>
                       <div>
                         <label className="block text-xs ui-muted">Time Zone</label>
-                        <select value={form.timeZone} onChange={(e) => updateForm({ timeZone: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
+                        <select value={form.timeZone} onChange={(e) => updateForm({ timeZone: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {TZ_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}
@@ -8576,16 +8576,16 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs ui-muted">Official Email</label>
-                        <input value={form.officialEmail} onChange={(e) => updateForm({ officialEmail: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                        <input value={form.officialEmail} onChange={(e) => updateForm({ officialEmail: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
                         <label className="block text-xs ui-muted">Phone Number</label>
-                        <input value={form.phone} onChange={(e) => updateForm({ phone: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                        <input value={form.phone} onChange={(e) => updateForm({ phone: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-xs ui-muted">Website</label>
-                      <input value={form.website} onChange={(e) => updateForm({ website: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                      <input value={form.website} onChange={(e) => updateForm({ website: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                   </div>
                 </div>
@@ -8598,20 +8598,20 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs ui-muted">Address Line 1</label>
-                      <input value={form.regAddress1} onChange={(e) => updateForm({ regAddress1: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                      <input value={form.regAddress1} onChange={(e) => updateForm({ regAddress1: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div>
                       <label className="block text-xs ui-muted">Address Line 2</label>
-                      <input value={form.regAddress2} onChange={(e) => updateForm({ regAddress2: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                      <input value={form.regAddress2} onChange={(e) => updateForm({ regAddress2: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs ui-muted">City</label>
-                        <input value={form.regCity} onChange={(e) => updateForm({ regCity: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                        <input value={form.regCity} onChange={(e) => updateForm({ regCity: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
                         <label className="block text-xs ui-muted">State / UT</label>
-                        <select value={form.regStateCode} onChange={(e) => updateForm({ regStateCode: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
+                        <select value={form.regStateCode} onChange={(e) => updateForm({ regStateCode: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           <option value="">Select</option>
                           {Object.keys(GST_STATE_BY_CODE || {}).sort().map((code) => (
                             <option key={code} value={code}>{GST_STATE_BY_CODE[code]}</option>
@@ -8622,11 +8622,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs ui-muted">Pincode</label>
-                        <input value={form.regPincode} onChange={(e) => updateForm({ regPincode: e.target.value })} className="w-full px-3 py-2 rounded border" />
+                        <input value={form.regPincode} onChange={(e) => updateForm({ regPincode: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
                         <label className="block text-xs ui-muted">Country</label>
-                        <select value={form.regCountry} onChange={(e) => updateForm({ regCountry: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
+                        <select value={form.regCountry} onChange={(e) => updateForm({ regCountry: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {COUNTRY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}

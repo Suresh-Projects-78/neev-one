@@ -316,7 +316,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"
-              className="w-full pl-3 pr-3 py-2 border rounded-lg ui-surface"
+              className="ui-input w-full pl-3 pr-3 py-2 ui-surface"
             />
           </div>
         </div>
@@ -365,25 +365,25 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 </div>
                 <div className="col-span-12 sm:col-span-6">
                   <label className="block text-sm font-medium mb-1">Warehouse Name *</label>
-                  <input className="w-full px-3 py-2 border rounded-lg" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} required />
+                  <input className="ui-input w-full px-3 py-2" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Address Line 1</label>
-                  <input className="w-full px-3 py-2 border rounded-lg" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} />
+                  <input className="ui-input w-full px-3 py-2" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Address Line 2</label>
-                  <input className="w-full px-3 py-2 border rounded-lg" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
+                  <input className="ui-input w-full px-3 py-2" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">City</label>
-                  <input className="w-full px-3 py-2 border rounded-lg" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
+                  <input className="ui-input w-full px-3 py-2" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
                 </div>
                 <div>
                   <PopupSelect
@@ -399,14 +399,14 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Country</label>
-                  <input className="w-full px-3 py-2 border rounded-lg" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
+                  <input className="ui-input w-full px-3 py-2" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">GST Registration</label>
-                  <select className="w-full px-3 py-2 border rounded-lg ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
+                  <select className="ui-select w-full px-3 py-2 ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
                     <option value="UNREGISTERED">Unregistered</option>
                     <option value="REGULAR">Regular</option>
                     <option value="COMPOSITION">Composition</option>
@@ -415,7 +415,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 <div>
                   <label className="block text-sm font-medium mb-1">GSTIN</label>
                   <input
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="ui-input w-full px-3 py-2"
                     value={editForm.gstin}
                     onChange={(e) => {
                       const next = e.target.value;
@@ -431,15 +431,15 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Contact Person</label>
-                  <input className="w-full px-3 py-2 border rounded-lg" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
+                  <input className="ui-input w-full px-3 py-2" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Phone</label>
-                  <input className="w-full px-3 py-2 border rounded-lg" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
+                  <input className="ui-input w-full px-3 py-2" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Email</label>
-                  <input type="email" className="w-full px-3 py-2 border rounded-lg" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
+                  <input type="email" className="ui-input w-full px-3 py-2" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
                 </div>
               </div>
 
@@ -521,25 +521,25 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             </div>
             <div className="col-span-12 sm:col-span-6">
               <label className="block text-sm font-medium mb-1">Warehouse Name *</label>
-              <input className="w-full px-3 py-2 border rounded-lg" value={form.name} onChange={onChange('name')} required />
+              <input className="ui-input w-full px-3 py-2" value={form.name} onChange={onChange('name')} required />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Address Line 1</label>
-              <input className="w-full px-3 py-2 border rounded-lg" value={form.addressLine1} onChange={onChange('addressLine1')} />
+              <input className="ui-input w-full px-3 py-2" value={form.addressLine1} onChange={onChange('addressLine1')} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Address Line 2</label>
-              <input className="w-full px-3 py-2 border rounded-lg" value={form.addressLine2} onChange={onChange('addressLine2')} />
+              <input className="ui-input w-full px-3 py-2" value={form.addressLine2} onChange={onChange('addressLine2')} />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">City</label>
-              <input className="w-full px-3 py-2 border rounded-lg" value={form.city} onChange={onChange('city')} />
+              <input className="ui-input w-full px-3 py-2" value={form.city} onChange={onChange('city')} />
             </div>
             <div>
               <PopupSelect
@@ -555,14 +555,14 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Country</label>
-              <input className="w-full px-3 py-2 border rounded-lg" value={form.country} onChange={onChange('country')} />
+              <input className="ui-input w-full px-3 py-2" value={form.country} onChange={onChange('country')} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">GST Registration</label>
-              <select className="w-full px-3 py-2 border rounded-lg ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+              <select className="ui-select w-full px-3 py-2 ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
                 <option value="UNREGISTERED">Unregistered</option>
                 <option value="REGULAR">Regular</option>
                 <option value="COMPOSITION">Composition</option>
@@ -571,7 +571,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             <div>
               <label className="block text-sm font-medium mb-1">GSTIN</label>
               <input
-                className="w-full px-3 py-2 border rounded-lg"
+                className="ui-input w-full px-3 py-2"
                 value={form.gstin}
                 onChange={onChange('gstin')}
                 placeholder="15 characters"
@@ -582,15 +582,15 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Contact Person</label>
-              <input className="w-full px-3 py-2 border rounded-lg" value={form.contactPerson} onChange={onChange('contactPerson')} />
+              <input className="ui-input w-full px-3 py-2" value={form.contactPerson} onChange={onChange('contactPerson')} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Phone</label>
-              <input className="w-full px-3 py-2 border rounded-lg" value={form.phone} onChange={onChange('phone')} />
+              <input className="ui-input w-full px-3 py-2" value={form.phone} onChange={onChange('phone')} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Email</label>
-              <input type="email" className="w-full px-3 py-2 border rounded-lg" value={form.email} onChange={onChange('email')} />
+              <input type="email" className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} />
             </div>
           </div>
           <div className="flex justify-end gap-2">

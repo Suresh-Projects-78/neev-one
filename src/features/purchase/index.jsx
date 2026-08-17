@@ -282,7 +282,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           <select
             value={formData.warehouseId}
             onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg ui-surface"
+            className="ui-select w-full px-3 py-2 ui-surface"
             required
           >
             <option value="">Select Warehouse</option>
@@ -300,7 +300,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="date"
             value={formData.date}
             onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -311,7 +311,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="date"
             value={formData.dueDate}
             onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -322,7 +322,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="text"
             value={formData.refNo}
             onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             placeholder="Customer invoice no"
           />
         </div>
@@ -333,7 +333,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="date"
             value={formData.refDate}
             onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
           />
         </div>
       </div>
@@ -376,7 +376,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -384,7 +384,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                       min="0"
                       step="0.01"
                     />
@@ -394,7 +394,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                       min="0"
                       step="0.01"
                     />
@@ -670,7 +670,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -714,18 +714,18 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="w-20 px-2 py-1 border rounded" min="1" />
+                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="ui-input w-20 px-2 py-1" min="1" />
                   </td>
                   <td className="px-3 py-2">
                     <input
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="w-28 px-2 py-1 border rounded"
+                      className="ui-input w-28 px-2 py-1"
                       min="0"
                       step="0.01"
                     />
@@ -754,7 +754,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
 
       <div>
         <label className="block text-sm font-medium mb-1">Notes</label>
-        <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" rows={3} />
+        <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full px-3 py-2" rows={3} />
       </div>
 
       <div className="flex justify-end">
@@ -1526,7 +1526,7 @@ export const DebitNoteForm = ({
 
         <div>
           <label className="block text-sm font-medium mb-1">Original Bill #</label>
-          <select value={formData.originalBillId} onChange={(e) => onSelectOriginalBill(e.target.value)} className="w-full px-3 py-2 border rounded-lg" required>
+          <select value={formData.originalBillId} onChange={(e) => onSelectOriginalBill(e.target.value)} className="ui-select w-full px-3 py-2" required>
             <option value="">Select Bill</option>
             {companyBills.map((b) => (
               <option key={b.id} value={b.id}>
@@ -1541,7 +1541,7 @@ export const DebitNoteForm = ({
           <select
             value={formData.warehouseId}
             onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg ui-surface"
+            className="ui-select w-full px-3 py-2 ui-surface"
             required
           >
             <option value="">Select Warehouse</option>
@@ -1559,7 +1559,7 @@ export const DebitNoteForm = ({
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-input w-full px-3 py-2"
             required
           />
         </div>
@@ -1613,18 +1613,18 @@ export const DebitNoteForm = ({
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="w-full px-2 py-1 border rounded"
+                      className="ui-input w-full px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="w-20 px-2 py-1 border rounded" min="1" />
+                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="ui-input w-20 px-2 py-1" min="1" />
                   </td>
                   <td className="px-3 py-2">
                     <input
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="w-24 px-2 py-1 border rounded"
+                      className="ui-input w-24 px-2 py-1"
                       min="0"
                       step="0.01"
                     />

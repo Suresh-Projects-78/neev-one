@@ -94,7 +94,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
               setVoucherType(e.target.value);
               setVoucherId('');
             }}
-            className="w-full px-3 py-2 border rounded-lg"
+            className="ui-select w-full px-3 py-2"
           >
             <option value="bill">Bill</option>
             <option value="expense">Expense</option>
@@ -107,7 +107,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
         <select
           value={voucherId}
           onChange={(e) => setVoucherId(e.target.value)}
-          className="w-full px-3 py-2 border rounded-lg"
+          className="ui-select w-full px-3 py-2"
         >
           <option value="">Select</option>
           {eligibleDocs.map((d) => (

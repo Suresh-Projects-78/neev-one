@@ -70,11 +70,11 @@ export function RoleCreateForm({ orgId, onCreated }) {
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">Role Name</label>
-          <input className="w-full px-3 py-2 border rounded-lg" value={name} onChange={(e) => setName(e.target.value)} required />
+          <input className="ui-input w-full px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Role Type</label>
-          <select className="w-full px-3 py-2 border rounded-lg" value={roleType} onChange={(e) => setRoleType(e.target.value)}>
+          <select className="ui-select w-full px-3 py-2" value={roleType} onChange={(e) => setRoleType(e.target.value)}>
             <option value="ADMIN">Admin</option>
             <option value="ACCOUNTANT">Accountant</option>
             <option value="SALES">Sales</option>
@@ -85,7 +85,7 @@ export function RoleCreateForm({ orgId, onCreated }) {
 
       <div>
         <label className="block text-sm font-medium mb-1">Description</label>
-        <input className="w-full px-3 py-2 border rounded-lg" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <input className="ui-input w-full px-3 py-2" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
 
       <div className="border rounded-xl overflow-hidden">
