@@ -12,11 +12,20 @@ import { PermissionAction } from './enums.js';
  * truth rather than a hardcoded client list that can drift.
  */
 
+export type FieldDef = {
+  key: string;
+  label: string;
+  /** 0 = ordinary. Above 0 requires a rule granting at least this level. */
+  permLevel: number;
+};
+
 export type ResourceDef = {
   key: string; // subModule value stored on Permission
   label: string;
   description?: string;
   actions: string[];
+  /** Fields worth restricting individually. Anything unlisted is level 0. */
+  fields?: FieldDef[];
 };
 
 export type ModuleDef = {
@@ -41,7 +50,18 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
     label: 'Sales',
     description: 'Customer-facing documents and collections',
     resources: [
-      { key: 'Invoices', label: 'Invoices', actions: DOCUMENT },
+      {
+        key: 'Invoices',
+        label: 'Invoices',
+        actions: DOCUMENT,
+        // Pricing and settlement are held above the ordinary level: a clerk may
+        // raise an invoice without being able to discount it or mark it paid.
+        fields: [
+          { key: 'discount', label: 'Discount', permLevel: 1 },
+          { key: 'paidAmount', label: 'Amount paid', permLevel: 1 },
+          { key: 'status', label: 'Status', permLevel: 1 },
+        ],
+      },
       { key: 'Receipts', label: 'Receipts', actions: DOCUMENT },
       { key: 'Estimates', label: 'Estimates / Quotes', actions: DOCUMENT },
       { key: 'Credit Notes', label: 'Credit Notes', actions: DOCUMENT_APPROVAL },
@@ -143,6 +163,12 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
 ];
 
 /** Flat list of every grantable permission, as (module, subModule, action). */
+/** Field definitions for a resource, or an empty list. */
+export const fieldsFor = (module: string, resource: string): FieldDef[] => {
+  const mod = PERMISSION_CATALOG.find((m) => m.key === module);
+  return mod?.resources.find((r) => r.key === resource)?.fields || [];
+};
+
 export const flattenCatalog = () => {
   const rows: Array<{ module: string; subModule: string; action: string }> = [];
   for (const m of PERMISSION_CATALOG) {

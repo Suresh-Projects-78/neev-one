@@ -4,6 +4,7 @@ import { prisma } from '../utils/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { resolveAccess, resolveUserPermissions } from '../services/access.js';
 import { PermissionAction } from '../constants/enums.js';
 import {
   PERMISSION_CATALOG,
@@ -78,12 +79,18 @@ permissionsRouter.get(
 
     const rows = await prisma.rolePermission.findMany({
       where: { roleId: role.id, allowed: true },
-      select: { permission: { select: { module: true, subModule: true, action: true } } },
+      select: { permLevel: true, permission: { select: { module: true, subModule: true, action: true } } },
     });
+
+    const levels: Record<string, number> = {};
+    for (const r of rows) {
+      if (r.permLevel > 0) levels[permKey(r.permission.module, r.permission.subModule, r.permission.action)] = r.permLevel;
+    }
 
     res.json({
       role,
       permissions: rows.map((r) => permKey(r.permission.module, r.permission.subModule, r.permission.action)),
+      levels,
     });
   }
 );
@@ -91,6 +98,8 @@ permissionsRouter.get(
 const putPermissionsSchema = z.object({
   // Wire keys: "MODULE::Resource::ACTION"
   permissions: z.array(z.string().min(3)),
+  // Optional field level per key; absent means level 0.
+  levels: z.record(z.number().int().min(0).max(9)).optional(),
 });
 
 /**
@@ -137,17 +146,26 @@ permissionsRouter.put(
 
     const current = await prisma.rolePermission.findMany({
       where: { roleId: role.id },
-      select: { id: true, permissionId: true, allowed: true },
+      select: { id: true, permissionId: true, allowed: true, permLevel: true },
     });
     const currentByPermId = new Map(current.map((c) => [c.permissionId, c]));
 
     await prisma.$transaction(async (tx) => {
+      const levelByPermId = new Map<string, number>();
+      for (const [k, lvl] of Object.entries(body.levels || {})) {
+        const id = idByKey.get(k);
+        if (id) levelByPermId.set(id, Number(lvl) || 0);
+      }
+
       for (const permissionId of wantedIds) {
         const existing = currentByPermId.get(permissionId);
+        const permLevel = levelByPermId.get(permissionId) ?? 0;
         if (!existing) {
-          await tx.rolePermission.create({ data: { accountId, orgId, roleId: role.id, permissionId, allowed: true } });
-        } else if (!existing.allowed) {
-          await tx.rolePermission.update({ where: { id: existing.id }, data: { allowed: true } });
+          await tx.rolePermission.create({
+            data: { accountId, orgId, roleId: role.id, permissionId, allowed: true, permLevel },
+          });
+        } else if (!existing.allowed || existing.permLevel !== permLevel) {
+          await tx.rolePermission.update({ where: { id: existing.id }, data: { allowed: true, permLevel } });
         }
       }
       const toRemove = current.filter((c) => !wantedIds.has(c.permissionId)).map((c) => c.id);
@@ -262,22 +280,27 @@ permissionsRouter.get('/orgs/:orgId/permissions/me', async (req, res) => {
   // it. Bring the creator's ADMIN role up to the full preset, once.
   await syncOwnerRoleIfCreator(accountId, orgId, userId);
 
-  const assignments = await prisma.userRoleAssignment.findMany({
-    where: { accountId, orgId, userId, OR: [{ branchId: null }, { branchId }] },
-    select: { roleId: true, role: { select: { id: true, name: true, roleType: true } } },
-  });
+  const access = await resolveAccess(accountId, orgId, userId, branchId);
 
-  const roleIds = assignments.map((a) => a.roleId);
-  const rows = roleIds.length
-    ? await prisma.rolePermission.findMany({
-        where: { roleId: { in: roleIds }, allowed: true },
-        select: { permission: { select: { module: true, subModule: true, action: true } } },
+  const roles = access.roleIds.length
+    ? await prisma.role.findMany({
+        where: { id: { in: access.roleIds } },
+        select: { id: true, name: true, roleType: true },
       })
     : [];
 
-  const permissions = Array.from(
-    new Set(rows.map((r) => permKey(r.permission.module, r.permission.subModule, r.permission.action)))
-  ).sort();
+  const profiles = await prisma.userRoleProfile.findMany({
+    where: { accountId, orgId, userId },
+    select: { profile: { select: { id: true, name: true } } },
+  });
+
+  const permissions = Array.from(access.permissions).sort();
+  const levels: Record<string, number> = {};
+  for (const [k, v] of access.levels) if (v > 0) levels[k] = v;
+
+  const userPermissions = await resolveUserPermissions(accountId, orgId, userId);
+  const restrictionsByType: Record<string, string[]> = {};
+  for (const [type, ids] of userPermissions) restrictionsByType[type] = Array.from(ids);
 
   const branches = await prisma.userBranchMembership.findMany({
     where: { accountId, orgId, userId },
@@ -289,12 +312,16 @@ permissionsRouter.get('/orgs/:orgId/permissions/me', async (req, res) => {
   });
 
   res.json({
-    roles: assignments.map((a) => a.role),
+    roles,
+    profiles: profiles.map((p) => p.profile),
     permissions,
+    // Highest field level held per permission; absent means level 0.
+    levels,
     // Document-level restrictions, ERPNext's "User Permissions".
     restrictions: {
       branchIds: branches.map((b) => b.branchId),
       warehouseIds: warehouses.map((w) => w.warehouseId),
+      ...restrictionsByType,
     },
   });
 });

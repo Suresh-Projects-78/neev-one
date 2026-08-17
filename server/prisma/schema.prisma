@@ -250,6 +250,9 @@ model RolePermission {
   roleId       String
   permissionId String
   allowed      Boolean @default(true)
+  // Field-level access, as in ERPNext's permlevels. Level 0 covers ordinary
+  // fields; a field declared at level 1 needs a rule granting level >= 1.
+  permLevel    Int     @default(0)
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
@@ -613,4 +616,136 @@ model JournalLine {
   @@index([accountId, orgId, branchId, ledgerAccountId])
   @@index([accountId, orgId, partyType, partyId])
   @@index([entryId])
+}
+
+// ----------------------------
+// Role profiles — bundles of roles, assigned as one unit
+// ----------------------------
+model RoleProfile {
+  id          String  @id @default(cuid())
+  accountId   String
+  orgId       String
+  name        String
+  description String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  roles       RoleProfileRole[]
+  assignments UserRoleProfile[]
+
+  @@unique([orgId, name])
+  @@index([accountId, orgId])
+}
+
+model RoleProfileRole {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  profileId String
+  roleId    String
+
+  profile RoleProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, roleId])
+  @@index([accountId, orgId])
+}
+
+model UserRoleProfile {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  userId    String
+  profileId String
+  branchId  String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  profile RoleProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, userId, profileId])
+  @@index([accountId, orgId, userId])
+}
+
+// ----------------------------
+// Approval thresholds
+// ----------------------------
+model ApprovalRule {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  docType   String // INVOICE | BILL | PAYMENT | JOURNAL
+  name      String
+  // A rule matches when the document amount falls in [minAmount, maxAmount).
+  minAmount Decimal  @default(0)
+  maxAmount Decimal?
+
+  approverRoleId String
+  sequence       Int     @default(1)
+  blocksPosting  Boolean @default(true)
+  isActive       Boolean @default(true)
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  requests ApprovalRequest[]
+
+  @@unique([orgId, docType, name])
+  @@index([accountId, orgId, docType, isActive])
+}
+
+model ApprovalRequest {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  docType  String
+  docId    String
+  ruleId   String
+  sequence Int    @default(1)
+
+  amount Decimal @default(0)
+  status String  @default("PENDING") // PENDING | APPROVED | REJECTED
+
+  requestedByUserId String
+  decidedByUserId   String?
+  decidedAt         DateTime?
+  comment           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rule ApprovalRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, orgId, docType, docId])
+  @@index([accountId, orgId, status])
+}
+
+// ----------------------------
+// User permissions — document-level restrictions, generalised
+// ----------------------------
+// Branch and warehouse access already have dedicated tables because they are
+// also the tenancy boundary. This covers everything else: restrict a user to
+// certain customers, vendors, cost centres, and so on.
+model UserPermission {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  userId    String
+
+  entityType String // CUSTOMER | VENDOR | COST_CENTRE | ITEM_GROUP
+  entityId   String
+  label      String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  @@unique([accountId, orgId, userId, entityType, entityId])
+  @@index([accountId, orgId, userId, entityType])
 }

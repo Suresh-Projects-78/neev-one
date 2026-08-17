@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { PermissionAction, type PermissionAction as PermissionActionType } from '../constants/enums.js';
 import { prisma } from '../utils/prisma.js';
+import { resolveAccess } from '../services/access.js';
 
 // DB-stored RBAC:
 // - UserRoleAssignment can be org-wide (branchId null) or branch-scoped
@@ -9,6 +10,7 @@ import { prisma } from '../utils/prisma.js';
 declare module 'express-serve-static-core' {
   interface Request {
     permissions?: Set<string>;
+    permissionLevels?: Map<string, number>;
   }
 }
 
@@ -173,43 +175,19 @@ export function requirePermission(module: string, action: PermissionActionType, 
     if (!accountId || !userId) return res.status(401).json({ error: 'Missing auth context' });
     if (!orgId || !branchId) return res.status(400).json({ error: 'Missing tenant context' });
 
-    // Build effective role set for this user in this org/branch
-    const assignments = await prisma.userRoleAssignment.findMany({
-      where: {
-        accountId,
-        orgId,
-        userId,
-        OR: [{ branchId: null }, { branchId }],
-      },
-      select: { roleId: true },
-    });
+    // Effective access resolves direct role assignments AND role profiles.
+    let access = await resolveAccess(accountId, orgId, userId, branchId);
 
-    let roleIds = assignments.map((a: { roleId: string }) => a.roleId);
-    if (roleIds.length === 0) {
+    if (access.roleIds.length === 0) {
       const bootstrapped = await bootstrapOwnerRoleIfCreator(accountId, orgId, userId);
       if (!bootstrapped) return res.status(403).json({ error: 'No roles assigned' });
-
-      const retry = await prisma.userRoleAssignment.findMany({
-        where: { accountId, orgId, userId, OR: [{ branchId: null }, { branchId }] },
-        select: { roleId: true },
-      });
-      roleIds = retry.map((a: { roleId: string }) => a.roleId);
-      if (roleIds.length === 0) return res.status(403).json({ error: 'No roles assigned' });
+      access = await resolveAccess(accountId, orgId, userId, branchId);
+      if (access.roleIds.length === 0) return res.status(403).json({ error: 'No roles assigned' });
     }
 
-    const rolePerms = await prisma.rolePermission.findMany({
-      where: { roleId: { in: roleIds }, allowed: true },
-      select: {
-        permission: { select: { module: true, subModule: true, action: true } },
-      },
-    });
-
-    const allowed = new Set<string>();
-    for (const rp of rolePerms) {
-      allowed.add(permString(rp.permission.module, rp.permission.subModule ?? null, rp.permission.action as PermissionActionType));
-    }
-
+    const allowed = access.permissions;
     req.permissions = allowed;
+    req.permissionLevels = access.levels;
 
     const want = permString(m, sm || null, action);
     const ok = allowed.has(want);

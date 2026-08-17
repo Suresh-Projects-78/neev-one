@@ -7,6 +7,9 @@ import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { ensureLedgerSetup, invoicePostingLines, postEntry, reverseEntry } from '../services/ledger.js';
+import { allowsEntity, filterFieldsByLevel, levelFor, resolveAccess, resolveUserPermissions } from '../services/access.js';
+import { evaluateApproval, isPending } from '../services/approvals.js';
+import { fieldsFor } from '../constants/permissionCatalog.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -130,9 +133,26 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   const userId = req.auth!.userId;
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
-  const body = invoiceUpsertSchema.parse(req.body);
-  const branchId = String(body.branchId || req.tenant!.branchId || '').trim();
+  const parsed = invoiceUpsertSchema.parse(req.body);
+  const branchId = String(parsed.branchId || req.tenant!.branchId || '').trim();
   if (!branchId) return res.status(400).json({ error: 'Missing branchId' });
+
+  // Document restrictions: a user limited to certain customers may not raise an
+  // invoice for anyone else.
+  const userPerms = await resolveUserPermissions(accountId, orgId, userId);
+  if (!allowsEntity(userPerms, 'CUSTOMER', parsed.customerId)) {
+    return res.status(403).json({ error: 'You are not permitted to raise documents for this customer' });
+  }
+
+  // Field-level permissions: silently drop fields above the caller's level
+  // rather than failing the whole request, as ERPNext does.
+  const access = await resolveAccess(accountId, orgId, userId, branchId);
+  const grantedLevel = levelFor(access, INVOICE_MODULE, INVOICE_SUBMODULE, PermissionAction.CREATE);
+  const { value: body, stripped } = filterFieldsByLevel(
+    parsed,
+    fieldsFor(INVOICE_MODULE, INVOICE_SUBMODULE),
+    grantedLevel
+  );
 
   const id = randomUUID();
   try {
@@ -182,6 +202,28 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to create invoice' });
 
+  // Approval thresholds are evaluated before anything reaches the ledger: an
+  // invoice awaiting sign-off must not appear in the books.
+  const approval = await evaluateApproval({
+    accountId,
+    orgId,
+    branchId,
+    userId,
+    docType: 'INVOICE',
+    docId: id,
+    amount: Number(body.total ?? 0),
+  });
+
+  if (approval.required) {
+    await prisma.$executeRawUnsafe(`UPDATE Invoice SET status = ? WHERE id = ?`, 'Pending Approval', id);
+    const held = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, id);
+    return res.status(201).json({
+      invoice: normalizeInvoiceResponse(held[0]),
+      approval: { required: true, rule: approval.ruleName },
+      strippedFields: stripped,
+    });
+  }
+
   // Post the invoice to the general ledger. A failure here is not silent: the
   // invoice row is removed so the books and the document list cannot diverge.
   try {
@@ -212,7 +254,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
     return res.status(status).json({ error: `Invoice not saved: ${String(e?.message || e)}` });
   }
 
-  res.status(201).json({ invoice: normalizeInvoiceResponse(row) });
+  res.status(201).json({ invoice: normalizeInvoiceResponse(row), strippedFields: stripped });
 });
 
 invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOICE_MODULE, PermissionAction.EDIT, INVOICE_SUBMODULE), async (req, res) => {
@@ -231,7 +273,17 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   const existing = existingRows[0];
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
-  const body = invoiceUpsertSchema.parse(req.body);
+  const parsedPatch = invoiceUpsertSchema.parse(req.body);
+  const editAccess = await resolveAccess(accountId, orgId, req.auth!.userId, req.tenant!.branchId);
+  const { value: body, stripped } = filterFieldsByLevel(
+    parsedPatch,
+    fieldsFor(INVOICE_MODULE, INVOICE_SUBMODULE),
+    levelFor(editAccess, INVOICE_MODULE, INVOICE_SUBMODULE, PermissionAction.EDIT)
+  );
+
+  if (await isPending(accountId, orgId, 'INVOICE', existing.id)) {
+    return res.status(409).json({ error: 'This invoice is awaiting approval and cannot be edited' });
+  }
 
   try {
     await prisma.$executeRawUnsafe(
@@ -276,7 +328,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to update invoice' });
 
-  res.json({ invoice: normalizeInvoiceResponse(row) });
+  res.json({ invoice: normalizeInvoiceResponse(row), strippedFields: stripped });
 });
 
 invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermission(INVOICE_MODULE, PermissionAction.EDIT, INVOICE_SUBMODULE), async (req, res) => {
