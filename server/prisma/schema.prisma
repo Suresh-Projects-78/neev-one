@@ -26,6 +26,10 @@ model Org {
   name            String
   legalName       String?
   pan             String?
+
+  /// The currency the books are kept in. Every ledger posting is in this
+  /// currency, whatever currency the document was raised in.
+  baseCurrency String @default("INR")
   createdByUserId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -443,6 +447,14 @@ model Invoice {
   status           String  @default("Draft")
   sourceEstimateId String?
   itemsJson        String
+
+  /// The currency this invoice was raised in, and the rate used to translate
+  /// it into the books. Both are stored so the posting can be explained later
+  /// without guessing which rate was in force.
+  currency     String  @default("INR")
+  exchangeRate Decimal @default(1)
+  /// `total` translated at `exchangeRate`. Reports read this.
+  baseTotal Decimal @default(0)
 
   /// Migration identity: where this row came from, and its key in that system.
   /// Re-running an import maps to the same row instead of duplicating it.
@@ -1261,6 +1273,56 @@ model ImportRow {
 
   @@unique([batchId, rowNumber])
   @@index([accountId, orgId, batchId, status])
+}
+
+/// A currency this organisation trades in — requirement 8.
+model Currency {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+
+  code   String // ISO 4217: INR, USD, EUR
+  name   String
+  symbol String @default("")
+  /// Minor units. Most currencies use 2; JPY uses 0.
+  decimals Int @default(2)
+
+  isActive Boolean @default(true)
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rates ExchangeRate[]
+
+  @@unique([orgId, code])
+  @@index([accountId, orgId, isActive])
+}
+
+/// What one unit of `code` was worth in the org's base currency on a date.
+///
+/// Rates are dated and never overwritten: restating a past document at
+/// today's rate would silently change reported results for a closed period.
+model ExchangeRate {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+
+  currencyId String
+  /// Denormalised so a rate can be looked up without joining.
+  code String
+  /// YYYY-MM-DD.
+  date String
+  /// Units of base currency per one unit of `code`.
+  rate Decimal
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  currency Currency @relation(fields: [currencyId], references: [id], onDelete: Cascade)
+
+  @@unique([orgId, code, date])
+  @@index([accountId, orgId, code, date])
 }
 
 // ----------------------------

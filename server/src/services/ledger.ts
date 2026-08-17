@@ -28,7 +28,8 @@ export type ControlKind =
   | 'BANK'
   | 'ROUNDING'
   | 'OPENING_DIFF'
-  | 'SUSPENSE';
+  | 'SUSPENSE'
+  | 'FX_GAIN_LOSS';
 
 export type PostingLine = {
   controlKind?: ControlKind;
@@ -99,6 +100,7 @@ const DEFAULT_ACCOUNTS: Array<{
   { code: '3000', name: 'Opening Balance Difference', accountType: 'EQUITY', controlKind: 'OPENING_DIFF' },
   { code: '4000', name: 'Sales Accounts', accountType: 'INCOME', controlKind: 'SALES' },
   { code: '5000', name: 'Purchase Accounts', accountType: 'EXPENSE', controlKind: 'PURCHASES' },
+  { code: '9997', name: 'Exchange Gain / Loss', accountType: 'EXPENSE', controlKind: 'FX_GAIN_LOSS' },
   { code: '9998', name: 'Rounding Difference', accountType: 'EXPENSE', controlKind: 'ROUNDING' },
   { code: '9999', name: 'Suspense / Uncategorised', accountType: 'ASSET', controlKind: 'SUSPENSE' },
 ];

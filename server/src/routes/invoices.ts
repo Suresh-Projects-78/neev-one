@@ -13,6 +13,7 @@ import { fieldsFor } from '../constants/permissionCatalog.js';
 import { dueDateFor } from './parties.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
+import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/fx.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -49,6 +50,8 @@ const invoiceUpsertSchema = z.object({
   refDate: z.string().optional().nullable(),
   customerId: z.string().optional().nullable(),
   customerName: z.string().min(1),
+  /// Omit for the base currency.
+  currency: z.string().length(3).optional(),
   customerGstin: z.string().optional().nullable(),
   placeOfSupplyState: z.string().optional().nullable(),
   taxType: z.string().optional().nullable(),
@@ -268,6 +271,25 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   // invoice row is removed so the books and the document list cannot diverge.
   try {
     await ensureLedgerSetup(accountId, orgId, userId);
+
+    // Requirement 8: the document may be in any currency, but the ledger is
+    // kept in one. Translate every amount at the rate in force on the document
+    // date before posting — mixing currencies in one ledger would give a trial
+    // balance that foots to zero and means nothing.
+    const baseCurrency = await baseCurrencyFor(accountId, orgId);
+    const docCurrency = String(body.currency || baseCurrency).toUpperCase();
+    const fxRate = isBase(docCurrency, baseCurrency)
+      ? 1
+      : await rateFor({ accountId, orgId, currency: docCurrency, date: String(body.date).trim(), baseCurrency });
+
+    await prisma.$executeRawUnsafe(
+      `UPDATE Invoice SET currency = ?, exchangeRate = ?, baseTotal = ? WHERE id = ?`,
+      docCurrency,
+      fxRate,
+      toBase(Number(body.total ?? 0), fxRate),
+      id
+    );
+
     await postEntry({
       accountId,
       orgId,
@@ -275,17 +297,19 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       userId,
       date: String(body.date).trim(),
       journalCode: 'SAL',
-      narration: `Invoice ${invoiceNumber} - ${String(body.customerName || '').trim()}`,
+      narration:
+        `Invoice ${invoiceNumber} - ${String(body.customerName || '').trim()}` +
+        (fxRate === 1 ? '' : ` (${docCurrency} at ${fxRate})`),
       sourceDocType: 'INVOICE',
       sourceDocId: id,
       lines: invoicePostingLines({
         customerId: body.customerId ?? null,
         customerName: body.customerName,
-        subtotal: body.subtotal ?? 0,
-        cgstTotal: body.cgstTotal ?? 0,
-        sgstTotal: body.sgstTotal ?? 0,
-        igstTotal: body.igstTotal ?? 0,
-        total: body.total ?? 0,
+        subtotal: toBase(Number(body.subtotal ?? 0), fxRate),
+        cgstTotal: toBase(Number(body.cgstTotal ?? 0), fxRate),
+        sgstTotal: toBase(Number(body.sgstTotal ?? 0), fxRate),
+        igstTotal: toBase(Number(body.igstTotal ?? 0), fxRate),
+        total: toBase(Number(body.total ?? 0), fxRate),
       }),
     });
   } catch (e: any) {
