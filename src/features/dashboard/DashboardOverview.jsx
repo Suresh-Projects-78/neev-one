@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -13,6 +13,24 @@ import {
 } from 'lucide-react';
 
 import { formatMoney } from '../../utils/money';
+/**
+ * ECharts is ~2 MB unminified and belongs nowhere near first paint. Loading the
+ * chart module on demand keeps the initial bundle for the shell and the tables,
+ * and the dashboard shows a shaped placeholder for the few hundred milliseconds
+ * it takes to arrive.
+ */
+const CircularCharts = {
+  ChartLegend: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.ChartLegend }))),
+  CompositionPie: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.CompositionPie }))),
+  DonutChart: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.DonutChart }))),
+  RadialGauge: lazy(() => import('../../components/charts/CircularCharts').then((m) => ({ default: m.RadialGauge }))),
+};
+const { ChartLegend, CompositionPie, DonutChart, RadialGauge } = CircularCharts;
+
+/** Reserves the chart's height so nothing below it jumps when it arrives. */
+const ChartFallback = ({ height = 220 }) => (
+  <div className="ui-skel w-full" style={{ height, borderRadius: 'var(--radius)' }} aria-hidden="true" />
+);
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { useCountUp } from '../../components/ui/useCountUp';
 
@@ -209,76 +227,62 @@ function RevenueChart({ buckets, company }) {
 
 /** Receivables by how overdue they are — the question behind "who owes us". */
 function AgingPanel({ buckets, total, company }) {
+  const rows = buckets.filter((b) => b.amount > 0).map((b) => ({ name: b.label, value: b.amount, color: b.color }));
+
   return (
     <section className="ui-card p-5">
       <h2 className="ui-title text-sm">Outstanding by age</h2>
-      <p className="ui-subtle text-xs mt-0.5">{formatMoney(total, company)} awaiting payment</p>
+      <p className="ui-subtle text-xs mt-0.5">Where the receivable book is sitting</p>
 
       {total <= 0 ? (
         <EmptyState icon={CircleSlash} title="Nothing outstanding" description="Every invoice in view is settled." />
       ) : (
         <>
-          <div className="mt-5 flex h-2.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
-            {buckets.map((b) =>
-              b.amount > 0 ? (
-                <span
-                  key={b.label}
-                  className="ui-bar-fill h-full"
-                  style={{ width: `${(b.amount / total) * 100}%`, backgroundColor: b.color }}
-                  title={`${b.label}: ${formatMoney(b.amount, company)}`}
-                />
-              ) : null
-            )}
+          <Suspense fallback={<ChartFallback height={220} />}>
+            <DonutChart
+              data={rows}
+              centerLabel="Outstanding"
+              centerValue={formatMoney(total, company)}
+              height={220}
+            />
+          </Suspense>
+          {/* The ring shows shape; these carry the figures it cannot. */}
+          <div className="mt-4">
+            <Suspense fallback={<ChartFallback height={96} />}>
+              <ChartLegend rows={rows} total={total} formatter={(v) => formatMoney(v, company)} />
+            </Suspense>
           </div>
-
-          <ul className="mt-4 space-y-2.5">
-            {buckets.map((b) => (
-              <li key={b.label} className="flex items-center justify-between gap-3 text-sm">
-                <span className="inline-flex items-center gap-2 min-w-0">
-                  <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: b.color }} aria-hidden="true" />
-                  <span className="truncate">{b.label}</span>
-                </span>
-                <span className="ui-num font-medium">{formatMoney(b.amount, company)}</span>
-              </li>
-            ))}
-          </ul>
         </>
       )}
     </section>
   );
 }
 
-/** Who owes the most, ranked, with a bar for relative weight. */
+/**
+ * Customer concentration.
+ *
+ * Ranked bars answer "who owes most"; the share of the whole answers "how
+ * exposed are we to one customer", which is the question that changes a
+ * decision. Capped at five slices plus an "Other".
+ */
 function TopCustomers({ rows, company }) {
-  const max = Math.max(...rows.map((r) => r.outstanding), 1);
-
   return (
     <section className="ui-card p-5">
-      <h2 className="ui-title text-sm">Owed the most</h2>
-      <p className="ui-subtle text-xs mt-0.5">By outstanding balance</p>
+      <h2 className="ui-title text-sm">Where the money is owed</h2>
+      <p className="ui-subtle text-xs mt-0.5">Share of outstanding, by customer</p>
 
       {rows.length === 0 ? (
         <EmptyState icon={Wallet} title="Nobody owes you" description="Outstanding balances appear here as invoices go unpaid." />
       ) : (
-        <ol className="mt-4 space-y-3.5">
-          {rows.map((r, i) => (
-            <li key={r.name}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="text-sm truncate">
-                  <span className="ui-subtle tabular-nums mr-2">{String(i + 1).padStart(2, '0')}</span>
-                  {r.name}
-                </span>
-                <span className="ui-num text-sm font-medium">{formatMoney(r.outstanding, company)}</span>
-              </div>
-              <div className="mt-1.5 h-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
-                <span
-                  className="ui-bar-fill block h-full"
-                  style={{ width: `${(r.outstanding / max) * 100}%`, backgroundColor: 'rgb(var(--brand))' }}
-                />
-              </div>
-            </li>
-          ))}
-        </ol>
+        <div className="mt-4">
+          <Suspense fallback={<ChartFallback height={320} />}>
+            <CompositionPie
+              data={rows.map((r) => ({ name: r.name, value: r.outstanding }))}
+              height={220}
+              formatter={(v) => formatMoney(v, company)}
+            />
+          </Suspense>
+        </div>
       )}
     </section>
   );
@@ -513,14 +517,38 @@ export default function DashboardOverview({
 
           <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
             <RevenueChart buckets={buckets} company={currentCompany} />
+
+            {/* A gauge rather than a bar: the arc has a visible end, so the
+                distance still to collect is as readable as the part already
+                collected. */}
+            <section className="ui-card p-5 flex flex-col">
+              <h2 className="ui-title text-sm">Collection rate</h2>
+              <p className="ui-subtle text-xs mt-0.5">Of everything billed this period</p>
+              <div className="flex-1 flex flex-col justify-center">
+                <Suspense fallback={<ChartFallback height={190} />}>
+                  <RadialGauge
+                    value={collectedPct}
+                    label="Collection rate"
+                    tone={collectedPct >= 70 ? 'pos' : collectedPct >= 40 ? undefined : 'neg'}
+                    height={190}
+                  />
+                </Suspense>
+                <p className="text-center text-sm ui-muted -mt-2">
+                  <span className="ui-fg font-medium">{formatMoney(collected, currentCompany)}</span> collected of{' '}
+                  {formatMoney(billed, currentCompany)}
+                </p>
+              </div>
+            </section>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
             <AgingPanel
               buckets={aging}
               total={aging.reduce((s, b) => s + b.amount, 0)}
               company={currentCompany}
             />
+            <TopCustomers rows={topCustomers} company={currentCompany} />
           </div>
-
-          <TopCustomers rows={topCustomers} company={currentCompany} />
         </>
       )}
     </div>
