@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BadgePercent,
   BarChart3,
+  Check,
   BookOpen,
   Building2,
   ChevronDown,
@@ -9171,6 +9172,52 @@ const AppShell = () => {
   const isOrgAdmin = Boolean(authCtx?.data?.isOrgAdmin);
   const emailVerified = Boolean(authCtx?.data?.user?.emailVerifiedAt);
   const [verifyNotice, setVerifyNotice] = useState('');
+  const [orgMenuOpen, setOrgMenuOpen] = useState(false);
+  const orgMenuRef = useRef(null);
+
+  useEffect(() => {
+    if (!orgMenuOpen) return;
+    const onMouseDown = (e) => {
+      if (!orgMenuRef.current) return;
+      if (orgMenuRef.current.contains(e.target)) return;
+      setOrgMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [orgMenuOpen]);
+
+
+  const availableOrgs = useMemo(() => {
+    const list = authCtx?.data?.orgs;
+    return Array.isArray(list) ? list : [];
+  }, [authCtx?.data]);
+
+  const activeOrgName = useMemo(() => {
+    const match = availableOrgs.find((o) => String(o.orgId) === String(activeOrgId));
+    return match?.org?.name || currentCompany?.name || 'Accounting';
+  }, [availableOrgs, activeOrgId, currentCompany?.name]);
+
+  /**
+   * Switching company changes the tenant for every subsequent request. The
+   * branch belongs to the old org, so it is cleared and re-resolved, and the
+   * page is reloaded so no cached list survives the switch.
+   */
+  const switchOrg = useCallback((nextOrgId) => {
+    const target = String(nextOrgId || '').trim();
+    if (!target || target === String(localStorage.getItem('activeOrgId') || '')) {
+      setOrgMenuOpen(false);
+      return;
+    }
+    try {
+      localStorage.setItem('activeOrgId', target);
+      localStorage.removeItem('activeBranchId');
+      localStorage.removeItem('branchId');
+      localStorage.removeItem('activeWarehouseId');
+    } catch (e) {
+      // ignore
+    }
+    window.location.reload();
+  }, []);
   const [verifySending, setVerifySending] = useState(false);
   const allowedBranchIds = useMemo(() => {
     const ids = authCtx?.data?.allowedBranchIds;
@@ -10587,7 +10634,49 @@ const AppShell = () => {
             <div className="h-5 w-px shrink-0" style={{ backgroundColor: 'rgb(var(--border))' }} aria-hidden="true" />
 
             <Building2 size={17} style={{ color: 'rgb(var(--accent))' }} aria-hidden="true" />
-            <div className="ui-title text-sm truncate">{currentCompany?.name || 'Accounting'}</div>
+
+            {availableOrgs.length > 1 ? (
+              <div className="relative" ref={orgMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setOrgMenuOpen((v) => !v)}
+                  className="ui-btn ui-btn-ghost !px-1.5 max-w-[16rem]"
+                  aria-haspopup="menu"
+                  aria-expanded={orgMenuOpen}
+                >
+                  <span className="ui-title text-sm truncate">{activeOrgName}</span>
+                  <ChevronDown size={14} aria-hidden="true" />
+                </button>
+
+                {orgMenuOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute left-0 mt-2 w-72 rounded-lg overflow-hidden z-50 ui-card ui-in-pop"
+                    style={{ boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top left' }}
+                  >
+                    <div className="px-3 py-2 ui-subtle text-[11px] uppercase tracking-wide">Switch company</div>
+                    {availableOrgs.map((o) => {
+                      const isActive = String(o.orgId) === String(activeOrgId);
+                      return (
+                        <button
+                          key={o.orgId}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => switchOrg(o.orgId)}
+                          className="w-full text-left px-3 py-2.5 text-sm transition-colors hover:bg-[rgb(var(--surface-sunken))] flex items-center justify-between gap-2"
+                          style={isActive ? { color: 'rgb(var(--accent))', fontWeight: 600 } : undefined}
+                        >
+                          <span className="truncate">{o.org?.name || o.orgId}</span>
+                          {isActive ? <Check size={14} aria-hidden="true" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="ui-title text-sm truncate">{activeOrgName}</div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

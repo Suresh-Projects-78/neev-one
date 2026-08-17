@@ -18,6 +18,7 @@ import { featuresRouter } from './routes/features.js';
 import { partiesRouter } from './routes/parties.js';
 import { emailRouter } from './routes/email.js';
 import { securityRouter } from './routes/security.js';
+import { itemsRouter } from './routes/items.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 export function buildApp() {
@@ -66,6 +67,7 @@ export function buildApp() {
   app.use('/api', partiesRouter);
   app.use('/api', emailRouter);
   app.use('/api', securityRouter);
+  app.use('/api', itemsRouter);
 
   app.use(notFound);
   app.use(errorHandler);

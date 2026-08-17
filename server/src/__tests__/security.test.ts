@@ -245,3 +245,30 @@ describe('activity log', () => {
     expect(res.body.events[0]).toHaveProperty('ip');
   });
 });
+
+describe('warehouse header does not break unrelated requests', () => {
+  it('ignores a warehouse the caller cannot use, instead of refusing the request', async () => {
+    const org = await makeOwner();
+
+    // A ledger read carrying a warehouse header the user has no access to.
+    const res = await request(app)
+      .get(`/api/orgs/${org.orgId}/ledger/trial-balance`)
+      .set({ ...auth(org), 'x-warehouse-id': 'some-warehouse-they-cannot-use' })
+      .expect(200);
+
+    expect(res.body.totals).toBeTruthy();
+  });
+
+  it('still refuses a stock movement into a warehouse the caller cannot use', async () => {
+    const org = await makeOwner();
+
+    const res = await request(app)
+      .post(`/api/orgs/${org.orgId}/adjustments`)
+      .set({ ...auth(org), 'x-warehouse-id': 'some-warehouse-they-cannot-use' })
+      .send({ itemId: 'x', qtyDelta: 1, reason: 'test' });
+
+    // Either the permission or the warehouse check refuses it; what matters is
+    // that it is not allowed through.
+    expect([400, 403]).toContain(res.status);
+  });
+});

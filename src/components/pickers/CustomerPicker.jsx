@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '../ui/Modal';
+import { createCustomer, listCustomers } from '../../api/masters';
+import { useServerMasters } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
@@ -856,14 +858,24 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 };
 
 const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Customer' }) => {
-  const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
+  // Customers live on the server now. The local list stays as a fallback so a
+  // network failure does not empty the picker in the middle of an invoice.
+  const serverCustomers = useServerMasters(
+    useCallback((search) => listCustomers(search).then((d) => d?.customers || []), []),
+    (db?.customers || []).filter((c) => Number(c.companyId) === Number(currentCompany?.id))
+  );
+
+  const customers = serverCustomers.rows;
+
+  // Server ids are strings; documents written before the migration hold numbers.
+  const findCustomer = (id) =>
+    customers.find((c) => String(c.id) === String(id)) ||
+    (db?.customers || []).find((c) => String(c.id) === String(id));
   const [showCustomerPopup, setShowCustomerPopup] = useState(false);
   const [customerPopupMode, setCustomerPopupMode] = useState('select');
   const [customerSearch, setCustomerSearch] = useState('');
 
-  const selectedCustomerName = value
-    ? getCustomerDisplayName(customers.find((c) => c.id === parseInt(value)))
-    : '';
+  const selectedCustomerName = value ? getCustomerDisplayName(findCustomer(value)) : '';
 
   const normalizedCustomerSearch = customerSearch.trim().toLowerCase();
   const filteredCustomers = normalizedCustomerSearch
@@ -964,7 +976,24 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
               db={db}
               setDb={setDb}
               currentCompany={currentCompany}
-              onCreated={(customer) => onChange(String(customer.id))}
+              onCreated={async (customer) => {
+                // Write through to the server so the record exists for every
+                // device, then select whichever id came back.
+                try {
+                  const created = await createCustomer({
+                    name: getCustomerDisplayName(customer) || customer.name || 'Customer',
+                    gstin: customer.gstin || undefined,
+                    phone: customer.mobile || customer.phone || undefined,
+                    email: customer.email || undefined,
+                    billingState: customer.billingAddress?.state || undefined,
+                  });
+                  await serverCustomers.reload();
+                  onChange(String(created?.party?.id || customer.id));
+                } catch {
+                  // Offline or refused: keep the local record so entry continues.
+                  onChange(String(customer.id));
+                }
+              }}
               onClose={closePopup}
             />
           )}

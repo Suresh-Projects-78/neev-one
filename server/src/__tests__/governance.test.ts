@@ -73,8 +73,12 @@ async function makeUser(org: Ctx = owner) {
 
   const login = await request(app)
     .post('/api/auth/login')
-    .send({ emailOrUsername: email, password: 'Passw0rd!23' })
-    .expect(200);
+    .send({ emailOrUsername: email, password: 'Passw0rd!23' });
+  if (login.status !== 200) {
+    // eslint-disable-next-line no-console
+    console.log('LOGIN FAILED', login.status, JSON.stringify(login.body), 'created was', created.status);
+  }
+  expect(login.status).toBe(200);
 
   return { id: created.body.user.id as string, token: login.body.token as string, email };
 }

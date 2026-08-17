@@ -11,6 +11,7 @@ import { allowsEntity, filterFieldsByLevel, levelFor, resolveAccess, resolveUser
 import { evaluateApproval, isPending } from '../services/approvals.js';
 import { fieldsFor } from '../constants/permissionCatalog.js';
 import { dueDateFor } from './parties.js';
+import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -37,8 +38,10 @@ const invoiceItemSchema = z.object({
 
 const invoiceUpsertSchema = z.object({
   branchId: z.string().min(1).optional(),
+  seriesId: z.string().optional().nullable(),
   warehouseId: z.string().optional().nullable(),
-  number: z.string().min(1),
+  // Omit to have the server allocate from the series.
+  number: z.string().min(1).optional(),
   date: z.string().min(1),
   dueDate: z.string().optional().nullable(),
   refNo: z.string().optional().nullable(),
@@ -168,6 +171,25 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
     }
   }
 
+  // Requirement 2: the number comes from the configured series, allocated on
+  // the server. Two browsers cannot mint the same one.
+  let invoiceNumber = String(body.number || '').trim();
+  if (!invoiceNumber) {
+    await ensureDefaultSeries({ accountId, orgId, branchId, docType: 'INVOICE', userId });
+    const allocated = await prisma.$transaction((tx) =>
+      allocateNumber(tx, {
+        accountId,
+        orgId,
+        branchId,
+        docType: 'INVOICE',
+        userId,
+        date: String(body.date).trim(),
+        seriesId: body.seriesId || null,
+      })
+    );
+    invoiceNumber = allocated.number;
+  }
+
   const id = randomUUID();
   try {
     await prisma.$executeRawUnsafe(
@@ -182,7 +204,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       orgId,
       branchId,
       String(body.warehouseId || '').trim() || null,
-      String(body.number).trim(),
+      invoiceNumber,
       String(body.date).trim(),
       resolvedDueDate,
       String(body.refNo || '').trim() || null,
@@ -249,7 +271,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       userId,
       date: String(body.date).trim(),
       journalCode: 'SAL',
-      narration: `Invoice ${String(body.number).trim()} - ${String(body.customerName || '').trim()}`,
+      narration: `Invoice ${invoiceNumber} - ${String(body.customerName || '').trim()}`,
       sourceDocType: 'INVOICE',
       sourceDocId: id,
       lines: invoicePostingLines({
@@ -308,7 +330,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
         paidAmount = ?, status = ?, sourceEstimateId = ?, itemsJson = ?, updatedAt = CURRENT_TIMESTAMP
        WHERE id = ?`,
       String(body.warehouseId || '').trim() || null,
-      String(body.number).trim(),
+      String(body.number || existing.number).trim(),
       String(body.date).trim(),
       String(body.dueDate || '').trim() || null,
       String(body.refNo || '').trim() || null,

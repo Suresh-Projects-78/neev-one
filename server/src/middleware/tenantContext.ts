@@ -6,7 +6,10 @@ export type TenantContext = {
   orgId: string;
   branchId: string;
   allowedBranchIds: string[];
+  /** The warehouse the caller may use, when one was supplied and permitted. */
   warehouseId?: string;
+  /** What the client asked for, permitted or not. */
+  requestedWarehouseId?: string;
   allowedWarehouseIds?: string[];
 };
 
@@ -52,19 +55,25 @@ export async function requireTenantContext(req: Request, res: Response, next: Ne
     select: { branchId: true },
   });
 
+  // Warehouse is resolved but NOT enforced here.
+  //
+  // The header is sent by the client on almost every request, including ones
+  // that have nothing to do with stock — the ledger, approvals, settings.
+  // Rejecting those because the user lacks access to whichever warehouse
+  // happened to be selected produced 'No access to warehouse' on a trial
+  // balance. Routes that genuinely act on a warehouse call requireWarehouse
+  // below, which is where the check belongs.
   let allowedWarehouseIds: string[] = [];
-  if (warehouseId) {
-    const whAccess = await prisma.userWarehouseAccess.findFirst({
-      where: { accountId, orgId, branchId, warehouseId, userId },
-      select: { id: true },
-    });
-    if (!whAccess) return res.status(403).json({ error: 'No access to warehouse' });
+  let resolvedWarehouseId: string | undefined;
 
+  if (warehouseId) {
     const allWh = await prisma.userWarehouseAccess.findMany({
       where: { accountId, orgId, userId },
       select: { warehouseId: true },
     });
     allowedWarehouseIds = allWh.map((x: { warehouseId: string }) => x.warehouseId);
+    // Only treat it as the active warehouse when the user may actually use it.
+    if (allowedWarehouseIds.includes(warehouseId)) resolvedWarehouseId = warehouseId;
   }
 
   req.tenant = {
@@ -72,9 +81,24 @@ export async function requireTenantContext(req: Request, res: Response, next: Ne
     orgId,
     branchId,
     allowedBranchIds: allowed.map((x: { branchId: string }) => x.branchId),
-    warehouseId: warehouseId || undefined,
+    warehouseId: resolvedWarehouseId,
+    requestedWarehouseId: warehouseId || undefined,
     allowedWarehouseIds: allowedWarehouseIds.length ? allowedWarehouseIds : undefined,
   };
 
   next();
+}
+
+/**
+ * Enforces warehouse access, for routes that actually operate on stock.
+ *
+ * Kept separate from requireTenantContext so a stray header cannot break
+ * unrelated requests, while a stock movement still cannot be posted into a
+ * warehouse the user has no rights to.
+ */
+export function requireWarehouse(req: Request, res: Response, next: NextFunction) {
+  const requested = req.tenant?.requestedWarehouseId;
+  if (!requested) return res.status(400).json({ error: 'Missing x-warehouse-id' });
+  if (!req.tenant?.warehouseId) return res.status(403).json({ error: 'No access to warehouse' });
+  return next();
 }

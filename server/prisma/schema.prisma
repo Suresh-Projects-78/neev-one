@@ -1066,3 +1066,82 @@ model AuthProvider {
   @@unique([orgId, name])
   @@index([accountId, orgId, enabled])
 }
+
+// ----------------------------
+// Item master
+// ----------------------------
+model ItemMaster {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  code        String?
+  name        String
+  description String?
+
+  /// STOCK items move inventory; SERVICE items never do.
+  itemType String  @default("STOCK")
+  unit     String  @default("Pcs")
+  hsnSac   String?
+  gstRate  Decimal @default(0)
+
+  salePrice     Decimal @default(0)
+  purchasePrice Decimal @default(0)
+
+  openingQty   Decimal @default(0)
+  reorderLevel Decimal @default(0)
+
+  /// Batch and serial tracking, gated by the batchSerial feature.
+  trackBy String @default("NONE") // NONE | BATCH | SERIAL
+
+  isActive Boolean @default(true)
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, name, unit])
+  @@unique([orgId, sourceSystem, sourceKey])
+  @@index([accountId, orgId, isActive])
+  @@index([accountId, orgId, hsnSac])
+}
+
+// ----------------------------
+// Document numbering
+// ----------------------------
+/// Allocation happens inside the document's transaction, so two browsers cannot
+/// mint the same number. Client-side numbering could only ever detect the clash
+/// afterwards, via a unique index.
+model NumberSeries {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  docType String
+  name    String
+
+  prefix     String @default("")
+  suffix     String @default("")
+  padding    Int    @default(4)
+  nextNumber Int    @default(1)
+
+  resetPolicy String  @default("FISCAL_YEAR") // NEVER | FISCAL_YEAR | MONTH
+  fiscalYear  String?
+  periodKey   String?
+
+  allowManual Boolean @default(false)
+  isDefault   Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, docType, name])
+  @@index([accountId, orgId, docType, isActive])
+}
