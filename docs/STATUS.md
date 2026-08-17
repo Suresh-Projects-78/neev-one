@@ -70,8 +70,7 @@ Web on 5173, API on 4001.
   To finish it on a machine with a working daemon:
 
   ```bash
-  cp .env.docker.example .env   # set JWT_SECRET
-  npm run docker:up
+  npm run docker:up                       # creates .env and its secrets
   curl -f http://localhost:8080/          # the app
   curl -f http://localhost:8080/health    # the API through nginx
   ```
