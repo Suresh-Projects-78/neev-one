@@ -647,7 +647,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               <div className="border rounded-lg overflow-hidden">
                 <div className="max-h-[55vh] overflow-y-auto divide-y">
                   {filtered.length === 0 ? (
-                    <div className="px-4 py-10 text-center text-gray-500">No results</div>
+                    <div className="px-4 py-10 text-center ui-muted">No results</div>
                   ) : (
                     filtered.map((o) => {
                       const isSelected = String(o.value) === String(snapshot.ledgerId);
@@ -663,9 +663,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                               ledgerSearch: String(o.label || '').trim(),
                             });
                           }}
-                          className={`w-full px-4 py-3 text-left hover:bg-gray-50 ${isSelected ? 'bg-gray-50' : ''}`}
+                          className={`w-full px-4 py-3 text-left ui-hover-sunken ${isSelected ? 'ui-sunken' : ''}`}
                         >
-                          <div className="font-medium text-gray-900">{o.label}</div>
+                          <div className="font-medium ui-fg">{o.label}</div>
                         </button>
                       );
                     })
@@ -691,8 +691,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       });
                     });
                   }}
-                  className={`w-full px-4 py-2 rounded-lg ${
-                    showCreate ? 'bg-stone-900 text-white hover:bg-stone-900' : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                  className={`w-full px-4 py-2 rounded-lg ${ showCreate ? 'ui-primary-bg ' : 'ui-sunken ui-muted cursor-not-allowed'
                   }`}
                   title={
                     !canAttemptCreate
@@ -713,7 +712,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                     setPendingAddTxnInitial(snapshot);
                     openModal(null);
                   }}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                  className="px-4 py-2 border rounded-lg ui-hover-sunken"
                 >
                   Back
                 </button>
@@ -1037,7 +1036,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
       return (
         <form onSubmit={save} className="space-y-4">
-          <div className="text-sm text-gray-600">
+          <div className="text-sm ui-muted">
             Add a bank/cash transaction for{' '}
             <span className="font-semibold">{selectedCashBankAccount?.name || effectiveAccount?.name}</span>.
           </div>
@@ -1064,7 +1063,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                         if (nextId) setSelectedAccountId(nextId);
                       });
                     }}
-                    className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm"
+                    className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
                   >
                     New
                   </button>
@@ -1083,10 +1082,10 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                   </option>
                 ))}
               </select>
-              <div className="text-xs text-gray-500 mt-1">This is where the entry will hit.</div>
+              <div className="text-xs ui-muted mt-1">This is where the entry will hit.</div>
             </div>
           ) : (
-            <div className="text-sm text-gray-600">
+            <div className="text-sm ui-muted">
               <span className="font-medium">Cash / Bank Account:</span>{' '}
               <span className="font-semibold">{selectedCashBankAccount?.name || effectiveAccount?.name || '-'}</span>
             </div>
@@ -1116,10 +1115,10 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 </select>
               </div>
             ) : (
-              <div className="text-sm text-gray-600 flex items-end">
+              <div className="text-sm ui-muted flex items-end">
                 <div>
                   <div className="text-sm font-medium mb-1">Type</div>
-                  <div className="px-3 py-2 border rounded-lg bg-gray-50">
+                  <div className="px-3 py-2 border rounded-lg ui-sunken">
                     {form.direction === 'OUT' ? 'Payment (Money Out)' : 'Receipt (Money In)'}
                   </div>
                 </div>
@@ -1135,12 +1134,12 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             <button
               type="button"
               onClick={openLedgerPicker}
-              className="w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg text-left bg-white hover:bg-gray-50"
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg text-left ui-surface ui-hover-sunken"
             >
-              <span className={selectedLedger ? 'text-gray-900' : 'text-gray-400'}>
+              <span className={selectedLedger ? 'ui-fg' : 'ui-subtle'}>
                 {selectedLedger ? `${selectedLedger.label}` : 'Select Ledger'}
               </span>
-              <span className="text-xs text-gray-500">Change</span>
+              <span className="text-xs ui-muted">Change</span>
             </button>
           </div>
 
@@ -1162,38 +1161,38 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           {knockoffMode === 'customer' ? (
             <div className="space-y-2">
               <div className="text-sm font-medium">Knock-off Invoices</div>
-              <div className="grid grid-cols-3 gap-3 text-sm bg-gray-50 border rounded-lg p-3">
+              <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
                 <div>
-                  <div className="text-gray-500">Allocated</div>
+                  <div className="ui-muted">Allocated</div>
                   <div className="font-semibold">{formatMoney(knockoffComputed.allocated, currentCompany)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Advance</div>
+                  <div className="ui-muted">Advance</div>
                   <div className="font-semibold">{formatMoney(knockoffComputed.advance, currentCompany)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Selected</div>
+                  <div className="ui-muted">Selected</div>
                   <div className="font-semibold">
                     {Object.values(knockoffAllocations).filter((v) => Boolean(v?.selected)).length}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+              <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">Sel</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Outstanding</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Allocate</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Invoice #</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Outstanding</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Allocate</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {outstandingInvoices.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                        <td colSpan={5} className="px-6 py-8 text-center ui-muted">
                           No outstanding invoices. This receipt will be recorded as advance.
                         </td>
                       </tr>
@@ -1211,7 +1210,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                         const suggested = Math.min(balance, remaining || balance);
 
                         return (
-                          <tr key={key} className="hover:bg-gray-50">
+                          <tr key={key} className="ui-hover-sunken">
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
@@ -1245,38 +1244,38 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           {knockoffMode === 'vendor' ? (
             <div className="space-y-2">
               <div className="text-sm font-medium">Knock-off Bills / Expenses</div>
-              <div className="grid grid-cols-3 gap-3 text-sm bg-gray-50 border rounded-lg p-3">
+              <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
                 <div>
-                  <div className="text-gray-500">Allocated</div>
+                  <div className="ui-muted">Allocated</div>
                   <div className="font-semibold">{formatMoney(knockoffComputed.allocated, currentCompany)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Advance</div>
+                  <div className="ui-muted">Advance</div>
                   <div className="font-semibold">{formatMoney(knockoffComputed.advance, currentCompany)}</div>
                 </div>
                 <div>
-                  <div className="text-gray-500">Selected</div>
+                  <div className="ui-muted">Selected</div>
                   <div className="font-semibold">
                     {Object.values(knockoffAllocations).filter((v) => Boolean(v?.selected)).length}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+              <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">Sel</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Doc #</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Outstanding</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Allocate</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Doc #</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Outstanding</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Allocate</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {outstandingDocs.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                        <td colSpan={5} className="px-6 py-8 text-center ui-muted">
                           No outstanding bills/expenses. This payment will be recorded as advance.
                         </td>
                       </tr>
@@ -1293,7 +1292,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                         const suggested = Math.min(d.balance, remaining || d.balance);
 
                         return (
-                          <tr key={key} className="hover:bg-gray-50">
+                          <tr key={key} className="ui-hover-sunken">
                             <td className="px-4 py-3">
                               <input
                                 type="checkbox"
@@ -1336,10 +1335,10 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           </div>
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+            <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg ui-hover-sunken">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+            <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
               {isEdit ? 'Save' : 'Add'}
             </button>
           </div>
@@ -1630,7 +1629,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
     if (txn.direction === 'OUT') {
       openModal(
-        <div className="bg-white rounded-xl border p-4">
+        <div className="ui-surface rounded-xl border p-4">
           <RecordDisbursementForm
             db={db}
             setDb={setDb}
@@ -1648,7 +1647,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     }
 
     openModal(
-      <div className="bg-white rounded-xl border p-4">
+      <div className="ui-surface rounded-xl border p-4">
         <RecordReceiptForm
           db={db}
           setDb={setDb}
@@ -1768,7 +1767,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h3 className="text-xl font-bold">Cash & Bank</h3>
-          <div className="text-sm text-gray-500">Reconcile bank/cash transactions with receipts and payments.</div>
+          <div className="text-sm ui-muted">Reconcile bank/cash transactions with receipts and payments.</div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1776,8 +1775,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             type="button"
             onClick={deleteSelectedTxns}
             disabled={!anySelected}
-            className={`px-4 py-2 rounded-lg border ${
-              anySelected ? 'bg-white hover:bg-gray-50 border-gray-200 text-red-600' : 'bg-gray-100 text-gray-500 border-gray-200'
+            className={`px-4 py-2 rounded-lg border ${ anySelected ? 'ui-surface ui-hover-sunken ui-border-c text-red-600' : 'ui-sunken ui-muted ui-border-c'
             }`}
           >
             Delete Selected
@@ -1785,22 +1783,21 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <button
             type="button"
             onClick={openCreateAccount}
-            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             New Account
           </button>
           <button
             type="button"
             onClick={downloadUploadTemplate}
-            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             Download Template
           </button>
           <button
             type="button"
             onClick={openUpload}
-            className={`px-4 py-2 rounded-lg border ${
-              accountsEmpty ? 'bg-gray-100 text-gray-500 border-gray-200' : 'bg-white hover:bg-gray-50 border-gray-200'
+            className={`px-4 py-2 rounded-lg border ${ accountsEmpty ? 'ui-sunken ui-muted ui-border-c' : 'ui-surface ui-hover-sunken ui-border-c'
             }`}
           >
             Upload Statement
@@ -1808,8 +1805,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <button
             type="button"
             onClick={openAddTxn}
-            className={`px-4 py-2 rounded-lg ${
-              accountsEmpty ? 'bg-gray-100 text-gray-500' : 'bg-stone-900 text-white hover:bg-stone-900'
+            className={`px-4 py-2 rounded-lg ${ accountsEmpty ? 'ui-sunken ui-muted' : 'ui-primary-bg '
             }`}
           >
             Add Transaction
@@ -1829,7 +1825,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         }}
       />
 
-      <div className="bg-white border rounded-xl p-4 space-y-4">
+      <div className="ui-surface border rounded-xl p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium mb-1">Cash/Bank Account</label>
@@ -1858,13 +1854,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         </div>
 
         {!selectedAccount ? (
-          <div className="text-sm text-gray-500">Select an account to see its transactions.</div>
+          <div className="text-sm ui-muted">Select an account to see its transactions.</div>
         ) : (
           <div className="border rounded-xl overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="ui-sunken border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
@@ -1872,20 +1868,20 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       disabled={txns.length === 0}
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ledger</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Narration</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Payment</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Receipts</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Description</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Ledger</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Narration</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Payment</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Receipts</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {txns.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-gray-500">
+                    <td colSpan={9} className="px-4 py-10 text-center text-sm ui-muted">
                       No transactions.
                     </td>
                   </tr>
@@ -1896,7 +1892,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                     const ledger = t.ledgerId ? ledgerById.get(String(t.ledgerId)) : null;
                     const ledgerName = categorised ? (ledger?.name || '-') : 'Uncategorised';
                     return (
-                      <tr key={t.id} className="hover:bg-gray-50">
+                      <tr key={t.id} className="ui-hover-sunken">
                         <td className="px-4 py-3 text-sm">
                           <input
                             type="checkbox"
@@ -1931,14 +1927,14 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                           <button
                             type="button"
                             onClick={() => setOpenActionId((p) => (String(p) === String(t.id) ? null : t.id))}
-                            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                             title="Actions"
                           >
                             <MoreVertical size={18} />
                           </button>
 
                           {String(openActionId || '') === String(t.id) ? (
-                            <div className="absolute right-4 mt-2 w-40 bg-white border rounded-lg shadow-sm overflow-hidden z-10">
+                            <div className="absolute right-4 mt-2 w-40 ui-surface border rounded-lg shadow-sm overflow-hidden z-10">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1954,7 +1950,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                                     ledgerSearch: String(ledgerById.get(String(t.ledgerId))?.name || '').trim(),
                                   });
                                 }}
-                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50"
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken"
                               >
                                 <Pencil size={16} />
                                 <span>Edit</span>
@@ -1962,7 +1958,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                               <button
                                 type="button"
                                 onClick={() => deleteTxn(t)}
-                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50 text-red-600"
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken text-red-600"
                               >
                                 <Trash2 size={16} />
                                 <span>Delete</span>

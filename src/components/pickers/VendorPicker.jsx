@@ -582,7 +582,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
                   },
                 }));
               }}
-              className={`w-full px-3 py-2 border rounded-lg ${gstRegistrationRequiresGstinUi ? '' : 'bg-gray-50'}`}
+              className={`w-full px-3 py-2 border rounded-lg ${gstRegistrationRequiresGstinUi ? '' : 'ui-sunken'}`}
               placeholder={gstRegistrationRequiresGstinUi ? 'GSTIN (required)' : 'GSTIN (disabled)'}
               disabled={!gstRegistrationRequiresGstinUi}
               required={gstRegistrationRequiresGstinUi}
@@ -612,7 +612,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
               className="w-full px-3 py-2 border rounded-lg"
               placeholder="30"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs ui-muted">
               Sets the due date on this vendor&apos;s bills. Blank uses 30 days; 0 means due on receipt.
             </p>
           </div>
@@ -709,7 +709,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         </div>
       </div>
 
-      <button type="submit" className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg ">
         {isEdit ? 'Update Vendor' : 'Create Vendor'}
       </button>
       </form>
@@ -741,7 +741,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
                 autoFocus
                 required
               />
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs ui-muted mt-1">
                 This group will be created under Sundry Creditors.
               </div>
             </div>
@@ -753,11 +753,11 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
                   setGroupCreateOpen(false);
                   setGroupDraftName('');
                 }}
-                className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border ui-hover-sunken"
               >
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+              <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
                 Create
               </button>
             </div>
@@ -810,7 +810,7 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
           setVendorSearch('');
           setShowVendorPopup(true);
         }}
-        className="w-full px-3 py-2 border rounded-lg bg-white text-left"
+        className="w-full px-3 py-2 border rounded-lg ui-surface text-left"
       >
         {selectedVendorName || 'Select Vendor'}
       </button>
@@ -843,7 +843,7 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
 
               <div className="max-h-80 overflow-y-auto space-y-1">
                 {filteredVendors.length === 0 ? (
-                  <div className="text-sm text-gray-600">No vendors found.</div>
+                  <div className="text-sm ui-muted">No vendors found.</div>
                 ) : (
                   filteredVendors.map((v) => (
                     <button
@@ -853,13 +853,12 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
                         onChange(String(v.id));
                         closePopup();
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-lg border hover:bg-gray-50 ${
-                        String(v.id) === String(value) ? 'bg-gray-50 border-gray-300' : 'border-gray-200'
+                      className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${ String(v.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
                       }`}
                     >
-                      <div className="text-sm font-medium text-gray-900">{getVendorDisplayName(v)}</div>
+                      <div className="text-sm font-medium ui-fg">{getVendorDisplayName(v)}</div>
                       {(v.phone || v.gstin) && (
-                        <div className="text-xs text-gray-500 truncate">{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
+                        <div className="text-xs ui-muted truncate">{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
                       )}
                     </button>
                   ))
@@ -870,7 +869,7 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
                 <button
                   type="button"
                   onClick={() => setVendorPopupMode('create')}
-                  className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
+                  className="w-full px-4 py-2 ui-primary-bg rounded-lg "
                 >
                   Create new vendor
                 </button>

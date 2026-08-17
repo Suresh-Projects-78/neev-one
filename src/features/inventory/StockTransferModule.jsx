@@ -36,9 +36,9 @@ const getStatusPillClass = (status) => {
   const s = String(status || '').trim();
   if (s === 'Approved') return 'bg-green-100 text-green-700';
   if (s === 'Rejected') return 'bg-red-100 text-red-700';
-  if (s === 'Cancelled') return 'bg-gray-100 text-gray-700';
-  if (s === 'Submitted') return 'bg-stone-100 text-stone-900';
-  return 'bg-gray-100 text-gray-700';
+  if (s === 'Cancelled') return 'ui-sunken ui-fg';
+  if (s === 'Submitted') return 'bg-stone-100 ui-fg';
+  return 'ui-sunken ui-fg';
 };
 
 export const StockTransferEditor = ({
@@ -400,7 +400,7 @@ export const StockTransferEditor = ({
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm ui-muted">
             {mode === 'branch'
               ? isEdit
                 ? 'Edit Branch Transfer'
@@ -423,7 +423,7 @@ export const StockTransferEditor = ({
             type="text"
             value={form.number}
             onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg ${!isEdit && lockTransferNumberOnCreate ? 'bg-gray-50' : ''}`}
+            className={`w-full px-3 py-2 border rounded-lg ${!isEdit && lockTransferNumberOnCreate ? 'ui-sunken' : ''}`}
             placeholder="Auto"
             disabled={readOnly || (!isEdit && lockTransferNumberOnCreate)}
           />
@@ -456,7 +456,7 @@ export const StockTransferEditor = ({
                   targetWarehouseId: '',
                 }));
               }}
-              className="w-full px-3 py-2 border rounded-lg bg-white"
+              className="w-full px-3 py-2 border rounded-lg ui-surface"
               required
               disabled={readOnly}
             >
@@ -482,7 +482,7 @@ export const StockTransferEditor = ({
                     sourceWarehouseId: '',
                   }));
                 }}
-                className="w-full px-3 py-2 border rounded-lg bg-white"
+                className="w-full px-3 py-2 border rounded-lg ui-surface"
                 required
                 disabled={readOnly}
               >
@@ -507,7 +507,7 @@ export const StockTransferEditor = ({
                     targetWarehouseId: '',
                   }));
                 }}
-                className="w-full px-3 py-2 border rounded-lg bg-white"
+                className="w-full px-3 py-2 border rounded-lg ui-surface"
                 required
                 disabled={readOnly}
               >
@@ -537,7 +537,7 @@ export const StockTransferEditor = ({
                 };
               });
             }}
-            className="w-full px-3 py-2 border rounded-lg bg-white"
+            className="w-full px-3 py-2 border rounded-lg ui-surface"
             required
             disabled={readOnly || !normalizeId(form.sourceBranchId)}
           >
@@ -548,7 +548,7 @@ export const StockTransferEditor = ({
               </option>
             ))}
           </select>
-          <div className="mt-1 text-xs text-gray-600">
+          <div className="mt-1 text-xs ui-muted">
             Branch: <span className="font-medium">{getBranchLabel(selectedSourceBranch) || '-'}</span> · State:{' '}
             <span className="font-medium">{sourceState || '-'}</span>
           </div>
@@ -569,7 +569,7 @@ export const StockTransferEditor = ({
                 };
               });
             }}
-            className="w-full px-3 py-2 border rounded-lg bg-white"
+            className="w-full px-3 py-2 border rounded-lg ui-surface"
             required
             disabled={readOnly || !normalizeId(mode === 'warehouse' ? form.sourceBranchId : form.targetBranchId)}
           >
@@ -580,7 +580,7 @@ export const StockTransferEditor = ({
               </option>
             ))}
           </select>
-          <div className="mt-1 text-xs text-gray-600">
+          <div className="mt-1 text-xs ui-muted">
             Branch: <span className="font-medium">{getBranchLabel(selectedTargetBranch) || '-'}</span> · State:{' '}
             <span className="font-medium">{targetState || '-'}</span>
           </div>
@@ -599,9 +599,9 @@ export const StockTransferEditor = ({
         </div>
       </div>
 
-      <div className="bg-white border rounded-lg p-3 text-sm">
+      <div className="ui-surface border rounded-lg p-3 text-sm">
         <div className="font-semibold mb-1">GST</div>
-        <div className="text-gray-600">
+        <div className="ui-muted">
           {sameState
             ? 'No GST for transfers within same state (stock movement only).'
             : 'No GST is applied in transfer entry (stock movement only).'}
@@ -614,7 +614,7 @@ export const StockTransferEditor = ({
           <button
             type="button"
             onClick={addLine}
-            className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1"
+            className="ui-fg ui-hover-fg text-sm flex items-center gap-1"
             disabled={readOnly}
           >
             <Plus size={16} /> Add Item
@@ -623,7 +623,7 @@ export const StockTransferEditor = ({
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[55%]">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[30%]">Description</th>
@@ -683,10 +683,10 @@ export const StockTransferEditor = ({
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => onBack?.()} className="px-3 py-2 rounded-lg text-sm border bg-white hover:bg-gray-50 border-gray-200">
+        <button type="button" onClick={() => onBack?.()} className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c">
           Back
         </button>
-        <button type="submit" disabled={saving || readOnly} className="px-3 py-2 rounded-lg text-sm bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
+        <button type="submit" disabled={saving || readOnly} className="px-3 py-2 rounded-lg text-sm ui-primary-bg disabled:opacity-50">
           {saving ? 'Saving…' : isEdit ? 'Save' : 'Create'}
         </button>
       </div>
@@ -735,52 +735,52 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-lg font-semibold">{transfer?.number || 'Stock Transfer'}</div>
-          <div className="text-sm text-gray-500">{transfer?.date || '-'}</div>
+          <div className="text-sm ui-muted">{transfer?.date || '-'}</div>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(status)}`}>{status}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
-          <div className="text-gray-500">From</div>
+          <div className="ui-muted">From</div>
           <div className="font-semibold">{getBranchLabel(sb) || transfer?.sourceBranchName || '-'}</div>
-          <div className="text-gray-700">{getWarehouseLabel(sw) || transfer?.sourceWarehouseName || '-'}</div>
+          <div className="ui-fg">{getWarehouseLabel(sw) || transfer?.sourceWarehouseName || '-'}</div>
         </div>
         <div>
-          <div className="text-gray-500">To</div>
+          <div className="ui-muted">To</div>
           <div className="font-semibold">{getBranchLabel(tb) || transfer?.targetBranchName || '-'}</div>
-          <div className="text-gray-700">{getWarehouseLabel(tw) || transfer?.targetWarehouseName || '-'}</div>
+          <div className="ui-fg">{getWarehouseLabel(tw) || transfer?.targetWarehouseName || '-'}</div>
         </div>
       </div>
 
       {transfer?.reason ? (
         <div className="text-sm">
-          <div className="text-gray-500">Reason / Notes</div>
-          <div className="text-gray-800 whitespace-pre-wrap">{String(transfer.reason)}</div>
+          <div className="ui-muted">Reason / Notes</div>
+          <div className="ui-fg whitespace-pre-wrap">{String(transfer.reason)}</div>
         </div>
       ) : null}
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
+              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Item</th>
+              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Qty</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {lines.length === 0 ? (
               <tr>
-                <td colSpan={2} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={2} className="px-4 py-8 text-center ui-muted">
                   No lines
                 </td>
               </tr>
             ) : (
               lines.map((l, idx) => (
-                <tr key={idx} className="hover:bg-gray-50">
+                <tr key={idx} className="ui-hover-sunken">
                   <td className="px-4 py-3">
                     <div className="font-medium">{l.name}</div>
-                    <div className="text-xs text-gray-500">{l.itemId}</div>
+                    <div className="text-xs ui-muted">{l.itemId}</div>
                   </td>
                   <td className="px-4 py-3 text-right font-semibold">
                     {l.qty}{l.unit ? ` ${l.unit}` : ''}
@@ -797,7 +797,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           <button
             type="button"
             onClick={() => onAction?.('submit')}
-            className="px-3 py-2 rounded-lg text-sm bg-stone-900 text-white hover:bg-stone-900"
+            className="px-3 py-2 rounded-lg text-sm ui-primary-bg "
           >
             Submit
           </button>
@@ -817,7 +817,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           <button
             type="button"
             onClick={() => onAction?.('reject')}
-            className="px-3 py-2 rounded-lg text-sm border bg-white hover:bg-gray-50 border-gray-200 flex items-center gap-2"
+            className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c flex items-center gap-2"
           >
             <X size={16} /> Reject
           </button>
@@ -827,7 +827,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           <button
             type="button"
             onClick={() => onAction?.('cancel')}
-            className="px-3 py-2 rounded-lg text-sm border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
           >
             Cancel
           </button>
@@ -1002,12 +1002,12 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
           <h3 className="text-xl font-bold">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>
-          <div className="text-sm text-gray-500">{mode === 'branch' ? 'Between branches' : 'Within the same branch'}</div>
+          <div className="text-sm ui-muted">{mode === 'branch' ? 'Between branches' : 'Within the same branch'}</div>
           </div>
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+            className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
           >
           <Plus size={18} /> New Transfer
           </button>
@@ -1037,22 +1037,22 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+        <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transfer #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">From</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">To</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Transfer #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">From</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">To</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filteredTransfers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center ui-muted">
                     No stock transfers found
                   </td>
                 </tr>
@@ -1078,7 +1078,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                   return (
                     <tr
                       key={normalizeId(t?.id)}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="ui-hover-sunken cursor-pointer"
                       onClick={(e) => {
                         const el = e.target;
                         if (el?.closest?.('[data-transfer-menu-button]')) return;
@@ -1111,7 +1111,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                               openRowMenu(normalizeId(t?.id), e.currentTarget);
                             }
                           }}
-                          className="p-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                          className="p-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                           aria-label="Transfer actions"
                           data-transfer-menu-button={normalizeId(t?.id)}
                         >
@@ -1129,7 +1129,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
         {openMenu?.id ? (
           <div
             ref={menuRef}
-            className="fixed w-56 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[9999]"
+            className="fixed w-56 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden z-[9999]"
             style={{ left: openMenu.left, top: openMenu.top }}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
@@ -1154,7 +1154,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                       setOpenMenu(null);
                       openEdit(t);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
                   >
                     View
                   </button>
@@ -1166,11 +1166,10 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                       if (editable) openEdit(t);
                     }}
                     disabled={!editable}
-                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
-                      editable ? 'hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed bg-white'
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ editable ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed ui-surface'
                     }`}
                   >
-                    <Pencil size={16} className={editable ? 'text-gray-600' : 'text-gray-300'} />
+                    <Pencil size={16} className={editable ? 'ui-muted' : 'ui-subtle'} />
                     <span>Edit</span>
                   </button>
 
@@ -1181,7 +1180,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                         setOpenMenu(null);
                         updateStatus(t, 'Submitted');
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
                     >
                       Submit
                     </button>
@@ -1194,9 +1193,9 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                         setOpenMenu(null);
                         approveWithStockCheck(t);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                     >
-                      <Check size={16} className="text-gray-600" />
+                      <Check size={16} className="ui-muted" />
                       <span>Approve</span>
                     </button>
                   ) : null}
@@ -1210,9 +1209,9 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                         if (!ok) return;
                         updateStatus(t, 'Rejected');
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                     >
-                      <X size={16} className="text-gray-600" />
+                      <X size={16} className="ui-muted" />
                       <span>Reject</span>
                     </button>
                   ) : null}
@@ -1226,13 +1225,13 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                         if (!ok) return;
                         updateStatus(t, 'Cancelled');
                       }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50"
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
                     >
                       Cancel
                     </button>
                   ) : null}
 
-                  <div className="border-t border-gray-100" />
+                  <div className="border-t ui-border-c" />
 
                   <button
                     type="button"
@@ -1241,11 +1240,10 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                       if (editable) removeTransfer(t);
                     }}
                     disabled={!editable}
-                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
-                      editable ? 'hover:bg-gray-50 text-red-600' : 'text-gray-300 cursor-not-allowed bg-white'
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ editable ? 'ui-hover-sunken text-red-600' : 'ui-subtle cursor-not-allowed ui-surface'
                     }`}
                   >
-                    <Trash2 size={16} className={editable ? 'text-red-600' : 'text-gray-300'} />
+                    <Trash2 size={16} className={editable ? 'text-red-600' : 'ui-subtle'} />
                     <span>Delete</span>
                   </button>
                 </>

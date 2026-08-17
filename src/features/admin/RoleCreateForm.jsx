@@ -63,7 +63,7 @@ export function RoleCreateForm({ orgId, onCreated }) {
   };
 
   return (
-    <form onSubmit={onSubmit} className="bg-white border rounded-xl p-5 space-y-4">
+    <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
       <div className="text-lg font-bold">Create Role</div>
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
@@ -89,7 +89,7 @@ export function RoleCreateForm({ orgId, onCreated }) {
       </div>
 
       <div className="border rounded-xl overflow-hidden">
-        <div className="px-4 py-2 bg-gray-50 border-b font-semibold">Permissions</div>
+        <div className="px-4 py-2 ui-sunken border-b font-semibold">Permissions</div>
         <div className="p-4 space-y-4">
           {MODULES.map((m) => (
             <div key={m.module} className="space-y-2">
@@ -117,7 +117,7 @@ export function RoleCreateForm({ orgId, onCreated }) {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
           {saving ? 'Saving…' : 'Create Role'}
         </button>
       </div>

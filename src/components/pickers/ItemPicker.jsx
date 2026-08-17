@@ -120,7 +120,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   <button
                     type="button"
                     onClick={() => setMode('create')}
-                    className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm"
+                    className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
                   >
                     New
                   </button>
@@ -128,11 +128,11 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
               </div>
             ) : (
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-gray-900">Create Item</div>
+                <div className="text-sm font-semibold ui-fg">Create Item</div>
                 <button
                   type="button"
                   onClick={() => setMode('select')}
-                  className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm"
+                  className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
                 >
                   Back
                 </button>
@@ -142,7 +142,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
             {mode === 'select' ? (
               <div className="max-h-80 overflow-y-auto space-y-1">
                 {filteredItems.length === 0 ? (
-                  <div className="text-sm text-gray-600">No items found.</div>
+                  <div className="text-sm ui-muted">No items found.</div>
                 ) : (
                   filteredItems.map((i) => (
                     <button
@@ -152,12 +152,11 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                         onChange(String(i.id), i);
                         closePopup();
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-lg border hover:bg-gray-50 ${
-                        String(i.id) === String(value) ? 'bg-gray-50 border-gray-300' : 'border-gray-200'
+                      className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${ String(i.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
                       }`}
                     >
-                      <div className="text-sm font-medium text-gray-900">{i.name}</div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className="text-sm font-medium ui-fg">{i.name}</div>
+                      <div className="text-xs ui-muted truncate">
                         {[i.code, i.hsnSac ? `HSN/SAC ${i.hsnSac}` : null, `GST ${Number(i.gstRate || 0)}%`]
                           .filter(Boolean)
                           .join(' • ')}
@@ -331,11 +330,11 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       resetNewItem();
                       setMode('select');
                     }}
-                    className="px-3 py-2 rounded-lg text-sm border bg-white hover:bg-gray-50 border-gray-200"
+                    className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="px-3 py-2 rounded-lg text-sm bg-stone-900 text-white hover:bg-stone-900">
+                  <button type="submit" className="px-3 py-2 rounded-lg text-sm ui-primary-bg ">
                     Create
                   </button>
                 </div>

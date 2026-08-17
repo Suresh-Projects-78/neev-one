@@ -475,17 +475,17 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-sm bg-gray-50 border rounded-lg p-3">
+      <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
         <div>
-          <div className="text-gray-500">Allocated</div>
+          <div className="ui-muted">Allocated</div>
           <div className="font-semibold">{formatMoney(computed.allocated, currentCompany)}</div>
         </div>
         <div>
-          <div className="text-gray-500">Advance</div>
+          <div className="ui-muted">Advance</div>
           <div className="font-semibold">{formatMoney(computed.advance, currentCompany)}</div>
         </div>
         <div>
-          <div className="text-gray-500">Selected</div>
+          <div className="ui-muted">Selected</div>
           <div className="font-semibold">{selectedCount}</div>
         </div>
       </div>
@@ -494,34 +494,34 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         <div className="flex items-center justify-between">
           <div className="text-sm font-medium">Outstanding Bills / Expenses</div>
           {formData.vendorId ? (
-            <div className="text-sm text-gray-500">{outstandingDocs.length} document(s)</div>
+            <div className="text-sm ui-muted">{outstandingDocs.length} document(s)</div>
           ) : (
-            <div className="text-sm text-gray-500">Select vendor to load documents</div>
+            <div className="text-sm ui-muted">Select vendor to load documents</div>
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+        <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-12">Sel</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase w-24">Type</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Number</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Outstanding</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Allocate</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-24">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Number</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Outstanding</th>
+                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Allocate</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {!formData.vendorId ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center ui-muted">
                     Select party name to see outstanding bills/expenses
                   </td>
                 </tr>
               ) : outstandingDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-8 text-center ui-muted">
                     No outstanding documents. This payment will be recorded as advance.
                   </td>
                 </tr>
@@ -531,7 +531,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
                   const allocValue = allocations[d.key]?.amount ?? '';
 
                   return (
-                    <tr key={d.key} className="hover:bg-gray-50">
+                    <tr key={d.key} className="ui-hover-sunken">
                       <td className="px-4 py-3">
                         <input type="checkbox" checked={selected} onChange={(e) => toggleDoc(d, e.target.checked)} />
                       </td>
@@ -570,13 +570,13 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
           Cancel
         </button>
         <button
           type="submit"
           disabled={saving}
-          className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900 disabled:opacity-50"
+          className="px-4 py-2 ui-primary-bg rounded-lg disabled:opacity-50"
         >
           Record Payment
         </button>

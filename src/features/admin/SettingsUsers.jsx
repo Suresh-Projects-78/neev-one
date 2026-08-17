@@ -338,7 +338,7 @@ export function SettingsUsers({ orgId }) {
         <button
           type="button"
           onClick={openCreate}
-          className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+          className="px-4 py-2 rounded-lg ui-primary-bg "
         >
           + Create User
         </button>
@@ -351,7 +351,7 @@ export function SettingsUsers({ orgId }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"
-              className="w-full pl-3 pr-3 py-2 border rounded-lg bg-white"
+              className="w-full pl-3 pr-3 py-2 border rounded-lg ui-surface"
             />
           </div>
         </div>
@@ -361,21 +361,21 @@ export function SettingsUsers({ orgId }) {
       {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>}
 
       {selectedUser ? (
-        <div className="bg-white border rounded-xl p-5 space-y-4">
+        <div className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg font-semibold">User Details</div>
-              <div className="text-xs text-gray-500">{selectedUser.fullName || selectedUser.name || selectedUser.email || ''}</div>
+              <div className="text-xs ui-muted">{selectedUser.fullName || selectedUser.name || selectedUser.email || ''}</div>
             </div>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => beginEdit(selectedUser)}
-                className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken"
               >
                 Edit
               </button>
-              <button type="button" onClick={closeView} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+              <button type="button" onClick={closeView} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                 Close
               </button>
             </div>
@@ -383,24 +383,24 @@ export function SettingsUsers({ orgId }) {
 
           <div className="grid grid-cols-12 gap-4 text-sm">
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs text-gray-500">Name</div>
+              <div className="text-xs ui-muted">Name</div>
               <div className="font-medium">{selectedUser.fullName || selectedUser.name || '—'}</div>
             </div>
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs text-gray-500">Email</div>
+              <div className="text-xs ui-muted">Email</div>
               <div className="font-medium">{selectedUser.email || '—'}</div>
             </div>
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs text-gray-500">Role</div>
+              <div className="text-xs ui-muted">Role</div>
               <div className="font-medium">{getRoleName(selectedUser.roleId)}</div>
             </div>
 
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs text-gray-500">Status</div>
+              <div className="text-xs ui-muted">Status</div>
               <div className="font-medium">{selectedUser.isActive !== false ? 'Active' : 'Inactive'}</div>
             </div>
             <div className="col-span-12 sm:col-span-8">
-              <div className="text-xs text-gray-500">User ID</div>
+              <div className="text-xs ui-muted">User ID</div>
               <div className="font-medium font-mono">{selectedUser.id || '—'}</div>
             </div>
           </div>
@@ -428,7 +428,7 @@ export function SettingsUsers({ orgId }) {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Role</label>
-                <select className="w-full px-3 py-2 border rounded-lg bg-white" value={form.roleId} onChange={onChange('roleId')}>
+                <select className="w-full px-3 py-2 border rounded-lg ui-surface" value={form.roleId} onChange={onChange('roleId')}>
                   <option value="">— No role —</option>
                   {assignableRoles.map((r) => (
                     <option key={r.id} value={r.id}>
@@ -442,12 +442,12 @@ export function SettingsUsers({ orgId }) {
             <div className="border rounded-lg p-4 space-y-3">
               <div>
                 <div className="text-sm font-semibold">Branch Access</div>
-                <div className="text-xs text-gray-500">Choose which branches this user can access</div>
+                <div className="text-xs ui-muted">Choose which branches this user can access</div>
               </div>
 
               <div className="border rounded-lg overflow-hidden">
                 <div className="max-h-56 overflow-y-auto divide-y">
-                  <label className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                  <label className="flex items-center gap-3 px-4 py-3 ui-hover-sunken cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isAllSelected(createBranchIds)}
@@ -458,19 +458,19 @@ export function SettingsUsers({ orgId }) {
                       onClick={(e) => e.stopPropagation()}
                     />
                     <div>
-                      <div className="font-medium text-gray-900">All branches</div>
-                      <div className="text-xs text-gray-500">Give access to every branch</div>
+                      <div className="font-medium ui-fg">All branches</div>
+                      <div className="text-xs ui-muted">Give access to every branch</div>
                     </div>
                   </label>
 
                   {branchesSorted.length === 0 ? (
-                    <div className="px-4 py-10 text-center text-gray-500">No branches</div>
+                    <div className="px-4 py-10 text-center ui-muted">No branches</div>
                   ) : (
                     branchesSorted.map((b) => {
                       const id = normalizeId(b?.id);
                       const checked = normalizeBranchIdArray(createBranchIds).includes(id);
                       return (
-                        <label key={id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                        <label key={id} className="flex items-center gap-3 px-4 py-3 ui-hover-sunken cursor-pointer">
                           <input
                             type="checkbox"
                             checked={checked}
@@ -485,7 +485,7 @@ export function SettingsUsers({ orgId }) {
                             }}
                             onClick={(e) => e.stopPropagation()}
                           />
-                          <div className="font-medium text-gray-900">{getBranchLabel(b) || `Branch ${id}`}</div>
+                          <div className="font-medium ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
                         </label>
                       );
                     })
@@ -495,13 +495,13 @@ export function SettingsUsers({ orgId }) {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={closeCreate} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+              <button type="button" onClick={closeCreate} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50"
               >
                 {saving ? 'Creating…' : 'Create User'}
               </button>
@@ -517,11 +517,11 @@ export function SettingsUsers({ orgId }) {
           maxWidthClass="max-w-3xl"
         >
           <form onSubmit={saveAssignBranches} className="space-y-4">
-            {assignBranchesLoading ? <div className="text-sm text-gray-500">Loading…</div> : null}
+            {assignBranchesLoading ? <div className="text-sm ui-muted">Loading…</div> : null}
 
             <div className="border rounded-lg overflow-hidden">
               <div className="max-h-56 overflow-y-auto divide-y">
-                <label className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                <label className="flex items-center gap-3 px-4 py-3 ui-hover-sunken cursor-pointer">
                   <input
                     type="checkbox"
                     checked={isAllSelected(assignBranchIds)}
@@ -532,19 +532,19 @@ export function SettingsUsers({ orgId }) {
                     onClick={(e) => e.stopPropagation()}
                   />
                   <div>
-                    <div className="font-medium text-gray-900">All branches</div>
-                    <div className="text-xs text-gray-500">Give access to every branch</div>
+                    <div className="font-medium ui-fg">All branches</div>
+                    <div className="text-xs ui-muted">Give access to every branch</div>
                   </div>
                 </label>
 
                 {branchesSorted.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-gray-500">No branches</div>
+                  <div className="px-4 py-10 text-center ui-muted">No branches</div>
                 ) : (
                   branchesSorted.map((b) => {
                     const id = normalizeId(b?.id);
                     const checked = normalizeBranchIdArray(assignBranchIds).includes(id);
                     return (
-                      <label key={id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                      <label key={id} className="flex items-center gap-3 px-4 py-3 ui-hover-sunken cursor-pointer">
                         <input
                           type="checkbox"
                           checked={checked}
@@ -559,7 +559,7 @@ export function SettingsUsers({ orgId }) {
                           }}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <div className="font-medium text-gray-900">{getBranchLabel(b) || `Branch ${id}`}</div>
+                        <div className="font-medium ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
                       </label>
                     );
                   })
@@ -568,13 +568,13 @@ export function SettingsUsers({ orgId }) {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={closeAssignBranches} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+              <button type="button" onClick={closeAssignBranches} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={assignBranchesSaving || assignBranchesLoading}
-                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50"
+                className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50"
               >
                 {assignBranchesSaving ? 'Saving…' : 'Save'}
               </button>
@@ -584,7 +584,7 @@ export function SettingsUsers({ orgId }) {
       ) : null}
 
       {editingUserId ? (
-        <form onSubmit={saveEdit} className="bg-white border rounded-xl p-5 space-y-4">
+        <form onSubmit={saveEdit} className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="text-lg font-semibold">Edit User</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -611,7 +611,7 @@ export function SettingsUsers({ orgId }) {
             <div>
               <label className="block text-sm font-medium mb-1">Role</label>
               <select
-                className="w-full px-3 py-2 border rounded-lg bg-white"
+                className="w-full px-3 py-2 border rounded-lg ui-surface"
                 value={editForm.roleId}
                 onChange={(e) => setEditForm((p) => ({ ...p, roleId: e.target.value }))}
               >
@@ -626,7 +626,7 @@ export function SettingsUsers({ orgId }) {
             <div>
               <label className="block text-sm font-medium mb-1">Status</label>
               <select
-                className="w-full px-3 py-2 border rounded-lg bg-white"
+                className="w-full px-3 py-2 border rounded-lg ui-surface"
                 value={editForm.isActive ? 'active' : 'inactive'}
                 onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.value === 'active' }))}
               >
@@ -637,13 +637,13 @@ export function SettingsUsers({ orgId }) {
           </div>
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={cancelEdit} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+            <button type="button" onClick={cancelEdit} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
               Cancel
             </button>
             <button
               type="submit"
               disabled={editSaving}
-              className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50"
+              className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50"
             >
               {editSaving ? 'Saving…' : 'Save Changes'}
             </button>
@@ -651,34 +651,34 @@ export function SettingsUsers({ orgId }) {
         </form>
       ) : null}
 
-      <div className="bg-white border rounded-xl overflow-visible">
+      <div className="ui-surface border rounded-xl overflow-visible">
         {loading ? (
-          <div className="px-6 py-10 text-center text-gray-500">Loading…</div>
+          <div className="px-6 py-10 text-center ui-muted">Loading…</div>
         ) : users.length === 0 ? (
-          <div className="px-6 py-10 text-center text-gray-500">No users yet. Click "Create User" to add one.</div>
+          <div className="px-6 py-10 text-center ui-muted">No users yet. Click "Create User" to add one.</div>
         ) : filteredUsers.length === 0 ? (
-          <div className="px-6 py-10 text-center text-gray-500">No users found.</div>
+          <div className="px-6 py-10 text-center ui-muted">No users found.</div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Email</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Role</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filteredUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                <tr key={u.id} className="ui-hover-sunken">
+                  <td className="px-4 py-3 text-sm font-medium ui-fg">
                     <button type="button" className="text-left hover:underline" onClick={() => openView(u.id)}>
                       {u.fullName || u.name}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{u.email}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{getRoleName(u.roleId)}</td>
+                  <td className="px-4 py-3 text-sm ui-fg">{u.email}</td>
+                  <td className="px-4 py-3 text-sm ui-fg">{getRoleName(u.roleId)}</td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${u.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {u.isActive !== false ? 'Active' : 'Inactive'}
@@ -692,39 +692,39 @@ export function SettingsUsers({ orgId }) {
                           e.stopPropagation();
                           setOpenMenuForUserId((prev) => (prev === u.id ? null : u.id));
                         }}
-                        className="px-2 py-1 rounded-md border bg-white hover:bg-gray-50"
+                        className="px-2 py-1 rounded-md border ui-surface ui-hover-sunken"
                         aria-label="User actions"
                       >
                         ⋯
                       </button>
 
                       {openMenuForUserId === u.id ? (
-                        <div className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border bg-white shadow-sm z-50">
+                        <div className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border ui-surface shadow-sm z-50">
                           <button
                             type="button"
                             onClick={() => openView(u.id)}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                            className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
                           >
                             View
                           </button>
                           <button
                             type="button"
                             onClick={() => beginEdit(u)}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                            className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => openAssignBranches(u)}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                            className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
                           >
                             Assign Branches
                           </button>
                           <button
                             type="button"
                             onClick={() => doChangePassword(u)}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                            className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
                           >
                             Change Password
                           </button>

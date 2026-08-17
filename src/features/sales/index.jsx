@@ -95,8 +95,8 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
 
   return (
     <div className="space-y-4">
-      <div className="text-sm text-gray-600">
-        Select a status for <span className="font-semibold text-gray-900">{invoice?.number}</span>
+      <div className="text-sm ui-muted">
+        Select a status for <span className="font-semibold ui-fg">{invoice?.number}</span>
       </div>
 
       <div>
@@ -124,7 +124,7 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
         <button
           type="button"
           onClick={save}
-          className="px-3 py-2 rounded-lg text-sm bg-stone-900 text-white hover:bg-stone-900"
+          className="px-3 py-2 rounded-lg text-sm ui-primary-bg "
         >
           Save
         </button>
@@ -405,7 +405,7 @@ export const InvoicesList = ({
               type="button"
               onClick={doDownload}
               disabled={downloading}
-              className="px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 flex items-center gap-2"
+              className="px-3 py-2 rounded-lg ui-primary-bg flex items-center gap-2"
             >
               <Download size={16} /> {downloading ? 'Preparing...' : 'Download'}
             </button>
@@ -745,9 +745,9 @@ export const InvoicesList = ({
                     setOpenMenu(null);
                     openEditInvoice(inv);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <span className="text-gray-600">Edit</span>
+                  <span className="ui-muted">Edit</span>
                 </button>
 
                 <button
@@ -756,9 +756,9 @@ export const InvoicesList = ({
                     setOpenMenu(null);
                     openPrintAndDownload(inv);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <Printer size={16} className="text-gray-600" />
+                  <Printer size={16} className="ui-muted" />
                   <span>Print & Download</span>
                 </button>
 
@@ -769,11 +769,10 @@ export const InvoicesList = ({
                     openRecordReceipt(inv);
                   }}
                   disabled={recordDisabled}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
-                    recordDisabled ? 'text-gray-400 cursor-not-allowed bg-white' : 'hover:bg-gray-50'
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ recordDisabled ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken'
                   }`}
                 >
-                  <CreditCard size={16} className={recordDisabled ? 'text-gray-300' : 'text-gray-600'} />
+                  <CreditCard size={16} className={recordDisabled ? 'ui-subtle' : 'ui-muted'} />
                   <span>Record Receipt</span>
                 </button>
 
@@ -784,11 +783,10 @@ export const InvoicesList = ({
                     if (!raiseCreditDisabled) raiseCreditNote(inv);
                   }}
                   disabled={raiseCreditDisabled}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
-                    raiseCreditDisabled ? 'text-gray-400 cursor-not-allowed bg-white' : 'hover:bg-gray-50'
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ raiseCreditDisabled ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken'
                   }`}
                 >
-                  <Plus size={16} className={raiseCreditDisabled ? 'text-gray-300' : 'text-gray-600'} />
+                  <Plus size={16} className={raiseCreditDisabled ? 'ui-subtle' : 'ui-muted'} />
                   <span>Raise Credit Note</span>
                 </button>
 
@@ -798,13 +796,13 @@ export const InvoicesList = ({
                     setOpenMenu(null);
                     duplicateInvoice(inv);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <Copy size={16} className="text-gray-600" />
+                  <Copy size={16} className="ui-muted" />
                   <span>Duplicate</span>
                 </button>
 
-                <div className="border-t border-gray-100" />
+                <div className="border-t ui-border-c" />
 
                 <button
                   type="button"
@@ -812,7 +810,7 @@ export const InvoicesList = ({
                     setOpenMenu(null);
                     cancelInvoice(inv);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
                 >
                   <Ban size={16} className="text-red-600" />
                   <span>Cancel</span>
@@ -824,7 +822,7 @@ export const InvoicesList = ({
                     setOpenMenu(null);
                     deleteInvoice(inv);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
                 >
                   <Trash2 size={16} className="text-red-600" />
                   <span>Delete</span>
@@ -1021,29 +1019,29 @@ export const EstimatesList = ({
         <button
           type="button"
           onClick={openNewEstimate}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Estimate
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estimate #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Due</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Estimate #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Customer</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Due</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Total</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {estimates.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No estimates found
                 </td>
               </tr>
@@ -1055,7 +1053,7 @@ export const EstimatesList = ({
                 return (
                 <tr
                   key={est.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="ui-hover-sunken cursor-pointer"
                   onClick={(e) => {
                     const el = e.target;
                     if (el?.closest?.('[data-estimate-menu-button]')) return;
@@ -1132,9 +1130,9 @@ export const EstimatesList = ({
                     setOpenMenu(null);
                     openEditEstimate(est);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <span className="text-gray-600">Edit</span>
+                  <span className="ui-muted">Edit</span>
                 </button>
 
                 <button
@@ -1143,9 +1141,9 @@ export const EstimatesList = ({
                     setOpenMenu(null);
                     duplicateEstimate(est);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <Copy size={16} className="text-gray-600" />
+                  <Copy size={16} className="ui-muted" />
                   <span>Duplicate</span>
                 </button>
 
@@ -1156,15 +1154,14 @@ export const EstimatesList = ({
                     if (!isConverted) convertToInvoice(est);
                   }}
                   disabled={isConverted}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
-                    isConverted ? 'text-gray-400 cursor-not-allowed bg-white' : 'hover:bg-gray-50'
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ isConverted ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken'
                   }`}
                 >
-                  <FileText size={16} className={isConverted ? 'text-gray-300' : 'text-gray-600'} />
+                  <FileText size={16} className={isConverted ? 'ui-subtle' : 'ui-muted'} />
                   <span>Convert to Invoice</span>
                 </button>
 
-                <div className="border-t border-gray-100" />
+                <div className="border-t ui-border-c" />
 
                 <button
                   type="button"
@@ -1172,7 +1169,7 @@ export const EstimatesList = ({
                     setOpenMenu(null);
                     deleteEstimate(est);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
                 >
                   <Trash2 size={16} className="text-red-600" />
                   <span>Delete</span>
@@ -1227,28 +1224,28 @@ export const CreditNotesList = ({
         <button
           type="button"
           onClick={openNewCreditNote}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Credit Note
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credit #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Original Invoice</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Credit #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Original Invoice</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Customer</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {creditNotes.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="6" className="px-6 py-12 text-center ui-muted">
                   No credit notes found
                 </td>
               </tr>
@@ -1258,7 +1255,7 @@ export const CreditNotesList = ({
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
-                  <tr key={cn.id} className="hover:bg-gray-50">
+                  <tr key={cn.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 font-medium">{cn.number}</td>
                     <td className="px-6 py-4">{cn.originalInvoiceNumber || '-'}</td>
                     <td className="px-6 py-4">{cn.customerName || '-'}</td>
@@ -1722,7 +1719,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               setSubmitAsDraft(true);
               formRef.current?.requestSubmit();
             }}
-            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             Save Draft
           </button>
@@ -1821,7 +1818,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
@@ -1923,7 +1920,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
           {isEdit ? 'Update Invoice' : 'Create Invoice'}
         </button>
       </div>
@@ -2146,7 +2143,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             type="text"
             value={formData.number}
             onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg ${lockEstimateNumberOnCreate ? 'bg-gray-50' : ''}`}
+            className={`w-full px-3 py-2 border rounded-lg ${lockEstimateNumberOnCreate ? 'ui-sunken' : ''}`}
             disabled={lockEstimateNumberOnCreate}
             required
           />
@@ -2185,14 +2182,14 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
@@ -2286,7 +2283,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
           {isEdit ? 'Update Estimate' : 'Create Estimate'}
         </button>
       </div>
@@ -2561,7 +2558,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
             type="text"
             value={formData.number}
             onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg ${lockCreditNumber ? 'bg-gray-50' : ''}`}
+            className={`w-full px-3 py-2 border rounded-lg ${lockCreditNumber ? 'ui-sunken' : ''}`}
             disabled={lockCreditNumber}
             required
           />
@@ -2632,14 +2629,14 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
@@ -2733,7 +2730,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
           Create Credit Note
         </button>
       </div>

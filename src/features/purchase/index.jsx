@@ -238,7 +238,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             setSubmitAsDraft(true);
             formRef.current?.requestSubmit();
           }}
-          className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+          className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
         >
           Save Draft
         </button>
@@ -250,7 +250,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="text"
             value={formData.number}
             onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg ${lockBillNumber ? 'bg-gray-50' : ''}`}
+            className={`w-full px-3 py-2 border rounded-lg ${lockBillNumber ? 'ui-sunken' : ''}`}
             disabled={lockBillNumber}
             required
           />
@@ -282,7 +282,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           <select
             value={formData.warehouseId}
             onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg bg-white"
+            className="w-full px-3 py-2 border rounded-lg ui-surface"
             required
           >
             <option value="">Select Warehouse</option>
@@ -341,14 +341,14 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
@@ -443,7 +443,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
           Create Bill
         </button>
       </div>
@@ -467,27 +467,27 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Purchase Orders</h3>
-        <button onClick={createPo} className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900">
+        <button onClick={createPo} className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg ">
           <Plus size={20} /> New PO
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PO #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">PO #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {purchaseOrders.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="6" className="px-6 py-12 text-center ui-muted">
                   No purchase orders found. Click "New PO" to create one.
                 </td>
               </tr>
@@ -497,7 +497,7 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
-                  <tr key={po.id} className="hover:bg-gray-50">
+                  <tr key={po.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 font-medium">{po.number}</td>
                     <td className="px-6 py-4">{po.vendorName}</td>
                     <td className="px-6 py-4">{whLabel}</td>
@@ -648,7 +648,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
             type="text"
             value={formData.number}
             onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg ${lockPoNumber ? 'bg-gray-50' : ''}`}
+            className={`w-full px-3 py-2 border rounded-lg ${lockPoNumber ? 'ui-sunken' : ''}`}
             disabled={lockPoNumber}
             required
           />
@@ -679,14 +679,14 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[44%]">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
@@ -758,7 +758,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
           Create PO
         </button>
       </div>
@@ -993,7 +993,7 @@ export const BillsList = ({
               />
             );
           }}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Bill
         </button>
@@ -1005,8 +1005,7 @@ export const BillsList = ({
             key={s}
             type="button"
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1 rounded-full text-sm border ${
-              statusFilter === s ? 'bg-gray-100 border-gray-300 text-gray-900' : 'bg-white border-gray-200 text-gray-700'
+            className={`px-3 py-1 rounded-full text-sm border ${ statusFilter === s ? 'ui-sunken ui-border-c ui-fg' : 'ui-surface ui-border-c ui-fg'
             }`}
           >
             {s}
@@ -1014,25 +1013,25 @@ export const BillsList = ({
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Bill #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ref No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ref Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Bill #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ref No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ref Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Total</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {filteredBills.length === 0 ? (
               <tr>
-                <td colSpan="9" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="9" className="px-6 py-12 text-center ui-muted">
                   No bills found
                 </td>
               </tr>
@@ -1048,11 +1047,11 @@ export const BillsList = ({
                     : derived === 'Over due'
                       ? 'bg-red-100 text-red-700'
                       : derived === 'Draft'
-                        ? 'bg-gray-100 text-gray-700'
+                        ? 'ui-sunken ui-fg'
                         : 'bg-yellow-100 text-yellow-700';
 
                 return (
-                  <tr key={b.id} className="hover:bg-gray-50">
+                  <tr key={b.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 font-medium">{b.number}</td>
                     <td className="px-6 py-4">{b.vendorName}</td>
                     <td className="px-6 py-4">{whLabel}</td>
@@ -1082,7 +1081,7 @@ export const BillsList = ({
                           e.stopPropagation();
                           openBillMenu(b.id, e.currentTarget);
                         }}
-                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                        className="inline-flex items-center justify-center w-9 h-9 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                         title="Actions"
                       >
                         <MoreVertical size={18} />
@@ -1099,7 +1098,7 @@ export const BillsList = ({
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed z-[9999] w-56 bg-white border rounded-lg shadow-lg overflow-hidden"
+          className="fixed z-[9999] w-56 ui-surface border rounded-lg shadow-lg overflow-hidden"
           style={{ left: openMenu.left, top: openMenu.top }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -1119,8 +1118,7 @@ export const BillsList = ({
                     if (canRecordPayment) openRecordPayment(bill);
                   }}
                   disabled={!canRecordPayment}
-                  className={`w-full px-4 py-2 text-left flex items-center gap-2 ${
-                    canRecordPayment ? 'hover:bg-gray-50 text-gray-900' : 'text-gray-400 cursor-not-allowed'
+                  className={`w-full px-4 py-2 text-left flex items-center gap-2 ${ canRecordPayment ? 'ui-hover-sunken ui-fg' : 'ui-subtle cursor-not-allowed'
                   }`}
                 >
                   <CreditCard size={16} /> Record Payment
@@ -1132,7 +1130,7 @@ export const BillsList = ({
                     setOpenMenu(null);
                     duplicateBill(bill);
                   }}
-                  className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left ui-hover-sunken flex items-center gap-2"
                 >
                   <Copy size={16} /> Duplicate
                 </button>
@@ -1144,8 +1142,7 @@ export const BillsList = ({
                     raiseDebitNote(bill);
                   }}
                   disabled={derived === 'Draft'}
-                  className={`w-full px-4 py-2 text-left flex items-center gap-2 ${
-                    derived === 'Draft' ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50 text-gray-900'
+                  className={`w-full px-4 py-2 text-left flex items-center gap-2 ${ derived === 'Draft' ? 'ui-subtle cursor-not-allowed' : 'ui-hover-sunken ui-fg'
                   }`}
                 >
                   <Plus size={16} /> Raise Debit Note
@@ -1521,7 +1518,7 @@ export const DebitNoteForm = ({
             type="text"
             value={formData.number}
             onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg ${lockDebitNumber ? 'bg-gray-50' : ''}`}
+            className={`w-full px-3 py-2 border rounded-lg ${lockDebitNumber ? 'ui-sunken' : ''}`}
             disabled={lockDebitNumber}
             required
           />
@@ -1544,7 +1541,7 @@ export const DebitNoteForm = ({
           <select
             value={formData.warehouseId}
             onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="w-full px-3 py-2 border rounded-lg bg-white"
+            className="w-full px-3 py-2 border rounded-lg ui-surface"
             required
           >
             <option value="">Select Warehouse</option>
@@ -1581,14 +1578,14 @@ export const DebitNoteForm = ({
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1">
+          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full table-fixed">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[42%]">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium w-[18%]">Description</th>
@@ -1676,7 +1673,7 @@ export const DebitNoteForm = ({
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
           Create Debit Note
         </button>
       </div>
@@ -1713,29 +1710,29 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               />
             );
           }}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Debit Note
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Debit Note #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Original Bill</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Debit Note #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Original Bill</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {debitNotes.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No debit notes found. Click "New Debit Note" to create one.
                 </td>
               </tr>
@@ -1745,7 +1742,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
-                  <tr key={dn.id} className="hover:bg-gray-50">
+                  <tr key={dn.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 font-medium">{dn.number}</td>
                     <td className="px-6 py-4">{dn.originalBillNumber}</td>
                     <td className="px-6 py-4">{dn.vendorName}</td>

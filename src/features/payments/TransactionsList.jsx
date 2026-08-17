@@ -117,39 +117,38 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
           ))}
         </select>
         {eligibleDocs.length === 0 ? (
-          <div className="text-sm text-gray-500 mt-2">No eligible documents found (needs balance and not Draft).</div>
+          <div className="text-sm ui-muted mt-2">No eligible documents found (needs balance and not Draft).</div>
         ) : null}
       </div>
 
       {selected ? (
-        <div className="grid grid-cols-3 gap-3 text-sm bg-gray-50 border rounded-lg p-3">
+        <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
           <div>
-            <div className="text-gray-500">Total</div>
+            <div className="ui-muted">Total</div>
             <div className="font-semibold">{formatMoney(Number(selected.total ?? 0), currentCompany)}</div>
           </div>
           <div>
-            <div className="text-gray-500">Paid</div>
+            <div className="ui-muted">Paid</div>
             <div className="font-semibold">{formatMoney(Number(selected.paidAmount ?? 0), currentCompany)}</div>
           </div>
           <div>
-            <div className="text-gray-500">Balance</div>
+            <div className="ui-muted">Balance</div>
             <div className="font-semibold">{formatMoney(getBalanceForVoucher(selected), currentCompany)}</div>
           </div>
         </div>
       ) : null}
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+        <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg ui-hover-sunken">
           Cancel
         </button>
         <button
           type="button"
           onClick={openRecord}
           disabled={!selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })}
-          className={`px-4 py-2 rounded-lg ${
-            !selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })
-              ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
-              : 'bg-stone-900 text-white hover:bg-stone-900'
+          className={`px-4 py-2 rounded-lg ${ !selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })
+              ? 'ui-sunken ui-muted cursor-not-allowed'
+              : 'ui-primary-bg '
           }`}
         >
           {title}
@@ -218,71 +217,71 @@ const TransactionView = ({ title, payload }) => {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-sm text-gray-500">{title}</div>
+          <div className="text-sm ui-muted">{title}</div>
           <div className="font-semibold">{payload?.documentNumber || '-'}</div>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={doPrint}
-            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             Print
           </button>
           <button
             type="button"
             onClick={doShare}
-            className="px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+            className="px-3 py-2 rounded-lg ui-primary-bg "
           >
             Share
           </button>
         </div>
       </div>
 
-      <div className="printable bg-white border rounded-xl p-4 space-y-4">
+      <div className="printable ui-surface border rounded-xl p-4 space-y-4">
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="text-gray-500">Party</div>
+            <div className="ui-muted">Party</div>
             <div className="font-medium">{payload?.partyName || '-'}</div>
           </div>
           <div>
-            <div className="text-gray-500">Date</div>
+            <div className="ui-muted">Date</div>
             <div className="font-medium">{payload?.date || '-'}</div>
           </div>
           <div>
-            <div className="text-gray-500">Mode</div>
+            <div className="ui-muted">Mode</div>
             <div className="font-medium">{payload?.mode || '-'}</div>
           </div>
           <div>
-            <div className="text-gray-500">Reference</div>
+            <div className="ui-muted">Reference</div>
             <div className="font-medium">{payload?.reference || '-'}</div>
           </div>
           <div>
-            <div className="text-gray-500">Type</div>
+            <div className="ui-muted">Type</div>
             <div className="font-medium">{payload?.typeLabel || '-'}</div>
           </div>
           <div>
-            <div className="text-gray-500">Amount</div>
+            <div className="ui-muted">Amount</div>
             <div className="font-semibold">{formatMoney(payload?.amount || 0, payload?.currentCompany)}</div>
           </div>
         </div>
 
         {payload?.notes ? (
           <div className="text-sm">
-            <div className="text-gray-500">Notes</div>
+            <div className="ui-muted">Notes</div>
             <div className="whitespace-pre-wrap">{payload.notes}</div>
           </div>
         ) : null}
 
         {Array.isArray(payload?.allocations) && payload.allocations.length ? (
           <div className="text-sm">
-            <div className="text-gray-500 mb-2">Allocations</div>
+            <div className="ui-muted mb-2">Allocations</div>
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Document #</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Document #</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -303,7 +302,7 @@ const TransactionView = ({ title, payload }) => {
 
             {Number(payload?.advanceAmount ?? 0) > 0 ? (
               <div className="mt-3 flex items-center justify-between">
-                <div className="text-gray-500">Advance</div>
+                <div className="ui-muted">Advance</div>
                 <div className="font-semibold">{formatMoney(Number(payload.advanceAmount ?? 0), payload?.currentCompany)}</div>
               </div>
             ) : null}
@@ -322,23 +321,23 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         {rightActions ? <div>{rightActions}</div> : null}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Document #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Party</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mode</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reference</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Document #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Party</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Mode</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Reference</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-12 text-center ui-muted">
                   No transactions found
                 </td>
               </tr>
@@ -346,7 +345,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
               rows.map((r) => (
                 <tr
                   key={r.id}
-                  className={onView ? 'hover:bg-gray-50 cursor-pointer' : 'hover:bg-gray-50'}
+                  className={onView ? 'ui-hover-sunken cursor-pointer' : 'ui-hover-sunken'}
                   onClick={() => {
                     if (typeof onView === 'function') onView(r);
                   }}
@@ -437,7 +436,7 @@ export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Receipt', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+          className="px-4 py-2 rounded-lg ui-primary-bg "
         >
           Record Receipt
         </button>
@@ -514,7 +513,7 @@ export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Payment', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+          className="px-4 py-2 rounded-lg ui-primary-bg "
         >
           Record Payment
         </button>

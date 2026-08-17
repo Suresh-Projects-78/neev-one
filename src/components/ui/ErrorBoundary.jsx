@@ -18,19 +18,19 @@ class ErrorBoundary extends React.Component {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-        <div className="w-full max-w-lg bg-white border rounded-xl p-6">
+      <div className="min-h-screen flex items-center justify-center ui-sunken p-6">
+        <div className="w-full max-w-lg ui-surface border rounded-xl p-6">
           <div className="text-lg font-semibold">Something went wrong</div>
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="text-sm ui-muted mt-2">
             Try refreshing the page. If the problem continues, check the last change.
           </div>
-          <div className="mt-4 text-xs text-gray-500 break-words">
+          <div className="mt-4 text-xs ui-muted break-words">
             {String(this.state.error?.message || this.state.error || '')}
           </div>
           <div className="mt-6 flex gap-2">
             <button
               type="button"
-              className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+              className="px-4 py-2 rounded-lg ui-primary-bg "
               onClick={() => window.location.reload()}
             >
               Refresh

@@ -87,21 +87,21 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <div className="text-sm text-gray-500">Document</div>
+        <div className="text-sm ui-muted">Document</div>
         <div className="font-semibold">{voucher?.number || '-'}</div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-sm bg-gray-50 border rounded-lg p-3">
+      <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
         <div>
-          <div className="text-gray-500">Total</div>
+          <div className="ui-muted">Total</div>
           <div className="font-semibold">{formatMoney(total, currentCompany)}</div>
         </div>
         <div>
-          <div className="text-gray-500">Paid</div>
+          <div className="ui-muted">Paid</div>
           <div className="font-semibold">{formatMoney(alreadyPaid, currentCompany)}</div>
         </div>
         <div>
-          <div className="text-gray-500">Balance</div>
+          <div className="ui-muted">Balance</div>
           <div className="font-semibold">{formatMoney(balance, currentCompany)}</div>
         </div>
       </div>
@@ -169,10 +169,10 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-4 py-2 ui-primary-bg rounded-lg ">
           {title}
         </button>
       </div>

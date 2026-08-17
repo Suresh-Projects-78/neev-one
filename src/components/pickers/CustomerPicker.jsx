@@ -599,7 +599,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   },
                 }));
               }}
-              className={`w-full px-3 py-2 border rounded-lg ${gstRegistrationRequiresGstinUi ? '' : 'bg-gray-50'}`}
+              className={`w-full px-3 py-2 border rounded-lg ${gstRegistrationRequiresGstinUi ? '' : 'ui-sunken'}`}
               placeholder={gstRegistrationRequiresGstinUi ? 'GSTIN (required)' : 'GSTIN (disabled)'}
               disabled={!gstRegistrationRequiresGstinUi}
               required={gstRegistrationRequiresGstinUi}
@@ -629,7 +629,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               className="w-full px-3 py-2 border rounded-lg"
               placeholder="30"
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs ui-muted">
               Sets the due date on this customer&apos;s invoices. Blank uses 30 days; 0 means due on receipt.
             </p>
           </div>
@@ -826,7 +826,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         )}
       </div>
 
-      <button type="submit" className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg ">
         {isEdit ? 'Update Customer' : 'Create Customer'}
       </button>
       </form>
@@ -858,7 +858,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 autoFocus
                 required
               />
-              <div className="text-xs text-gray-500 mt-1">This group will be created under Sundry Debtors.</div>
+              <div className="text-xs ui-muted mt-1">This group will be created under Sundry Debtors.</div>
             </div>
 
             <div className="flex justify-end gap-2">
@@ -868,11 +868,11 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   setGroupCreateOpen(false);
                   setGroupDraftName('');
                 }}
-                className="px-4 py-2 rounded-lg border hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border ui-hover-sunken"
               >
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+              <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
                 Create
               </button>
             </div>
@@ -927,7 +927,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
           setCustomerSearch('');
           setShowCustomerPopup(true);
         }}
-        className="w-full px-3 py-2 border rounded-lg bg-white text-left"
+        className="w-full px-3 py-2 border rounded-lg ui-surface text-left"
       >
         {selectedCustomerName || 'Select Customer'}
       </button>
@@ -962,7 +962,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
 
               <div className="max-h-80 overflow-y-auto space-y-1">
                 {filteredCustomers.length === 0 ? (
-                  <div className="text-sm text-gray-600">No customers found.</div>
+                  <div className="text-sm ui-muted">No customers found.</div>
                 ) : (
                   filteredCustomers.map((c) => (
                     <button
@@ -972,13 +972,12 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                         onChange(String(c.id));
                         closePopup();
                       }}
-                      className={`w-full text-left px-3 py-2 rounded-lg border hover:bg-gray-50 ${
-                        String(c.id) === String(value) ? 'bg-gray-50 border-gray-300' : 'border-gray-200'
+                      className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${ String(c.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
                       }`}
                     >
-                      <div className="text-sm font-medium text-gray-900">{getCustomerDisplayName(c)}</div>
+                      <div className="text-sm font-medium ui-fg">{getCustomerDisplayName(c)}</div>
                       {(c.email || c.mobile || c.phone) && (
-                        <div className="text-xs text-gray-500 truncate">
+                        <div className="text-xs ui-muted truncate">
                           {[c.email, c.mobile || c.phone].filter(Boolean).join(' • ')}
                         </div>
                       )}

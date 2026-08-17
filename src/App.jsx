@@ -282,28 +282,27 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
             <button
               type="button"
               onClick={() => setPendingBranchIds([])}
-              className={`w-full px-4 py-3 rounded-lg border text-left ${
-                pendingBranchIds.length === 0 ? 'bg-gray-50 border-gray-300' : 'bg-white hover:bg-gray-50 border-gray-200'
+              className={`w-full px-4 py-3 rounded-lg border text-left ${ pendingBranchIds.length === 0 ? 'ui-sunken ui-border-c' : 'ui-surface ui-hover-sunken ui-border-c'
               }`}
             >
               <div className="font-medium">All branches</div>
-              <div className="text-xs text-gray-500">Show dashboard totals for all branches</div>
+              <div className="text-xs ui-muted">Show dashboard totals for all branches</div>
             </button>
 
             <div className="border rounded-lg overflow-hidden">
               <div className="max-h-[55vh] overflow-y-auto divide-y">
                 {branchesLoading ? (
-                  <div className="px-4 py-10 text-center text-gray-500">Loading branches…</div>
+                  <div className="px-4 py-10 text-center ui-muted">Loading branches…</div>
                 ) : branchesError ? (
                   <div className="px-4 py-10 text-center text-red-600">{branchesError}</div>
                 ) : branchesSorted.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-gray-500">No branches</div>
+                  <div className="px-4 py-10 text-center ui-muted">No branches</div>
                 ) : (
                   branchesSorted.map((b) => {
                     const id = normalizeId(b?.id);
                     const checked = pendingBranchIds.length > 0 && pendingBranchIds.includes(id);
                     return (
-                      <label key={id} className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
+                      <label key={id} className="flex items-center gap-3 px-4 py-3 ui-hover-sunken cursor-pointer">
                         <input
                           type="checkbox"
                           checked={checked}
@@ -323,8 +322,8 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
                           onClick={(e) => e.stopPropagation()}
                         />
                         <div>
-                          <div className="font-medium text-gray-900">{getBranchLabel(b) || `Branch ${id}`}</div>
-                          <div className="text-xs text-gray-500">{id}</div>
+                          <div className="font-medium ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
+                          <div className="text-xs ui-muted">{id}</div>
                         </div>
                       </label>
                     );
@@ -337,7 +336,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
               <button
                 type="button"
                 onClick={() => setBranchPickerOpen(false)}
-                className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
               >
                 Cancel
               </button>
@@ -353,7 +352,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
                   }
                   setBranchPickerOpen(false);
                 }}
-                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+                className="px-4 py-2 rounded-lg ui-primary-bg "
               >
                 Apply
               </button>
@@ -429,7 +428,7 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Back
             </button>
@@ -437,7 +436,7 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="ui-surface rounded-xl shadow-sm border p-6">
           <VendorForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => setIsCreating(false)} />
         </div>
       </div>
@@ -452,18 +451,18 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={() => setEditingVendor(null)}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Back
             </button>
             <div>
               <h3 className="text-xl font-bold">Edit Vendor</h3>
-              <div className="text-sm text-gray-500">{getVendorDisplayName(editingVendor) || ''}</div>
+              <div className="text-sm ui-muted">{getVendorDisplayName(editingVendor) || ''}</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="ui-surface rounded-xl shadow-sm border p-6">
           <VendorForm
             db={db}
             setDb={setDb}
@@ -483,35 +482,35 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Vendor
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full table-fixed">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[26%]">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[16%]">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[22%]">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[12%]">GST Reg.</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[14%]">GSTIN</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Balance</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase w-[12%]">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[26%]">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[16%]">Phone</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[22%]">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[12%]">GST Reg.</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[14%]">GSTIN</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Balance</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase w-[12%]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {vendors.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No vendors found
                 </td>
               </tr>
             ) : (
               vendors.map((vendor) => (
-                <tr key={vendor.id} className="hover:bg-gray-50">
+                <tr key={vendor.id} className="ui-hover-sunken">
                   <td className="px-6 py-4 font-medium truncate" title={getVendorDisplayName(vendor) || ''}>
                     {getVendorDisplayName(vendor) || '-'}
                   </td>
@@ -529,14 +528,14 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
                       <button
                         type="button"
                         onClick={() => onEditVendor(vendor)}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1"
                       >
                         <Pencil size={16} /> Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => onDeleteVendor(vendor)}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1 text-red-600"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
                       >
                         <Trash2 size={16} /> Delete
                       </button>
@@ -613,7 +612,7 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Back
             </button>
@@ -621,7 +620,7 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="ui-surface rounded-xl shadow-sm border p-6">
           <CustomerForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => setIsCreating(false)} />
         </div>
       </div>
@@ -636,18 +635,18 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={() => setEditingCustomer(null)}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Back
             </button>
             <div>
               <h3 className="text-xl font-bold">Edit Customer</h3>
-              <div className="text-sm text-gray-500">{getCustomerDisplayName(editingCustomer) || ''}</div>
+              <div className="text-sm ui-muted">{getCustomerDisplayName(editingCustomer) || ''}</div>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="ui-surface rounded-xl shadow-sm border p-6">
           <CustomerForm
             db={db}
             setDb={setDb}
@@ -667,35 +666,35 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Customer
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full table-fixed">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[26%]">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[16%]">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[22%]">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[12%]">GST Reg.</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[14%]">GSTIN</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Balance</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase w-[12%]">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[26%]">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[16%]">Phone</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[22%]">Email</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[12%]">GST Reg.</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[14%]">GSTIN</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Balance</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase w-[12%]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {customers.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No customers found
                 </td>
               </tr>
             ) : (
               customers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50">
+                <tr key={customer.id} className="ui-hover-sunken">
                   <td className="px-6 py-4 font-medium truncate" title={getCustomerDisplayName(customer)}>
                     {getCustomerDisplayName(customer)}
                   </td>
@@ -715,14 +714,14 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
                       <button
                         type="button"
                         onClick={() => onEditCustomer(customer)}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1"
                       >
                         <Pencil size={16} /> Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => onDeleteCustomer(customer)}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1 text-red-600"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
                       >
                         <Trash2 size={16} /> Delete
                       </button>
@@ -740,9 +739,9 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
 
 const PurchaseOverview = ({ db, currentCompany }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border">
+    <div className="ui-surface rounded-xl shadow-sm p-6 border">
       <h3 className="text-xl font-bold mb-4">Purchase Overview</h3>
-      <p className="text-gray-500">Purchase statistics will appear here</p>
+      <p className="ui-muted">Purchase statistics will appear here</p>
     </div>
   );
 };
@@ -800,7 +799,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Back
             </button>
@@ -808,7 +807,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="ui-surface rounded-xl shadow-sm border p-6">
           <ExpenseForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => setIsCreating(false)} />
         </div>
       </div>
@@ -822,7 +821,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Expense
         </button>
@@ -834,8 +833,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             key={s}
             type="button"
             onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1 rounded-full text-sm border ${
-              statusFilter === s ? 'bg-gray-100 border-gray-300 text-gray-900' : 'bg-white border-gray-200 text-gray-700'
+            className={`px-3 py-1 rounded-full text-sm border ${ statusFilter === s ? 'ui-sunken ui-border-c ui-fg' : 'ui-surface ui-border-c ui-fg'
             }`}
           >
             {s}
@@ -843,26 +841,26 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full table-fixed">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Voucher #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[9%]">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[9%]">Due Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[16%]">Description</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Ref No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Ref Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[8%]">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase w-[8%]">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Voucher #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[9%]">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[9%]">Due Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[16%]">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Category</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Ref No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Ref Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[10%]">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[8%]">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase w-[8%]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {filteredExpenses.length === 0 ? (
               <tr>
-                <td colSpan="10" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="10" className="px-6 py-12 text-center ui-muted">
                   No expenses found
                 </td>
               </tr>
@@ -875,10 +873,10 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                     : derived === 'Over due'
                       ? 'bg-red-100 text-red-700'
                       : derived === 'Draft'
-                        ? 'bg-gray-100 text-gray-700'
+                        ? 'ui-sunken ui-fg'
                         : 'bg-yellow-100 text-yellow-700';
                 return (
-                  <tr key={expense.id} className="hover:bg-gray-50">
+                  <tr key={expense.id} className="ui-hover-sunken">
                   <td className="px-6 py-4 font-medium">{expense.number || '-'}</td>
                   <td className="px-6 py-4">{expense.date}</td>
                   <td className="px-6 py-4">{expense.dueDate || '-'}</td>
@@ -895,10 +893,9 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                       type="button"
                       onClick={() => openRecordPayment(expense)}
                       disabled={derived === 'Paid' || derived === 'Draft'}
-                      className={`px-3 py-1 rounded-lg text-sm border ${
-                        derived === 'Paid' || derived === 'Draft'
-                          ? 'bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed'
-                          : 'bg-white hover:bg-gray-50 border-gray-200'
+                      className={`px-3 py-1 rounded-lg text-sm border ${ derived === 'Paid' || derived === 'Draft'
+                          ? 'ui-sunken ui-muted ui-border-c cursor-not-allowed'
+                          : 'ui-surface ui-hover-sunken ui-border-c'
                       }`}
                     >
                       Record Payment
@@ -1025,7 +1022,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             setSubmitAsDraft(true);
             formRef.current?.requestSubmit();
           }}
-          className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+          className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
         >
           Save Draft
         </button>
@@ -1037,7 +1034,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             type="text"
             value={formData.number}
             onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg ${lockExpenseNumber ? 'bg-gray-50' : ''}`}
+            className={`w-full px-3 py-2 border rounded-lg ${lockExpenseNumber ? 'ui-sunken' : ''}`}
             disabled={lockExpenseNumber}
             required
           />
@@ -1156,7 +1153,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
         </div>
       </div>
 
-      <div className="bg-gray-50 border rounded-lg p-3 text-sm space-y-1">
+      <div className="ui-sunken border rounded-lg p-3 text-sm space-y-1">
         <div className="flex justify-between">
           <span>GST:</span>
           <span>{formatMoney(computed.gstAmount, currentCompany)}</span>
@@ -1185,7 +1182,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
           Create Expense
         </button>
       </div>
@@ -1266,36 +1263,36 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
               { title: 'New Item', maxWidthClass: 'max-w-3xl' }
             )
           }
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Item
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">HSN/SAC</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">GST %</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sale Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Code</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">HSN/SAC</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">GST %</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Sale Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Stock</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-10 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-10 text-center ui-muted">
                   No items yet
                 </td>
               </tr>
             ) : null}
             {items.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50">
+              <tr key={item.id} className="ui-hover-sunken">
                 <td className="px-6 py-4 font-medium">{item.code}</td>
                 <td className="px-6 py-4">{item.name}</td>
                 <td className="px-6 py-4">{item.type}</td>
@@ -1316,7 +1313,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
                     <button
                       type="button"
                       onClick={() => onEdit(item)}
-                      className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1"
                       title="Edit"
                     >
                       <Pencil size={16} /> Edit
@@ -1324,7 +1321,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
                     <button
                       type="button"
                       onClick={() => onDelete(item)}
-                      className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1 text-red-600"
+                      className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
                       title="Delete"
                     >
                       <Trash2 size={16} /> Delete
@@ -1590,7 +1587,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           />
         </div>
       </div>
-      <button type="submit" className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg ">
         {isEdit ? 'Update Item' : 'Create Item'}
       </button>
     </form>
@@ -1599,9 +1596,9 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
 
 const StockAdjustment = ({ db, setDb, currentCompany }) => {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border">
+    <div className="ui-surface rounded-xl shadow-sm p-6 border">
       <h3 className="text-xl font-bold mb-4">Stock Adjustment</h3>
-      <p className="text-gray-500">Adjust inventory stock levels</p>
+      <p className="ui-muted">Adjust inventory stock levels</p>
     </div>
   );
 };
@@ -1619,12 +1616,12 @@ const InventoryOverview = ({ db, currentCompany }) => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6 border">
-          <h4 className="text-sm text-gray-600 mb-2">Total Items</h4>
+        <div className="ui-surface rounded-xl shadow-sm p-6 border">
+          <h4 className="text-sm ui-muted mb-2">Total Items</h4>
           <p className="text-3xl font-bold">{items.length}</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-6 border">
-          <h4 className="text-sm text-gray-600 mb-2">Inventory Value</h4>
+        <div className="ui-surface rounded-xl shadow-sm p-6 border">
+          <h4 className="text-sm ui-muted mb-2">Inventory Value</h4>
           <p className="text-3xl font-bold">{formatMoney(totalValue, currentCompany)}</p>
         </div>
       </div>
@@ -1646,7 +1643,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   const LedgerCreateChooser = ({ onClose }) => {
     const openCustomerCreate = () => {
       openModal(
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="ui-surface rounded-xl shadow-sm border p-6">
           <CustomerForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />
         </div>,
         { title: 'New Customer', maxWidthClass: 'max-w-3xl' }
@@ -1655,7 +1652,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
 
     const openVendorCreate = () => {
       openModal(
-        <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="ui-surface rounded-xl shadow-sm border p-6">
           <VendorForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />
         </div>,
         { title: 'New Vendor', maxWidthClass: 'max-w-3xl' }
@@ -1678,39 +1675,39 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
 
     return (
       <div className="space-y-4">
-        <div className="text-sm text-gray-600">Choose what you want to create:</div>
+        <div className="text-sm ui-muted">Choose what you want to create:</div>
 
         <div className="grid grid-cols-1 gap-3">
           <button
             type="button"
             onClick={openVendorCreate}
-            className="w-full text-left px-4 py-3 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="w-full text-left px-4 py-3 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             <div className="font-semibold">1. Vendor</div>
-            <div className="text-xs text-gray-500">Opens vendor creation form</div>
+            <div className="text-xs ui-muted">Opens vendor creation form</div>
           </button>
 
           <button
             type="button"
             onClick={openCustomerCreate}
-            className="w-full text-left px-4 py-3 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="w-full text-left px-4 py-3 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             <div className="font-semibold">2. Customer</div>
-            <div className="text-xs text-gray-500">Opens customer creation form</div>
+            <div className="text-xs ui-muted">Opens customer creation form</div>
           </button>
 
           <button
             type="button"
             onClick={openOtherLedgerCreate}
-            className="w-full text-left px-4 py-3 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="w-full text-left px-4 py-3 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             <div className="font-semibold">3. Others</div>
-            <div className="text-xs text-gray-500">Create any ledger other than Vendor/Customer ledgers</div>
+            <div className="text-xs ui-muted">Create any ledger other than Vendor/Customer ledgers</div>
           </button>
         </div>
 
         <div className="flex justify-end">
-          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
             Cancel
           </button>
         </div>
@@ -1892,7 +1889,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     }
 
     openModal(
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="ui-surface rounded-xl shadow-sm border p-6">
         <AccountGroupForm
           db={db}
           setDb={setDb}
@@ -1985,7 +1982,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={openNewLedger}
-              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+              className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
             >
               <Plus size={20} /> New Ledger
             </button>
@@ -1993,7 +1990,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={openNewGroup}
-              className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+              className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
             >
               <Plus size={20} /> New Group
             </button>
@@ -2008,8 +2005,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             setOpenMenu(null);
             setCoaView('ledgers');
           }}
-          className={`px-4 py-2 rounded-lg border text-sm ${
-            coaView === 'ledgers' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white hover:bg-gray-50 border-gray-200'
+          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'ledgers' ? 'ui-primary-bg ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
           }`}
         >
           Ledgers
@@ -2020,8 +2016,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             setOpenMenu(null);
             setCoaView('groups');
           }}
-          className={`px-4 py-2 rounded-lg border text-sm ${
-            coaView === 'groups' ? 'bg-gray-900 text-white border-gray-900' : 'bg-white hover:bg-gray-50 border-gray-200'
+          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'groups' ? 'ui-primary-bg ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
           }`}
         >
           Groups
@@ -2030,34 +2025,34 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
 
       <div className="space-y-6">
         {coaView === 'ledgers' ? (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
-            <div className="bg-gray-50 px-6 py-3 border-b">
-              <div className="font-bold text-gray-800">Ledgers</div>
-              <div className="text-xs text-gray-500">View: Ledger → Group → Parent</div>
+          <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
+            <div className="ui-sunken px-6 py-3 border-b">
+              <div className="font-bold ui-fg">Ledgers</div>
+              <div className="text-xs ui-muted">View: Ledger → Group → Parent</div>
               <div className="mt-3">
                 <input
                   type="text"
                   value={ledgerSearch}
                   onChange={(e) => setLedgerSearch(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg bg-white"
+                  className="w-full px-3 py-2 border rounded-lg ui-surface"
                   placeholder="Search ledgers (name, code, group)"
                 />
               </div>
             </div>
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="ui-sunken border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ledger</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Group</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parent</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ledger</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Group</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Parent</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Balance</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {visibleLedgerRows.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-sm text-gray-500">
+                    <td colSpan="5" className="px-6 py-8 text-center text-sm ui-muted">
                       No ledgers found
                     </td>
                   </tr>
@@ -2065,10 +2060,10 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                   visibleLedgerRows.map((a) => {
                     const buttonKey = `ledger:${String(a.id)}`;
                     return (
-                      <tr key={a.id} className="hover:bg-gray-50">
+                      <tr key={a.id} className="ui-hover-sunken">
                         <td className="px-6 py-4 font-medium">{a.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{a._groupName || '-'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{a._parent || '-'}</td>
+                        <td className="px-6 py-4 text-sm ui-fg">{a._groupName || '-'}</td>
+                        <td className="px-6 py-4 text-sm ui-fg">{a._parent || '-'}</td>
                         <td className="px-6 py-4 text-right font-semibold">{formatMoney(a.balance || 0, currentCompany)}</td>
                         <td
                           className="px-6 py-4 text-right"
@@ -2088,7 +2083,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                                 openRowMenu('ledger', a.id, e.currentTarget);
                               }
                             }}
-                            className="p-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 inline-flex"
+                            className="p-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c inline-flex"
                             aria-label="Ledger actions"
                             data-coa-menu-button={buttonKey}
                           >
@@ -2103,33 +2098,33 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             </table>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
-            <div className="bg-gray-50 px-6 py-3 border-b">
-              <div className="font-bold text-gray-800">Groups</div>
-              <div className="text-xs text-gray-500">All groups under Parents</div>
+          <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
+            <div className="ui-sunken px-6 py-3 border-b">
+              <div className="font-bold ui-fg">Groups</div>
+              <div className="text-xs ui-muted">All groups under Parents</div>
               <div className="mt-3">
                 <input
                   type="text"
                   value={groupSearch}
                   onChange={(e) => setGroupSearch(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg bg-white"
+                  className="w-full px-3 py-2 border rounded-lg ui-surface"
                   placeholder="Search groups (name, category)"
                 />
               </div>
             </div>
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="ui-sunken border-b">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Group</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parent</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Group</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Parent</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Category</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {visibleGroupRows.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="px-6 py-8 text-center text-sm text-gray-500">
+                    <td colSpan="4" className="px-6 py-8 text-center text-sm ui-muted">
                       No groups found
                     </td>
                   </tr>
@@ -2137,10 +2132,10 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                   visibleGroupRows.map((g) => {
                     const buttonKey = `group:${String(g.id)}`;
                     return (
-                      <tr key={g.id} className="hover:bg-gray-50">
+                      <tr key={g.id} className="ui-hover-sunken">
                         <td className="px-6 py-4 font-medium">{g.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{g._parent || '-'}</td>
-                        <td className="px-6 py-4 text-sm text-gray-700">{String(g.groupCategory || 'General')}</td>
+                        <td className="px-6 py-4 text-sm ui-fg">{g._parent || '-'}</td>
+                        <td className="px-6 py-4 text-sm ui-fg">{String(g.groupCategory || 'General')}</td>
                         <td
                           className="px-6 py-4 text-right"
                           onMouseDown={(e) => e.stopPropagation()}
@@ -2159,7 +2154,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                                 openRowMenu('group', g.id, e.currentTarget);
                               }
                             }}
-                            className="p-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 inline-flex"
+                            className="p-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c inline-flex"
                             aria-label="Group actions"
                             data-coa-menu-button={buttonKey}
                           >
@@ -2179,7 +2174,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-48 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-[9999]"
+          className="fixed w-48 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden z-[9999]"
           style={{ left: openMenu.left, top: openMenu.top }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
@@ -2198,9 +2193,9 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                       setOpenMenu(null);
                       openEditLedger(ledger);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                   >
-                    <span className="text-gray-600">Edit</span>
+                    <span className="ui-muted">Edit</span>
                   </button>
 
                   <button
@@ -2209,7 +2204,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                       setOpenMenu(null);
                       deleteLedger(ledger);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
                   >
                     <span>Delete</span>
                   </button>
@@ -2233,8 +2228,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     openEditGroup(group);
                   }}
                   disabled={editDisabled}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
-                    editDisabled ? 'text-gray-400 cursor-not-allowed bg-white' : 'hover:bg-gray-50'
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ editDisabled ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken'
                   }`}
                 >
                   <span>Edit</span>
@@ -2247,8 +2241,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     deleteGroup(group);
                   }}
                   disabled={deleteDisabled}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
-                    deleteDisabled ? 'text-gray-400 cursor-not-allowed bg-white' : 'hover:bg-gray-50 text-red-600'
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ deleteDisabled ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken text-red-600'
                   }`}
                   title={deleteDisabled ? canDel.reason : ''}
                 >
@@ -2599,7 +2592,7 @@ const ChartAccountForm = ({
       </div>
 
       {isBankGroupSelected ? (
-        <div className="border rounded-xl p-4 bg-gray-50 space-y-4">
+        <div className="border rounded-xl p-4 ui-sunken space-y-4">
           <div className="font-semibold">Bank Details</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -2649,10 +2642,10 @@ const ChartAccountForm = ({
       ) : null}
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
           {isEdit ? 'Save' : 'Create'}
         </button>
       </div>
@@ -2765,10 +2758,10 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => onClose?.()} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
+        <button type="button" onClick={() => onClose?.()} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
           Create
         </button>
       </div>
@@ -2796,40 +2789,40 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
         <h3 className="text-xl font-bold">Journal Entries</h3>
         <button
           onClick={onNewJournal}
-          className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-lg hover:bg-stone-900"
+          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
         >
           <Plus size={20} /> New Entry
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">JV #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Narration</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debit</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Credit</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">JV #</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Narration</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Debit</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Credit</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {journalEntries.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No journal entries found. Click "New Entry" to create one.
                 </td>
               </tr>
             ) : (
               journalEntries.map((jv) => (
-                <tr key={jv.id} className="hover:bg-gray-50">
+                <tr key={jv.id} className="ui-hover-sunken">
                   <td className="px-6 py-4 font-medium">{jv.number}</td>
                   <td className="px-6 py-4">{jv.date}</td>
                   <td className="px-6 py-4">
                     <div className="font-medium">{jv.narration || '-'}</div>
-                    <div className="text-xs text-gray-500">{(jv.lines || []).length} lines</div>
+                    <div className="text-xs ui-muted">{(jv.lines || []).length} lines</div>
                   </td>
                   <td className="px-6 py-4 text-right font-semibold">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
                   <td className="px-6 py-4 text-right font-semibold">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
@@ -2845,14 +2838,14 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                       <button
                         type="button"
                         onClick={() => onEditJournal?.(jv)}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1"
                       >
                         <Pencil size={16} /> Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => deleteEntry(jv)}
-                        className="px-3 py-1.5 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm flex items-center gap-1 text-red-600"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
                       >
                         <Trash2 size={16} /> Delete
                       </button>
@@ -3093,14 +3086,14 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Lines</label>
-          <button type="button" onClick={addLine} className="text-stone-900 hover:text-stone-900 text-sm flex items-center gap-1">
+          <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Line
           </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Account</th>
                 <th className="px-3 py-2 text-right text-xs font-medium">Debit</th>
@@ -3245,19 +3238,19 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
     <div className="space-y-4">
       <h3 className="text-xl font-bold">Trial Balance</h3>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Account</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Group</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Debit</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Credit</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Account</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Group</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Debit</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Credit</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {rows.map((account) => (
-              <tr key={account.id} className="hover:bg-gray-50">
+              <tr key={account.id} className="ui-hover-sunken">
                 <td className="px-6 py-4">
                   <button
                     type="button"
@@ -3267,7 +3260,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
                     {account.name}
                   </button>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{account._group || '-'}</td>
+                <td className="px-6 py-4 text-sm ui-muted">{account._group || '-'}</td>
                 <td className="px-6 py-4 text-right">
                   {account._debit > 0 ? formatMoney(account._debit, currentCompany) : '-'}
                 </td>
@@ -3276,7 +3269,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
                 </td>
               </tr>
             ))}
-            <tr className="bg-gray-50 font-bold border-t-2">
+            <tr className="ui-sunken font-bold border-t-2">
               <td className="px-6 py-4">TOTAL</td>
               <td className="px-6 py-4" />
               <td className="px-6 py-4 text-right">{formatMoney(totalDebit, currentCompany)}</td>
@@ -3401,9 +3394,9 @@ const LedgerView = ({
 
       return (
         <div className="space-y-4">
-          <div className="text-sm text-gray-600">Choose which columns to show for this ledger.</div>
+          <div className="text-sm ui-muted">Choose which columns to show for this ledger.</div>
 
-          <div className="max-h-80 overflow-y-auto border rounded-lg p-3 bg-white">
+          <div className="max-h-80 overflow-y-auto border rounded-lg p-3 ui-surface">
             <div className="grid grid-cols-2 gap-2">
               {LEDGER_COLUMN_DEFS.map((c) => (
                 <label key={c.key} className="flex items-center gap-2 text-sm">
@@ -3422,21 +3415,21 @@ const LedgerView = ({
                 persistLedgerColumns(draft);
                 openModal(null);
               }}
-              className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+              className="px-4 py-2 rounded-lg ui-primary-bg "
             >
               Save
             </button>
             <button
               type="button"
               onClick={() => setDraft(DEFAULT_LEDGER_COLUMNS.slice())}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Reset Default
             </button>
             <button
               type="button"
               onClick={() => openModal(null)}
-              className="ml-auto px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="ml-auto px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Cancel
             </button>
@@ -3460,9 +3453,9 @@ const LedgerView = ({
       const showItemsInline = !selectedColumnKeys.includes('itemsSummary');
       return (
         <div>
-          <div className="text-sm font-medium text-gray-900">{r?.particulars || '-'}</div>
-          {showNarrationInline && r?.narration ? <div className="text-xs text-gray-500">{r.narration}</div> : null}
-          {showItemsInline && r?.itemsSummary ? <div className="text-xs text-gray-500">{r.itemsSummary}</div> : null}
+          <div className="text-sm font-medium ui-fg">{r?.particulars || '-'}</div>
+          {showNarrationInline && r?.narration ? <div className="text-xs ui-muted">{r.narration}</div> : null}
+          {showItemsInline && r?.itemsSummary ? <div className="text-xs ui-muted">{r.itemsSummary}</div> : null}
         </div>
       );
     }
@@ -3500,14 +3493,14 @@ const LedgerView = ({
 
     openModal(
       <div className="space-y-4">
-        <div className="text-sm text-gray-600">Choose action for this entry.</div>
+        <div className="text-sm ui-muted">Choose action for this entry.</div>
         <div className="flex flex-col">
-          <button type="button" onClick={() => { openModal(null); handleView(row); }} className="text-left px-3 py-2 hover:bg-gray-50">View</button>
-          <button type="button" onClick={() => { openModal(null); handleEdit(row); }} className="text-left px-3 py-2 hover:bg-gray-50">Edit</button>
-          <button type="button" onClick={() => { openModal(null); handleDelete(row); }} className="text-left px-3 py-2 hover:bg-gray-50 text-red-600">Delete</button>
+          <button type="button" onClick={() => { openModal(null); handleView(row); }} className="text-left px-3 py-2 ui-hover-sunken">View</button>
+          <button type="button" onClick={() => { openModal(null); handleEdit(row); }} className="text-left px-3 py-2 ui-hover-sunken">Edit</button>
+          <button type="button" onClick={() => { openModal(null); handleDelete(row); }} className="text-left px-3 py-2 ui-hover-sunken text-red-600">Delete</button>
         </div>
         <div className="flex justify-end">
-          <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">Close</button>
+          <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Close</button>
         </div>
       </div>
     );
@@ -3518,11 +3511,11 @@ const LedgerView = ({
     openModal(
       <div className="space-y-4">
         <h4 className="text-lg font-medium">Entry details</h4>
-        <div className="text-sm text-gray-700">
+        <div className="text-sm ui-fg">
           <pre className="whitespace-pre-wrap text-xs">{JSON.stringify(row, null, 2)}</pre>
         </div>
         <div className="flex justify-end">
-          <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">
+          <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
             Close
           </button>
         </div>
@@ -3606,28 +3599,28 @@ const LedgerView = ({
         return (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">Edit entry — simple form or JSON.</div>
+              <div className="text-sm ui-muted">Edit entry — simple form or JSON.</div>
               <div>
-                <label className="text-xs text-gray-500 mr-2">Raw JSON</label>
+                <label className="text-xs ui-muted mr-2">Raw JSON</label>
                 <input type="checkbox" checked={!useForm} onChange={() => setUseForm((v) => !v)} />
               </div>
             </div>
             {useForm ? (
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-500">Date</label>
+                  <label className="block text-xs ui-muted">Date</label>
                   <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Particulars</label>
+                  <label className="block text-xs ui-muted">Particulars</label>
                   <input value={form.particulars} onChange={(e) => setForm((p) => ({ ...p, particulars: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Debit</label>
+                  <label className="block text-xs ui-muted">Debit</label>
                   <input value={form.debit} onChange={(e) => setForm((p) => ({ ...p, debit: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Credit</label>
+                  <label className="block text-xs ui-muted">Credit</label>
                   <input value={form.credit} onChange={(e) => setForm((p) => ({ ...p, credit: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
               </div>
@@ -3635,8 +3628,8 @@ const LedgerView = ({
               <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="w-full h-64 p-2 border rounded text-xs font-mono" />
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save</button>
+              <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Cancel</button>
+              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-primary-bg ">Save</button>
             </div>
           </div>
         );
@@ -3765,24 +3758,24 @@ const LedgerView = ({
         return (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600">Edit voucher — simple form or JSON.</div>
+              <div className="text-sm ui-muted">Edit voucher — simple form or JSON.</div>
               <div>
-                <label className="text-xs text-gray-500 mr-2">Raw JSON</label>
+                <label className="text-xs ui-muted mr-2">Raw JSON</label>
                 <input type="checkbox" checked={!useForm} onChange={() => setUseForm((v) => !v)} />
               </div>
             </div>
             {useForm ? (
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-500">Date</label>
+                  <label className="block text-xs ui-muted">Date</label>
                   <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Number</label>
+                  <label className="block text-xs ui-muted">Number</label>
                   <input value={form.number} onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Total</label>
+                  <label className="block text-xs ui-muted">Total</label>
                   <input value={form.total} onChange={(e) => setForm((p) => ({ ...p, total: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
               </div>
@@ -3790,8 +3783,8 @@ const LedgerView = ({
               <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="w-full h-64 p-2 border rounded text-xs font-mono" />
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save</button>
+              <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Cancel</button>
+              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-primary-bg ">Save</button>
             </div>
           </div>
         );
@@ -3826,9 +3819,9 @@ const LedgerView = ({
         if (!openModal) return;
         openModal(
           <div className="space-y-4">
-            <div className="text-sm text-gray-700">Deleted voucher.</div>
+            <div className="text-sm ui-fg">Deleted voucher.</div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">Close</button>
+              <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Close</button>
               <button type="button" onClick={() => {
                 // restore
                 setDb((prev2) => {
@@ -3837,7 +3830,7 @@ const LedgerView = ({
                   return next2;
                 });
                 openModal(null);
-              }} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Undo</button>
+              }} className="px-4 py-2 rounded-lg ui-primary-bg ">Undo</button>
             </div>
           </div>
         );
@@ -3952,11 +3945,11 @@ const LedgerView = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold">Ledger</h3>
-          <button type="button" onClick={onBack} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">
+          <button type="button" onClick={onBack} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
             Back
           </button>
         </div>
-        <div className="bg-white border rounded-xl p-6 text-sm text-gray-600">Ledger not found.</div>
+        <div className="ui-surface border rounded-xl p-6 text-sm ui-muted">Ledger not found.</div>
       </div>
     );
   }
@@ -3996,7 +3989,7 @@ const LedgerView = ({
 
     openModal(
       <div className="space-y-4">
-        <div className="text-sm text-gray-600">Choose export format for this ledger.</div>
+        <div className="text-sm ui-muted">Choose export format for this ledger.</div>
         <div className="flex gap-3">
           <button
             type="button"
@@ -4004,7 +3997,7 @@ const LedgerView = ({
               openModal(null);
               doExport('pdf');
             }}
-            className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+            className="px-4 py-2 rounded-lg ui-primary-bg "
           >
             PDF
           </button>
@@ -4014,14 +4007,14 @@ const LedgerView = ({
               openModal(null);
               doExport('excel');
             }}
-            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             Excel
           </button>
           <button
             type="button"
             onClick={() => openModal(null)}
-            className="ml-auto px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="ml-auto px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             Cancel
           </button>
@@ -4046,19 +4039,19 @@ const LedgerView = ({
 
       return (
         <div className="space-y-4">
-          <div className="text-sm text-gray-600">Select period for ledger entries.</div>
+          <div className="text-sm ui-muted">Select period for ledger entries.</div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs text-gray-500">From</label>
+              <label className="block text-xs ui-muted">From</label>
               <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} className="w-full px-3 py-2 rounded border" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-500">To</label>
+              <label className="block text-xs ui-muted">To</label>
               <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} className="w-full px-3 py-2 rounded border" />
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">
+            <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
               Cancel
             </button>
             <button
@@ -4068,7 +4061,7 @@ const LedgerView = ({
                 setFilterTo(draftTo);
                 openModal(null);
               }}
-              className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+              className="px-4 py-2 rounded-lg ui-primary-bg "
             >
               Apply
             </button>
@@ -4081,7 +4074,7 @@ const LedgerView = ({
                 setFilterTo('');
                 openModal(null);
               }}
-              className="ml-auto px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="ml-auto px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Clear
             </button>
@@ -4098,17 +4091,17 @@ const LedgerView = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xl font-bold">Ledger: {account.name}</h3>
-          <div className="text-sm text-gray-500">As of {new Date().toLocaleDateString()}</div>
+          <div className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</div>
         </div>
           <div className="flex items-center gap-2">
-          <button type="button" onClick={onBack} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200">
+          <button type="button" onClick={onBack} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
             Back
           </button>
 
           <button
             type="button"
             onClick={openColumnSettings}
-            className="inline-flex items-center gap-2 px-2 py-1 rounded border bg-white hover:bg-gray-50 border-gray-200 text-xs"
+            className="inline-flex items-center gap-2 px-2 py-1 rounded border ui-surface ui-hover-sunken ui-border-c text-xs"
             title="Configure columns"
           >
             <Settings size={14} /> Columns
@@ -4117,7 +4110,7 @@ const LedgerView = ({
           <button
             type="button"
             onClick={openPeriodModal}
-            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm"
+            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
             title="Select period"
           >
             {periodLabel}
@@ -4126,7 +4119,7 @@ const LedgerView = ({
           <button
             type="button"
             onClick={openExportChooser}
-            className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             <Download size={18} /> Export
           </button>
@@ -4134,7 +4127,7 @@ const LedgerView = ({
           <button
             type="button"
             onClick={expandAll}
-            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm"
+            className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
             title="Expand all entries"
           >
             Expand All
@@ -4143,7 +4136,7 @@ const LedgerView = ({
           <button
             type="button"
             onClick={collapseAll}
-            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-sm"
+            className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
             title="Collapse all entries"
           >
             Collapse All
@@ -4161,21 +4154,21 @@ const LedgerView = ({
                 columns: visibleColumns.map((c) => ({ key: c.key, label: c.label })),
               })
             }
-            className="px-6 py-3 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+            className="px-6 py-3 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
           >
             Print
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
               {visibleColumns.map((c) => (
                 <th
                   key={c.key}
-                  className={`px-4 py-3 text-xs font-medium text-gray-500 uppercase ${c.align === 'right' ? 'text-right' : 'text-left'}`}
+                  className={`px-4 py-3 text-xs font-medium ui-muted uppercase ${c.align === 'right' ? 'text-right' : 'text-left'}`}
                 >
                   {c.label}
                 </th>
@@ -4184,7 +4177,7 @@ const LedgerView = ({
             </tr>
           </thead>
           <tbody className="divide-y">
-            <tr className="bg-gray-50">
+            <tr className="ui-sunken">
               {visibleColumns.map((c) => {
                 let content = '-';
                 if (c.key === 'particulars') content = 'Opening Balance';
@@ -4192,7 +4185,7 @@ const LedgerView = ({
                 return (
                   <td
                     key={c.key}
-                    className={`px-4 py-3 text-sm ${c.align === 'right' ? 'text-right' : 'text-left'} text-gray-600`}
+                    className={`px-4 py-3 text-sm ${c.align === 'right' ? 'text-right' : 'text-left'} ui-muted`}
                   >
                     {content}
                   </td>
@@ -4244,7 +4237,7 @@ const LedgerView = ({
                 return (
                   <React.Fragment key={g.key}>
                     <tr
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="ui-hover-sunken cursor-pointer"
                       onClick={() => {
                         const next = new Set(expandedGroups);
                         if (next.has(g.key)) next.delete(g.key);
@@ -4260,7 +4253,7 @@ const LedgerView = ({
                           const party = g.meta?.partyName ? `${g.meta.partyName} • ${g.particulars || ''}` : g.particulars || '';
                           content = (
                             <div className="flex items-center gap-2">
-                              <span className="text-xs px-2 py-1 rounded border bg-white text-gray-600" aria-hidden>
+                              <span className="text-xs px-2 py-1 rounded border ui-surface ui-muted" aria-hidden>
                                 {isExpanded ? '▾' : '▸'}
                               </span>
                               <div className="truncate">{party}</div>
@@ -4273,7 +4266,7 @@ const LedgerView = ({
                         else content = renderCell(g.rows[0], c.key);
 
                         return (
-                          <td key={c.key} className={`px-4 py-3 ${c.align === 'right' ? 'text-right' : 'text-left'} text-sm text-gray-900`}>
+                          <td key={c.key} className={`px-4 py-3 ${c.align === 'right' ? 'text-right' : 'text-left'} text-sm ui-fg`}>
                             {content}
                           </td>
                         );
@@ -4297,11 +4290,11 @@ const LedgerView = ({
                       });
 
                       return aggs.map((a, ai) => (
-                        <tr key={`${g.key}:agg:${ai}`} className="bg-gray-50">
+                        <tr key={`${g.key}:agg:${ai}`} className="ui-sunken">
                           {visibleColumns.map((c) => {
                             if (c.key === 'particulars') {
                               return (
-                                <td key={c.key} className={`px-4 py-2 ${c.align === 'right' ? 'text-right' : 'text-left'} text-sm text-gray-600 pl-6`}>
+                                <td key={c.key} className={`px-4 py-2 ${c.align === 'right' ? 'text-right' : 'text-left'} text-sm ui-muted pl-6`}>
                                   <div className="font-medium">{a.particulars}</div>
                                 </td>
                               );
@@ -4309,26 +4302,26 @@ const LedgerView = ({
 
                             if (c.key === 'debit') {
                               return (
-                                <td key={c.key} className={`px-4 py-2 text-sm text-gray-600 text-right`}>{formatMoney(a.debit || 0, currentCompany)}</td>
+                                <td key={c.key} className={`px-4 py-2 text-sm ui-muted text-right`}>{formatMoney(a.debit || 0, currentCompany)}</td>
                               );
                             }
 
                             if (c.key === 'credit') {
                               return (
-                                <td key={c.key} className={`px-4 py-2 text-sm text-gray-600 text-right`}>{formatMoney(a.credit || 0, currentCompany)}</td>
+                                <td key={c.key} className={`px-4 py-2 text-sm ui-muted text-right`}>{formatMoney(a.credit || 0, currentCompany)}</td>
                               );
                             }
 
                             if (c.key === 'runningBalance') {
                               return (
-                                <td key={c.key} className={`px-4 py-2 text-sm text-gray-600 text-right`}>{a.runningBalance != null ? formatMoney(Number(a.runningBalance), currentCompany) : '-'}</td>
+                                <td key={c.key} className={`px-4 py-2 text-sm ui-muted text-right`}>{a.runningBalance != null ? formatMoney(Number(a.runningBalance), currentCompany) : '-'}</td>
                               );
                             }
 
                             // For other columns, prefer representative row but strip item/narration details
                             const repRow = { ...(a.rep || {}), itemsSummary: undefined, narration: undefined };
                             return (
-                              <td key={c.key} className={`px-4 py-2 ${c.align === 'right' ? 'text-right' : 'text-left'} text-sm text-gray-600 pl-6`}>
+                              <td key={c.key} className={`px-4 py-2 ${c.align === 'right' ? 'text-right' : 'text-left'} text-sm ui-muted pl-6`}>
                                 {renderCell(repRow, c.key)}
                               </td>
                             );
@@ -4340,7 +4333,7 @@ const LedgerView = ({
                 );
               });
             })()}
-            <tr className="bg-gray-50 font-bold border-t-2">
+            <tr className="ui-sunken font-bold border-t-2">
               {visibleColumns.map((c, idx) => {
                 if (c.key === 'debit') {
                   return (
@@ -4382,9 +4375,9 @@ const LedgerView = ({
 
 const AccountingOverview = () => {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border">
+    <div className="ui-surface rounded-xl shadow-sm p-6 border">
       <h3 className="text-xl font-bold mb-4">Accounting Module</h3>
-      <p className="text-gray-500">Select a sub-module from the sidebar</p>
+      <p className="ui-muted">Select a sub-module from the sidebar</p>
     </div>
   );
 };
@@ -4455,24 +4448,24 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Profit & Loss Statement</h3>
-        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
           <h4 className="text-lg font-bold">{currentCompany.name}</h4>
-          <p className="text-sm text-gray-500">Profit & Loss Statement</p>
-          <p className="text-sm text-gray-500">As of {new Date().toLocaleDateString()}</p>
+          <p className="text-sm ui-muted">Profit & Loss Statement</p>
+          <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <h5 className="font-bold text-gray-700 mb-2">REVENUE</h5>
+            <h5 className="font-bold ui-fg mb-2">REVENUE</h5>
             {incomeAccounts.map((account) => (
                 <div key={account.id} className="flex justify-between py-1 pl-4">
-                  <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="text-gray-600 text-left hover:underline">
+                  <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                     {account.name}
                   </button>
                   <span>{formatMoney(account.balance || 0, currentCompany)}</span>
@@ -4485,10 +4478,10 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
           </div>
 
           <div>
-            <h5 className="font-bold text-gray-700 mb-2">EXPENSES</h5>
+            <h5 className="font-bold ui-fg mb-2">EXPENSES</h5>
             {expenseAccounts.map((account) => (
                 <div key={account.id} className="flex justify-between py-1 pl-4">
-                  <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="text-gray-600 text-left hover:underline">
+                  <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                     {account.name}
                   </button>
                   <span>{formatMoney(account.balance || 0, currentCompany)}</span>
@@ -4557,26 +4550,26 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Balance Sheet</h3>
-        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
           <h4 className="text-lg font-bold">{currentCompany.name}</h4>
-          <p className="text-sm text-gray-500">Balance Sheet</p>
-          <p className="text-sm text-gray-500">As of {new Date().toLocaleDateString()}</p>
+          <p className="text-sm ui-muted">Balance Sheet</p>
+          <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-8">
           <div>
-            <h5 className="font-bold text-gray-700 mb-3">ASSETS</h5>
+            <h5 className="font-bold ui-fg mb-3">ASSETS</h5>
             {balanceSheetAccounts
               .filter((a) => a._derivedClass === 'Asset')
               .map((account) => (
                 <div key={account.id} className="flex justify-between py-1 pl-4">
-                  <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="text-gray-600 text-left hover:underline">
+                  <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                     {account.name}
                   </button>
                   <span>{formatMoney(account.balance || 0, currentCompany)}</span>
@@ -4590,12 +4583,12 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
 
           <div>
             <div className="mb-6">
-              <h5 className="font-bold text-gray-700 mb-3">LIABILITIES</h5>
+              <h5 className="font-bold ui-fg mb-3">LIABILITIES</h5>
               {balanceSheetAccounts
                 .filter((a) => a._derivedClass === 'Liability')
                 .map((account) => (
                   <div key={account.id} className="flex justify-between py-1 pl-4">
-                    <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="text-gray-600 text-left hover:underline">
+                    <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                       {account.name}
                     </button>
                     <span>{formatMoney(account.balance || 0, currentCompany)}</span>
@@ -4608,19 +4601,19 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
             </div>
 
             <div>
-              <h5 className="font-bold text-gray-700 mb-3">EQUITY</h5>
+              <h5 className="font-bold ui-fg mb-3">EQUITY</h5>
               {balanceSheetAccounts
                 .filter((a) => a._derivedClass === 'Equity')
                 .map((account) => (
                   <div key={account.id} className="flex justify-between py-1 pl-4">
-                    <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="text-gray-600 text-left hover:underline">
+                    <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                       {account.name}
                     </button>
                     <span>{formatMoney(account.balance || 0, currentCompany)}</span>
                   </div>
                 ))}
               <div className="flex justify-between py-1 pl-4">
-                <span className="text-gray-600">Current Year Profit / (Loss)</span>
+                <span className="ui-muted">Current Year Profit / (Loss)</span>
                 <span className={netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
                   {formatMoney(netProfit, currentCompany)}
                 </span>
@@ -4687,29 +4680,29 @@ const CashFlowStatement = ({ db, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Cash Flow Statement</h3>
-        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
+        <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
           <h4 className="text-lg font-bold">{currentCompany.name}</h4>
-          <p className="text-sm text-gray-500">Cash Flow Statement</p>
-          <p className="text-sm text-gray-500">As of {new Date().toLocaleDateString()}</p>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-sm ui-muted">Cash Flow Statement</p>
+          <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
+          <p className="text-xs ui-muted mt-2">
             Based on recorded Receipts/Payments transactions.
           </p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <h5 className="font-bold text-gray-700 mb-2">CASH INFLOWS</h5>
+            <h5 className="font-bold ui-fg mb-2">CASH INFLOWS</h5>
             {positiveLines
               .filter((l) => l.label === 'Receipts' || l.label === 'Customer Collections')
               .map((l) => (
                 <div key={l.label} className="flex justify-between py-1 pl-4">
-                  <span className="text-gray-600">{l.label}</span>
+                  <span className="ui-muted">{l.label}</span>
                   <span>{formatMoney(l.amount, currentCompany)}</span>
                 </div>
               ))}
@@ -4720,12 +4713,12 @@ const CashFlowStatement = ({ db, currentCompany }) => {
           </div>
 
           <div>
-            <h5 className="font-bold text-gray-700 mb-2">CASH OUTFLOWS</h5>
+            <h5 className="font-bold ui-fg mb-2">CASH OUTFLOWS</h5>
             {positiveLines
               .filter((l) => !['Receipts', 'Customer Collections'].includes(l.label))
               .map((l) => (
                 <div key={l.label} className="flex justify-between py-1 pl-4">
-                  <span className="text-gray-600">{l.label}</span>
+                  <span className="ui-muted">{l.label}</span>
                   <span>{formatMoney(l.amount, currentCompany)}</span>
                 </div>
               ))}
@@ -4753,7 +4746,7 @@ const SalesReports = ({ db, currentCompany }) => {
       <h3 className="text-xl font-bold">Sales Reports</h3>
 
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm p-6 border">
+        <div className="ui-surface rounded-xl shadow-sm p-6 border">
           <h4 className="font-bold mb-4">Sales by Status</h4>
           <div className="space-y-2">
             <div className="flex justify-between">
@@ -4771,7 +4764,7 @@ const SalesReports = ({ db, currentCompany }) => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border">
+        <div className="ui-surface rounded-xl shadow-sm p-6 border">
           <h4 className="font-bold mb-4">Total Sales</h4>
           <p className="text-3xl font-bold text-green-600">{formatMoney(invoices.reduce((sum, i) => sum + i.total, 0), currentCompany)}</p>
         </div>
@@ -4785,14 +4778,14 @@ const ReportsOverview = ({ sections, onNavigate }) => {
   const activeSection = sections.find((s) => s.key === activeSectionKey) || sections[0];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+    <div className="ui-surface rounded-xl shadow-sm border overflow-hidden">
       <div className="p-6 border-b">
         <h3 className="text-xl font-bold">Reports</h3>
-        <p className="text-sm text-gray-500">Choose a category on the left, then select a report.</p>
+        <p className="text-sm ui-muted">Choose a category on the left, then select a report.</p>
       </div>
 
       <div className="flex">
-        <div className="w-64 border-r bg-white p-4">
+        <div className="w-64 border-r ui-surface p-4">
           <div className="space-y-1">
             {sections.map((s) => {
               const isActive = s.key === activeSectionKey;
@@ -4801,10 +4794,9 @@ const ReportsOverview = ({ sections, onNavigate }) => {
                   key={s.key}
                   type="button"
                   onClick={() => setActiveSectionKey(s.key)}
-                  className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                    isActive
-                      ? 'bg-stone-100 border-stone-300 text-stone-900'
-                      : 'bg-white border-transparent text-gray-700 hover:bg-gray-50'
+                  className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${ isActive
+                      ? 'bg-stone-100 border-stone-300 ui-fg'
+                      : 'ui-surface border-transparent ui-fg ui-hover-sunken'
                   }`}
                 >
                   <div className="text-sm font-semibold">{s.title}</div>
@@ -4816,20 +4808,20 @@ const ReportsOverview = ({ sections, onNavigate }) => {
 
         <div className="flex-1 p-6">
           <div className="mb-4">
-            <div className="text-sm text-gray-500">Category</div>
+            <div className="text-sm ui-muted">Category</div>
             <div className="text-lg font-bold">{activeSection?.title || 'Reports'}</div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden bg-white">
+          <div className="border rounded-lg overflow-hidden ui-surface">
             {(activeSection?.items || []).length === 0 ? (
-              <div className="px-4 py-6 text-sm text-gray-500">No reports.</div>
+              <div className="px-4 py-6 text-sm ui-muted">No reports.</div>
             ) : (
               (activeSection?.items || []).map((r, idx) => (
                 <button
                   key={r.key}
                   type="button"
                   onClick={() => onNavigate?.(r.key)}
-                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 ${idx ? 'border-t' : ''}`}
+                  className={`w-full text-left px-4 py-3 ui-hover-sunken ${idx ? 'border-t' : ''}`}
                 >
                   <div className="font-semibold">{r.label}</div>
                 </button>
@@ -4849,13 +4841,13 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
       <div className={`h-2 ${accentBarClass}`} />
       <div className="p-4 flex items-start justify-between">
         <div>
-          <div className="text-lg font-bold text-gray-800">{companyName}</div>
-          <div className="text-xs text-gray-500">Document Template Preview</div>
+          <div className="text-lg font-bold ui-fg">{companyName}</div>
+          <div className="text-xs ui-muted">Document Template Preview</div>
         </div>
         <div className="text-right">
           <div className="text-sm font-semibold">{voucherLabel}</div>
-          <div className="text-xs text-gray-500">No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
-          <div className="text-xs text-gray-500">Date: {new Date().toISOString().slice(0, 10)}</div>
+          <div className="text-xs ui-muted">No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
+          <div className="text-xs ui-muted">Date: {new Date().toISOString().slice(0, 10)}</div>
         </div>
       </div>
     </div>
@@ -4864,12 +4856,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
   const rows = (
     <div className="border rounded-lg overflow-hidden">
       <table className="w-full">
-        <thead className="bg-gray-50 border-b">
+        <thead className="ui-sunken border-b">
           <tr>
-            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
-            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Rate</th>
-            <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+            <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Item</th>
+            <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Qty</th>
+            <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Rate</th>
+            <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Amount</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -4893,11 +4885,11 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
   const totals = (
     <div className="border rounded-lg p-4 text-sm">
       <div className="flex justify-between">
-        <span className="text-gray-600">Subtotal</span>
+        <span className="ui-muted">Subtotal</span>
         <span className="font-medium">₹2,000</span>
       </div>
       <div className="flex justify-between">
-        <span className="text-gray-600">GST</span>
+        <span className="ui-muted">GST</span>
         <span className="font-medium">₹360</span>
       </div>
       <div className="flex justify-between border-t mt-2 pt-2 font-bold">
@@ -4913,11 +4905,11 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
         <div className="flex items-stretch gap-3">
           <div className={`w-2 rounded-lg ${accentBarClass}`} />
           <div className="flex-1">
-            <div className="text-xs text-gray-500">{title}</div>
-            <div className="text-2xl font-bold text-gray-800">{voucherLabel}</div>
-            <div className="text-sm text-gray-600">{companyName}</div>
+            <div className="text-xs ui-muted">{title}</div>
+            <div className="text-2xl font-bold ui-fg">{voucherLabel}</div>
+            <div className="text-sm ui-muted">{companyName}</div>
           </div>
-          <div className="text-right text-sm text-gray-600">
+          <div className="text-right text-sm ui-muted">
             <div>No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
             <div>Date: {new Date().toISOString().slice(0, 10)}</div>
           </div>
@@ -4934,10 +4926,10 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
         <div className="border rounded-lg p-4">
           <div className="flex justify-between">
             <div>
-              <div className="text-xs text-gray-500">{companyName}</div>
+              <div className="text-xs ui-muted">{companyName}</div>
               <div className="text-xl font-bold">{voucherLabel}</div>
             </div>
-            <div className="text-right text-xs text-gray-600">
+            <div className="text-right text-xs ui-muted">
               <div>No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
               <div>Date: {new Date().toISOString().slice(0, 10)}</div>
             </div>
@@ -4956,11 +4948,11 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className={`h-2 ${accentBarClass}`} />
           <div className="p-3 flex items-start justify-between">
             <div>
-              <div className="text-sm font-bold text-gray-800">{companyName}</div>
-              <div className="text-xs text-gray-500">{title}</div>
+              <div className="text-sm font-bold ui-fg">{companyName}</div>
+              <div className="text-xs ui-muted">{title}</div>
             </div>
-            <div className="text-right text-xs text-gray-600">
-              <div className="font-semibold text-gray-800">{voucherLabel}</div>
+            <div className="text-right text-xs ui-muted">
+              <div className="font-semibold ui-fg">{voucherLabel}</div>
               <div>No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
               <div>Date: {new Date().toISOString().slice(0, 10)}</div>
             </div>
@@ -4996,14 +4988,14 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   if (templateId === 'a5') {
     return (
-      <div className="max-w-[620px] mx-auto text-[11px] leading-4 text-gray-900">
+      <div className="max-w-[620px] mx-auto text-[11px] leading-4 ui-fg">
         <div className="border border-gray-900">
           <div className="p-3 border-b border-gray-900">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-base font-bold">{companyName}</div>
-                <div className="text-[10px] text-gray-700">(Sample address line 1, city, state - pincode)</div>
-                <div className="text-[10px] text-gray-700">GSTIN: 27ABCDE1234F1Z5</div>
+                <div className="text-[10px] ui-fg">(Sample address line 1, city, state - pincode)</div>
+                <div className="text-[10px] ui-fg">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
               <div className="text-right">
                 <div className="text-lg font-extrabold tracking-wide">TAX INVOICE</div>
@@ -5016,9 +5008,9 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <div className="p-3 border-r border-gray-900">
               <div className="font-semibold">M/S</div>
               <div className="font-semibold">Customer Name</div>
-              <div className="text-[10px] text-gray-700">Address line…</div>
-              <div className="text-[10px] text-gray-700">GSTIN: 29ABCDE1234F1Z5</div>
-              <div className="text-[10px] text-gray-700">Place of Supply: Kerala (32)</div>
+              <div className="text-[10px] ui-fg">Address line…</div>
+              <div className="text-[10px] ui-fg">GSTIN: 29ABCDE1234F1Z5</div>
+              <div className="text-[10px] ui-fg">Place of Supply: Kerala (32)</div>
             </div>
             <div className="p-3 border-r border-gray-900">
               <div className="grid grid-cols-2 gap-x-2">
@@ -5076,7 +5068,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="grid grid-cols-3 border-t border-gray-900">
             <div className="p-3 col-span-2 border-r border-gray-900">
               <div className="font-semibold">Terms and Conditions</div>
-              <div className="text-[10px] text-gray-700">This is a sample A5 template preview.</div>
+              <div className="text-[10px] ui-fg">This is a sample A5 template preview.</div>
               <div className="mt-8 font-semibold">Customer Signature</div>
             </div>
             <div className="p-3">
@@ -5092,7 +5084,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
                 <span>Total Amount</span>
                 <span>₹2,360</span>
               </div>
-              <div className="mt-6 text-[10px] text-gray-700">This is a computer generated invoice.</div>
+              <div className="mt-6 text-[10px] ui-fg">This is a computer generated invoice.</div>
             </div>
           </div>
         </div>
@@ -5102,13 +5094,13 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   if (templateId === 'a5Compact') {
     return (
-      <div className="max-w-[620px] mx-auto text-[10px] leading-4 text-gray-900">
+      <div className="max-w-[620px] mx-auto text-[10px] leading-4 ui-fg">
         <div className="border border-gray-900">
           <div className="p-2 border-b border-gray-900">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <div className="text-sm font-bold">{companyName}</div>
-                <div className="text-[10px] text-gray-700">GSTIN: 27ABCDE1234F1Z5</div>
+                <div className="text-[10px] ui-fg">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
               <div className="text-right">
                 <div className="text-base font-extrabold">TAX INVOICE</div>
@@ -5120,8 +5112,8 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="grid grid-cols-2">
             <div className="p-2 border-r border-gray-900">
               <div className="font-semibold">M/S Customer Name</div>
-              <div className="text-[10px] text-gray-700">GSTIN: 29ABCDE1234F1Z5</div>
-              <div className="text-[10px] text-gray-700">Place of Supply: Kerala (32)</div>
+              <div className="text-[10px] ui-fg">GSTIN: 29ABCDE1234F1Z5</div>
+              <div className="text-[10px] ui-fg">Place of Supply: Kerala (32)</div>
             </div>
             <div className="p-2">
               <div className="grid grid-cols-2 gap-x-2">
@@ -5161,7 +5153,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="grid grid-cols-2 border-t border-gray-900">
             <div className="p-2 border-r border-gray-900">
               <div className="font-semibold">Terms</div>
-              <div className="text-[10px] text-gray-700">Computer generated invoice.</div>
+              <div className="text-[10px] ui-fg">Computer generated invoice.</div>
             </div>
             <div className="p-2">
               <div className="flex justify-between font-semibold">
@@ -5185,14 +5177,14 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   if (templateId === 'a5Clean') {
     return (
-      <div className="max-w-[620px] mx-auto text-[11px] leading-4 text-gray-900">
+      <div className="max-w-[620px] mx-auto text-[11px] leading-4 ui-fg">
         <div className="border border-gray-900">
           <div className={`h-2 ${accentBarClass}`} />
           <div className="p-3 border-b border-gray-900">
             <div className="flex items-start justify-between">
               <div>
                 <div className="text-base font-bold">{companyName}</div>
-                <div className="text-[10px] text-gray-700">GSTIN: 27ABCDE1234F1Z5</div>
+                <div className="text-[10px] ui-fg">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
               <div className="text-right">
                 <div className="text-lg font-extrabold tracking-wide">TAX INVOICE</div>
@@ -5205,7 +5197,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <div className="p-3 border-r border-gray-900">
               <div className="font-semibold">M/S</div>
               <div className="font-semibold">Customer Name</div>
-              <div className="text-[10px] text-gray-700">GSTIN: 29ABCDE1234F1Z5</div>
+              <div className="text-[10px] ui-fg">GSTIN: 29ABCDE1234F1Z5</div>
             </div>
             <div className="p-3 border-r border-gray-900">
               <div className="grid grid-cols-2 gap-x-2">
@@ -5277,7 +5269,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   if (templateId === 'a5Boxed') {
     return (
-      <div className="max-w-[620px] mx-auto text-[11px] leading-4 text-gray-900">
+      <div className="max-w-[620px] mx-auto text-[11px] leading-4 ui-fg">
         <div className="border-2 border-gray-900">
           <div className="p-3 border-b-2 border-gray-900">
             <div className="flex items-center justify-between">
@@ -5297,8 +5289,8 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <div className="p-3 border-r-2 border-gray-900">
               <div className="font-semibold">Bill To</div>
               <div className="font-semibold">Customer Name</div>
-              <div className="text-[10px] text-gray-700">GSTIN: 29ABCDE1234F1Z5</div>
-              <div className="text-[10px] text-gray-700">Place of Supply: Kerala (32)</div>
+              <div className="text-[10px] ui-fg">GSTIN: 29ABCDE1234F1Z5</div>
+              <div className="text-[10px] ui-fg">Place of Supply: Kerala (32)</div>
             </div>
             <div className="p-3">
               <div className="grid grid-cols-2 gap-x-2">
@@ -5340,7 +5332,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="grid grid-cols-3 border-t-2 border-gray-900">
             <div className="p-3 col-span-2 border-r-2 border-gray-900">
               <div className="font-semibold">Terms</div>
-              <div className="text-[10px] text-gray-700">Subject to jurisdiction.</div>
+              <div className="text-[10px] ui-fg">Subject to jurisdiction.</div>
               <div className="mt-8 font-semibold">Customer Signature</div>
             </div>
             <div className="p-3">
@@ -5365,39 +5357,39 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   if (templateId === 'a4Modern') {
     return (
-      <div className="max-w-[980px] mx-auto text-sm text-gray-900">
+      <div className="max-w-[980px] mx-auto text-sm ui-fg">
         <div className="border rounded-lg overflow-hidden">
           <div className={`h-2 ${accentBarClass}`} />
           <div className="p-6">
             <div className="flex items-start justify-between gap-6">
               <div>
                 <div className="text-2xl font-extrabold">{companyName}</div>
-                <div className="text-xs text-gray-600">(Sample address line 1, city, state - pincode)</div>
-                <div className="text-xs text-gray-600">GSTIN: 27ABCDE1234F1Z5</div>
+                <div className="text-xs ui-muted">(Sample address line 1, city, state - pincode)</div>
+                <div className="text-xs ui-muted">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-extrabold tracking-wide">TAX INVOICE</div>
-                <div className="text-xs font-semibold text-gray-700">A4 Modern</div>
-                <div className="mt-2 text-xs text-gray-600">Invoice No: GST-0001</div>
-                <div className="text-xs text-gray-600">Date: {new Date().toISOString().slice(0, 10)}</div>
+                <div className="text-xs font-semibold ui-fg">A4 Modern</div>
+                <div className="mt-2 text-xs ui-muted">Invoice No: GST-0001</div>
+                <div className="text-xs ui-muted">Date: {new Date().toISOString().slice(0, 10)}</div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">Bill To</div>
+                <div className="text-xs font-semibold ui-fg uppercase">Bill To</div>
                 <div className="mt-1 font-semibold">Customer Name</div>
-                <div className="text-xs text-gray-600">GSTIN: 29ABCDE1234F1Z5</div>
-                <div className="text-xs text-gray-600">Place of Supply: Kerala (32)</div>
+                <div className="text-xs ui-muted">GSTIN: 29ABCDE1234F1Z5</div>
+                <div className="text-xs ui-muted">Place of Supply: Kerala (32)</div>
               </div>
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">Summary</div>
+                <div className="text-xs font-semibold ui-fg uppercase">Summary</div>
                 <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-gray-600">Taxable</span>
+                  <span className="ui-muted">Taxable</span>
                   <span className="font-semibold">₹2,000</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">GST</span>
+                  <span className="ui-muted">GST</span>
                   <span className="font-semibold">₹360</span>
                 </div>
                 <div className="flex justify-between text-sm border-t mt-2 pt-2">
@@ -5409,17 +5401,17 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
             <div className="border rounded-lg overflow-hidden mt-6">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[5%]">Sr</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product / Service</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[10%]">HSN/SAC</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[8%]">Qty</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[12%]">Rate</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[12%]">Taxable</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[8%]">GST%</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[12%]">GST Amt</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[13%]">Total</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-[5%]">Sr</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Product / Service</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-[10%]">HSN/SAC</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[8%]">Qty</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">Rate</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">Taxable</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[8%]">GST%</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">GST Amt</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[13%]">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -5440,12 +5432,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">Terms</div>
-                <div className="text-xs text-gray-600 mt-2">This is a computer generated invoice. Signature not required.</div>
+                <div className="text-xs font-semibold ui-fg uppercase">Terms</div>
+                <div className="text-xs ui-muted mt-2">This is a computer generated invoice. Signature not required.</div>
               </div>
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">For {companyName}</div>
-                <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
+                <div className="text-xs font-semibold ui-fg uppercase">For {companyName}</div>
+                <div className="mt-10 text-xs ui-muted">(Authorized Signatory)</div>
               </div>
             </div>
           </div>
@@ -5456,21 +5448,21 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   if (templateId === 'a4BoxedGst') {
     return (
-      <div className="max-w-[980px] mx-auto text-sm text-gray-900">
-        <div className="border-2 border-gray-900 bg-white">
+      <div className="max-w-[980px] mx-auto text-sm ui-fg">
+        <div className="border-2 border-gray-900 ui-surface">
           <div className={`h-2 ${accentBarClass}`} />
           <div className="p-6 border-b-2 border-gray-900">
             <div className="flex items-start justify-between gap-6">
               <div>
                 <div className="text-2xl font-extrabold">{companyName}</div>
-                <div className="text-xs text-gray-600">(Sample address line 1, city, state - pincode)</div>
-                <div className="text-xs text-gray-600">GSTIN: 27ABCDE1234F1Z5</div>
+                <div className="text-xs ui-muted">(Sample address line 1, city, state - pincode)</div>
+                <div className="text-xs ui-muted">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
               <div className="text-right">
                 <div className="text-3xl font-extrabold tracking-wide">TAX INVOICE</div>
-                <div className="text-xs font-semibold text-gray-700">A4 Boxed GST Split</div>
-                <div className="mt-2 text-xs text-gray-600">Invoice No: GST-0001</div>
-                <div className="text-xs text-gray-600">Date: {new Date().toISOString().slice(0, 10)}</div>
+                <div className="text-xs font-semibold ui-fg">A4 Boxed GST Split</div>
+                <div className="mt-2 text-xs ui-muted">Invoice No: GST-0001</div>
+                <div className="text-xs ui-muted">Date: {new Date().toISOString().slice(0, 10)}</div>
               </div>
             </div>
           </div>
@@ -5479,19 +5471,19 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <div className="p-4 border-r-2 border-gray-900">
               <div className="text-xs font-semibold uppercase">Bill To</div>
               <div className="font-semibold mt-1">Customer Name</div>
-              <div className="text-xs text-gray-600">GSTIN: 29ABCDE1234F1Z5</div>
-              <div className="text-xs text-gray-600">Place of Supply: Kerala (32)</div>
+              <div className="text-xs ui-muted">GSTIN: 29ABCDE1234F1Z5</div>
+              <div className="text-xs ui-muted">Place of Supply: Kerala (32)</div>
             </div>
             <div className="p-4">
               <div className="text-xs font-semibold uppercase">Totals</div>
               <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                <div className="text-gray-600">Taxable</div>
+                <div className="ui-muted">Taxable</div>
                 <div className="text-right font-semibold">₹2,000</div>
-                <div className="text-gray-600">CGST</div>
+                <div className="ui-muted">CGST</div>
                 <div className="text-right font-semibold">₹180</div>
-                <div className="text-gray-600">SGST</div>
+                <div className="ui-muted">SGST</div>
                 <div className="text-right font-semibold">₹180</div>
-                <div className="text-gray-600">Total</div>
+                <div className="ui-muted">Total</div>
                 <div className="text-right font-bold">₹2,360</div>
               </div>
             </div>
@@ -5500,7 +5492,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="p-6">
             <div className="border-2 border-gray-900 overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b-2 border-gray-900">
+                <thead className="ui-sunken border-b-2 border-gray-900">
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900 w-[5%]">Sr</th>
                     <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900">Item</th>
@@ -5534,11 +5526,11 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="border-2 border-gray-900 p-4">
                 <div className="text-xs font-semibold uppercase">Terms</div>
-                <div className="text-xs text-gray-600 mt-2">Subject to jurisdiction.</div>
+                <div className="text-xs ui-muted mt-2">Subject to jurisdiction.</div>
               </div>
               <div className="border-2 border-gray-900 p-4">
                 <div className="text-xs font-semibold uppercase">For {companyName}</div>
-                <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
+                <div className="mt-10 text-xs ui-muted">(Authorized Signatory)</div>
               </div>
             </div>
           </div>
@@ -5549,8 +5541,8 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   if (templateId === 'a4Letterhead') {
     return (
-      <div className="max-w-[980px] mx-auto text-sm text-gray-900">
-        <div className="bg-white border rounded-lg overflow-hidden">
+      <div className="max-w-[980px] mx-auto text-sm ui-fg">
+        <div className="ui-surface border rounded-lg overflow-hidden">
           <div className={`p-6 ${accentBarClass} text-white`}>
             <div className="flex items-start justify-between gap-6">
               <div>
@@ -5570,19 +5562,19 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">Bill To</div>
+                <div className="text-xs font-semibold ui-fg uppercase">Bill To</div>
                 <div className="mt-1 font-semibold">Customer Name</div>
-                <div className="text-xs text-gray-600">GSTIN: 29ABCDE1234F1Z5</div>
-                <div className="text-xs text-gray-600">Place of Supply: Kerala (32)</div>
+                <div className="text-xs ui-muted">GSTIN: 29ABCDE1234F1Z5</div>
+                <div className="text-xs ui-muted">Place of Supply: Kerala (32)</div>
               </div>
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">Summary</div>
+                <div className="text-xs font-semibold ui-fg uppercase">Summary</div>
                 <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-gray-600">Taxable</span>
+                  <span className="ui-muted">Taxable</span>
                   <span className="font-semibold">₹2,000</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">GST</span>
+                  <span className="ui-muted">GST</span>
                   <span className="font-semibold">₹360</span>
                 </div>
                 <div className="flex justify-between text-sm border-t mt-2 pt-2">
@@ -5594,14 +5586,14 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
             <div className="border rounded-lg overflow-hidden">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase w-[5%]">Sr</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product / Service</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[10%]">Qty</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[12%]">Taxable</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[10%]">GST%</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase w-[13%]">Total</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-[5%]">Sr</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Product / Service</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[10%]">Qty</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[12%]">Taxable</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[10%]">GST%</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-[13%]">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -5619,12 +5611,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
             <div className="grid grid-cols-2 gap-4">
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">Notes</div>
-                <div className="text-xs text-gray-600 mt-2">This is a computer generated invoice. Signature not required.</div>
+                <div className="text-xs font-semibold ui-fg uppercase">Notes</div>
+                <div className="text-xs ui-muted mt-2">This is a computer generated invoice. Signature not required.</div>
               </div>
               <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">For {companyName}</div>
-                <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
+                <div className="text-xs font-semibold ui-fg uppercase">For {companyName}</div>
+                <div className="mt-10 text-xs ui-muted">(Authorized Signatory)</div>
               </div>
             </div>
           </div>
@@ -5644,9 +5636,9 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
 const MdmOverview = () => {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border">
+    <div className="ui-surface rounded-xl shadow-sm p-6 border">
       <h3 className="text-xl font-bold mb-2">Master Data (MDM)</h3>
-      <p className="text-gray-500">Select a master from the sidebar</p>
+      <p className="ui-muted">Select a master from the sidebar</p>
     </div>
   );
 };
@@ -5695,7 +5687,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
         <h3 className="text-xl font-bold">Units of Measure (UoM)</h3>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border space-y-4">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
             <label className="block text-sm font-medium mb-1">Add UoM</label>
@@ -5711,7 +5703,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={addUom}
-              className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
+              className="w-full px-4 py-2 ui-primary-bg rounded-lg "
             >
               Add
             </button>
@@ -5720,22 +5712,22 @@ const UomsList = ({ db, setDb, currentCompany }) => {
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">UoM</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">UoM</th>
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {uoms.length === 0 ? (
                 <tr>
-                  <td colSpan="2" className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan="2" className="px-6 py-10 text-center ui-muted">
                     No UoMs found
                   </td>
                 </tr>
               ) : (
                 uoms.map((u) => (
-                  <tr key={u.id} className="hover:bg-gray-50">
+                  <tr key={u.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 font-medium">{u.name}</td>
                     <td className="px-6 py-4 text-right">
                       <button type="button" onClick={() => deleteUom(u.id)} className="text-red-600 hover:text-red-700">
@@ -5749,7 +5741,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
           </table>
         </div>
 
-        <div className="text-sm text-gray-500">Tip: Items pick their Unit from this master.</div>
+        <div className="text-sm ui-muted">Tip: Items pick their Unit from this master.</div>
       </div>
     </div>
   );
@@ -5803,7 +5795,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
         <h3 className="text-xl font-bold">GST Rates</h3>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border space-y-4">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
             <label className="block text-sm font-medium mb-1">Add GST Rate (%)</label>
@@ -5822,7 +5814,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={addRate}
-              className="w-full px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900"
+              className="w-full px-4 py-2 ui-primary-bg rounded-lg "
             >
               Add
             </button>
@@ -5831,22 +5823,22 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
 
         <div className="border rounded-lg overflow-hidden">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rate (%)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Rate (%)</th>
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {gstRates.length === 0 ? (
                 <tr>
-                  <td colSpan="2" className="px-6 py-10 text-center text-gray-500">
+                  <td colSpan="2" className="px-6 py-10 text-center ui-muted">
                     No GST rates found
                   </td>
                 </tr>
               ) : (
                 gstRates.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
+                  <tr key={r.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 font-medium">{Number(r.rate)}%</td>
                     <td className="px-6 py-4 text-right">
                       <button type="button" onClick={() => deleteRate(r.id)} className="text-red-600 hover:text-red-700">
@@ -5860,7 +5852,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
           </table>
         </div>
 
-        <div className="text-sm text-gray-500">
+        <div className="text-sm ui-muted">
           Tip: Items store their GST % directly. This list is your standard rate master.
         </div>
       </div>
@@ -5937,19 +5929,19 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Numbering</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border space-y-4">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-1">
             <label className="block text-xs font-medium mb-1">Apply To</label>
             <select
               value={scopeBranchId}
               onChange={(e) => setScopeBranchId(String(e.target.value || '').trim())}
-              className="w-full px-3 py-2 border rounded-lg bg-white"
+              className="w-full px-3 py-2 border rounded-lg ui-surface"
             >
               <option value="">Company default</option>
               {(Array.isArray(branches) ? branches : [])
@@ -5961,7 +5953,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </option>
                 ))}
             </select>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs ui-muted mt-1">
               {scopeBranchId ? 'Edits apply only to the selected branch.' : 'Edits apply to company-wide defaults.'}
             </div>
           </div>
@@ -5969,7 +5961,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
 
         <div>
           <h4 className="font-bold">Voucher Numbering</h4>
-          <p className="text-sm text-gray-500">Configure prefix/suffix, auto/manual numbering, and manual override per voucher.</p>
+          <p className="text-sm ui-muted">Configure prefix/suffix, auto/manual numbering, and manual override per voucher.</p>
         </div>
 
         <div className="space-y-3">
@@ -5980,7 +5972,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
               <div key={v.key} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between">
                   <div className="font-semibold">{v.label}</div>
-                  <div className="text-sm text-gray-600">Preview: {formatVoucherNumberPreview(cfg)}</div>
+                  <div className="text-sm ui-muted">Preview: {formatVoucherNumberPreview(cfg)}</div>
                 </div>
 
                 <div className="grid grid-cols-6 gap-3 mt-3">
@@ -6022,7 +6014,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       type="number"
                       value={cfg?.nextNumber ?? 1}
                       onChange={(e) => updateNumberingSetting(v.key, { nextNumber: Number(e.target.value || 1) })}
-                      className={`w-full px-2 py-2 border rounded-lg ${isManual ? 'bg-gray-50' : ''}`}
+                      className={`w-full px-2 py-2 border rounded-lg ${isManual ? 'ui-sunken' : ''}`}
                       disabled={isManual}
                       min="1"
                       step="1"
@@ -6030,7 +6022,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-2 flex items-end">
-                    <label className={`flex items-center gap-2 text-sm ${isManual ? 'text-gray-400' : ''}`}>
+                    <label className={`flex items-center gap-2 text-sm ${isManual ? 'ui-subtle' : ''}`}>
                       <input
                         type="checkbox"
                         checked={Boolean(cfg?.allowManualOverride)}
@@ -6090,15 +6082,15 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Templates</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border space-y-4">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div>
           <h4 className="font-bold">Document Templates</h4>
-          <p className="text-sm text-gray-500">Choose a template and accent color for each voucher print layout.</p>
+          <p className="text-sm ui-muted">Choose a template and accent color for each voucher print layout.</p>
         </div>
 
         <div className="space-y-3">
@@ -6111,7 +6103,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
                 <div className="flex items-center justify-between">
                   <div className="font-semibold">{v.label}</div>
                   <div className="flex items-center gap-2">
-                    <div className="text-sm text-gray-600">{templateName}</div>
+                    <div className="text-sm ui-muted">{templateName}</div>
                     <button
                       type="button"
                       onClick={() =>
@@ -6121,7 +6113,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
                           accentBarClass: accent.barClass,
                         })
                       }
-                      className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50"
+                      className="px-3 py-1.5 border rounded-lg text-sm ui-hover-sunken"
                     >
                       Preview
                     </button>
@@ -6162,7 +6154,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
                   <div className="flex items-end">
                     <div className="w-full border rounded-lg overflow-hidden">
                       <div className={`h-2 ${accent.barClass}`} />
-                      <div className="p-2 text-xs text-gray-600">Preview header bar</div>
+                      <div className="p-2 text-xs ui-muted">Preview header bar</div>
                     </div>
                   </div>
                 </div>
@@ -6230,15 +6222,15 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Invoice Templates</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border space-y-4">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div>
           <h4 className="font-bold">Select Invoice Template</h4>
-          <p className="text-sm text-gray-500">This template is used when you open an invoice from the invoice list.</p>
+          <p className="text-sm ui-muted">This template is used when you open an invoice from the invoice list.</p>
         </div>
 
         <div className="max-w-sm space-y-3">
@@ -6264,7 +6256,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
                 accentBarClass: accent.barClass,
               })
             }
-            className="w-full px-4 py-2 border rounded-lg text-sm hover:bg-gray-50"
+            className="w-full px-4 py-2 border rounded-lg text-sm ui-hover-sunken"
           >
             Preview
           </button>
@@ -6386,12 +6378,12 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Company Profile</h3>
-        <button onClick={handleSave} className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Company Name</label>
@@ -6409,7 +6401,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
               type="text"
               value={formData.currency}
               readOnly
-              className="w-full px-3 py-2 border rounded-lg bg-gray-50"
+              className="w-full px-3 py-2 border rounded-lg ui-sunken"
             />
           </div>
 
@@ -6460,7 +6452,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
           </div>
 
           <div className="flex items-end">
-            <div className="w-full text-sm text-gray-600 bg-gray-50 border rounded-lg px-3 py-2">
+            <div className="w-full text-sm ui-muted ui-sunken border rounded-lg px-3 py-2">
               Effective GST: {String(formData.state || '').trim() ? `${formData.state}` : 'Set state'}
             </div>
           </div>
@@ -6625,25 +6617,25 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
       <div className="flex items-center justify-between">
         <div>
           <div className="text-lg font-bold">Tax & Compliances</div>
-          <div className="text-sm text-gray-500">GST, TDS and TCS settings</div>
+          <div className="text-sm ui-muted">GST, TDS and TCS settings</div>
         </div>
         <button
           type="button"
           disabled={saving}
           onClick={saveAll}
-          className={`px-4 py-2 rounded-lg ${saving ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
+          className={`px-4 py-2 rounded-lg ${saving ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
       </div>
 
-      <div className="border rounded-xl p-5 shadow-sm bg-white">
+      <div className="border rounded-xl p-5 shadow-sm ui-surface">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-semibold text-gray-800">GST</div>
-            <div className="text-xs text-gray-500">Enable GST and keep registration details</div>
+            <div className="text-sm font-semibold ui-fg">GST</div>
+            <div className="text-xs ui-muted">Enable GST and keep registration details</div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+          <label className="flex items-center gap-2 text-sm ui-fg select-none">
             <input
               type="checkbox"
               checked={gstEnabled}
@@ -6655,17 +6647,17 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         </div>
 
         {!gstEnabled ? (
-          <div className="mt-4 text-sm text-gray-600 bg-gray-50 border rounded-lg px-3 py-3">
+          <div className="mt-4 text-sm ui-muted ui-sunken border rounded-lg px-3 py-3">
             GST is disabled.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-xs text-gray-500">GST Registration Type</label>
+              <label className="block text-xs ui-muted">GST Registration Type</label>
               <select
                 value={gst.gstRegistration}
                 onChange={(e) => setGst((p) => ({ ...p, gstRegistration: e.target.value }))}
-                className="w-full px-3 py-2 rounded border bg-white"
+                className="w-full px-3 py-2 rounded border ui-surface"
               >
                 <option value="Registered">Registered</option>
                 <option value="Unregistered">Unregistered</option>
@@ -6675,7 +6667,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500">GST Number (GSTIN)</label>
+              <label className="block text-xs ui-muted">GST Number (GSTIN)</label>
               <input
                 value={gst.gstin}
                 onChange={(e) => {
@@ -6690,11 +6682,11 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                 className="w-full px-3 py-2 rounded border"
                 placeholder="e.g. 29ABCDE1234F1Z5"
               />
-              <div className="text-xs text-gray-500 mt-1">State auto-fills from GSTIN (first 2 digits).</div>
+              <div className="text-xs ui-muted mt-1">State auto-fills from GSTIN (first 2 digits).</div>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-500">State</label>
+              <label className="block text-xs ui-muted">State</label>
               <PopupSelect
                 label={null}
                 title="Select State"
@@ -6707,7 +6699,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
             </div>
 
             <div className="flex items-end">
-              <div className="w-full text-sm text-gray-600 bg-gray-50 border rounded-lg px-3 py-2">
+              <div className="w-full text-sm ui-muted ui-sunken border rounded-lg px-3 py-2">
                 Effective GST: {String(gst.state || '').trim() ? `${gst.state}` : 'Set state'}
               </div>
             </div>
@@ -6715,13 +6707,13 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         )}
       </div>
 
-      <div className="border rounded-xl p-5 shadow-sm bg-white">
+      <div className="border rounded-xl p-5 shadow-sm ui-surface">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-semibold text-gray-800">TDS</div>
-            <div className="text-xs text-gray-500">Enable TDS and keep TAN details</div>
+            <div className="text-sm font-semibold ui-fg">TDS</div>
+            <div className="text-xs ui-muted">Enable TDS and keep TAN details</div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+          <label className="flex items-center gap-2 text-sm ui-fg select-none">
             <input
               type="checkbox"
               checked={tdsEnabled}
@@ -6733,24 +6725,24 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         </div>
 
         {!tdsEnabled ? (
-          <div className="mt-4 text-sm text-gray-600 bg-gray-50 border rounded-lg px-3 py-3">
+          <div className="mt-4 text-sm ui-muted ui-sunken border rounded-lg px-3 py-3">
             TDS is disabled.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-xs text-gray-500">Registration Type</label>
+              <label className="block text-xs ui-muted">Registration Type</label>
               <select
                 value={tds.registrationType}
                 onChange={(e) => setTds((p) => ({ ...p, registrationType: e.target.value }))}
-                className="w-full px-3 py-2 rounded border bg-white"
+                className="w-full px-3 py-2 rounded border ui-surface"
               >
                 <option value="Applicable">Applicable</option>
                 <option value="Not Applicable">Not Applicable</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500">TDS Number (TAN)</label>
+              <label className="block text-xs ui-muted">TDS Number (TAN)</label>
               <input
                 value={tds.tan}
                 onChange={(e) => {
@@ -6763,7 +6755,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500">State</label>
+              <label className="block text-xs ui-muted">State</label>
               <PopupSelect
                 label={null}
                 title="Select State"
@@ -6778,13 +6770,13 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         )}
       </div>
 
-      <div className="border rounded-xl p-5 shadow-sm bg-white">
+      <div className="border rounded-xl p-5 shadow-sm ui-surface">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-sm font-semibold text-gray-800">TCS</div>
-            <div className="text-xs text-gray-500">Enable TCS and keep TAN details</div>
+            <div className="text-sm font-semibold ui-fg">TCS</div>
+            <div className="text-xs ui-muted">Enable TCS and keep TAN details</div>
           </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 select-none">
+          <label className="flex items-center gap-2 text-sm ui-fg select-none">
             <input
               type="checkbox"
               checked={tcsEnabled}
@@ -6796,24 +6788,24 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         </div>
 
         {!tcsEnabled ? (
-          <div className="mt-4 text-sm text-gray-600 bg-gray-50 border rounded-lg px-3 py-3">
+          <div className="mt-4 text-sm ui-muted ui-sunken border rounded-lg px-3 py-3">
             TCS is disabled.
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-xs text-gray-500">Registration Type</label>
+              <label className="block text-xs ui-muted">Registration Type</label>
               <select
                 value={tcs.registrationType}
                 onChange={(e) => setTcs((p) => ({ ...p, registrationType: e.target.value }))}
-                className="w-full px-3 py-2 rounded border bg-white"
+                className="w-full px-3 py-2 rounded border ui-surface"
               >
                 <option value="Applicable">Applicable</option>
                 <option value="Not Applicable">Not Applicable</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500">TCS Number (TAN)</label>
+              <label className="block text-xs ui-muted">TCS Number (TAN)</label>
               <input
                 value={tcs.tan}
                 onChange={(e) => {
@@ -6826,7 +6818,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-500">State</label>
+              <label className="block text-xs ui-muted">State</label>
               <PopupSelect
                 label={null}
                 title="Select State"
@@ -7564,7 +7556,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="text-lg font-bold">Users, Roles, Branches & Warehouses</div>
-            <div className="text-sm text-gray-500">Manage users, roles, branches and warehouses</div>
+            <div className="text-sm ui-muted">Manage users, roles, branches and warehouses</div>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex rounded-lg border overflow-hidden">
@@ -7573,7 +7565,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   key={s}
                   type="button"
                   onClick={() => setActiveSection(s)}
-                  className={`px-3 py-2 text-sm capitalize ${activeSection === s ? 'bg-stone-900 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+                  className={`px-3 py-2 text-sm capitalize ${activeSection === s ? 'ui-primary-bg' : 'ui-surface ui-fg ui-hover-sunken'}`}
                 >
                   {s}
                 </button>
@@ -7582,34 +7574,34 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             <button
               type="button"
               onClick={loadAll}
-              className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
             >
               Refresh
             </button>
           </div>
         </div>
 
-        {error ? <div className="bg-white border rounded-xl p-4 text-sm text-red-600">{error}</div> : null}
+        {error ? <div className="ui-surface border rounded-xl p-4 text-sm text-red-600">{error}</div> : null}
 
-        {error ? <div className="bg-white border rounded-xl p-4 text-sm text-red-600">{error}</div> : null}
+        {error ? <div className="ui-surface border rounded-xl p-4 text-sm text-red-600">{error}</div> : null}
 
         {activeSection === 'users' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Users column */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b bg-gray-50">
+          <div className="ui-surface border rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b ui-sunken">
               <div className="font-bold">Users</div>
-              <div className="text-xs text-gray-500">Company users and their assignments</div>
+              <div className="text-xs ui-muted">Company users and their assignments</div>
             </div>
 
             <div className="p-5 space-y-4">
               <div className="border rounded-xl p-4">
                 <div className="text-sm font-semibold">Add / Attach User</div>
-                <div className="text-xs text-gray-500">If the email already exists, it will be attached to this company.</div>
+                <div className="text-xs ui-muted">If the email already exists, it will be attached to this company.</div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs text-gray-500">Email</label>
+                    <label className="block text-xs ui-muted">Email</label>
                     <input
                       value={newUser.email}
                       onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))}
@@ -7618,7 +7610,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">Name</label>
+                    <label className="block text-xs ui-muted">Name</label>
                     <input
                       value={newUser.name}
                       onChange={(e) => setNewUser((p) => ({ ...p, name: e.target.value }))}
@@ -7627,7 +7619,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">Mobile</label>
+                    <label className="block text-xs ui-muted">Mobile</label>
                     <input
                       value={newUser.mobile}
                       onChange={(e) => setNewUser((p) => ({ ...p, mobile: e.target.value }))}
@@ -7636,7 +7628,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">Password (new user)</label>
+                    <label className="block text-xs ui-muted">Password (new user)</label>
                     <input
                       type="password"
                       value={newUser.password}
@@ -7646,11 +7638,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs text-gray-500">Role</label>
+                    <label className="block text-xs ui-muted">Role</label>
                     <select
                       value={newUser.roleId}
                       onChange={(e) => setNewUser((p) => ({ ...p, roleId: e.target.value }))}
-                      className="w-full px-3 py-2 rounded border bg-white"
+                      className="w-full px-3 py-2 rounded border ui-surface"
                     >
                       <option value="">Select role</option>
                       {roleOptions.map((o) => (
@@ -7665,7 +7657,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     disabled={loading}
                     onClick={createUser}
-                    className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
+                    className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
                   >
                     Add User
                   </button>
@@ -7673,33 +7665,33 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               </div>
 
               <div className="border rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b bg-gray-50 text-sm font-semibold">User List</div>
+                <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">User List</div>
                 <div className="max-h-64 overflow-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
+                    <thead className="ui-sunken border-b">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Email</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {loading ? (
-                        <tr><td colSpan={3} className="px-4 py-6 text-sm text-gray-500">Loading...</td></tr>
+                        <tr><td colSpan={3} className="px-4 py-6 text-sm ui-muted">Loading...</td></tr>
                       ) : users.length === 0 ? (
-                        <tr><td colSpan={3} className="px-4 py-6 text-sm text-gray-500">No users found.</td></tr>
+                        <tr><td colSpan={3} className="px-4 py-6 text-sm ui-muted">No users found.</td></tr>
                       ) : (
                         users.map((u) => {
                           const active = String(u.userId) === String(selectedUserId);
                           return (
                             <tr
                               key={String(u.userId)}
-                              className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`}
+                              className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedUserId(String(u.userId))}
                             >
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{u.name || '-'}</td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{u.email || '-'}</td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{u.roleLabel || u.roleKey || '-'}</td>
+                              <td className="px-4 py-3 text-sm font-medium ui-fg">{u.name || '-'}</td>
+                              <td className="px-4 py-3 text-sm ui-fg">{u.email || '-'}</td>
+                              <td className="px-4 py-3 text-sm ui-fg">{u.roleLabel || u.roleKey || '-'}</td>
                             </tr>
                           );
                         })
@@ -7712,20 +7704,20 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="border rounded-xl p-4">
                 <div className="text-sm font-semibold">Edit Selected User</div>
                 {!selectedUser ? (
-                  <div className="text-sm text-gray-500 mt-2">Select a user from the list to edit.</div>
+                  <div className="text-sm ui-muted mt-2">Select a user from the list to edit.</div>
                 ) : (
                   <div className="space-y-3 mt-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500">Email</label>
-                        <input value={selectedUser.email || ''} disabled className="w-full px-3 py-2 rounded border bg-gray-50" />
+                        <label className="block text-xs ui-muted">Email</label>
+                        <input value={selectedUser.email || ''} disabled className="w-full px-3 py-2 rounded border ui-sunken" />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Role</label>
+                        <label className="block text-xs ui-muted">Role</label>
                         <select
                           value={userEdit.roleId}
                           onChange={(e) => setUserEdit((p) => ({ ...p, roleId: e.target.value }))}
-                          className="w-full px-3 py-2 rounded border bg-white"
+                          className="w-full px-3 py-2 rounded border ui-surface"
                         >
                           <option value="">Select role</option>
                           {roleOptions.map((o) => (
@@ -7733,13 +7725,13 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                           ))}
                         </select>
                         <div className="mt-2 flex justify-end">
-                          <button type="button" onClick={saveUserRole} className="px-3 py-2 rounded-lg bg-white border hover:bg-gray-50">
+                          <button type="button" onClick={saveUserRole} className="px-3 py-2 rounded-lg ui-surface border ui-hover-sunken">
                             Save Role
                           </button>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Name</label>
+                        <label className="block text-xs ui-muted">Name</label>
                         <input
                           value={userEdit.name}
                           onChange={(e) => setUserEdit((p) => ({ ...p, name: e.target.value }))}
@@ -7747,7 +7739,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Mobile</label>
+                        <label className="block text-xs ui-muted">Mobile</label>
                         <input
                           value={userEdit.mobile}
                           onChange={(e) => setUserEdit((p) => ({ ...p, mobile: e.target.value }))}
@@ -7757,10 +7749,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={saveUserBasics} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+                      <button type="button" onClick={saveUserBasics} className="px-4 py-2 rounded-lg ui-primary-bg ">
                         Save User
                       </button>
-                      <button type="button" onClick={removeUser} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+                      <button type="button" onClick={removeUser} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                         Remove
                       </button>
                     </div>
@@ -7768,13 +7760,13 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <div className="border rounded-lg p-3">
                       <div className="text-sm font-semibold">Branches</div>
                       {branches.length === 0 ? (
-                        <div className="text-sm text-gray-500 mt-2">No branches found.</div>
+                        <div className="text-sm ui-muted mt-2">No branches found.</div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                           {branches.map((b) => {
                             const checked = userEdit.branchIds.includes(b.id);
                             return (
-                              <label key={b.id} className="flex items-center gap-2 text-sm text-gray-800">
+                              <label key={b.id} className="flex items-center gap-2 text-sm ui-fg">
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -7793,7 +7785,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         </div>
                       )}
                       <div className="mt-3 flex justify-end">
-                        <button type="button" onClick={saveUserBranches} className="px-3 py-2 rounded-lg bg-white border hover:bg-gray-50">
+                        <button type="button" onClick={saveUserBranches} className="px-3 py-2 rounded-lg ui-surface border ui-hover-sunken">
                           Save Branches
                         </button>
                       </div>
@@ -7802,13 +7794,13 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <div className="border rounded-lg p-3">
                       <div className="text-sm font-semibold">Warehouses</div>
                       {warehouses.length === 0 ? (
-                        <div className="text-sm text-gray-500 mt-2">No warehouses found.</div>
+                        <div className="text-sm ui-muted mt-2">No warehouses found.</div>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                           {warehouses.map((w) => {
                             const checked = userEdit.warehouseIds.includes(w.id);
                             return (
-                              <label key={w.id} className="flex items-center gap-2 text-sm text-gray-800">
+                              <label key={w.id} className="flex items-center gap-2 text-sm ui-fg">
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -7827,7 +7819,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         </div>
                       )}
                       <div className="mt-3 flex justify-end">
-                        <button type="button" onClick={saveUserWarehouses} className="px-3 py-2 rounded-lg bg-white border hover:bg-gray-50">
+                        <button type="button" onClick={saveUserWarehouses} className="px-3 py-2 rounded-lg ui-surface border ui-hover-sunken">
                           Save Warehouses
                         </button>
                       </div>
@@ -7839,10 +7831,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
           </div>
 
           {/* Roles column */}
-          <div className="bg-white border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b bg-gray-50">
+          <div className="ui-surface border rounded-xl overflow-hidden">
+            <div className="px-5 py-4 border-b ui-sunken">
               <div className="font-bold">Roles</div>
-              <div className="text-xs text-gray-500">Create roles and assign permissions (matrix)</div>
+              <div className="text-xs ui-muted">Create roles and assign permissions (matrix)</div>
             </div>
 
             <div className="p-5 space-y-4">
@@ -7850,7 +7842,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 <div className="text-sm font-semibold">Create Role</div>
                 <div className="grid grid-cols-1 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs text-gray-500">Role Name</label>
+                    <label className="block text-xs ui-muted">Role Name</label>
                     <input
                       value={newRole.label}
                       onChange={(e) => setNewRole((p) => ({ ...p, label: e.target.value }))}
@@ -7859,16 +7851,16 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">Permissions</label>
+                    <label className="block text-xs ui-muted">Permissions</label>
                     <input
                       value={permSearch}
                       onChange={(e) => setPermSearch(e.target.value)}
                       className="w-full px-3 py-2 rounded border"
                       placeholder="Search permissions"
                     />
-                    <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 bg-white">
+                    <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 ui-surface">
                       {filteredPerms.length === 0 ? (
-                        <div className="text-sm text-gray-500 px-2 py-2">No permissions match.</div>
+                        <div className="text-sm ui-muted px-2 py-2">No permissions match.</div>
                       ) : (
                         <div className="space-y-1">
                           {filteredPerms.map((p) => {
@@ -7876,7 +7868,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                             if (!key) return null;
                             const checked = newRole.permissions.includes(key);
                             return (
-                              <label key={key} className="flex items-start gap-2 text-sm text-gray-800 px-2 py-1 hover:bg-gray-50 rounded">
+                              <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -7890,7 +7882,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                 />
                                 <div>
                                   <div className="font-medium">{p.label || key}</div>
-                                  <div className="text-xs text-gray-500">{key}</div>
+                                  <div className="text-xs ui-muted">{key}</div>
                                 </div>
                               </label>
                             );
@@ -7906,7 +7898,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     disabled={loading}
                     onClick={createRole}
-                    className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
+                    className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
                   >
                     Create Role
                   </button>
@@ -7914,29 +7906,29 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               </div>
 
               <div className="border rounded-xl overflow-hidden">
-                <div className="px-4 py-3 border-b bg-gray-50 text-sm font-semibold">Role List</div>
+                <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Role List</div>
                 <div className="max-h-56 overflow-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b">
+                    <thead className="ui-sunken border-b">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Type</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
                       {roles.length === 0 ? (
-                        <tr><td colSpan={2} className="px-4 py-6 text-sm text-gray-500">No roles found.</td></tr>
+                        <tr><td colSpan={2} className="px-4 py-6 text-sm ui-muted">No roles found.</td></tr>
                       ) : (
                         roles.map((r) => {
                           const active = String(r.id) === String(selectedRoleId);
                           return (
                             <tr
                               key={String(r.id)}
-                              className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`}
+                              className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedRoleId(String(r.id))}
                             >
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">{r.label}</td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{r.isSystem ? 'System' : 'Custom'}</td>
+                              <td className="px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
+                              <td className="px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                             </tr>
                           );
                         })
@@ -7949,13 +7941,13 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="border rounded-xl p-4">
                 <div className="text-sm font-semibold">Edit Selected Role</div>
                 {!selectedRole ? (
-                  <div className="text-sm text-gray-500 mt-2">Select a role from the list to edit.</div>
+                  <div className="text-sm ui-muted mt-2">Select a role from the list to edit.</div>
                 ) : selectedRole.isSystem ? (
-                  <div className="text-sm text-gray-500 mt-2">System roles cannot be edited here.</div>
+                  <div className="text-sm ui-muted mt-2">System roles cannot be edited here.</div>
                 ) : (
                   <div className="space-y-3 mt-3">
                     <div>
-                      <label className="block text-xs text-gray-500">Role Name</label>
+                      <label className="block text-xs ui-muted">Role Name</label>
                       <input
                         value={roleEdit.label}
                         onChange={(e) => setRoleEdit((p) => ({ ...p, label: e.target.value }))}
@@ -7964,10 +7956,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div>
-                      <label className="block text-xs text-gray-500">Permissions</label>
-                      <div className="mt-2 max-h-56 overflow-auto border rounded-lg p-2 bg-white">
+                      <label className="block text-xs ui-muted">Permissions</label>
+                      <div className="mt-2 max-h-56 overflow-auto border rounded-lg p-2 ui-surface">
                         {filteredPerms.length === 0 ? (
-                          <div className="text-sm text-gray-500 px-2 py-2">No permissions match.</div>
+                          <div className="text-sm ui-muted px-2 py-2">No permissions match.</div>
                         ) : (
                           <div className="space-y-1">
                             {filteredPerms.map((p) => {
@@ -7975,7 +7967,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                               if (!key) return null;
                               const checked = roleEdit.permissions.includes(key);
                               return (
-                                <label key={key} className="flex items-start gap-2 text-sm text-gray-800 px-2 py-1 hover:bg-gray-50 rounded">
+                                <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
                                   <input
                                     type="checkbox"
                                     checked={checked}
@@ -7989,7 +7981,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                   />
                                   <div>
                                     <div className="font-medium">{p.label || key}</div>
-                                    <div className="text-xs text-gray-500">{key}</div>
+                                    <div className="text-xs ui-muted">{key}</div>
                                   </div>
                                 </label>
                               );
@@ -8000,10 +7992,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+                      <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg ui-primary-bg ">
                         Save Role
                       </button>
-                      <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+                      <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                         Delete
                       </button>
                     </div>
@@ -8016,10 +8008,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
         )}
 
         {activeSection === 'roles' && (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b bg-gray-50">
+        <div className="ui-surface border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b ui-sunken">
             <div className="font-bold">Roles</div>
-            <div className="text-xs text-gray-500">Create and manage roles with permissions</div>
+            <div className="text-xs ui-muted">Create and manage roles with permissions</div>
           </div>
           <div className="p-5 space-y-4">
             <div className="border rounded-xl p-4">
@@ -8027,7 +8019,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="grid grid-cols-1 gap-3 mt-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500">Role Name</label>
+                    <label className="block text-xs ui-muted">Role Name</label>
                     <input
                       value={newRole.label}
                       onChange={(e) => setNewRole((p) => ({ ...p, label: e.target.value }))}
@@ -8036,7 +8028,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">Description</label>
+                    <label className="block text-xs ui-muted">Description</label>
                     <input
                       value={newRole.description}
                       onChange={(e) => setNewRole((p) => ({ ...p, description: e.target.value }))}
@@ -8046,16 +8038,16 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Permissions</label>
+                  <label className="block text-xs ui-muted">Permissions</label>
                   <input
                     value={permSearch}
                     onChange={(e) => setPermSearch(e.target.value)}
                     className="w-full px-3 py-2 rounded border"
                     placeholder="Search permissions"
                   />
-                  <div className="mt-2 max-h-40 overflow-auto border rounded-lg p-2 bg-white">
+                  <div className="mt-2 max-h-40 overflow-auto border rounded-lg p-2 ui-surface">
                     {filteredPerms.length === 0 ? (
-                      <div className="text-sm text-gray-500 px-2 py-2">No permissions match.</div>
+                      <div className="text-sm ui-muted px-2 py-2">No permissions match.</div>
                     ) : (
                       <div className="space-y-1">
                         {filteredPerms.map((p) => {
@@ -8063,7 +8055,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                           if (!key) return null;
                           const checked = newRole.permissions.includes(key);
                           return (
-                            <label key={key} className="flex items-start gap-2 text-sm text-gray-800 px-2 py-1 hover:bg-gray-50 rounded">
+                            <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
                               <input type="checkbox" checked={checked} onChange={() => {
                                 const next = new Set(newRole.permissions);
                                 if (next.has(key)) next.delete(key); else next.add(key);
@@ -8071,7 +8063,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                               }} className="h-4 w-4 mt-0.5" />
                               <div>
                                 <div className="font-medium">{p.label || key}</div>
-                                <div className="text-xs text-gray-500">{key}</div>
+                                <div className="text-xs ui-muted">{key}</div>
                               </div>
                             </label>
                           );
@@ -8082,33 +8074,33 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createRole} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}>
+                <button type="button" disabled={loading} onClick={createRole} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}>
                   Create Role
                 </button>
               </div>
             </div>
             <div className="border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b bg-gray-50 text-sm font-semibold">Role List</div>
+              <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Role List</div>
               <div className="max-h-56 overflow-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Description</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Type</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {roles.length === 0 ? (
-                      <tr><td colSpan={3} className="px-4 py-6 text-sm text-gray-500">No roles found.</td></tr>
+                      <tr><td colSpan={3} className="px-4 py-6 text-sm ui-muted">No roles found.</td></tr>
                     ) : (
                       roles.map((r) => {
                         const active = String(r.id) === String(selectedRoleId);
                         return (
-                          <tr key={String(r.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`} onClick={() => setSelectedRoleId(String(r.id))}>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{r.label}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{r.description || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-700">{r.isSystem ? 'System' : 'Custom'}</td>
+                          <tr key={String(r.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedRoleId(String(r.id))}>
+                            <td className="px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
+                            <td className="px-4 py-3 text-sm ui-muted">{r.description || '-'}</td>
+                            <td className="px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                           </tr>
                         );
                       })
@@ -8123,23 +8115,23 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="space-y-3 mt-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-gray-500">Role Name</label>
+                    <label className="block text-xs ui-muted">Role Name</label>
                     <input value={roleEdit.label} onChange={(e) => setRoleEdit((p) => ({ ...p, label: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500">Description</label>
+                    <label className="block text-xs ui-muted">Description</label>
                     <input value={roleEdit.description} onChange={(e) => setRoleEdit((p) => ({ ...p, description: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Permissions</label>
-                  <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 bg-white">
+                  <label className="block text-xs ui-muted">Permissions</label>
+                  <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 ui-surface">
                     {filteredPerms.map((p) => {
                       const key = String(p?.key || '').trim();
                       if (!key) return null;
                       const checked = roleEdit.permissions.includes(key);
                       return (
-                        <label key={key} className="flex items-start gap-2 text-sm text-gray-800 px-2 py-1 hover:bg-gray-50 rounded">
+                        <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
                           <input type="checkbox" checked={checked} onChange={() => {
                             const next = new Set(roleEdit.permissions);
                             if (next.has(key)) next.delete(key); else next.add(key);
@@ -8147,7 +8139,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                           }} className="h-4 w-4 mt-0.5" />
                           <div>
                             <div className="font-medium">{p.label || key}</div>
-                            <div className="text-xs text-gray-500">{key}</div>
+                            <div className="text-xs ui-muted">{key}</div>
                           </div>
                         </label>
                       );
@@ -8155,8 +8147,8 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save Role</button>
-                  <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Delete</button>
+                  <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg ui-primary-bg ">Save Role</button>
+                  <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Delete</button>
                 </div>
               </div>
             </div>
@@ -8166,57 +8158,57 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
         )}
 
         {activeSection === 'branches' && (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b bg-gray-50">
+        <div className="ui-surface border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b ui-sunken">
             <div className="font-bold">Branches</div>
-            <div className="text-xs text-gray-500">Create and manage company branches</div>
+            <div className="text-xs ui-muted">Create and manage company branches</div>
           </div>
           <div className="p-5 space-y-4">
             <div className="border rounded-xl p-4">
               <div className="text-sm font-semibold">Create Branch</div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs text-gray-500">Branch Name *</label>
+                  <label className="block text-xs ui-muted">Branch Name *</label>
                   <input value={newBranch.name} onChange={(e) => setNewBranch((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="Main Branch" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Code</label>
+                  <label className="block text-xs ui-muted">Code</label>
                   <input value={newBranch.code} onChange={(e) => setNewBranch((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="MAIN" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Address</label>
+                  <label className="block text-xs ui-muted">Address</label>
                   <input value={newBranch.address} onChange={(e) => setNewBranch((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="123 Street..." />
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createBranch} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}>
+                <button type="button" disabled={loading} onClick={createBranch} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}>
                   Create Branch
                 </button>
               </div>
             </div>
             <div className="border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b bg-gray-50 text-sm font-semibold">Branch List</div>
+              <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Branch List</div>
               <div className="max-h-64 overflow-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Code</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Address</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {branches.length === 0 ? (
-                      <tr><td colSpan={4} className="px-4 py-6 text-sm text-gray-500">No branches found.</td></tr>
+                      <tr><td colSpan={4} className="px-4 py-6 text-sm ui-muted">No branches found.</td></tr>
                     ) : (
                       branches.map((b) => {
                         const active = String(b.id) === String(selectedBranchId);
                         return (
-                          <tr key={String(b.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`} onClick={() => setSelectedBranchId(String(b.id))}>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{b.name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-700">{b.code || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{b.address || '-'}</td>
+                          <tr key={String(b.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedBranchId(String(b.id))}>
+                            <td className="px-4 py-3 text-sm font-medium ui-fg">{b.name}</td>
+                            <td className="px-4 py-3 text-sm ui-fg">{b.code || '-'}</td>
+                            <td className="px-4 py-3 text-sm ui-muted">{b.address || '-'}</td>
                             <td className="px-4 py-3 text-sm">{b.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
                           </tr>
                         );
@@ -8231,28 +8223,28 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="text-sm font-semibold">Edit Branch: {selectedBranch.name}</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs text-gray-500">Branch Name *</label>
+                  <label className="block text-xs ui-muted">Branch Name *</label>
                   <input value={branchEdit.name} onChange={(e) => setBranchEdit((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Code</label>
+                  <label className="block text-xs ui-muted">Code</label>
                   <input value={branchEdit.code} onChange={(e) => setBranchEdit((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Address</label>
+                  <label className="block text-xs ui-muted">Address</label>
                   <input value={branchEdit.address} onChange={(e) => setBranchEdit((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Status</label>
-                  <select value={branchEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setBranchEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="w-full px-3 py-2 rounded border bg-white">
+                  <label className="block text-xs ui-muted">Status</label>
+                  <select value={branchEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setBranchEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="w-full px-3 py-2 rounded border ui-surface">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={saveBranch} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save Branch</button>
-                <button type="button" onClick={deleteBranch} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Delete</button>
+                <button type="button" onClick={saveBranch} className="px-4 py-2 rounded-lg ui-primary-bg ">Save Branch</button>
+                <button type="button" onClick={deleteBranch} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Delete</button>
               </div>
             </div>
             )}
@@ -8261,17 +8253,17 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
         )}
 
         {activeSection === 'warehouses' && (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-5 py-4 border-b bg-gray-50">
+        <div className="ui-surface border rounded-xl overflow-hidden">
+          <div className="px-5 py-4 border-b ui-sunken">
             <div className="font-bold">Warehouses</div>
-            <div className="text-xs text-gray-500">Create and manage warehouses (can be linked to branches)</div>
+            <div className="text-xs ui-muted">Create and manage warehouses (can be linked to branches)</div>
           </div>
           <div className="p-5 space-y-4">
-            <div className="border rounded-xl p-4 bg-white">
+            <div className="border rounded-xl p-4 ui-surface">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold">Active Warehouse (request header)</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs ui-muted">
                     {activeWarehouse ? `${activeWarehouse.name} (ID ${activeWarehouse.id})` : 'Not set; requests will omit x-warehouse-id.'}
                   </div>
                 </div>
@@ -8285,7 +8277,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       }
                       setActiveWarehouse(selectedWarehouse.id);
                     }}
-                    className="px-3 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+                    className="px-3 py-2 rounded-lg ui-primary-bg "
                   >
                     Use selected
                   </button>
@@ -8293,7 +8285,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     <button
                       type="button"
                       onClick={() => setActiveWarehouse('')}
-                      className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50"
+                      className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken"
                     >
                       Clear
                     </button>
@@ -8305,60 +8297,60 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="text-sm font-semibold">Create Warehouse</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs text-gray-500">Warehouse Name *</label>
+                  <label className="block text-xs ui-muted">Warehouse Name *</label>
                   <input value={newWarehouse.name} onChange={(e) => setNewWarehouse((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="Main Warehouse" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Code</label>
+                  <label className="block text-xs ui-muted">Code</label>
                   <input value={newWarehouse.code} onChange={(e) => setNewWarehouse((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="WH-001" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Location</label>
+                  <label className="block text-xs ui-muted">Location</label>
                   <input value={newWarehouse.location} onChange={(e) => setNewWarehouse((p) => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="City, Zone..." />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Address</label>
+                  <label className="block text-xs ui-muted">Address</label>
                   <input value={newWarehouse.address} onChange={(e) => setNewWarehouse((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" placeholder="123 Street..." />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Branch (optional)</label>
-                  <select value={newWarehouse.branchId} onChange={(e) => setNewWarehouse((p) => ({ ...p, branchId: e.target.value }))} className="w-full px-3 py-2 rounded border bg-white">
+                  <label className="block text-xs ui-muted">Branch (optional)</label>
+                  <select value={newWarehouse.branchId} onChange={(e) => setNewWarehouse((p) => ({ ...p, branchId: e.target.value }))} className="w-full px-3 py-2 rounded border ui-surface">
                     <option value="">No branch</option>
                     {branchOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createWarehouse} className={`px-4 py-2 rounded-lg ${loading ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}>
+                <button type="button" disabled={loading} onClick={createWarehouse} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}>
                   Create Warehouse
                 </button>
               </div>
             </div>
             <div className="border rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b bg-gray-50 text-sm font-semibold">Warehouse List</div>
+              <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Warehouse List</div>
               <div className="max-h-64 overflow-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
+                  <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Code</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Location</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Branch</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {warehouses.length === 0 ? (
-                      <tr><td colSpan={5} className="px-4 py-6 text-sm text-gray-500">No warehouses found.</td></tr>
+                      <tr><td colSpan={5} className="px-4 py-6 text-sm ui-muted">No warehouses found.</td></tr>
                     ) : (
                       warehouses.map((w) => {
                         const active = String(w.id) === String(selectedWarehouseId);
                         return (
-                          <tr key={String(w.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'hover:bg-gray-50'}`} onClick={() => setSelectedWarehouseId(String(w.id))}>
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{w.name}</td>
-                            <td className="px-4 py-3 text-sm text-gray-700">{w.code || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{w.location || '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{w.branchName || '-'}</td>
+                          <tr key={String(w.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedWarehouseId(String(w.id))}>
+                            <td className="px-4 py-3 text-sm font-medium ui-fg">{w.name}</td>
+                            <td className="px-4 py-3 text-sm ui-fg">{w.code || '-'}</td>
+                            <td className="px-4 py-3 text-sm ui-muted">{w.location || '-'}</td>
+                            <td className="px-4 py-3 text-sm ui-muted">{w.branchName || '-'}</td>
                             <td className="px-4 py-3 text-sm">{w.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
                           </tr>
                         );
@@ -8373,39 +8365,39 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="text-sm font-semibold">Edit Warehouse: {selectedWarehouse.name}</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs text-gray-500">Warehouse Name *</label>
+                  <label className="block text-xs ui-muted">Warehouse Name *</label>
                   <input value={warehouseEdit.name} onChange={(e) => setWarehouseEdit((p) => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Code</label>
+                  <label className="block text-xs ui-muted">Code</label>
                   <input value={warehouseEdit.code} onChange={(e) => setWarehouseEdit((p) => ({ ...p, code: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Location</label>
+                  <label className="block text-xs ui-muted">Location</label>
                   <input value={warehouseEdit.location} onChange={(e) => setWarehouseEdit((p) => ({ ...p, location: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Address</label>
+                  <label className="block text-xs ui-muted">Address</label>
                   <input value={warehouseEdit.address} onChange={(e) => setWarehouseEdit((p) => ({ ...p, address: e.target.value }))} className="w-full px-3 py-2 rounded border" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Branch</label>
-                  <select value={warehouseEdit.branchId} onChange={(e) => setWarehouseEdit((p) => ({ ...p, branchId: e.target.value }))} className="w-full px-3 py-2 rounded border bg-white">
+                  <label className="block text-xs ui-muted">Branch</label>
+                  <select value={warehouseEdit.branchId} onChange={(e) => setWarehouseEdit((p) => ({ ...p, branchId: e.target.value }))} className="w-full px-3 py-2 rounded border ui-surface">
                     <option value="">No branch</option>
                     {branchOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500">Status</label>
-                  <select value={warehouseEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setWarehouseEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="w-full px-3 py-2 rounded border bg-white">
+                  <label className="block text-xs ui-muted">Status</label>
+                  <select value={warehouseEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setWarehouseEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="w-full px-3 py-2 rounded border ui-surface">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
                 </div>
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={saveWarehouse} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">Save Warehouse</button>
-                <button type="button" onClick={deleteWarehouse} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Delete</button>
+                <button type="button" onClick={saveWarehouse} className="px-4 py-2 rounded-lg ui-primary-bg ">Save Warehouse</button>
+                <button type="button" onClick={deleteWarehouse} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Delete</button>
               </div>
             </div>
             )}
@@ -8417,10 +8409,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
   };
 
   return (
-    <div className="bg-white border rounded-xl overflow-hidden">
+    <div className="ui-surface border rounded-xl overflow-hidden">
       <div className="flex">
         {showSidebar ? (
-          <div className="w-64 border-r bg-white p-4">
+          <div className="w-64 border-r ui-surface p-4">
             <div className="space-y-1">
               {[{ key: 'company', title: 'Company' }, { key: 'tax', title: 'Tax & Compliances' }].map((s) => {
                 const isActive = s.key === activeTab;
@@ -8429,8 +8421,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     key={s.key}
                     type="button"
                     onClick={() => setActiveTab(s.key)}
-                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
-                      isActive ? 'bg-stone-100 border-stone-300 text-stone-900' : 'bg-white border-transparent text-gray-700 hover:bg-gray-50'
+                    className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${ isActive ? 'bg-stone-100 border-stone-300 ui-fg' : 'ui-surface border-transparent ui-fg ui-hover-sunken'
                     }`}
                   >
                     <div className="text-sm font-semibold">{s.title}</div>
@@ -8447,51 +8438,51 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-bold">Company</div>
-                  <div className="text-sm text-gray-500">Basic, contact and registered address</div>
+                  <div className="text-sm ui-muted">Basic, contact and registered address</div>
                 </div>
                 <button
                   type="button"
                   disabled={saving}
                   onClick={saveCompanySettings}
-                  className={`px-4 py-2 rounded-lg ${saving ? 'bg-gray-200 text-gray-600' : 'bg-stone-900 text-white hover:bg-stone-900'}`}
+                  className={`px-4 py-2 rounded-lg ${saving ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
               </div>
 
               <div className="space-y-6 max-w-4xl">
-                <div className="border rounded-xl p-5 shadow-sm bg-white">
+                <div className="border rounded-xl p-5 shadow-sm ui-surface">
                   <div className="flex items-baseline justify-between gap-4 mb-4">
                     <div>
-                      <div className="text-sm font-semibold text-gray-800">Basic details</div>
-                      <div className="text-xs text-gray-500">Business identity and accounting defaults</div>
+                      <div className="text-sm font-semibold ui-fg">Basic details</div>
+                      <div className="text-xs ui-muted">Business identity and accounting defaults</div>
                     </div>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs text-gray-500">Legal Company Name</label>
+                      <label className="block text-xs ui-muted">Legal Company Name</label>
                       <input value={form.legalName} onChange={(e) => updateForm({ legalName: e.target.value })} className="w-full px-3 py-2 rounded border" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500">Display / Trade Name</label>
+                      <label className="block text-xs ui-muted">Display / Trade Name</label>
                       <input value={form.tradeName} onChange={(e) => updateForm({ tradeName: e.target.value })} className="w-full px-3 py-2 rounded border" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500">Business Type / Entity Type</label>
-                      <select value={form.entityType} onChange={(e) => updateForm({ entityType: e.target.value })} className="w-full px-3 py-2 rounded border bg-white">
+                      <label className="block text-xs ui-muted">Business Type / Entity Type</label>
+                      <select value={form.entityType} onChange={(e) => updateForm({ entityType: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
                         {COMPANY_ENTITY_TYPES.map((x) => (
                           <option key={x} value={x}>{x}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500">Industry</label>
-                      <div className="mt-2 border rounded-lg p-3 bg-white">
+                      <label className="block text-xs ui-muted">Industry</label>
+                      <div className="mt-2 border rounded-lg p-3 ui-surface">
                         <div className="space-y-2">
                           {INDUSTRY_OPTIONS.map((x) => {
                             const checked = Array.isArray(form.industries) && form.industries.includes(x);
                             return (
-                              <label key={x} className="flex items-center gap-2 text-sm text-gray-800">
+                              <label key={x} className="flex items-center gap-2 text-sm ui-fg">
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -8509,26 +8500,26 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                           })}
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">Select one or more</div>
+                      <div className="text-xs ui-muted mt-1">Select one or more</div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500">Incorporation Date</label>
+                        <label className="block text-xs ui-muted">Incorporation Date</label>
                         <input type="date" value={form.incorporationDate} onChange={(e) => updateForm({ incorporationDate: e.target.value })} className="w-full px-3 py-2 rounded border" />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Financial Year Start</label>
+                        <label className="block text-xs ui-muted">Financial Year Start</label>
                         <input type="date" value={form.financialYearStart} onChange={(e) => updateForm({ financialYearStart: e.target.value })} className="w-full px-3 py-2 rounded border" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500">Books Begin Date</label>
+                        <label className="block text-xs ui-muted">Books Begin Date</label>
                         <input type="date" value={form.booksBeginDate} onChange={(e) => updateForm({ booksBeginDate: e.target.value })} className="w-full px-3 py-2 rounded border" />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Base Currency</label>
-                        <select value={form.baseCurrency} onChange={(e) => updateForm({ baseCurrency: e.target.value })} className="w-full px-3 py-2 rounded border bg-white">
+                        <label className="block text-xs ui-muted">Base Currency</label>
+                        <select value={form.baseCurrency} onChange={(e) => updateForm({ baseCurrency: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
                           {CURRENCY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}
@@ -8537,16 +8528,16 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500">Country</label>
-                        <select value={form.country} onChange={(e) => updateForm({ country: e.target.value })} className="w-full px-3 py-2 rounded border bg-white">
+                        <label className="block text-xs ui-muted">Country</label>
+                        <select value={form.country} onChange={(e) => updateForm({ country: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
                           {COUNTRY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Time Zone</label>
-                        <select value={form.timeZone} onChange={(e) => updateForm({ timeZone: e.target.value })} className="w-full px-3 py-2 rounded border bg-white">
+                        <label className="block text-xs ui-muted">Time Zone</label>
+                        <select value={form.timeZone} onChange={(e) => updateForm({ timeZone: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
                           {TZ_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}
@@ -8556,51 +8547,51 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                 </div>
 
-                <div className="border rounded-xl p-5 shadow-sm bg-white">
+                <div className="border rounded-xl p-5 shadow-sm ui-surface">
                   <div className="mb-4">
-                    <div className="text-sm font-semibold text-gray-800">Contact details</div>
-                    <div className="text-xs text-gray-500">Where customers and vendors can reach you</div>
+                    <div className="text-sm font-semibold ui-fg">Contact details</div>
+                    <div className="text-xs ui-muted">Where customers and vendors can reach you</div>
                   </div>
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500">Official Email</label>
+                        <label className="block text-xs ui-muted">Official Email</label>
                         <input value={form.officialEmail} onChange={(e) => updateForm({ officialEmail: e.target.value })} className="w-full px-3 py-2 rounded border" />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Phone Number</label>
+                        <label className="block text-xs ui-muted">Phone Number</label>
                         <input value={form.phone} onChange={(e) => updateForm({ phone: e.target.value })} className="w-full px-3 py-2 rounded border" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500">Website</label>
+                      <label className="block text-xs ui-muted">Website</label>
                       <input value={form.website} onChange={(e) => updateForm({ website: e.target.value })} className="w-full px-3 py-2 rounded border" />
                     </div>
                   </div>
                 </div>
 
-                <div className="border rounded-xl p-5 shadow-sm bg-white">
+                <div className="border rounded-xl p-5 shadow-sm ui-surface">
                   <div className="mb-4">
-                    <div className="text-sm font-semibold text-gray-800">Registered Address (Mandatory)</div>
-                    <div className="text-xs text-gray-500">Used for GST state mapping and statutory documents</div>
+                    <div className="text-sm font-semibold ui-fg">Registered Address (Mandatory)</div>
+                    <div className="text-xs ui-muted">Used for GST state mapping and statutory documents</div>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs text-gray-500">Address Line 1</label>
+                      <label className="block text-xs ui-muted">Address Line 1</label>
                       <input value={form.regAddress1} onChange={(e) => updateForm({ regAddress1: e.target.value })} className="w-full px-3 py-2 rounded border" />
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-500">Address Line 2</label>
+                      <label className="block text-xs ui-muted">Address Line 2</label>
                       <input value={form.regAddress2} onChange={(e) => updateForm({ regAddress2: e.target.value })} className="w-full px-3 py-2 rounded border" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500">City</label>
+                        <label className="block text-xs ui-muted">City</label>
                         <input value={form.regCity} onChange={(e) => updateForm({ regCity: e.target.value })} className="w-full px-3 py-2 rounded border" />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">State / UT</label>
-                        <select value={form.regStateCode} onChange={(e) => updateForm({ regStateCode: e.target.value })} className="w-full px-3 py-2 rounded border bg-white">
+                        <label className="block text-xs ui-muted">State / UT</label>
+                        <select value={form.regStateCode} onChange={(e) => updateForm({ regStateCode: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
                           <option value="">Select</option>
                           {Object.keys(GST_STATE_BY_CODE || {}).sort().map((code) => (
                             <option key={code} value={code}>{GST_STATE_BY_CODE[code]}</option>
@@ -8610,19 +8601,19 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-500">Pincode</label>
+                        <label className="block text-xs ui-muted">Pincode</label>
                         <input value={form.regPincode} onChange={(e) => updateForm({ regPincode: e.target.value })} className="w-full px-3 py-2 rounded border" />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-500">Country</label>
-                        <select value={form.regCountry} onChange={(e) => updateForm({ regCountry: e.target.value })} className="w-full px-3 py-2 rounded border bg-white">
+                        <label className="block text-xs ui-muted">Country</label>
+                        <select value={form.regCountry} onChange={(e) => updateForm({ regCountry: e.target.value })} className="w-full px-3 py-2 rounded border ui-surface">
                           {COUNTRY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
                           ))}
                         </select>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500">State code is stored internally for GST mappings.</div>
+                    <div className="text-xs ui-muted">State code is stored internally for GST mappings.</div>
                   </div>
                 </div>
               </div>
@@ -8764,49 +8755,49 @@ const Gstr1Report = ({ db, currentCompany }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
-          <div className="text-sm text-gray-500">Taxable Value (Net)</div>
+        <div className="ui-surface rounded-xl shadow-sm p-5 border">
+          <div className="text-sm ui-muted">Taxable Value (Net)</div>
           <div className="text-2xl font-bold">{formatMoney(totals.taxableAmount, currentCompany)}</div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
-          <div className="text-sm text-gray-500">GST (Net)</div>
+        <div className="ui-surface rounded-xl shadow-sm p-5 border">
+          <div className="text-sm ui-muted">GST (Net)</div>
           <div className="text-2xl font-bold">{formatMoney(totals.gstAmount, currentCompany)}</div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs ui-muted mt-1">
             CGST {formatMoney(totals.cgstAmount, currentCompany)} · SGST {formatMoney(totals.sgstAmount, currentCompany)} · IGST {formatMoney(totals.igstAmount, currentCompany)}
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
-          <div className="text-sm text-gray-500">Total (Net)</div>
+        <div className="ui-surface rounded-xl shadow-sm p-5 border">
+          <div className="text-sm ui-muted">Total (Net)</div>
           <div className="text-2xl font-bold">{formatMoney(totals.totalAmount, currentCompany)}</div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-        <div className="px-6 py-4 border-b bg-gray-50">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
+        <div className="px-6 py-4 border-b ui-sunken">
           <h4 className="font-bold">Rate-wise Summary</h4>
         </div>
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tax Type</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">GST %</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Taxable</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">CGST</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">SGST</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">IGST</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">GST</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Tax Type</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">GST %</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">CGST</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">SGST</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">IGST</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">GST</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rateRows.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-10 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-10 text-center ui-muted">
                   No GST transactions yet.
                 </td>
               </tr>
             ) : (
               rateRows.map((r) => (
-                <tr key={`${r.taxType}-${r.gstRate}`} className="hover:bg-gray-50">
+                <tr key={`${r.taxType}-${r.gstRate}`} className="ui-hover-sunken">
                   <td className="px-6 py-4">{r.taxType}</td>
                   <td className="px-6 py-4 text-right">{Number(r.gstRate || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-right">{formatMoney(Number(r.taxableAmount || 0), currentCompany)}</td>
@@ -8821,36 +8812,36 @@ const Gstr1Report = ({ db, currentCompany }) => {
         </table>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-        <div className="px-6 py-4 border-b bg-gray-50">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
+        <div className="px-6 py-4 border-b ui-sunken">
           <h4 className="font-bold">Document Summary (Invoices & Credit Notes)</h4>
         </div>
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Number</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Party</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">GSTIN</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">POS</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Taxable</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">CGST</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">SGST</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">IGST</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Number</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Party</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">GSTIN</th>
+              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">POS</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">CGST</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">SGST</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">IGST</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {docRows.length === 0 ? (
               <tr>
-                <td colSpan="11" className="px-6 py-10 text-center text-gray-500">
+                <td colSpan="11" className="px-6 py-10 text-center ui-muted">
                   No invoices or credit notes found.
                 </td>
               </tr>
             ) : (
               docRows.map((r, idx) => (
-                <tr key={`${r.type}-${r.number}-${idx}`} className="hover:bg-gray-50">
+                <tr key={`${r.type}-${r.number}-${idx}`} className="ui-hover-sunken">
                   <td className="px-6 py-4">{r.type}</td>
                   <td className="px-6 py-4 font-medium">{r.number}</td>
                   <td className="px-6 py-4">{r.date}</td>
@@ -8926,34 +8917,34 @@ const Gstr3bReport = ({ db, currentCompany }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
-          <div className="text-sm text-gray-500">Outward Supplies (Net)</div>
+        <div className="ui-surface rounded-xl shadow-sm p-5 border">
+          <div className="text-sm ui-muted">Outward Supplies (Net)</div>
           <div className="text-2xl font-bold">{formatMoney(outwardNet.gst, currentCompany)}</div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs ui-muted mt-1">
             Taxable {formatMoney(outwardNet.taxable, currentCompany)} · CGST {formatMoney(outwardNet.cgst, currentCompany)} · SGST {formatMoney(outwardNet.sgst, currentCompany)} · IGST {formatMoney(outwardNet.igst, currentCompany)}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
-          <div className="text-sm text-gray-500">ITC (Bills + Expenses)</div>
+        <div className="ui-surface rounded-xl shadow-sm p-5 border">
+          <div className="text-sm ui-muted">ITC (Bills + Expenses)</div>
           <div className="text-2xl font-bold">{formatMoney(inwardItc.gst, currentCompany)}</div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs ui-muted mt-1">
             Taxable {formatMoney(inwardItc.taxable, currentCompany)} · CGST {formatMoney(inwardItc.cgst, currentCompany)} · SGST {formatMoney(inwardItc.sgst, currentCompany)} · IGST {formatMoney(inwardItc.igst, currentCompany)}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 border">
-          <div className="text-sm text-gray-500">Net Tax Payable (Proxy)</div>
+        <div className="ui-surface rounded-xl shadow-sm p-5 border">
+          <div className="text-sm ui-muted">Net Tax Payable (Proxy)</div>
           <div className="text-2xl font-bold">{formatMoney(netPayable.gst, currentCompany)}</div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs ui-muted mt-1">
             CGST {formatMoney(netPayable.cgst, currentCompany)} · SGST {formatMoney(netPayable.sgst, currentCompany)} · IGST {formatMoney(netPayable.igst, currentCompany)}
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm p-6 border">
+      <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <h4 className="font-bold mb-3">What this report uses</h4>
-        <div className="text-sm text-gray-600 space-y-1">
+        <div className="text-sm ui-muted space-y-1">
           <div>Outward: Invoices minus Credit Notes (based on saved GST totals).</div>
           <div>ITC: Bills and Expenses (based on saved GST totals).</div>
         </div>
@@ -9869,17 +9860,17 @@ const AppShell = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold">{isEdit ? 'Edit Invoice' : 'New Invoice'}</h3>
-                  <div className="text-sm text-gray-500">{isEdit ? invoiceEditor.initial?.number || '' : ''}</div>
+                  <div className="text-sm ui-muted">{isEdit ? invoiceEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setInvoiceEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <InvoiceForm
                   db={dbForUser}
                   setDb={setDb}
@@ -9917,17 +9908,17 @@ const AppShell = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold">{isEdit ? 'Edit Estimate' : 'New Estimate'}</h3>
-                  <div className="text-sm text-gray-500">{isEdit ? estimateEditor.initial?.number || '' : ''}</div>
+                  <div className="text-sm ui-muted">{isEdit ? estimateEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setEstimateEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <EstimateForm
                   db={dbForUser}
                   setDb={setDb}
@@ -9984,17 +9975,17 @@ const AppShell = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-xl font-bold">{isEdit ? 'Edit Journal Entry' : 'New Journal Entry'}</h3>
-                  <div className="text-sm text-gray-500">{isEdit ? journalEditor.initial?.number || '' : ''}</div>
+                  <div className="text-sm ui-muted">{isEdit ? journalEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setJournalEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <JournalEntryForm
                   db={dbForUser}
                   setDb={setDb}
@@ -10025,12 +10016,12 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <CreditNoteForm
                   db={dbForUser}
                   setDb={setDb}
@@ -10064,12 +10055,12 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setReceiptEditor({ open: false })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <RecordReceiptForm
                   db={dbForUser}
                   setDb={setDb}
@@ -10100,12 +10091,12 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setPaymentEditor({ open: false })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <RecordDisbursementForm
                   db={dbForUser}
                   setDb={setDb}
@@ -10217,18 +10208,18 @@ const AppShell = () => {
                         : 'New Warehouse Transfer'}
                   </h3>
                   {stockTransferEditor.initial?.number ? (
-                    <div className="text-sm text-gray-500">{String(stockTransferEditor.initial.number)}</div>
+                    <div className="text-sm ui-muted">{String(stockTransferEditor.initial.number)}</div>
                   ) : null}
                 </div>
                 <button
                   type="button"
                   onClick={() => setStockTransferEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <StockTransferEditor
                   db={dbForUser}
                   setDb={setDb}
@@ -10269,13 +10260,13 @@ const AppShell = () => {
           return (
             <div className="space-y-3">
               <div className="text-xl font-bold">Bills</div>
-              <div className="bg-white border rounded-xl p-4 text-sm text-gray-700">
+              <div className="ui-surface border rounded-xl p-4 text-sm ui-fg">
                 Bills module failed to load (missing component). Please refresh the page.
               </div>
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+                className="px-4 py-2 rounded-lg ui-primary-bg "
               >
                 Refresh
               </button>
@@ -10290,12 +10281,12 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setBillEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <BillForm
                   db={dbForUser}
                   setDb={setDb}
@@ -10334,12 +10325,12 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>
               </div>
-              <div className="bg-white border rounded-xl p-4">
+              <div className="ui-surface border rounded-xl p-4">
                 <DebitNoteForm
                   db={dbForUser}
                   setDb={setDb}
@@ -10571,10 +10562,10 @@ const AppShell = () => {
 
   if (hasBranchRestriction && !authCtx.loading && authCtx.data && allowedBranchIds.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="max-w-lg w-full bg-white border rounded-xl p-6">
+      <div className="min-h-screen ui-sunken flex items-center justify-center p-6">
+        <div className="max-w-lg w-full ui-surface border rounded-xl p-6">
           <div className="text-lg font-bold">No branches assigned</div>
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="text-sm ui-muted mt-2">
             Your user does not have access to any branch. Ask an admin to assign branches to your user.
           </div>
           <div className="mt-4 flex gap-2">
@@ -10866,7 +10857,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setActive('reports')}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
                 >
                   Back
                 </button>

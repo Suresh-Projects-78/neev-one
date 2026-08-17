@@ -409,7 +409,7 @@ const AuthGate = ({ onAuth }) => {
           <div className="relative z-10 p-12 flex flex-col justify-between w-full text-white">
             <div>
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl grid place-items-center bg-white/10 backdrop-blur-sm ring-1 ring-white/15">
+                <div className="w-11 h-11 rounded-xl grid place-items-center ui-surface/10 backdrop-blur-sm ring-1 ring-white/15">
                   <BookIcon className="w-6 h-6" />
                 </div>
                 <div>
@@ -434,7 +434,7 @@ const AuthGate = ({ onAuth }) => {
                 ].map(([title, body]) => (
                   <li key={title} className="flex items-start gap-3.5">
                     <span
-                      className="mt-0.5 w-6 h-6 rounded-md grid place-items-center bg-white/10 ring-1 ring-white/15 flex-shrink-0"
+                      className="mt-0.5 w-6 h-6 rounded-md grid place-items-center ui-surface/10 ring-1 ring-white/15 flex-shrink-0"
                       aria-hidden="true"
                     >
                       <CheckIcon className="w-3.5 h-3.5" />
@@ -735,7 +735,7 @@ const AuthGate = ({ onAuth }) => {
                         <button
                           type="button"
                           onClick={() => switchMode('signup')}
-                          className="text-stone-900 font-semibold hover:text-stone-900 transition-colors"
+                          className="ui-fg font-semibold ui-hover-fg transition-colors"
                         >
                           Sign up here
                         </button>
@@ -749,7 +749,7 @@ const AuthGate = ({ onAuth }) => {
                       <button
                         type="button"
                         onClick={() => switchMode('login')}
-                        className="text-stone-900 font-semibold hover:text-stone-900 transition-colors"
+                        className="ui-fg font-semibold ui-hover-fg transition-colors"
                       >
                         Sign in
                       </button>

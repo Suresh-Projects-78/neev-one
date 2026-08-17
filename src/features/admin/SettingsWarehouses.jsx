@@ -303,7 +303,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900"
+          className="px-4 py-2 rounded-lg ui-primary-bg "
         >
           + Create Warehouse
         </button>
@@ -316,7 +316,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search"
-              className="w-full pl-3 pr-3 py-2 border rounded-lg bg-white"
+              className="w-full pl-3 pr-3 py-2 border rounded-lg ui-surface"
             />
           </div>
         </div>
@@ -326,23 +326,23 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
       {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>}
 
       {selectedWarehouse ? (
-        <div className="bg-white border rounded-xl p-5 space-y-4">
+        <div className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-lg font-semibold">Warehouse Details</div>
-              <div className="text-xs text-gray-500">{selectedWarehouse.name || ''}</div>
+              <div className="text-xs ui-muted">{selectedWarehouse.name || ''}</div>
             </div>
             <div className="flex gap-2">
               {editingWarehouseId ? null : (
                 <button
                   type="button"
                   onClick={() => beginEdit(selectedWarehouse)}
-                  className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50"
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken"
                 >
                   Edit
                 </button>
               )}
-              <button type="button" onClick={closeDetails} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+              <button type="button" onClick={closeDetails} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                 Close
               </button>
             </div>
@@ -406,7 +406,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">GST Registration</label>
-                  <select className="w-full px-3 py-2 border rounded-lg bg-white" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
+                  <select className="w-full px-3 py-2 border rounded-lg ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
                     <option value="UNREGISTERED">Unregistered</option>
                     <option value="REGULAR">Regular</option>
                     <option value="COMPOSITION">Composition</option>
@@ -444,10 +444,10 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               </div>
 
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={() => setEditingWarehouseId(null)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">
+                <button type="button" onClick={() => setEditingWarehouseId(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                   Cancel
                 </button>
-                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
+                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
                   {editSaving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
@@ -455,7 +455,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
           ) : (
             <div className="grid grid-cols-12 gap-4 text-sm">
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs text-gray-500">Branch</div>
+                <div className="text-xs ui-muted">Branch</div>
                 <div className="font-medium">
                   {(() => {
                     const b = branchLookup.get(String(selectedWarehouse.branchId || ''));
@@ -464,37 +464,37 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 </div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs text-gray-500">GST Registration</div>
+                <div className="text-xs ui-muted">GST Registration</div>
                 <div className="font-medium">{selectedWarehouse.gstRegistrationType || 'UNREGISTERED'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs text-gray-500">GSTIN</div>
+                <div className="text-xs ui-muted">GSTIN</div>
                 <div className="font-medium">{selectedWarehouse.gstin || '—'}</div>
               </div>
 
               <div className="col-span-12 sm:col-span-6">
-                <div className="text-xs text-gray-500">Address</div>
+                <div className="text-xs ui-muted">Address</div>
                 <div className="font-medium">
                   {[selectedWarehouse.addressLine1, selectedWarehouse.addressLine2].filter(Boolean).join(', ') || '—'}
                 </div>
               </div>
               <div className="col-span-12 sm:col-span-6">
-                <div className="text-xs text-gray-500">Location</div>
+                <div className="text-xs ui-muted">Location</div>
                 <div className="font-medium">
                   {[selectedWarehouse.city, selectedWarehouse.state, selectedWarehouse.country].filter(Boolean).join(', ') || '—'}
                 </div>
               </div>
 
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs text-gray-500">Contact Person</div>
+                <div className="text-xs ui-muted">Contact Person</div>
                 <div className="font-medium">{selectedWarehouse.contactPerson || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs text-gray-500">Phone</div>
+                <div className="text-xs ui-muted">Phone</div>
                 <div className="font-medium">{selectedWarehouse.phone || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs text-gray-500">Email</div>
+                <div className="text-xs ui-muted">Email</div>
                 <div className="font-medium">{selectedWarehouse.email || '—'}</div>
               </div>
             </div>
@@ -503,7 +503,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
       ) : null}
 
       {showForm && (
-        <form onSubmit={onSubmit} className="bg-white border rounded-xl p-5 space-y-4">
+        <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="text-lg font-semibold">New Warehouse</div>
 
           <div className="grid grid-cols-12 gap-4">
@@ -562,7 +562,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">GST Registration</label>
-              <select className="w-full px-3 py-2 border rounded-lg bg-white" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+              <select className="w-full px-3 py-2 border rounded-lg ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
                 <option value="UNREGISTERED">Unregistered</option>
                 <option value="REGULAR">Regular</option>
                 <option value="COMPOSITION">Composition</option>
@@ -594,50 +594,50 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border bg-white hover:bg-gray-50">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
+            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Cancel</button>
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Warehouse'}
             </button>
           </div>
         </form>
       )}
 
-      <div className="bg-white border rounded-xl overflow-hidden">
+      <div className="ui-surface border rounded-xl overflow-hidden">
         {loading ? (
-          <div className="px-6 py-10 text-center text-gray-500">Loading…</div>
+          <div className="px-6 py-10 text-center ui-muted">Loading…</div>
         ) : warehouses.length === 0 ? (
-          <div className="px-6 py-10 text-center text-gray-500">No warehouses yet. Click "Create Warehouse" to add one.</div>
+          <div className="px-6 py-10 text-center ui-muted">No warehouses yet. Click "Create Warehouse" to add one.</div>
         ) : filteredWarehouses.length === 0 ? (
-          <div className="px-6 py-10 text-center text-gray-500">No warehouses found.</div>
+          <div className="px-6 py-10 text-center ui-muted">No warehouses found.</div>
         ) : (
           <table className="w-full">
-            <thead className="bg-gray-50 border-b">
+            <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Branch</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Warehouse</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Address</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">GST</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Branch</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Location</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Address</th>
+                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">GST</th>
+                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
               {filteredWarehouses.map((w) => (
-                <tr key={w.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                <tr key={w.id} className="ui-hover-sunken">
+                  <td className="px-4 py-3 text-sm ui-fg">
                     {(() => {
                       const b = branchLookup.get(String(w.branchId || ''));
                       return (b && (b.branchName || b.name)) ? String(b.branchName || b.name) : '—';
                     })()}
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                  <td className="px-4 py-3 text-sm font-medium ui-fg">
                     <button type="button" className="text-left hover:underline" onClick={() => openView(w.id)}>
                       {w.name || '—'}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{[w.city, w.state].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{[w.addressLine1, w.addressLine2].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{w.gstin || '—'}</td>
+                  <td className="px-4 py-3 text-sm ui-fg">{[w.city, w.state].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="px-4 py-3 text-sm ui-fg">{[w.addressLine1, w.addressLine2].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="px-4 py-3 text-sm ui-fg">{w.gstin || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="relative inline-block text-left" data-warehouse-actions>
                       <button
@@ -646,18 +646,18 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                           e.stopPropagation();
                           setOpenMenuForWarehouseId((prev) => (prev === w.id ? null : w.id));
                         }}
-                        className="px-2 py-1 rounded-md border bg-white hover:bg-gray-50"
+                        className="px-2 py-1 rounded-md border ui-surface ui-hover-sunken"
                         aria-label="Warehouse actions"
                       >
                         ⋯
                       </button>
 
                       {openMenuForWarehouseId === w.id ? (
-                        <div className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border bg-white shadow-sm z-50">
-                          <button type="button" onClick={() => openView(w.id)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                        <div className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border ui-surface shadow-sm z-50">
+                          <button type="button" onClick={() => openView(w.id)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
                             View
                           </button>
-                          <button type="button" onClick={() => beginEdit(w)} className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
+                          <button type="button" onClick={() => beginEdit(w)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
                             Edit
                           </button>
                           <button type="button" onClick={() => removeWarehouse(w.id)} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">

@@ -143,10 +143,10 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -303,10 +303,10 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-gray-50">
+        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>

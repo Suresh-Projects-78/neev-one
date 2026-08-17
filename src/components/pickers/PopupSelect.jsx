@@ -83,12 +83,11 @@ const PopupSelect = ({
         type="button"
         onClick={openPopup}
         disabled={disabled}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg text-left ${
-          disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'bg-white hover:bg-gray-50'
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg text-left ${ disabled ? 'ui-sunken ui-muted cursor-not-allowed' : 'ui-surface ui-hover-sunken'
         }`}
       >
-        <span className={displayLabel ? 'text-gray-900' : 'text-gray-400'}>{displayLabel || placeholder}</span>
-        <ChevronDown size={16} className="text-gray-500" />
+        <span className={displayLabel ? 'ui-fg' : 'ui-subtle'}>{displayLabel || placeholder}</span>
+        <ChevronDown size={16} className="ui-muted" />
       </button>
 
       {open && (
@@ -107,7 +106,7 @@ const PopupSelect = ({
               <button
                 type="button"
                 onClick={() => runCustomAction(customValue)}
-                className="w-full px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 border-gray-200 text-left"
+                className="w-full px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-left"
               >
                 {String(customActionText || 'Use').trim() || 'Use'} “{customValue}”
               </button>
@@ -116,25 +115,25 @@ const PopupSelect = ({
             <div className="border rounded-lg overflow-hidden">
               <div className="max-h-[55vh] overflow-y-auto divide-y">
                 {filtered.length === 0 ? (
-                  <div className="px-4 py-10 text-center text-gray-500">No results</div>
+                  <div className="px-4 py-10 text-center ui-muted">No results</div>
                 ) : (
                   filtered.map((o) => (
                     <button
                       key={`${String(o.value)}-${String(o.label)}`}
                       type="button"
                       onClick={() => applyValue(o.value)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50"
+                      className="w-full px-4 py-3 text-left ui-hover-sunken"
                     >
                       {String(o.code || '').trim() ? (
                         <div className="grid grid-cols-[84px_1fr] gap-3 items-center">
-                          <div className="text-xs text-gray-500">{String(o.code || '').trim()}</div>
-                          <div className="font-medium text-gray-900">{o.label}</div>
+                          <div className="text-xs ui-muted">{String(o.code || '').trim()}</div>
+                          <div className="font-medium ui-fg">{o.label}</div>
                         </div>
                       ) : (
-                        <div className="font-medium text-gray-900">{o.label}</div>
+                        <div className="font-medium ui-fg">{o.label}</div>
                       )}
                       {showValueSubtext && String(o.value || '').trim() !== String(o.label || '').trim() ? (
-                        <div className="text-xs text-gray-500">{o.value}</div>
+                        <div className="text-xs ui-muted">{o.value}</div>
                       ) : null}
                     </button>
                   ))

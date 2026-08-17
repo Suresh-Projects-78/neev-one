@@ -39,7 +39,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
   };
 
   return (
-    <form onSubmit={onSubmit} className="bg-white border rounded-xl p-5 space-y-4">
+    <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
       <div className="text-lg font-bold">Inter-branch Transfer</div>
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
 
@@ -69,12 +69,12 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
       </div>
 
       <div className="border rounded-xl overflow-hidden">
-        <div className="px-4 py-2 bg-gray-50 border-b font-semibold">Items</div>
+        <div className="px-4 py-2 ui-sunken border-b font-semibold">Items</div>
         <div className="p-4 space-y-3">
           {lines.map((l, idx) => (
             <div key={idx} className="grid grid-cols-12 gap-3 items-end">
               <div className="col-span-8">
-                <label className="block text-xs text-gray-600 mb-1">Item</label>
+                <label className="block text-xs ui-muted mb-1">Item</label>
                 <select className="w-full px-3 py-2 border rounded-lg" value={l.itemId} onChange={(e) => updateLine(idx, { itemId: e.target.value })}>
                   <option value="">Select</option>
                   {items.map((it) => (
@@ -85,7 +85,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
                 </select>
               </div>
               <div className="col-span-3">
-                <label className="block text-xs text-gray-600 mb-1">Qty</label>
+                <label className="block text-xs ui-muted mb-1">Qty</label>
                 <input
                   type="number"
                   min="0"
@@ -96,21 +96,21 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
                 />
               </div>
               <div className="col-span-1">
-                <button type="button" onClick={() => removeLine(idx)} className="w-full px-2 py-2 border rounded-lg hover:bg-gray-50">
+                <button type="button" onClick={() => removeLine(idx)} className="w-full px-2 py-2 border rounded-lg ui-hover-sunken">
                   ×
                 </button>
               </div>
             </div>
           ))}
 
-          <button type="button" onClick={addLine} className="px-3 py-2 border rounded-lg hover:bg-gray-50 text-sm">
+          <button type="button" onClick={addLine} className="px-3 py-2 border rounded-lg ui-hover-sunken text-sm">
             + Add line
           </button>
         </div>
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg bg-stone-900 text-white hover:bg-stone-900 disabled:opacity-50">
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
           {saving ? 'Creating…' : 'Create Transfer'}
         </button>
       </div>

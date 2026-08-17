@@ -14,50 +14,50 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
   );
 
   if (!ledger.item) {
-    return <div className="text-gray-500">Item not found</div>;
+    return <div className="ui-muted">Item not found</div>;
   }
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
-          <div className="text-gray-500">Item</div>
+          <div className="ui-muted">Item</div>
           <div className="font-semibold">{ledger.item.name}</div>
         </div>
         <div>
-          <div className="text-gray-500">Opening Qty</div>
+          <div className="ui-muted">Opening Qty</div>
           <div className="font-semibold">
             {ledger.openingQty} {ledger.item.unit || ''}
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Voucher</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Number</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">In</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Out</th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Balance</th>
+              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Voucher</th>
+              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Number</th>
+              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">In</th>
+              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Out</th>
+              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Balance</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {ledger.rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-10 text-center text-gray-500">
+                <td colSpan={6} className="px-6 py-10 text-center ui-muted">
                   No movements
                 </td>
               </tr>
             ) : (
               ledger.rows.map((r, idx) => (
-                <tr key={idx} className="hover:bg-gray-50">
+                <tr key={idx} className="ui-hover-sunken">
                   <td className="px-4 py-3">{r.date || '-'}</td>
                   <td className="px-4 py-3">
                     <div>{String(r.voucherType || '')}</div>
-                    {r.voucherNote ? <div className="text-xs text-gray-500">{String(r.voucherNote)}</div> : null}
+                    {r.voucherNote ? <div className="text-xs ui-muted">{String(r.voucherNote)}</div> : null}
                   </td>
                   <td className="px-4 py-3">{r.voucherNumber || '-'}</td>
                   <td className="px-4 py-3 text-right">{r.qtyIn ? r.qtyIn : '-'}</td>
@@ -345,7 +345,7 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-medium">Period:</div>
           <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="px-3 py-2 border rounded-lg" />
-          <span className="text-gray-400">to</span>
+          <span className="ui-subtle">to</span>
           <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="px-3 py-2 border rounded-lg" />
           <button
             type="button"
@@ -353,59 +353,59 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
               setFromDate('');
               setToDate('');
             }}
-            className="px-3 py-2 border rounded-lg hover:bg-gray-50"
+            className="px-3 py-2 border rounded-lg ui-hover-sunken"
           >
             Clear
           </button>
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={exportPdf} className="px-3 py-2 border rounded-lg hover:bg-gray-50">
+          <button type="button" onClick={exportPdf} className="px-3 py-2 border rounded-lg ui-hover-sunken">
             Export PDF
           </button>
-          <button type="button" onClick={exportCsv} className="px-3 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+          <button type="button" onClick={exportCsv} className="px-3 py-2 ui-primary-bg rounded-lg ">
             Export Excel
           </button>
         </div>
       </div>
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border">
+      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="w-full">
-          <thead className="bg-gray-50 border-b">
+          <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left">
                 <div className="text-xs text-transparent">0</div>
-                <div className="text-xs font-medium text-gray-500 uppercase">Item</div>
+                <div className="text-xs font-medium ui-muted uppercase">Item</div>
               </th>
               <th className="px-6 py-3 text-right">
-                <div className="text-xs text-gray-400">{fmtTotal(columnTotals.opening)}</div>
-                <div className="text-xs font-medium text-gray-500 uppercase">Opening</div>
+                <div className="text-xs ui-subtle">{fmtTotal(columnTotals.opening)}</div>
+                <div className="text-xs font-medium ui-muted uppercase">Opening</div>
               </th>
               <th className="px-6 py-3 text-right">
-                <div className="text-xs text-gray-400">{fmtTotal(columnTotals.purchases)}</div>
-                <div className="text-xs font-medium text-gray-500 uppercase">Purchases</div>
+                <div className="text-xs ui-subtle">{fmtTotal(columnTotals.purchases)}</div>
+                <div className="text-xs font-medium ui-muted uppercase">Purchases</div>
               </th>
               <th className="px-6 py-3 text-right">
-                <div className="text-xs text-gray-400">{fmtTotal(columnTotals.sales)}</div>
-                <div className="text-xs font-medium text-gray-500 uppercase">Sales</div>
+                <div className="text-xs ui-subtle">{fmtTotal(columnTotals.sales)}</div>
+                <div className="text-xs font-medium ui-muted uppercase">Sales</div>
               </th>
               <th className="px-6 py-3 text-right">
-                <div className="text-xs text-gray-400">{fmtTotal(columnTotals.dn)}</div>
-                <div className="text-xs font-medium text-gray-500 uppercase">DN (Return)</div>
+                <div className="text-xs ui-subtle">{fmtTotal(columnTotals.dn)}</div>
+                <div className="text-xs font-medium ui-muted uppercase">DN (Return)</div>
               </th>
               <th className="px-6 py-3 text-right">
-                <div className="text-xs text-gray-400">{fmtTotal(columnTotals.cn)}</div>
-                <div className="text-xs font-medium text-gray-500 uppercase">CN (Return)</div>
+                <div className="text-xs ui-subtle">{fmtTotal(columnTotals.cn)}</div>
+                <div className="text-xs font-medium ui-muted uppercase">CN (Return)</div>
               </th>
               <th className="px-6 py-3 text-right">
-                <div className="text-xs text-gray-400">{fmtTotal(columnTotals.closing)}</div>
-                <div className="text-xs font-medium text-gray-500 uppercase">Closing</div>
+                <div className="text-xs ui-subtle">{fmtTotal(columnTotals.closing)}</div>
+                <div className="text-xs font-medium ui-muted uppercase">Closing</div>
               </th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-12 text-center ui-muted">
                   No items yet
                 </td>
               </tr>
@@ -432,13 +432,13 @@ const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = []
               return (
                 <tr
                   key={it.id}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className="ui-hover-sunken cursor-pointer"
                   onClick={() => openLedger(it)}
                   title="Click to view ledger"
                 >
                   <td className="px-6 py-4">
                     <div className="font-medium">{it.name}</div>
-                    <div className="text-xs text-gray-500">{it.code || ''}</div>
+                    <div className="text-xs ui-muted">{it.code || ''}</div>
                   </td>
                   <td className="px-6 py-4 text-right">{fmt(opening)}</td>
                   <td className="px-6 py-4 text-right">{fmt(purchases)}</td>

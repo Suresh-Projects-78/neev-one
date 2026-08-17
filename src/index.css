@@ -727,6 +727,33 @@
   }
 }
 
+@layer components {
+  /* --- migration utilities -------------------------------------------------
+     The feature screens were written with fixed light-mode Tailwind colours
+     (bg-white, text-gray-600, border-gray-200). That is why those screens
+     ignored the theme and why dark mode was half-broken on them. These map the
+     old intent onto the tokens one-for-one, so the sweep is a rename rather
+     than a redesign.
+  --------------------------------------------------------------------------- */
+  .ui-surface { background-color: rgb(var(--surface)); }
+  .ui-sunken { background-color: rgb(var(--surface-sunken)); }
+  .ui-fg { color: rgb(var(--fg)); }
+  .ui-border-c { border-color: rgb(var(--border)); }
+  .ui-border-strong-c { border-color: rgb(var(--border-strong)); }
+  .ui-hover-fg { transition: color 160ms ease; }
+  .ui-hover-fg:hover { color: rgb(var(--fg)); }
+  .ui-hover-sunken { transition: background-color 160ms ease; }
+  .ui-hover-sunken:hover { background-color: rgb(var(--surface-sunken)); }
+
+  /* Sets its own foreground: --primary inverts between themes, so a paired
+     `text-white` would be invisible on the light button in dark mode. */
+  .ui-primary-bg {
+    background-color: rgb(var(--primary));
+    color: rgb(var(--on-primary));
+  }
+  .ui-primary-bg:hover { background-color: rgb(var(--primary-hover)); }
+}
+
 /* Honour the user's motion preference. */
 @media (prefers-reduced-motion: reduce) {
   *,
