@@ -560,8 +560,10 @@ export const InvoicesList = ({
         }
       />
 
-      <div className="ui-card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+      {/* One card, not two: the filters belong to the table they filter, and a
+          separate floating box above it reads as an unrelated control panel. */}
+      <div className="ui-card overflow-hidden">
+        <div className="ui-toolbar grid-cols-1 md:grid-cols-12 items-end">
           <div className="md:col-span-5">
             <label className="ui-label">Search</label>
             <input
@@ -606,29 +608,23 @@ export const InvoicesList = ({
               className="ui-input"
             />
           </div>
-        </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          <div className="ui-subtle text-xs">
-            Showing <span className="ui-title">{filteredInvoices.length}</span> of{' '}
-            <span className="ui-title">{invoices.length}</span>
+          <div className="md:col-span-12 flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchText('');
+                setStatusFilter('');
+                setDateFrom('');
+                setDateTo('');
+              }}
+              className="ui-btn ui-btn-ghost"
+            >
+              Clear filters
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => {
-              setSearchText('');
-              setStatusFilter('');
-              setDateFrom('');
-              setDateTo('');
-            }}
-            className="ui-btn ui-btn-secondary"
-          >
-            Clear
-          </button>
         </div>
-      </div>
 
-      <div className="ui-card overflow-hidden">
         <div className="overflow-x-auto">
         <table className="ui-table">
           <thead>
@@ -717,13 +713,20 @@ export const InvoicesList = ({
           </tbody>
         </table>
         </div>
+
+        <div className="ui-card-foot">
+          <span>
+            Showing <span className="ui-fg font-medium">{filteredInvoices.length}</span> of{' '}
+            <span className="ui-fg font-medium">{invoices.length}</span> invoices
+          </span>
+        </div>
       </div>
 
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop" style={{ boxShadow: 'var(--shadow-pop)' }}
-          style={{ left: openMenu.left, top: openMenu.top }}
+          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop"
+          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -1107,8 +1110,8 @@ export const EstimatesList = ({
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop" style={{ boxShadow: 'var(--shadow-pop)' }}
-          style={{ left: openMenu.left, top: openMenu.top }}
+          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop"
+          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}

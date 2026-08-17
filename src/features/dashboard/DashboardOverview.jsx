@@ -441,7 +441,7 @@ export default function DashboardOverview({
             ) : null}
 
             {onNewInvoice ? (
-              <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-brand">
+              <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-primary">
                 <Plus size={15} aria-hidden="true" />
                 New invoice
               </button>
@@ -458,7 +458,7 @@ export default function DashboardOverview({
             description="Raise your first invoice and this dashboard fills in — billed, collected, and who still owes you."
             action={
               onNewInvoice ? (
-                <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-brand">
+                <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-primary">
                   <Plus size={15} aria-hidden="true" />
                   New invoice
                 </button>
