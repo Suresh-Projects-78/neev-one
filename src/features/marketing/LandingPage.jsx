@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   ArrowRight,
   BadgeCheck,
@@ -11,6 +11,8 @@ import {
   Sun,
   Upload,
 } from 'lucide-react';
+
+import { useTheme } from '../../components/ui/useTheme';
 
 /**
  * The public front page — requirement: a landing page.
@@ -69,26 +71,12 @@ const STEPS = [
   ['Read the books', 'Trial balance, ledgers and returns come from posted lines, never from a cache.'],
 ];
 
-/** Theme toggle for the public page, kept in sync with the app shell. */
-function useTheme() {
-  const [theme, setTheme] = useState(() =>
-    typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'
-  );
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem('theme', theme);
-    } catch {
-      // Private browsing: the toggle still works for this session.
-    }
-  }, [theme]);
-
-  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))];
-}
-
 export default function LandingPage({ onSignIn, onGetStarted }) {
-  const [theme, toggleTheme] = useTheme();
+  // The app shell's own hook, not a second copy: it stores under `uiTheme` and
+  // falls back to the system preference. A private hook here would have used a
+  // different key, so a toggle on this page would not have followed the user
+  // into the app.
+  const { theme, toggle: toggleTheme } = useTheme();
 
   return (
     <div className="min-h-dvh" style={{ backgroundColor: 'rgb(var(--app-bg))' }}>
