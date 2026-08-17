@@ -56,7 +56,20 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
   // With exactly one cash/bank ledger there is no choice to make, so treat it
   // as chosen. Derived rather than written into state by an effect: the user's
   // own pick always wins, and no extra render is spent agreeing with itself.
-  const ledgerAccountId = formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '');
+  //
+  // hideMode is the cash/bank book, where the account is implied by the book
+  // you are standing in. It still has to resolve to a real ledger, otherwise a
+  // receipt entered from the bank book would never reach the general ledger --
+  // which is exactly what happens to every receipt once the standalone screens
+  // are switched off.
+  const impliedByBook = useMemo(() => {
+    if (!hideMode) return '';
+    const wanted = String(formData.mode || '').toLowerCase() === 'cash' ? 'CASH' : 'BANK';
+    return modes.find((m) => m.controlKind === wanted)?.id || modes[0]?.id || '';
+  }, [hideMode, formData.mode, modes]);
+
+  const ledgerAccountId =
+    formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
   const [allocations, setAllocations] = useState(() => ({}));
 
@@ -219,7 +232,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     // against there; anything created before the API migration is still sent,
     // just unallocated, so the cash is never lost from the books.
     let posted = null;
-    if (!hideMode) {
+    if (String(ledgerAccountId || "").trim()) {
       const invoiceById = new Map(safeArray(db.invoices).map((i) => [Number(i.id), i]));
       const serverAllocations = computed.lines
         .map((l) => {

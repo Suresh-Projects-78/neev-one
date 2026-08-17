@@ -54,7 +54,20 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
   // With exactly one cash/bank ledger there is no choice to make, so treat it
   // as chosen. Derived rather than written into state by an effect: the user's
   // own pick always wins, and no extra render is spent agreeing with itself.
-  const ledgerAccountId = formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '');
+  //
+  // hideMode is the cash/bank book, where the account is implied by the book
+  // you are standing in. It still has to resolve to a real ledger, otherwise a
+  // payment entered from the bank book would never reach the general ledger --
+  // which is exactly what happens to every payment once the standalone screens
+  // are switched off.
+  const impliedByBook = useMemo(() => {
+    if (!hideMode) return '';
+    const wanted = String(formData.mode || '').toLowerCase() === 'cash' ? 'CASH' : 'BANK';
+    return modes.find((m) => m.controlKind === wanted)?.id || modes[0]?.id || '';
+  }, [hideMode, formData.mode, modes]);
+
+  const ledgerAccountId =
+    formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
   const [allocations, setAllocations] = useState(() => ({}));
 
@@ -248,7 +261,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
     // allocated server-side yet — the payment posts against the vendor control
     // account, which keeps cash and the AP total correct.
     let posted = null;
-    if (!hideMode) {
+    if (String(ledgerAccountId || "").trim()) {
       setSaving(true);
       try {
         posted = await createPayment({

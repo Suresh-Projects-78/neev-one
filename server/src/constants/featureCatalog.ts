@@ -98,6 +98,14 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     category: 'Accounting',
   },
   {
+    key: 'standaloneReceiptsPayments',
+    label: 'Separate Receipt and Payment screens',
+    description:
+      'On: money in and money out are entered on their own screens. Off: they are entered inside the bank and cash book instead, which suits a business that works from its bank statement. The record written is the same either way, so nothing is entered twice.',
+    defaultEnabled: true,
+    category: 'Accounting',
+  },
+  {
     key: 'paymentTerms',
     label: 'Payment terms and automatic due dates',
     description:

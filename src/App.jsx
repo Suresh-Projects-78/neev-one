@@ -9412,7 +9412,7 @@ const AppShell = () => {
         icon: FileText,
         items: [
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
-          { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW' },
+          { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW', feature: 'standaloneReceiptsPayments' },
           { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW', feature: 'estimates' },
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
         ],
@@ -9424,7 +9424,7 @@ const AppShell = () => {
         icon: ShoppingCart,
         items: [
           { key: 'bills', label: 'Bills', icon: FileStack, perm: 'PURCHASE::Bills::VIEW' },
-          { key: 'payments', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW' },
+          { key: 'payments', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW', feature: 'standaloneReceiptsPayments' },
           { key: 'purchaseOrders', label: 'Purchase Orders', icon: ShoppingCart, perm: 'PURCHASE::Purchase Orders::VIEW', feature: 'purchaseOrders' },
           { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW', feature: 'debitNotes' },
         ],
@@ -9437,7 +9437,7 @@ const AppShell = () => {
         icon: Receipt,
         items: [
           { key: 'expenses', label: 'Expenses', icon: Receipt, perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
-          { key: 'paymentsExpense', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW' },
+          { key: 'paymentsExpense', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW', feature: 'standaloneReceiptsPayments' },
         ],
       },
       {
