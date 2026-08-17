@@ -104,6 +104,7 @@ import FeatureSettings from './features/settings/FeatureSettings';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
+import NumberingSettings from './features/settings/NumberingSettings';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
@@ -9451,6 +9452,7 @@ const AppShell = () => {
           { key: 'gstRates', label: 'GST Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
           { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
           { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
+          { key: 'settingsNumbering', label: 'Numbering (series)', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
         ],
       },
       {
@@ -10421,6 +10423,8 @@ const AppShell = () => {
         return <GovernanceSettings />;
       case 'settingsProfile':
         return <ProfileSettings />;
+      case 'settingsNumbering':
+        return <NumberingSettings />;
       case 'approvals':
         return <ApprovalsInbox currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':
