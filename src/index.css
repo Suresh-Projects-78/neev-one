@@ -974,6 +974,10 @@
   /* The party. Darkest and heaviest thing in the row, because a person
      recognises a name faster than a number. */
   .ui-col-entity.ui-col-entity {
+    /* Size as well as weight. Colour alone separates only two tiers at AA, so
+       the party column earns a point of size over its neighbours — the reader
+       should be able to find the name without reading the row. */
+    font-size: 0.875rem;
     font-weight: 600;
     color: rgb(var(--fg));
     white-space: nowrap;
