@@ -26,13 +26,17 @@ const build = (windowMs: number, max: number, what: string) =>
     // Limit per IP and per submitted identity, so one attacker cannot lock out
     // every user from a shared office IP, and one account cannot be sprayed
     // from many IPs without tripping the identity bucket.
-    keyGenerator: (req, res) => {
-      // ipKeyGenerator normalises IPv6 to its /64 prefix. Using the raw address
-      // would let a single IPv6 user rotate through addresses to evade the
-      // limit, which express-rate-limit refuses to start without.
+    keyGenerator: (req) => {
+      // ipKeyGenerator normalises IPv6 to a subnet prefix. Using the raw
+      // address would let a single IPv6 user rotate through addresses to evade
+      // the limit, which express-rate-limit refuses to start without.
+      //
+      // Its second parameter is the IPv6 subnet mask (a number), NOT the
+      // response object. Passing `res` here made every rate-limited route --
+      // sign-in, sign-up and password reset -- fail with "Invalid subnet
+      // mask.", which the test suite hid by setting DISABLE_RATE_LIMIT=true.
       const ip = ipKeyGenerator(
-        String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || 'unknown',
-        res as any
+        String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || 'unknown'
       );
       const identity = String((req.body && (req.body.emailOrUsername || req.body.email)) || '')
         .trim()

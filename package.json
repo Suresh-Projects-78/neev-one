@@ -13,7 +13,7 @@
     "api:build": "npm --prefix server run build",
     "api:start": "npm --prefix server start",
     "start": "concurrently -n web,api -c cyan,magenta \"npm:dev\" \"npm:api\"",
-    "typecheck": "npm --prefix server exec -- tsc -p tsconfig.json --noEmit",
+    "typecheck": "npm --prefix server run typecheck",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run api:build",
     "docker:up": "npm run env:init && docker compose up --build",
     "docker:down": "docker compose down",

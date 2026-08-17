@@ -216,6 +216,32 @@ describe('rate limiting', () => {
     process.env.DISABLE_RATE_LIMIT = 'true';
     expect(limited).toBe(true);
   });
+
+  /**
+   * Regression: the key generator used to pass the response object where
+   * ipKeyGenerator expects an IPv6 subnet mask, so every rate-limited route
+   * answered "Invalid subnet mask." instead of doing its job.
+   *
+   * The burst test above never caught it because supertest connects over IPv4
+   * and the subnet mask is only consulted for IPv6 — while a browser reaching
+   * `localhost` on macOS arrives as ::1 and took the broken path. Sign-up,
+   * sign-in and password reset were all unusable on a real deployment.
+   */
+  it('accepts an IPv6 client on a rate-limited route', async () => {
+    process.env.DISABLE_RATE_LIMIT = 'false';
+    const email = `v6.${Date.now()}.${rnd()}@example.com`;
+
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .set('X-Forwarded-For', '2001:db8::1')
+      .send({ email, password: 'Passw0rd!23', name: 'IPv6 user' });
+
+    process.env.DISABLE_RATE_LIMIT = 'true';
+
+    expect(String(res.body.error || '')).not.toMatch(/subnet/i);
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeTruthy();
+  });
 });
 
 describe('auth audit', () => {

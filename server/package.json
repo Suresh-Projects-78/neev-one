@@ -13,7 +13,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:deploy": "prisma migrate deploy",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
