@@ -1,8 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../ui/Modal';
+import { createItem, listItems } from '../../api/masters';
+import { useServerMasters } from '../../hooks/useServerMasters';
 
 const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item', autoFocus = false }) => {
-  const items = db.items.filter((i) => i.companyId === currentCompany.id);
+  const serverItems = useServerMasters(
+    useCallback((search) => listItems(search).then((d) => d?.items || []), []),
+    (db?.items || []).filter((i) => Number(i.companyId) === Number(currentCompany?.id))
+  );
+
+  const items = serverItems.rows;
   const triggerRef = useRef(null);
   const [showItemPopup, setShowItemPopup] = useState(false);
 
@@ -15,7 +22,11 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   const [mode, setMode] = useState('select');
   const canCreate = typeof setDb === 'function';
 
-  const selectedItem = value ? items.find((i) => i.id === parseInt(value)) : null;
+  const selectedItem = value
+    ? items.find((i) => String(i.id) === String(value)) ||
+      (db?.items || []).find((i) => String(i.id) === String(value)) ||
+      null
+    : null;
   const selectedItemName = selectedItem ? selectedItem.name : '';
 
   const normalizedSearch = itemSearch.trim().toLowerCase();
@@ -157,7 +168,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
               </div>
             ) : (
               <form
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
 
                   const code = String(newItem.code || '').trim();
@@ -185,8 +196,26 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     return { ...prev, items: [...prevItems, created] };
                   });
 
-                  // Pick it immediately.
-                  onChange(String(nextId), created);
+                  // Write through to the server so the item exists for every
+                  // device; fall back to the local record if that fails so a
+                  // network problem does not interrupt data entry.
+                  try {
+                    const saved = await createItem({
+                      code: code || undefined,
+                      name,
+                      itemType: String(newItem.type || 'Goods') === 'Service' ? 'SERVICE' : 'STOCK',
+                      unit: String(newItem.unit || 'Pcs'),
+                      hsnSac: String(newItem.hsnSac || '') || undefined,
+                      gstRate: parseFloat(newItem.gstRate) || 0,
+                      salePrice: parseFloat(newItem.salePrice) || 0,
+                      purchasePrice: parseFloat(newItem.purchasePrice) || 0,
+                    });
+                    await serverItems.reload();
+                    const serverItem = saved?.item;
+                    onChange(String(serverItem?.id || nextId), serverItem || created);
+                  } catch {
+                    onChange(String(nextId), created);
+                  }
                   closePopup();
                 }}
                 className="space-y-3"

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Modal from '../ui/Modal';
+import { createVendor, listVendors } from '../../api/masters';
+import { useServerMasters } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
@@ -742,12 +744,22 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 };
 
 const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Vendor' }) => {
-  const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
+  // Same pattern as the customer picker: server list, local fallback.
+  const serverVendors = useServerMasters(
+    useCallback((search) => listVendors(search).then((d) => d?.vendors || []), []),
+    (db?.vendors || []).filter((v) => Number(v.companyId) === Number(currentCompany?.id))
+  );
+
+  const vendors = serverVendors.rows;
+
+  const findVendor = (id) =>
+    vendors.find((v) => String(v.id) === String(id)) ||
+    (db?.vendors || []).find((v) => String(v.id) === String(id));
   const [showVendorPopup, setShowVendorPopup] = useState(false);
   const [vendorPopupMode, setVendorPopupMode] = useState('select');
   const [vendorSearch, setVendorSearch] = useState('');
 
-  const selectedVendorName = value ? getVendorDisplayName(vendors.find((v) => v.id === parseInt(value))) : '';
+  const selectedVendorName = value ? getVendorDisplayName(findVendor(value)) : '';
 
   const normalizedVendorSearch = vendorSearch.trim().toLowerCase();
   const filteredVendors = normalizedVendorSearch
@@ -844,7 +856,21 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
               db={db}
               setDb={setDb}
               currentCompany={currentCompany}
-              onCreated={(vendor) => onChange(String(vendor.id))}
+              onCreated={async (vendor) => {
+                try {
+                  const created = await createVendor({
+                    name: getVendorDisplayName(vendor) || vendor.name || 'Vendor',
+                    gstin: vendor.gstin || undefined,
+                    phone: vendor.mobile || vendor.phone || undefined,
+                    email: vendor.email || undefined,
+                    billingState: vendor.billingAddress?.state || undefined,
+                  });
+                  await serverVendors.reload();
+                  onChange(String(created?.party?.id || vendor.id));
+                } catch {
+                  onChange(String(vendor.id));
+                }
+              }}
               onClose={closePopup}
             />
           )}
