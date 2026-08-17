@@ -67,6 +67,13 @@ export type ResolvedTransport =
 
 const captureFrom = () => `${APP_NAME} <no-reply@localhost>`;
 
+/**
+ * Timeouts are not optional here. Without them a wrong host leaves the request
+ * waiting on the operating system's TCP timeout, which can be minutes, and the
+ * user sees a hung page rather than 'could not connect'.
+ */
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS || 10_000);
+
 function buildSmtp(opts: {
   host: string;
   port: number;
@@ -78,6 +85,9 @@ function buildSmtp(opts: {
     host: opts.host,
     port: opts.port,
     secure: opts.secure,
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
     ...(opts.user ? { auth: { user: opts.user, pass: opts.pass || '' } } : {}),
   });
 }

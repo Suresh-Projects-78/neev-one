@@ -620,3 +620,23 @@ authRouter.post('/resend-verification', resetLimiter, async (req: Request, res: 
     ...(process.env.NODE_ENV === 'production' ? {} : { devVerifyToken: token }),
   });
 });
+
+/** Update your own name. Email changes go through verification separately. */
+authRouter.patch('/me', async (req: Request, res: Response) => {
+  let auth;
+  try {
+    auth = requireAuth(req);
+  } catch (e: any) {
+    return res.status(401).json({ error: String(e?.message || 'Unauthorized') });
+  }
+
+  const body = z.object({ fullName: z.string().min(1).max(120) }).parse(req.body);
+
+  const user = await prisma.user.update({
+    where: { id: auth.userId },
+    data: { fullName: body.fullName.trim() },
+    select: { id: true, email: true, fullName: true, accountId: true, emailVerifiedAt: true, lastLoginAt: true },
+  });
+
+  return res.json({ user });
+});

@@ -102,6 +102,10 @@ import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
+import ProfileSettings from './features/settings/ProfileSettings';
+import GovernanceSettings from './features/admin/GovernanceSettings';
+import ApprovalsInbox from './features/approvals/ApprovalsInbox';
+import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
 import { resendVerification } from './api/email';
 import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
@@ -9384,6 +9388,8 @@ const AppShell = () => {
         ],
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: NotebookPen, perm: 'ACCOUNTING::Journal Entries::VIEW' },
+      { type: 'item', key: 'approvals', label: 'Approvals', icon: Shield, feature: 'approvals' },
+      { type: 'item', key: 'ledgerTrialBalance', label: 'Trial Balance', icon: BookOpen, perm: 'ACCOUNTING::Ledger::VIEW' },
       { type: 'item', key: 'reports', label: 'Reports', icon: BarChart3, permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
       {
         type: 'group',
@@ -9415,6 +9421,8 @@ const AppShell = () => {
           { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications' },
           { key: 'settingsSecurity', label: 'Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
+          { key: 'settingsGovernance', label: 'Governance', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
+          { key: 'settingsProfile', label: 'My Profile', icon: Users },
           { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
         ],
       },
@@ -10362,6 +10370,14 @@ const AppShell = () => {
         return <EmailSettings />;
       case 'settingsSecurity':
         return <SecuritySettings />;
+      case 'settingsGovernance':
+        return <GovernanceSettings />;
+      case 'settingsProfile':
+        return <ProfileSettings />;
+      case 'approvals':
+        return <ApprovalsInbox currentCompany={currentCompany} />;
+      case 'ledgerTrialBalance':
+        return <LedgerTrialBalance currentCompany={currentCompany} />;
       case 'settingsUsersRoles': {
         const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
         return <SettingsUsersRoles orgId={orgId} />;
@@ -10541,6 +10557,17 @@ const AppShell = () => {
                       org {String(localStorage.getItem('activeOrgId') || '-')}
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setActive('settingsProfile');
+                      setProfileMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--surface-sunken))]"
+                  >
+                    My profile
+                  </button>
                   <button
                     type="button"
                     role="menuitem"

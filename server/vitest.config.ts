@@ -9,6 +9,9 @@ export default defineConfig({
       DISABLE_RATE_LIMIT: 'true',
       BCRYPT_ROUNDS: '4',
       JWT_SECRET: 'test-secret-do-not-use-in-production',
+      // Failure-path tests point at a host that does not answer; a short
+      // timeout keeps them fast instead of waiting on the OS.
+      SMTP_TIMEOUT_MS: '800',
     },
     include: ['src/**/*.test.ts'],
     // The suite shares one SQLite file; parallel files would deadlock on writes.
