@@ -9881,6 +9881,8 @@ const AppShell = () => {
             currentCompany={currentCompany}
             branches={branchesForUser}
             onNewInvoice={() => setActive('invoices')}
+            onOpenInvoices={() => setActive('invoices')}
+            onOpenReceipts={() => setActive('receipts')}
           />
         );
       case 'sales':
@@ -10908,7 +10910,7 @@ const AppShell = () => {
         />
         ) : null}
 
-        <main id="main-content" key={active} className="min-w-0 flex-1 ui-in-fade">
+        <main id="main-content" key={active} className="min-w-0 flex-1 ui-in-fade ui-content">
           {/*
             A failed warehouse load used to be silent: the dropdown was simply
             empty, which reads as "no warehouses configured" when the truth may

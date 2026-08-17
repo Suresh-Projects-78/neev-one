@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
   ArrowDownRight,
+  ArrowRight,
   ArrowUpRight,
   Building2,
   CircleSlash,
@@ -12,7 +13,7 @@ import {
   Wallet,
 } from 'lucide-react';
 
-import { formatMoney } from '../../utils/money';
+import { formatMoney, formatMoneyCompact } from '../../utils/money';
 /**
  * ECharts is ~2 MB unminified and belongs nowhere near first paint. Loading the
  * chart module on demand keeps the initial bundle for the shell and the tables,
@@ -90,63 +91,78 @@ function DeltaChip({ value, invert = false }) {
 
   return (
     <span
-      className="ui-badge"
-      style={{
-        backgroundColor: flat ? 'rgb(var(--surface-sunken))' : good ? 'rgb(var(--pos-soft))' : 'rgb(var(--neg-soft))',
-        color: flat ? 'rgb(var(--fg-muted))' : good ? 'rgb(var(--pos))' : 'rgb(var(--neg))',
-      }}
+      className="inline-flex items-center gap-1 text-[0.8125rem] font-medium"
+      style={{ color: flat ? 'rgb(var(--fg-muted))' : good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
     >
-      <Icon size={12} aria-hidden="true" />
+      <Icon size={13} aria-hidden="true" />
       {flat ? 'Flat' : `${Math.abs(rounded)}%`}
     </span>
   );
 }
 
 /**
- * Metric card: figure, movement against the previous period, and the shape of
- * how it got there. The sparkline is decorative detail on top of a number that
- * is already readable on its own.
+ * KPI card.
+ *
+ * Small title, large number, tiny trend, sparkline, one action. Deliberately
+ * no icon: an icon beside "Billed" tells the reader nothing the word did not,
+ * and four of them across a row is decoration competing with the figures.
+ *
+ * The figure is neutral, not coloured. Colour on the number would say the
+ * amount itself is good or bad; only the movement can carry that, so only the
+ * trend chip is tinted.
  */
-function MetricCard({ label, value, company, deltaValue, invertDelta, hint, series = [], icon: Icon, tone }) {
+function MetricCard({ label, value, company, deltaValue, invertDelta, hint, series = [], actionLabel, onAction }) {
   const counted = useCountUp(value);
-  const toneClass = tone === 'pos' ? 'ui-amount-pos' : tone === 'neg' ? 'ui-amount-neg' : 'ui-title';
 
   const path = useMemo(() => {
     if (series.length < 2) return '';
     const max = Math.max(...series, 1);
     const step = 100 / (series.length - 1);
     return series
-      .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(2)} ${(28 - (v / max) * 26).toFixed(2)}`)
+      .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(2)} ${(24 - (v / max) * 22).toFixed(2)}`)
       .join(' ');
   }, [series]);
 
   return (
-    <article className="ui-stat">
-      <div className="flex items-start justify-between gap-2">
-        <span className="ui-muted text-xs font-semibold uppercase tracking-wide">{label}</span>
-        {Icon ? <Icon size={15} className="ui-subtle" aria-hidden="true" /> : null}
-      </div>
+    <article className="ui-card ui-hover-raise p-6 flex flex-col">
+      <h3 className="ui-card-label">{label}</h3>
 
-      <div className={`mt-2 text-[1.75rem] leading-none font-semibold tracking-tight ${toneClass}`}>
-        {formatMoney(counted, company)}
-      </div>
+      {/* Compact at a glance; the exact figure is one hover away and lives in
+          full in the tables below. */}
+      <p className="ui-kpi mt-3" title={formatMoney(counted, company)}>
+        {formatMoneyCompact(counted, company)}
+      </p>
 
-      <div className="mt-2.5 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2">
         <DeltaChip value={deltaValue} invert={invertDelta} />
-        {hint ? <span className="ui-subtle text-xs truncate">{hint}</span> : null}
+        {hint ? <span className="ui-caption truncate">{hint}</span> : null}
       </div>
 
       {path ? (
         <svg
-          className="mt-3 w-full"
-          height="28"
-          viewBox="0 0 100 28"
+          className="mt-5 w-full"
+          height="24"
+          viewBox="0 0 100 24"
           preserveAspectRatio="none"
           aria-hidden="true"
           focusable="false"
         >
-          <path d={path} fill="none" stroke="rgb(var(--brand))" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+          <path
+            d={path}
+            fill="none"
+            stroke="rgb(var(--brand))"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
         </svg>
+      ) : null}
+
+      {actionLabel ? (
+        <button type="button" onClick={onAction} className="ui-card-action mt-5 self-start">
+          {actionLabel}
+          <ArrowRight size={13} aria-hidden="true" />
+        </button>
       ) : null}
     </article>
   );
@@ -192,7 +208,6 @@ function RevenueChart({ buckets, company }) {
 
       {buckets.length < 2 ? (
         <EmptyState
-          icon={TrendingUp}
           title="Not enough history yet"
           description="Once there are invoices across more than one period, the trend appears here."
         />
@@ -293,6 +308,8 @@ export default function DashboardOverview({
   currentCompany,
   branches = [],
   onNewInvoice,
+  onOpenInvoices,
+  onOpenReceipts,
   onOpenBranches,
   branchFilterLabel = 'All',
   invoices: invoicesProp = null,
@@ -457,7 +474,6 @@ export default function DashboardOverview({
       {allInvoices.length === 0 ? (
         <div className="ui-card">
           <EmptyState
-            icon={FileText}
             title="No invoices yet"
             description="Raise your first invoice and this dashboard fills in — billed, collected, and who still owes you."
             action={
@@ -478,9 +494,10 @@ export default function DashboardOverview({
               value={billed}
               company={currentCompany}
               deltaValue={delta(billed, prevBilled)}
-              hint="vs previous period"
+              hint="vs last period"
               series={sparkOf('billed')}
-              icon={TrendingUp}
+              actionLabel="View invoices"
+              onAction={onOpenInvoices}
             />
             <MetricCard
               label="Collected"
@@ -489,8 +506,8 @@ export default function DashboardOverview({
               deltaValue={delta(collected, prevCollected)}
               hint={`${collectedPct}% of billed`}
               series={sparkOf('collected')}
-              icon={Receipt}
-              tone="pos"
+              actionLabel="View receipts"
+              onAction={onOpenReceipts}
             />
             <MetricCard
               label="Outstanding"
@@ -499,8 +516,8 @@ export default function DashboardOverview({
               deltaValue={delta(outstanding, prevOutstanding)}
               invertDelta
               hint={`${current.filter((i) => num(i.total) - num(i.paidAmount) > 0).length} unpaid`}
-              icon={Wallet}
-              tone="neg"
+              actionLabel="Chase payment"
+              onAction={onOpenInvoices}
             />
             <MetricCard
               label="Average invoice"
@@ -510,8 +527,7 @@ export default function DashboardOverview({
                 current.length ? billed / current.length : 0,
                 previous.length ? prevBilled / previous.length : 0
               )}
-              hint="Billed value per invoice"
-              icon={FileText}
+              hint="per invoice"
             />
           </div>
 
