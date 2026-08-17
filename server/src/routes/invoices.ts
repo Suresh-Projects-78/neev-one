@@ -10,6 +10,7 @@ import { ensureLedgerSetup, invoicePostingLines, postEntry, reverseEntry } from 
 import { allowsEntity, filterFieldsByLevel, levelFor, resolveAccess, resolveUserPermissions } from '../services/access.js';
 import { evaluateApproval, isPending } from '../services/approvals.js';
 import { fieldsFor } from '../constants/permissionCatalog.js';
+import { dueDateFor } from './parties.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -154,6 +155,19 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
     grantedLevel
   );
 
+  // Requirement 12: the due date comes from the customer's payment terms, on
+  // the server, so it cannot be quietly extended in the browser.
+  let resolvedDueDate = String(body.dueDate || '').trim() || null;
+  if (body.customerId) {
+    const party = await prisma.party.findFirst({
+      where: { id: String(body.customerId), accountId, orgId },
+      select: { paymentTermDays: true },
+    });
+    if (party && party.paymentTermDays > 0) {
+      resolvedDueDate = dueDateFor(String(body.date).trim(), party.paymentTermDays) || resolvedDueDate;
+    }
+  }
+
   const id = randomUUID();
   try {
     await prisma.$executeRawUnsafe(
@@ -170,7 +184,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       String(body.warehouseId || '').trim() || null,
       String(body.number).trim(),
       String(body.date).trim(),
-      String(body.dueDate || '').trim() || null,
+      resolvedDueDate,
       String(body.refNo || '').trim() || null,
       String(body.refDate || '').trim() || null,
       String(body.customerId || '').trim() || null,

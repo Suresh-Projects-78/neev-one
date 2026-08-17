@@ -768,3 +768,69 @@ model FeatureSetting {
   @@unique([orgId, key])
   @@index([accountId, orgId])
 }
+
+// ----------------------------
+// Parties — customers and vendors
+// ----------------------------
+// One table for both: an entity is frequently a customer and a vendor at once,
+// and splitting them duplicates GSTIN, address and contact handling.
+model Party {
+  id        String  @id @default(cuid())
+  accountId String
+  orgId     String
+  // null = shared across branches, which is the usual case for a customer list
+  branchId  String?
+
+  partyType String // CUSTOMER | VENDOR | BOTH
+  code      String?
+  name      String
+  legalName String?
+
+  gstin               String?
+  gstRegistrationType String  @default("UNREGISTERED")
+  pan                 String?
+  placeOfSupplyState  String?
+
+  email         String?
+  phone         String?
+  contactPerson String?
+
+  billingLine1   String?
+  billingLine2   String?
+  billingCity    String?
+  billingState   String?
+  billingPincode String?
+  billingCountry String? @default("India")
+
+  shippingSameAsBilling Boolean @default(true)
+  shippingLine1         String?
+  shippingLine2         String?
+  shippingCity          String?
+  shippingState         String?
+  shippingPincode       String?
+  shippingCountry       String?
+
+  // Drives the due date on documents so it cannot be bypassed in the browser.
+  paymentTermDays Int      @default(0)
+  paymentTermName String?
+  creditLimit     Decimal?
+
+  openingBalance     Decimal @default(0)
+  openingBalanceType String  @default("DR") // DR | CR
+
+  notes    String?
+  isActive Boolean @default(true)
+
+  // Migration identity, so a re-run maps to the same row.
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, partyType, name])
+  @@unique([orgId, sourceSystem, sourceKey])
+  @@index([accountId, orgId, partyType, isActive])
+  @@index([accountId, orgId, gstin])
+}
