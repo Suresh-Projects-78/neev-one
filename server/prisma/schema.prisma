@@ -1110,6 +1110,86 @@ model ItemMaster {
   @@index([accountId, orgId, hsnSac])
 }
 
+/// A batch (lot) of a tracked item held in one warehouse.
+///
+/// Quantity lives here rather than only on StockBalance because the whole point
+/// of batch tracking is knowing which lot the stock is in — an expiry-dated
+/// pharmaceutical or food item cannot be issued from an aggregate number.
+model Batch {
+  id          String  @id @default(cuid())
+  accountId   String
+  orgId       String
+  branchId    String
+  warehouseId String
+  itemId      String
+
+  batchNo String
+  /// Kept as YYYY-MM-DD strings for the same reason document dates are: a
+  /// timezone has no meaning for a manufacturing or expiry date.
+  mfgDate    String?
+  expiryDate String?
+
+  qtyOnHand Decimal @default(0)
+  isActive  Boolean @default(true)
+
+  notes String?
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  serials SerialNumber[]
+
+  /// One lot number per item per warehouse; receiving the same lot again adds
+  /// to it rather than creating a second row that reconciles to nothing.
+  @@unique([orgId, itemId, warehouseId, batchNo])
+  @@index([accountId, orgId, branchId, warehouseId, itemId])
+  @@index([accountId, orgId, expiryDate])
+}
+
+/// One physical unit of a serial-tracked item.
+///
+/// Status rather than deletion: a sold or scrapped serial has to stay
+/// searchable for warranty and recall, which is most of why serials are
+/// tracked at all.
+model SerialNumber {
+  id          String  @id @default(cuid())
+  accountId   String
+  orgId       String
+  branchId    String
+  warehouseId String?
+  itemId      String
+  batchId     String?
+
+  serialNo String
+  status   String @default("IN_STOCK") // IN_STOCK | SOLD | SCRAPPED
+
+  /// The document that took it out of stock, for tracing.
+  issuedDocType String?
+  issuedDocId   String?
+  issuedAt      DateTime?
+
+  notes String?
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  batch Batch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  /// A serial number is unique for an item across the whole organisation: the
+  /// same unit cannot be in two warehouses.
+  @@unique([orgId, itemId, serialNo])
+  @@index([accountId, orgId, branchId, warehouseId, status])
+  @@index([accountId, orgId, itemId, status])
+}
+
 // ----------------------------
 // Document numbering
 // ----------------------------

@@ -19,6 +19,7 @@ import { partiesRouter } from './routes/parties.js';
 import { emailRouter } from './routes/email.js';
 import { securityRouter } from './routes/security.js';
 import { itemsRouter } from './routes/items.js';
+import { batchSerialRouter } from './routes/batchSerial.js';
 import { paymentsRouter } from './routes/payments.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
@@ -70,6 +71,7 @@ export function buildApp() {
   app.use('/api', securityRouter);
   app.use('/api', itemsRouter);
   app.use('/api', paymentsRouter);
+  app.use('/api', batchSerialRouter);
 
   app.use(notFound);
   app.use(errorHandler);

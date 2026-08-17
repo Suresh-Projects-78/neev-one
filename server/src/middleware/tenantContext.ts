@@ -72,6 +72,29 @@ export async function requireTenantContext(req: Request, res: Response, next: Ne
       select: { warehouseId: true },
     });
     allowedWarehouseIds = allWh.map((x: { warehouseId: string }) => x.warehouseId);
+
+    // The org creator reaches every warehouse in their own organisation.
+    //
+    // Warehouse access is only ever granted by an administrator assigning it to
+    // somebody else, so the creator of a brand-new company had none: they could
+    // create a warehouse and then be told 'No access to warehouse' by every
+    // stock route, with no way to grant it to themselves. This mirrors the
+    // permission safety net in rbac.ts, and is deliberately narrow — it applies
+    // to the creator of this org and to nobody else.
+    if (!allowedWarehouseIds.includes(warehouseId)) {
+      const org = await prisma.org.findFirst({
+        where: { accountId, id: orgId },
+        select: { createdByUserId: true },
+      });
+      if (org?.createdByUserId === userId) {
+        const inOrg = await prisma.warehouse.findFirst({
+          where: { id: warehouseId, accountId, orgId },
+          select: { id: true },
+        });
+        if (inOrg) allowedWarehouseIds = [...allowedWarehouseIds, warehouseId];
+      }
+    }
+
     // Only treat it as the active warehouse when the user may actually use it.
     if (allowedWarehouseIds.includes(warehouseId)) resolvedWarehouseId = warehouseId;
   }
