@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { prisma } from '../utils/prisma.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
 import { ensureLedgerSetup } from '../services/ledger.js';
+import { ensurePermissionCatalog } from './permissions.js';
+import { expandPreset, permKey } from '../constants/permissionCatalog.js';
 
 export const authRouter = Router();
 
@@ -43,37 +45,9 @@ function requireAuth(req: any) {
 }
 
 async function bootstrapOwnerRole(accountId: string, orgId: string, userId: string) {
-  // Create a minimal-but-useful default RBAC setup for a brand-new company.
-  // Permissions are global rows; Role/RolePermission/Assignment are org-scoped.
-  const permissionSpecs: Array<{ module: string; subModule: string; actions: string[] }> = [
-    { module: 'MASTERS', subModule: 'Company/Branch setup', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.DELETE] },
-    { module: 'SETTINGS', subModule: 'Users', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.DELETE] },
-    { module: 'SETTINGS', subModule: 'Roles', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.DELETE] },
-    { module: 'INVENTORY', subModule: 'Inter-branch transfer', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.APPROVE] },
-    { module: 'INVENTORY', subModule: 'Stock Adjustment', actions: [PermissionAction.VIEW, PermissionAction.CREATE] },
-    { module: 'SALES', subModule: 'Invoices', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.DELETE] },
-    { module: 'ACCOUNTING', subModule: 'Ledger', actions: [PermissionAction.VIEW, PermissionAction.CREATE, PermissionAction.EDIT, PermissionAction.APPROVE] },
-  ];
-
-  const permissions: Array<{ id: string }> = [];
-  for (const spec of permissionSpecs) {
-    for (const action of spec.actions) {
-      const existing = await prisma.permission.findFirst({
-        where: { module: spec.module, subModule: spec.subModule, action },
-        select: { id: true },
-      });
-      if (existing) {
-        permissions.push(existing);
-        continue;
-      }
-
-      const created = await prisma.permission.create({
-        data: { module: spec.module, subModule: spec.subModule, action },
-        select: { id: true },
-      });
-      permissions.push(created);
-    }
-  }
+  // Seed every catalog permission once, then grant the whole Administrator
+  // preset to the org creator's Owner role.
+  await ensurePermissionCatalog();
 
   const roleName = 'Owner';
   const role =
@@ -87,49 +61,37 @@ async function bootstrapOwnerRole(accountId: string, orgId: string, userId: stri
         orgId,
         branchId: null,
         name: roleName,
-        description: 'Default owner role (auto-created)',
+        description: 'Full access. Created automatically for the account owner.',
         roleType: RoleType.ADMIN,
         createdByUserId: userId,
       },
       select: { id: true },
     }));
 
+  const wanted = new Set(expandPreset('ADMIN').map((r) => permKey(r.module, r.subModule, r.action)));
+  const permissions = await prisma.permission.findMany({
+    select: { id: true, module: true, subModule: true, action: true },
+  });
+
   for (const p of permissions) {
+    if (!wanted.has(permKey(p.module, p.subModule, p.action))) continue;
     try {
       await prisma.rolePermission.create({
-        data: {
-          accountId,
-          orgId,
-          roleId: role.id,
-          permissionId: p.id,
-          allowed: true,
-        },
+        data: { accountId, orgId, roleId: role.id, permissionId: p.id, allowed: true },
         select: { id: true },
       });
     } catch (err: any) {
-      // Ignore unique constraint violations (roleId+permissionId)
-      if (String(err?.name || '') === 'PrismaClientKnownRequestError' && String(err?.code || '') === 'P2002') continue;
-      throw err;
+      if (String(err?.code || '') !== 'P2002') throw err;
     }
   }
 
   try {
     await prisma.userRoleAssignment.create({
-      data: {
-        accountId,
-        orgId,
-        branchId: null,
-        userId,
-        roleId: role.id,
-        createdByUserId: userId,
-      },
+      data: { accountId, orgId, branchId: null, userId, roleId: role.id, createdByUserId: userId },
       select: { id: true },
     });
   } catch (err: any) {
-    // Ignore unique constraint violations
-    if (!(String(err?.name || '') === 'PrismaClientKnownRequestError' && String(err?.code || '') === 'P2002')) {
-      throw err;
-    }
+    if (String(err?.code || '') !== 'P2002') throw err;
   }
 }
 
