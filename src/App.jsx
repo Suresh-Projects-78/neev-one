@@ -111,6 +111,7 @@ import NumberingSettings from './features/settings/NumberingSettings';
 import CurrencySettings from './features/settings/CurrencySettings';
 import BatchSerialManager from './features/inventory/BatchSerialManager';
 import ImportCenter from './features/data/ImportCenter';
+import DashboardOverview from './features/dashboard/DashboardOverview';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
@@ -126,6 +127,25 @@ const getBranchLabel = (b) => {
   const name = String(b.branchName || b.name || '').trim();
   if (code && name) return `${code} - ${name}`;
   return name || code || `Branch ${String(b.id)}`;
+};
+
+/**
+ * The org id the SERVER knows this company by.
+ *
+ * `currentCompany.id` is a local numeric id (1, 2, 3...) from the client
+ * store. Falling back to it meant calling `/api/orgs/1/warehouses`, which the
+ * server rejects as an orgId mismatch — the warehouse list then failed on
+ * every load. The session's activeOrgId is the right fallback; when neither is
+ * known there is no server org to ask about, so callers should skip the fetch.
+ */
+const resolveServerOrgId = (company) => {
+  const backend = String(company?.profile?.backendCompanyId || '').trim();
+  if (backend) return backend;
+  try {
+    return String(localStorage.getItem('activeOrgId') || '').trim();
+  } catch {
+    return '';
+  }
 };
 
 const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], branchesLoading = false, branchesError = '' }) => {
@@ -7048,7 +7068,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       isActive: true,
     }));
 
-    const backendCompanyId = currentCompany?.profile?.backendCompanyId || currentCompany?.id || '';
+    const backendCompanyId = resolveServerOrgId(currentCompany) || '';
     const token = localStorage.getItem('token');
     const orgId = String(localStorage.getItem('activeOrgId') || '').trim();
 
@@ -9530,7 +9550,7 @@ const AppShell = () => {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+    const orgId = resolveServerOrgId(currentCompany);
     if (!orgId) return;
 
     let cancelled = false;
@@ -9565,7 +9585,7 @@ const AppShell = () => {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+    const orgId = resolveServerOrgId(currentCompany);
     if (!orgId) return;
 
     let cancelled = false;
@@ -9666,7 +9686,7 @@ const AppShell = () => {
         let head = (Array.isArray(warehouses) ? warehouses : []).find((w) => String(w?.name || '').trim().toLowerCase() === nameToMatch) || null;
 
         if (!head) {
-          const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+          const orgId = resolveServerOrgId(currentCompany);
           const branchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || currentCompany?.profile?.backendBranchId || '').trim();
 
           if (orgId && branchId) {
@@ -9832,13 +9852,11 @@ const AppShell = () => {
     switch (active) {
       case 'dashboard':
         return (
-          <SalesOverview
+          <DashboardOverview
             db={dbForUser}
             currentCompany={currentCompany}
             branches={branchesForUser}
-            warehouses={warehousesForUser}
-            branchesLoading={branchesLoading}
-            branchesError={branchesError}
+            onNewInvoice={() => setActive('invoices')}
           />
         );
       case 'sales':
@@ -10415,20 +10433,20 @@ const AppShell = () => {
       case 'settingsTax':
         return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="tax" showSidebar={false} />;
       case 'settingsBranches': {
-        const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+        const orgId = resolveServerOrgId(currentCompany);
         return <SettingsBranches orgId={orgId} />;
       }
       case 'settingsWarehouses': {
-        const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+        const orgId = resolveServerOrgId(currentCompany);
         const branchId = localStorage.getItem('activeBranchId');
         return <SettingsWarehouses orgId={orgId} branchId={branchId} onWarehousesChanged={reloadWarehouses} />;
       }
       case 'settingsUsers': {
-        const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+        const orgId = resolveServerOrgId(currentCompany);
         return <SettingsUsers orgId={orgId} />;
       }
       case 'settingsRoles': {
-        const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+        const orgId = resolveServerOrgId(currentCompany);
         return <SettingsRoles orgId={orgId} />;
       }
       case 'settingsPermissions':
@@ -10456,7 +10474,7 @@ const AppShell = () => {
       case 'ledgerTrialBalance':
         return <LedgerTrialBalance currentCompany={currentCompany} />;
       case 'settingsUsersRoles': {
-        const orgId = currentCompany?.profile?.backendCompanyId || currentCompany?.id;
+        const orgId = resolveServerOrgId(currentCompany);
         return <SettingsUsersRoles orgId={orgId} />;
       }
       case 'settings':
