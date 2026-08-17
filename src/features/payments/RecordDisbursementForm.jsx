@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
+import { createPayment } from '../../api/payments';
+import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -28,6 +30,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       vendorId: d?.vendorId !== undefined && d?.vendorId !== null ? String(d.vendorId) : '',
       amount: d?.amount !== undefined && d?.amount !== null ? String(d.amount) : '',
       mode: String(d?.mode || '').trim() || 'Cash',
+      ledgerAccountId: String(d?.ledgerAccountId || '').trim(),
       reference: String(d?.reference || '').trim(),
       notes: String(d?.notes || '').trim(),
       cashBankAccountId: d?.cashBankAccountId,
@@ -40,9 +43,18 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
     vendorId: initial.vendorId,
     amount: initial.amount,
     mode: initial.mode,
+    ledgerAccountId: initial.ledgerAccountId,
     reference: initial.reference,
     notes: initial.notes,
   }));
+
+  const { modes, loading: modesLoading, error: modesError } = usePaymentModes();
+  const [saving, setSaving] = useState(false);
+
+  // With exactly one cash/bank ledger there is no choice to make, so treat it
+  // as chosen. Derived rather than written into state by an effect: the user's
+  // own pick always wins, and no extra render is spent agreeing with itself.
+  const ledgerAccountId = formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '');
 
   const [allocations, setAllocations] = useState(() => ({}));
 
@@ -178,7 +190,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const amount = Number(formData.amount ?? 0);
@@ -220,12 +232,45 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       }
     }
 
+    if (!hideMode && !String(ledgerAccountId || "").trim()) {
+      alert('Choose the cash or bank account the money was paid from');
+      return;
+    }
+
     const vendors = safeArray(db.vendors).filter((v) => v.companyId === companyId);
     const vendor = vendors.find((v) => Number(v.id) === vendorIdNum) || null;
     const vendorName = vendor?.name || vendor?.displayName || vendor?.companyName || vendor?.legalName || '';
 
     const paymentId = safeArray(db.payments).length + 1;
-    const paymentNo = `PAY-${paymentId}`;
+
+    // Post to the server first: it allocates the number and writes the
+    // double-entry. Bills and expenses are still client-only, so nothing is
+    // allocated server-side yet — the payment posts against the vendor control
+    // account, which keeps cash and the AP total correct.
+    let posted = null;
+    if (!hideMode) {
+      setSaving(true);
+      try {
+        posted = await createPayment({
+          direction: 'PAYMENT',
+          date: formData.date,
+          partyType: 'VENDOR',
+          partyId: /^\d+$/.test(String(formData.vendorId).trim()) ? null : String(formData.vendorId).trim() || null,
+          partyName: vendorName || null,
+          ledgerAccountId: String(ledgerAccountId).trim(),
+          instrumentRef: formData.reference || null,
+          amount: round2(amount),
+          notes: formData.notes || null,
+        });
+      } catch (err) {
+        setSaving(false);
+        alert(String(err?.message || 'Unable to record the payment.'));
+        return;
+      }
+      setSaving(false);
+    }
+
+    const paymentNo = String(posted?.number || '').trim() || `PAY-${paymentId}`;
 
     const paymentRecord = {
       id: paymentId,
@@ -255,6 +300,10 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         amount: round2(l.amount),
       })),
       mode: formData.mode,
+      // Links the local row to the posted server payment and the ledger the
+      // money actually left from.
+      backendPaymentId: posted?.id ? String(posted.id) : undefined,
+      ledgerAccountId: String(ledgerAccountId || "").trim() || undefined,
       reference: formData.reference,
       notes: formData.notes,
       createdAt: new Date().toISOString(),
@@ -375,18 +424,30 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
         {!hideMode ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Mode</label>
+            <label className="block text-sm font-medium mb-1">
+              Paid from <span className="text-red-600">*</span>
+            </label>
             <select
-              value={formData.mode}
-              onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
+              value={ledgerAccountId}
+              onChange={(e) => setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg"
+              disabled={modesLoading}
+              required
             >
-              <option>Cash</option>
-              <option>Bank</option>
-              <option>UPI</option>
-              <option>Card</option>
-              <option>Other</option>
+              <option value="">{modesLoading ? 'Loading accounts…' : 'Select cash or bank account'}</option>
+              {modes.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {modeLabel(m)}
+                </option>
+              ))}
             </select>
+            {modesError ? (
+              <p className="mt-1 text-sm text-red-600">{modesError}</p>
+            ) : !modesLoading && modes.length === 0 ? (
+              <p className="mt-1 text-sm text-amber-700">
+                No cash or bank ledgers yet. Create one under Accounting → Ledgers.
+              </p>
+            ) : null}
           </div>
         ) : null}
         <div>
@@ -499,7 +560,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900 disabled:opacity-50"
+        >
           Record Payment
         </button>
       </div>

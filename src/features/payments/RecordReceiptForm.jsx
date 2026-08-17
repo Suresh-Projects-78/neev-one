@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
+import { createPayment } from '../../api/payments';
+import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { getNextNumericId } from '../../utils/ids';
 import { formatMoney, round2 } from '../../utils/money';
 
@@ -30,6 +32,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       customerId: d?.customerId !== undefined && d?.customerId !== null ? String(d.customerId) : '',
       amount: d?.amount !== undefined && d?.amount !== null ? String(d.amount) : '',
       mode: String(d?.mode || '').trim() || 'Cash',
+      ledgerAccountId: String(d?.ledgerAccountId || '').trim(),
       reference: String(d?.reference || '').trim(),
       notes: String(d?.notes || '').trim(),
       cashBankAccountId: d?.cashBankAccountId,
@@ -42,9 +45,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     customerId: initial.customerId,
     amount: initial.amount,
     mode: initial.mode,
+    ledgerAccountId: initial.ledgerAccountId,
     reference: initial.reference,
     notes: initial.notes,
   }));
+
+  const { modes, loading: modesLoading, error: modesError } = usePaymentModes();
+  const [saving, setSaving] = useState(false);
+
+  // With exactly one cash/bank ledger there is no choice to make, so treat it
+  // as chosen. Derived rather than written into state by an effect: the user's
+  // own pick always wins, and no extra render is spent agreeing with itself.
+  const ledgerAccountId = formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '');
 
   const [allocations, setAllocations] = useState(() => ({}));
 
@@ -127,8 +139,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         const totalAmount = Number.isFinite(receiptAmount) ? Math.max(0, receiptAmount) : 0;
 
         const alreadyAllocated = Object.entries(prev)
-          .filter(([k, v]) => k !== key && v?.selected)
-          .reduce((sum, [k, v]) => {
+          .filter(([entryKey, v]) => entryKey !== key && v?.selected)
+          .reduce((sum, [, v]) => {
             const amt = Number(v?.amount ?? 0);
             return sum + (Number.isFinite(amt) ? Math.max(0, amt) : 0);
           }, 0);
@@ -153,7 +165,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const amount = Number(formData.amount ?? 0);
@@ -191,12 +203,60 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       return;
     }
 
+    if (!hideMode && !String(ledgerAccountId || "").trim()) {
+      alert('Choose the cash or bank account the money was received into');
+      return;
+    }
+
     const customers = safeArray(db.customers).filter((c) => c.companyId === companyId);
     const customer = customers.find((c) => Number(c.id) === customerIdNum) || null;
     const customerName = customer?.name || customer?.displayName || customer?.companyName || customer?.legalName || '';
 
     const paymentId = getNextNumericId(db.payments);
-    const receiptNo = `RCPT-${paymentId}`;
+
+    // Post to the server first: it allocates the number and writes the
+    // double-entry. Only invoices that exist on the server can be allocated
+    // against there; anything created before the API migration is still sent,
+    // just unallocated, so the cash is never lost from the books.
+    let posted = null;
+    if (!hideMode) {
+      const invoiceById = new Map(safeArray(db.invoices).map((i) => [Number(i.id), i]));
+      const serverAllocations = computed.lines
+        .map((l) => {
+          const backendId = String(invoiceById.get(Number(l.invoiceId))?.backendInvoiceId || '').trim();
+          return backendId ? { docType: 'INVOICE', docId: backendId, amount: round2(l.amount) } : null;
+        })
+        .filter(Boolean);
+
+      setSaving(true);
+      try {
+        posted = await createPayment({
+          direction: 'RECEIPT',
+          date: formData.date,
+          partyType: 'CUSTOMER',
+          // Only a server party id is meaningful here. The picker returns a
+          // cuid for server-backed customers and a local numeric id for the
+          // rest; sending the numeric one would point at nothing. The name is
+          // carried either way, so the ledger line still reads correctly.
+          partyId: /^\d+$/.test(String(formData.customerId).trim()) ? null : String(formData.customerId).trim() || null,
+          partyName: customerName || null,
+          ledgerAccountId: String(ledgerAccountId).trim(),
+          instrumentRef: formData.reference || null,
+          amount: round2(amount),
+          notes: formData.notes || null,
+          allocations: serverAllocations,
+        });
+      } catch (err) {
+        setSaving(false);
+        alert(String(err?.message || 'Unable to record the receipt.'));
+        return;
+      }
+      setSaving(false);
+    }
+
+    // Prefer the server's series number over a browser-minted one, which two
+    // tabs can duplicate.
+    const receiptNo = String(posted?.number || '').trim() || `RCPT-${paymentId}`;
 
     const receiptRecord = {
       id: paymentId,
@@ -226,14 +286,16 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         amount: round2(l.amount),
       })),
       mode: formData.mode,
+      // Links the local row to the posted server payment and the ledger the
+      // money actually landed in.
+      backendPaymentId: posted?.id ? String(posted.id) : undefined,
+      ledgerAccountId: String(ledgerAccountId || "").trim() || undefined,
       reference: formData.reference,
       notes: formData.notes,
       createdAt: new Date().toISOString(),
     };
 
     // Apply allocations to invoices
-    const invoiceMap = new Map(safeArray(db.invoices).map((i) => [Number(i.id), i]));
-
     const nextInvoices = safeArray(db.invoices).map((inv) => {
       if (inv.companyId !== companyId) return inv;
 
@@ -315,18 +377,30 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
         {!hideMode ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Mode</label>
+            <label className="block text-sm font-medium mb-1">
+              Received into <span className="text-red-600">*</span>
+            </label>
             <select
-              value={formData.mode}
-              onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
+              value={ledgerAccountId}
+              onChange={(e) => setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg"
+              disabled={modesLoading}
+              required
             >
-              <option>Cash</option>
-              <option>Bank</option>
-              <option>UPI</option>
-              <option>Card</option>
-              <option>Other</option>
+              <option value="">{modesLoading ? 'Loading accounts…' : 'Select cash or bank account'}</option>
+              {modes.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {modeLabel(m)}
+                </option>
+              ))}
             </select>
+            {modesError ? (
+              <p className="mt-1 text-sm text-red-600">{modesError}</p>
+            ) : !modesLoading && modes.length === 0 ? (
+              <p className="mt-1 text-sm text-amber-700">
+                No cash or bank ledgers yet. Create one under Accounting → Ledgers.
+              </p>
+            ) : null}
           </div>
         ) : null}
         <div>
@@ -443,8 +517,12 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900">
-          Record Receipt
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-900 disabled:opacity-50"
+        >
+          {saving ? 'Recording…' : 'Record Receipt'}
         </button>
       </div>
     </form>
