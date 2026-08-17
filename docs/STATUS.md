@@ -58,10 +58,23 @@ Web on 5173, API on 4001.
 
 ## Known blockers and caveats
 
-- **Docker stack is unverified.** `docker compose config` validates and the
-  images were building, but the Docker Desktop daemon on this machine stopped
-  accepting connections mid-build (its processes run; it is likely waiting on a
-  GUI prompt). Re-run `npm run docker:up` once Docker is responsive.
+- **Docker stack is still unverified, and it is an environment problem, not a
+  code one.** Everything checkable without the daemon passes: `docker compose
+  config` validates, every file the two images copy exists, and the exact
+  command the API image runs — `node dist/index.js` — serves `/health` 200
+  locally from the same compiled output. What cannot be done here is the build
+  and run itself: Docker Desktop's processes are up and the CLI resolves its
+  context, but the engine never answers, so `docker info` hangs on the Server
+  section. Two attempts, hours apart.
+
+  To finish it on a machine with a working daemon:
+
+  ```bash
+  cp .env.docker.example .env   # set JWT_SECRET
+  npm run docker:up
+  curl -f http://localhost:8080/          # the app
+  curl -f http://localhost:8080/health    # the API through nginx
+  ```
 - **The frontend still writes the book to localStorage.** The ledger exists and
   invoices post to it, but every other voucher type is still client-only. Until
   the frontend migration lands, the GL is authoritative for invoices only.
