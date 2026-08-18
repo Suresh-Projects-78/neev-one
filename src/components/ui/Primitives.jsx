@@ -23,21 +23,24 @@ export const PageHeader = ({ title, description, actions = null }) => (
  * Metric tile. `tone` colours the value for financial meaning only
  * (pos = money in, neg = money owed), never for decoration.
  */
-export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = null, amount = null, format = null }) => {
+export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = null, amount = null, format = null, title = null }) => {
   const toneClass = tone === 'pos' ? 'ui-amount-pos' : tone === 'neg' ? 'ui-amount-neg' : '';
   // When a raw amount and formatter are supplied the figure counts up on
   // change; otherwise the pre-formatted value renders as-is.
   const counted = useCountUp(amount ?? 0);
   const shown = amount !== null && typeof format === 'function' ? format(counted) : value;
 
+  // Same KPI voice as the main dashboard: small quiet label, 42px figure,
+  // caption underneath. One language for a number-on-a-card everywhere, so a
+  // module overview no longer reads as an older generation of the product.
   return (
     <div className="ui-stat">
       <div className="flex items-center justify-between gap-2">
-        <span className="ui-muted text-xs font-semibold uppercase tracking-wide">{label}</span>
+        <span className="ui-card-label">{label}</span>
         {Icon ? <Icon size={15} className="ui-subtle" aria-hidden="true" /> : null}
       </div>
-      <div className={`mt-2 text-2xl font-semibold tracking-tight ${toneClass || 'ui-title'}`}>{shown}</div>
-      {hint ? <div className="ui-subtle text-xs mt-1">{hint}</div> : null}
+      <div className={`ui-kpi mt-3 ${toneClass}`} title={title || undefined}>{shown}</div>
+      {hint ? <div className="ui-caption mt-2">{hint}</div> : null}
     </div>
   );
 };

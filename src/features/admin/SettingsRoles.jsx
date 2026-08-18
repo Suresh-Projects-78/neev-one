@@ -366,7 +366,7 @@ export function SettingsRoles({ orgId }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="text-xl font-bold">User Roles &amp; Permissions</div>
+        <div className="ui-title text-lg">User Roles &amp; Permissions</div>
         <button
           type="button"
           onClick={openCreate}
@@ -588,7 +588,7 @@ export function SettingsRoles({ orgId }) {
         ) : filteredRoles.length === 0 ? (
           <div className="px-6 py-10 text-center ui-muted">No roles found.</div>
         ) : (
-          <table className="w-full">
+          <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Role Name</th>

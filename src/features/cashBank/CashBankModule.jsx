@@ -1179,7 +1179,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               </div>
 
               <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-                <table className="w-full">
+                <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
@@ -1262,7 +1262,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               </div>
 
               <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-                <table className="w-full">
+                <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
@@ -1766,7 +1766,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-xl font-bold">Cash & Bank</h3>
+          <h3 className="ui-title text-lg">Cash & Bank</h3>
           <div className="text-sm ui-muted">Reconcile bank/cash transactions with receipts and payments.</div>
         </div>
 
@@ -1857,7 +1857,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <div className="text-sm ui-muted">Select an account to see its transactions.</div>
         ) : (
           <div className="border rounded-xl overflow-hidden">
-            <table className="w-full">
+            <table className="ui-table w-full">
               <thead className="ui-sunken border-b">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">

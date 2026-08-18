@@ -414,7 +414,7 @@ const AuthGate = ({ onAuth }) => {
                   <BookIcon className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="ui-display text-2xl">Ledgerly</p>
+                  <p className="ui-display text-2xl">Neev One</p>
                   <p className="text-white/55 text-xs tracking-wide">GST accounting, kept straight</p>
                 </div>
               </div>
@@ -456,7 +456,7 @@ const AuthGate = ({ onAuth }) => {
             </div>
 
             <p className="mt-8 text-white/40 text-xs">
-              © 2026 Ledgerly · Books stay on your server
+              © 2026 Neev One · Books stay on your server
             </p>
           </div>
         </div>
@@ -474,7 +474,7 @@ const AuthGate = ({ onAuth }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <span className="ui-display text-xl">Ledgerly</span>
+                <span className="ui-display text-xl">Neev One</span>
               </div>
             </div>
 

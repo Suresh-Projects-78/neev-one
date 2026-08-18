@@ -30,7 +30,7 @@ export function SettingsUsersRoles({ orgId }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-2xl font-bold">Users & Roles</div>
+          <div className="ui-title text-xl">Users & Roles</div>
           <div className="text-sm ui-muted">Create users and define role permissions</div>
         </div>
       </div>

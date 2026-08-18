@@ -1,7 +1,7 @@
 import InventoryModule from './features/inventory/InventoryModule';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BadgePercent,
   BarChart3,
@@ -56,7 +56,7 @@ import VendorPicker, { VendorForm } from './components/pickers/VendorPicker';
 import { CustomerForm } from './components/pickers/CustomerPicker';
 import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB, seedDummyDataV1 } from './data/db';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
-import { formatMoney, round2 } from './utils/money';
+import { formatMoney, formatMoneyCompact, round2 } from './utils/money';
 import { getCustomerDisplayName, getVendorDisplayName } from './utils/contacts';
 import {
   ACCENT_OPTIONS,
@@ -129,6 +129,16 @@ import CurrencySettings from './features/settings/CurrencySettings';
 import BatchSerialManager from './features/inventory/BatchSerialManager';
 import ImportCenter from './features/data/ImportCenter';
 import DashboardOverview from './features/dashboard/DashboardOverview';
+import ChartCard from './components/charts/ChartCard';
+
+/* Lazily loaded chart primitives for module overviews — same chunk the main
+   dashboard pulls, so navigating between them costs one fetch total. */
+const LazyPeriodBars = lazy(() => import('./components/charts/CircularCharts').then((m) => ({ default: m.PeriodBars })));
+const LazyCompositionPie = lazy(() => import('./components/charts/CircularCharts').then((m) => ({ default: m.CompositionPie })));
+const ModuleChartFallback = ({ height = 220 }) => (
+  <div className="ui-skel w-full" style={{ height, borderRadius: 'var(--radius)' }} aria-hidden="true" />
+);
+import PurchaseOverview from './features/purchase/PurchaseOverview';
 import CommandPalette from './components/ui/CommandPalette';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import GovernanceSettings from './features/admin/GovernanceSettings';
@@ -169,6 +179,8 @@ const resolveServerOrgId = (company) => {
 
 const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], branchesLoading = false, branchesError = '' }) => {
   const [branchPickerOpen, setBranchPickerOpen] = useState(false);
+  // Pinned once per mount: month bucketing must not shift between renders.
+  const [nowTs] = useState(() => Date.now());
 
   const [selectedBranchIds, setSelectedBranchIds] = useState(() => {
     try {
@@ -241,7 +253,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Dashboard"
+        title="Sales"
         description={`${invoices.length} invoice${invoices.length === 1 ? '' : 's'} in view`}
         actions={
           <button
@@ -262,14 +274,16 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
         <StatTile
           label="Total sales"
           amount={totalSales}
-          format={(v) => formatMoney(v, currentCompany)}
+          format={(v) => formatMoneyCompact(v, currentCompany)}
+          title={formatMoney(totalSales, currentCompany)}
           hint={`Across ${invoices.length} invoices`}
           icon={BarChart3}
         />
         <StatTile
           label="Collected"
           amount={paidSales}
-          format={(v) => formatMoney(v, currentCompany)}
+          format={(v) => formatMoneyCompact(v, currentCompany)}
+          title={formatMoney(paidSales, currentCompany)}
           hint={`${collectedPct}% of billed value`}
           tone="pos"
           icon={Receipt}
@@ -277,7 +291,8 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
         <StatTile
           label="Outstanding"
           amount={totalSales - paidSales}
-          format={(v) => formatMoney(v, currentCompany)}
+          format={(v) => formatMoneyCompact(v, currentCompany)}
+          title={formatMoney(totalSales - paidSales, currentCompany)}
           hint={`${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} awaiting payment`}
           tone="neg"
           icon={FileText}
@@ -285,7 +300,8 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
         <StatTile
           label="Average invoice"
           amount={invoices.length ? totalSales / invoices.length : 0}
-          format={(v) => formatMoney(v, currentCompany)}
+          format={(v) => formatMoneyCompact(v, currentCompany)}
+          title={formatMoney(invoices.length ? totalSales / invoices.length : 0, currentCompany)}
           hint="Billed value per invoice"
           icon={ClipboardList}
         />
@@ -314,6 +330,56 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           {formatMoney(paidSales, currentCompany)} collected of {formatMoney(totalSales, currentCompany)} billed
         </div>
       </div>
+
+      {invoices.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <ChartCard title="Billed by month" subtitle="Last six months, in view">
+            <Suspense fallback={<ModuleChartFallback height={240} />}>
+              <LazyPeriodBars
+                data={(() => {
+                  const out = [];
+                  const base = new Date(nowTs);
+                  for (let i = 5; i >= 0; i--) {
+                    const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+                    out.push({
+                      key: `${d.getFullYear()}-${d.getMonth()}`,
+                      label: d.toLocaleDateString(undefined, { month: 'short' }),
+                      value: 0,
+                    });
+                  }
+                  const byKey = new Map(out.map((b) => [b.key, b]));
+                  for (const inv of invoices) {
+                    const d = new Date(`${String(inv.date || '').slice(0, 10)}T00:00:00`);
+                    if (Number.isNaN(d.getTime())) continue;
+                    const b = byKey.get(`${d.getFullYear()}-${d.getMonth()}`);
+                    if (b) b.value += Number(inv.total || 0);
+                  }
+                  return out;
+                })()}
+                height={240}
+                formatter={(v) => formatMoneyCompact(v, currentCompany)}
+              />
+            </Suspense>
+          </ChartCard>
+
+          <ChartCard title="Invoice status mix" subtitle="Share of billed value, by status">
+            <Suspense fallback={<ModuleChartFallback height={240} />}>
+              <LazyCompositionPie
+                data={(() => {
+                  const byStatus = new Map();
+                  for (const inv of invoices) {
+                    const key = String(inv.status || 'Unpaid');
+                    byStatus.set(key, (byStatus.get(key) || 0) + Number(inv.total || 0));
+                  }
+                  return [...byStatus.entries()].map(([name, value]) => ({ name, value }));
+                })()}
+                height={200}
+                formatter={(v) => formatMoneyCompact(v, currentCompany)}
+              />
+            </Suspense>
+          </ChartCard>
+        </div>
+      ) : null}
 
       {branchPickerOpen ? (
         <Modal onClose={() => setBranchPickerOpen(false)} title="Select Branches" maxWidthClass="max-w-2xl">
@@ -471,7 +537,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
             >
               Back
             </button>
-            <h3 className="text-xl font-bold">New Vendor</h3>
+            <h3 className="ui-title text-lg">New Vendor</h3>
           </div>
         </div>
 
@@ -495,7 +561,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
               Back
             </button>
             <div>
-              <h3 className="text-xl font-bold">Edit Vendor</h3>
+              <h3 className="ui-title text-lg">Edit Vendor</h3>
               <div className="text-sm ui-muted">{getVendorDisplayName(editingVendor) || ''}</div>
             </div>
           </div>
@@ -517,11 +583,11 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Vendors</h3>
+        <h3 className="ui-title text-lg">Vendors</h3>
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Vendor
         </button>
@@ -655,7 +721,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
             >
               Back
             </button>
-            <h3 className="text-xl font-bold">New Customer</h3>
+            <h3 className="ui-title text-lg">New Customer</h3>
           </div>
         </div>
 
@@ -679,7 +745,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
               Back
             </button>
             <div>
-              <h3 className="text-xl font-bold">Edit Customer</h3>
+              <h3 className="ui-title text-lg">Edit Customer</h3>
               <div className="text-sm ui-muted">{getCustomerDisplayName(editingCustomer) || ''}</div>
             </div>
           </div>
@@ -701,11 +767,11 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Customers</h3>
+        <h3 className="ui-title text-lg">Customers</h3>
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Customer
         </button>
@@ -776,15 +842,6 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
   );
 };
 
-const PurchaseOverview = () => {
-  return (
-    <div className="ui-surface rounded-xl shadow-sm p-6 border">
-      <h3 className="text-xl font-bold mb-4">Purchase Overview</h3>
-      <p className="ui-muted">Purchase statistics will appear here</p>
-    </div>
-  );
-};
-
 const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   const expenses = db.expenses.filter((e) => e.companyId === currentCompany.id);
   const [statusFilter, setStatusFilter] = useState('All');
@@ -842,7 +899,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             >
               Back
             </button>
-            <h3 className="text-xl font-bold">New Expense</h3>
+            <h3 className="ui-title text-lg">New Expense</h3>
           </div>
         </div>
 
@@ -856,11 +913,11 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Expenses</h3>
+        <h3 className="ui-title text-lg">Expenses</h3>
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Expense
         </button>
@@ -1294,7 +1351,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Items</h3>
+        <h3 className="ui-title text-lg">Items</h3>
         <button
           onClick={() =>
             openModal(
@@ -1302,14 +1359,14 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
               { title: 'New Item', maxWidthClass: 'max-w-3xl' }
             )
           }
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Item
         </button>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Code</th>
@@ -1636,7 +1693,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
 const StockAdjustment = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
-      <h3 className="text-xl font-bold mb-4">Stock Adjustment</h3>
+      <h3 className="ui-title text-lg mb-4">Stock Adjustment</h3>
       <p className="ui-muted">Adjust inventory stock levels</p>
     </div>
   );
@@ -2015,13 +2072,13 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Chart of Accounts</h3>
+        <h3 className="ui-title text-lg">Chart of Accounts</h3>
         <div className="flex gap-2">
           {coaView === 'ledgers' ? (
             <button
               type="button"
               onClick={openNewLedger}
-              className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+              className="ui-btn ui-btn-primary "
             >
               <Plus size={20} /> New Ledger
             </button>
@@ -2029,7 +2086,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={openNewGroup}
-              className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+              className="ui-btn ui-btn-primary "
             >
               <Plus size={20} /> New Group
             </button>
@@ -2078,7 +2135,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                 />
               </div>
             </div>
-            <table className="w-full">
+            <table className="ui-table w-full">
               <thead className="ui-sunken border-b">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ledger</th>
@@ -2151,7 +2208,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                 />
               </div>
             </div>
-            <table className="w-full">
+            <table className="ui-table w-full">
               <thead className="ui-sunken border-b">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Group</th>
@@ -2824,17 +2881,17 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Journal Entries</h3>
+        <h3 className="ui-title text-lg">Journal Entries</h3>
         <button
           onClick={onNewJournal}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Entry
         </button>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">JV #</th>
@@ -3130,7 +3187,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
+          <table className="ui-table w-full">
             <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Account</th>
@@ -3274,10 +3331,10 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-xl font-bold">Trial Balance</h3>
+      <h3 className="ui-title text-lg">Trial Balance</h3>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Account</th>
@@ -3982,7 +4039,7 @@ const LedgerView = ({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-xl font-bold">Ledger</h3>
+          <h3 className="ui-title text-lg">Ledger</h3>
           <button type="button" onClick={onBack} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
             Back
           </button>
@@ -4128,7 +4185,7 @@ const LedgerView = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-xl font-bold">Ledger: {account.name}</h3>
+          <h3 className="ui-title text-lg">Ledger: {account.name}</h3>
           <div className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</div>
         </div>
           <div className="flex items-center gap-2">
@@ -4200,7 +4257,7 @@ const LedgerView = ({
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               {visibleColumns.map((c) => (
@@ -4414,7 +4471,7 @@ const LedgerView = ({
 const AccountingOverview = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
-      <h3 className="text-xl font-bold mb-4">Accounting Module</h3>
+      <h3 className="ui-title text-lg mb-4">Accounting Module</h3>
       <p className="ui-muted">Select a sub-module from the sidebar</p>
     </div>
   );
@@ -4485,7 +4542,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Profit & Loss Statement</h3>
+        <h3 className="ui-title text-lg">Profit & Loss Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
@@ -4493,7 +4550,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
-          <h4 className="text-lg font-bold">{currentCompany.name}</h4>
+          <h4 className="ui-title text-base">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Profit & Loss Statement</p>
           <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
         </div>
@@ -4587,7 +4644,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Balance Sheet</h3>
+        <h3 className="ui-title text-lg">Balance Sheet</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
@@ -4595,7 +4652,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
-          <h4 className="text-lg font-bold">{currentCompany.name}</h4>
+          <h4 className="ui-title text-base">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Balance Sheet</p>
           <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
         </div>
@@ -4717,7 +4774,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Cash Flow Statement</h3>
+        <h3 className="ui-title text-lg">Cash Flow Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
@@ -4725,7 +4782,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
-          <h4 className="text-lg font-bold">{currentCompany.name}</h4>
+          <h4 className="ui-title text-base">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Cash Flow Statement</p>
           <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
           <p className="text-xs ui-muted mt-2">
@@ -4781,7 +4838,7 @@ const SalesReports = ({ db, currentCompany }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-xl font-bold">Sales Reports</h3>
+      <h3 className="ui-title text-lg">Sales Reports</h3>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="ui-surface rounded-xl shadow-sm p-6 border">
@@ -4818,7 +4875,7 @@ const ReportsOverview = ({ sections, onNavigate }) => {
   return (
     <div className="ui-surface rounded-xl shadow-sm border overflow-hidden">
       <div className="p-6 border-b">
-        <h3 className="text-xl font-bold">Reports</h3>
+        <h3 className="ui-title text-lg">Reports</h3>
         <p className="text-sm ui-muted">Choose a category on the left, then select a report.</p>
       </div>
 
@@ -4847,7 +4904,7 @@ const ReportsOverview = ({ sections, onNavigate }) => {
         <div className="flex-1 p-6">
           <div className="mb-4">
             <div className="text-sm ui-muted">Category</div>
-            <div className="text-lg font-bold">{activeSection?.title || 'Reports'}</div>
+            <div className="ui-title text-base">{activeSection?.title || 'Reports'}</div>
           </div>
 
           <div className="border rounded-lg overflow-hidden ui-surface">
@@ -4879,7 +4936,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
       <div className={`h-2 ${accentBarClass}`} />
       <div className="p-4 flex items-start justify-between">
         <div>
-          <div className="text-lg font-bold ui-fg">{companyName}</div>
+          <div className="ui-title text-base ui-fg">{companyName}</div>
           <div className="text-xs ui-muted">Document Template Preview</div>
         </div>
         <div className="text-right">
@@ -4893,7 +4950,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
   const rows = (
     <div className="border rounded-lg overflow-hidden">
-      <table className="w-full">
+      <table className="ui-table w-full">
         <thead className="ui-sunken border-b">
           <tr>
             <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Item</th>
@@ -4944,7 +5001,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className={`w-2 rounded-lg ${accentBarClass}`} />
           <div className="flex-1">
             <div className="text-xs ui-muted">{title}</div>
-            <div className="text-2xl font-bold ui-fg">{voucherLabel}</div>
+            <div className="ui-title text-xl ui-fg">{voucherLabel}</div>
             <div className="text-sm ui-muted">{companyName}</div>
           </div>
           <div className="text-right text-sm ui-muted">
@@ -4965,7 +5022,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="flex justify-between">
             <div>
               <div className="text-xs ui-muted">{companyName}</div>
-              <div className="text-xl font-bold">{voucherLabel}</div>
+              <div className="ui-title text-lg">{voucherLabel}</div>
             </div>
             <div className="text-right text-xs ui-muted">
               <div>No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
@@ -5008,7 +5065,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
         <div className={`rounded-lg p-4 text-white ${accentBarClass}`}>
           <div className="flex items-start justify-between">
             <div>
-              <div className="text-lg font-bold">{companyName}</div>
+              <div className="ui-title text-base">{companyName}</div>
               <div className="text-xs opacity-90">{title}</div>
             </div>
             <div className="text-right text-xs opacity-95">
@@ -5073,7 +5130,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           </div>
 
           <div className="border-t border-gray-900">
-            <table className="w-full border-collapse">
+            <table className="ui-table w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-900">
                   <th className="p-1 border-r border-gray-900">Sr</th>
@@ -5164,7 +5221,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           </div>
 
           <div className="border-t border-gray-900">
-            <table className="w-full border-collapse">
+            <table className="ui-table w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-900">
                   <th className="p-1 border-r border-gray-900">Sr</th>
@@ -5254,7 +5311,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           </div>
 
           <div className="border-t border-gray-900">
-            <table className="w-full border-collapse">
+            <table className="ui-table w-full border-collapse">
               <thead>
                 <tr className="border-b border-gray-900">
                   <th className="p-1 border-r border-gray-900">Sr</th>
@@ -5341,7 +5398,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           </div>
 
           <div>
-            <table className="w-full border-collapse">
+            <table className="ui-table w-full border-collapse">
               <thead>
                 <tr className="border-b-2 border-gray-900">
                   <th className="p-1 border-r-2 border-gray-900">Sr</th>
@@ -5438,7 +5495,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             </div>
 
             <div className="border rounded-lg overflow-hidden mt-6">
-              <table className="w-full">
+              <table className="ui-table w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Sr</th>
@@ -5529,7 +5586,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 
           <div className="p-6">
             <div className="border-2 border-gray-900 overflow-hidden">
-              <table className="w-full">
+              <table className="ui-table w-full">
                 <thead className="ui-sunken border-b-2 border-gray-900">
                   <tr>
                     <th className="px-2 py-2 text-left text-xs font-semibold border-r-2 border-gray-900">Sr</th>
@@ -5623,7 +5680,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
             </div>
 
             <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
+              <table className="ui-table w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Sr</th>
@@ -5675,7 +5732,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 const MdmOverview = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
-      <h3 className="text-xl font-bold mb-2">Master Data (MDM)</h3>
+      <h3 className="ui-title text-lg mb-2">Master Data (MDM)</h3>
       <p className="ui-muted">Select a master from the sidebar</p>
     </div>
   );
@@ -5722,7 +5779,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Units of Measure (UoM)</h3>
+        <h3 className="ui-title text-lg">Units of Measure (UoM)</h3>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
@@ -5749,7 +5806,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
+          <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">UoM</th>
@@ -5830,7 +5887,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">GST Rates</h3>
+        <h3 className="ui-title text-lg">GST Rates</h3>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
@@ -5860,7 +5917,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full">
+          <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Rate (%)</th>
@@ -5976,7 +6033,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Numbering</h3>
+        <h3 className="ui-title text-lg">Numbering</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
@@ -6129,7 +6186,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Templates</h3>
+        <h3 className="ui-title text-lg">Templates</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
@@ -6269,7 +6326,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Invoice Templates</h3>
+        <h3 className="ui-title text-lg">Invoice Templates</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
@@ -6425,7 +6482,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Company Profile</h3>
+        <h3 className="ui-title text-lg">Company Profile</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
           Save
         </button>
@@ -6664,7 +6721,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-lg font-bold">Tax & Compliances</div>
+          <div className="ui-title text-base">Tax & Compliances</div>
           <div className="text-sm ui-muted">GST, TDS and TCS settings</div>
         </div>
         <button
@@ -7594,7 +7651,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <div className="text-lg font-bold">Users, Roles, Branches & Warehouses</div>
+            <div className="ui-title text-base">Users, Roles, Branches & Warehouses</div>
             <div className="text-sm ui-muted">Manage users, roles, branches and warehouses</div>
           </div>
           <div className="flex items-center gap-2">
@@ -7706,7 +7763,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">User List</div>
                 <div className="max-h-64 overflow-auto">
-                  <table className="w-full">
+                  <table className="ui-table w-full">
                     <thead className="ui-sunken border-b">
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
@@ -7947,7 +8004,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="border rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Role List</div>
                 <div className="max-h-56 overflow-auto">
-                  <table className="w-full">
+                  <table className="ui-table w-full">
                     <thead className="ui-sunken border-b">
                       <tr>
                         <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
@@ -8121,7 +8178,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             <div className="border rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Role List</div>
               <div className="max-h-56 overflow-auto">
-                <table className="w-full">
+                <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
@@ -8228,7 +8285,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             <div className="border rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Branch List</div>
               <div className="max-h-64 overflow-auto">
-                <table className="w-full">
+                <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
@@ -8368,7 +8425,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             <div className="border rounded-xl overflow-hidden">
               <div className="px-4 py-3 border-b ui-sunken text-sm font-semibold">Warehouse List</div>
               <div className="max-h-64 overflow-auto">
-                <table className="w-full">
+                <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
@@ -8476,7 +8533,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-lg font-bold">Company</div>
+                  <div className="ui-title text-base">Company</div>
                   <div className="text-sm ui-muted">Basic, contact and registered address</div>
                 </div>
                 <button
@@ -8790,24 +8847,24 @@ const Gstr1Report = ({ db, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">GST - GSTR-1 (Summary)</h3>
+        <h3 className="ui-title text-lg">GST - GSTR-1 (Summary)</h3>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Taxable Value (Net)</div>
-          <div className="text-2xl font-bold">{formatMoney(totals.taxableAmount, currentCompany)}</div>
+          <div className="ui-title text-xl">{formatMoney(totals.taxableAmount, currentCompany)}</div>
         </div>
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">GST (Net)</div>
-          <div className="text-2xl font-bold">{formatMoney(totals.gstAmount, currentCompany)}</div>
+          <div className="ui-title text-xl">{formatMoney(totals.gstAmount, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             CGST {formatMoney(totals.cgstAmount, currentCompany)} · SGST {formatMoney(totals.sgstAmount, currentCompany)} · IGST {formatMoney(totals.igstAmount, currentCompany)}
           </div>
         </div>
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Total (Net)</div>
-          <div className="text-2xl font-bold">{formatMoney(totals.totalAmount, currentCompany)}</div>
+          <div className="ui-title text-xl">{formatMoney(totals.totalAmount, currentCompany)}</div>
         </div>
       </div>
 
@@ -8815,7 +8872,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
         <div className="px-6 py-4 border-b ui-sunken">
           <h4 className="font-bold">Rate-wise Summary</h4>
         </div>
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Tax Type</th>
@@ -8855,7 +8912,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
         <div className="px-6 py-4 border-b ui-sunken">
           <h4 className="font-bold">Document Summary (Invoices & Credit Notes)</h4>
         </div>
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Type</th>
@@ -8952,13 +9009,13 @@ const Gstr3bReport = ({ db, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">GST - GSTR-3B (Summary)</h3>
+        <h3 className="ui-title text-lg">GST - GSTR-3B (Summary)</h3>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Outward Supplies (Net)</div>
-          <div className="text-2xl font-bold">{formatMoney(outwardNet.gst, currentCompany)}</div>
+          <div className="ui-title text-xl">{formatMoney(outwardNet.gst, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             Taxable {formatMoney(outwardNet.taxable, currentCompany)} · CGST {formatMoney(outwardNet.cgst, currentCompany)} · SGST {formatMoney(outwardNet.sgst, currentCompany)} · IGST {formatMoney(outwardNet.igst, currentCompany)}
           </div>
@@ -8966,7 +9023,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
 
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">ITC (Bills + Expenses)</div>
-          <div className="text-2xl font-bold">{formatMoney(inwardItc.gst, currentCompany)}</div>
+          <div className="ui-title text-xl">{formatMoney(inwardItc.gst, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             Taxable {formatMoney(inwardItc.taxable, currentCompany)} · CGST {formatMoney(inwardItc.cgst, currentCompany)} · SGST {formatMoney(inwardItc.sgst, currentCompany)} · IGST {formatMoney(inwardItc.igst, currentCompany)}
           </div>
@@ -8974,7 +9031,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
 
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Net Tax Payable (Proxy)</div>
-          <div className="text-2xl font-bold">{formatMoney(netPayable.gst, currentCompany)}</div>
+          <div className="ui-title text-xl">{formatMoney(netPayable.gst, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             CGST {formatMoney(netPayable.cgst, currentCompany)} · SGST {formatMoney(netPayable.sgst, currentCompany)} · IGST {formatMoney(netPayable.igst, currentCompany)}
           </div>
@@ -9449,6 +9506,7 @@ const AppShell = () => {
         ph: true,
         tint: 'sales',
         items: [
+          { key: 'sales', label: 'Overview', icon: BarChart3, perm: 'SALES::Invoices::VIEW' },
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
           { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW', feature: 'standaloneReceiptsPayments' },
           { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW', feature: 'estimates' },
@@ -9463,6 +9521,7 @@ const AppShell = () => {
         ph: true,
         tint: 'purchases',
         items: [
+          { key: 'purchaseOverview', label: 'Overview', icon: BarChart3, perm: 'PURCHASE::Bills::VIEW' },
           { key: 'bills', label: 'Bills', icon: FileStack, perm: 'PURCHASE::Bills::VIEW' },
           { key: 'payments', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW', feature: 'standaloneReceiptsPayments' },
           { key: 'purchaseOrders', label: 'Purchase Orders', icon: ShoppingCart, perm: 'PURCHASE::Purchase Orders::VIEW', feature: 'purchaseOrders' },
@@ -9928,7 +9987,7 @@ const AppShell = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">{isEdit ? 'Edit Invoice' : 'New Invoice'}</h3>
+                  <h3 className="ui-title text-lg">{isEdit ? 'Edit Invoice' : 'New Invoice'}</h3>
                   <div className="text-sm ui-muted">{isEdit ? invoiceEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
@@ -9976,7 +10035,7 @@ const AppShell = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">{isEdit ? 'Edit Estimate' : 'New Estimate'}</h3>
+                  <h3 className="ui-title text-lg">{isEdit ? 'Edit Estimate' : 'New Estimate'}</h3>
                   <div className="text-sm ui-muted">{isEdit ? estimateEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
@@ -10043,7 +10102,7 @@ const AppShell = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">{isEdit ? 'Edit Journal Entry' : 'New Journal Entry'}</h3>
+                  <h3 className="ui-title text-lg">{isEdit ? 'Edit Journal Entry' : 'New Journal Entry'}</h3>
                   <div className="text-sm ui-muted">{isEdit ? journalEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
@@ -10081,7 +10140,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">New Credit Note</h3>
+                <h3 className="ui-title text-lg">New Credit Note</h3>
                 <button
                   type="button"
                   onClick={() => setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null })}
@@ -10120,7 +10179,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Record Receipt</h3>
+                <h3 className="ui-title text-lg">Record Receipt</h3>
                 <button
                   type="button"
                   onClick={() => setReceiptEditor({ open: false })}
@@ -10156,7 +10215,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">Record Payment</h3>
+                <h3 className="ui-title text-lg">Record Payment</h3>
                 <button
                   type="button"
                   onClick={() => setPaymentEditor({ open: false })}
@@ -10267,7 +10326,7 @@ const AppShell = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-bold">
+                  <h3 className="ui-title text-lg">
                     {mode === 'branch'
                       ? stockTransferEditor.initial
                         ? 'Edit Branch Transfer'
@@ -10328,7 +10387,7 @@ const AppShell = () => {
         if (typeof BillsList === 'undefined' || typeof BillForm === 'undefined') {
           return (
             <div className="space-y-3">
-              <div className="text-xl font-bold">Bills</div>
+              <div className="ui-title text-lg">Bills</div>
               <div className="ui-surface border rounded-xl p-4 text-sm ui-fg">
                 Bills module failed to load (missing component). Please refresh the page.
               </div>
@@ -10346,7 +10405,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">New Bill</h3>
+                <h3 className="ui-title text-lg">New Bill</h3>
                 <button
                   type="button"
                   onClick={() => setBillEditor({ open: false, initial: null })}
@@ -10390,7 +10449,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-bold">New Debit Note</h3>
+                <h3 className="ui-title text-lg">New Debit Note</h3>
                 <button
                   type="button"
                   onClick={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
@@ -10633,7 +10692,7 @@ const AppShell = () => {
     return (
       <div className="min-h-screen ui-sunken flex items-center justify-center p-6">
         <div className="max-w-lg w-full ui-surface border rounded-xl p-6">
-          <div className="text-lg font-bold">No branches assigned</div>
+          <div className="ui-title text-base">No branches assigned</div>
           <div className="text-sm ui-muted mt-2">
             Your user does not have access to any branch. Ask an admin to assign branches to your user.
           </div>

@@ -196,7 +196,7 @@ export default function CurrencySettings() {
           </form>
 
           <div className="ui-card overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="ui-table w-full text-sm">
               <thead>
                 <tr className="text-left ui-muted">
                   <th className="px-4 py-2">Currency</th>

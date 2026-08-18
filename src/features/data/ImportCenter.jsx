@@ -239,7 +239,7 @@ export default function ImportCenter() {
               <div className="flex items-center gap-2 mb-2 text-sm text-amber-700">
                 <AlertTriangle size={16} /> These rows will be skipped. Line numbers match the file.
               </div>
-              <table className="w-full text-sm">
+              <table className="ui-table w-full text-sm">
                 <thead>
                   <tr className="text-left ui-muted">
                     <th className="px-3 py-2 w-24">Line</th>

@@ -55,7 +55,7 @@ export function SettingsWarehousesBranches({ orgId }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-2xl font-bold">Warehouse & Branches</div>
+          <div className="ui-title text-xl">Warehouse & Branches</div>
           <div className="text-sm ui-muted">Manage branches and warehouses with GST validation</div>
         </div>
         <div className="flex gap-2">

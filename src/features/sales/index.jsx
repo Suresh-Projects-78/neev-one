@@ -1055,18 +1055,18 @@ export const EstimatesList = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Estimates</h3>
+        <h3 className="ui-title text-lg">Estimates</h3>
         <button
           type="button"
           onClick={openNewEstimate}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Estimate
         </button>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Estimate #</th>
@@ -1260,18 +1260,18 @@ export const CreditNotesList = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Credit Notes</h3>
+        <h3 className="ui-title text-lg">Credit Notes</h3>
         <button
           type="button"
           onClick={openNewCreditNote}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Credit Note
         </button>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Credit #</th>

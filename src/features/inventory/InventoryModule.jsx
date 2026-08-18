@@ -33,7 +33,7 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
@@ -369,7 +369,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
         </div>
       </div>
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left">

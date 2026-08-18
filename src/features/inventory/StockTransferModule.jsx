@@ -409,7 +409,7 @@ export const StockTransferEditor = ({
                 ? 'Edit Warehouse Transfer'
                 : 'New Warehouse Transfer'}
           </div>
-          <div className="text-xl font-bold">{String(form.number || '').trim() || 'Draft'}</div>
+          <div className="ui-title text-lg">{String(form.number || '').trim() || 'Draft'}</div>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(String(form.status || '').trim() || 'Draft')}`}>{String(form.status || '').trim() || 'Draft'}</span>
       </div>
@@ -761,7 +761,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
       ) : null}
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Item</th>
@@ -1001,13 +1001,13 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
     <div className="space-y-4">
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
-          <h3 className="text-xl font-bold">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>
+          <h3 className="ui-title text-lg">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>
           <div className="text-sm ui-muted">{mode === 'branch' ? 'Between branches' : 'Within the same branch'}</div>
           </div>
           <button
             type="button"
             onClick={openCreate}
-            className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+            className="ui-btn ui-btn-primary "
           >
           <Plus size={18} /> New Transfer
           </button>
@@ -1038,7 +1038,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
         </div>
 
         <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-          <table className="w-full">
+          <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Transfer #</th>

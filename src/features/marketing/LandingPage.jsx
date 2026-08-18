@@ -93,7 +93,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
             <span className="ui-brand-mark">
               <Scale size={17} aria-hidden="true" />
             </span>
-            <span className="ui-display text-lg">Ledgerly</span>
+            <span className="ui-display text-lg">Neev One</span>
           </a>
 
           <nav className="hidden md:flex items-center gap-7 text-sm" aria-label="Primary">
@@ -141,7 +141,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
             </h1>
 
             <p className="ui-lede mt-6">
-              Ledgerly posts every invoice, receipt, bill and journal to a real double-entry ledger
+              Neev One posts every invoice, receipt, bill and journal to a real double-entry ledger
               the moment you save it. No month-end reconciliation ritual, no spreadsheet standing in
               for the truth.
             </p>
@@ -330,7 +330,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
 
       <footer className="border-t" style={{ borderColor: 'rgb(var(--border))' }}>
         <div className="ui-container flex flex-wrap items-center justify-between gap-3 py-7 text-sm ui-subtle">
-          <span>© 2026 Ledgerly</span>
+          <span>© 2026 Neev One</span>
           <span>Self-hosted GST accounting</span>
         </div>
       </footer>

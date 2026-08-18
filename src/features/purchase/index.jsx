@@ -467,14 +467,14 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Purchase Orders</h3>
-        <button onClick={createPo} className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg ">
+        <h3 className="ui-title text-lg">Purchase Orders</h3>
+        <button onClick={createPo} className="ui-btn ui-btn-primary ">
           <Plus size={20} /> New PO
         </button>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">PO #</th>
@@ -980,7 +980,7 @@ export const BillsList = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Bills</h3>
+        <h3 className="ui-title text-lg">Bills</h3>
         <button
           onClick={() => {
             if (typeof onNewBill === 'function') {
@@ -998,7 +998,7 @@ export const BillsList = ({
               />
             );
           }}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Bill
         </button>
@@ -1019,7 +1019,7 @@ export const BillsList = ({
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Bill #</th>
@@ -1697,7 +1697,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold">Debit Notes</h3>
+        <h3 className="ui-title text-lg">Debit Notes</h3>
         <button
           onClick={() => {
             if (typeof onNewDebitNote === 'function') {
@@ -1715,14 +1715,14 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               />
             );
           }}
-          className="flex items-center gap-2 ui-primary-bg px-4 py-2 rounded-lg "
+          className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Debit Note
         </button>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Debit Note #</th>

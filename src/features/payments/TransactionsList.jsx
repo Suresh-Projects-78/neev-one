@@ -277,7 +277,7 @@ const TransactionView = ({ title, payload }) => {
           <div className="text-sm">
             <div className="ui-muted mb-2">Allocations</div>
             <div className="border rounded-lg overflow-hidden">
-              <table className="w-full">
+              <table className="ui-table w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Document #</th>
@@ -317,12 +317,12 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold">{title}</h3>
+        <h3 className="ui-title text-lg">{title}</h3>
         {rightActions ? <div>{rightActions}</div> : null}
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full">
+        <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
