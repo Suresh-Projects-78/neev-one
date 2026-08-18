@@ -2,6 +2,7 @@ import InventoryModule from './features/inventory/InventoryModule';
 import { notify, confirmDialog } from './components/ui/notify';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
+import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExport';
 import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
@@ -8877,6 +8878,35 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
   );
 };
 
+/**
+ * Month picker + download for the portal-schema JSON. Lives beside the report
+ * heading; the JSON is what the GST offline tool / portal imports.
+ */
+const GstrExportControl = ({ label, onExport }) => {
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7)); // yyyy-mm
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="month"
+        value={month}
+        onChange={(e) => setMonth(e.target.value)}
+        className="ui-input !h-9 !min-h-0 w-auto text-sm"
+        aria-label="Return period"
+      />
+      <button
+        type="button"
+        onClick={() => {
+          const period = `${month.slice(5, 7)}${month.slice(0, 4)}`; // MMYYYY
+          onExport(period);
+        }}
+        className="ui-btn ui-btn-primary"
+      >
+        <Download size={15} aria-hidden="true" /> {label}
+      </button>
+    </div>
+  );
+};
+
 const Gstr1Report = ({ db, currentCompany }) => {
   const invoices = db.invoices.filter((i) => i.companyId === currentCompany.id);
   const creditNotes = db.creditNotes.filter((c) => c.companyId === currentCompany.id);
@@ -9002,6 +9032,18 @@ const Gstr1Report = ({ db, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">GST - GSTR-1 (Summary)</h3>
+        <GstrExportControl
+          label="Portal JSON"
+          onExport={(period) => {
+            if (!String(currentCompany?.gstin || '').trim()) {
+              notify.error('Set the company GSTIN in Company Profile before exporting a return.');
+              return;
+            }
+            const json = buildGstr1Json({ invoices, creditNotes, company: currentCompany, period });
+            downloadJson(`GSTR1_${currentCompany.gstin}_${period}.json`, json);
+            notify.success(`GSTR-1 JSON for ${period} downloaded.`);
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -9164,6 +9206,26 @@ const Gstr3bReport = ({ db, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">GST - GSTR-3B (Summary)</h3>
+        <GstrExportControl
+          label="Portal JSON"
+          onExport={(period) => {
+            if (!String(currentCompany?.gstin || '').trim()) {
+              notify.error('Set the company GSTIN in Company Profile before exporting a return.');
+              return;
+            }
+            const json = buildGstr3bJson({
+              invoices: db.invoices.filter((i) => i.companyId === currentCompany.id),
+              creditNotes: db.creditNotes.filter((c) => c.companyId === currentCompany.id),
+              bills: db.bills.filter((b) => b.companyId === currentCompany.id),
+              expenses: db.expenses.filter((e) => e.companyId === currentCompany.id),
+              debitNotes: db.debitNotes.filter((d) => d.companyId === currentCompany.id),
+              company: currentCompany,
+              period,
+            });
+            downloadJson(`GSTR3B_${currentCompany.gstin}_${period}.json`, json);
+            notify.success(`GSTR-3B JSON for ${period} downloaded.`);
+          }}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
