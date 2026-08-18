@@ -3,7 +3,7 @@ import { Check, ChevronDown, Lock, RotateCcw, Save, ShieldCheck } from 'lucide-r
 
 import { listRoles } from '../../api/admin';
 import { expandPreset, getPermissionCatalog, getRolePermissions, setRolePermissions } from '../../api/permissions';
-import { EmptyState, PageHeader, Spinner } from '../../components/ui/Primitives';
+import { EmptyState, PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 import { usePermissions } from '../../permissions/usePermissions';
 
 const key = (module, resource, action) => `${module}::${resource}::${action}`;
@@ -144,10 +144,7 @@ export const RolePermissionManager = () => {
 
   if (loading) {
     return (
-      <div className="ui-card p-8 flex items-center justify-center gap-3">
-        <Spinner />
-        <span className="ui-muted text-sm">Loading permissions…</span>
-      </div>
+      <SkeletonCard lines={4} />
     );
   }
 

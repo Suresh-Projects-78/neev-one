@@ -492,16 +492,16 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
                   onClick={() => openLedger(it)}
                   title="Click to view ledger"
                 >
-                  <td className="ui-col-entity px-6 py-4">
+                  <td className="ui-col-entity px-4 py-2.5">
                     <div className="font-medium">{it.name}</div>
                     <div className="text-xs ui-muted">{it.code || ''}</div>
                   </td>
-                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(opening)}</td>
-                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(purchases)}</td>
-                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(sales)}</td>
-                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(dn)}</td>
-                  <td className="ui-col-meta px-6 py-4 text-right">{fmt(cn)}</td>
-                  <td className="ui-col-meta px-6 py-4 text-right font-semibold">{fmt(closing)}</td>
+                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(opening)}</td>
+                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(purchases)}</td>
+                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(sales)}</td>
+                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(dn)}</td>
+                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(cn)}</td>
+                  <td className="ui-col-meta px-4 py-2.5 text-right font-semibold">{fmt(closing)}</td>
                 </tr>
               );
             })}

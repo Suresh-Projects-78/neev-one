@@ -1042,12 +1042,12 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Transfer #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">From</th>
-                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">To</th>
-                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Actions</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Transfer #</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">From</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">To</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -1087,15 +1087,15 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                         openEdit(t);
                       }}
                     >
-                      <td className="ui-col-meta px-6 py-4 font-medium">{t?.number || '-'}</td>
-                      <td className="ui-col-meta px-6 py-4">{fromLabel || '-'}</td>
-                      <td className="ui-col-meta px-6 py-4">{toLabel || '-'}</td>
-                      <td className="ui-col-date px-6 py-4">{t?.date || '-'}</td>
+                      <td className="ui-col-meta px-4 py-2.5 font-medium">{t?.number || '-'}</td>
+                      <td className="ui-col-meta px-4 py-2.5">{fromLabel || '-'}</td>
+                      <td className="ui-col-meta px-4 py-2.5">{toLabel || '-'}</td>
+                      <td className="ui-col-date px-4 py-2.5">{t?.date || '-'}</td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(status)}`}>{status}</span>
                       </td>
                       <td
-                        className="px-6 py-4 relative"
+                        className="px-4 py-2.5 relative"
                         onMouseDown={(e) => e.stopPropagation()}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => e.stopPropagation()}

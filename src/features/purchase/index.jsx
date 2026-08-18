@@ -478,13 +478,13 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">PO #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">PO #</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Amount</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
@@ -501,15 +501,15 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={po.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-6 py-4 font-medium">{po.number}</td>
-                    <td className="ui-col-entity px-6 py-4">{po.vendorName}</td>
-                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
-                    <td className="ui-col-date px-6 py-4">{po.date}</td>
-                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
-                    <td className="ui-col-meta px-6 py-4">
+                    <td className="ui-col-id px-4 py-2.5 font-medium">{po.number}</td>
+                    <td className="ui-col-entity px-4 py-2.5">{po.vendorName}</td>
+                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
+                    <td className="ui-col-date px-4 py-2.5">{po.date}</td>
+                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
+                    <td className="ui-col-meta px-4 py-2.5">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]">{po.status || 'Draft'}</span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-2.5 text-right">
                       {onConvertToBill && po.status !== 'Billed' ? (
                         <button
                           type="button"
@@ -1038,15 +1038,15 @@ export const BillsList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Bill #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ref No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Ref Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Actions</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Bill #</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ref No</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ref Date</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -1073,14 +1073,14 @@ export const BillsList = ({
 
                 return (
                   <tr key={b.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-6 py-4 font-medium">{b.number}</td>
-                    <td className="ui-col-entity px-6 py-4">{b.vendorName}</td>
-                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
-                    <td className="ui-col-date px-6 py-4">{b.date}</td>
-                    <td className="ui-col-id px-6 py-4">{b.refNo || '-'}</td>
-                    <td className="ui-col-date px-6 py-4">{b.refDate || '-'}</td>
-                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(b.total || 0, currentCompany)}</td>
-                    <td className="ui-col-meta px-6 py-4">
+                    <td className="ui-col-id px-4 py-2.5 font-medium">{b.number}</td>
+                    <td className="ui-col-entity px-4 py-2.5">{b.vendorName}</td>
+                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
+                    <td className="ui-col-date px-4 py-2.5">{b.date}</td>
+                    <td className="ui-col-id px-4 py-2.5">{b.refNo || '-'}</td>
+                    <td className="ui-col-date px-4 py-2.5">{b.refDate || '-'}</td>
+                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(b.total || 0, currentCompany)}</td>
+                    <td className="ui-col-meta px-4 py-2.5">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusPillClass}`}>{derived}</span>
                     </td>
                     <td
@@ -1741,14 +1741,14 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Debit Note #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Original Bill</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Debit Note #</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Original Bill</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Amount</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
@@ -1765,13 +1765,13 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={dn.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-6 py-4 font-medium">{dn.number}</td>
-                    <td className="ui-col-meta px-6 py-4">{dn.originalBillNumber}</td>
-                    <td className="ui-col-entity px-6 py-4">{dn.vendorName}</td>
-                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
-                    <td className="ui-col-date px-6 py-4">{dn.date}</td>
-                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
-                    <td className="ui-col-meta px-6 py-4">
+                    <td className="ui-col-id px-4 py-2.5 font-medium">{dn.number}</td>
+                    <td className="ui-col-meta px-4 py-2.5">{dn.originalBillNumber}</td>
+                    <td className="ui-col-entity px-4 py-2.5">{dn.vendorName}</td>
+                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
+                    <td className="ui-col-date px-4 py-2.5">{dn.date}</td>
+                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-meta px-4 py-2.5">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]">{dn.status || 'Draft'}</span>
                     </td>
                   </tr>

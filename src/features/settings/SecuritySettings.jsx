@@ -12,7 +12,7 @@ import {
   revokeMySessions,
   savePolicy,
 } from '../../api/security';
-import { EmptyState, PageHeader, Spinner, StatusPill } from '../../components/ui/Primitives';
+import { EmptyState, PageHeader, Spinner, StatusPill, SkeletonCard } from '../../components/ui/Primitives';
 
 const TABS = [
   { key: 'signin', label: 'Sign-in methods' },
@@ -106,10 +106,7 @@ export const SecuritySettings = () => {
 
   if (loading) {
     return (
-      <div className="ui-card p-8 flex items-center justify-center gap-3">
-        <Spinner />
-        <span className="ui-muted text-sm">Loading security settings…</span>
-      </div>
+      <SkeletonCard lines={4} />
     );
   }
 

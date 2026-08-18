@@ -43,20 +43,20 @@
   --brand-deep: 194 65 12;      /* #C2410C — the money-out series; same family, unmistakably not the brand bar */
   --brand-hover: 234 88 12;
   --brand-soft: 255 247 237;
-  --on-brand: 255 255 255;
+  --on-brand: 26 12 3;          /* 6.82:1 on the orange; white was 2.80:1 */
   --brand-ink: 124 45 18;
   --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
 
   /* Primary action == brand, so there is one obvious next step per screen. */
   --primary: 249 115 22;
-  --on-primary: 255 255 255;
+  --on-primary: 26 12 3;        /* ink on orange, same as --on-brand */
   --primary-hover: 234 88 12;
 
   /* Accent + focus ring follow the brand rather than introducing a third hue. */
   --accent: 249 115 22;
   --accent-hover: 234 88 12;
   --accent-soft: 255 247 237;
-  --on-accent: 255 255 255;
+  --on-accent: 26 12 3;
   --ring: 249 115 22;
 
   /* No second accent on chrome. Success/warning/danger exist for status. */
@@ -92,6 +92,7 @@
   --neg: 220 38 38;             /* #DC2626 */
   --neg-soft: 254 242 242;
   --warn: 245 158 11;           /* #F59E0B */
+  --warn-ink: 180 83 9;         /* amber-700 — 4.84:1 on warn-soft; --warn itself is 2.07:1 there */
   --warn-soft: 255 251 235;
 
   /* Spacing — 4px base */
@@ -159,7 +160,7 @@
   --brand-panel: 9 11 17;
 
   --primary: 249 115 22;
-  --on-primary: 255 255 255;
+  --on-primary: 26 12 3;
   --primary-hover: 251 146 60;
 
   --accent: 251 146 60;
@@ -192,6 +193,7 @@
   --neg: 248 113 113;
   --neg-soft: 60 12 12;
   --warn: 251 191 36;
+  --warn-ink: 251 191 36;       /* already 9:1 on the dark soft */
   --warn-soft: 56 33 6;
 
   --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.5);
@@ -420,7 +422,7 @@
   }
   .ui-pill-warn {
     background-color: rgb(var(--warn-soft));
-    color: rgb(var(--warn));
+    color: rgb(var(--warn-ink));
   }
   .ui-pill-info {
     background-color: rgb(var(--info-soft));

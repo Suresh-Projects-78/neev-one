@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Lock, RotateCcw, Save } from 'lucide-react';
 
 import { getFeatureCatalog, setFeatures } from '../../api/features';
-import { PageHeader, Spinner } from '../../components/ui/Primitives';
+import { PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 import { useFeatures } from '../../permissions/useFeatures';
 
 const CATEGORY_ORDER = ['Operations', 'Accounting', 'Inventory', 'Governance', 'Communication', 'Data'];
@@ -102,10 +102,7 @@ export const FeatureSettings = () => {
 
   if (loading) {
     return (
-      <div className="ui-card p-8 flex items-center justify-center gap-3">
-        <Spinner />
-        <span className="ui-muted text-sm">Loading features…</span>
-      </div>
+      <SkeletonCard lines={4} />
     );
   }
 

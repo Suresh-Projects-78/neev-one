@@ -11,7 +11,7 @@ import {
   sendTestEmail,
   testEmailConnection,
 } from '../../api/email';
-import { EmptyState, PageHeader, Spinner, StatusPill } from '../../components/ui/Primitives';
+import { EmptyState, PageHeader, Spinner, StatusPill, SkeletonCard } from '../../components/ui/Primitives';
 
 const TABS = [
   { key: 'server', label: 'Mail server' },
@@ -127,10 +127,7 @@ export const EmailSettings = () => {
 
   if (loading) {
     return (
-      <div className="ui-card p-8 flex items-center justify-center gap-3">
-        <Spinner />
-        <span className="ui-muted text-sm">Loading email settings…</span>
-      </div>
+      <SkeletonCard lines={4} />
     );
   }
 

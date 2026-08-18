@@ -3,7 +3,7 @@ import { BadgeCheck, Check, Mail, Save, ShieldAlert, UserRound } from 'lucide-re
 
 import { getProfile, updateProfile } from '../../api/profile';
 import { resendVerification } from '../../api/email';
-import { PageHeader, Spinner } from '../../components/ui/Primitives';
+import { PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 
 /** The signed-in user's own details. */
 export const ProfileSettings = () => {
@@ -46,10 +46,7 @@ export const ProfileSettings = () => {
 
   if (loading) {
     return (
-      <div className="ui-card p-8 flex items-center justify-center gap-3">
-        <Spinner />
-        <span className="ui-muted text-sm">Loading your profile…</span>
-      </div>
+      <SkeletonCard lines={4} />
     );
   }
 

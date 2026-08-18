@@ -1191,13 +1191,13 @@ export const EstimatesList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Estimate #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Due</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Total</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Actions</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Estimate #</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Due</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -1223,14 +1223,14 @@ export const EstimatesList = ({
                     openEditEstimate(est);
                   }}
                 >
-                  <td className="ui-col-id px-6 py-4 font-medium">{est.number}</td>
-                  <td className="ui-col-entity px-6 py-4">{est.customerName || '-'}</td>
-                  <td className="ui-col-meta px-6 py-4">{whLabel}</td>
-                  <td className="ui-col-date px-6 py-4">{est.date || '-'}</td>
-                  <td className="ui-col-date px-6 py-4">{est.dueDate || '-'}</td>
-                  <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(est.total || 0, currentCompany)}</td>
+                  <td className="ui-col-id px-4 py-2.5 font-medium">{est.number}</td>
+                  <td className="ui-col-entity px-4 py-2.5">{est.customerName || '-'}</td>
+                  <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
+                  <td className="ui-col-date px-4 py-2.5">{est.date || '-'}</td>
+                  <td className="ui-col-date px-4 py-2.5">{est.dueDate || '-'}</td>
+                  <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(est.total || 0, currentCompany)}</td>
                   <td
-                    className="px-6 py-4 relative"
+                    className="px-4 py-2.5 relative"
                     onMouseDown={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
@@ -1396,12 +1396,12 @@ export const CreditNotesList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Credit #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Original Invoice</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Total</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Credit #</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Original Invoice</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -1418,12 +1418,12 @@ export const CreditNotesList = ({
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={cn.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-6 py-4 font-medium">{cn.number}</td>
-                    <td className="ui-col-meta px-6 py-4">{cn.originalInvoiceNumber || '-'}</td>
-                    <td className="ui-col-entity px-6 py-4">{cn.customerName || '-'}</td>
-                    <td className="ui-col-meta px-6 py-4">{whLabel}</td>
-                    <td className="ui-col-date px-6 py-4">{cn.date || '-'}</td>
-                    <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(cn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-id px-4 py-2.5 font-medium">{cn.number}</td>
+                    <td className="ui-col-meta px-4 py-2.5">{cn.originalInvoiceNumber || '-'}</td>
+                    <td className="ui-col-entity px-4 py-2.5">{cn.customerName || '-'}</td>
+                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
+                    <td className="ui-col-date px-4 py-2.5">{cn.date || '-'}</td>
+                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(cn.total || 0, currentCompany)}</td>
                   </tr>
                 );
               })

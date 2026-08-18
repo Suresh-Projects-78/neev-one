@@ -326,13 +326,13 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Document #</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Party</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Mode</th>
-              <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Reference</th>
-              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Amount</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Type</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Document #</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Party</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Mode</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Reference</th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -351,13 +351,13 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
                     if (typeof onView === 'function') onView(r);
                   }}
                 >
-                  <td className="ui-col-date px-6 py-4">{r.date || '-'}</td>
-                  <td className="ui-col-meta px-6 py-4">{r.typeLabel}</td>
-                  <td className="ui-col-id px-6 py-4 font-medium">{r.documentNumber || '-'}</td>
-                  <td className="ui-col-entity px-6 py-4">{r.partyName || '-'}</td>
-                  <td className="ui-col-meta px-6 py-4">{r.mode || '-'}</td>
-                  <td className="ui-col-meta px-6 py-4">{r.reference || '-'}</td>
-                  <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(r.amount || 0, currentCompany)}</td>
+                  <td className="ui-col-date px-4 py-2.5">{r.date || '-'}</td>
+                  <td className="ui-col-meta px-4 py-2.5">{r.typeLabel}</td>
+                  <td className="ui-col-id px-4 py-2.5 font-medium">{r.documentNumber || '-'}</td>
+                  <td className="ui-col-entity px-4 py-2.5">{r.partyName || '-'}</td>
+                  <td className="ui-col-meta px-4 py-2.5">{r.mode || '-'}</td>
+                  <td className="ui-col-meta px-4 py-2.5">{r.reference || '-'}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(r.amount || 0, currentCompany)}</td>
                 </tr>
               ))
             )}

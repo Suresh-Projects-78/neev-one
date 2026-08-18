@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Hash, Plus, Save } from 'lucide-react';
 
 import { apiFetch } from '../../api/http';
-import { EmptyState, PageHeader, Spinner } from '../../components/ui/Primitives';
+import { EmptyState, PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 
 const DOC_TYPES = [
   { key: 'INVOICE', label: 'Invoices' },
@@ -100,10 +100,7 @@ export const NumberingSettings = () => {
 
   if (loading) {
     return (
-      <div className="ui-card p-8 flex items-center justify-center gap-3">
-        <Spinner />
-        <span className="ui-muted text-sm">Loading numbering…</span>
-      </div>
+      <SkeletonCard lines={4} />
     );
   }
 
