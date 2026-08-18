@@ -40,7 +40,18 @@ export const useCountUp = (target, { duration = 650 } = {}) => {
     };
 
     frame.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame.current);
+    // Hidden tabs never fire animation frames, and a tile mounted while the
+    // tab is backgrounded would sit on 0 until the next target change. The
+    // timer is the guarantee the figure lands; the frames are only the show.
+    const settle = setTimeout(() => {
+      cancelAnimationFrame(frame.current);
+      from.current = end;
+      setValue(end);
+    }, duration + 100);
+    return () => {
+      cancelAnimationFrame(frame.current);
+      clearTimeout(settle);
+    };
   }, [end, duration, reduced]);
 
   return reduced ? end : value;

@@ -3,7 +3,9 @@ import { MoreVertical, Pencil, Trash2 , Link2, CheckCircle2} from 'lucide-react'
 
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
-import { formatMoney, round2 } from '../../utils/money';
+import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
+import { StatTile } from '../../components/ui/Primitives';
+import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -260,6 +262,19 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   }, [allTxns, view]);
 
   const uncategorisedCount = useMemo(() => allTxns.filter((t) => !isCategorised(t)).length, [allTxns]);
+
+  // Money through the selected account, for the overview tiles.
+  const flow = useMemo(() => {
+    let moneyIn = 0;
+    let moneyOut = 0;
+    for (const t of allTxns) {
+      const amt = Number(t.amount ?? 0);
+      if (!Number.isFinite(amt)) continue;
+      if (t.direction === 'OUT') moneyOut += amt;
+      else moneyIn += amt;
+    }
+    return { moneyIn, moneyOut, net: moneyIn - moneyOut };
+  }, [allTxns]);
   const categorisedCount = useMemo(() => allTxns.filter((t) => isCategorised(t)).length, [allTxns]);
 
   const ledgerById = useMemo(() => {
@@ -1812,6 +1827,47 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           </button>
         </div>
       </div>
+
+      {allTxns.length > 0 ? (
+        <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile
+            label="Money in"
+            amount={flow.moneyIn}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(flow.moneyIn, currentCompany)}
+            hint={selectedAccount ? selectedAccount.name : 'All accounts'}
+            tone="pos"
+            icon={ArrowDownLeft}
+            tint="cash"
+          />
+          <StatTile
+            label="Money out"
+            amount={flow.moneyOut}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(flow.moneyOut, currentCompany)}
+            hint={`${allTxns.length} transaction${allTxns.length === 1 ? '' : 's'}`}
+            tone="neg"
+            icon={ArrowUpRight}
+            tint="cash"
+          />
+          <StatTile
+            label="Net movement"
+            amount={flow.net}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(flow.net, currentCompany)}
+            hint="In less out, this account"
+            icon={Landmark}
+            tint="cash"
+          />
+          <StatTile
+            label="To categorise"
+            value={String(uncategorisedCount)}
+            hint={uncategorisedCount ? 'Lines awaiting a ledger' : 'Everything categorised'}
+            icon={ListTodo}
+            tint="cash"
+          />
+        </div>
+      ) : null}
 
       <input
         ref={uploadInputRef}

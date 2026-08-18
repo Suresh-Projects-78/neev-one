@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react';
 
-import { formatMoney, round2 } from '../../utils/money';
+import { Boxes, PackageX, TrendingDown, Warehouse } from 'lucide-react';
+
+import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
+import { StatTile } from '../../components/ui/Primitives';
 import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -315,8 +318,60 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
     w.print();
   };
 
+  const stockKpis = useMemo(() => {
+    let stockValue = 0;
+    let outOfStock = 0;
+    let negative = 0;
+    for (const it of items) {
+      const row = summaryByItemId.get(String(it.id));
+      const closing = Number(row?.closingQty ?? 0);
+      const rate = Number(it.purchasePrice ?? 0);
+      stockValue += closing * (Number.isFinite(rate) ? rate : 0);
+      if (closing === 0) outOfStock += 1;
+      if (closing < 0) negative += 1;
+    }
+    return { stockValue: round2(stockValue), outOfStock, negative };
+  }, [items, summaryByItemId]);
+
   return (
     <div className="space-y-6">
+      {items.length > 0 ? (
+        <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile
+            label="Stock value"
+            amount={stockKpis.stockValue}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(stockKpis.stockValue, currentCompany)}
+            hint="Closing quantity at purchase price"
+            icon={Warehouse}
+            tint="inventory"
+          />
+          <StatTile
+            label="Stock items"
+            value={String(items.length)}
+            hint="Tracked for quantity"
+            icon={Boxes}
+            tint="inventory"
+          />
+          <StatTile
+            label="Out of stock"
+            value={String(stockKpis.outOfStock)}
+            hint={stockKpis.outOfStock ? 'Closing quantity is zero' : 'Everything in stock'}
+            tone={stockKpis.outOfStock ? 'neg' : 'neutral'}
+            icon={PackageX}
+            tint="inventory"
+          />
+          <StatTile
+            label="Negative stock"
+            value={String(stockKpis.negative)}
+            hint={stockKpis.negative ? 'Sold below recorded stock — investigate' : 'None'}
+            tone={stockKpis.negative ? 'neg' : 'neutral'}
+            icon={TrendingDown}
+            tint="inventory"
+          />
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <div className="text-sm font-medium">View:</div>

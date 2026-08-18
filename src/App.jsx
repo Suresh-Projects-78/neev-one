@@ -970,6 +970,13 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     );
   }
 
+  const expenseFlow = (() => {
+    const active = expenses.filter((e) => String(e?.status || '') !== 'Draft');
+    const total = active.reduce((sum, e) => sum + Number(e?.total || 0), 0);
+    const paid = active.reduce((sum, e) => sum + Math.min(Number(e?.paidAmount || 0), Number(e?.total || 0)), 0);
+    return { total, paid, unpaid: Math.max(0, total - paid), count: active.length };
+  })();
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -982,6 +989,49 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
           <Plus size={20} /> New Expense
         </button>
       </div>
+
+      {expenseFlow.count > 0 ? (
+        <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatTile
+            label="Spent"
+            amount={expenseFlow.total}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(expenseFlow.total, currentCompany)}
+            hint={`Across ${expenseFlow.count} voucher${expenseFlow.count === 1 ? '' : 's'}`}
+            icon={Receipt}
+            tint="expenses"
+          />
+          <StatTile
+            label="Paid"
+            amount={expenseFlow.paid}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(expenseFlow.paid, currentCompany)}
+            hint={expenseFlow.total > 0 ? `${Math.round((expenseFlow.paid / expenseFlow.total) * 100)}% of spend` : 'Nothing yet'}
+            tone="pos"
+            icon={Check}
+            tint="expenses"
+          />
+          <StatTile
+            label="Unpaid"
+            amount={expenseFlow.unpaid}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(expenseFlow.unpaid, currentCompany)}
+            tone={expenseFlow.unpaid > 0 ? 'neg' : 'neutral'}
+            hint="Awaiting payment"
+            icon={FileText}
+            tint="expenses"
+          />
+          <StatTile
+            label="Average voucher"
+            amount={expenseFlow.count ? expenseFlow.total / expenseFlow.count : 0}
+            format={(v) => formatMoneyCompact(v, currentCompany)}
+            title={formatMoney(expenseFlow.count ? expenseFlow.total / expenseFlow.count : 0, currentCompany)}
+            hint="Spend per voucher"
+            icon={ClipboardList}
+            tint="expenses"
+          />
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-2 flex-wrap">
         {['All', 'Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'].map((s) => (
