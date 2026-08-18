@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { buildApp } from '../app.js';
 import { parseCsv, toCsv } from '../services/csv.js';
@@ -11,7 +11,18 @@ import { parseCsv, toCsv } from '../services/csv.js';
  * that a journal which does not balance can never reach the ledger.
  */
 
-const app = buildApp();
+/**
+ * One listening server for the whole file, not one per request.
+ *
+ * supertest given an Express app binds a fresh ephemeral-port listener for
+ * every single request; a run makes thousands of listen/close cycles, and
+ * the suite's residual flake was a raw Node-level 400 "Bad Request" that
+ * never reached Express (absent from both morgan and the anomaly log) —
+ * socket churn, not application behaviour. Given an already-listening
+ * server, supertest reuses it.
+ */
+const app = buildApp().listen(0);
+afterAll(() => new Promise((done) => app.close(done)));
 const rnd = () => Math.random().toString(36).slice(2, 8);
 
 type Ctx = { token: string; orgId: string; branchId: string };

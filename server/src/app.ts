@@ -56,6 +56,45 @@ export function buildApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(morgan('tiny'));
 
+  // Test-only anomaly capture. The suite's residual flake shows up as
+  // unexplained 401/403/404s that morgan records without context; this logs
+  // every non-2xx JSON response with the request's tenancy headers so a
+  // failing run can be diagnosed from the log instead of guessed at.
+  // Gated to vitest: zero cost in dev and production.
+  if (process.env.VITEST) {
+    const fs = require('node:fs') as typeof import('node:fs');
+    const path = require('node:path') as typeof import('node:path');
+    app.use((req, res, next) => {
+      const orig = res.json.bind(res);
+      (res as any).json = (body: unknown) => {
+        if (res.statusCode >= 400) {
+          try {
+            const logDir = path.join(process.cwd(), 'logs');
+            fs.mkdirSync(logDir, { recursive: true });
+            fs.appendFileSync(
+              path.join(logDir, 'test-anomalies.log'),
+              JSON.stringify({
+                ts: new Date().toISOString(),
+                method: req.method,
+                url: req.originalUrl,
+                status: res.statusCode,
+                body,
+                hasAuth: Boolean(req.headers.authorization),
+                org: req.headers['x-org-id'] || null,
+                branch: req.headers['x-branch-id'] || null,
+              }) + '\n',
+              'utf8'
+            );
+          } catch {
+            /* capture is best-effort */
+          }
+        }
+        return orig(body as any);
+      };
+      next();
+    });
+  }
+
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
   app.use('/api/auth', authRouter);
