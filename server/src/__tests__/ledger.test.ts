@@ -270,3 +270,52 @@ describe('control accounts', () => {
     expect(tb.body.totals.balanced).toBe(true);
   });
 });
+
+describe('account ledger drill-down', () => {
+  it('returns dated lines with a running balance for one account', async () => {
+    const C = await makeTenant('tenant-drill');
+    await request(app)
+      .post(`/api/orgs/${C.orgId}/invoices`)
+      .set(auth(C))
+      .send(invoicePayload({ date: '2026-08-01', total: 1180 }))
+      .expect(201);
+    await request(app)
+      .post(`/api/orgs/${C.orgId}/invoices`)
+      .set(auth(C))
+      .send(invoicePayload({ date: '2026-08-10', total: 1180 }))
+      .expect(201);
+
+    const tb = await request(app).get(`/api/orgs/${C.orgId}/ledger/trial-balance`).set(auth(C)).expect(200);
+    const ar = tb.body.rows.find((r: any) => /receivable/i.test(r.name));
+    expect(ar).toBeTruthy();
+
+    const res = await request(app)
+      .get(`/api/orgs/${C.orgId}/ledger/accounts/${ar.accountId}/lines`)
+      .set(auth(C))
+      .expect(200);
+
+    expect(res.body.account.id).toBe(ar.accountId);
+    expect(res.body.rows.length).toBe(2);
+    // oldest first, running balance accumulates the debits
+    expect(res.body.rows[0].date).toBe('2026-08-01');
+    expect(res.body.rows[0].running).toBeCloseTo(1180, 2);
+    expect(res.body.rows[1].running).toBeCloseTo(2360, 2);
+
+    // date filter narrows to the second invoice only
+    const filtered = await request(app)
+      .get(`/api/orgs/${C.orgId}/ledger/accounts/${ar.accountId}/lines?from=2026-08-05`)
+      .set(auth(C))
+      .expect(200);
+    expect(filtered.body.rows.length).toBe(1);
+    expect(filtered.body.rows[0].date).toBe('2026-08-10');
+  });
+
+  it('rejects an account from another org', async () => {
+    const tb = await request(app).get(`/api/orgs/${A.orgId}/ledger/trial-balance`).set(auth(A)).expect(200);
+    const anyAccount = tb.body.rows[0];
+    await request(app)
+      .get(`/api/orgs/${B.orgId}/ledger/accounts/${anyAccount.accountId}/lines`)
+      .set(auth(B))
+      .expect(404);
+  });
+});

@@ -75,6 +75,72 @@ ledgerRouter.get('/orgs/:orgId/ledger/trial-balance', requirePermission(MODULE, 
   res.json(result);
 });
 
+/**
+ * One account's ledger: every posted line, oldest first, with a running
+ * balance — the drill-down a trial balance row opens into. REVERSED entries
+ * are included alongside POSTED because their contras are, and hiding one
+ * side of a reversal would make the running balance lie.
+ */
+ledgerRouter.get('/orgs/:orgId/ledger/accounts/:ledgerAccountId/lines', requirePermission(MODULE, PermissionAction.VIEW, SUB), async (req, res) => {
+  if (!requireOrgMatch(req, res)) return;
+
+  const account = await prisma.ledgerAccount.findFirst({
+    where: { id: String(req.params.ledgerAccountId), orgId: req.tenant!.orgId },
+    select: { id: true, code: true, name: true, accountType: true },
+  });
+  if (!account) {
+    res.status(404).json({ error: 'Account not found' });
+    return;
+  }
+
+  const from = req.query.from ? String(req.query.from) : undefined;
+  const to = req.query.to ? String(req.query.to) : undefined;
+  const allBranches = String(req.query.allBranches || '') === 'true';
+
+  const lines = await prisma.journalLine.findMany({
+    where: {
+      ledgerAccountId: account.id,
+      entry: {
+        accountId: req.tenant!.accountId,
+        orgId: req.tenant!.orgId,
+        ...(allBranches ? {} : { branchId: req.tenant!.branchId }),
+        status: { in: ['POSTED', 'REVERSED'] },
+        ...(from || to
+          ? { date: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } }
+          : {}),
+      },
+    },
+    orderBy: [{ entry: { date: 'asc' } }, { id: 'asc' }],
+    take: 1000,
+    include: {
+      entry: {
+        select: { id: true, entryNo: true, date: true, narration: true, sourceDocType: true, sourceDocId: true, status: true },
+      },
+    },
+  });
+
+  let running = 0;
+  const rows = lines.map((l) => {
+    const debit = Number(l.debit);
+    const credit = Number(l.credit);
+    running += debit - credit;
+    return {
+      id: l.id,
+      date: l.entry.date,
+      entryNo: l.entry.entryNo,
+      narration: l.description || l.entry.narration || '',
+      sourceDocType: l.entry.sourceDocType,
+      sourceDocId: l.entry.sourceDocId,
+      status: l.entry.status,
+      debit,
+      credit,
+      running,
+    };
+  });
+
+  res.json({ account, rows, truncated: lines.length === 1000 });
+});
+
 ledgerRouter.get('/orgs/:orgId/ledger/entries', requirePermission(MODULE, PermissionAction.VIEW, SUB), async (req, res) => {
   if (!requireOrgMatch(req, res)) return;
   const take = Math.min(200, Math.max(1, Number(req.query.limit || 50)));

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, RefreshCw } from 'lucide-react';
+import { BookOpen, RefreshCw, X } from 'lucide-react';
 
-import { getTrialBalance } from '../../api/ledger';
+import { getAccountLedgerLines, getTrialBalance } from '../../api/ledger';
 import { EmptyState, PageHeader, Spinner } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
 
@@ -17,12 +17,37 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
   const [allBranches, setAllBranches] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  // Compare: the same-length window immediately before [from, to].
+  const [compare, setCompare] = useState(false);
+  const [prevData, setPrevData] = useState(null);
+  // Drill-down: the account whose journal lines are open below the table.
+  const [drill, setDrill] = useState(null); // { account, rows, truncated } | { loading, name } | null
+
+  const priorWindow = (from, to) => {
+    const f = new Date(`${from}T00:00:00Z`);
+    const t = new Date(`${to}T00:00:00Z`);
+    if (Number.isNaN(f.getTime()) || Number.isNaN(t.getTime()) || t < f) return null;
+    const days = Math.round((t - f) / 86_400_000) + 1;
+    const pf = new Date(f.getTime() - days * 86_400_000);
+    const pt = new Date(f.getTime() - 86_400_000);
+    return { from: pf.toISOString().slice(0, 10), to: pt.toISOString().slice(0, 10) };
+  };
 
   const load = (scope = allBranches) => {
     setLoading(true);
     setError('');
-    return getTrialBalance(scope)
-      .then(setData)
+    const wantCompare = compare && fromDate && toDate;
+    const prior = wantCompare ? priorWindow(fromDate, toDate) : null;
+    return Promise.all([
+      getTrialBalance(scope, fromDate, toDate),
+      prior ? getTrialBalance(scope, prior.from, prior.to) : Promise.resolve(null),
+    ])
+      .then(([cur, prev]) => {
+        setData(cur);
+        setPrevData(prev);
+      })
       .catch((e) => setError(String(e?.message || e)))
       .finally(() => setLoading(false));
   };
@@ -30,7 +55,21 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
   useEffect(() => {
     load(allBranches);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allBranches]);
+  }, [allBranches, fromDate, toDate, compare]);
+
+  const openDrill = (row) => {
+    setDrill({ loading: true, name: row.name });
+    getAccountLedgerLines(row.accountId, { from: fromDate, to: toDate, allBranches })
+      .then((res) => setDrill(res))
+      .catch((e) => setDrill({ error: String(e?.message || e), name: row.name }));
+  };
+
+  /** Closing balance of one account in the prior window, signed Dr-positive. */
+  const prevClosing = (accountId) => {
+    const r = (prevData?.rows || []).find((x) => x.accountId === accountId);
+    if (!r) return null;
+    return (r.closingDebit || 0) - (r.closingCredit || 0);
+  };
 
   const totals = data?.totals;
 
@@ -41,8 +80,35 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
         description="From posted journal entries. Debits and credits must agree exactly."
         actions={
           <>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="ui-input !h-9 !min-h-0 w-auto text-sm"
+              aria-label="From date"
+            />
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="ui-input !h-9 !min-h-0 w-auto text-sm"
+              aria-label="To date"
+            />
+            <label
+              className={`flex items-center gap-2 text-sm ${fromDate && toDate ? 'cursor-pointer' : 'opacity-50'}`}
+              title={fromDate && toDate ? 'Compare with the previous period of the same length' : 'Pick a date range first'}
+            >
+              <input
+                type="checkbox"
+                className="ui-checkbox"
+                checked={compare}
+                disabled={!fromDate || !toDate}
+                onChange={(e) => setCompare(e.target.checked)}
+              />
+              Compare
+            </label>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input type="checkbox" checked={allBranches} onChange={(e) => setAllBranches(e.target.checked)} />
+              <input type="checkbox" className="ui-checkbox" checked={allBranches} onChange={(e) => setAllBranches(e.target.checked)} />
               All branches
             </label>
             <button type="button" className="ui-btn ui-btn-secondary" onClick={() => load()}>
@@ -88,11 +154,22 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                     <th scope="col" className="ui-num">Debit</th>
                     <th scope="col" className="ui-num">Credit</th>
                     <th scope="col" className="ui-num">Closing</th>
+                    {prevData ? <th scope="col" className="ui-num">Prior period</th> : null}
+                    {prevData ? <th scope="col" className="ui-num">Change</th> : null}
                   </tr>
                 </thead>
                 <tbody>
-                  {data.rows.map((r) => (
-                    <tr key={r.accountId}>
+                  {data.rows.map((r) => {
+                    const cur = (r.closingDebit || 0) - (r.closingCredit || 0);
+                    const prev = prevData ? prevClosing(r.accountId) : null;
+                    const delta = prev === null ? cur : cur - prev;
+                    return (
+                    <tr
+                      key={r.accountId}
+                      className="cursor-pointer"
+                      onClick={() => openDrill(r)}
+                      title={`Open the ${r.name} ledger`}
+                    >
                       <td className="ui-col-id">{r.code}</td>
                       <td className="ui-col-entity">{r.name}</td>
                       <td className="ui-col-meta ui-muted text-xs">{r.accountType}</td>
@@ -105,8 +182,23 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                           ? `${formatMoney(r.closingCredit, currentCompany)} Cr`
                           : '—'}
                       </td>
+                      {prevData ? (
+                        <td className="ui-col-amount">
+                          {prev === null
+                            ? '—'
+                            : prev >= 0
+                            ? `${formatMoney(prev, currentCompany)} Dr`
+                            : `${formatMoney(-prev, currentCompany)} Cr`}
+                        </td>
+                      ) : null}
+                      {prevData ? (
+                        <td className="ui-col-amount">
+                          {Math.abs(delta) < 0.005 ? '—' : `${delta > 0 ? '+' : '−'}${formatMoney(Math.abs(delta), currentCompany)}`}
+                        </td>
+                      ) : null}
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -131,6 +223,70 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
               </span>
             )}
           </div>
+
+          {drill ? (
+            <section className="ui-card overflow-hidden ui-in" aria-label="Account ledger">
+              <header
+                className="flex items-center justify-between gap-3 px-5 py-3"
+                style={{ borderBottom: '1px solid rgb(var(--border))' }}
+              >
+                <div>
+                  <h3 className="ui-title text-sm">
+                    {drill.account ? `${drill.account.code} · ${drill.account.name}` : drill.name}
+                  </h3>
+                  <p className="ui-caption">
+                    {drill.loading
+                      ? 'Loading…'
+                      : drill.error
+                      ? drill.error
+                      : `${drill.rows.length} posted line${drill.rows.length === 1 ? '' : 's'}${
+                          fromDate || toDate ? ' in the selected range' : ''
+                        }${drill.truncated ? ' (first 1000 shown)' : ''}`}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setDrill(null)} className="ui-icon-btn" aria-label="Close account ledger">
+                  <X size={15} aria-hidden="true" />
+                </button>
+              </header>
+
+              {drill.rows?.length ? (
+                <div className="overflow-x-auto">
+                  <table className="ui-table w-full text-sm">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Entry</th>
+                        <th>Narration</th>
+                        <th className="ui-num">Debit</th>
+                        <th className="ui-num">Credit</th>
+                        <th className="ui-num">Running</th>
+                      </tr>
+                    </thead>
+                    <tbody className="ui-rows">
+                      {drill.rows.map((l) => (
+                        <tr key={l.id}>
+                          <td className="ui-col-date">{l.date}</td>
+                          <td className="ui-col-id">{l.entryNo}</td>
+                          <td className="ui-col-meta max-w-[24rem] truncate" title={l.narration}>
+                            {l.narration || l.sourceDocType || '—'}
+                          </td>
+                          <td className="ui-col-amount">{l.debit ? formatMoney(l.debit, currentCompany) : '—'}</td>
+                          <td className="ui-col-amount">{l.credit ? formatMoney(l.credit, currentCompany) : '—'}</td>
+                          <td className="ui-col-amount">
+                            {l.running >= 0
+                              ? `${formatMoney(l.running, currentCompany)} Dr`
+                              : `${formatMoney(-l.running, currentCompany)} Cr`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : !drill.loading && !drill.error ? (
+                <EmptyState icon={BookOpen} title="No lines in this range" description="Widen the dates to see history." />
+              ) : null}
+            </section>
+          ) : null}
         </>
       )}
     </div>
