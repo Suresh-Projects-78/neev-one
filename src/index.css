@@ -575,6 +575,22 @@
     position: fixed;
   }
 
+  /* --- 3D tilt ---
+     The wrapper eases the spring-back; while the pointer moves, useTilt sets
+     an inline transform that overrides the transition target. preserve-3d
+     lets .ui-depth-* children ride above the surface for real parallax. */
+  .ui-tilt3d {
+    transform-style: preserve-3d;
+    transition: transform 350ms var(--ease-out);
+    will-change: transform;
+  }
+  .ui-depth-1 { transform: translateZ(18px); }
+  .ui-depth-2 { transform: translateZ(36px); }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-tilt3d { transition: none; }
+    .ui-depth-1, .ui-depth-2 { transform: none; }
+  }
+
   .ui-float {
     animation: ui-hover-float 7s ease-in-out infinite;
   }

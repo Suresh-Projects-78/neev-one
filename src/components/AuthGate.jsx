@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LandingPage from '../features/marketing/LandingPage';
 import AuthIllustration from './AuthIllustration';
+import { useTilt } from './ui/useTilt';
 
 /* Inline marks rather than an icon package: this screen renders before the app
    shell loads, and the two glyphs it needs are not worth the import. Both are
@@ -40,6 +41,7 @@ const AuthGate = ({ onAuth }) => {
   const [success, setSuccess] = useState('');
   const [signupToken, setSignupToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { ref: illusRef, onPointerMove: illusMove, onPointerLeave: illusLeave } = useTilt({ maxDeg: 7, scale: 1.02 });
 
   // Backend base URL.
   // In dev, Vite proxies `/api` to the backend (see vite.config.js).
@@ -451,7 +453,12 @@ const AuthGate = ({ onAuth }) => {
 
             {/* Fills whatever height is left between the copy and the footer,
                 shrinking on short screens instead of pushing the footer out. */}
-            <div className="flex-1 min-h-[3rem] mt-8 flex items-end">
+            <div
+              ref={illusRef}
+              onPointerMove={illusMove}
+              onPointerLeave={illusLeave}
+              className="ui-tilt3d flex-1 min-h-[3rem] mt-8 flex items-end"
+            >
               <AuthIllustration className="h-[clamp(8rem,24vh,17rem)] w-auto max-w-full select-none" />
             </div>
 

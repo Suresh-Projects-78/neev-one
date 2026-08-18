@@ -17,6 +17,7 @@ import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import ChartCard from '../../components/charts/ChartCard';
 import { useChartTheme } from '../../components/charts/useChartTheme';
 import { useFeatures } from '../../permissions/useFeatures';
+import { useTilt } from '../../components/ui/useTilt';
 /**
  * ECharts is ~2 MB unminified and belongs nowhere near first paint. Loading the
  * chart module on demand keeps the initial bundle for the shell and the tables,
@@ -118,6 +119,9 @@ function DeltaChip({ value, invert = false }) {
  */
 function MetricCard({ label, value, company, deltaValue, invertDelta, hint, series = [], actionLabel, onAction }) {
   const counted = useCountUp(value);
+  // Three degrees, no more: the figure lifts 18px above the card so the
+  // number — the point of the tile — is what the depth showcases.
+  const { ref: tiltRef, onPointerMove: tiltMove, onPointerLeave: tiltLeave } = useTilt({ maxDeg: 3, scale: 1.008 });
 
   const path = useMemo(() => {
     if (series.length < 2) return '';
@@ -129,12 +133,17 @@ function MetricCard({ label, value, company, deltaValue, invertDelta, hint, seri
   }, [series]);
 
   return (
-    <article className="ui-card ui-hover-raise p-6 flex flex-col">
+    <article
+      ref={tiltRef}
+      onPointerMove={tiltMove}
+      onPointerLeave={tiltLeave}
+      className="ui-tilt3d ui-card ui-hover-raise p-6 flex flex-col"
+    >
       <h3 className="ui-card-label">{label}</h3>
 
       {/* Compact at a glance; the exact figure is one hover away and lives in
           full in the tables below. */}
-      <p className="ui-kpi mt-3" title={formatMoney(counted, company)}>
+      <p className="ui-kpi ui-depth-1 mt-3" title={formatMoney(counted, company)}>
         {formatMoneyCompact(counted, company)}
       </p>
 

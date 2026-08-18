@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { useTheme } from '../../components/ui/useTheme';
+import { useTilt } from '../../components/ui/useTilt';
 
 /**
  * The public front page — requirement: a landing page.
@@ -77,6 +78,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
   // different key, so a toggle on this page would not have followed the user
   // into the app.
   const { theme, toggle: toggleTheme } = useTheme();
+  const { ref: specimenRef, onPointerMove: specimenMove, onPointerLeave: specimenLeave } = useTilt({ maxDeg: 4, scale: 1.01 });
 
   return (
     <div className="min-h-dvh" style={{ backgroundColor: 'rgb(var(--app-bg))' }}>
@@ -161,14 +163,23 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
             </p>
           </div>
 
-          {/* A specimen of the thing itself, rather than a stock screenshot. */}
-          <div className="mt-14 ui-card overflow-hidden ui-in" style={{ boxShadow: 'var(--shadow-lift)' }}>
+          {/* A specimen of the thing itself, rather than a stock screenshot.
+              It tilts a few degrees toward the cursor — a physical object on
+              the desk, not a flat screenshot; the Balanced badge rides 36px
+              above the surface so the parallax is visible. */}
+          <div
+            ref={specimenRef}
+            onPointerMove={specimenMove}
+            onPointerLeave={specimenLeave}
+            className="ui-tilt3d mt-14 ui-card overflow-hidden ui-in"
+            style={{ boxShadow: 'var(--shadow-lift)' }}
+          >
             <div
               className="flex items-center justify-between gap-3 border-b px-4 py-3"
               style={{ borderColor: 'rgb(var(--border))', backgroundColor: 'rgb(var(--surface-sunken))' }}
             >
               <span className="text-sm font-semibold">Trial balance</span>
-              <span className="ui-badge ui-badge-brand">
+              <span className="ui-badge ui-badge-brand ui-depth-2">
                 <BadgeCheck size={13} aria-hidden="true" /> Balanced
               </span>
             </div>
