@@ -93,7 +93,7 @@ import {
 import RecordReceiptForm from './features/payments/RecordReceiptForm';
 import RecordDisbursementForm from './features/payments/RecordDisbursementForm';
 
-import InvoicePreview from './features/sales/InvoicePreview';
+const InvoicePreview = lazy(() => import('./features/sales/InvoicePreview'));
 import AuthGate from './components/AuthGate';
 import {
   CreditNoteForm,
@@ -112,7 +112,7 @@ import {
   PurchaseOrderForm,
   PurchaseOrdersList,
 } from './features/purchase';
-import CashBankModule from './features/cashBank/CashBankModule';
+const CashBankModule = lazy(() => import('./features/cashBank/CashBankModule'));
 import { AccountGroupForm } from './features/accounts/AccountGroupTypeForms';
 import { SettingsWarehousesBranches } from './features/admin/SettingsWarehousesBranches';
 import { SettingsUsersRoles } from './features/admin/SettingsUsersRoles';
@@ -123,7 +123,7 @@ import { SettingsRoles } from './features/admin/SettingsRoles';
 import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
-import { PageHeader, StatTile, ThemeToggle } from './components/ui/Primitives';
+import { PageHeader, StatTile, ThemeToggle, SkeletonStats } from './components/ui/Primitives';
 import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
@@ -134,8 +134,8 @@ import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
 import NumberingSettings from './features/settings/NumberingSettings';
 import CurrencySettings from './features/settings/CurrencySettings';
-import BatchSerialManager from './features/inventory/BatchSerialManager';
-import ImportCenter from './features/data/ImportCenter';
+const BatchSerialManager = lazy(() => import('./features/inventory/BatchSerialManager'));
+const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
 import ChartCard from './components/charts/ChartCard';
 
@@ -11515,10 +11515,10 @@ const AppShell = () => {
                   Back
                 </button>
               </div>
-              {page}
+              <Suspense fallback={<SkeletonStats count={4} />}>{page}</Suspense>
             </div>
           ) : (
-            page
+            <Suspense fallback={<SkeletonStats count={4} />}>{page}</Suspense>
           )}
         </main>
       </div>

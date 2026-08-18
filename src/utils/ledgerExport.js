@@ -1,5 +1,11 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+/**
+ * jsPDF loads on demand: it is ~100KB of gzip that only matters the moment
+ * someone exports, and it was riding in the first-paint bundle.
+ */
+const loadPdf = async () => {
+  const [{ jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+  return { jsPDF, autoTable };
+};
 
 const safeNum = (n) => {
   const x = Number(n ?? 0);
@@ -127,7 +133,7 @@ export const exportLedgerToExcel = ({
   URL.revokeObjectURL(url);
 };
 
-export const exportLedgerToPdf = ({
+export const exportLedgerToPdf = async ({
   companyName,
   ledgerName,
   openingBalance,
@@ -136,6 +142,7 @@ export const exportLedgerToPdf = ({
   fileName,
   columns,
 }) => {
+  const { jsPDF, autoTable } = await loadPdf();
   const cols = normalizeColumns(columns);
   const orientation = cols.length > 8 ? 'landscape' : 'portrait';
   const doc = new jsPDF({ orientation, unit: 'pt', format: 'a4' });
