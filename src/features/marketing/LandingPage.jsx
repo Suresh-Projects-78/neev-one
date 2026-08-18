@@ -129,7 +129,10 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
 
       {/* --- hero ------------------------------------------------------- */}
       <section id="top" className="ui-hero-wash relative overflow-hidden">
-        <div className="ui-container ui-section">
+        {/* Drifting brand light behind the hero. Decorative; base colour is
+            still --app-bg underneath. */}
+        <div className="ui-ambient" aria-hidden="true" />
+        <div className="ui-container ui-section relative">
           <div className="max-w-3xl ui-stagger">
             <p className="ui-eyebrow">GST accounting · India</p>
 

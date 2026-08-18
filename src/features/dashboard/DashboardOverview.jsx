@@ -15,6 +15,7 @@ import {
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import ChartCard from '../../components/charts/ChartCard';
+import { useChartTheme } from '../../components/charts/useChartTheme';
 /**
  * ECharts is ~2 MB unminified and belongs nowhere near first paint. Loading the
  * chart module on demand keeps the initial bundle for the shell and the tables,
@@ -316,14 +317,39 @@ export default function DashboardOverview({
   onOpenBranches,
   branchFilterLabel = 'All',
   invoices: invoicesProp = null,
+  onOpenPurchases,
 }) {
   const [rangeKey, setRangeKey] = useState('90');
   const range = RANGES.find((r) => r.key === rangeKey) || RANGES[1];
+  // Chart slice colours resolved to concrete rgb() strings: ECharts writes
+  // them into SVG *attributes*, where a var() reference is not reliably
+  // resolved across browsers. The hook also re-resolves on theme switch.
+  const chartTheme = useChartTheme();
 
   const allInvoices = useMemo(() => {
     if (Array.isArray(invoicesProp)) return invoicesProp;
     return (Array.isArray(db?.invoices) ? db.invoices : []).filter((i) => i.companyId === currentCompany?.id);
   }, [invoicesProp, db, currentCompany]);
+
+  /**
+   * Money out: purchase bills and expense vouchers, folded into one stream.
+   *
+   * The dashboard used to ingest only the sales side, which answers "what did
+   * we bill" but not "what did it cost" — half of the proprietor's question.
+   * Drafts are excluded: a draft is an intention, not a liability.
+   */
+  const allOutflows = useMemo(() => {
+    const pick = (rows, fallbackName) =>
+      (Array.isArray(rows) ? rows : [])
+        .filter((r) => r.companyId === currentCompany?.id)
+        .filter((r) => String(r.status || '').toLowerCase() !== 'draft')
+        .map((r) => ({
+          date: r.date,
+          total: num(r.total),
+          vendorName: String(r.vendorName || '').trim() || fallbackName,
+        }));
+    return [...pick(db?.bills, 'Unnamed vendor'), ...pick(db?.expenses, 'Expense')];
+  }, [db, currentCompany]);
 
   // Pinned once per mount rather than read during render: "now" moving between
   // renders makes the bucketing impure, and every memo below depends on it.
@@ -347,6 +373,23 @@ export default function DashboardOverview({
     return { current: cur, previous: prev };
   }, [allInvoices, range, now]);
 
+  /** The same window, applied to the money-out stream. */
+  const { currentOut, previousOut } = useMemo(() => {
+    if (!range.days) return { currentOut: allOutflows, previousOut: [] };
+    const from = now - range.days * DAY;
+    const prevFrom = from - range.days * DAY;
+    const cur = [];
+    const prev = [];
+    for (const row of allOutflows) {
+      const d = toDate(row.date);
+      if (!d) continue;
+      const t = d.getTime();
+      if (t >= from) cur.push(row);
+      else if (t >= prevFrom) prev.push(row);
+    }
+    return { currentOut: cur, previousOut: prev };
+  }, [allOutflows, range, now]);
+
   const sum = (rows, fn) => rows.reduce((s, r) => s + fn(r), 0);
 
   const billed = sum(current, (i) => num(i.total));
@@ -356,6 +399,9 @@ export default function DashboardOverview({
   const prevBilled = sum(previous, (i) => num(i.total));
   const prevCollected = sum(previous, (i) => num(i.paidAmount));
   const prevOutstanding = Math.max(0, prevBilled - prevCollected);
+
+  const spent = sum(currentOut, (r) => r.total);
+  const prevSpent = sum(previousOut, (r) => r.total);
 
   /** Six buckets across the window, so the shape is visible without noise. */
   const buckets = useMemo(() => {
@@ -388,10 +434,10 @@ export default function DashboardOverview({
 
   const aging = useMemo(() => {
     const b = [
-      { label: 'Not yet due', amount: 0, color: 'rgb(var(--pos))' },
-      { label: '1–30 days', amount: 0, color: 'rgb(var(--warn))' },
-      { label: '31–60 days', amount: 0, color: 'rgb(var(--accent))' },
-      { label: 'Over 60 days', amount: 0, color: 'rgb(var(--neg))' },
+      { label: 'Not yet due', amount: 0, color: chartTheme.pos },
+      { label: '1–30 days', amount: 0, color: chartTheme.warn },
+      { label: '31–60 days', amount: 0, color: chartTheme.accent },
+      { label: 'Over 60 days', amount: 0, color: chartTheme.neg },
     ];
 
     for (const inv of current) {
@@ -405,7 +451,7 @@ export default function DashboardOverview({
       else b[3].amount += due;
     }
     return b;
-  }, [current, now]);
+  }, [current, now, chartTheme]);
 
   const topCustomers = useMemo(() => {
     const byName = new Map();
@@ -451,6 +497,38 @@ export default function DashboardOverview({
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
   }, [current, now]);
+
+  /** Spend, in the same six slots the income chart uses, so the two compare. */
+  const spendBuckets = useMemo(() => {
+    if (!currentOut.length) return [];
+    const days = range.days || 365;
+    const slots = 6;
+    const width = (days * DAY) / slots;
+    const start = now - days * DAY;
+    const out = Array.from({ length: slots }, (_, i) => ({
+      label: new Date(start + i * width).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
+      value: 0,
+    }));
+    for (const row of currentOut) {
+      const d = toDate(row.date);
+      if (!d) continue;
+      const idx = Math.min(slots - 1, Math.max(0, Math.floor((d.getTime() - start) / width)));
+      out[idx].value += row.total;
+    }
+    return out;
+  }, [currentOut, range, now]);
+
+  const topVendors = useMemo(() => {
+    const byName = new Map();
+    for (const row of currentOut) {
+      if (row.total <= 0) continue;
+      byName.set(row.vendorName, (byName.get(row.vendorName) || 0) + row.total);
+    }
+    return [...byName.entries()]
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [currentOut]);
 
   const sparkOf = (key) => buckets.map((b) => b[key]);
   const collectedPct = billed > 0 ? Math.round((collected / billed) * 100) : 0;
@@ -665,6 +743,81 @@ export default function DashboardOverview({
                     formatter={(v) => `${Math.round(v)}d`}
                   />
                 </Suspense>
+              )}
+            </ChartCard>
+
+            {/* --- money out ---
+                Bills and expense vouchers, in the same window and the same
+                six buckets as the income charts, so the rows compare. */}
+            <ChartCard
+              title="Spent by period"
+              subtitle={
+                prevSpent > 0
+                  ? `${formatMoneyCompact(spent, currentCompany)} this period, ${formatMoneyCompact(prevSpent, currentCompany)} last`
+                  : `Bills and expenses, last ${range.label.toLowerCase()}`
+              }
+              actionLabel="View purchases"
+              onAction={onOpenPurchases}
+            >
+              {spendBuckets.every((b) => b.value <= 0) ? (
+                <EmptyState icon={Receipt} title="Nothing spent" description="Bills and expenses land here as you record them." />
+              ) : (
+                <Suspense fallback={<ChartFallback height={240} />}>
+                  <PeriodBars
+                    data={spendBuckets}
+                    height={240}
+                    tone="deep"
+                    formatter={(v) => formatMoneyCompact(v, currentCompany)}
+                  />
+                </Suspense>
+              )}
+            </ChartCard>
+
+            <ChartCard
+              title="Where the money goes"
+              subtitle="Share of spend, by vendor"
+              actionLabel="View purchases"
+              onAction={onOpenPurchases}
+            >
+              {topVendors.length === 0 ? (
+                <EmptyState icon={Receipt} title="No spend yet" description="Vendor share appears once bills are recorded." />
+              ) : (
+                <Suspense fallback={<ChartFallback height={300} />}>
+                  <CompositionPie
+                    data={topVendors}
+                    height={200}
+                    formatter={(v) => formatMoneyCompact(v, currentCompany)}
+                  />
+                </Suspense>
+              )}
+            </ChartCard>
+
+            <ChartCard title="In against out" subtitle="Collected vs spent this period">
+              {collected <= 0 && spent <= 0 ? (
+                <EmptyState icon={Wallet} title="No movement" description="Collections and spend compare here." />
+              ) : (
+                <>
+                  <Suspense fallback={<ChartFallback height={200} />}>
+                    <DonutChart
+                      data={[
+                        { name: 'Collected', value: collected, color: chartTheme.pos },
+                        { name: 'Spent', value: spent, color: chartTheme.brandDeep },
+                      ]}
+                      centerLabel={collected - spent >= 0 ? 'Net in' : 'Net out'}
+                      centerValue={formatMoneyCompact(Math.abs(collected - spent), currentCompany)}
+                      height={200}
+                    />
+                  </Suspense>
+                  <Suspense fallback={<ChartFallback height={64} />}>
+                    <ChartLegend
+                      rows={[
+                        { name: 'Collected', value: collected, color: chartTheme.pos },
+                        { name: 'Spent', value: spent, color: chartTheme.brandDeep },
+                      ]}
+                      formatter={(v) => formatMoneyCompact(v, currentCompany)}
+                    />
+                  </Suspense>
+                </>
               )}
             </ChartCard>
           </div>

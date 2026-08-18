@@ -9907,6 +9907,7 @@ const AppShell = () => {
             onOpenInvoices={() => setActive('invoices')}
             onOpenReceipts={() => setActive('receipts')}
             onOpenCustomers={() => setActive('customers')}
+            onOpenPurchases={() => setActive('purchaseOverview')}
           />
         );
       case 'sales':
@@ -10656,6 +10657,10 @@ const AppShell = () => {
 
   return (
     <div className="min-h-dvh" style={{ backgroundColor: 'rgb(var(--app-bg))' }}>
+      {/* Ambient brand light for the whole shell: fixed so it stays put while
+          content scrolls, quiet so tables stay tables. The background colour
+          itself is untouched — this paints over --app-bg, never replaces it. */}
+      <div className="ui-ambient ui-ambient-quiet ui-ambient-fixed" aria-hidden="true" />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 ui-btn ui-btn-primary"

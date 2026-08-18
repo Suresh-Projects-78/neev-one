@@ -236,8 +236,11 @@ export function ChartLegend({ rows = [], total, formatter }) {
  * this size compete with them. Values arrive on hover rather than as permanent
  * labels, which keeps a twelve-bar series readable.
  */
-export function PeriodBars({ data = [], height = 240, formatter }) {
+export function PeriodBars({ data = [], height = 240, formatter, tone = 'brand' }) {
   const t = useChartTheme();
+  // Money-in charts keep the brand orange; money-out charts take the deeper
+  // accent so two bar charts on one dashboard never read as the same series.
+  const barColor = tone === 'deep' ? t.brandDeep : t[tone] || t.brand;
 
   const option = useMemo(
     () => ({
@@ -270,12 +273,12 @@ export function PeriodBars({ data = [], height = 240, formatter }) {
           type: 'bar',
           data: data.map((d) => d.value),
           barMaxWidth: 26,
-          itemStyle: { color: t.brand, borderRadius: [6, 6, 0, 0] },
-          emphasis: { itemStyle: { color: t.brand, opacity: 0.85 } },
+          itemStyle: { color: barColor, borderRadius: [6, 6, 0, 0] },
+          emphasis: { itemStyle: { color: barColor, opacity: 0.85 } },
         },
       ],
     }),
-    [t, data, formatter]
+    [t, data, formatter, barColor]
   );
 
   return <ReactECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} notMerge />;

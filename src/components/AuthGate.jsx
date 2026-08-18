@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import LandingPage from '../features/marketing/LandingPage';
+import AuthIllustration from './AuthIllustration';
 
 /* Inline marks rather than an icon package: this screen renders before the app
    shell loads, and the two glyphs it needs are not worth the import. Both are
@@ -406,7 +407,7 @@ const AuthGate = ({ onAuth }) => {
             }}
           />
 
-          <div className="relative z-10 p-12 flex flex-col justify-between w-full text-white">
+          <div className="relative z-10 p-12 flex flex-col w-full text-white">
             <div>
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-xl grid place-items-center ui-surface/10 backdrop-blur-sm ring-1 ring-white/15">
@@ -418,7 +419,7 @@ const AuthGate = ({ onAuth }) => {
                 </div>
               </div>
 
-              <h2 className="ui-display mt-16 text-[2.75rem] leading-[1.05] max-w-[16ch]">
+              <h2 className="ui-display mt-10 text-[2.75rem] leading-[1.05] max-w-[16ch]">
                 Books that balance themselves.
               </h2>
               <p className="mt-5 text-white/65 leading-relaxed max-w-[46ch]">
@@ -426,7 +427,7 @@ const AuthGate = ({ onAuth }) => {
                 you save it. No month-end reconciliation ritual.
               </p>
 
-              <ul className="mt-12 space-y-5">
+              <ul className="mt-8 space-y-4">
                 {[
                   ['Balanced or rejected', 'An entry that does not foot to zero is never stored.'],
                   ['Multi-company, multi-branch', 'One sign-in across every book you keep.'],
@@ -448,15 +449,23 @@ const AuthGate = ({ onAuth }) => {
               </ul>
             </div>
 
-            <p className="text-white/40 text-xs">
+            {/* Fills whatever height is left between the copy and the footer,
+                shrinking on short screens instead of pushing the footer out. */}
+            <div className="flex-1 min-h-[3rem] mt-8 flex items-end">
+              <AuthIllustration className="h-[clamp(8rem,24vh,17rem)] w-auto max-w-full select-none" />
+            </div>
+
+            <p className="mt-8 text-white/40 text-xs">
               © 2026 Ledgerly · Books stay on your server
             </p>
           </div>
         </div>
 
         {/* Right side - Form */}
-        <div className="flex-1 flex items-center justify-center px-6 py-10">
-          <div className="w-full max-w-md">
+        <div className="relative flex-1 flex items-center justify-center px-6 py-10">
+          {/* Ambient brand light behind the card; base colour stays --app-bg. */}
+          <div className="ui-ambient ui-ambient-quiet" aria-hidden="true" />
+          <div className="relative w-full max-w-md">
             {/* Mobile logo */}
             <div className="lg:hidden mb-8 text-center">
               <div className="inline-flex items-center gap-2">
@@ -779,7 +788,7 @@ const AuthGate = ({ onAuth }) => {
               </form>
             </div>
 
-            <p className="text-center text-white/40 text-xs mt-6">
+            <p className="ui-subtle text-center text-xs mt-6">
               By continuing, you agree to our Terms of Service and Privacy Policy
             </p>
           </div>

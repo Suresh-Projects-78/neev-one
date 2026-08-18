@@ -40,6 +40,7 @@
 
   /* Brand — orange. The primary action and the active state. */
   --brand: 249 115 22;          /* #F97316 */
+  --brand-deep: 194 65 12;      /* #C2410C — the money-out series; same family, unmistakably not the brand bar */
   --brand-hover: 234 88 12;
   --brand-soft: 255 247 237;
   --on-brand: 255 255 255;
@@ -150,6 +151,7 @@
   /* Orange lifts slightly in dark so it keeps its contrast against a dark
      surface without turning fluorescent. */
   --brand: 251 146 60;
+  --brand-deep: 253 186 116;    /* orange-300 — reads as the second series on dark, not a duplicate of brand */
   --brand-hover: 253 186 116;
   --brand-soft: 43 26 14;
   --on-brand: 26 12 3;
@@ -234,6 +236,13 @@
     border: 1px solid rgb(var(--border));
     border-radius: var(--radius);
     box-shadow: var(--shadow-card);
+    transition: box-shadow 200ms var(--ease-out), border-color 200ms ease, transform 200ms var(--ease-out);
+  }
+  /* Opt-in hover lift for cards that are themselves clickable. Never applied
+     to plain content cards — a lift promises interactivity. */
+  .ui-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lift);
   }
 
   .ui-panel {
@@ -497,8 +506,78 @@
 @keyframes ui-spin {
   to { transform: rotate(360deg); }
 }
+/* Ambient drift: two soft orbs of brand light wandering very slowly. The
+   travel is small and the cycle long, so it reads as atmosphere, not motion. */
+@keyframes ui-orb-a {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(3.5rem, -2.5rem, 0) scale(1.1); }
+}
+@keyframes ui-orb-b {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50%      { transform: translate3d(-3rem, 2rem, 0) scale(0.94); }
+}
+/* Gentle hover for illustration elements — a breath, not a bounce. */
+@keyframes ui-hover-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
 
 @layer components {
+  /* --- ambient background ---
+     A decorative light layer painted OVER the app background, never replacing
+     it: the base colour stays --app-bg in both themes. Two blurred orbs in the
+     brand hue drift on a 26–32s cycle. pointer-events: none, aria-hidden at
+     the call site, and the global reduced-motion block freezes them. */
+  .ui-ambient {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .ui-ambient::before,
+  .ui-ambient::after {
+    content: '';
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(64px);
+    will-change: transform;
+  }
+  .ui-ambient::before {
+    width: 34rem;
+    height: 34rem;
+    top: -10rem;
+    right: -8rem;
+    background: radial-gradient(closest-side, rgb(var(--brand) / 0.14), transparent 70%);
+    animation: ui-orb-a 26s ease-in-out infinite;
+  }
+  .ui-ambient::after {
+    width: 28rem;
+    height: 28rem;
+    bottom: -9rem;
+    left: -7rem;
+    background: radial-gradient(closest-side, rgb(var(--accent) / 0.1), transparent 70%);
+    animation: ui-orb-b 32s ease-in-out infinite;
+  }
+  /* Inside the working app the same layer at a third of the strength: present
+     when you look for it, invisible when you are reading numbers. */
+  .ui-ambient-quiet::before {
+    background: radial-gradient(closest-side, rgb(var(--brand) / 0.05), transparent 70%);
+  }
+  .ui-ambient-quiet::after {
+    background: radial-gradient(closest-side, rgb(var(--accent) / 0.04), transparent 70%);
+  }
+  /* Fixed variant for the app shell, so the glow stays put while lists scroll. */
+  .ui-ambient-fixed {
+    position: fixed;
+  }
+
+  .ui-float {
+    animation: ui-hover-float 7s ease-in-out infinite;
+  }
+  .ui-float-late {
+    animation: ui-hover-float 9s ease-in-out 1.8s infinite;
+  }
+
   /* Content arriving: 320ms, decelerating, because it is coming to rest. */
   .ui-in {
     animation: ui-rise 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
