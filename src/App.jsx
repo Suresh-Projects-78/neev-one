@@ -33,6 +33,7 @@ import {
   Coins,
   Upload,
   Search as SearchIcon,
+  ArrowRight,
   Bell,
   PanelLeftClose,
   PanelLeftOpen,
@@ -4976,63 +4977,70 @@ const SalesReports = ({ db, currentCompany }) => {
   );
 };
 
+/**
+ * The reports hub, in the product's card language.
+ *
+ * Was a bare master-detail of text rows — the thinnest screen in the app
+ * sitting on the richest data. Now every report is a tile: icon, name, and
+ * one line saying what question it answers, grouped by category. Tiles are
+ * clickable cards, so they take the hover lift.
+ */
+const REPORT_META = {
+  trialBalance: { icon: BookOpen, desc: 'Every account\u2019s closing balance. Must foot to zero.' },
+  profitLoss: { icon: BarChart3, desc: 'What you earned and what it cost, over a period.' },
+  balanceSheet: { icon: FileStack, desc: 'What the business owns and owes, at a date.' },
+  cashFlow: { icon: Coins, desc: 'Where money came from and where it went.' },
+  gstr1: { icon: BadgePercent, desc: 'Outward supplies, ready for the GSTR-1 return.' },
+  gstr3b: { icon: BadgePercent, desc: 'Summary return: tax on sales less input credit.' },
+  salesReports: { icon: ClipboardList, desc: 'Billing by status and totals across customers.' },
+};
+
 const ReportsOverview = ({ sections, onNavigate }) => {
-  const [activeSectionKey, setActiveSectionKey] = useState('financials');
-  const activeSection = sections.find((s) => s.key === activeSectionKey) || sections[0];
-
   return (
-    <div className="ui-surface rounded-xl shadow-sm border overflow-hidden">
-      <div className="p-6 border-b">
-        <h3 className="ui-title text-lg">Reports</h3>
-        <p className="text-sm ui-muted">Choose a category on the left, then select a report.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Reports"
+        description="Everything is computed from posted documents — never from a cache."
+      />
 
-      <div className="flex">
-        <div className="w-64 border-r ui-surface p-4">
-          <div className="space-y-1">
-            {sections.map((s) => {
-              const isActive = s.key === activeSectionKey;
+      {sections.map((sec) => (
+        <section key={sec.key} aria-label={sec.title}>
+          <h3 className="ui-card-label mb-3" style={{ color: 'rgb(var(--fg))' }}>{sec.title}</h3>
+          <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {(sec.items || []).map((r) => {
+              const meta = REPORT_META[r.key] || {};
+              const Icon = meta.icon || FileText;
               return (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => setActiveSectionKey(s.key)}
-                  className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${ isActive
-                      ? 'bg-stone-100 border-stone-300 ui-fg'
-                      : 'ui-surface border-transparent ui-fg ui-hover-sunken'
-                  }`}
-                >
-                  <div className="text-sm font-semibold">{s.title}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex-1 p-6">
-          <div className="mb-4">
-            <div className="text-sm ui-muted">Category</div>
-            <div className="ui-title text-base">{activeSection?.title || 'Reports'}</div>
-          </div>
-
-          <div className="border rounded-lg overflow-hidden ui-surface">
-            {(activeSection?.items || []).length === 0 ? (
-              <div className="px-4 py-6 text-sm ui-muted">No reports.</div>
-            ) : (
-              (activeSection?.items || []).map((r, idx) => (
                 <button
                   key={r.key}
                   type="button"
                   onClick={() => onNavigate?.(r.key)}
-                  className={`w-full text-left px-4 py-3 ui-hover-sunken ${idx ? 'border-t' : ''}`}
+                  className="ui-card ui-lift group flex items-start gap-3.5 p-5 text-left"
                 >
-                  <div className="font-semibold">{r.label}</div>
+                  <span
+                    className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl"
+                    style={{ backgroundColor: 'rgb(var(--mod-reports) / 0.12)', color: 'rgb(var(--mod-reports))' }}
+                    aria-hidden="true"
+                  >
+                    <Icon size={18} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">{r.label}</span>
+                      <ArrowRight
+                        size={15}
+                        className="ui-subtle flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
+                        aria-hidden="true"
+                      />
+                    </span>
+                    {meta.desc ? <span className="ui-caption mt-1 block leading-snug">{meta.desc}</span> : null}
+                  </span>
                 </button>
-              ))
-            )}
+              );
+            })}
           </div>
-        </div>
-      </div>
+        </section>
+      ))}
     </div>
   );
 };
