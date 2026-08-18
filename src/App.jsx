@@ -278,6 +278,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           title={formatMoney(totalSales, currentCompany)}
           hint={`Across ${invoices.length} invoices`}
           icon={BarChart3}
+          tint="sales"
         />
         <StatTile
           label="Collected"
@@ -287,6 +288,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           hint={`${collectedPct}% of billed value`}
           tone="pos"
           icon={Receipt}
+          tint="sales"
         />
         <StatTile
           label="Outstanding"
@@ -296,6 +298,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           hint={`${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} awaiting payment`}
           tone="neg"
           icon={FileText}
+          tint="sales"
         />
         <StatTile
           label="Average invoice"
@@ -304,6 +307,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           title={formatMoney(invoices.length ? totalSales / invoices.length : 0, currentCompany)}
           hint="Billed value per invoice"
           icon={ClipboardList}
+          tint="sales"
         />
       </div>
 

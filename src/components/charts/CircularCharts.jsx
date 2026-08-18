@@ -257,13 +257,13 @@ export function PeriodBars({ data = [], height = 240, formatter, tone = 'brand' 
         data: data.map((d) => d.label),
         axisLine: { lineStyle: { color: t.border } },
         axisTick: { show: false },
-        axisLabel: { color: t.subtle, fontSize: 11, interval: 0, hideOverlap: true },
+        axisLabel: { color: t.muted, fontSize: 11, interval: 0, hideOverlap: true },
       },
       yAxis: {
         type: 'value',
         splitLine: { lineStyle: { color: t.border, type: 'dashed' } },
         axisLabel: {
-          color: t.subtle,
+          color: t.muted,
           fontSize: 11,
           formatter: (v) => (formatter ? formatter(v) : v),
         },
@@ -308,7 +308,7 @@ export function RankedBars({ data = [], height = 240, formatter }) {
       xAxis: {
         type: 'value',
         splitLine: { lineStyle: { color: t.border, type: 'dashed' } },
-        axisLabel: { color: t.subtle, fontSize: 11, formatter: (v) => (formatter ? formatter(v) : v) },
+        axisLabel: { color: t.muted, fontSize: 11, formatter: (v) => (formatter ? formatter(v) : v) },
       },
       yAxis: {
         type: 'category',

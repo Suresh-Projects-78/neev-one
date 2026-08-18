@@ -162,6 +162,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
         <div className="ui-card">
           <EmptyState
             icon={Receipt}
+              tint="purchases"
             title="No purchases yet"
             description="Record a bill or an expense and this overview fills in — spend, dues and vendor share."
           />
@@ -176,6 +177,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
               title={formatMoney(purchased, currentCompany)}
               hint={`Across ${docs.length} documents`}
               icon={ClipboardList}
+              tint="purchases"
             />
             <StatTile
               label="Paid out"
@@ -185,6 +187,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
               hint={purchased > 0 ? `${Math.round((paid / purchased) * 100)}% of purchased` : 'Nothing yet'}
               tone="pos"
               icon={Wallet}
+              tint="purchases"
             />
             <StatTile
               label="Owed to vendors"
@@ -194,6 +197,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
               hint={`${unpaidCount} document${unpaidCount === 1 ? '' : 's'} unpaid`}
               tone="neg"
               icon={FileText}
+              tint="purchases"
             />
             <StatTile
               label="Average document"

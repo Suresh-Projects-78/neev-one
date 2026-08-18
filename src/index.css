@@ -35,8 +35,8 @@
 
   /* Text */
   --fg: 17 24 39;               /* #111827 */
-  --fg-muted: 107 114 128;      /* #6B7280 */
-  --fg-subtle: 107 114 128;   /* 4.83:1 on white — was 2.54:1 */
+  --fg-muted: 75 85 99;         /* #4B5563 — 7.6:1 on white; #6B7280 read as washed out at 13-14px */
+  --fg-subtle: 107 114 128;     /* #6B7280 — 4.83:1, the quietest tier that is still AA */
 
   /* Brand — orange. The primary action and the active state. */
   --brand: 249 115 22;          /* #F97316 */
@@ -87,7 +87,7 @@
   --mod-settings: 107 114 128;
 
   /* Money semantics */
-  --pos: 22 163 74;             /* #16A34A */
+  --pos: 21 128 61;             /* #15803D — 4.9:1 on white; #16A34A was 3.3:1, washy as a figure colour */
   --pos-soft: 240 253 244;
   --neg: 220 38 38;             /* #DC2626 */
   --neg-soft: 254 242 242;
@@ -272,10 +272,12 @@
     font-weight: 600;
     color: rgb(var(--fg));
   }
-  .ui-amount-pos {
+  /* Doubled on purpose: .ui-kpi (defined later) also sets color at (0,1,0),
+     and source order was silently turning every toned KPI figure black. */
+  .ui-amount-pos.ui-amount-pos {
     color: rgb(var(--pos));
   }
-  .ui-amount-neg {
+  .ui-amount-neg.ui-amount-neg {
     color: rgb(var(--neg));
   }
 

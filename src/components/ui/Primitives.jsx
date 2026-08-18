@@ -23,7 +23,7 @@ export const PageHeader = ({ title, description, actions = null }) => (
  * Metric tile. `tone` colours the value for financial meaning only
  * (pos = money in, neg = money owed), never for decoration.
  */
-export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = null, amount = null, format = null, title = null }) => {
+export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = null, amount = null, format = null, title = null, tint = null }) => {
   const toneClass = tone === 'pos' ? 'ui-amount-pos' : tone === 'neg' ? 'ui-amount-neg' : '';
   // When a raw amount and formatter are supplied the figure counts up on
   // change; otherwise the pre-formatted value renders as-is.
@@ -37,7 +37,14 @@ export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = nu
     <div className="ui-stat">
       <div className="flex items-center justify-between gap-2">
         <span className="ui-card-label">{label}</span>
-        {Icon ? <Icon size={15} className="ui-subtle" aria-hidden="true" /> : null}
+        {Icon ? (
+          <Icon
+            size={15}
+            className={tint ? undefined : 'ui-subtle'}
+            style={tint ? { color: `rgb(var(--mod-${tint}))` } : undefined}
+            aria-hidden="true"
+          />
+        ) : null}
       </div>
       <div className={`ui-kpi mt-3 ${toneClass}`} title={title || undefined}>{shown}</div>
       {hint ? <div className="ui-caption mt-2">{hint}</div> : null}
