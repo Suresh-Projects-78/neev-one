@@ -7177,7 +7177,20 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     const regCountry = String(form.regCountry || '').trim();
 
     if (!legalName) return notify.error('Legal Company Name is required.');
-    if (!regAddress1 || !regCity || !regStateCode || !regPincode || !regCountry) return notify.error('Registered Address is required.');
+    // Name the exact gap: "Registered Address is required" while the user is
+    // looking at a filled address line reads as a broken form.
+    const missing = [
+      [!regAddress1, 'Address Line 1'],
+      [!regCity, 'City'],
+      [!regStateCode, 'State / UT'],
+      [!regPincode, 'Pincode'],
+      [!regCountry, 'Country'],
+    ]
+      .filter(([bad]) => bad)
+      .map(([, label]) => label);
+    if (missing.length) {
+      return notify.error(`Registered address: ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} still empty.`);
+    }
 
     const stateName = (GST_STATE_BY_CODE && regStateCode && GST_STATE_BY_CODE[regStateCode]) ? GST_STATE_BY_CODE[regStateCode] : '';
 
