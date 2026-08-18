@@ -29,22 +29,22 @@ export function SettingsWarehousesBranches({ orgId }) {
     loadAll();
   }, [orgId]);
 
-  const onBranchCreated = (branch) => {
+  const onBranchCreated = async (branch) => {
     setBranches((prev) => [...prev, branch]);
   };
 
-  const onWarehouseCreated = (wh) => {
+  const onWarehouseCreated = async (wh) => {
     setWarehouses((prev) => [...prev, wh]);
   };
 
   const removeBranch = async (id) => {
-    if (!window.confirm('Delete this branch?')) return;
+    if (!await confirmDialog({ title: 'Please confirm', message: 'Delete this branch?', confirmLabel: 'Yes, continue' })) return;
     await deleteBranch(orgId, id);
     setBranches((prev) => prev.filter((b) => b.id !== id));
   };
 
   const removeWarehouse = async (id) => {
-    if (!window.confirm('Delete this warehouse?')) return;
+    if (!await confirmDialog({ title: 'Please confirm', message: 'Delete this warehouse?', confirmLabel: 'Yes, continue' })) return;
     await deleteWarehouse(orgId, id);
     setWarehouses((prev) => prev.filter((w) => w.id !== id));
   };

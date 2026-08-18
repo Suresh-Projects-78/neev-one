@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { confirmDialog } from '../../components/ui/notify';
 import {
   listUsers,
   listRoles,
@@ -215,7 +216,7 @@ export function SettingsUsers({ orgId }) {
     }
   };
 
-  const closeAssignBranches = () => {
+  const closeAssignBranches = async () => {
     setAssignBranchesModalOpen(false);
     setAssignBranchesUser(null);
     setAssignBranchesLoading(false);
@@ -245,7 +246,7 @@ export function SettingsUsers({ orgId }) {
   };
 
   const removeUser = async (id) => {
-    if (!window.confirm('Remove this user?')) return;
+    if (!await confirmDialog({ title: 'Please confirm', message: 'Remove this user?', confirmLabel: 'Yes, continue' })) return;
     try {
       await deleteUser(orgId, id);
       setUsers((prev) => prev.filter((u) => u.id !== id));

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { notify } from '../../components/ui/notify';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { createPayment } from '../../api/payments';
@@ -183,13 +184,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
     const amount = Number(formData.amount ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) {
-      alert('Receipt amount must be greater than 0');
+      notify.error('Receipt amount must be greater than 0');
       return;
     }
 
     const customerIdNum = Number(formData.customerId);
     if (!Number.isFinite(customerIdNum) || !customerIdNum) {
-      alert('Party (Customer) is required');
+      notify.error('Party (Customer) is required');
       return;
     }
 
@@ -197,27 +198,27 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     for (const line of computed.lines) {
       const inv = safeArray(db.invoices).find((i) => i.companyId === companyId && Number(i.id) === Number(line.invoiceId));
       if (!inv) {
-        alert('One of the selected invoices was not found. Please refresh and try again.');
+        notify.error('One of the selected invoices was not found. Please refresh and try again.');
         return;
       }
       if (!canCollectAgainstInvoice(inv)) {
-        alert(`Cannot record against invoice ${inv.number || ''} (Draft/Cancelled/No balance).`);
+        notify.error(`Cannot record against invoice ${inv.number || ''} (Draft/Cancelled/No balance).`);
         return;
       }
       const balance = getInvoiceBalance(inv);
       if (Number(line.amount) > balance + 0.0001) {
-        alert(`Allocation exceeds outstanding for invoice ${inv.number || ''}.`);
+        notify.error(`Allocation exceeds outstanding for invoice ${inv.number || ''}.`);
         return;
       }
     }
 
     if (computed.allocated > amount + 0.0001) {
-      alert('Total allocated cannot be more than receipt amount');
+      notify.error('Total allocated cannot be more than receipt amount');
       return;
     }
 
     if (!hideMode && !String(ledgerAccountId || "").trim()) {
-      alert('Choose the cash or bank account the money was received into');
+      notify.error('Choose the cash or bank account the money was received into');
       return;
     }
 
@@ -261,7 +262,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         });
       } catch (err) {
         setSaving(false);
-        alert(String(err?.message || 'Unable to record the receipt.'));
+        notify.error(String(err?.message || 'Unable to record the receipt.'));
         return;
       }
       setSaving(false);
@@ -345,7 +346,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
     onSaved?.(receiptRecord);
 
-    alert(computed.advance > 0 ? 'Receipt recorded (with advance)!' : 'Receipt recorded!');
+    notify.error(computed.advance > 0 ? 'Receipt recorded (with advance)!' : 'Receipt recorded!');
     onClose?.();
   };
 

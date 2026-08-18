@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { notify, confirmDialog } from '../../components/ui/notify';
 import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
@@ -46,7 +47,7 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
         };
         await updateInvoiceStatusApi(backendInvoiceId, payload);
       } catch (e) {
-        alert(String(e?.message || 'Unable to sync invoice status to backend.'));
+        notify.error(String(e?.message || 'Unable to sync invoice status to backend.'));
         return;
       }
     }
@@ -436,7 +437,7 @@ export const InvoicesList = ({
 
         doc.save(`${filenameBase}.pdf`);
       } catch {
-        alert('Unable to generate PDF. Please try again.');
+        notify.error('Unable to generate PDF. Please try again.');
       } finally {
         document.body.classList.remove('print-mode');
         document.title = prevTitle;
@@ -513,7 +514,7 @@ export const InvoicesList = ({
   };
 
   const raiseCreditNote = (invoice) => {
-    if (typeof onRaiseCreditNote === 'function') {
+    if (typeof onRaiseCreditNote === 'async function') {
       onRaiseCreditNote(invoice);
       return;
     }
@@ -532,8 +533,8 @@ export const InvoicesList = ({
     );
   };
 
-  const cancelInvoice = (invoice) => {
-    const ok = window.confirm(`Cancel invoice ${invoice?.number || ''}?`.trim());
+  const cancelInvoice = async (invoice) => {
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Cancel invoice ${invoice?.number || ''}?`.trim(), confirmLabel: 'Yes, continue' });
     if (!ok) return;
     setDb((prev) => ({
       ...prev,
@@ -557,7 +558,7 @@ export const InvoicesList = ({
         try {
           await deleteInvoiceApi(backendInvoiceId);
         } catch (e) {
-          alert(String(e?.message || 'Unable to delete invoice from backend.'));
+          notify.error(String(e?.message || 'Unable to delete invoice from backend.'));
           return;
         }
       }
@@ -580,8 +581,8 @@ export const InvoicesList = ({
     await run();
   };
 
-  const deleteInvoice = (invoice) => {
-    const ok = window.confirm(`Delete invoice ${invoice?.number || ''}? This cannot be undone.`.trim());
+  const deleteInvoice = async (invoice) => {
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete invoice ${invoice?.number || ''}? This cannot be undone.`.trim(), confirmLabel: 'Yes, continue' });
     if (!ok) return;
     deleteInvoiceCore(invoice);
   };
@@ -589,7 +590,7 @@ export const InvoicesList = ({
   const bulkDelete = async () => {
     const rows = filteredInvoices.filter((i) => selectedIds.has(i.id));
     if (!rows.length) return;
-    const ok = window.confirm(`Delete ${rows.length} invoice${rows.length === 1 ? '' : 's'}? This cannot be undone.`);
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete ${rows.length} invoice${rows.length === 1 ? '' : 's'}? This cannot be undone.`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
     for (const inv of rows) {
       // Sequential on purpose: each delete hits the API and then rewrites
@@ -1141,8 +1142,8 @@ export const EstimatesList = ({
     );
   };
 
-  const deleteEstimate = (estimate) => {
-    const ok = window.confirm(`Delete estimate ${estimate?.number || ''}? This cannot be undone.`.trim());
+  const deleteEstimate = async (estimate) => {
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete estimate ${estimate?.number || ''}? This cannot be undone.`.trim(), confirmLabel: 'Yes, continue' });
     if (!ok) return;
     setDb((prev) => ({
       ...prev,
@@ -1611,12 +1612,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     }
 
     if (!invoiceNumber) {
-      alert('Invoice number is required');
+      notify.error('Invoice number is required');
       return;
     }
 
     if (!String(formData.warehouseId || '').trim()) {
-      alert('Warehouse is required');
+      notify.error('Warehouse is required');
       return;
     }
 
@@ -1624,29 +1625,29 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       (inv) => inv.companyId === currentCompany.id && String(inv.number || '').trim() === invoiceNumber && (!isEdit || inv.id !== Number(initialData?.id))
     );
     if (invoiceNumberClash) {
-      alert('Invoice number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Invoice number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
     if (!formData.customerId) {
-      alert('Customer is required');
+      notify.error('Customer is required');
       return;
     }
 
     if (!companyState) {
-      alert('Please set Company State in Company Profile before creating GST invoices.');
+      notify.error('Please set Company State in Company Profile before creating GST invoices.');
       return;
     }
 
     const customerIsRegistered = String(selectedCustomer?.gstRegistration || '').trim().toLowerCase() === 'registered';
     if (customerIsRegistered && !canDetermineSupplyType({ companyState, partyState: customerState })) {
-      alert('Cannot determine Place of Supply for this registered customer. Please set customer state/address before creating GST invoices.');
+      notify.error('Cannot determine Place of Supply for this registered customer. Please set customer state/address before creating GST invoices.');
       return;
     }
 
     const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
     if (hasMissingItem) {
-      alert('Please select an Item for every line. Items are mandatory for GST.');
+      notify.error('Please select an Item for every line. Items are mandatory for GST.');
       return;
     }
 
@@ -1654,7 +1655,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
     const existingInvoice = isEdit ? db.invoices.find((i) => i.id === Number(initialData.id)) : null;
     if (isEdit && !existingInvoice) {
-      alert('Invoice not found. It may have been removed.');
+      notify.error('Invoice not found. It may have been removed.');
       return;
     }
 
@@ -1724,7 +1725,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         if (needQty > available + 0.0001) {
           const master = itemsById.get(String(itemId));
           const label = master?.name || master?.code || `Item ${itemId}`;
-          alert(`Negative stock not allowed. "${label}" available ${available}, required ${needQty}.`);
+          notify.error(`Negative stock not allowed. "${label}" available ${available}, required ${needQty}.`);
           return;
         }
       }
@@ -1775,7 +1776,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             : await createInvoiceApi(payload);
           updatedInvoice.backendInvoiceId = String(saved?.id || backendInvoiceId || '').trim() || undefined;
         } catch (err) {
-          alert(String(err?.message || 'Unable to save invoice to backend.'));
+          notify.error(String(err?.message || 'Unable to save invoice to backend.'));
           return;
         }
       }
@@ -1785,7 +1786,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         invoices: db.invoices.map((inv) => (inv.id === existingInvoice.id ? updatedInvoice : inv)),
       });
       onClose?.();
-      alert('Invoice updated successfully!');
+      notify.success('Invoice updated successfully!');
       return;
     }
 
@@ -1829,7 +1830,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         const saved = await createInvoiceApi(payload);
         newInvoice.backendInvoiceId = String(saved?.id || '').trim() || undefined;
       } catch (err) {
-        alert(String(err?.message || 'Unable to save invoice to backend.'));
+        notify.error(String(err?.message || 'Unable to save invoice to backend.'));
         return;
       }
     }
@@ -1863,8 +1864,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
     onClose?.();
 
-    if (sourceEstimateId) alert('Invoice created and estimate converted successfully!');
-    else alert('Invoice created successfully!');
+    if (sourceEstimateId) notify.success('Invoice created and estimate converted successfully!');
+    else notify.success('Invoice created successfully!');
   };
 
   return (
@@ -2204,7 +2205,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
     if (isEstimateAuto && lockEstimateNumberOnCreate) estimateNumber = String(generatedEstimateNumber || '').trim();
     if (!isEdit && isEstimateAuto && !estimateNumber) estimateNumber = String(generatedEstimateNumber || '').trim();
     if (!estimateNumber) {
-      alert('Estimate number is required');
+      notify.error('Estimate number is required');
       return;
     }
 
@@ -2215,23 +2216,23 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         (!isEdit || est.id !== initialData?.id)
     );
     if (estimateNumberClash) {
-      alert('Estimate number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Estimate number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
     if (!formData.customerId) {
-      alert('Customer is required');
+      notify.error('Customer is required');
       return;
     }
 
     if (!companyState) {
-      alert('Please set Company State in Company Profile before creating GST estimates.');
+      notify.error('Please set Company State in Company Profile before creating GST estimates.');
       return;
     }
 
     const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
     if (hasMissingItem) {
-      alert('Please select an Item for every line. Items are mandatory for GST.');
+      notify.error('Please select an Item for every line. Items are mandatory for GST.');
       return;
     }
 
@@ -2271,7 +2272,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         ),
       });
       onClose?.();
-      alert('Estimate updated successfully!');
+      notify.success('Estimate updated successfully!');
       return;
     }
 
@@ -2289,7 +2290,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'estimate', usedNumber: estimateNumber, branchId: activeBranchId || null }),
     });
     onClose?.();
-    alert('Estimate created successfully!');
+    notify.success('Estimate created successfully!');
   };
 
   return (
@@ -2629,46 +2630,46 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       else if (!creditNumber) creditNumber = String(generatedCreditNumber || '').trim();
     }
     if (!creditNumber) {
-      alert('Credit note number is required');
+      notify.error('Credit note number is required');
       return;
     }
 
     const creditNumberClash = db.creditNotes.some((cn) => cn.companyId === currentCompany.id && String(cn.number || '').trim() === creditNumber);
     if (creditNumberClash) {
-      alert('Credit note number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Credit note number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
     const originalInvoice = companyInvoices.find((i) => i.id === parseInt(formData.originalInvoiceId));
     if (!originalInvoice) {
-      alert('Please select the original invoice');
+      notify.error('Please select the original invoice');
       return;
     }
 
     if (!String(formData.warehouseId || '').trim()) {
-      alert('Warehouse is required');
+      notify.error('Warehouse is required');
       return;
     }
 
     if (!formData.customerId) {
-      alert('Customer is required');
+      notify.error('Customer is required');
       return;
     }
 
     if (!companyState) {
-      alert('Please set Company State in Company Profile before creating GST credit notes.');
+      notify.error('Please set Company State in Company Profile before creating GST credit notes.');
       return;
     }
 
     const customerIsRegistered = String(selectedCustomer?.gstRegistration || '').trim().toLowerCase() === 'registered';
     if (customerIsRegistered && !canDetermineSupplyType({ companyState, partyState: customerState })) {
-      alert('Cannot determine Place of Supply for this registered customer. Please set customer state/address before creating GST credit notes.');
+      notify.error('Cannot determine Place of Supply for this registered customer. Please set customer state/address before creating GST credit notes.');
       return;
     }
 
     const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
     if (hasMissingItem) {
-      alert('Please select an Item for every line. Items are mandatory for GST.');
+      notify.error('Please select an Item for every line. Items are mandatory for GST.');
       return;
     }
 
@@ -2704,7 +2705,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'creditNote', usedNumber: creditNumber, branchId: branchIdForNumbering }),
     });
     onClose?.();
-    alert('Credit note created successfully!');
+    notify.success('Credit note created successfully!');
   };
 
   return (

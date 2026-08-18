@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createCustomer, listCustomers } from '../../api/masters';
 import { useServerMasters } from '../../hooks/useServerMasters';
@@ -161,13 +162,13 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     const name = String(nameRaw || '').trim();
     if (!name) return;
     if (!sundryDebtorsGroup?.id) {
-      alert('Sundry Debtors group is missing.');
+      notify.error('Sundry Debtors group is missing.');
       return;
     }
 
     const clash = allGroups.some((g) => String(g.name || '').trim().toLowerCase() === name.toLowerCase());
     if (clash) {
-      alert('Group already exists');
+      notify.error('Group already exists');
       return;
     }
 
@@ -247,7 +248,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         : null;
 
     if (!formData.displayName.trim()) {
-      alert('Company name is required');
+      notify.error('Company name is required');
       return;
     }
 
@@ -261,30 +262,30 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     const effectivePan = gstRegistrationRequiresGstin ? (panNormalized || panFromGstin) : '';
 
     if (!gstRegistrationRequiresGstin && gstinNormalized) {
-      alert('GSTIN is not allowed when GST Registration is Unregistered/Overseas.');
+      notify.error('GSTIN is not allowed when GST Registration is Unregistered/Overseas.');
       return;
     }
     if (gstRegistrationRequiresGstin && !effectiveGstin) {
-      alert('GSTIN is required for the selected GST registration type');
+      notify.error('GSTIN is required for the selected GST registration type');
       return;
     }
 
     if (effectiveGstin && !isValidGstin(effectiveGstin)) {
-      alert('Please enter a valid GSTIN.');
+      notify.error('Please enter a valid GSTIN.');
       return;
     }
 
     if (gstRegistrationRequiresGstin) {
       if (!effectivePan) {
-        alert('PAN is required for the selected GST registration type.');
+        notify.error('PAN is required for the selected GST registration type.');
         return;
       }
       if (!isValidPan(effectivePan)) {
-        alert('Please enter a valid PAN.');
+        notify.error('Please enter a valid PAN.');
         return;
       }
       if (panFromGstin && normalizePan(effectivePan) !== normalizePan(panFromGstin)) {
-        alert('PAN does not match GSTIN.');
+        notify.error('PAN does not match GSTIN.');
         return;
       }
     }
@@ -295,23 +296,23 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     const shippingState = String(formData.shippingAddress?.state || '').trim();
 
     if (billingCountry === INDIA_COUNTRY && !billingState) {
-      alert('Billing state is required for India.');
+      notify.error('Billing state is required for India.');
       return;
     }
 
     if (!formData.shippingSameAsBilling && shippingCountry === INDIA_COUNTRY && !shippingState) {
-      alert('Shipping state is required for India.');
+      notify.error('Shipping state is required for India.');
       return;
     }
 
     if (gstRegistrationRequiresGstin) {
       const stateFromGstin = getGstinState(effectiveGstin);
       if (!stateFromGstin) {
-        alert('Unable to derive State from GSTIN. Please check GSTIN.');
+        notify.error('Unable to derive State from GSTIN. Please check GSTIN.');
         return;
       }
       if (billingCountry === INDIA_COUNTRY && billingState && String(stateFromGstin).trim().toLowerCase() !== String(billingState).trim().toLowerCase()) {
-        alert('Billing State does not match GSTIN State.');
+        notify.error('Billing State does not match GSTIN State.');
         return;
       }
     }
@@ -354,7 +355,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         (c) => c.companyId === currentCompany.id && String(c.id) === String(initialData?.id)
       );
       if (!existing) {
-        alert('Customer not found. It may have been removed.');
+        notify.error('Customer not found. It may have been removed.');
         onClose?.();
         return;
       }
@@ -429,7 +430,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         return;
       }
 
-      alert('Customer updated!');
+      notify.error('Customer updated!');
       return;
     }
 
@@ -471,7 +472,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       return;
     }
 
-    alert('Customer created!');
+    notify.error('Customer created!');
   };
 
   return (

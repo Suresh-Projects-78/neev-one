@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { notify, confirmDialog } from '../../components/ui/notify';
 import { Copy, CreditCard, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -165,34 +166,34 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       else if (!billNumber) billNumber = String(generatedBillNumber || '').trim();
     }
     if (!billNumber) {
-      alert('Bill number is required');
+      notify.error('Bill number is required');
       return;
     }
 
     if (!String(formData.warehouseId || '').trim()) {
-      alert('Warehouse is required');
+      notify.error('Warehouse is required');
       return;
     }
 
     const billNumberClash = db.bills.some((b) => b.companyId === currentCompany.id && String(b.number || '').trim() === billNumber);
     if (billNumberClash) {
-      alert('Bill number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Bill number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
     if (!formData.vendorId) {
-      alert('Vendor is required');
+      notify.error('Vendor is required');
       return;
     }
 
     if (!companyState) {
-      alert('Please set Company State in Company Profile before creating GST bills.');
+      notify.error('Please set Company State in Company Profile before creating GST bills.');
       return;
     }
 
     const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
     if (hasMissingItem) {
-      alert('Please select an Item for every line. Items are mandatory for GST.');
+      notify.error('Please select an Item for every line. Items are mandatory for GST.');
       return;
     }
 
@@ -227,7 +228,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'bill', usedNumber: billNumber, branchId: branchIdForNumbering }),
     });
     onClose?.();
-    alert('Bill created successfully!');
+    notify.success('Bill created successfully!');
   };
 
   return (
@@ -601,24 +602,24 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
       else if (!poNumber) poNumber = String(generatedPoNumber || '').trim();
     }
     if (!poNumber) {
-      alert('PO number is required');
+      notify.error('PO number is required');
       return;
     }
 
     const poNumberClash = db.purchaseOrders.some((po) => po.companyId === currentCompany.id && String(po.number || '').trim() === poNumber);
     if (poNumberClash) {
-      alert('PO number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('PO number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
     if (!formData.vendorId) {
-      alert('Vendor is required');
+      notify.error('Vendor is required');
       return;
     }
 
     const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
     if (hasMissingItem) {
-      alert('Please select an Item for every line.');
+      notify.error('Please select an Item for every line.');
       return;
     }
 
@@ -652,7 +653,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
     });
 
     onClose?.();
-    alert('Purchase order created successfully!');
+    notify.success('Purchase order created successfully!');
   };
 
   return (
@@ -921,16 +922,16 @@ export const BillsList = ({
     );
   };
 
-  const deleteBill = (bill) => {
-    const usedInDebitNotes = (Array.isArray(db.debitNotes) ? db.debitNotes : []).some(
+  const deleteBill = async (bill) => {
+    const usedInDebitNotes = async (Array.isArray(db.debitNotes) ? db.debitNotes : []).some(
       (dn) => dn?.companyId === currentCompany.id && Number(dn?.originalBillId) === Number(bill.id)
     );
     if (usedInDebitNotes) {
-      alert('Cannot delete this bill because it is referenced in a Debit Note.');
+      notify.error('Cannot delete this bill because it is referenced in a Debit Note.');
       return;
     }
 
-    const ok = window.confirm(`Delete bill ${bill?.number || ''}? This cannot be undone.`.trim());
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete bill ${bill?.number || ''}? This cannot be undone.`.trim(), confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     setDb((prev) => ({
@@ -1410,47 +1411,47 @@ export const DebitNoteForm = ({
       else if (!debitNumber) debitNumber = String(generatedDebitNumber || '').trim();
     }
     if (!debitNumber) {
-      alert('Debit note number is required');
+      notify.error('Debit note number is required');
       return;
     }
 
     if (!String(formData.warehouseId || '').trim()) {
-      alert('Warehouse is required');
+      notify.error('Warehouse is required');
       return;
     }
 
     const debitNumberClash = db.debitNotes.some((dn) => dn.companyId === currentCompany.id && String(dn.number || '').trim() === debitNumber);
     if (debitNumberClash) {
-      alert('Debit note number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Debit note number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
     const originalBill = companyBills.find((b) => b.id === parseInt(formData.originalBillId));
     if (!originalBill) {
-      alert('Please select the original bill');
+      notify.error('Please select the original bill');
       return;
     }
 
     const originalWarehouseId = String(originalBill?.warehouseId || '').trim();
     const selectedWarehouseId = String(formData.warehouseId || '').trim();
     if (originalWarehouseId && selectedWarehouseId && originalWarehouseId !== selectedWarehouseId) {
-      alert('Debit note warehouse must match the original bill warehouse.');
+      notify.error('Debit note warehouse must match the original bill warehouse.');
       return;
     }
 
     if (!formData.vendorId) {
-      alert('Vendor is required');
+      notify.error('Vendor is required');
       return;
     }
 
     if (!companyState) {
-      alert('Please set Company State in Company Profile before creating GST debit notes.');
+      notify.error('Please set Company State in Company Profile before creating GST debit notes.');
       return;
     }
 
     const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
     if (hasMissingItem) {
-      alert('Please select an Item for every line. Items are mandatory for GST.');
+      notify.error('Please select an Item for every line. Items are mandatory for GST.');
       return;
     }
 
@@ -1481,7 +1482,7 @@ export const DebitNoteForm = ({
         if (needQty > available + 0.0001) {
           const master = itemsById.get(String(itemId));
           const label = master?.name || master?.code || `Item ${itemId}`;
-          alert(`Negative stock not allowed. "${label}" available ${available}, required ${needQty}.`);
+          notify.error(`Negative stock not allowed. "${label}" available ${available}, required ${needQty}.`);
           return;
         }
       }
@@ -1526,7 +1527,7 @@ export const DebitNoteForm = ({
     });
 
     onClose?.();
-    alert('Debit note created successfully!');
+    notify.success('Debit note created successfully!');
   };
 
   return (

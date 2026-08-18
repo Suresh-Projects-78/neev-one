@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createItem, listItems } from '../../api/masters';
 import { useServerMasters } from '../../hooks/useServerMasters';
@@ -172,8 +173,8 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
 
                   const code = String(newItem.code || '').trim();
                   const name = String(newItem.name || '').trim();
-                  if (!code) return alert('Item code is required');
-                  if (!name) return alert('Item name is required');
+                  if (!code) return notify.error('Item code is required');
+                  if (!name) return notify.error('Item name is required');
 
                   const nextId = (items || []).reduce((m, i) => Math.max(m, Number(i.id) || 0), 0) + 1;
                   const created = {

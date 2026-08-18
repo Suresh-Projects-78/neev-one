@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { confirmDialog } from '../../components/ui/notify';
 import { listBranches, listWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
@@ -256,7 +257,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
       } else {
         await loadWarehouses();
       }
-      if (typeof onWarehousesChanged === 'function') onWarehousesChanged();
+      if (typeof onWarehousesChanged === 'async function') onWarehousesChanged();
       setEditingWarehouseId(null);
     } catch (err) {
       setError(err.message || 'Failed to update warehouse');
@@ -266,7 +267,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
   };
 
   const removeWarehouse = async (id) => {
-    if (!window.confirm('Delete this warehouse?')) return;
+    if (!await confirmDialog({ title: 'Please confirm', message: 'Delete this warehouse?', confirmLabel: 'Yes, continue' })) return;
     try {
       await deleteWarehouse(orgId, id);
       setWarehouses((prev) => prev.filter((w) => w.id !== id));

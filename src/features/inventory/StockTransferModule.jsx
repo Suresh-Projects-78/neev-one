@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { notify, confirmDialog } from '../../components/ui/notify';
 import { Check, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
@@ -920,8 +921,8 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
   const openCreate = () => onNew?.();
   const openEdit = (transfer) => onEdit?.(transfer);
 
-  const removeTransfer = (transfer) => {
-    const ok = window.confirm(`Delete stock transfer ${transfer?.number || ''}?`);
+  const removeTransfer = async (transfer) => {
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete stock transfer ${transfer?.number || ''}?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     setDb((prev) => {
@@ -945,7 +946,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
     });
   };
 
-  const approveWithStockCheck = (transfer) => {
+  const approveWithStockCheck = async (transfer) => {
     const sourceWarehouseId = normalizeId(transfer?.sourceWarehouseId);
     const date = String(transfer?.date || '').trim();
 
@@ -954,7 +955,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
       .filter((l) => l.itemId && l.qty > 0);
 
     if (!sourceWarehouseId) {
-      alert('From Warehouse is required');
+      notify.error('From Warehouse is required');
       return;
     }
 
@@ -964,7 +965,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
       const row = summary.get(l.itemId);
       const available = toNum(row?.closingQty ?? 0);
       if (available + 0.0001 < l.qty) {
-        alert(`Not enough stock for item ${l.itemId} in the source warehouse. Available: ${available}, trying to transfer: ${l.qty}`);
+        notify.error(`Not enough stock for item ${l.itemId} in the source warehouse. Available: ${available}, trying to transfer: ${l.qty}`);
         return;
       }
     }
@@ -975,7 +976,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
   const MENU_WIDTH = 224; // w-56
   const MENU_HEIGHT_ESTIMATE = 340;
 
-  const openRowMenu = (id, anchorEl) => {
+  const openRowMenu = async (id, anchorEl) => {
     if (!anchorEl) {
       setOpenMenu({ id, left: 0, top: 0 });
       return;
@@ -1203,9 +1204,9 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                   {canReject ? (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setOpenMenu(null);
-                        const ok = window.confirm('Reject this transfer?');
+                        const ok = await confirmDialog({ title: 'Please confirm', message: 'Reject this transfer?', confirmLabel: 'Yes, continue' });
                         if (!ok) return;
                         updateStatus(t, 'Rejected');
                       }}
@@ -1219,9 +1220,9 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                   {canCancel ? (
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setOpenMenu(null);
-                        const ok = window.confirm('Cancel this transfer?');
+                        const ok = await confirmDialog({ title: 'Please confirm', message: 'Cancel this transfer?', confirmLabel: 'Yes, continue' });
                         if (!ok) return;
                         updateStatus(t, 'Cancelled');
                       }}

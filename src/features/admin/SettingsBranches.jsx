@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import { confirmDialog } from '../../components/ui/notify';
 import { listBranches, createBranch, updateBranch, deleteBranch } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
@@ -80,7 +81,7 @@ export function SettingsBranches({ orgId }) {
     return () => document.removeEventListener('click', onDocClick);
   }, []);
 
-  const onChange = (k) => (e) => {
+  const onChange = async (k) => (e) => {
     const next = e.target.value;
     if (k === 'gstin') {
       const maybeState = getGstStateFromGstin(String(next || '').trim());
@@ -113,7 +114,7 @@ export function SettingsBranches({ orgId }) {
   };
 
   const removeBranch = async (id) => {
-    if (!window.confirm('Delete this branch?')) return;
+    if (!await confirmDialog({ title: 'Please confirm', message: 'Delete this branch?', confirmLabel: 'Yes, continue' })) return;
     try {
       await deleteBranch(orgId, id);
       setBranches((prev) => prev.filter((b) => b.id !== id));

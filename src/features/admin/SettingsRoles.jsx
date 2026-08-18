@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { confirmDialog } from '../../components/ui/notify';
 import { listRoles, createRole, updateRole, deleteRole } from '../../api/admin';
 
 // Matrix permissions UI inspired by the provided example.
@@ -285,7 +286,7 @@ export function SettingsRoles({ orgId }) {
     });
   };
 
-  const isGroupChecked = (group, column) => {
+  const isGroupChecked = async (group, column) => {
     const items = Array.isArray(group.items) ? group.items : [];
     if (items.length === 0) return false;
     let any = false;
@@ -340,7 +341,7 @@ export function SettingsRoles({ orgId }) {
   };
 
   const removeRole = async (id) => {
-    if (!window.confirm('Delete this role?')) return;
+    if (!await confirmDialog({ title: 'Please confirm', message: 'Delete this role?', confirmLabel: 'Yes, continue' })) return;
     try {
       await deleteRole(orgId, id);
       setRoles((prev) => prev.filter((r) => r.id !== id));

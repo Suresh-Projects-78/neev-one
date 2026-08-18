@@ -1,4 +1,6 @@
 import InventoryModule from './features/inventory/InventoryModule';
+import { notify, confirmDialog } from './components/ui/notify';
+import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -513,17 +515,15 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
 
 
 
-  const onDeleteVendor = (vendor) => {
+  const onDeleteVendor = async (vendor) => {
     const refs = getVendorReferences(vendor.id);
     if (refs.length) {
       const preview = refs.slice(0, 5).join(', ');
-      alert(`Cannot delete this vendor because it is used in: ${preview}${refs.length > 5 ? '...' : ''}`);
+      notify.error(`Cannot delete this vendor because it is used in: ${preview}${refs.length > 5 ? '...' : ''}`);
       return;
     }
 
-    const ok = window.confirm(
-      `Delete vendor "${String(vendor.name || vendor.displayName || '').trim() || 'this vendor'}"?`
-    );
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete vendor "${String(vendor.name || vendor.displayName || '').trim() || 'this vendor'}"?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     setDb({
@@ -723,17 +723,15 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
     setIsCreating(false);
   };
 
-  const onDeleteCustomer = (customer) => {
+  const onDeleteCustomer = async (customer) => {
     const refs = getCustomerReferences(customer.id);
     if (refs.length) {
       const preview = refs.slice(0, 5).join(', ');
-      alert(`Cannot delete this customer because it is used in: ${preview}${refs.length > 5 ? '...' : ''}`);
+      notify.error(`Cannot delete this customer because it is used in: ${preview}${refs.length > 5 ? '...' : ''}`);
       return;
     }
 
-    const ok = window.confirm(
-      `Delete customer "${String(getCustomerDisplayName(customer) || '').trim() || 'this customer'}"?`
-    );
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete customer "${String(getCustomerDisplayName(customer) || '').trim() || 'this customer'}"?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     setDb({
@@ -1176,18 +1174,18 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       else if (!expenseNumber) expenseNumber = String(generatedExpenseNumber || '').trim();
     }
     if (!expenseNumber) {
-      alert('Expense voucher number is required');
+      notify.error('Expense voucher number is required');
       return;
     }
 
     const expenseNumberClash = db.expenses.some((ex) => ex.companyId === currentCompany.id && String(ex.number || '').trim() === expenseNumber);
     if (expenseNumberClash) {
-      alert('Expense voucher number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Expense voucher number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
     if (gstEnabled && !companyState) {
-      alert('Please set Company State in Tax & Compliances before creating GST expenses.');
+      notify.error('Please set Company State in Tax & Compliances before creating GST expenses.');
       return;
     }
 
@@ -1216,7 +1214,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'expense', usedNumber: expenseNumber, branchId: activeBranchId || null }),
     });
     onClose?.();
-    alert('Expense created!');
+    notify.error('Expense created!');
   };
 
   return (
@@ -1441,15 +1439,15 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
     );
   };
 
-  const onDelete = (item) => {
+  const onDelete = async (item) => {
     const refs = getItemReferences(item.id);
     if (refs.length) {
       const preview = refs.slice(0, 5).join(', ');
-      alert(`Cannot delete this item because it is used in: ${preview}${refs.length > 5 ? '...' : ''}`);
+      notify.error(`Cannot delete this item because it is used in: ${preview}${refs.length > 5 ? '...' : ''}`);
       return;
     }
 
-    const ok = window.confirm(`Delete item "${String(item.name || '').trim() || String(item.code || '').trim() || 'this item'}"?`);
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete item "${String(item.name || '').trim() || String(item.code || '').trim() || 'this item'}"?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     setDb({
@@ -1598,11 +1596,11 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
     const code = String(formData.code || '').trim();
     const name = String(formData.name || '').trim();
     if (!code) {
-      alert('Item code is required');
+      notify.error('Item code is required');
       return;
     }
     if (!name) {
-      alert('Item name is required');
+      notify.error('Item name is required');
       return;
     }
 
@@ -1618,14 +1616,14 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         (!isEdit || String(it.id) !== String(initialData?.id))
     );
     if (clash) {
-      alert('Item code already exists. Please use a different code.');
+      notify.error('Item code already exists. Please use a different code.');
       return;
     }
 
     if (isEdit) {
       const existing = (db.items || []).find((it) => it.companyId === currentCompany.id && String(it.id) === String(initialData?.id));
       if (!existing) {
-        alert('Item not found. It may have been removed.');
+        notify.error('Item not found. It may have been removed.');
         onClose?.();
         return;
       }
@@ -1651,7 +1649,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         items: db.items.map((it) => (it.companyId === currentCompany.id && String(it.id) === String(existing.id) ? updated : it)),
       });
       onClose?.();
-      alert('Item updated!');
+      notify.error('Item updated!');
       return;
     }
 
@@ -1673,7 +1671,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
 
     setDb({ ...db, items: [...db.items, newItem] });
     onClose?.();
-    alert('Item created!');
+    notify.error('Item created!');
   };
 
   return (
@@ -2090,7 +2088,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
 
   const openEditGroup = (group) => {
     if (group?.isSystem && !group?.isUserDefined) {
-      alert('System groups cannot be edited.');
+      notify.error('System groups cannot be edited.');
       return;
     }
 
@@ -2130,14 +2128,14 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     return { ok: true, reason: '' };
   };
 
-  const deleteLedger = (ledger) => {
+  const deleteLedger = async (ledger) => {
     const check = canDeleteLedger(ledger?.id);
     if (!check.ok) {
-      alert(`Cannot delete this ledger. ${check.reason}`);
+      notify.error(`Cannot delete this ledger. ${check.reason}`);
       return;
     }
 
-    const ok = window.confirm(`Delete ledger "${String(ledger?.name || '').trim() || 'this ledger'}"?`);
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete ledger "${String(ledger?.name || '').trim() || 'this ledger'}"?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     setDb({
@@ -2161,14 +2159,14 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     return { ok: true, reason: '' };
   };
 
-  const deleteGroup = (group) => {
+  const deleteGroup = async (group) => {
     const check = canDeleteGroup(group?.id);
     if (!check.ok) {
-      alert(`Cannot delete this group. ${check.reason}`);
+      notify.error(`Cannot delete this group. ${check.reason}`);
       return;
     }
 
-    const ok = window.confirm(`Delete group "${String(group?.name || '').trim() || 'this group'}"?`);
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete group "${String(group?.name || '').trim() || 'this group'}"?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     setDb({
@@ -2601,25 +2599,25 @@ const ChartAccountForm = ({
     const openingBalance = round2(Number(formData.openingBalance || 0));
 
     if (!name) {
-      alert('Account name is required');
+      notify.error('Account name is required');
       return;
     }
 
     const groupValue = String(formData.groupId || '').trim();
     if (!groupValue) {
-      alert('Group is required');
+      notify.error('Group is required');
       return;
     }
 
     groupRow = groupById.get(groupValue) || null;
     if (!groupRow) {
-      alert('Please select a valid group.');
+      notify.error('Please select a valid group.');
       return;
     }
 
     const typeRow = groupRow ? typeById.get(String(groupRow.typeId)) : null;
     if (!typeRow) {
-      alert('Parent mapping not found for selected group');
+      notify.error('Parent mapping not found for selected group');
       return;
     }
 
@@ -2637,11 +2635,11 @@ const ChartAccountForm = ({
       const ifsc = String(formData.bankIfsc || '').trim();
 
       if (!bankName) {
-        alert('Bank name is required for Bank Accounts');
+        notify.error('Bank name is required for Bank Accounts');
         return;
       }
       if (!accountNumber) {
-        alert('Account number is required for Bank Accounts');
+        notify.error('Account number is required for Bank Accounts');
         return;
       }
 
@@ -2664,7 +2662,7 @@ const ChartAccountForm = ({
         (a) => a.companyId === currentCompany.id && String(a.id) === String(initialData.id)
       );
       if (!existing) {
-        alert('Ledger not found');
+        notify.error('Ledger not found');
         return;
       }
 
@@ -2893,24 +2891,24 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
     const parentGroupId = String(formData.parentGroupId || '').trim();
 
     if (!name) {
-      alert('Group name is required');
+      notify.error('Group name is required');
       return;
     }
 
     if (!parentGroupId) {
-      alert('Group is required');
+      notify.error('Group is required');
       return;
     }
 
     const parent = groups.find((g) => String(g.id) === parentGroupId) || null;
     if (!parent) {
-      alert('Please select a valid group.');
+      notify.error('Please select a valid group.');
       return;
     }
 
     const clash = groups.some((g) => String(g.name || '').trim().toLowerCase() === name.toLowerCase());
     if (clash) {
-      alert('Group already exists');
+      notify.error('Group already exists');
       return;
     }
 
@@ -2977,8 +2975,8 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
 const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJournal }) => {
   const journalEntries = db.journalEntries.filter((j) => j.companyId === currentCompany.id);
 
-  const deleteEntry = (jv) => {
-    const ok = window.confirm(`Delete journal entry "${String(jv?.number || '').trim() || 'this entry'}"?`);
+  const deleteEntry = async (jv) => {
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete journal entry "${String(jv?.number || '').trim() || 'this entry'}"?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
     setDb({
       ...db,
@@ -3133,7 +3131,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
 
   const openCreateLedgerForLine = (lineIndex, initialName) => {
     if (typeof openModal !== 'function') {
-      alert('Unable to open ledger creation.');
+      notify.error('Unable to open ledger creation.');
       return;
     }
 
@@ -3168,7 +3166,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
       else if (!jvNumber) jvNumber = String(generatedJvNumber || '').trim();
     }
     if (!jvNumber) {
-      alert('Journal number is required');
+      notify.error('Journal number is required');
       return;
     }
 
@@ -3179,7 +3177,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
         (!isEdit || String(j.id) !== String(initialData.id))
     );
     if (numberClash) {
-      alert('Journal number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Journal number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
@@ -3192,22 +3190,22 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
       .filter((l) => l.accountId && (l.debit > 0 || l.credit > 0));
 
     if (cleanLines.length < 2) {
-      alert('Please add at least two lines with amounts.');
+      notify.error('Please add at least two lines with amounts.');
       return;
     }
     if (cleanLines.some((l) => !l.accountId)) {
-      alert('Account is required for each line.');
+      notify.error('Account is required for each line.');
       return;
     }
 
     const debitSum = round2(cleanLines.reduce((sum, l) => sum + l.debit, 0));
     const creditSum = round2(cleanLines.reduce((sum, l) => sum + l.credit, 0));
     if (debitSum <= 0 || creditSum <= 0) {
-      alert('Both total debit and total credit must be greater than 0.');
+      notify.error('Both total debit and total credit must be greater than 0.');
       return;
     }
     if (Math.abs(debitSum - creditSum) > 0.01) {
-      alert('Journal entry must be balanced (Total Debit = Total Credit).');
+      notify.error('Journal entry must be balanced (Total Debit = Total Credit).');
       return;
     }
 
@@ -3616,7 +3614,7 @@ const LedgerView = ({
             <button
               type="button"
               onClick={() => {
-                if (!draft.length) return alert('Select at least one column');
+                if (!draft.length) return notify.error('Select at least one column');
                 persistLedgerColumns(draft);
                 openModal(null);
               }}
@@ -3712,7 +3710,7 @@ const LedgerView = ({
   };
 
   const handleView = (row) => {
-    if (!openModal) return alert('No modal handler available');
+    if (!openModal) return notify.error('No modal handler available');
     openModal(
       <div className="space-y-4">
         <h4 className="text-lg font-medium">Entry details</h4>
@@ -3749,7 +3747,7 @@ const LedgerView = ({
           const je = { id: nextId, companyId: currentCompany.id, date, narration, lines: [{ accountId: String(ledgerId), debit, credit }], createdAt: new Date().toISOString() };
           setDb((prev) => ({ ...prev, journalEntries: [...(Array.isArray(prev.journalEntries) ? prev.journalEntries : []), je] }));
         } catch {
-          alert('Invalid JSON');
+          notify.error('Invalid JSON');
         }
         return;
       }
@@ -3797,7 +3795,7 @@ const LedgerView = ({
             setDb((prev) => ({ ...prev, journalEntries: [...(Array.isArray(prev.journalEntries) ? prev.journalEntries : []), je] }));
             onClose && onClose();
           } catch (e) {
-            alert('Invalid JSON: ' + e.message);
+            notify.error('Invalid JSON: ' + e.message);
           }
         };
 
@@ -3956,7 +3954,7 @@ const LedgerView = ({
             });
             onClose && onClose();
           } catch (e) {
-            alert('Invalid JSON: ' + e.message);
+            notify.error('Invalid JSON: ' + e.message);
           }
         };
 
@@ -4003,17 +4001,17 @@ const LedgerView = ({
     handleView(row);
   };
 
-  const handleDelete = (row) => {
+  const handleDelete = async (row) => {
     const meta = row?.meta || {};
     const key = String(meta.voucherKey || '').trim();
     const id = meta.voucherId ?? meta.voucherId;
-    if (!key || !id) return alert('Cannot delete this entry');
-    const ok = window.confirm('Delete this voucher? This action cannot be undone.');
+    if (!key || !id) return notify.error('Cannot delete this entry');
+    const ok = await confirmDialog({ title: 'Please confirm', message: 'Delete this voucher? This action cannot be undone.', confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
     const def = getVoucherDef(key);
     const listKey = def?.listKey || null;
-    if (!listKey) return alert('Delete not supported for this voucher type');
+    if (!listKey) return notify.error('Delete not supported for this voucher type');
 
     setDb((prev) => {
       const next = { ...prev };
@@ -5859,13 +5857,13 @@ const UomsList = ({ db, setDb, currentCompany }) => {
   const addUom = () => {
     const name = String(newUom || '').trim();
     if (!name) {
-      alert('Please enter a UoM name.');
+      notify.error('Please enter a UoM name.');
       return;
     }
 
     const exists = uoms.some((u) => String(u.name || '').trim().toLowerCase() === name.toLowerCase());
     if (exists) {
-      alert('This UoM already exists.');
+      notify.error('This UoM already exists.');
       return;
     }
 
@@ -5963,13 +5961,13 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
   const addRate = () => {
     const rate = Number(newRate);
     if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
-      alert('Please enter a valid GST rate (0 to 100).');
+      notify.error('Please enter a valid GST rate (0 to 100).');
       return;
     }
 
     const exists = gstRates.some((r) => Number(r.rate) === rate);
     if (exists) {
-      alert('This GST rate already exists.');
+      notify.error('This GST rate already exists.');
       return;
     }
 
@@ -6137,7 +6135,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
         };
       }),
     });
-    alert('Numbering settings saved.');
+    notify.success('Numbering settings saved.');
   };
 
   return (
@@ -6290,7 +6288,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
           : c
       ),
     });
-    alert('Template settings saved.');
+    notify.success('Template settings saved.');
   };
 
   return (
@@ -6426,7 +6424,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
           : c
       ),
     });
-    alert('Invoice template saved.');
+    notify.success('Invoice template saved.');
   };
 
   const cfg = docSettings?.templates?.invoice;
@@ -6586,7 +6584,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
       ),
     });
 
-    alert('Company profile saved.');
+    notify.success('Company profile saved.');
   };
 
   return (
@@ -6764,16 +6762,16 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
     const nextTcsState = String(tcs.state || '').trim();
 
     if (gstEnabled) {
-      if (!nextGstState) return alert('GST State is required when GST is enabled.');
-      if (gstReg !== 'Unregistered' && !gstinNormalized) return alert('GSTIN is required for the selected GST Registration type.');
+      if (!nextGstState) return notify.error('GST State is required when GST is enabled.');
+      if (gstReg !== 'Unregistered' && !gstinNormalized) return notify.error('GSTIN is required for the selected GST Registration type.');
     }
     if (tdsEnabled) {
-      if (!normalizedTdsTan) return alert('TDS TAN Number is required when TDS is enabled.');
-      if (!nextTdsState) return alert('TDS State is required when TDS is enabled.');
+      if (!normalizedTdsTan) return notify.error('TDS TAN Number is required when TDS is enabled.');
+      if (!nextTdsState) return notify.error('TDS State is required when TDS is enabled.');
     }
     if (tcsEnabled) {
-      if (!normalizedTcsTan) return alert('TCS TAN Number is required when TCS is enabled.');
-      if (!nextTcsState) return alert('TCS State is required when TCS is enabled.');
+      if (!normalizedTcsTan) return notify.error('TCS TAN Number is required when TCS is enabled.');
+      if (!nextTcsState) return notify.error('TCS State is required when TCS is enabled.');
     }
 
     const nextTax = {
@@ -6820,7 +6818,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
       // backend that served it; the live API has no such route, so the request
       // never reached a handler and its failure was never checked. A real
       // endpoint lands with the server-side company profile work.
-      alert('Tax & compliances saved.');
+      notify.success('Tax & compliances saved.');
       return;
     } finally {
       setSaving(false);
@@ -7095,7 +7093,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
   useEffect(() => {
     const nextSaved = (currentCompany && typeof currentCompany === 'object' ? currentCompany.profile : null) || {};
-    const nextCompanySettings = (nextSaved.companySettings && typeof nextSaved.companySettings === 'object') ? nextSaved.companySettings : {};
+    const nextCompanySettings = async (nextSaved.companySettings && typeof nextSaved.companySettings === 'object') ? nextSaved.companySettings : {};
     setForm({
       legalName: nextCompanySettings.legalName || (currentCompany?.name || ''),
       tradeName: nextCompanySettings.tradeName || '',
@@ -7119,7 +7117,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     });
   }, [currentCompany?.id]);
 
-  const updateForm = (patch) => setForm((p) => ({ ...p, ...patch }));
+  const updateForm = async (patch) => setForm((p) => ({ ...p, ...patch }));
 
   const saveCompanySettings = async () => {
     const legalName = String(form.legalName || '').trim();
@@ -7129,10 +7127,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     const regPincode = String(form.regPincode || '').trim();
     const regCountry = String(form.regCountry || '').trim();
 
-    if (!legalName) return alert('Legal Company Name is required.');
-    if (!regAddress1 || !regCity || !regStateCode || !regPincode || !regCountry) return alert('Registered Address is required.');
+    if (!legalName) return notify.error('Legal Company Name is required.');
+    if (!regAddress1 || !regCity || !regStateCode || !regPincode || !regCountry) return notify.error('Registered Address is required.');
 
-    const stateName = (GST_STATE_BY_CODE && regStateCode && GST_STATE_BY_CODE[regStateCode]) ? GST_STATE_BY_CODE[regStateCode] : '';
+    const stateName = async (GST_STATE_BY_CODE && regStateCode && GST_STATE_BY_CODE[regStateCode]) ? GST_STATE_BY_CODE[regStateCode] : '';
 
     const payload = {
       legalName,
@@ -7178,15 +7176,15 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       });
 
       // Local-only for now — see the note on the tax & compliances save above.
-      alert('Company settings saved.');
+      notify.success('Company settings saved.');
     } catch {
-      alert('Failed to save company settings.');
+      notify.error('Failed to save company settings.');
     } finally {
       setSaving(false);
     }
   };
 
-  const UsersRoles = () => {
+  const UsersRoles = async () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -7418,8 +7416,8 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       setError('');
       const email = String(newUser.email || '').trim();
       const password = String(newUser.password || '');
-      if (!email) return alert('Email is required.');
-      if (password && password.length < 8) return alert('Password must be at least 8 characters.');
+      if (!email) return notify.error('Email is required.');
+      if (password && password.length < 8) return notify.error('Password must be at least 8 characters.');
 
       try {
         const res = await fetch('/api/users/company-user', {
@@ -7463,7 +7461,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
     const saveUserRole = async () => {
       if (!selectedUser) return;
-      if (!userEdit.roleId) return alert('Select a role.');
+      if (!userEdit.roleId) return notify.error('Select a role.');
       setError('');
       try {
         const res = await fetch(`/api/users/${encodeURIComponent(String(selectedUser.userId))}/role`, {
@@ -7518,7 +7516,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
     const removeUser = async () => {
       if (!selectedUser) return;
-      const ok = window.confirm(`Remove ${selectedUser.email || 'this user'} from this company?`);
+      const ok = await confirmDialog({ title: 'Please confirm', message: `Remove ${selectedUser.email || 'this user'} from this company?`, confirmLabel: 'Yes, continue' });
       if (!ok) return;
       setError('');
       try {
@@ -7539,7 +7537,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     const createRole = async () => {
       setError('');
       const label = String(newRole.label || '').trim();
-      if (!label) return alert('Role name is required.');
+      if (!label) return notify.error('Role name is required.');
 
       try {
         const res = await fetch('/api/roles', {
@@ -7562,7 +7560,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       if (selectedRole.isSystem) return;
       setError('');
       const label = String(roleEdit.label || '').trim();
-      if (!label) return alert('Role name is required.');
+      if (!label) return notify.error('Role name is required.');
       try {
         const res = await fetch(`/api/roles/${encodeURIComponent(String(selectedRole.id))}`, {
           method: 'PUT',
@@ -7581,7 +7579,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     const deleteRole = async () => {
       if (!selectedRole) return;
       if (selectedRole.isSystem) return;
-      const ok = window.confirm(`Delete role "${selectedRole.label}"?`);
+      const ok = await confirmDialog({ title: 'Please confirm', message: `Delete role "${selectedRole.label}"?`, confirmLabel: 'Yes, continue' });
       if (!ok) return;
       setError('');
       try {
@@ -7603,7 +7601,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     const createBranch = async () => {
       setError('');
       const name = String(newBranch.name || '').trim();
-      if (!name) return alert('Branch name is required.');
+      if (!name) return notify.error('Branch name is required.');
       try {
         const res = await fetch('/api/branches', {
           method: 'POST',
@@ -7628,7 +7626,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       if (!selectedBranch) return;
       setError('');
       const name = String(branchEdit.name || '').trim();
-      if (!name) return alert('Branch name is required.');
+      if (!name) return notify.error('Branch name is required.');
       try {
         const res = await fetch(`/api/branches/${encodeURIComponent(String(selectedBranch.id))}`, {
           method: 'PUT',
@@ -7651,7 +7649,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
     const deleteBranch = async () => {
       if (!selectedBranch) return;
-      const ok = window.confirm(`Delete branch "${selectedBranch.name}"?`);
+      const ok = await confirmDialog({ title: 'Please confirm', message: `Delete branch "${selectedBranch.name}"?`, confirmLabel: 'Yes, continue' });
       if (!ok) return;
       setError('');
       try {
@@ -7673,7 +7671,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     const createWarehouse = async () => {
       setError('');
       const name = String(newWarehouse.name || '').trim();
-      if (!name) return alert('Warehouse name is required.');
+      if (!name) return notify.error('Warehouse name is required.');
       try {
         const res = await fetch('/api/warehouses', {
           method: 'POST',
@@ -7700,7 +7698,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       if (!selectedWarehouse) return;
       setError('');
       const name = String(warehouseEdit.name || '').trim();
-      if (!name) return alert('Warehouse name is required.');
+      if (!name) return notify.error('Warehouse name is required.');
       try {
         const res = await fetch(`/api/warehouses/${encodeURIComponent(String(selectedWarehouse.id))}`, {
           method: 'PUT',
@@ -7725,7 +7723,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
     const deleteWarehouse = async () => {
       if (!selectedWarehouse) return;
-      const ok = window.confirm(`Delete warehouse "${selectedWarehouse.name}"?`);
+      const ok = await confirmDialog({ title: 'Please confirm', message: `Delete warehouse "${selectedWarehouse.name}"?`, confirmLabel: 'Yes, continue' });
       if (!ok) return;
       setError('');
       try {
@@ -8478,7 +8476,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     onClick={() => {
                       if (!selectedWarehouse) {
-                        alert('Select a warehouse from the list first.');
+                        notify.error('Select a warehouse from the list first.');
                         return;
                       }
                       setActiveWarehouse(selectedWarehouse.id);
@@ -10960,6 +10958,7 @@ const AppShell = () => {
           content scrolls, quiet so tables stay tables. The background colour
           itself is untouched — this paints over --app-bg, never replaces it. */}
       <div className="ui-ambient ui-ambient-quiet ui-ambient-fixed" aria-hidden="true" />
+      <Toaster />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 ui-btn ui-btn-primary"

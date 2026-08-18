@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { notify } from '../../components/ui/notify';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -52,11 +53,11 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
     const name = String(formData.name || '').trim();
 
     if (!parent) {
-      alert('Parent is required');
+      notify.error('Parent is required');
       return;
     }
     if (!name) {
-      alert('Group name is required');
+      notify.error('Group name is required');
       return;
     }
 
@@ -69,7 +70,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
         (!isEdit || String(t.id) !== String(initialData.id))
     );
     if (clash) {
-      alert('Group already exists under this Parent');
+      notify.error('Group already exists under this Parent');
       return;
     }
 
@@ -196,11 +197,11 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
     const groupCategory = String(formData.groupCategory || 'General').trim() || 'General';
 
     if (!typeId) {
-      alert('Group is required');
+      notify.error('Group is required');
       return;
     }
     if (!name) {
-      alert('Group name is required');
+      notify.error('Group name is required');
       return;
     }
 
@@ -211,7 +212,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
         (!isEdit || String(g.id) !== String(initialData.id))
     );
     if (clash) {
-      alert('Group already exists under this Parent');
+      notify.error('Group already exists under this Parent');
       return;
     }
 

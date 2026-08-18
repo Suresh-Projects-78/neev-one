@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { notify } from '../ui/notify';
 
 import Modal from '../ui/Modal';
 import { CustomerForm } from './CustomerPicker';
@@ -134,23 +135,23 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
     const openingBalance = Number(formData.openingBalance || 0);
 
     if (!name) {
-      alert('Account name is required');
+      notify.error('Account name is required');
       return;
     }
     if (!groupValue) {
-      alert('Group is required');
+      notify.error('Group is required');
       return;
     }
 
     const group = groupById.get(groupValue) || null;
     if (!group) {
-      alert('Please select a valid group.');
+      notify.error('Please select a valid group.');
       return;
     }
 
     const typeRow = typeById.get(String(group.typeId));
     if (!typeRow) {
-      alert('Parent mapping not found for selected group');
+      notify.error('Parent mapping not found for selected group');
       return;
     }
 

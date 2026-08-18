@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { notify } from '../../components/ui/notify';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { createPayment } from '../../api/payments';
@@ -208,18 +209,18 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
     const amount = Number(formData.amount ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) {
-      alert('Payment amount must be greater than 0');
+      notify.error('Payment amount must be greater than 0');
       return;
     }
 
     const vendorIdNum = Number(formData.vendorId);
     if (!Number.isFinite(vendorIdNum) || !vendorIdNum) {
-      alert('Party (Vendor) is required');
+      notify.error('Party (Vendor) is required');
       return;
     }
 
     if (computed.allocated > amount + 0.0001) {
-      alert('Total allocated cannot be more than payment amount');
+      notify.error('Total allocated cannot be more than payment amount');
       return;
     }
 
@@ -231,22 +232,22 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       const list = line.voucherType === 'bill' ? billsList : expensesList;
       const doc = list.find((d) => Number(d.id) === Number(line.voucherId));
       if (!doc) {
-        alert('One of the selected documents was not found. Please refresh and try again.');
+        notify.error('One of the selected documents was not found. Please refresh and try again.');
         return;
       }
       if (!canPayDoc(doc)) {
-        alert(`Cannot record against ${line.voucherType} ${doc.number || ''} (Draft/No balance).`);
+        notify.error(`Cannot record against ${line.voucherType} ${doc.number || ''} (Draft/No balance).`);
         return;
       }
       const balance = getDocBalance(doc);
       if (Number(line.amount) > balance + 0.0001) {
-        alert(`Allocation exceeds outstanding for ${line.voucherType} ${doc.number || ''}.`);
+        notify.error(`Allocation exceeds outstanding for ${line.voucherType} ${doc.number || ''}.`);
         return;
       }
     }
 
     if (!hideMode && !String(ledgerAccountId || "").trim()) {
-      alert('Choose the cash or bank account the money was paid from');
+      notify.error('Choose the cash or bank account the money was paid from');
       return;
     }
 
@@ -277,7 +278,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         });
       } catch (err) {
         setSaving(false);
-        alert(String(err?.message || 'Unable to record the payment.'));
+        notify.error(String(err?.message || 'Unable to record the payment.'));
         return;
       }
       setSaving(false);
@@ -387,7 +388,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
     onSaved?.(paymentRecord);
 
-    alert(computed.advance > 0 ? 'Payment recorded (with advance)!' : 'Payment recorded!');
+    notify.error(computed.advance > 0 ? 'Payment recorded (with advance)!' : 'Payment recorded!');
     onClose?.();
   };
 

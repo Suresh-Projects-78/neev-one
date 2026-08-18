@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { notify } from '../../components/ui/notify';
 import { getNextNumericId } from '../../utils/ids';
 import { round2, formatMoney } from '../../utils/money';
 
@@ -22,11 +23,11 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
     e.preventDefault();
     const amount = Number(formData.amount ?? 0);
     if (!Number.isFinite(amount) || amount <= 0) {
-      alert('Amount must be greater than 0');
+      notify.error('Amount must be greater than 0');
       return;
     }
     if (amount > balance + 0.0001) {
-      alert('Amount cannot be more than balance');
+      notify.error('Amount cannot be more than balance');
       return;
     }
 
@@ -35,7 +36,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
     const targetId = Number(voucher?.id);
     const target = list.find((d) => Number(d.id) === targetId);
     if (!target) {
-      alert('Document not found');
+      notify.error('Document not found');
       return;
     }
 
@@ -80,7 +81,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
       payments: [...(Array.isArray(db.payments) ? db.payments : []), paymentRecord],
     });
 
-    alert(isInvoice ? 'Receipt recorded!' : 'Payment recorded!');
+    notify.error(isInvoice ? 'Receipt recorded!' : 'Payment recorded!');
     onClose?.();
   };
 

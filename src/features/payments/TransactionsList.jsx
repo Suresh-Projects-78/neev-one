@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { notify } from '../../components/ui/notify';
 
 import RecordPaymentForm from './RecordPaymentForm';
 import { formatMoney } from '../../utils/money';
@@ -203,14 +204,14 @@ const TransactionView = ({ title, payload }) => {
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareText);
-        alert('Copied to clipboard');
+        notify.success('Copied to clipboard');
         return;
       }
     } catch {
       // ignore
     }
 
-    alert(shareText);
+    notify.error(shareText);
   };
 
   return (

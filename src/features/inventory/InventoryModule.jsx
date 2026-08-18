@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { notify } from '../../components/ui/notify';
 
 import { Boxes, PackageX, TrendingDown, Warehouse } from 'lucide-react';
 
@@ -308,7 +309,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
 
     const w = window.open('', '_blank');
     if (!w) {
-      alert('Popup blocked. Please allow popups to export PDF.');
+      notify.error('Popup blocked. Please allow popups to export PDF.');
       return;
     }
     w.document.open();

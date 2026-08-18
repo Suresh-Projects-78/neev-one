@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { notify, confirmDialog } from '../../components/ui/notify';
 import { MoreVertical, Pencil, Trash2 , Link2, CheckCircle2} from 'lucide-react';
 
 import RecordReceiptForm from '../payments/RecordReceiptForm';
@@ -432,7 +433,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   const openAddTxn = (initial = null) => {
     if (!cashBankAccounts.length) {
-      alert('Please create a cash/bank account first.');
+      notify.error('Please create a cash/bank account first.');
       return;
     }
 
@@ -443,7 +444,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       null;
 
     if (!effectiveAccount) {
-      alert('Please select a cash/bank account first.');
+      notify.error('Please select a cash/bank account first.');
       return;
     }
 
@@ -744,19 +745,19 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
         const cashBankAccountId = String(form.cashBankAccountId || '').trim();
         if (!cashBankAccountId) {
-          alert('Cash/Bank account is required');
+          notify.error('Cash/Bank account is required');
           return;
         }
 
         const ledgerId = String(form.ledgerId || '').trim();
         if (!ledgerId) {
-          alert('Ledger is required');
+          notify.error('Ledger is required');
           return;
         }
 
         const amt = parseAmount(form.amount);
         if (!Number.isFinite(amt) || amt <= 0) {
-          alert('Amount must be greater than 0');
+          notify.error('Amount must be greater than 0');
           return;
         }
 
@@ -818,21 +819,21 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             for (const line of knockoffComputed.lines.filter((l) => l.voucherType === 'invoice')) {
               const inv = safeArray(db.invoices).find((i) => i.companyId === companyId && Number(i.id) === Number(line.voucherId));
               if (!inv) {
-                alert('One of the selected invoices was not found. Please refresh and try again.');
+                notify.error('One of the selected invoices was not found. Please refresh and try again.');
                 return;
               }
               if (!canCollectAgainstInvoice(inv)) {
-                alert(`Cannot record against invoice ${inv.number || ''} (Draft/Cancelled/No balance).`);
+                notify.error(`Cannot record against invoice ${inv.number || ''} (Draft/Cancelled/No balance).`);
                 return;
               }
               const balance = getInvoiceBalance(inv);
               if (Number(line.amount) > balance + 0.0001) {
-                alert(`Allocation exceeds outstanding for invoice ${inv.number || ''}.`);
+                notify.error(`Allocation exceeds outstanding for invoice ${inv.number || ''}.`);
                 return;
               }
             }
             if (knockoffComputed.allocated > amountNum + 0.0001) {
-              alert('Total allocated cannot be more than receipt amount');
+              notify.error('Total allocated cannot be more than receipt amount');
               return;
             }
 
@@ -895,7 +896,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             const vendorName = vendor?.name || vendor?.displayName || vendor?.companyName || vendor?.legalName || '';
 
             if (knockoffComputed.allocated > amountNum + 0.0001) {
-              alert('Total allocated cannot be more than payment amount');
+              notify.error('Total allocated cannot be more than payment amount');
               return;
             }
 
@@ -906,16 +907,16 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               const list = line.voucherType === 'bill' ? billsList : expensesList;
               const doc = list.find((d) => Number(d.id) === Number(line.voucherId));
               if (!doc) {
-                alert('One of the selected documents was not found. Please refresh and try again.');
+                notify.error('One of the selected documents was not found. Please refresh and try again.');
                 return;
               }
               if (!canPayDoc(doc)) {
-                alert(`Cannot record against ${line.voucherType} ${doc.number || ''} (Draft/Cancelled/No balance).`);
+                notify.error(`Cannot record against ${line.voucherType} ${doc.number || ''} (Draft/Cancelled/No balance).`);
                 return;
               }
               const balance = getDocBalance(doc);
               if (Number(line.amount) > balance + 0.0001) {
-                alert(`Allocation exceeds outstanding for ${line.voucherType} ${doc.number || ''}.`);
+                notify.error(`Allocation exceeds outstanding for ${line.voucherType} ${doc.number || ''}.`);
                 return;
               }
             }
@@ -1383,7 +1384,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   const onUploadStatement = async (file) => {
     if (!file) return;
     if (!cashBankAccounts.length) {
-      alert('No cash/bank accounts found. Please create one first.');
+      notify.error('No cash/bank accounts found. Please create one first.');
       return;
     }
 
@@ -1392,13 +1393,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       try {
         text = await file.text();
       } catch {
-        alert('Unable to read the statement file.');
+        notify.error('Unable to read the statement file.');
         return;
       }
 
     const { headers, rows } = parseCsv(text);
     if (!headers.length || !rows.length) {
-      alert('No rows found in the uploaded file.');
+      notify.error('No rows found in the uploaded file.');
       return;
     }
 
@@ -1431,7 +1432,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       const narrationIdx = pickIdx(['narration', 'description', 'particulars', 'remarks', 'details']);
 
     if (dateIdx < 0 || (amountIdx < 0 && paymentIdx < 0 && receiptsIdx < 0)) {
-      alert(
+      notify.error(
         `CSV must contain Date and either Amount or Payment/Receipts columns.\nDetected headers: ${headers
           .map((h) => String(h || '').trim())
           .filter(Boolean)
@@ -1533,7 +1534,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     }
 
       if (newTxns.length === 0) {
-        alert('No valid transactions found to import.');
+        notify.error('No valid transactions found to import.');
         return;
       }
 
@@ -1571,7 +1572,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 unknownAccounts.size > 10 ? ' …' : ''
               }`
             : '';
-        alert(
+        notify.error(
           `Imported ${newTxns.length} transaction(s).\nWarning: detected ${duplicates.length} duplicate(s) (imported anyway).${unknownMsg}\n\nSample duplicates:\n${sample}`
         );
       } else {
@@ -1581,18 +1582,18 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 unknownAccounts.size > 10 ? ' …' : ''
               }`
             : '';
-        alert(`Imported ${newTxns.length} transaction(s).${unknownMsg}`);
+        notify.error(`Imported ${newTxns.length} transaction(s).${unknownMsg}`);
       }
     } catch (err) {
       // Avoid silent failures when a helper or parse step throws.
       console.error('Upload/import failed', err);
-      alert(`Import failed: ${err?.message || String(err)}`);
+      notify.error(`Import failed: ${err?.message || String(err)}`);
     }
   };
 
   const openUpload = () => {
     if (!cashBankAccounts.length) {
-      alert('No cash/bank accounts found. Please create one first.');
+      notify.error('No cash/bank accounts found. Please create one first.');
       return;
     }
     uploadInputRef.current?.click?.();
@@ -1683,7 +1684,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       openLedgerCreate();
       return;
     }
-    alert('Ledger creation is not available.');
+    notify.error('Ledger creation is not available.');
   };
 
   const accountsEmpty = cashBankAccounts.length === 0;
@@ -1734,9 +1735,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     });
   };
 
-  const deleteSelectedTxns = () => {
+  const deleteSelectedTxns = async () => {
     if (!selectedTxnIds.size) return;
-    const ok = window.confirm(`Delete ${selectedTxnIds.size} selected transaction(s)?`);
+    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete ${selectedTxnIds.size} selected transaction(s)?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
     setDb((prev) => {
       const list = safeArray(prev.bankTransactions);
@@ -1766,9 +1767,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     });
   };
 
-  const deleteTxn = (txn) => {
+  const deleteTxn = async (txn) => {
     if (!txn) return;
-    const ok = window.confirm('Delete this transaction?');
+    const ok = await confirmDialog({ title: 'Please confirm', message: 'Delete this transaction?', confirmLabel: 'Yes, continue' });
     if (!ok) return;
     setDb((prev) => {
       const list = safeArray(prev.bankTransactions);
