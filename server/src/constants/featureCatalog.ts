@@ -211,6 +211,14 @@ export const FEATURE_CATALOG: FeatureDef[] = [
 
   // ---- Data -------------------------------------------------------------
   {
+    key: 'gridTools',
+    label: 'Power grid tools',
+    description:
+      'Saved views, column show/hide, bulk actions and a row preview drawer on the big list pages. When off, lists stay plain tables.',
+    defaultEnabled: true,
+    category: 'Data',
+  },
+  {
     key: 'imports',
     label: 'Data import',
     description:

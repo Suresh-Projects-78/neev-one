@@ -721,6 +721,18 @@
   }
   /* Icon-only control. 40px keeps it above the 24px minimum pointer target
      with room to spare, and matches the height of a small button beside it. */
+  /* Checkboxes in grids: brand accent, generous 16px hit target. */
+  .ui-checkbox {
+    width: 1rem;
+    height: 1rem;
+    accent-color: rgb(var(--brand));
+    cursor: pointer;
+  }
+  .ui-checkbox:disabled {
+    cursor: default;
+    opacity: 0.4;
+  }
+
   .ui-icon-btn {
     display: inline-flex;
     align-items: center;

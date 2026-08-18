@@ -6,6 +6,9 @@ import { dueDateFor, termsLabel } from '../../utils/paymentTerms';
 import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '../../api/invoices';
+import { useFeatures } from '../../permissions/useFeatures';
+import { useGridView } from '../../components/grid/useGridView';
+import GridControls, { BulkBar } from '../../components/grid/GridControls';
 
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import { getCustomerDisplayName } from '../../utils/contacts';
@@ -148,6 +151,17 @@ const isOverdue = (doc) => {
   return due < new Date().toISOString().slice(0, 10);
 };
 
+/** Columns the invoices grid can show or hide. Identity and actions stay. */
+const GRID_COLUMNS = [
+  { key: 'number', label: 'Invoice #', always: true },
+  { key: 'customer', label: 'Customer' },
+  { key: 'warehouse', label: 'Warehouse' },
+  { key: 'date', label: 'Date' },
+  { key: 'due', label: 'Due' },
+  { key: 'total', label: 'Total', always: true },
+  { key: 'status', label: 'Status' },
+];
+
 export const InvoicesList = ({
   db,
   setDb,
@@ -172,6 +186,30 @@ export const InvoicesList = ({
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+
+  // --- power grid tools (feature-gated) ---
+  const { isEnabled } = useFeatures();
+  const gridEnabled = isEnabled('gridTools');
+  const grid = useGridView({
+    storageKey: `grid:${currentCompany?.id || 'x'}:invoices`,
+    columns: GRID_COLUMNS,
+    getFilterSnapshot: () => ({ searchText, statusFilter, dateFrom, dateTo }),
+    applyFilterSnapshot: (f) => {
+      setSearchText(String(f?.searchText ?? ''));
+      setStatusFilter(String(f?.statusFilter ?? ''));
+      setDateFrom(String(f?.dateFrom ?? ''));
+      setDateTo(String(f?.dateTo ?? ''));
+    },
+  });
+  const col = (key) => !gridEnabled || grid.isVisible(key);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const toggleSelected = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   const MENU_WIDTH = 224; // w-56
   const MENU_HEIGHT_ESTIMATE = 320;
@@ -511,9 +549,7 @@ export const InvoicesList = ({
     }));
   };
 
-  const deleteInvoice = (invoice) => {
-    const ok = window.confirm(`Delete invoice ${invoice?.number || ''}? This cannot be undone.`.trim());
-    if (!ok) return;
+  const deleteInvoiceCore = async (invoice) => {
     const run = async () => {
       const hasApiSession = Boolean(String(localStorage.getItem('token') || '').trim() && String(localStorage.getItem('activeOrgId') || '').trim());
       const backendInvoiceId = String(invoice?.backendInvoiceId || '').trim();
@@ -541,7 +577,52 @@ export const InvoicesList = ({
         ),
       }));
     };
-    run();
+    await run();
+  };
+
+  const deleteInvoice = (invoice) => {
+    const ok = window.confirm(`Delete invoice ${invoice?.number || ''}? This cannot be undone.`.trim());
+    if (!ok) return;
+    deleteInvoiceCore(invoice);
+  };
+
+  const bulkDelete = async () => {
+    const rows = filteredInvoices.filter((i) => selectedIds.has(i.id));
+    if (!rows.length) return;
+    const ok = window.confirm(`Delete ${rows.length} invoice${rows.length === 1 ? '' : 's'}? This cannot be undone.`);
+    if (!ok) return;
+    for (const inv of rows) {
+      // Sequential on purpose: each delete hits the API and then rewrites
+      // db state; racing them loses updates to the last writer.
+      // eslint-disable-next-line no-await-in-loop
+      await deleteInvoiceCore(inv);
+    }
+    setSelectedIds(new Set());
+  };
+
+  const bulkExportCsv = () => {
+    const rows = filteredInvoices.filter((i) => selectedIds.has(i.id));
+    if (!rows.length) return;
+    const esc = (v) => {
+      const t = String(v ?? '');
+      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const head = ['Invoice #', 'Customer', 'Date', 'Due date', 'Total', 'Paid', 'Status'];
+    const lines = rows.map((i) =>
+      [i.number, i.customerName || '', i.date || '', i.dueDate || '', Number(i.total || 0).toFixed(2), Number(i.paidAmount || 0).toFixed(2), getDerivedStatus(i)]
+        .map(esc)
+        .join(',')
+    );
+    const csv = '\ufeff' + [head.map(esc).join(','), ...lines].join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'invoices.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const openInvoiceMenu = (invoiceId, anchorEl) => {
@@ -628,7 +709,7 @@ export const InvoicesList = ({
             />
           </div>
 
-          <div className="md:col-span-12 flex justify-end">
+          <div className="md:col-span-12 flex items-center justify-end gap-2">
             <button
               type="button"
               onClick={() => {
@@ -641,27 +722,52 @@ export const InvoicesList = ({
             >
               Clear filters
             </button>
+            {gridEnabled ? <GridControls grid={grid} /> : null}
           </div>
         </div>
+
+        {gridEnabled ? (
+          <BulkBar count={selectedIds.size} onClear={() => setSelectedIds(new Set())}>
+            <button type="button" onClick={bulkExportCsv} className="ui-btn ui-btn-secondary !h-8">
+              Export CSV
+            </button>
+            <button type="button" onClick={bulkDelete} className="ui-btn ui-btn-danger !h-8">
+              Delete
+            </button>
+          </BulkBar>
+        ) : null}
 
         <div className="overflow-x-auto">
         <table className="ui-table ui-table-wide">
           <thead>
             <tr>
+              {gridEnabled ? (
+                <th scope="col" className="w-8">
+                  <input
+                    type="checkbox"
+                    className="ui-checkbox"
+                    aria-label="Select all invoices in view"
+                    checked={filteredInvoices.length > 0 && filteredInvoices.every((i) => selectedIds.has(i.id))}
+                    onChange={(e) =>
+                      setSelectedIds(e.target.checked ? new Set(filteredInvoices.map((i) => i.id)) : new Set())
+                    }
+                  />
+                </th>
+              ) : null}
               <th scope="col">Invoice #</th>
-              <th scope="col">Customer</th>
-              <th scope="col">Warehouse</th>
-              <th scope="col">Date</th>
-              <th scope="col">Due</th>
+              {col('customer') ? <th scope="col">Customer</th> : null}
+              {col('warehouse') ? <th scope="col">Warehouse</th> : null}
+              {col('date') ? <th scope="col">Date</th> : null}
+              {col('due') ? <th scope="col">Due</th> : null}
               <th scope="col" className="ui-num">Total</th>
-              <th scope="col">Status</th>
+              {col('status') ? <th scope="col">Status</th> : null}
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="ui-rows">
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan="8">
+                <td colSpan={3 + (gridEnabled ? 1 : 0) + GRID_COLUMNS.filter((c) => !c.always && col(c.key)).length}>
                   <EmptyState
                     icon={FileText}
                     title="No invoices found"
@@ -687,18 +793,33 @@ export const InvoicesList = ({
                       openViewInvoice(inv);
                     }}
                   >
+                    {gridEnabled ? (
+                      <td className="w-8" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="ui-checkbox"
+                          aria-label={`Select invoice ${inv.number}`}
+                          checked={selectedIds.has(inv.id)}
+                          onChange={() => toggleSelected(inv.id)}
+                        />
+                      </td>
+                    ) : null}
                     <td className="ui-col-id">{inv.number}</td>
-                    <td className="ui-col-entity">{inv.customerName || '-'}</td>
-                    <td className="ui-col-meta">{whLabel}</td>
-                    <td className="ui-col-date">{inv.date || '-'}</td>
+                    {col('customer') ? <td className="ui-col-entity">{inv.customerName || '-'}</td> : null}
+                    {col('warehouse') ? <td className="ui-col-meta">{whLabel}</td> : null}
+                    {col('date') ? <td className="ui-col-date">{inv.date || '-'}</td> : null}
                     {/* The only date that earns colour: past due, still owed. */}
-                    <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>
-                      {inv.dueDate || '-'}
-                    </td>
+                    {col('due') ? (
+                      <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>
+                        {inv.dueDate || '-'}
+                      </td>
+                    ) : null}
                     <td className="ui-col-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
+                    {col('status') ? (
                     <td>
                       <StatusPill status={derived} />
                     </td>
+                    ) : null}
                     <td
                       className="relative w-10"
                       onMouseDown={(e) => e.stopPropagation()}
