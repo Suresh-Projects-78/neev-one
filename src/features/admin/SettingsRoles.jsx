@@ -371,7 +371,7 @@ export function SettingsRoles({ orgId }) {
         <button
           type="button"
           onClick={openCreate}
-          className="px-4 py-2 rounded-lg ui-primary-bg "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
         >
           + Create Role
         </button>
@@ -391,7 +391,7 @@ export function SettingsRoles({ orgId }) {
         <div />
       </div>
 
-      {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>}
+      {error && <div className="text-sm text-[rgb(var(--neg))] bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg)/0.35)] rounded-lg p-3">{error}</div>}
 
       {selectedRole ? (
         <div className="ui-surface border rounded-xl p-5 space-y-4">
@@ -574,7 +574,7 @@ export function SettingsRoles({ orgId }) {
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
               {saving ? 'Saving…' : editRole ? 'Update Role' : 'Create Role'}
             </button>
           </div>
@@ -610,7 +610,7 @@ export function SettingsRoles({ orgId }) {
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.description || '-'}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{Number(r.assignedUsersCount || 0)}</td>
                   <td className="ui-col-meta px-4 py-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]">
                       Active
                     </span>
                   </td>
@@ -655,7 +655,7 @@ export function SettingsRoles({ orgId }) {
                           </button>
                           <button
                             type="button"
-                            className="w-full text-left px-3 py-2 text-sm text-red-600 ui-hover-sunken"
+                            className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] ui-hover-sunken"
                             onClick={() => {
                               setOpenMenuForRoleId(null);
                               removeRole(r.id);

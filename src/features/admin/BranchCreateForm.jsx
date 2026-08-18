@@ -73,7 +73,7 @@ export function BranchCreateForm({ orgId, onCreated }) {
     <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
       <div className="ui-title text-base">Create Branch</div>
 
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 sm:col-span-4">
@@ -152,7 +152,7 @@ export function BranchCreateForm({ orgId, onCreated }) {
       </label>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
           {saving ? 'Saving…' : 'Create Branch'}
         </button>
       </div>

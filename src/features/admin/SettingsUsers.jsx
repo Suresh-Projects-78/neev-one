@@ -339,7 +339,7 @@ export function SettingsUsers({ orgId }) {
         <button
           type="button"
           onClick={openCreate}
-          className="px-4 py-2 rounded-lg ui-primary-bg "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
         >
           + Create User
         </button>
@@ -359,7 +359,7 @@ export function SettingsUsers({ orgId }) {
         <div />
       </div>
 
-      {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>}
+      {error && <div className="text-sm text-[rgb(var(--neg))] bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg)/0.35)] rounded-lg p-3">{error}</div>}
 
       {selectedUser ? (
         <div className="ui-surface border rounded-xl p-5 space-y-4">
@@ -502,7 +502,7 @@ export function SettingsUsers({ orgId }) {
               <button
                 type="submit"
                 disabled={saving}
-                className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50"
+                className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50"
               >
                 {saving ? 'Creating…' : 'Create User'}
               </button>
@@ -575,7 +575,7 @@ export function SettingsUsers({ orgId }) {
               <button
                 type="submit"
                 disabled={assignBranchesSaving || assignBranchesLoading}
-                className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50"
+                className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50"
               >
                 {assignBranchesSaving ? 'Saving…' : 'Save'}
               </button>
@@ -644,7 +644,7 @@ export function SettingsUsers({ orgId }) {
             <button
               type="submit"
               disabled={editSaving}
-              className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50"
+              className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50"
             >
               {editSaving ? 'Saving…' : 'Save Changes'}
             </button>
@@ -681,7 +681,7 @@ export function SettingsUsers({ orgId }) {
                   <td className="ui-col-entity px-4 py-3 text-sm ui-fg">{u.email}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{getRoleName(u.roleId)}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${u.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${u.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
                       {u.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -732,7 +732,7 @@ export function SettingsUsers({ orgId }) {
                           <button
                             type="button"
                             onClick={() => removeUser(u.id)}
-                            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                            className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]"
                           >
                             Delete
                           </button>

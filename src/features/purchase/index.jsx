@@ -240,7 +240,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             setSubmitAsDraft(true);
             formRef.current?.requestSubmit();
           }}
-          className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+          className="ui-btn ui-btn-secondary"
         >
           Save Draft
         </button>
@@ -403,7 +403,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                   </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
+                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -445,7 +445,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           Create Bill
         </button>
       </div>
@@ -487,7 +487,7 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
               <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[rgb(var(--border))]">
             {purchaseOrders.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-12 text-center ui-muted">
@@ -507,7 +507,7 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
                     <td className="ui-col-date px-6 py-4">{po.date}</td>
                     <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-6 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">{po.status || 'Draft'}</span>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]">{po.status || 'Draft'}</span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       {onConvertToBill && po.status !== 'Billed' ? (
@@ -749,7 +749,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
                   </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.amount || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
+                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -775,7 +775,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           Create PO
         </button>
       </div>
@@ -1064,12 +1064,12 @@ export const BillsList = ({
                 const derived = getDerivedStatus(b);
                 const statusPillClass =
                   derived === 'Paid'
-                    ? 'bg-green-100 text-green-700'
+                    ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
                     : derived === 'Over due'
-                      ? 'bg-red-100 text-red-700'
+                      ? 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'
                       : derived === 'Draft'
                         ? 'ui-sunken ui-fg'
-                        : 'bg-yellow-100 text-yellow-700';
+                        : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
 
                 return (
                   <tr key={b.id} className="ui-hover-sunken">
@@ -1177,7 +1177,7 @@ export const BillsList = ({
                     setOpenMenu(null);
                     deleteBill(bill);
                   }}
-                  className="w-full px-4 py-2 text-left hover:bg-red-50 text-red-700 flex items-center gap-2"
+                  className="w-full px-4 py-2 text-left hover:bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))] flex items-center gap-2"
                 >
                   <Trash2 size={16} /> Delete
                 </button>
@@ -1652,7 +1652,7 @@ export const DebitNoteForm = ({
                   </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
+                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -1694,7 +1694,7 @@ export const DebitNoteForm = ({
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           Create Debit Note
         </button>
       </div>
@@ -1751,7 +1751,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[rgb(var(--border))]">
             {debitNotes.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-12 text-center ui-muted">
@@ -1772,7 +1772,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                     <td className="ui-col-date px-6 py-4">{dn.date}</td>
                     <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-6 py-4">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">{dn.status || 'Draft'}</span>
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]">{dn.status || 'Draft'}</span>
                     </td>
                   </tr>
                 );

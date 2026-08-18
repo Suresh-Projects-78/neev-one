@@ -409,7 +409,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
                 {branchesLoading ? (
                   <div className="px-4 py-10 text-center ui-muted">Loading branches…</div>
                 ) : branchesError ? (
-                  <div className="px-4 py-10 text-center text-red-600">{branchesError}</div>
+                  <div className="px-4 py-10 text-center text-[rgb(var(--neg))]">{branchesError}</div>
                 ) : branchesSorted.length === 0 ? (
                   <div className="px-4 py-10 text-center ui-muted">No branches</div>
                 ) : (
@@ -451,7 +451,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
               <button
                 type="button"
                 onClick={() => setBranchPickerOpen(false)}
-                className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                className="ui-btn ui-btn-secondary"
               >
                 Cancel
               </button>
@@ -467,7 +467,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
                   }
                   setBranchPickerOpen(false);
                 }}
-                className="px-4 py-2 rounded-lg ui-primary-bg "
+                className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
               >
                 Apply
               </button>
@@ -560,7 +560,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ui-btn ui-btn-secondary"
             >
               Back
             </button>
@@ -583,7 +583,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={() => setEditingVendor(null)}
-              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ui-btn ui-btn-secondary"
             >
               Back
             </button>
@@ -674,7 +674,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
                       <button
                         type="button"
                         onClick={() => onDeleteVendor(vendor)}
-                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-[rgb(var(--neg))]"
                       >
                         <Trash2 size={16} /> Delete
                       </button>
@@ -768,7 +768,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ui-btn ui-btn-secondary"
             >
               Back
             </button>
@@ -791,7 +791,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={() => setEditingCustomer(null)}
-              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ui-btn ui-btn-secondary"
             >
               Back
             </button>
@@ -884,7 +884,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
                       <button
                         type="button"
                         onClick={() => onDeleteCustomer(customer)}
-                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-[rgb(var(--neg))]"
                       >
                         <Trash2 size={16} /> Delete
                       </button>
@@ -953,7 +953,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             <button
               type="button"
               onClick={() => setIsCreating(false)}
-              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ui-btn ui-btn-secondary"
             >
               Back
             </button>
@@ -1073,12 +1073,12 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                 const derived = getDerivedStatus(expense);
                 const statusPillClass =
                   derived === 'Paid'
-                    ? 'bg-green-100 text-green-700'
+                    ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
                     : derived === 'Over due'
-                      ? 'bg-red-100 text-red-700'
+                      ? 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'
                       : derived === 'Draft'
                         ? 'ui-sunken ui-fg'
-                        : 'bg-yellow-100 text-yellow-700';
+                        : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
                 return (
                   <tr key={expense.id} className="ui-hover-sunken">
                   <td className="px-6 py-4 ui-col-entity">{expense.number || '-'}</td>
@@ -1226,7 +1226,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             setSubmitAsDraft(true);
             formRef.current?.requestSubmit();
           }}
-          className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+          className="ui-btn ui-btn-secondary"
         >
           Save Draft
         </button>
@@ -1386,7 +1386,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           Create Expense
         </button>
       </div>
@@ -1525,7 +1525,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
                     <button
                       type="button"
                       onClick={() => onDelete(item)}
-                      className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
+                      className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-[rgb(var(--neg))]"
                       title="Delete"
                     >
                       <Trash2 size={16} /> Delete
@@ -1791,7 +1791,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           />
         </div>
       </div>
-      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg ">
+      <button type="submit" className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
         {isEdit ? 'Update Item' : 'Create Item'}
       </button>
     </form>
@@ -2209,7 +2209,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             setOpenMenu(null);
             setCoaView('ledgers');
           }}
-          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'ledgers' ? 'ui-primary-bg ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
+          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'ledgers' ? 'ui-btn ui-btn-primary ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
           }`}
         >
           Ledgers
@@ -2220,7 +2220,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             setOpenMenu(null);
             setCoaView('groups');
           }}
-          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'groups' ? 'ui-primary-bg ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
+          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'groups' ? 'ui-btn ui-btn-primary ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
           }`}
         >
           Groups
@@ -2408,7 +2408,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                       setOpenMenu(null);
                       deleteLedger(ledger);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
                   >
                     <span>Delete</span>
                   </button>
@@ -2445,7 +2445,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     deleteGroup(group);
                   }}
                   disabled={deleteDisabled}
-                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ deleteDisabled ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken text-red-600'
+                  className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ deleteDisabled ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken text-[rgb(var(--neg))]'
                   }`}
                   title={deleteDisabled ? canDel.reason : ''}
                 >
@@ -2849,7 +2849,7 @@ const ChartAccountForm = ({
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
           {isEdit ? 'Save' : 'Create'}
         </button>
       </div>
@@ -2964,7 +2964,7 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
         <button type="button" onClick={() => onClose?.()} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
           Create
         </button>
       </div>
@@ -3011,7 +3011,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
               <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[rgb(var(--border))]">
             {journalEntries.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-12 text-center ui-muted">
@@ -3031,7 +3031,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                   <td className="ui-col-amount px-6 py-4 text-right font-semibold">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
                   <td className="px-6 py-4 ui-col-meta">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}
                     >
                       {(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'Balanced' : 'Unbalanced'}
                     </span>
@@ -3048,7 +3048,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                       <button
                         type="button"
                         onClick={() => deleteEntry(jv)}
-                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-red-600"
+                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-[rgb(var(--neg))]"
                       >
                         <Trash2 size={16} /> Delete
                       </button>
@@ -3346,7 +3346,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
                     <button
                       type="button"
                       onClick={() => removeLine(idx)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]"
                       disabled={formData.lines.length <= 2}
                       title={formData.lines.length <= 2 ? 'Minimum 2 lines' : 'Remove line'}
                     >
@@ -3482,8 +3482,8 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
         </table>
       </div>
 
-      <div className={`p-4 rounded-lg ${Math.abs(totalDebit - totalCredit) < 0.01 ? 'bg-green-50' : 'bg-red-50'}`}>
-        <p className={`font-medium ${Math.abs(totalDebit - totalCredit) < 0.01 ? 'text-green-700' : 'text-red-700'}`}>
+      <div className={`p-4 rounded-lg ${Math.abs(totalDebit - totalCredit) < 0.01 ? 'bg-[rgb(var(--pos-soft))]' : 'bg-[rgb(var(--neg-soft))]'}`}>
+        <p className={`font-medium ${Math.abs(totalDebit - totalCredit) < 0.01 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}>
           {Math.abs(totalDebit - totalCredit) < 0.01 ? '✓ Trial Balance is balanced' : '✗ Trial Balance is not balanced'}
         </p>
       </div>
@@ -3618,21 +3618,21 @@ const LedgerView = ({
                 persistLedgerColumns(draft);
                 openModal(null);
               }}
-              className="px-4 py-2 rounded-lg ui-primary-bg "
+              className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
             >
               Save
             </button>
             <button
               type="button"
               onClick={() => setDraft(DEFAULT_LEDGER_COLUMNS.slice())}
-              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ui-btn ui-btn-secondary"
             >
               Reset Default
             </button>
             <button
               type="button"
               onClick={() => openModal(null)}
-              className="ml-auto px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ml-auto ui-btn ui-btn-secondary"
             >
               Cancel
             </button>
@@ -3700,10 +3700,10 @@ const LedgerView = ({
         <div className="flex flex-col">
           <button type="button" onClick={() => { openModal(null); handleView(row); }} className="text-left px-3 py-2 ui-hover-sunken">View</button>
           <button type="button" onClick={() => { openModal(null); handleEdit(row); }} className="text-left px-3 py-2 ui-hover-sunken">Edit</button>
-          <button type="button" onClick={() => { openModal(null); handleDelete(row); }} className="text-left px-3 py-2 ui-hover-sunken text-red-600">Delete</button>
+          <button type="button" onClick={() => { openModal(null); handleDelete(row); }} className="text-left px-3 py-2 ui-hover-sunken text-[rgb(var(--neg))]">Delete</button>
         </div>
         <div className="flex justify-end">
-          <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Close</button>
+          <button type="button" onClick={() => openModal(null)} className="ui-btn ui-btn-secondary">Close</button>
         </div>
       </div>
     );
@@ -3718,7 +3718,7 @@ const LedgerView = ({
           <pre className="whitespace-pre-wrap text-xs">{JSON.stringify(row, null, 2)}</pre>
         </div>
         <div className="flex justify-end">
-          <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
+          <button type="button" onClick={() => openModal(null)} className="ui-btn ui-btn-secondary">
             Close
           </button>
         </div>
@@ -3831,8 +3831,8 @@ const LedgerView = ({
               <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="ui-input w-full h-64 p-2 text-xs font-mono" />
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-primary-bg ">Save</button>
+              <button type="button" onClick={() => { onClose && onClose(); }} className="ui-btn ui-btn-secondary">Cancel</button>
+              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">Save</button>
             </div>
           </div>
         );
@@ -3986,8 +3986,8 @@ const LedgerView = ({
               <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="ui-input w-full h-64 p-2 text-xs font-mono" />
             )}
             <div className="flex gap-2">
-              <button type="button" onClick={() => { onClose && onClose(); }} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-primary-bg ">Save</button>
+              <button type="button" onClick={() => { onClose && onClose(); }} className="ui-btn ui-btn-secondary">Cancel</button>
+              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">Save</button>
             </div>
           </div>
         );
@@ -4024,7 +4024,7 @@ const LedgerView = ({
           <div className="space-y-4">
             <div className="text-sm ui-fg">Deleted voucher.</div>
             <div className="flex gap-2">
-              <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">Close</button>
+              <button type="button" onClick={() => openModal(null)} className="ui-btn ui-btn-secondary">Close</button>
               <button type="button" onClick={() => {
                 // restore
                 setDb((prev2) => {
@@ -4033,7 +4033,7 @@ const LedgerView = ({
                   return next2;
                 });
                 openModal(null);
-              }} className="px-4 py-2 rounded-lg ui-primary-bg ">Undo</button>
+              }} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">Undo</button>
             </div>
           </div>
         );
@@ -4148,7 +4148,7 @@ const LedgerView = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="ui-title text-lg">Ledger</h3>
-          <button type="button" onClick={onBack} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
+          <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
             Back
           </button>
         </div>
@@ -4200,7 +4200,7 @@ const LedgerView = ({
               openModal(null);
               doExport('pdf');
             }}
-            className="px-4 py-2 rounded-lg ui-primary-bg "
+            className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
           >
             PDF
           </button>
@@ -4210,14 +4210,14 @@ const LedgerView = ({
               openModal(null);
               doExport('excel');
             }}
-            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+            className="ui-btn ui-btn-secondary"
           >
             Excel
           </button>
           <button
             type="button"
             onClick={() => openModal(null)}
-            className="ml-auto px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+            className="ml-auto ui-btn ui-btn-secondary"
           >
             Cancel
           </button>
@@ -4254,7 +4254,7 @@ const LedgerView = ({
             </div>
           </div>
           <div className="flex gap-3">
-            <button type="button" onClick={() => openModal(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
+            <button type="button" onClick={() => openModal(null)} className="ui-btn ui-btn-secondary">
               Cancel
             </button>
             <button
@@ -4264,7 +4264,7 @@ const LedgerView = ({
                 setFilterTo(draftTo);
                 openModal(null);
               }}
-              className="px-4 py-2 rounded-lg ui-primary-bg "
+              className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
             >
               Apply
             </button>
@@ -4277,7 +4277,7 @@ const LedgerView = ({
                 setFilterTo('');
                 openModal(null);
               }}
-              className="ml-auto px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ml-auto ui-btn ui-btn-secondary"
             >
               Clear
             </button>
@@ -4297,7 +4297,7 @@ const LedgerView = ({
           <div className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</div>
         </div>
           <div className="flex items-center gap-2">
-          <button type="button" onClick={onBack} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c">
+          <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
             Back
           </button>
 
@@ -4313,7 +4313,7 @@ const LedgerView = ({
           <button
             type="button"
             onClick={openPeriodModal}
-            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
+            className="ui-btn ui-btn-secondary text-sm"
             title="Select period"
           >
             {periodLabel}
@@ -4322,7 +4322,7 @@ const LedgerView = ({
           <button
             type="button"
             onClick={openExportChooser}
-            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+            className="ui-btn ui-btn-secondary"
           >
             <Download size={18} /> Export
           </button>
@@ -4697,7 +4697,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
           </div>
 
           <div
-            className={`flex justify-between font-bold text-lg border-t-2 pt-4 ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}
+            className={`flex justify-between font-bold text-lg border-t-2 pt-4 ${netProfit >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}
           >
             <span>NET PROFIT</span>
             <span>{formatMoney(netProfit, currentCompany)}</span>
@@ -4817,7 +4817,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
                 ))}
               <div className="flex justify-between py-1 pl-4">
                 <span className="ui-muted">Current Year Profit / (Loss)</span>
-                <span className={netProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                <span className={netProfit >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}>
                   {formatMoney(netProfit, currentCompany)}
                 </span>
               </div>
@@ -4931,7 +4931,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
             </div>
           </div>
 
-          <div className={`flex justify-between font-bold text-lg border-t-2 pt-4 ${totals.net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className={`flex justify-between font-bold text-lg border-t-2 pt-4 ${totals.net >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}>
             <span>NET CASH FLOW</span>
             <span>{formatMoney(totals.net, currentCompany)}</span>
           </div>
@@ -4969,7 +4969,7 @@ const SalesReports = ({ db, currentCompany }) => {
 
         <div className="ui-surface rounded-xl shadow-sm p-6 border">
           <h4 className="font-bold mb-4">Total Sales</h4>
-          <p className="text-3xl font-bold text-green-600">{formatMoney(invoices.reduce((sum, i) => sum + i.total, 0), currentCompany)}</p>
+          <p className="text-3xl font-bold text-[rgb(var(--pos))]">{formatMoney(invoices.reduce((sum, i) => sum + i.total, 0), currentCompany)}</p>
         </div>
       </div>
     </div>
@@ -5906,7 +5906,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={addUom}
-              className="w-full px-4 py-2 ui-primary-bg rounded-lg "
+              className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg "
             >
               Add
             </button>
@@ -5921,7 +5921,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[rgb(var(--border))]">
               {uoms.length === 0 ? (
                 <tr>
                   <td colSpan="2" className="px-6 py-10 text-center ui-muted">
@@ -5933,7 +5933,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
                   <tr key={u.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 ui-col-entity">{u.name}</td>
                     <td className="px-6 py-4 text-right">
-                      <button type="button" onClick={() => deleteUom(u.id)} className="text-red-600 hover:text-red-700">
+                      <button type="button" onClick={() => deleteUom(u.id)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -6017,7 +6017,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
             <button
               type="button"
               onClick={addRate}
-              className="w-full px-4 py-2 ui-primary-bg rounded-lg "
+              className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg "
             >
               Add
             </button>
@@ -6032,7 +6032,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[rgb(var(--border))]">
               {gstRates.length === 0 ? (
                 <tr>
                   <td colSpan="2" className="px-6 py-10 text-center ui-muted">
@@ -6044,7 +6044,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
                   <tr key={r.id} className="ui-hover-sunken">
                     <td className="px-6 py-4 ui-col-entity">{Number(r.rate)}%</td>
                     <td className="px-6 py-4 text-right">
-                      <button type="button" onClick={() => deleteRate(r.id)} className="text-red-600 hover:text-red-700">
+                      <button type="button" onClick={() => deleteRate(r.id)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -6142,7 +6142,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">Numbering</h3>
-        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
+        <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
       </div>
@@ -6295,7 +6295,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">Templates</h3>
-        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
+        <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
       </div>
@@ -6435,7 +6435,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">Invoice Templates</h3>
-        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
+        <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
       </div>
@@ -6591,7 +6591,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">Company Profile</h3>
-        <button onClick={handleSave} className="px-4 py-2 ui-primary-bg rounded-lg ">
+        <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
       </div>
@@ -6836,7 +6836,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
           type="button"
           disabled={saving}
           onClick={saveAll}
-          className={`px-4 py-2 rounded-lg ${saving ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
+          className={`px-4 py-2 rounded-lg ${saving ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}
         >
           {saving ? 'Saving...' : 'Save'}
         </button>
@@ -7769,7 +7769,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   key={s}
                   type="button"
                   onClick={() => setActiveSection(s)}
-                  className={`px-3 py-2 text-sm capitalize ${activeSection === s ? 'ui-primary-bg' : 'ui-surface ui-fg ui-hover-sunken'}`}
+                  className={`px-3 py-2 text-sm capitalize ${activeSection === s ? 'ui-btn ui-btn-primary' : 'ui-surface ui-fg ui-hover-sunken'}`}
                 >
                   {s}
                 </button>
@@ -7778,16 +7778,16 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             <button
               type="button"
               onClick={loadAll}
-              className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+              className="ui-btn ui-btn-secondary"
             >
               Refresh
             </button>
           </div>
         </div>
 
-        {error ? <div className="ui-surface border rounded-xl p-4 text-sm text-red-600">{error}</div> : null}
+        {error ? <div className="ui-surface border rounded-xl p-4 text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
-        {error ? <div className="ui-surface border rounded-xl p-4 text-sm text-red-600">{error}</div> : null}
+        {error ? <div className="ui-surface border rounded-xl p-4 text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
         {activeSection === 'users' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -7861,7 +7861,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     disabled={loading}
                     onClick={createUser}
-                    className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
+                    className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}
                   >
                     Add User
                   </button>
@@ -7953,7 +7953,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={saveUserBasics} className="px-4 py-2 rounded-lg ui-primary-bg ">
+                      <button type="button" onClick={saveUserBasics} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
                         Save User
                       </button>
                       <button type="button" onClick={removeUser} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
@@ -8102,7 +8102,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     type="button"
                     disabled={loading}
                     onClick={createRole}
-                    className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
+                    className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}
                   >
                     Create Role
                   </button>
@@ -8196,7 +8196,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg ui-primary-bg ">
+                      <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
                         Save Role
                       </button>
                       <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
@@ -8278,7 +8278,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createRole} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}>
+                <button type="button" disabled={loading} onClick={createRole} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}>
                   Create Role
                 </button>
               </div>
@@ -8351,7 +8351,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg ui-primary-bg ">Save Role</button>
+                  <button type="button" onClick={saveRole} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">Save Role</button>
                   <button type="button" onClick={deleteRole} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Delete</button>
                 </div>
               </div>
@@ -8385,7 +8385,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createBranch} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}>
+                <button type="button" disabled={loading} onClick={createBranch} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}>
                   Create Branch
                 </button>
               </div>
@@ -8413,7 +8413,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                             <td className="ui-col-entity px-4 py-3 text-sm font-medium ui-fg">{b.name}</td>
                             <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{b.code || '-'}</td>
                             <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{b.address || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm">{b.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm">{b.isActive !== false ? <span className="text-[rgb(var(--pos))]">Active</span> : <span className="text-[rgb(var(--neg))]">Inactive</span>}</td>
                           </tr>
                         );
                       })
@@ -8447,7 +8447,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={saveBranch} className="px-4 py-2 rounded-lg ui-primary-bg ">Save Branch</button>
+                <button type="button" onClick={saveBranch} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">Save Branch</button>
                 <button type="button" onClick={deleteBranch} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Delete</button>
               </div>
             </div>
@@ -8481,7 +8481,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       }
                       setActiveWarehouse(selectedWarehouse.id);
                     }}
-                    className="px-3 py-2 rounded-lg ui-primary-bg "
+                    className="px-3 py-2 rounded-lg ui-btn ui-btn-primary "
                   >
                     Use selected
                   </button>
@@ -8525,7 +8525,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end">
-                <button type="button" disabled={loading} onClick={createWarehouse} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}>
+                <button type="button" disabled={loading} onClick={createWarehouse} className={`px-4 py-2 rounded-lg ${loading ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}>
                   Create Warehouse
                 </button>
               </div>
@@ -8555,7 +8555,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                             <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{w.code || '-'}</td>
                             <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{w.location || '-'}</td>
                             <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{w.branchName || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm">{w.isActive !== false ? <span className="text-green-600">Active</span> : <span className="text-red-600">Inactive</span>}</td>
+                            <td className="ui-col-meta px-4 py-3 text-sm">{w.isActive !== false ? <span className="text-[rgb(var(--pos))]">Active</span> : <span className="text-[rgb(var(--neg))]">Inactive</span>}</td>
                           </tr>
                         );
                       })
@@ -8600,7 +8600,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 </div>
               </div>
               <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={saveWarehouse} className="px-4 py-2 rounded-lg ui-primary-bg ">Save Warehouse</button>
+                <button type="button" onClick={saveWarehouse} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">Save Warehouse</button>
                 <button type="button" onClick={deleteWarehouse} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Delete</button>
               </div>
             </div>
@@ -8648,7 +8648,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   type="button"
                   disabled={saving}
                   onClick={saveCompanySettings}
-                  className={`px-4 py-2 rounded-lg ${saving ? 'ui-sunken ui-subtle' : 'ui-primary-bg '}`}
+                  className={`px-4 py-2 rounded-lg ${saving ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}
                 >
                   {saving ? 'Saving...' : 'Save'}
                 </button>
@@ -8992,7 +8992,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
               <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">GST</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[rgb(var(--border))]">
             {rateRows.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-10 text-center ui-muted">
@@ -9036,7 +9036,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
               <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase">Total</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[rgb(var(--border))]">
             {docRows.length === 0 ? (
               <tr>
                 <td colSpan="11" className="px-6 py-10 text-center ui-muted">
@@ -10214,7 +10214,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setInvoiceEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10262,7 +10262,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setEstimateEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10329,7 +10329,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setJournalEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10365,7 +10365,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10404,7 +10404,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setReceiptEditor({ open: false })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10440,7 +10440,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setPaymentEditor({ open: false })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10563,7 +10563,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setStockTransferEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10647,7 +10647,7 @@ const AppShell = () => {
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 rounded-lg ui-primary-bg "
+                className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
               >
                 Refresh
               </button>
@@ -10662,7 +10662,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setBillEditor({ open: false, initial: null })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10706,7 +10706,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>
@@ -10958,7 +10958,7 @@ const AppShell = () => {
               Logout
             </button>
           </div>
-          {authCtx.error ? <div className="mt-3 text-xs text-red-600">{authCtx.error}</div> : null}
+          {authCtx.error ? <div className="mt-3 text-xs text-[rgb(var(--neg))]">{authCtx.error}</div> : null}
         </div>
       </div>
     );
@@ -11451,7 +11451,7 @@ const AppShell = () => {
             already surfaced; this is the warehouse counterpart.
           */}
           {warehousesError ? (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-4 rounded-lg border border-[rgb(var(--neg)/0.35)] bg-[rgb(var(--neg-soft))] px-4 py-3 text-sm text-[rgb(var(--neg))]">
               Could not load warehouses: {warehousesError}
             </div>
           ) : null}
@@ -11461,7 +11461,7 @@ const AppShell = () => {
                 <button
                   type="button"
                   onClick={() => setActive('reports')}
-                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                  className="ui-btn ui-btn-secondary"
                 >
                   Back
                 </button>

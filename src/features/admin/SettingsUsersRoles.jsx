@@ -35,7 +35,7 @@ export function SettingsUsersRoles({ orgId }) {
         </div>
       </div>
 
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
       {loading ? <div className="text-sm ui-muted">Loading…</div> : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -137,7 +137,7 @@ export default function ImportCenter() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg border border-[rgb(var(--neg)/0.35)] bg-[rgb(var(--neg-soft))] px-4 py-3 text-sm text-[rgb(var(--neg))]">{error}</div>
       ) : null}
 
       <div className="ui-card p-4 space-y-3">
@@ -181,7 +181,7 @@ export default function ImportCenter() {
               {spec.columns.map((c) => (
                 <li key={c.key}>
                   <code className="font-mono">{c.key}</code>
-                  {c.required ? <span className="text-red-600"> *</span> : null} — {c.hint}
+                  {c.required ? <span className="text-[rgb(var(--neg))]"> *</span> : null} — {c.hint}
                 </li>
               ))}
             </ul>
@@ -260,7 +260,7 @@ export default function ImportCenter() {
               ) : null}
             </div>
           ) : (
-            <p className="text-sm text-green-700 flex items-center gap-2">
+            <p className="text-sm text-[rgb(var(--pos))] flex items-center gap-2">
               <CheckCircle2 size={16} /> No problems found.
             </p>
           )}
@@ -280,10 +280,10 @@ export default function ImportCenter() {
       ) : null}
 
       {result ? (
-        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+        <div className="rounded-lg border border-[rgb(var(--pos)/0.35)] bg-[rgb(var(--pos-soft))] px-4 py-3 text-sm text-green-800">
           Imported {result.committed} row{result.committed === 1 ? '' : 's'}.
           {result.failures?.length ? (
-            <ul className="mt-2 space-y-1 text-red-700">
+            <ul className="mt-2 space-y-1 text-[rgb(var(--neg))]">
               {result.failures.map((f) => (
                 <li key={f.group}>
                   {f.group}: {f.error}

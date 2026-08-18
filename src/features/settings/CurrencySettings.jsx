@@ -89,7 +89,7 @@ export default function CurrencySettings() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg border border-[rgb(var(--neg)/0.35)] bg-[rgb(var(--neg-soft))] px-4 py-3 text-sm text-[rgb(var(--neg))]">{error}</div>
       ) : null}
 
       <form onSubmit={onAddCurrency} className="ui-card p-4 space-y-3">

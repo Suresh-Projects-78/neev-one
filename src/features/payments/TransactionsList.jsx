@@ -149,7 +149,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
           disabled={!selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })}
           className={`px-4 py-2 rounded-lg ${ !selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })
               ? 'ui-sunken ui-muted cursor-not-allowed'
-              : 'ui-primary-bg '
+              : 'ui-btn ui-btn-primary '
           }`}
         >
           {title}
@@ -232,7 +232,7 @@ const TransactionView = ({ title, payload }) => {
           <button
             type="button"
             onClick={doShare}
-            className="px-3 py-2 rounded-lg ui-primary-bg "
+            className="px-3 py-2 rounded-lg ui-btn ui-btn-primary "
           >
             Share
           </button>
@@ -437,7 +437,7 @@ export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Receipt', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg ui-primary-bg "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
         >
           Record Receipt
         </button>
@@ -514,7 +514,7 @@ export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Payment', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg ui-primary-bg "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
         >
           Record Payment
         </button>

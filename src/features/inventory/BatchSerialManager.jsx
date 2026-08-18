@@ -38,7 +38,7 @@ const ExpiryCell = ({ expiryDate }) => {
   // Expiry is the reason batches are tracked, so a lot that is gone or nearly
   // gone says so instead of leaving the reader to compare dates.
   const tone =
-    days === null ? '' : days < 0 ? 'text-red-600 font-medium' : days <= 30 ? 'text-amber-700' : '';
+    days === null ? '' : days < 0 ? 'text-[rgb(var(--neg))] font-medium' : days <= 30 ? 'text-amber-700' : '';
   const note = days === null ? '' : days < 0 ? ' (expired)' : days <= 30 ? ` (${days}d left)` : '';
 
   return (
@@ -183,7 +183,7 @@ export default function BatchSerialManager() {
       />
 
       {error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg border border-[rgb(var(--neg)/0.35)] bg-[rgb(var(--neg-soft))] px-4 py-3 text-sm text-[rgb(var(--neg))]">{error}</div>
       ) : null}
 
       {items.length === 0 ? (

@@ -707,7 +707,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       });
                     });
                   }}
-                  className={`w-full px-4 py-2 rounded-lg ${ showCreate ? 'ui-primary-bg ' : 'ui-sunken ui-muted cursor-not-allowed'
+                  className={`w-full px-4 py-2 rounded-lg ${ showCreate ? 'ui-btn ui-btn-primary ' : 'ui-sunken ui-muted cursor-not-allowed'
                   }`}
                   title={
                     !canAttemptCreate
@@ -1354,7 +1354,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg ui-hover-sunken">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
+            <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
               {isEdit ? 'Save' : 'Add'}
             </button>
           </div>
@@ -1791,7 +1791,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             type="button"
             onClick={deleteSelectedTxns}
             disabled={!anySelected}
-            className={`px-4 py-2 rounded-lg border ${ anySelected ? 'ui-surface ui-hover-sunken ui-border-c text-red-600' : 'ui-sunken ui-muted ui-border-c'
+            className={`px-4 py-2 rounded-lg border ${ anySelected ? 'ui-surface ui-hover-sunken ui-border-c text-[rgb(var(--neg))]' : 'ui-sunken ui-muted ui-border-c'
             }`}
           >
             Delete Selected
@@ -1799,14 +1799,14 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <button
             type="button"
             onClick={openCreateAccount}
-            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+            className="ui-btn ui-btn-secondary"
           >
             New Account
           </button>
           <button
             type="button"
             onClick={downloadUploadTemplate}
-            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+            className="ui-btn ui-btn-secondary"
           >
             Download Template
           </button>
@@ -1821,7 +1821,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <button
             type="button"
             onClick={openAddTxn}
-            className={`px-4 py-2 rounded-lg ${ accountsEmpty ? 'ui-sunken ui-muted' : 'ui-primary-bg '
+            className={`px-4 py-2 rounded-lg ${ accountsEmpty ? 'ui-sunken ui-muted' : 'ui-btn ui-btn-primary '
             }`}
           >
             Add Transaction
@@ -1961,20 +1961,20 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                         <td className="ui-col-meta px-4 py-3 text-sm">{String(t.description || '').trim() || '-'}</td>
                         <td className="ui-col-meta px-4 py-3 text-sm">{ledgerName}</td>
                         <td className="ui-col-meta px-4 py-3 text-sm">{String(t.narration || '').trim() || '-'}</td>
-                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-red-600">
+                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-[rgb(var(--neg))]">
                           {isOut ? formatMoney(Number(t.amount ?? 0), currentCompany) : '-'}
                         </td>
-                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-green-700">
+                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-[rgb(var(--pos))]">
                           {isOut ? '-' : formatMoney(Number(t.amount ?? 0), currentCompany)}
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {categorised ? (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Categorised</span>
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]">Categorised</span>
                           ) : (
                             <button
                               type="button"
                               onClick={() => openCategorise(t)}
-                              className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                              className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-yellow-800 hover:bg-yellow-200"
                             >
                               Uncategorised
                             </button>
@@ -2045,7 +2045,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                               <button
                                 type="button"
                                 onClick={() => deleteTxn(t)}
-                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken text-red-600"
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken text-[rgb(var(--neg))]"
                               >
                                 <Trash2 size={16} />
                                 <span>Delete</span>

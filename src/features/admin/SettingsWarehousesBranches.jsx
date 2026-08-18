@@ -63,7 +63,7 @@ export function SettingsWarehousesBranches({ orgId }) {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-3 py-2 rounded-lg border ${tab === t ? 'ui-primary-bg border-stone-900' : 'ui-surface ui-fg ui-hover-sunken'}`}
+              className={`px-3 py-2 rounded-lg border ${tab === t ? 'ui-btn ui-btn-primary border-stone-900' : 'ui-surface ui-fg ui-hover-sunken'}`}
             >
               {t === 'branches' ? 'Branches' : 'Warehouses'}
             </button>
@@ -71,7 +71,7 @@ export function SettingsWarehousesBranches({ orgId }) {
         </div>
       </div>
 
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
       {loading ? <div className="text-sm ui-muted">Loading…</div> : null}
 
       {tab === 'branches' ? (
@@ -86,7 +86,7 @@ export function SettingsWarehousesBranches({ orgId }) {
                     <div className="text-xs ui-muted">Code: {b.branchCode}</div>
                     {b.gstin ? <div className="text-xs ui-muted">GSTIN: {b.gstin}</div> : null}
                   </div>
-                  <button onClick={() => removeBranch(b.id)} className="text-red-600 text-sm">Delete</button>
+                  <button onClick={() => removeBranch(b.id)} className="text-[rgb(var(--neg))] text-sm">Delete</button>
                 </div>
               ))}
               {!branches.length ? <div className="text-sm ui-muted py-3">No branches yet</div> : null}
@@ -106,7 +106,7 @@ export function SettingsWarehousesBranches({ orgId }) {
                     <div className="text-xs ui-muted">Branch: {branchLookup[w.branchId]?.branchName || branchLookup[w.branchId]?.name || '—'}</div>
                     {w.gstin ? <div className="text-xs ui-muted">GSTIN: {w.gstin}</div> : null}
                   </div>
-                  <button onClick={() => removeWarehouse(w.id)} className="text-red-600 text-sm">Delete</button>
+                  <button onClick={() => removeWarehouse(w.id)} className="text-[rgb(var(--neg))] text-sm">Delete</button>
                 </div>
               ))}
               {!warehouses.length ? <div className="text-sm ui-muted py-3">No warehouses yet</div> : null}

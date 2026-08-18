@@ -223,7 +223,7 @@ export function SettingsBranches({ orgId }) {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 rounded-lg ui-primary-bg "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
         >
           + Create Branch
         </button>
@@ -243,7 +243,7 @@ export function SettingsBranches({ orgId }) {
         <div />
       </div>
 
-      {error && <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</div>}
+      {error && <div className="text-sm text-[rgb(var(--neg))] bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg)/0.35)] rounded-lg p-3">{error}</div>}
 
       {selectedBranch ? (
         <div className="ui-surface border rounded-xl p-5 space-y-4">
@@ -360,7 +360,7 @@ export function SettingsBranches({ orgId }) {
                 <button type="button" onClick={() => setEditingBranchId(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
                   Cancel
                 </button>
-                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
+                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
                   {editSaving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
@@ -472,7 +472,7 @@ export function SettingsBranches({ orgId }) {
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Cancel</button>
-            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
               {saving ? 'Creating…' : 'Create Branch'}
             </button>
           </div>
@@ -510,7 +510,7 @@ export function SettingsBranches({ orgId }) {
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[b.city, b.state].filter(Boolean).join(', ') || '—'}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{b.addressLine1 || '—'}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${b.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${b.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
                       {b.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -537,7 +537,7 @@ export function SettingsBranches({ orgId }) {
                           <button type="button" onClick={() => beginEdit(b)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
                             Edit
                           </button>
-                          <button type="button" onClick={() => removeBranch(b.id)} className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50">
+                          <button type="button" onClick={() => removeBranch(b.id)} className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]">
                             Delete
                           </button>
                         </div>

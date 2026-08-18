@@ -392,7 +392,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         {!hideMode ? (
           <div>
             <label className="block text-sm font-medium mb-1">
-              Received into <span className="text-red-600">*</span>
+              Received into <span className="text-[rgb(var(--neg))]">*</span>
             </label>
             <select
               value={ledgerAccountId}
@@ -409,7 +409,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               ))}
             </select>
             {modesError ? (
-              <p className="mt-1 text-sm text-red-600">{modesError}</p>
+              <p className="mt-1 text-sm text-[rgb(var(--neg))]">{modesError}</p>
             ) : !modesLoading && modes.length === 0 ? (
               <p className="mt-1 text-sm text-amber-700">
                 No cash or bank ledgers yet. Create one under Accounting → Ledgers.
@@ -534,7 +534,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         <button
           type="submit"
           disabled={saving}
-          className="px-4 py-2 ui-primary-bg rounded-lg disabled:opacity-50"
+          className="px-4 py-2 ui-btn ui-btn-primary rounded-lg disabled:opacity-50"
         >
           {saving ? 'Recording…' : 'Record Receipt'}
         </button>

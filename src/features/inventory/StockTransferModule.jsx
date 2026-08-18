@@ -35,8 +35,8 @@ const getWarehouseLabel = (w) => {
 
 const getStatusPillClass = (status) => {
   const s = String(status || '').trim();
-  if (s === 'Approved') return 'bg-green-100 text-green-700';
-  if (s === 'Rejected') return 'bg-red-100 text-red-700';
+  if (s === 'Approved') return 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]';
+  if (s === 'Rejected') return 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]';
   if (s === 'Cancelled') return 'ui-sunken ui-fg';
   if (s === 'Submitted') return 'bg-stone-100 ui-fg';
   return 'ui-sunken ui-fg';
@@ -415,7 +415,7 @@ export const StockTransferEditor = ({
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(String(form.status || '').trim() || 'Draft')}`}>{String(form.status || '').trim() || 'Draft'}</span>
       </div>
 
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
@@ -669,7 +669,7 @@ export const StockTransferEditor = ({
                     <button
                       type="button"
                       onClick={() => removeLine(idx)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]"
                       disabled={readOnly}
                       aria-label="Remove line"
                     >
@@ -687,7 +687,7 @@ export const StockTransferEditor = ({
         <button type="button" onClick={() => onBack?.()} className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c">
           Back
         </button>
-        <button type="submit" disabled={saving || readOnly} className="px-3 py-2 rounded-lg text-sm ui-primary-bg disabled:opacity-50">
+        <button type="submit" disabled={saving || readOnly} className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary disabled:opacity-50">
           {saving ? 'Saving…' : isEdit ? 'Save' : 'Create'}
         </button>
       </div>
@@ -798,7 +798,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           <button
             type="button"
             onClick={() => onAction?.('submit')}
-            className="px-3 py-2 rounded-lg text-sm ui-primary-bg "
+            className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary "
           >
             Submit
           </button>
@@ -1241,10 +1241,10 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                       if (editable) removeTransfer(t);
                     }}
                     disabled={!editable}
-                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ editable ? 'ui-hover-sunken text-red-600' : 'ui-subtle cursor-not-allowed ui-surface'
+                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ editable ? 'ui-hover-sunken text-[rgb(var(--neg))]' : 'ui-subtle cursor-not-allowed ui-surface'
                     }`}
                   >
-                    <Trash2 size={16} className={editable ? 'text-red-600' : 'ui-subtle'} />
+                    <Trash2 size={16} className={editable ? 'text-[rgb(var(--neg))]' : 'ui-subtle'} />
                     <span>Delete</span>
                   </button>
                 </>

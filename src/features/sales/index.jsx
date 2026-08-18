@@ -129,7 +129,7 @@ const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
         <button
           type="button"
           onClick={save}
-          className="px-3 py-2 rounded-lg text-sm ui-primary-bg "
+          className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary "
         >
           Save
         </button>
@@ -463,7 +463,7 @@ export const InvoicesList = ({
               type="button"
               onClick={doDownload}
               disabled={downloading}
-              className="px-3 py-2 rounded-lg ui-primary-bg flex items-center gap-2"
+              className="px-3 py-2 rounded-lg ui-btn ui-btn-primary flex items-center gap-2"
             >
               <Download size={16} /> {downloading ? 'Preparing...' : 'Download'}
             </button>
@@ -972,9 +972,9 @@ export const InvoicesList = ({
                     setOpenMenu(null);
                     cancelInvoice(inv);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
                 >
-                  <Ban size={16} className="text-red-600" />
+                  <Ban size={16} className="text-[rgb(var(--neg))]" />
                   <span>Cancel</span>
                 </button>
 
@@ -984,9 +984,9 @@ export const InvoicesList = ({
                     setOpenMenu(null);
                     deleteInvoice(inv);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
                 >
-                  <Trash2 size={16} className="text-red-600" />
+                  <Trash2 size={16} className="text-[rgb(var(--neg))]" />
                   <span>Delete</span>
                 </button>
               </>
@@ -1331,9 +1331,9 @@ export const EstimatesList = ({
                     setOpenMenu(null);
                     deleteEstimate(est);
                   }}
-                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-red-600"
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
                 >
-                  <Trash2 size={16} className="text-red-600" />
+                  <Trash2 size={16} className="text-[rgb(var(--neg))]" />
                   <span>Delete</span>
                 </button>
               </>
@@ -1878,7 +1878,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               setSubmitAsDraft(true);
               formRef.current?.requestSubmit();
             }}
-            className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+            className="ui-btn ui-btn-secondary"
           >
             Save Draft
           </button>
@@ -2030,7 +2030,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
+                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -2079,7 +2079,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           {isEdit ? 'Update Invoice' : 'Create Invoice'}
         </button>
       </div>
@@ -2400,7 +2400,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                   </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
+                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -2442,7 +2442,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           {isEdit ? 'Update Estimate' : 'Create Estimate'}
         </button>
       </div>
@@ -2847,7 +2847,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                   </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-red-600 hover:text-red-700">
+                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
                     </button>
                   </td>
@@ -2889,7 +2889,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           Create Credit Note
         </button>
       </div>

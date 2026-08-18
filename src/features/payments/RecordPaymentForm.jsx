@@ -173,7 +173,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
         <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 ui-primary-bg rounded-lg ">
+        <button type="submit" className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           {title}
         </button>
       </div>

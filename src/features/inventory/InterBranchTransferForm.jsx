@@ -41,7 +41,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
   return (
     <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
       <div className="ui-title text-base">Inter-branch Transfer</div>
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -110,7 +110,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
           {saving ? 'Creating…' : 'Create Transfer'}
         </button>
       </div>

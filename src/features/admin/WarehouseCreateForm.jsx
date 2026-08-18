@@ -55,7 +55,7 @@ export function WarehouseCreateForm({ orgId, branches = [], onCreated }) {
   return (
     <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
       <div className="ui-title text-base">Create Warehouse</div>
-      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -126,7 +126,7 @@ export function WarehouseCreateForm({ orgId, branches = [], onCreated }) {
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-primary-bg disabled:opacity-50">
+        <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
           {saving ? 'Saving…' : 'Create Warehouse'}
         </button>
       </div>
