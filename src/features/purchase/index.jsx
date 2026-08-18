@@ -923,7 +923,7 @@ export const BillsList = ({
   };
 
   const deleteBill = async (bill) => {
-    const usedInDebitNotes = async (Array.isArray(db.debitNotes) ? db.debitNotes : []).some(
+    const usedInDebitNotes = (Array.isArray(db.debitNotes) ? db.debitNotes : []).some(
       (dn) => dn?.companyId === currentCompany.id && Number(dn?.originalBillId) === Number(bill.id)
     );
     if (usedInDebitNotes) {

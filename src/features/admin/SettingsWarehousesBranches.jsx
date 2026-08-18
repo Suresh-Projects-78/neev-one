@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { confirmDialog } from '../../components/ui/notify';
 import { BranchCreateForm } from './BranchCreateForm';
 import { WarehouseCreateForm } from './WarehouseCreateForm';
 import { listBranches, listWarehouses, deleteBranch, deleteWarehouse } from '../../api/admin';

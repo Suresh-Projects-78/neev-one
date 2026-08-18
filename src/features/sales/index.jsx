@@ -514,7 +514,7 @@ export const InvoicesList = ({
   };
 
   const raiseCreditNote = (invoice) => {
-    if (typeof onRaiseCreditNote === 'async function') {
+    if (typeof onRaiseCreditNote === 'function') {
       onRaiseCreditNote(invoice);
       return;
     }

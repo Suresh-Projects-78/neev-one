@@ -257,7 +257,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
       } else {
         await loadWarehouses();
       }
-      if (typeof onWarehousesChanged === 'async function') onWarehousesChanged();
+      if (typeof onWarehousesChanged === 'function') onWarehousesChanged();
       setEditingWarehouseId(null);
     } catch (err) {
       setError(err.message || 'Failed to update warehouse');

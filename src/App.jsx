@@ -7093,7 +7093,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
   useEffect(() => {
     const nextSaved = (currentCompany && typeof currentCompany === 'object' ? currentCompany.profile : null) || {};
-    const nextCompanySettings = async (nextSaved.companySettings && typeof nextSaved.companySettings === 'object') ? nextSaved.companySettings : {};
+    const nextCompanySettings = (nextSaved.companySettings && typeof nextSaved.companySettings === 'object') ? nextSaved.companySettings : {};
     setForm({
       legalName: nextCompanySettings.legalName || (currentCompany?.name || ''),
       tradeName: nextCompanySettings.tradeName || '',
@@ -7130,7 +7130,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     if (!legalName) return notify.error('Legal Company Name is required.');
     if (!regAddress1 || !regCity || !regStateCode || !regPincode || !regCountry) return notify.error('Registered Address is required.');
 
-    const stateName = async (GST_STATE_BY_CODE && regStateCode && GST_STATE_BY_CODE[regStateCode]) ? GST_STATE_BY_CODE[regStateCode] : '';
+    const stateName = (GST_STATE_BY_CODE && regStateCode && GST_STATE_BY_CODE[regStateCode]) ? GST_STATE_BY_CODE[regStateCode] : '';
 
     const payload = {
       legalName,
