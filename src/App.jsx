@@ -139,6 +139,7 @@ const ModuleChartFallback = ({ height = 220 }) => (
   <div className="ui-skel w-full" style={{ height, borderRadius: 'var(--radius)' }} aria-hidden="true" />
 );
 import PurchaseOverview from './features/purchase/PurchaseOverview';
+import PartyDetail from './features/parties/PartyDetail';
 import CommandPalette from './components/ui/CommandPalette';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import GovernanceSettings from './features/admin/GovernanceSettings';
@@ -477,6 +478,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
   const [isCreating, setIsCreating] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
+  const [viewingVendor, setViewingVendor] = useState(null);
 
   const getVendorReferences = (vendorId) => {
     const idStr = String(vendorId);
@@ -528,6 +530,24 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
       ),
     });
   };
+
+  if (viewingVendor) {
+    return (
+      <PartyDetail
+        db={db}
+        currentCompany={currentCompany}
+        party={viewingVendor}
+        kind="vendor"
+        displayName={getVendorDisplayName(viewingVendor)}
+        onBack={() => setViewingVendor(null)}
+        onEdit={() => {
+          const v = viewingVendor;
+          setViewingVendor(null);
+          onEditVendor(v);
+        }}
+      />
+    );
+  }
 
   if (isCreating) {
     return (
@@ -598,7 +618,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full ui-table-wide">
+        <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Name</th>
@@ -619,7 +639,14 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
               </tr>
             ) : (
               vendors.map((vendor) => (
-                <tr key={vendor.id} className="ui-hover-sunken">
+                <tr
+                  key={vendor.id}
+                  className="ui-hover-sunken cursor-pointer"
+                  onClick={(e) => {
+                    if (e.target?.closest?.('button')) return;
+                    setViewingVendor(vendor);
+                  }}
+                >
                   <td className="px-6 py-4 ui-col-entity truncate" title={getVendorDisplayName(vendor) || ''}>
                     {getVendorDisplayName(vendor) || '-'}
                   </td>
@@ -664,6 +691,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
   const [isCreating, setIsCreating] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
+  const [viewingCustomer, setViewingCustomer] = useState(null);
 
   const getCustomerReferences = (customerId) => {
     const idStr = String(customerId);
@@ -712,6 +740,24 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
       ),
     });
   };
+
+  if (viewingCustomer) {
+    return (
+      <PartyDetail
+        db={db}
+        currentCompany={currentCompany}
+        party={viewingCustomer}
+        kind="customer"
+        displayName={getCustomerDisplayName(viewingCustomer)}
+        onBack={() => setViewingCustomer(null)}
+        onEdit={() => {
+          const c = viewingCustomer;
+          setViewingCustomer(null);
+          onEditCustomer(c);
+        }}
+      />
+    );
+  }
 
   if (isCreating) {
     return (
@@ -782,7 +828,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full ui-table-wide">
+        <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Name</th>
@@ -803,7 +849,14 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
               </tr>
             ) : (
               customers.map((customer) => (
-                <tr key={customer.id} className="ui-hover-sunken">
+                <tr
+                  key={customer.id}
+                  className="ui-hover-sunken cursor-pointer"
+                  onClick={(e) => {
+                    if (e.target?.closest?.('button')) return;
+                    setViewingCustomer(customer);
+                  }}
+                >
                   <td className="px-6 py-4 ui-col-entity truncate" title={getCustomerDisplayName(customer)}>
                     {getCustomerDisplayName(customer)}
                   </td>
@@ -942,7 +995,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="w-full ui-table-wide">
+        <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Voucher #</th>

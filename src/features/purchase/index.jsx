@@ -348,7 +348,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full ui-table-wide">
+          <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
@@ -686,7 +686,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full ui-table-wide">
+          <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
@@ -1589,7 +1589,7 @@ export const DebitNoteForm = ({
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full ui-table-wide">
+          <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Item</th>

@@ -1975,7 +1975,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full ui-table-wide">
+          <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
@@ -2346,7 +2346,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full ui-table-wide">
+          <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
@@ -2793,7 +2793,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="w-full ui-table-wide">
+          <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
