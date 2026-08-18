@@ -30,6 +30,9 @@ EXPOSE 4001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=5 \
   CMD curl -fsS http://127.0.0.1:4001/health || exit 1
 
-# migrate deploy is a no-op when prisma/migrations is absent, so fall back to
-# db push so a fresh container still comes up with a usable schema.
-CMD ["sh", "-c", "npx prisma migrate deploy || npx prisma db push --accept-data-loss; exec node dist/index.js"]
+# `migrate deploy` with no migrations directory EXITS 0 ("No pending
+# migrations"), so an `||` fallback never fires and a fresh volume boots with
+# an empty database — every request then dies on "table does not exist".
+# Choose explicitly: real migrations when they exist, otherwise push the
+# schema so a fresh container comes up usable.
+CMD ["sh", "-c", "if [ -d prisma/migrations ] && [ \"$(ls -A prisma/migrations 2>/dev/null)\" ]; then npx prisma migrate deploy; else npx prisma db push --accept-data-loss; fi; exec node dist/index.js"]
