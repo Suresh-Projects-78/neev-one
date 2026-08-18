@@ -151,6 +151,7 @@ const ModuleChartFallback = ({ height = 220 }) => (
 );
 import PurchaseOverview from './features/purchase/PurchaseOverview';
 import PartyDetail from './features/parties/PartyDetail';
+import CompanyGroups from './features/companies/CompanyGroups';
 import CommandPalette from './components/ui/CommandPalette';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import GovernanceSettings from './features/admin/GovernanceSettings';
@@ -9442,7 +9443,13 @@ const AppShell = () => {
     setIsAuthenticated(false);
   };
 
-  const currentCompany = (db.companies || [])[0] || { id: 1, name: 'Accounting', currency: 'INR' };
+  // The Companies page can switch which company the whole product operates
+  // on; first-in-list remains the fallback so existing single-company data
+  // behaves exactly as before.
+  const currentCompany =
+    (db.companies || []).find((c) => c.id === db.activeCompanyId) ||
+    (db.companies || [])[0] ||
+    { id: 1, name: 'Accounting', currency: 'INR' };
 
   // Fresh browser, existing books: pull server documents into the local db.
   useServerDocSync({ enabled: isAuthenticated, currentCompanyId: currentCompany?.id, setDb });
@@ -9812,6 +9819,7 @@ const AppShell = () => {
         ph: true,
         tint: 'master',
         items: [
+          { key: 'companies', label: 'Companies', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
           { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
           { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
           { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
@@ -10737,6 +10745,15 @@ const AppShell = () => {
         return <TrialBalance db={dbForUser} currentCompany={currentCompany} />;
       case 'salesReports':
         return <SalesReports db={dbForUser} currentCompany={currentCompany} />;
+      case 'companies':
+        return (
+          <CompanyGroups
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            onSwitched={() => setActive('dashboard')}
+          />
+        );
       case 'purchaseOverview':
         return <PurchaseOverview db={dbForUser} currentCompany={currentCompany} />;
       case 'purchaseOrders':

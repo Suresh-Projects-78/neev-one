@@ -211,6 +211,14 @@ export const FEATURE_CATALOG: FeatureDef[] = [
 
   // ---- Data -------------------------------------------------------------
   {
+    key: 'companyGroups',
+    label: 'Company groups',
+    description:
+      'Keep several companies in one workspace with parent\u2013child structure: a Companies page to view the group, switch the active company, and add subsidiaries.',
+    defaultEnabled: true,
+    category: 'Operations',
+  },
+  {
     key: 'einvoice',
     label: 'e-Invoice and e-Way Bill JSON',
     description:
