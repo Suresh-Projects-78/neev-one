@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag } from 'lucide-react';
+import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag, RefreshCw } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -924,6 +924,67 @@ export const InvoicesList = ({
                   <Tag size={16} className="ui-muted" />
                   <span>Change Status</span>
                 </button>
+
+                {isEnabled('recurringInvoices')
+                  ? (() => {
+                      const existing = (db.recurringTemplates || []).find(
+                        (t) => t.companyId === currentCompany.id && t.sourceInvoiceId === inv.id && t.active !== false
+                      );
+                      return (
+                        <button
+                          type="button"
+                          className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                          onClick={() => {
+                            setOpenMenu(null);
+                            if (existing) {
+                              setDb((prev) => ({
+                                ...prev,
+                                recurringTemplates: (prev.recurringTemplates || []).map((t) =>
+                                  t.id === existing.id ? { ...t, active: false } : t
+                                ),
+                              }));
+                              notify.success(`${inv.number} will no longer repeat.`);
+                              return;
+                            }
+                            const base = String(inv.date || '').slice(0, 10) || new Date().toISOString().slice(0, 10);
+                            const [y, m, d] = base.split('-').map(Number);
+                            const nxt = new Date(Date.UTC(y, m, 1));
+                            const last = new Date(Date.UTC(nxt.getUTCFullYear(), nxt.getUTCMonth() + 1, 0)).getUTCDate();
+                            nxt.setUTCDate(Math.min(d, last));
+                            setDb((prev) => ({
+                              ...prev,
+                              recurringTemplates: [
+                                ...(prev.recurringTemplates || []),
+                                {
+                                  id: Date.now(),
+                                  companyId: currentCompany.id,
+                                  sourceInvoiceId: inv.id,
+                                  sourceInvoiceNumber: inv.number,
+                                  customerId: inv.customerId,
+                                  customerName: inv.customerName,
+                                  items: inv.items || [],
+                                  subtotal: inv.subtotal,
+                                  cgstTotal: inv.cgstTotal,
+                                  sgstTotal: inv.sgstTotal,
+                                  igstTotal: inv.igstTotal,
+                                  gstTotal: inv.gstTotal,
+                                  total: inv.total,
+                                  frequency: 'monthly',
+                                  nextRunDate: nxt.toISOString().slice(0, 10),
+                                  active: true,
+                                  createdAt: new Date().toISOString(),
+                                },
+                              ],
+                            }));
+                            notify.success(`${inv.number} will repeat monthly as a draft.`);
+                          }}
+                        >
+                          <RefreshCw size={16} className="ui-muted" />
+                          <span>{existing ? 'Stop repeating' : 'Repeat monthly'}</span>
+                        </button>
+                      );
+                    })()
+                  : null}
 
                 <button
                   type="button"

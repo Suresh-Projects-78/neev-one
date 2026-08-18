@@ -2,6 +2,8 @@ import InventoryModule from './features/inventory/InventoryModule';
 import { notify, confirmDialog } from './components/ui/notify';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
+import { useRecurringInvoices } from './hooks/useRecurringInvoices';
+import OnboardingWizard, { shouldOnboard } from './components/OnboardingWizard';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExport';
 import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
@@ -9432,6 +9434,17 @@ const AppShell = () => {
   // Fresh browser, existing books: pull server documents into the local db.
   useServerDocSync({ enabled: isAuthenticated, currentCompanyId: currentCompany?.id, setDb });
 
+  const [onboardDismissed, setOnboardDismissed] = useState(false);
+  const showOnboarding = isAuthenticated && !onboardDismissed && shouldOnboard(db, currentCompany);
+
+  // Templates marked "repeat monthly" raise their due drafts on sign-in.
+  useRecurringInvoices({
+    enabled: isAuthenticated && isEnabled('recurringInvoices'),
+    db,
+    setDb,
+    currentCompanyId: currentCompany?.id,
+  });
+
   useEffect(() => {
     if (!isAuthenticated) return;
     const existing = String(localStorage.getItem('activeBranchId') || '').trim();
@@ -11085,6 +11098,17 @@ const AppShell = () => {
           itself is untouched — this paints over --app-bg, never replaces it. */}
       <div className="ui-ambient ui-ambient-quiet ui-ambient-fixed" aria-hidden="true" />
       <Toaster />
+      {showOnboarding ? (
+        <OnboardingWizard
+          setDb={setDb}
+          currentCompany={currentCompany}
+          onDone={() => setOnboardDismissed(true)}
+          onCreateInvoice={() => {
+            setActive('invoices');
+            setInvoiceEditor({ open: true, initial: null });
+          }}
+        />
+      ) : null}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 ui-btn ui-btn-primary"

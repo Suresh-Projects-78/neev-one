@@ -211,6 +211,14 @@ export const FEATURE_CATALOG: FeatureDef[] = [
 
   // ---- Data -------------------------------------------------------------
   {
+    key: 'recurringInvoices',
+    label: 'Recurring invoices',
+    description:
+      'Mark an invoice as repeating monthly. On sign-in, invoices that have come due are raised as drafts for review — nothing posts until you approve each one.',
+    defaultEnabled: true,
+    category: 'Operations',
+  },
+  {
     key: 'insights',
     label: 'Dashboard insights',
     description:
