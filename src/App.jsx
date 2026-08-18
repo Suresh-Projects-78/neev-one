@@ -10540,7 +10540,39 @@ const AppShell = () => {
       case 'purchaseOverview':
         return <PurchaseOverview db={dbForUser} currentCompany={currentCompany} />;
       case 'purchaseOrders':
-        return <PurchaseOrdersList db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} warehouses={warehousesForUser} defaultWarehouseId={activeWarehouseId} />;
+        return (
+          <PurchaseOrdersList
+            db={dbForUser}
+            setDb={setDb}
+            openModal={openModal}
+            currentCompany={currentCompany}
+            warehouses={warehousesForUser}
+            defaultWarehouseId={activeWarehouseId}
+            onConvertToBill={(po) => {
+              // Carry the order across: vendor, warehouse and lines prefill
+              // the bill; the PO number lands in the reference so the paper
+              // trail survives. The PO is marked Billed only here, at the
+              // moment of conversion — the bill form still allows editing.
+              setBillEditor({
+                open: true,
+                initial: {
+                  vendorId: po.vendorId,
+                  warehouseId: po.warehouseId,
+                  refNo: po.number,
+                  refDate: po.date,
+                  items: po.items,
+                },
+              });
+              setDb((prev) => ({
+                ...prev,
+                purchaseOrders: (prev.purchaseOrders || []).map((x) =>
+                  x.id === po.id ? { ...x, status: 'Billed', updatedAt: new Date().toISOString() } : x
+                ),
+              }));
+              setActive('bills');
+            }}
+          />
+        );
       case 'bills':
         if (typeof BillsList === 'undefined' || typeof BillForm === 'undefined') {
           return (

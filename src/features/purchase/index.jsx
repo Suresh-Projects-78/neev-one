@@ -452,7 +452,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   );
 };
 
-export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) => {
+export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, warehouses = [], onConvertToBill }) => {
   const purchaseOrders = db.purchaseOrders.filter((po) => po.companyId === currentCompany.id);
 
   const warehouseById = React.useMemo(() => {
@@ -483,12 +483,13 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {purchaseOrders.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center ui-muted">
+                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No purchase orders found. Click "New PO" to create one.
                 </td>
               </tr>
@@ -506,6 +507,20 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
                     <td className="ui-col-amount px-6 py-4 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-6 py-4">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">{po.status || 'Draft'}</span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {onConvertToBill && po.status !== 'Billed' ? (
+                        <button
+                          type="button"
+                          onClick={() => onConvertToBill(po)}
+                          className="ui-btn ui-btn-secondary !h-8 text-xs"
+                          title={`Raise a bill from ${po.number}`}
+                        >
+                          Convert to Bill
+                        </button>
+                      ) : po.status === 'Billed' ? (
+                        <span className="ui-caption">Billed</span>
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -1732,6 +1747,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
