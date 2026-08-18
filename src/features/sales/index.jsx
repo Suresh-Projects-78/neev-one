@@ -9,6 +9,8 @@ import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '../../api/invoices';
 import { useFeatures } from '../../permissions/useFeatures';
 import { createDocApi, hasApiSession as hasDocsApiSession } from '../../api/purchaseDocs';
+import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
+import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 
@@ -985,6 +987,51 @@ export const InvoicesList = ({
                       );
                     })()
                   : null}
+
+                {isEnabled('einvoice') ? (
+                  <>
+                    <button
+                      type="button"
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                      onClick={() => {
+                        setOpenMenu(null);
+                        if (!String(currentCompany?.gstin || '').trim()) {
+                          notify.error('Set the company GSTIN in Company Profile before generating e-invoice JSON.');
+                          return;
+                        }
+                        const customer = (db.customers || []).find((c) => c.id === inv.customerId) || {};
+                        downloadJson(
+                          `EINV_${inv.number}.json`,
+                          buildEInvoicePayload({ invoice: inv, company: currentCompany, customer })
+                        );
+                        notify.success(`e-Invoice JSON for ${inv.number} downloaded — upload via the NIC bulk tool.`);
+                      }}
+                    >
+                      <FileText size={16} className="ui-muted" />
+                      <span>e-Invoice JSON</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                      onClick={() => {
+                        setOpenMenu(null);
+                        if (!String(currentCompany?.gstin || '').trim()) {
+                          notify.error('Set the company GSTIN in Company Profile before generating e-way bill JSON.');
+                          return;
+                        }
+                        const customer = (db.customers || []).find((c) => c.id === inv.customerId) || {};
+                        downloadJson(
+                          `EWB_${inv.number}.json`,
+                          buildEwayBillPayload({ invoice: inv, company: currentCompany, customer })
+                        );
+                        notify.success(`e-Way Bill JSON for ${inv.number} downloaded — upload via the e-way bill bulk tool.`);
+                      }}
+                    >
+                      <FileText size={16} className="ui-muted" />
+                      <span>e-Way Bill JSON</span>
+                    </button>
+                  </>
+                ) : null}
 
                 <button
                   type="button"

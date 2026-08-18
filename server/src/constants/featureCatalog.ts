@@ -211,6 +211,14 @@ export const FEATURE_CATALOG: FeatureDef[] = [
 
   // ---- Data -------------------------------------------------------------
   {
+    key: 'einvoice',
+    label: 'e-Invoice and e-Way Bill JSON',
+    description:
+      'Download NIC-schema JSON per invoice for the e-invoice and e-way bill portals\u2019 bulk tools. Direct IRP submission needs GSP credentials and is not included yet.',
+    defaultEnabled: false,
+    category: 'Operations',
+  },
+  {
     key: 'recurringInvoices',
     label: 'Recurring invoices',
     description:

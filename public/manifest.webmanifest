@@ -1,0 +1,17 @@
+{
+  "name": "Neev One — GST accounting",
+  "short_name": "Neev One",
+  "description": "Double-entry GST accounting. Books that balance themselves.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFAFA",
+  "theme_color": "#F97316",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
