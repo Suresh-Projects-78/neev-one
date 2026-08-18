@@ -31,6 +31,9 @@ import {
   Coins,
   Upload,
   Search as SearchIcon,
+  Bell,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 /* Duotone icons for the module rail — the two-tone fill is what reads as a
    "coloured icon" rather than a tinted outline. Leaf items stay lucide, tinted
@@ -9666,6 +9669,104 @@ const AppShell = () => {
   // this only stops the UI offering doors that are locked.
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
 
+  // --- shell trio: collapsed rail, quick create, notifications ---
+  const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem('navCollapsed') === '1');
+  const toggleNavCollapsed = () =>
+    setNavCollapsed((v) => {
+      try { localStorage.setItem('navCollapsed', v ? '0' : '1'); } catch { /* best effort */ }
+      return !v;
+    });
+  const [quickOpen, setQuickOpen] = useState(false);
+  const quickRef = useRef(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+  const [notifSeenKey, setNotifSeenKey] = useState(() => localStorage.getItem('notifSeenKey') || '');
+  // Pinned per mount so overdue bucketing is stable across renders.
+  const [shellNowTs] = useState(() => Date.now());
+
+  // Close the two header popovers on outside click, same contract as the
+  // org and profile menus.
+  useEffect(() => {
+    if (!quickOpen && !notifOpen) return undefined;
+    const onDown = (e) => {
+      if (quickOpen && !quickRef.current?.contains(e.target)) setQuickOpen(false);
+      if (notifOpen && !notifRef.current?.contains(e.target)) setNotifOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [quickOpen, notifOpen]);
+
+  /**
+   * Notification feed computed from the books — never invented. Two event
+   * classes today: receivables past due, and payables falling due this week.
+   */
+  const notifications = useMemo(() => {
+    const out = [];
+    const companyId = currentCompany?.id;
+    if (!companyId) return out;
+    const todayStr = new Date(shellNowTs).toISOString().slice(0, 10);
+    const weekStr = new Date(shellNowTs + 7 * 86_400_000).toISOString().slice(0, 10);
+    const numv = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
+
+    const overdue = (Array.isArray(db?.invoices) ? db.invoices : []).filter((i) => {
+      if (i.companyId !== companyId) return false;
+      const st = String(i.status || '').toLowerCase();
+      if (st === 'draft' || st === 'cancelled') return false;
+      const due = numv(i.total) - numv(i.paidAmount);
+      return due > 0.0001 && String(i.dueDate || '') && String(i.dueDate) < todayStr;
+    });
+    if (overdue.length) {
+      const total = overdue.reduce((sum, i) => sum + numv(i.total) - numv(i.paidAmount), 0);
+      out.push({
+        id: 'overdue-invoices',
+        tone: 'neg',
+        title: `${overdue.length} invoice${overdue.length === 1 ? '' : 's'} overdue`,
+        body: `${formatMoney(total, currentCompany)} past due date`,
+        target: 'invoices',
+      });
+    }
+
+    const payables = [
+      ...(Array.isArray(db?.bills) ? db.bills : []),
+      ...(Array.isArray(db?.expenses) ? db.expenses : []),
+    ].filter((b) => {
+      if (b.companyId !== companyId) return false;
+      const st = String(b.status || '').toLowerCase();
+      if (st === 'draft' || st === 'cancelled' || st === 'paid') return false;
+      const due = numv(b.total) - numv(b.paidAmount);
+      const d = String(b.dueDate || '');
+      return due > 0.0001 && d && d >= todayStr && d <= weekStr;
+    });
+    if (payables.length) {
+      const total = payables.reduce((sum, b) => sum + numv(b.total) - numv(b.paidAmount), 0);
+      out.push({
+        id: 'payables-week',
+        tone: 'warn',
+        title: `${payables.length} payable${payables.length === 1 ? '' : 's'} due this week`,
+        body: `${formatMoney(total, currentCompany)} to schedule`,
+        target: 'bills',
+      });
+    }
+
+    return out;
+  }, [db, currentCompany, shellNowTs]);
+
+  const notifKey = notifications.map((n) => `${n.id}:${n.body}`).join('|');
+  const notifUnseen = notifications.length > 0 && notifKey !== notifSeenKey;
+  const markNotifsSeen = () => {
+    setNotifSeenKey(notifKey);
+    try { localStorage.setItem('notifSeenKey', notifKey); } catch { /* best effort */ }
+  };
+
+  const QUICK_CREATE = [
+    { label: 'Invoice', run: () => { setActive('invoices'); setInvoiceEditor({ open: true, initial: null }); } },
+    { label: 'Bill', run: () => { setActive('bills'); setBillEditor({ open: true, initial: null }); } },
+    { label: 'Journal entry', run: () => { setActive('journalEntries'); setJournalEditor({ open: true, initial: null }); } },
+    { label: 'Expense', run: () => setActive('expenses') },
+    { label: 'Customer', run: () => setActive('customers') },
+    { label: 'Vendor', run: () => setActive('vendors') },
+  ];
+
   const visibleNav = useMemo(() => {
     if (permsLoading) return navModel;
     // Hidden when the user lacks the permission OR the org has the feature off.
@@ -10878,6 +10979,105 @@ const AppShell = () => {
               </select>
             ) : null}
 
+            {/* Quick create: the two-click path to any new document. */}
+            <div className="relative" ref={quickRef}>
+              <button
+                type="button"
+                onClick={() => setQuickOpen((v) => !v)}
+                className="ui-btn ui-btn-primary !h-9 !px-2.5"
+                aria-haspopup="menu"
+                aria-expanded={quickOpen}
+                aria-label="Quick create"
+              >
+                <Plus size={16} aria-hidden="true" />
+                <span className="hidden lg:inline">New</span>
+              </button>
+              {quickOpen ? (
+                <div
+                  role="menu"
+                  className="ui-card ui-in-pop absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden py-1"
+                  style={{ boxShadow: 'var(--shadow-pop)' }}
+                >
+                  {QUICK_CREATE.map((q) => (
+                    <button
+                      key={q.label}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setQuickOpen(false);
+                        q.run();
+                      }}
+                      className="w-full px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Notifications: computed from the books, never invented. */}
+            <div className="relative" ref={notifRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setNotifOpen((v) => !v);
+                  if (!notifOpen) markNotifsSeen();
+                }}
+                className="ui-icon-btn relative !h-9 !w-9"
+                aria-haspopup="menu"
+                aria-expanded={notifOpen}
+                aria-label={`Notifications${notifications.length ? `, ${notifications.length} item${notifications.length === 1 ? '' : 's'}` : ''}`}
+              >
+                <Bell size={16} aria-hidden="true" />
+                {notifUnseen ? (
+                  <span
+                    className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full"
+                    style={{ backgroundColor: 'rgb(var(--brand))' }}
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </button>
+              {notifOpen ? (
+                <div
+                  role="menu"
+                  className="ui-card ui-in-pop absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden"
+                  style={{ boxShadow: 'var(--shadow-pop)' }}
+                >
+                  <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+                    <span className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Notifications</span>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <p className="ui-caption px-4 py-6 text-center">All clear — nothing needs attention.</p>
+                  ) : (
+                    notifications.map((n) => (
+                      <button
+                        key={n.id}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setNotifOpen(false);
+                          setActive(n.target);
+                        }}
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[rgb(var(--surface-sunken))]"
+                        style={{ borderBottom: '1px solid rgb(var(--border))' }}
+                      >
+                        <span
+                          className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+                          style={{ backgroundColor: `rgb(var(--${n.tone}))` }}
+                          aria-hidden="true"
+                        />
+                        <span>
+                          <span className="block text-sm font-medium">{n.title}</span>
+                          <span className="ui-caption">{n.body}</span>
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : null}
+            </div>
+
             <span className="ui-pill ui-pill-neutral hidden lg:inline-flex">{activeLabel}</span>
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
           </div>
@@ -10917,11 +11117,25 @@ const AppShell = () => {
       ) : null}
 
       <div className="w-full px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5">
-        <aside className="w-full md:w-56 lg:w-60 shrink-0">
+        <aside className={`w-full shrink-0 transition-[width] duration-200 ${navCollapsed ? 'md:w-[4.5rem]' : 'md:w-56 lg:w-60'}`}>
           <nav
             aria-label="Main"
             className="ui-panel p-2 md:sticky md:top-[4.5rem] flex flex-col md:max-h-[calc(100dvh-5rem)]"
           >
+            {/* Collapse control: desktop only — on a phone the rail already
+                stacks above the content and hiding labels saves nothing. */}
+            <button
+              type="button"
+              onClick={toggleNavCollapsed}
+              className={`ui-nav-item hidden md:flex ${navCollapsed ? 'md:justify-center' : ''}`}
+              aria-pressed={navCollapsed}
+              aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+              title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+            >
+              {navCollapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelLeftClose size={16} aria-hidden="true" />}
+              <span className={navCollapsed ? 'md:hidden' : ''}>Collapse</span>
+            </button>
+
             <div className="space-y-0.5 min-h-0 flex-1 overflow-y-auto">
               {visibleNav.map((entry) => {
                 if (entry.type === 'item') {
@@ -10943,9 +11157,10 @@ const AppShell = () => {
                       key={entry.key}
                       type="button"
                       onClick={() => setActive(entry.key)}
-                      className="ui-nav-item"
+                      className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : ''}`}
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
+                      title={navCollapsed ? entry.label : undefined}
                     >
                       <Icon
                         size={16}
@@ -10953,7 +11168,7 @@ const AppShell = () => {
                         {...(entry.ph ? { weight: 'duotone' } : {})}
                         style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
                       />
-                      <span>{entry.label}</span>
+                      <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
                     </button>
                   );
                 }
@@ -10966,34 +11181,43 @@ const AppShell = () => {
                   <div key={entry.key}>
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        // Collapsed rail: a group tap re-opens the rail with
+                        // that group expanded — a flyout would need its own
+                        // focus management for four entries.
+                        if (navCollapsed && window.innerWidth >= 768) {
+                          toggleNavCollapsed();
+                          setOpenGroups((prev) => ({ ...prev, [entry.key]: true }));
+                          return;
+                        }
                         setOpenGroups((prev) => ({
                           ...prev,
                           [entry.key]: !prev[entry.key],
-                        }))
-                      }
-                      className="ui-nav-item justify-between"
+                        }));
+                      }}
+                      className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
                       aria-expanded={isOpen}
                       style={isGroupActive ? { color: 'rgb(var(--fg))' } : undefined}
+                      title={navCollapsed ? entry.label : undefined}
                     >
-                      <span className="flex items-center gap-2.5">
+                      <span className={`flex items-center gap-2.5 ${navCollapsed ? 'md:gap-0' : ''}`}>
                         <GroupIcon
                           size={16}
                           aria-hidden="true"
                           {...(entry.ph ? { weight: 'duotone' } : {})}
                           style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
                         />
-                        <span>{entry.label}</span>
+                        <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
                       </span>
                       <ChevronDown
                         size={14}
                         aria-hidden="true"
-                        className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'}`}
+                        className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'} ${navCollapsed ? 'md:hidden' : ''}`}
                       />
                     </button>
 
                     {isOpen && (
-                      <div className="mt-0.5 space-y-0.5 pl-5">
+                      <div className={`mt-0.5 space-y-0.5 pl-5 ${navCollapsed ? 'md:hidden' : ''}`}>
                         {entry.items.map((item) => {
                           const Icon = item.icon;
                           const isActive = active === item.key;
@@ -11046,8 +11270,8 @@ const AppShell = () => {
                 >
                   {userInitials}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-left">{userEmail}</span>
-                <ChevronDown size={14} aria-hidden="true" className="rotate-180" />
+                <span className={`min-w-0 flex-1 truncate text-left ${navCollapsed ? 'md:hidden' : ''}`}>{userEmail}</span>
+                <ChevronDown size={14} aria-hidden="true" className={`rotate-180 ${navCollapsed ? 'md:hidden' : ''}`} />
               </button>
 
               {profileMenuOpen && (
