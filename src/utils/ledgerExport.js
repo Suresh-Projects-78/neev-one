@@ -1,6 +1,5 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
 
 const safeNum = (n) => {
   const x = Number(n ?? 0);
@@ -68,6 +67,22 @@ const cellValue = (row, key) => {
   return String(r?.[k] ?? '');
 };
 
+/** Quotes a CSV cell only when it needs it. */
+const csvCell = (v) => {
+  const t = String(v ?? '');
+  return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+};
+
+/**
+ * Spreadsheet export, as CSV rather than .xlsx.
+ *
+ * The xlsx package carried a high-severity advisory with no fixed release on
+ * npm, and the one alternative tried (exceljs) shipped its own vulnerable
+ * transitive dependencies — trading one advisory for four. This export was
+ * always an unformatted grid, so CSV with a UTF-8 BOM loses nothing but the
+ * file extension: Excel opens it with columns split and the ₹ sign intact,
+ * and the export path now carries zero dependencies.
+ */
 export const exportLedgerToExcel = ({
   companyName,
   ledgerName,
@@ -78,7 +93,6 @@ export const exportLedgerToExcel = ({
   columns,
 }) => {
   const cols = normalizeColumns(columns);
-  const header = cols.map((c) => c.label);
 
   const data = [
     ['Company', companyName || ''],
@@ -87,7 +101,7 @@ export const exportLedgerToExcel = ({
     ['Opening Balance', r2(openingBalance)],
     ['Closing Balance', r2(closingBalance)],
     [],
-    header,
+    cols.map((c) => c.label),
     ...(Array.isArray(rows) ? rows : []).map((r) =>
       cols.map((c) => {
         const v = cellValue(r, c.key);
@@ -96,12 +110,21 @@ export const exportLedgerToExcel = ({
     ),
   ];
 
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
+  // BOM first: without it Excel guesses the encoding and mangles ₹.
+  const csv = '\ufeff' + data.map((row) => row.map(csvCell).join(',')).join('\r\n');
 
-  const safeName = String(fileName || `${ledgerName || 'ledger'}.xlsx`).replace(/[\\/:*?"<>|]+/g, '-');
-  XLSX.writeFile(wb, safeName);
+  const base = String(fileName || `${ledgerName || 'ledger'}`).replace(/\.xlsx?$/i, '');
+  const safeName = `${base.replace(/[\\/:*?"<>|]+/g, '-')}.csv`;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = safeName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 };
 
 export const exportLedgerToPdf = ({
