@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction, type PermissionAction as PermissionActionType } from '../constants/enums.js';
+import { ensureDefaultRoles } from '../services/defaultRoles.js';
 
 export const rolesRouter = Router();
 rolesRouter.use(requireAuth, requireTenantContext);
@@ -35,6 +36,15 @@ rolesRouter.get('/orgs/:orgId/roles', requirePermission('SETTINGS', PermissionAc
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
+
+  // First visit to any screen that lists roles materialises the standard set,
+  // so the user-create dropdown is never just "Owner". Failure to seed must
+  // not break listing what already exists.
+  try {
+    await ensureDefaultRoles(accountId, orgId, req.auth!.userId);
+  } catch {
+    /* listing continues with whatever roles exist */
+  }
 
   const roles = await prisma.role.findMany({
     where: { accountId, orgId },
