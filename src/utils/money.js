@@ -4,7 +4,7 @@ export const round2 = (n) => {
   return Math.round(x * 100) / 100;
 };
 
-export const getCurrencyCode = (company) => {
+export const getCurrencyCode = (_company) => {
   return 'INR';
 };
 

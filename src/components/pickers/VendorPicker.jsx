@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Modal from '../ui/Modal';
 import { createVendor, listVendors } from '../../api/masters';
 import { useServerMasters } from '../../hooks/useServerMasters';
@@ -92,12 +92,11 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
     };
   });
 
-  useEffect(() => {
-    if (isEdit) return;
-    if (String(formData.groupId || '').trim()) return;
-    if (!sundryCreditorsGroup?.id) return;
+  // Default group, adjusted during render when it resolves after mount —
+  // an effect here fires a second render pass for the same result.
+  if (!isEdit && !String(formData.groupId || '').trim() && sundryCreditorsGroup?.id) {
     setFormData((p) => ({ ...p, groupId: String(sundryCreditorsGroup.id) }));
-  }, [isEdit, formData.groupId, sundryCreditorsGroup?.id]);
+  }
 
   const vendorGroupOptions = useMemo(() => {
     const rootId = sundryCreditorsGroup?.id ? String(sundryCreditorsGroup.id) : '';

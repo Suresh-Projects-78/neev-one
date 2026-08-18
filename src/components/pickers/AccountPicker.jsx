@@ -30,11 +30,6 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
     return m;
   }, [db.accountTypes, currentCompany.id]);
 
-  const types = useMemo(() => {
-    return safeArray(db.accountTypes)
-      .filter((t) => t.companyId === currentCompany.id)
-      .slice();
-  }, [db.accountTypes, currentCompany.id]);
 
   const groupById = useMemo(() => {
     const m = new Map();
@@ -48,9 +43,6 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
     return m;
   }, [groups]);
 
-  const groupOptions = useMemo(() => {
-    return groups.map((g) => ({ value: String(g.id), label: String(g.name || '').trim() }));
-  }, [groups]);
 
   const typeRowToParent = (t) => {
     const main = String(t?.main || '').trim();

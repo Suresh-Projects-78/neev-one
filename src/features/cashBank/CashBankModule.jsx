@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2 , Link2, CheckCircle2} from 'lucide-react';
 
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
@@ -1955,6 +1955,36 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                                 <Pencil size={16} />
                                 <span>Edit</span>
                               </button>
+                              {/* Both existed as complete implementations with
+                                  no way to reach them — the menu offered only
+                                  Edit and Delete, so matching a bank line to
+                                  its invoices could never actually be done. */}
+                              {!t.linkedPaymentId && t.ledgerId ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionId(null);
+                                    openKnockoff({ bankTxn: t, ledgerId: t.ledgerId });
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken"
+                                >
+                                  <Link2 size={16} />
+                                  <span>Knock-off invoices</span>
+                                </button>
+                              ) : null}
+                              {!t.linkedPaymentId ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionId(null);
+                                    openReconcile(t);
+                                  }}
+                                  className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken"
+                                >
+                                  <CheckCircle2 size={16} />
+                                  <span>Reconcile</span>
+                                </button>
+                              ) : null}
                               <button
                                 type="button"
                                 onClick={() => deleteTxn(t)}

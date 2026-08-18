@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Modal from '../ui/Modal';
 import { createCustomer, listCustomers } from '../../api/masters';
 import { useServerMasters } from '../../hooks/useServerMasters';
@@ -93,12 +93,11 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     };
   });
 
-  useEffect(() => {
-    if (isEdit) return;
-    if (String(formData.groupId || '').trim()) return;
-    if (!sundryDebtorsGroup?.id) return;
+  // Default group, adjusted during render when it resolves after mount —
+  // an effect here fires a second render pass for the same result.
+  if (!isEdit && !String(formData.groupId || '').trim() && sundryDebtorsGroup?.id) {
     setFormData((p) => ({ ...p, groupId: String(sundryDebtorsGroup.id) }));
-  }, [isEdit, formData.groupId, sundryDebtorsGroup?.id]);
+  }
 
   const customerGroupOptions = useMemo(() => {
     const rootId = sundryDebtorsGroup?.id ? String(sundryDebtorsGroup.id) : '';
@@ -236,12 +235,6 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
   const isIndiaBilling = String(formData.billingAddress?.country || '').trim() === INDIA_COUNTRY;
   const isIndiaShipping = String(formData.shippingAddress?.country || '').trim() === INDIA_COUNTRY;
 
-  const billingStateFromDropdown = (codeOrName) => {
-    const trimmed = String(codeOrName || '').trim();
-    if (!trimmed) return '';
-    const byCode = GST_STATE_BY_CODE[trimmed];
-    return byCode || trimmed;
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();

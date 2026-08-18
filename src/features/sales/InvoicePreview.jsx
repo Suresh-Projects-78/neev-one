@@ -592,8 +592,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
 
     const outerClass = isCompact ? 'text-[10px] leading-4' : 'text-[11px] leading-4';
     const borderClass = isBoxed ? 'border-2 border-gray-900' : 'border border-gray-900';
-    const b = isBoxed ? 'border-gray-900 border-2' : 'border-gray-900 border';
-    const pHead = isCompact ? 'p-2' : 'p-3';
+      const pHead = isCompact ? 'p-2' : 'p-3';
     const pCell = isCompact ? 'p-2' : 'p-3';
 
     return (

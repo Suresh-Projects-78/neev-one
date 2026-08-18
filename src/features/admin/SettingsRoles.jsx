@@ -128,33 +128,6 @@ const PERMISSION_MATRIX = [
   },
 ];
 
-function buildMatrixPermissionSet(item, column) {
-  const module = String(item.module).trim();
-  const subModule = String(item.subModule).trim();
-
-  if (column === 'view') return [{ module, subModule, action: MATRIX_ACTIONS.VIEW, allowed: true }];
-  if (column === 'edit') {
-    // map "Edit" column to CREATE+EDIT
-    return [
-      { module, subModule, action: MATRIX_ACTIONS.CREATE, allowed: true },
-      { module, subModule, action: MATRIX_ACTIONS.EDIT, allowed: true },
-    ];
-  }
-  if (column === 'del') return [{ module, subModule, action: MATRIX_ACTIONS.DELETE, allowed: true }];
-  if (column === 'approve') return [{ module, subModule, action: MATRIX_ACTIONS.APPROVE, allowed: true }];
-  if (column === 'full') {
-    const base = [
-      { module, subModule, action: MATRIX_ACTIONS.VIEW, allowed: true },
-      { module, subModule, action: MATRIX_ACTIONS.CREATE, allowed: true },
-      { module, subModule, action: MATRIX_ACTIONS.EDIT, allowed: true },
-      { module, subModule, action: MATRIX_ACTIONS.DELETE, allowed: true },
-    ];
-    if (item.supports?.approve) base.push({ module, subModule, action: MATRIX_ACTIONS.APPROVE, allowed: true });
-    return base;
-  }
-  return [];
-}
-
 function itemAllKeys(item) {
   const keys = [];
   if (item.supports?.view) keys.push(permKey({ module: item.module, subModule: item.subModule, action: MATRIX_ACTIONS.VIEW }));

@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2 } from 'lucide-react';
+import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { dueDateFor, termsLabel } from '../../utils/paymentTerms';
+import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '../../api/invoices';
 
@@ -159,7 +160,6 @@ export const InvoicesList = ({
   defaultWarehouseId = '',
 }) => {
   const invoices = db.invoices.filter((i) => i.companyId === currentCompany.id);
-  const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
   const [openMenu, setOpenMenu] = useState(null);
   const menuRef = useRef(null);
 
@@ -787,6 +787,21 @@ export const InvoicesList = ({
                   <span>Print & Download</span>
                 </button>
 
+                {/* ChangeInvoiceStatusPrompt existed with a full handler but
+                    no menu item ever called it — the same defined-but-unwired
+                    class of bug as onDuplicateBill. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMenu(null);
+                    openChangeStatus(inv);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                >
+                  <Tag size={16} className="ui-muted" />
+                  <span>Change Status</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -1316,13 +1331,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const invoiceDocSettingsInit = getDocSettings(db, currentCompany, { branchId: initBranchId || null });
   const invoiceNumberingInit = invoiceDocSettingsInit?.numbering?.invoice;
   const isInvoiceAutoInit = String(invoiceNumberingInit?.mode || '').toLowerCase() === 'auto';
-  const generatedInvoiceNumberInit = !isEdit
-    ? generateVoucherNumber({ db, company: currentCompany, voucherKey: 'invoice', branchId: initBranchId || null })
-    : '';
 
   const [formData, setFormData] = useState(() => {
-    const defaultDate = new Date().toISOString().split('T')[0];
-    const defaultDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const defaultDate = todayIso();
+    const defaultDueDate = plusDaysIso(30);
 
     const normalizedItems = Array.isArray(initialData?.items)
       ? initialData.items.map((it) => {
@@ -1965,8 +1977,8 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
     : '';
 
   const [formData, setFormData] = useState(() => {
-    const defaultDate = new Date().toISOString().split('T')[0];
-    const defaultDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const defaultDate = todayIso();
+    const defaultDueDate = plusDaysIso(30);
 
     const normalizedItems = Array.isArray(initialData?.items)
       ? initialData.items.map((it) => {

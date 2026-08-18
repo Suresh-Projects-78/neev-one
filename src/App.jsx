@@ -71,7 +71,6 @@ import {
 } from './utils/docSettings';
 import {
   computeGstForLine,
-  computeGstForLines,
   getCompanyGstProfile,
   GST_STATE_BY_CODE,
   getGstStateFromGstin,
@@ -404,7 +403,7 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
   );
 };
 
-const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
+const VendorsList = ({ db, setDb, currentCompany }) => {
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
   const [isCreating, setIsCreating] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
@@ -591,7 +590,7 @@ const VendorsList = ({ db, setDb, openModal, currentCompany }) => {
   );
 };
 
-const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
+const CustomersList = ({ db, setDb, currentCompany }) => {
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
   const [isCreating, setIsCreating] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -777,7 +776,7 @@ const CustomersList = ({ db, setDb, openModal, currentCompany }) => {
   );
 };
 
-const PurchaseOverview = ({ db, currentCompany }) => {
+const PurchaseOverview = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
       <h3 className="text-xl font-bold mb-4">Purchase Overview</h3>
@@ -1634,7 +1633,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
   );
 };
 
-const StockAdjustment = ({ db, setDb, currentCompany }) => {
+const StockAdjustment = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
       <h3 className="text-xl font-bold mb-4">Stock Adjustment</h3>
@@ -2714,12 +2713,11 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
     };
   });
 
-  useEffect(() => {
-    if (formData.parentGroupId) return;
-    const firstId = groups[0]?.id ? String(groups[0].id) : '';
-    if (!firstId) return;
-    setFormData((p) => ({ ...p, parentGroupId: firstId }));
-  }, [groups, formData.parentGroupId]);
+  // Groups load synchronously from the local store; if they ever appear a
+  // render late, adjust during render rather than in an effect.
+  if (!formData.parentGroupId && groups[0]?.id) {
+    setFormData((p) => ({ ...p, parentGroupId: String(groups[0].id) }));
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -5902,11 +5900,21 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
 
 const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
   const [scopeBranchId, setScopeBranchId] = useState('');
-  const [docSettings, setDocSettings] = useState(() => getDocSettings(db, currentCompany, { branchId: null }));
-
-  useEffect(() => {
-    setDocSettings(getDocSettings(db, currentCompany, { branchId: scopeBranchId ? scopeBranchId : null }));
-  }, [db, currentCompany, scopeBranchId]);
+  // Draft keyed by scope; changing scope re-seeds during render instead of
+  // syncing state from props in an effect.
+  const [numberingDraft, setNumberingDraft] = useState(() => ({
+    scope: '',
+    value: getDocSettings(db, currentCompany, { branchId: null }),
+  }));
+  if (numberingDraft.scope !== (scopeBranchId || '')) {
+    setNumberingDraft({
+      scope: scopeBranchId || '',
+      value: getDocSettings(db, currentCompany, { branchId: scopeBranchId ? scopeBranchId : null }),
+    });
+  }
+  const docSettings = numberingDraft.value;
+  const setDocSettings = (updater) =>
+    setNumberingDraft((p) => ({ ...p, value: typeof updater === 'function' ? updater(p.value) : updater }));
 
   const updateNumberingSetting = (voucherKey, patch) => {
     setDocSettings((prev) => ({
@@ -6367,7 +6375,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
     return '';
   };
 
-  const [formData, setFormData] = useState(() => {
+  const seedCompanyForm = () => {
     const profile = getCompanyGstProfile(currentCompany);
     return {
       name: currentCompany?.name || '',
@@ -6376,18 +6384,18 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
       gstin: profile.gstin || '',
       state: profile.state || '',
     };
-  });
+  };
 
-  useEffect(() => {
-    const profile = getCompanyGstProfile(currentCompany);
-    setFormData({
-      name: currentCompany?.name || '',
-      currency: 'INR',
-      gstRegistration: profile.gstRegistration || 'Registered',
-      gstin: profile.gstin || '',
-      state: profile.state || '',
-    });
-  }, [currentCompany, db]);
+  // Keyed to the company and reset during render on a switch — the effect
+  // that re-seeded it also wiped in-progress edits whenever anything in db
+  // changed, which was a bug, not a feature.
+  const [companyForm, setCompanyForm] = useState(() => ({ key: currentCompany?.id, value: seedCompanyForm() }));
+  if (companyForm.key !== currentCompany?.id) {
+    setCompanyForm({ key: currentCompany?.id, value: seedCompanyForm() });
+  }
+  const formData = companyForm.value;
+  const setFormData = (updater) =>
+    setCompanyForm((p) => ({ ...p, value: typeof updater === 'function' ? updater(p.value) : updater }));
 
   const handleSave = () => {
     const gstinNormalized = String(formData.gstin || '').trim().toUpperCase();
@@ -7238,15 +7246,6 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
         return k.includes(q) || l.includes(q);
       });
     }, [permCatalog, permSearch]);
-
-    const togglePerm = (stateSetter, current, key) => {
-      stateSetter((prev) => {
-        const next = new Set(Array.isArray(current) ? current : []);
-        if (next.has(key)) next.delete(key);
-        else next.add(key);
-        return { ...prev, permissions: Array.from(next) };
-      });
-    };
 
     const createUser = async () => {
       setError('');
@@ -9702,11 +9701,6 @@ const AppShell = () => {
     [warehousesForUser]
   );
 
-  const activeWarehouse = useMemo(() => {
-    if (!activeWarehouseId) return null;
-    return warehousesForUser.find((w) => String(w.id) === String(activeWarehouseId)) || null;
-  }, [warehousesForUser, activeWarehouseId]);
-
   useEffect(() => {
     if (!isAuthenticated) return;
     if (warehousesLoading) return;
@@ -10743,6 +10737,25 @@ const AppShell = () => {
               <span className="hidden md:inline text-sm">Search</span>
               <kbd className="ui-kbd hidden md:inline-flex">⌘K</kbd>
             </button>
+
+            {/* setActiveWarehouse existed with access checks and persistence,
+                but no control ever called it — a user with two warehouses had
+                no way to switch, and every stock screen reads the active one. */}
+            {warehousesForUser.length > 1 ? (
+              <select
+                value={activeWarehouseId || ''}
+                onChange={(e) => setActiveWarehouse(e.target.value)}
+                className="ui-select hidden md:block !h-9 !min-h-0 max-w-[11rem] text-sm"
+                aria-label="Active warehouse"
+              >
+                <option value="">All warehouses</option>
+                {warehousesForUser.map((w) => (
+                  <option key={w.id} value={String(w.id)}>
+                    {w.name || `Warehouse ${w.id}`}
+                  </option>
+                ))}
+              </select>
+            ) : null}
 
             <span className="ui-pill ui-pill-neutral hidden lg:inline-flex">{activeLabel}</span>
             <ThemeToggle theme={theme} onToggle={toggleTheme} />

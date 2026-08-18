@@ -73,7 +73,7 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
   );
 };
 
-const InventoryModule = ({ db, setDb, openModal, currentCompany, warehouses = [] }) => {
+const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => {
   const companyId = currentCompany.id;
 
   const [viewMode, setViewMode] = useState('qty');

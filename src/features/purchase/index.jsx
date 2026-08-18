@@ -3,6 +3,7 @@ import { Copy, CreditCard, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { dueDateFor } from '../../utils/paymentTerms';
+import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
@@ -38,8 +39,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
 
   const [formData, setFormData] = useState(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const defaultDue = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const today = todayIso();
+    const defaultDue = plusDaysIso(30);
 
     const base = {
       number: isBillAutoInit ? generatedBillNumberInit || '' : '',
