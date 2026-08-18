@@ -211,6 +211,14 @@ export const FEATURE_CATALOG: FeatureDef[] = [
 
   // ---- Data -------------------------------------------------------------
   {
+    key: 'insights',
+    label: 'Dashboard insights',
+    description:
+      'A card of observations computed directly from your books — receivable concentration, collection-rate movement, spend spikes. Nothing predictive, nothing invented.',
+    defaultEnabled: true,
+    category: 'Data',
+  },
+  {
     key: 'gridTools',
     label: 'Power grid tools',
     description:

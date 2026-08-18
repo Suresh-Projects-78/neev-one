@@ -16,6 +16,7 @@ import {
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import ChartCard from '../../components/charts/ChartCard';
 import { useChartTheme } from '../../components/charts/useChartTheme';
+import { useFeatures } from '../../permissions/useFeatures';
 /**
  * ECharts is ~2 MB unminified and belongs nowhere near first paint. Loading the
  * chart module on demand keeps the initial bundle for the shell and the tables,
@@ -325,6 +326,7 @@ export default function DashboardOverview({
   // them into SVG *attributes*, where a var() reference is not reliably
   // resolved across browsers. The hook also re-resolves on theme switch.
   const chartTheme = useChartTheme();
+  const { isEnabled } = useFeatures();
 
   const allInvoices = useMemo(() => {
     if (Array.isArray(invoicesProp)) return invoicesProp;
@@ -530,8 +532,73 @@ export default function DashboardOverview({
       .slice(0, 5);
   }, [currentOut]);
 
-  const sparkOf = (key) => buckets.map((b) => b[key]);
   const collectedPct = billed > 0 ? Math.round((collected / billed) * 100) : 0;
+
+  /**
+   * Insights: observations computed from the figures already on this page.
+   * Every line cites its numbers; nothing is predicted and nothing is
+   * invented. An empty list renders nothing rather than filler.
+   */
+  const insights = useMemo(() => {
+    const out = [];
+    const fmt = (v) => formatMoneyCompact(v, currentCompany);
+
+    // Receivable concentration: one customer holding too much of the book.
+    const totalOut = topCustomers.reduce((s, c) => s + c.outstanding, 0);
+    if (topCustomers.length > 1 && totalOut > 0) {
+      const top = topCustomers[0];
+      const share = top.outstanding / totalOut;
+      if (share >= 0.4) {
+        out.push({
+          id: 'concentration',
+          tone: 'warn',
+          text: `${top.name} holds ${Math.round(share * 100)}% of outstanding (${fmt(top.outstanding)}). A single delay there moves the whole book.`,
+        });
+      }
+    }
+
+    // Collection rate movement against the previous period.
+    if (prevBilled > 0 && billed > 0) {
+      const prevPct = Math.round((prevCollected / prevBilled) * 100);
+      if (prevPct - collectedPct >= 10) {
+        out.push({
+          id: 'collection-drop',
+          tone: 'neg',
+          text: `Collection rate fell to ${collectedPct}% from ${prevPct}% last period. ${fmt(billed - collected)} is uncollected.`,
+        });
+      } else if (collectedPct - prevPct >= 10) {
+        out.push({
+          id: 'collection-rise',
+          tone: 'pos',
+          text: `Collection rate rose to ${collectedPct}% from ${prevPct}% last period.`,
+        });
+      }
+    }
+
+    // Spend spike against the previous period.
+    if (prevSpent > 0 && spent > prevSpent * 1.5) {
+      out.push({
+        id: 'spend-spike',
+        tone: 'warn',
+        text: `Spend is ${fmt(spent)} this period against ${fmt(prevSpent)} last — up ${Math.round(((spent - prevSpent) / prevSpent) * 100)}%.`,
+      });
+    }
+
+    // Old receivables: the over-60 bucket carrying real weight.
+    const over60 = aging[3]?.amount || 0;
+    const agingSum = aging.reduce((s, b) => s + b.amount, 0);
+    if (agingSum > 0 && over60 / agingSum >= 0.25) {
+      out.push({
+        id: 'aging-tail',
+        tone: 'neg',
+        text: `${Math.round((over60 / agingSum) * 100)}% of outstanding (${fmt(over60)}) is older than 60 days.`,
+      });
+    }
+
+    return out;
+  }, [topCustomers, prevBilled, billed, prevCollected, collectedPct, collected, prevSpent, spent, aging, currentCompany]);
+
+  const sparkOf = (key) => buckets.map((b) => b[key]);
 
   return (
     <div className="space-y-5">
@@ -642,6 +709,27 @@ export default function DashboardOverview({
               hint="per invoice"
             />
           </div>
+
+          {isEnabled('insights') && insights.length > 0 ? (
+            <section className="ui-card p-5 ui-in" aria-label="Insights from your books">
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Worth a look</h3>
+                <span className="ui-caption">Computed from your books — not a prediction</span>
+              </div>
+              <ul className="space-y-2.5">
+                {insights.map((n) => (
+                  <li key={n.id} className="flex items-start gap-2.5 text-sm">
+                    <span
+                      className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: `rgb(var(--${n.tone}))` }}
+                      aria-hidden="true"
+                    />
+                    <span>{n.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {/* Three-column grid of equal tiles. One shape repeated, because a
               dashboard's job is comparison and comparison breaks the moment
