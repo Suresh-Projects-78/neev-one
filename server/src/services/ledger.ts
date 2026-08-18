@@ -18,6 +18,7 @@ export type ControlKind =
   | 'STOCK'
   | 'SALES'
   | 'PURCHASES'
+  | 'EXPENSES'
   | 'CGST_OUT'
   | 'SGST_OUT'
   | 'IGST_OUT'
@@ -100,6 +101,7 @@ const DEFAULT_ACCOUNTS: Array<{
   { code: '3000', name: 'Opening Balance Difference', accountType: 'EQUITY', controlKind: 'OPENING_DIFF' },
   { code: '4000', name: 'Sales Accounts', accountType: 'INCOME', controlKind: 'SALES' },
   { code: '5000', name: 'Purchase Accounts', accountType: 'EXPENSE', controlKind: 'PURCHASES' },
+  { code: '5100', name: 'Indirect Expenses', accountType: 'EXPENSE', controlKind: 'EXPENSES' },
   { code: '9997', name: 'Exchange Gain / Loss', accountType: 'EXPENSE', controlKind: 'FX_GAIN_LOSS' },
   { code: '9998', name: 'Rounding Difference', accountType: 'EXPENSE', controlKind: 'ROUNDING' },
   { code: '9999', name: 'Suspense / Uncategorised', accountType: 'ASSET', controlKind: 'SUSPENSE' },
@@ -493,6 +495,52 @@ export function billPostingLines(bill: {
     partyType: 'VENDOR',
     partyId: bill.partyId || null,
     description: `Bill from ${bill.partyName || 'vendor'}`,
+  });
+
+  return lines;
+}
+
+/**
+ * Posting lines for an expense voucher.
+ *
+ * Same shape as a bill with one difference of account: the cost lands in
+ * Indirect Expenses rather than Purchases, so trading and operating spend
+ * stay separable on the P&L. The credit still goes to Accounts Payable —
+ * an unpaid expense is owed to a party exactly like an unpaid bill, and
+ * settlement flows through the same payments machinery.
+ */
+export function expensePostingLines(expense: {
+  partyId?: string | null;
+  partyName?: string | null;
+  subtotal?: number | null;
+  cgstTotal?: number | null;
+  sgstTotal?: number | null;
+  igstTotal?: number | null;
+  total?: number | null;
+}): PostingLine[] {
+  const subtotal = Number(expense.subtotal ?? 0);
+  const cgst = Number(expense.cgstTotal ?? 0);
+  const sgst = Number(expense.sgstTotal ?? 0);
+  const igst = Number(expense.igstTotal ?? 0);
+  const computed = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
+  const total = Number(expense.total ?? 0) || computed;
+  const rounding = Math.round((total - computed) * 100) / 100;
+
+  const lines: PostingLine[] = [];
+  if (subtotal) lines.push({ controlKind: 'EXPENSES', debit: subtotal, description: 'Expense' });
+  if (cgst) lines.push({ controlKind: 'CGST_IN', debit: cgst, taxCode: 'CGST', description: 'Input CGST' });
+  if (sgst) lines.push({ controlKind: 'SGST_IN', debit: sgst, taxCode: 'SGST', description: 'Input SGST' });
+  if (igst) lines.push({ controlKind: 'IGST_IN', debit: igst, taxCode: 'IGST', description: 'Input IGST' });
+
+  if (rounding > 0) lines.push({ controlKind: 'ROUNDING', debit: rounding, description: 'Rounding difference' });
+  if (rounding < 0) lines.push({ controlKind: 'ROUNDING', credit: Math.abs(rounding), description: 'Rounding difference' });
+
+  lines.push({
+    controlKind: 'AP',
+    credit: total,
+    partyType: 'VENDOR',
+    partyId: expense.partyId || null,
+    description: `Expense payable to ${expense.partyName || 'party'}`,
   });
 
   return lines;

@@ -22,6 +22,7 @@ export type SeriesInput = {
 const DEFAULT_PREFIX: Record<string, string> = {
   INVOICE: 'INV-',
   BILL: 'BILL-',
+  EXPENSE: 'EXP-',
   RECEIPT: 'RCP-',
   PAYMENT: 'PAY-',
   JOURNAL: 'JE-',

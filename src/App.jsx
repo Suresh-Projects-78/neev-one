@@ -1,5 +1,6 @@
 import InventoryModule from './features/inventory/InventoryModule';
 import { notify, confirmDialog } from './components/ui/notify';
+import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
@@ -1163,7 +1164,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
     isIntra,
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const wantsDraft = submitAsDraft;
@@ -1190,11 +1191,47 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       return;
     }
 
+    // Server first: an unpaid expense is a liability; it must reach the books
+    // or not exist. Drafts stay local until they become real.
+    let backendDocId = null;
+    let serverNumber = '';
+    if (!wantsDraft && hasDocsApiSession()) {
+      try {
+        const saved = await createDocApi('expense', {
+          number: expenseNumber || undefined,
+          date: formData.date,
+          dueDate: formData.dueDate || null,
+          refNo: formData.refNo || null,
+          refDate: formData.refDate || null,
+          partyId: vendor?.backendPartyId ? String(vendor.backendPartyId) : null,
+          partyName: getVendorDisplayName(vendor) || 'Expense',
+          partyGstin: vendorGstin || null,
+          placeOfSupplyState: vendorState || null,
+          category: formData.category || null,
+          description: formData.description || null,
+          subtotal: computed.taxableAmount,
+          cgstTotal: computed.cgstAmount,
+          sgstTotal: computed.sgstAmount,
+          igstTotal: computed.igstAmount,
+          gstTotal: computed.gstAmount,
+          total: computed.lineTotal,
+          status: 'Unpaid',
+          items: [],
+        });
+        backendDocId = saved?.id || null;
+        serverNumber = String(saved?.number || '');
+      } catch (err) {
+        notify.error(String(err?.message || 'Expense not saved to the server.'));
+        return;
+      }
+    }
+
     const newExpense = {
       id: db.expenses.length + 1,
       companyId: currentCompany.id,
       ...formData,
-      number: expenseNumber,
+      backendDocId,
+      number: serverNumber || expenseNumber,
       vendorName: getVendorDisplayName(vendor),
       vendorGstin: vendorGstin,
       placeOfSupplyState: vendorState,
@@ -7192,7 +7229,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
     }
   };
 
-  const UsersRoles = async () => {
+  const UsersRoles = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 

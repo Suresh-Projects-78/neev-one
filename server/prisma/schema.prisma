@@ -523,6 +523,61 @@ model Bill {
   @@index([accountId, orgId, branchId, date])
 }
 
+/// An expense voucher — money out that is not a stock purchase: rent, travel,
+/// utilities. Posts Dr Indirect Expenses (+ input GST) / Cr Accounts Payable,
+/// so unpaid expenses sit in the same payable book as bills.
+model Expense {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  warehouseId String?
+  number      String
+  date        String
+  dueDate     String?
+  refNo       String?
+  refDate     String?
+
+  againstDocId String?
+
+  partyId            String?
+  partyName          String
+  partyGstin         String?
+  placeOfSupplyState String?
+  taxType            String?
+
+  /// Free-text bucket ("Rent", "Travel") — reporting label, not a ledger key.
+  category    String?
+  description String?
+
+  subtotal      Decimal @default(0)
+  cgstTotal     Decimal @default(0)
+  sgstTotal     Decimal @default(0)
+  igstTotal     Decimal @default(0)
+  gstTotal      Decimal @default(0)
+  total         Decimal @default(0)
+  settledAmount Decimal @default(0)
+
+  status    String @default("Unpaid")
+  itemsJson String
+
+  currency     String  @default("INR")
+  exchangeRate Decimal @default(1)
+  baseTotal    Decimal @default(0)
+
+  sourceSystem String?
+  sourceKey    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@unique([orgId, sourceSystem, sourceKey])
+  @@index([accountId, orgId, branchId, date])
+}
+
 /// A sales return. Reverses part or all of a sales invoice: revenue and output GST come back down, and the customer is credited.
 model CreditNote {
   id        String @id @default(cuid())

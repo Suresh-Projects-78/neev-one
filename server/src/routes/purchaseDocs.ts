@@ -6,14 +6,12 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
-import {
-  billPostingLines,
+import { billPostingLines,
   creditNotePostingLines,
   debitNotePostingLines,
   ensureLedgerSetup,
   postEntry,
-  reverseEntry,
-} from '../services/ledger.js';
+  reverseEntry, expensePostingLines } from '../services/ledger.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/fx.js';
@@ -33,7 +31,7 @@ import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/f
 export const purchaseDocsRouter = Router();
 purchaseDocsRouter.use(requireAuth, requireTenantContext);
 
-type DocKind = 'BILL' | 'CREDIT_NOTE' | 'DEBIT_NOTE';
+type DocKind = 'BILL' | 'CREDIT_NOTE' | 'DEBIT_NOTE' | 'EXPENSE';
 
 const CONFIG: Record<
   DocKind,
@@ -46,6 +44,8 @@ const CONFIG: Record<
     journalCode: string;
     partyLabel: 'CUSTOMER' | 'VENDOR';
     lines: (doc: any) => ReturnType<typeof billPostingLines>;
+    /** Columns beyond the shared document shape (expense category etc). */
+    extraData?: (body: any) => Record<string, unknown>;
   }
 > = {
   BILL: {
@@ -77,6 +77,17 @@ const CONFIG: Record<
     journalCode: 'PUR',
     partyLabel: 'VENDOR',
     lines: debitNotePostingLines,
+  },
+  EXPENSE: {
+    path: 'expenses',
+    model: 'expense' as any,
+    module: 'EXPENSES',
+    resource: 'Expenses',
+    feature: 'expenses',
+    journalCode: 'PUR',
+    partyLabel: 'VENDOR',
+    lines: expensePostingLines,
+    extraData: (body) => ({ category: body.category ?? null, description: body.description ?? null }),
   },
 };
 
@@ -112,6 +123,8 @@ const docSchema = z.object({
   gstTotal: z.number().optional(),
   total: z.number().optional(),
   status: z.string().optional(),
+  category: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
   items: z.array(itemSchema).default([]),
 });
 
@@ -243,6 +256,7 @@ function register(kind: DocKind) {
             exchangeRate: new Prisma.Decimal(String(fxRate)),
             baseTotal: new Prisma.Decimal(toBase(num(body.total), fxRate).toFixed(2)),
             createdByUserId: userId,
+            ...(cfg.extraData ? cfg.extraData(body) : {}),
           },
         });
       });
@@ -313,4 +327,4 @@ function register(kind: DocKind) {
   );
 }
 
-(['BILL', 'CREDIT_NOTE', 'DEBIT_NOTE'] as DocKind[]).forEach(register);
+(['BILL', 'CREDIT_NOTE', 'DEBIT_NOTE', 'EXPENSE'] as DocKind[]).forEach(register);

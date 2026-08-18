@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
+import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
 import { Copy, CreditCard, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -154,7 +155,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
   const computed = computeGstForLines({ lines: formData.items, isIntra });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const wantsDraft = submitAsDraft;
@@ -200,11 +201,46 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     const vendorObj = vendors.find((v) => v.id === parseInt(formData.vendorId));
     const billVendorName = getVendorDisplayName(vendorObj);
 
+    // Server first: a non-draft bill is a liability and must reach the books.
+    // The local copy mirrors it for the UI; drafts stay local until real.
+    let backendDocId = null;
+    let serverNumber = '';
+    if (!wantsDraft && hasApiSession()) {
+      try {
+        const saved = await createDocApi('bill', {
+          number: billNumber || undefined,
+          date: formData.date,
+          dueDate: formData.dueDate || null,
+          refNo: formData.refNo || null,
+          refDate: formData.refDate || null,
+          partyId: vendorObj?.backendPartyId ? String(vendorObj.backendPartyId) : null,
+          partyName: billVendorName,
+          partyGstin: vendorGstin || null,
+          placeOfSupplyState: vendorState || null,
+          taxType: isIntra ? 'CGST_SGST' : 'IGST',
+          subtotal: computed.subtotal,
+          cgstTotal: computed.cgstTotal,
+          sgstTotal: computed.sgstTotal,
+          igstTotal: computed.igstTotal,
+          gstTotal: computed.gstTotal,
+          total: computed.total,
+          status: 'Unpaid',
+          items: computed.lines,
+        });
+        backendDocId = saved?.id || null;
+        serverNumber = String(saved?.number || '');
+      } catch (err) {
+        notify.error(String(err?.message || 'Bill not saved to the server.'));
+        return;
+      }
+    }
+
     const newBill = {
       id: db.bills.length + 1,
       companyId: currentCompany.id,
       ...formData,
-      number: billNumber,
+      backendDocId,
+      number: serverNumber || billNumber,
       warehouseId: String(formData.warehouseId || '').trim(),
       vendorName: billVendorName,
       vendorGstin: vendorGstin,
@@ -933,6 +969,17 @@ export const BillsList = ({
 
     const ok = await confirmDialog({ title: 'Please confirm', message: `Delete bill ${bill?.number || ''}? This cannot be undone.`.trim(), confirmLabel: 'Yes, continue' });
     if (!ok) return;
+
+    // Server copy first: the delete reverses the GL posting there. If that
+    // fails, the local list must not drift ahead of the books.
+    if (bill?.backendDocId && hasApiSession()) {
+      try {
+        await deleteDocApi('bill', bill.backendDocId);
+      } catch (err) {
+        notify.error(String(err?.message || 'Unable to delete the bill on the server.'));
+        return;
+      }
+    }
 
     setDb((prev) => ({
       ...prev,
