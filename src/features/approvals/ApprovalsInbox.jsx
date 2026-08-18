@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, Inbox, XCircle } from 'lucide-react';
 
 import { decideApproval, getApprovals } from '../../api/governance';
-import { EmptyState, PageHeader, Spinner, StatusPill } from '../../components/ui/Primitives';
+import { EmptyState, PageHeader, Spinner, StatusPill, LoadingRegion, SkeletonCard } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
 
 const FILTERS = [
@@ -101,10 +101,13 @@ export const ApprovalsInbox = ({ currentCompany }) => {
       </div>
 
       {loading ? (
-        <div className="ui-card p-8 flex items-center justify-center gap-3">
-          <Spinner />
-          <span className="ui-muted text-sm">Loading…</span>
-        </div>
+        <LoadingRegion>
+          <div className="space-y-3">
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={2} />
+          </div>
+        </LoadingRegion>
       ) : requests.length === 0 ? (
         <div className="ui-card">
           <EmptyState

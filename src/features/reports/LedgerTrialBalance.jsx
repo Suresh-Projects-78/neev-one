@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BookOpen, RefreshCw, X } from 'lucide-react';
 
 import { getAccountLedgerLines, getTrialBalance } from '../../api/ledger';
-import { EmptyState, PageHeader, Spinner } from '../../components/ui/Primitives';
+import { EmptyState, PageHeader, Spinner, TableSkeleton } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
 
 /**
@@ -129,9 +129,8 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
       ) : null}
 
       {loading ? (
-        <div className="ui-card p-8 flex items-center justify-center gap-3">
-          <Spinner />
-          <span className="ui-muted text-sm">Loading…</span>
+        <div className="ui-card overflow-hidden">
+          <TableSkeleton rows={8} cols={6} />
         </div>
       ) : !data?.rows?.length ? (
         <div className="ui-card">

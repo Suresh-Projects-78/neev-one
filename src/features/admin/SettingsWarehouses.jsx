@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { TableSkeleton } from '../../components/ui/Primitives';
 import { confirmDialog } from '../../components/ui/notify';
 import { listBranches, listWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
@@ -605,7 +606,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
 
       <div className="ui-surface border rounded-xl overflow-hidden">
         {loading ? (
-          <div className="px-6 py-10 text-center ui-muted">Loading…</div>
+          <TableSkeleton rows={6} cols={5} />
         ) : warehouses.length === 0 ? (
           <div className="px-6 py-10 text-center ui-muted">No warehouses yet. Click "Create Warehouse" to add one.</div>
         ) : filteredWarehouses.length === 0 ? (

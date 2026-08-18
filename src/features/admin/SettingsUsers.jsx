@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { TableSkeleton } from '../../components/ui/Primitives';
 import { confirmDialog } from '../../components/ui/notify';
 import {
   listUsers,
@@ -654,7 +655,7 @@ export function SettingsUsers({ orgId }) {
 
       <div className="ui-surface border rounded-xl overflow-visible">
         {loading ? (
-          <div className="px-6 py-10 text-center ui-muted">Loading…</div>
+          <TableSkeleton rows={6} cols={5} />
         ) : users.length === 0 ? (
           <div className="px-6 py-10 text-center ui-muted">No users yet. Click "Create User" to add one.</div>
         ) : filteredUsers.length === 0 ? (

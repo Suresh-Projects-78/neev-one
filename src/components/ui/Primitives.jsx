@@ -106,6 +106,21 @@ export const SkeletonRows = ({ rows = 5, cols = 4 }) => (
   </>
 );
 
+/**
+ * Drop-in replacement for a centred "Loading…" line above a table: rows the
+ * shape of the data, announced once through the live region. Layout does not
+ * jump when the real rows land.
+ */
+export const TableSkeleton = ({ rows = 6, cols = 4 }) => (
+  <LoadingRegion>
+    <table className="ui-table w-full" aria-hidden="true">
+      <tbody>
+        <SkeletonRows rows={rows} cols={cols} />
+      </tbody>
+    </table>
+  </LoadingRegion>
+);
+
 /** Placeholder for a metric tile, matching StatTile's height exactly. */
 export const SkeletonStats = ({ count = 4 }) => (
   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">

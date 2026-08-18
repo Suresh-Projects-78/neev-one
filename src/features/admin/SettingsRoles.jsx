@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { TableSkeleton } from '../../components/ui/Primitives';
 import { confirmDialog } from '../../components/ui/notify';
 import { listRoles, createRole, updateRole, deleteRole } from '../../api/admin';
 
@@ -583,7 +584,7 @@ export function SettingsRoles({ orgId }) {
 
       <div className="ui-surface border rounded-xl overflow-hidden">
         {loading ? (
-          <div className="px-6 py-10 text-center ui-muted">Loading…</div>
+          <TableSkeleton rows={6} cols={4} />
         ) : roles.length === 0 ? (
           <div className="px-6 py-10 text-center ui-muted">No roles yet. Click "Create Role" to add one.</div>
         ) : filteredRoles.length === 0 ? (

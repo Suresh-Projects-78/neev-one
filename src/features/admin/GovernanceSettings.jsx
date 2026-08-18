@@ -14,7 +14,7 @@ import {
   getUserRestrictions,
   removeUserRestriction,
 } from '../../api/governance';
-import { EmptyState, PageHeader, Spinner } from '../../components/ui/Primitives';
+import { EmptyState, PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 
 const TABS = [
   { key: 'profiles', label: 'Role profiles' },
@@ -101,10 +101,7 @@ export const GovernanceSettings = () => {
 
   if (loading) {
     return (
-      <div className="ui-card p-8 flex items-center justify-center gap-3">
-        <Spinner />
-        <span className="ui-muted text-sm">Loading…</span>
-      </div>
+      <SkeletonCard lines={4} />
     );
   }
 
