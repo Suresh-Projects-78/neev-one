@@ -1067,7 +1067,10 @@
 
   /* Content column: wide enough for dense tables, capped so a 27" monitor
      does not stretch a row to arm's length. */
-  .ui-content { max-width: var(--content-max); margin-inline: auto; }
+  /* min(…, 100%): the 1600px cap alone let a 60rem table stretch the whole
+     content column past a phone viewport, panning the page instead of
+     scrolling inside its card. */
+  .ui-content { max-width: min(var(--content-max), 100%); margin-inline: auto; }
 }
 
 @layer components {

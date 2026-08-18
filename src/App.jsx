@@ -9724,6 +9724,7 @@ const AppShell = () => {
       try { localStorage.setItem('navCollapsed', v ? '0' : '1'); } catch { /* best effort */ }
       return !v;
     });
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const quickRef = useRef(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -9731,6 +9732,20 @@ const AppShell = () => {
   const [notifSeenKey, setNotifSeenKey] = useState(() => localStorage.getItem('notifSeenKey') || '');
   // Pinned per mount so overdue bucketing is stable across renders.
   const [shellNowTs] = useState(() => Date.now());
+
+  // The drawer closes itself on navigation — tapping a destination should
+  // reveal the page, not leave a panel covering it.
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [active]);
+  useEffect(() => {
+    if (!mobileNavOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setMobileNavOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [mobileNavOpen]);
 
   // Close the two header popovers on outside click, same contract as the
   // org and profile menus.
@@ -10975,6 +10990,16 @@ const AppShell = () => {
       >
         <div className="w-full px-4 lg:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
+            {/* Phone-only: the rail lives in a drawer, opened here. */}
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="ui-icon-btn md:hidden"
+              aria-label="Open navigation"
+              aria-expanded={mobileNavOpen}
+            >
+              <PanelLeftOpen size={18} aria-hidden="true" />
+            </button>
             <Building2 size={17} style={{ color: 'rgb(var(--accent))' }} aria-hidden="true" />
 
             {availableOrgs.length > 1 ? (
@@ -11198,7 +11223,21 @@ const AppShell = () => {
       ) : null}
 
       <div className="w-full px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5">
-        <aside className={`w-full shrink-0 transition-[width] duration-200 ${navCollapsed ? 'md:w-[4.5rem]' : 'md:w-56 lg:w-60'}`}>
+        {mobileNavOpen ? (
+          <div
+            className="fixed inset-0 z-[110] md:hidden"
+            style={{ backgroundColor: 'rgb(0 0 0 / 0.45)' }}
+            onClick={() => setMobileNavOpen(false)}
+            aria-hidden="true"
+          />
+        ) : null}
+        <aside
+          className={`shrink-0 transition-[width] duration-200 ${navCollapsed ? 'md:w-[4.5rem]' : 'md:w-56 lg:w-60'} ${
+            mobileNavOpen
+              ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[115] max-md:w-72 max-md:overflow-y-auto max-md:p-2 max-md:ui-in-left'
+              : 'max-md:hidden'
+          } md:block`}
+        >
           <nav
             aria-label="Main"
             className="ui-panel p-2 md:sticky md:top-[4.5rem] flex flex-col md:max-h-[calc(100dvh-5rem)]"
