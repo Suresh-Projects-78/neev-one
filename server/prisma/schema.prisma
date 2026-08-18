@@ -523,6 +523,67 @@ model Bill {
   @@index([accountId, orgId, branchId, date])
 }
 
+/// A quotation to a customer. No ledger impact until it becomes an invoice.
+model Estimate {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  number      String
+  date        String
+  validUntil  String?
+  partyId     String?
+  partyName   String
+  partyGstin  String?
+
+  subtotal  Decimal @default(0)
+  gstTotal  Decimal @default(0)
+  total     Decimal @default(0)
+
+  status    String @default("Draft")
+  itemsJson String
+  notes     String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@index([accountId, orgId, branchId, date])
+}
+
+/// An order placed on a vendor. No ledger impact until it becomes a bill.
+model PurchaseOrderDoc {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  number       String
+  date         String
+  expectedDate String?
+  partyId      String?
+  partyName    String
+  partyGstin   String?
+  warehouseId  String?
+
+  subtotal  Decimal @default(0)
+  gstTotal  Decimal @default(0)
+  total     Decimal @default(0)
+
+  status    String @default("Draft")
+  itemsJson String
+  notes     String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@index([accountId, orgId, branchId, date])
+}
+
 /// An expense voucher — money out that is not a stock purchase: rent, travel,
 /// utilities. Posts Dr Indirect Expenses (+ input GST) / Cr Accounts Payable,
 /// so unpaid expenses sit in the same payable book as bills.

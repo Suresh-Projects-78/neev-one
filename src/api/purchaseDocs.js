@@ -17,7 +17,14 @@ const requireOrgId = () => {
 export const hasApiSession = () =>
   Boolean(String(localStorage.getItem('token') || '').trim() && String(localStorage.getItem('activeOrgId') || '').trim());
 
-const PATHS = { bill: 'bills', creditNote: 'credit-notes', debitNote: 'debit-notes', expense: 'expenses' };
+const PATHS = {
+  bill: 'bills',
+  creditNote: 'credit-notes',
+  debitNote: 'debit-notes',
+  expense: 'expenses',
+  estimate: 'estimates',
+  purchaseOrder: 'purchase-orders',
+};
 
 const pathFor = (kind) => {
   const p = PATHS[kind];
@@ -40,4 +47,12 @@ export async function deleteDocApi(kind, docId) {
     method: 'DELETE',
   });
   return Boolean(data?.ok);
+}
+
+export async function updateDocApi(kind, docId, payload) {
+  const data = await apiFetch(`/orgs/${requireOrgId()}/${pathFor(kind)}/${encodeURIComponent(docId)}`, {
+    method: 'PATCH',
+    body: payload,
+  });
+  return data?.document || null;
 }

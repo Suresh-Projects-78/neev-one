@@ -27,6 +27,7 @@ const DEFAULT_PREFIX: Record<string, string> = {
   PAYMENT: 'PAY-',
   JOURNAL: 'JE-',
   ESTIMATE: 'EST-',
+  PURCHASE_ORDER: 'PO-',
   CREDIT_NOTE: 'CN-',
   DEBIT_NOTE: 'DN-',
   TRANSFER: 'TRF-',

@@ -8,6 +8,7 @@ import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '../../api/invoices';
 import { useFeatures } from '../../permissions/useFeatures';
+import { createDocApi, hasApiSession as hasDocsApiSession } from '../../api/purchaseDocs';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 
@@ -2198,7 +2199,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 
   const computed = computeGstForLines({ lines: formData.items, isIntra });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     let estimateNumber = String(formData.number || '').trim();
@@ -2276,10 +2277,37 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       return;
     }
 
+    // Survives the browser: estimates are quote-stage (no ledger posting),
+    // but they still belong on the server, not in this profile's storage.
+    let backendDocId = null;
+    let serverNumber = '';
+    if (hasDocsApiSession()) {
+      try {
+        const saved = await createDocApi('estimate', {
+          number: estimateNumber || undefined,
+          date: nextEstimateCore.date,
+          validUntil: nextEstimateCore.validUntil || null,
+          partyName: nextEstimateCore.customerName || 'Customer',
+          subtotal: Number(nextEstimateCore.subtotal || 0),
+          gstTotal: Number(nextEstimateCore.gstTotal || 0),
+          total: Number(nextEstimateCore.total || 0),
+          status: 'Draft',
+          items: nextEstimateCore.items || [],
+        });
+        backendDocId = saved?.id || null;
+        serverNumber = String(saved?.number || '');
+      } catch (err) {
+        notify.error(String(err?.message || 'Estimate not saved to the server.'));
+        return;
+      }
+    }
+
     const newEstimate = {
       id: getNextNumericId(db.estimates),
       companyId: currentCompany.id,
       ...nextEstimateCore,
+      ...(serverNumber ? { number: serverNumber } : {}),
+      backendDocId,
       status: 'Draft',
       createdAt: new Date().toISOString(),
     };

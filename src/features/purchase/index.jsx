@@ -629,7 +629,7 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
 
   const subtotal = round2((formData.items || []).reduce((sum, l) => sum + Number(l.amount || 0), 0));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     let poNumber = String(formData.number || '').trim();
@@ -661,10 +661,36 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
 
     const vendorObj = vendors.find((v) => v.id === parseInt(formData.vendorId));
 
+    // Same server-first rule as estimates: intentions survive the browser.
+    let backendDocId = null;
+    let serverNumber = '';
+    if (hasApiSession()) {
+      try {
+        const saved = await createDocApi('purchaseOrder', {
+          number: poNumber || undefined,
+          date: formData.date,
+          partyId: vendorObj?.backendPartyId ? String(vendorObj.backendPartyId) : null,
+          partyName: getVendorDisplayName(vendorObj) || 'Vendor',
+          warehouseId: String(formData.warehouseId || '').trim() || null,
+          subtotal,
+          total: subtotal,
+          status: 'Draft',
+          notes: formData.notes || null,
+          items: formData.items || [],
+        });
+        backendDocId = saved?.id || null;
+        serverNumber = String(saved?.number || '');
+      } catch (err) {
+        notify.error(String(err?.message || 'Purchase order not saved to the server.'));
+        return;
+      }
+    }
+
     const newPo = {
       id: db.purchaseOrders.length + 1,
       companyId: currentCompany.id,
-      number: poNumber,
+      backendDocId,
+      number: serverNumber || poNumber,
       date: formData.date,
       vendorId: formData.vendorId,
       vendorName: getVendorDisplayName(vendorObj),

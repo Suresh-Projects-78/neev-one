@@ -1,6 +1,7 @@
 import InventoryModule from './features/inventory/InventoryModule';
 import { notify, confirmDialog } from './components/ui/notify';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
+import { useServerDocSync } from './hooks/useServerDocSync';
 import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
@@ -9365,6 +9366,9 @@ const AppShell = () => {
   };
 
   const currentCompany = (db.companies || [])[0] || { id: 1, name: 'Accounting', currency: 'INR' };
+
+  // Fresh browser, existing books: pull server documents into the local db.
+  useServerDocSync({ enabled: isAuthenticated, currentCompanyId: currentCompany?.id, setDb });
 
   useEffect(() => {
     if (!isAuthenticated) return;
