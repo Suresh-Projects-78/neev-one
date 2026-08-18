@@ -82,7 +82,7 @@ export function SettingsBranches({ orgId }) {
     return () => document.removeEventListener('click', onDocClick);
   }, []);
 
-  const onChange = async (k) => (e) => {
+  const onChange = (k) => (e) => {
     const next = e.target.value;
     if (k === 'gstin') {
       const maybeState = getGstStateFromGstin(String(next || '').trim());
