@@ -28,6 +28,7 @@ import {
   Plus,
   Receipt,
   RefreshCw,
+  Landmark,
   Settings,
   Shield,
   ShoppingCart,
@@ -151,6 +152,7 @@ const Gstr2bReco = lazy(() => import('./features/reports/Gstr2bReco'));
 const PaymentReminders = lazy(() => import('./features/sales/PaymentReminders'));
 const TallyExport = lazy(() => import('./features/reports/TallyExport'));
 const ReorderAlerts = lazy(() => import('./features/inventory/ReorderAlerts'));
+const TdsTcsReport = lazy(() => import('./features/reports/TdsTcsReport'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -5208,6 +5210,7 @@ const REPORT_META = {
   gstr3b: { icon: BadgePercent, desc: 'Summary return: tax on sales less input credit.' },
   gstr2bReco: { icon: BadgePercent, desc: 'Match the portal\u2019s 2B against your bills — know which ITC is safe.' },
   tallyExport: { icon: FileStack, desc: 'Masters + vouchers as Tally XML — what the CA asks for.' },
+  tdsTcs: { icon: Landmark, desc: 'Per-party 194Q/206C accumulation and the payable for challan filing.' },
   salesReports: { icon: ClipboardList, desc: 'Billing by status and totals across customers.' },
 };
 
@@ -9967,7 +9970,10 @@ const AppShell = () => {
         {
           key: 'accountant',
           title: 'Accountant',
-          items: [{ key: 'tallyExport', label: 'Tally Export' }],
+          items: [
+            { key: 'tallyExport', label: 'Tally Export' },
+            { key: 'tdsTcs', label: 'TDS / TCS (194Q & 206C)' },
+          ],
         },
       ],
       []
@@ -11274,6 +11280,8 @@ const AppShell = () => {
         return <PaymentReminders db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'tallyExport':
         return <TallyExport db={dbForUser} currentCompany={currentCompany} />;
+      case 'tdsTcs':
+        return <TdsTcsReport db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'priceLists':
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'discountRules':
