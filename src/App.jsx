@@ -148,6 +148,7 @@ const DiscountRules = lazy(() => import('./features/sales/DiscountRules'));
 const SalesOrders = lazy(() => import('./features/sales/SalesOrders'));
 const BatchStock = lazy(() => import('./features/inventory/BatchStock'));
 const Gstr2bReco = lazy(() => import('./features/reports/Gstr2bReco'));
+const PaymentReminders = lazy(() => import('./features/sales/PaymentReminders'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -9998,6 +9999,7 @@ const AppShell = () => {
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
           { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
           { key: 'recurringInvoices', label: 'Recurring', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
+          { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
           { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
         ],
       },
@@ -11227,6 +11229,8 @@ const AppShell = () => {
         return <BatchStock db={dbForUser} currentCompany={currentCompany} />;
       case 'gstr2bReco':
         return <Gstr2bReco db={dbForUser} currentCompany={currentCompany} />;
+      case 'paymentReminders':
+        return <PaymentReminders db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'priceLists':
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'discountRules':

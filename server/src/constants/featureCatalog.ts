@@ -107,6 +107,13 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     category: 'Operations',
   },
   {
+    key: 'paymentReminders',
+    label: 'Payment reminders',
+    description: 'Due → +7 → +15 collection schedule with WhatsApp/email deep links.',
+    defaultEnabled: true,
+    category: 'Operations',
+  },
+  {
     key: 'discountRules',
     label: 'Discount rules',
     description: 'Quantity breaks, customer specials, category and promotional discounts, auto-applied.',
