@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
+import { resolvePurchaseRate } from '../../utils/pricing';
 import { Copy, CreditCard, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -124,10 +125,18 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       if (field === 'itemId') {
         const item = pickedItem || itemsMaster.find((i) => i.id === parseInt(value));
         if (item) {
+          const resolved = resolvePurchaseRate({
+            db,
+            companyId: currentCompany.id,
+            vendorId: prev.vendorId,
+            itemId: item.id,
+            item,
+          });
           next.description = item.name;
-          next.rate = item.purchasePrice;
+          next.rate = resolved.rate;
           next.gstRate = Number(item.gstRate ?? 0);
           next.hsnSac = item.hsnSac || '';
+          if (resolved.source !== 'item master') notify.info(`Rate ${resolved.rate} from ${resolved.source}`);
         }
       }
 

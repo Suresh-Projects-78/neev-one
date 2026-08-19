@@ -139,6 +139,10 @@ import ProfileSettings from './features/settings/ProfileSettings';
 import NumberingSettings from './features/settings/NumberingSettings';
 import CurrencySettings from './features/settings/CurrencySettings';
 const BatchSerialManager = lazy(() => import('./features/inventory/BatchSerialManager'));
+const PriceLists = lazy(() => import('./features/pricing/PriceLists'));
+const Salesmen = lazy(() => import('./features/sales/Salesmen'));
+const DeliveryChallans = lazy(() => import('./features/sales/DeliveryChallans'));
+const PosScreen = lazy(() => import('./features/sales/PosScreen'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
 import ChartCard from './components/charts/ChartCard';
@@ -1600,6 +1604,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         gstRate: Number.isFinite(Number(initialData.gstRate)) ? Number(initialData.gstRate) : 0,
         salePrice: Number.isFinite(Number(initialData.salePrice)) ? Number(initialData.salePrice) : 0,
         purchasePrice: Number.isFinite(Number(initialData.purchasePrice)) ? Number(initialData.purchasePrice) : 0,
+        mrp: Number.isFinite(Number(initialData.mrp)) ? Number(initialData.mrp) : '',
+        trackingType: initialData.trackingType || 'NONE',
         openingQty: Number.isFinite(Number(initialData.openingQty))
           ? Number(initialData.openingQty)
           : Number.isFinite(Number(initialData.stock))
@@ -1618,6 +1624,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       gstRate: 0,
       salePrice: 0,
       purchasePrice: 0,
+      mrp: '',
+      trackingType: 'NONE',
       openingQty: 0,
     };
   });
@@ -1677,6 +1685,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
     const gstRate = parseFloat(String(formData.gstRate ?? '0'));
     const salePrice = parseFloat(String(formData.salePrice ?? '0'));
     const purchasePrice = parseFloat(String(formData.purchasePrice ?? '0'));
+    const mrp = parseFloat(String(formData.mrp ?? '0'));
     const openingQty = parseFloat(String(formData.openingQty ?? '0'));
 
     const clash = (db.items || []).some(
@@ -1710,6 +1719,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         gstRate: Number.isFinite(gstRate) ? gstRate : 0,
         salePrice: Number.isFinite(salePrice) ? salePrice : 0,
         purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
+        mrp: Number.isFinite(mrp) && mrp > 0 ? mrp : null,
+        trackingType: formData.trackingType || 'NONE',
         openingQty: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
         // keep legacy field in sync (older screens/data)
         stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : Number(existing?.stock ?? 0) || 0,
@@ -1737,6 +1748,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       gstRate: Number.isFinite(gstRate) ? gstRate : 0,
       salePrice: Number.isFinite(salePrice) ? salePrice : 0,
       purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
+      mrp: Number.isFinite(mrp) && mrp > 0 ? mrp : null,
+      trackingType: formData.trackingType || 'NONE',
       openingQty: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
       stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
     };
@@ -1904,6 +1917,34 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             step="0.01"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">MRP</label>
+          <input
+            type="number"
+            value={formData.mrp}
+            onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+            min="0"
+            step="0.01"
+            placeholder="Maximum retail price"
+          />
+        </div>
+        {String(formData.type || '').toLowerCase() === 'goods' ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Tracking</label>
+            <select
+              value={formData.trackingType}
+              onChange={(e) => setFormData({ ...formData, trackingType: e.target.value })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="NONE">None</option>
+              <option value="BATCH">Batch (batch no + mfg date)</option>
+              <option value="BATCH_EXPIRY">Batch + Expiry</option>
+            </select>
+          </div>
+        ) : (
+          <div />
+        )}
       </div>
       <button type="submit" className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
         {isEdit ? 'Update Item' : 'Create Item'}
@@ -6617,19 +6658,48 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
           <p className="text-sm ui-muted">This template is used when you open an invoice from the invoice list.</p>
         </div>
 
-        <div className="max-w-sm space-y-3">
-          <label className="block text-sm font-medium mb-1">Template</label>
-          <select
-            value={templateId}
-            onChange={(e) => updateInvoiceTemplate({ templateId: e.target.value })}
-            className="ui-select w-full px-3 py-2"
-          >
-            {TEMPLATE_OPTIONS.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+        <div className="max-w-xl space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="block text-sm font-medium mb-1">Template</label>
+              <select
+                value={templateId}
+                onChange={(e) => updateInvoiceTemplate({ templateId: e.target.value })}
+                className="ui-select w-full px-3 py-2"
+              >
+                {TEMPLATE_OPTIONS.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Accent colour</label>
+              <select
+                value={cfg?.accentId || ACCENT_OPTIONS[0].id}
+                onChange={(e) => updateInvoiceTemplate({ accentId: e.target.value })}
+                className="ui-select w-full px-3 py-2"
+              >
+                {ACCENT_OPTIONS.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name || a.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Terms &amp; conditions (printed on every invoice)</label>
+            <textarea
+              value={cfg?.termsText || ''}
+              onChange={(e) => updateInvoiceTemplate({ termsText: e.target.value })}
+              className="ui-input w-full px-3 py-2"
+              rows={4}
+              placeholder={'1. Goods once sold will not be taken back.\n2. Interest @18% p.a. on overdue invoices.'}
+            />
+          </div>
 
           <button
             type="button"
@@ -9892,9 +9962,12 @@ const AppShell = () => {
         items: [
           { key: 'sales', label: 'Overview', icon: BarChart3, perm: 'SALES::Invoices::VIEW' },
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
+          { key: 'pos', label: 'POS', icon: Receipt, perm: 'SALES::Invoices::CREATE', feature: 'pos' },
           { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW', feature: 'standaloneReceiptsPayments' },
           { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW', feature: 'estimates' },
+          { key: 'deliveryChallans', label: 'Delivery Challans', icon: Truck, perm: 'SALES::Invoices::VIEW', feature: 'deliveryChallans' },
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
+          { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
         ],
       },
       {
@@ -9953,6 +10026,7 @@ const AppShell = () => {
           { key: 'companies', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
           { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
           { key: 'uoms', label: 'Units', icon: Boxes, perm: 'MASTERS::Items::VIEW' },
+          { key: 'priceLists', label: 'Price Lists', icon: Tags, perm: 'MASTERS::Items::VIEW', feature: 'priceLists' },
           { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
           { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
           { key: 'bankCash', label: 'Chart of Accounts', icon: Building2, perm: 'ACCOUNTING::Chart of Accounts::VIEW' },
@@ -11117,6 +11191,39 @@ const AppShell = () => {
         return <ImportCenter />;
       case 'batchSerial':
         return <BatchSerialManager />;
+      case 'priceLists':
+        return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'salesmen':
+        return <Salesmen db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'pos':
+        return <PosScreen db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'deliveryChallans':
+        return (
+          <DeliveryChallans
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            onConvert={(challan) => {
+              setInvoiceEditor({
+                open: true,
+                initial: {
+                  customerId: challan.customerId,
+                  refNo: challan.number,
+                  items: challan.items.map((l) => ({
+                    itemId: String(l.itemId),
+                    description: l.description,
+                    quantity: Number(l.quantity) || 1,
+                    rate: Number(l.rate) || 0,
+                    gstRate: Number(
+                      (dbForUser.items || []).find((i) => String(i.id) === String(l.itemId))?.gstRate ?? 0
+                    ),
+                  })),
+                },
+              });
+              setActive('invoices');
+            }}
+          />
+        );
       case 'approvals':
         return <ApprovalsInbox currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':

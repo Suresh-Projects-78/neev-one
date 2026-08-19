@@ -54,6 +54,9 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           initialData.paymentTermDays === undefined || initialData.paymentTermDays === null
             ? ''
             : String(initialData.paymentTermDays),
+        creditLimit:
+          initialData.creditLimit === undefined || initialData.creditLimit === null ? '' : String(initialData.creditLimit),
+        shipToAddresses: Array.isArray(initialData.shipToAddresses) ? initialData.shipToAddresses : [],
         billingAddress: {
           ...billing,
           state: String(billing.state || ''),
@@ -84,6 +87,8 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       gstin: '',
       pan: '',
       paymentTermDays: '',
+      creditLimit: '',
+      shipToAddresses: [],
       billingAddress: {
         ...emptyAddress,
         country: INDIA_COUNTRY,
@@ -334,6 +339,9 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         String(formData.paymentTermDays ?? '').trim() === ''
           ? undefined
           : Math.min(365, Math.max(0, Math.trunc(Number(formData.paymentTermDays) || 0))),
+      creditLimit:
+        String(formData.creditLimit ?? '').trim() === '' ? undefined : Math.max(0, Number(formData.creditLimit) || 0),
+      shipToAddresses: (formData.shipToAddresses || []).filter((a) => String(a.line1 || a.label || '').trim()),
       billingAddress: {
         ...formData.billingAddress,
         state: billingStateFinal,
@@ -658,6 +666,19 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             </p>
           </div>
           <div>
+            <label className="block text-sm font-medium mb-1">Credit limit</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.creditLimit}
+              onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
+              className="ui-input w-full px-3 py-2"
+              placeholder="0 = no limit"
+            />
+            <p className="mt-1 text-xs ui-muted">New invoices warn when outstanding would cross this.</p>
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-1">State</label>
             <PopupSelect
               label={null}
@@ -848,6 +869,55 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             </div>
           </div>
         )}
+      </div>
+
+      <div className="border-t pt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium">Ship-to addresses</div>
+            <div className="text-xs ui-muted">Extra delivery addresses, each with its own code for tracking. Pick one on the invoice.</div>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setFormData((p) => ({
+                ...p,
+                shipToAddresses: [
+                  ...(p.shipToAddresses || []),
+                  { code: `SHIP-${(p.shipToAddresses || []).length + 1}`, label: '', line1: '', city: '', state: '', pincode: '' },
+                ],
+              }))
+            }
+            className="ui-btn ui-btn-secondary !h-8 text-xs"
+          >
+            + Add ship-to
+          </button>
+        </div>
+        {(formData.shipToAddresses || []).map((a, ai) => {
+          const upd = (k, v) =>
+            setFormData((p) => ({
+              ...p,
+              shipToAddresses: p.shipToAddresses.map((x, i) => (i === ai ? { ...x, [k]: v } : x)),
+            }));
+          return (
+            <div key={ai} className="mb-2 flex flex-wrap items-center gap-2">
+              <span className="ui-caption w-14 font-mono">{a.code}</span>
+              <input type="text" value={a.label} onChange={(e) => upd('label', e.target.value)} className="ui-input !h-9 w-32 px-2 text-sm" placeholder="Label (Godown)" />
+              <input type="text" value={a.line1} onChange={(e) => upd('line1', e.target.value)} className="ui-input !h-9 flex-1 min-w-40 px-2 text-sm" placeholder="Address" />
+              <input type="text" value={a.city} onChange={(e) => upd('city', e.target.value)} className="ui-input !h-9 w-28 px-2 text-sm" placeholder="City" />
+              <input type="text" value={a.state} onChange={(e) => upd('state', e.target.value)} className="ui-input !h-9 w-28 px-2 text-sm" placeholder="State" />
+              <input type="text" value={a.pincode} onChange={(e) => upd('pincode', e.target.value)} className="ui-input !h-9 w-20 px-2 text-sm" placeholder="PIN" />
+              <button
+                type="button"
+                onClick={() => setFormData((p) => ({ ...p, shipToAddresses: p.shipToAddresses.filter((_, i) => i !== ai) }))}
+                className="ui-icon-btn !h-8 !w-8"
+                aria-label="Remove ship-to"
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg ">

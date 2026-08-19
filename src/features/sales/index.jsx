@@ -11,6 +11,7 @@ import { useFeatures } from '../../permissions/useFeatures';
 import { createDocApi, hasApiSession as hasDocsApiSession } from '../../api/purchaseDocs';
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
+import { resolveSaleRate } from '../../utils/pricing';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
@@ -1651,6 +1652,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             rate: Number.isFinite(rate) ? rate : 0,
             gstRate: Number.isFinite(gstRate) ? gstRate : 0,
             hsnSac: it.hsnSac || '',
+            discountPct: Number(it.discountPct) || 0,
             amount: Number.isFinite(amount) ? amount : 0,
           };
         })
@@ -1679,6 +1681,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           ? normalizedItems
           : [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
       sourceEstimateId: initialData?.sourceEstimateId ?? null,
+      invoiceDiscountType: initialData?.invoiceDiscountType || 'pct',
+      invoiceDiscountValue: Number(initialData?.invoiceDiscountValue) || '',
+      otherCharges: Array.isArray(initialData?.otherCharges) ? initialData.otherCharges : [],
+      salesmanId: initialData?.salesmanId ?? '',
+      shipToCode: initialData?.shipToCode || '',
+      shipToAddress: initialData?.shipToAddress || null,
     };
   });
 
@@ -1732,25 +1740,38 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     if (field === 'itemId') {
       const item = pickedItem || items.find((i) => i.id === parseInt(value));
       if (item) {
+        // Price list first, then this customer's last paid rate, then master.
+        const resolved = resolveSaleRate({
+          db,
+          companyId: currentCompany.id,
+          customer: selectedCustomer,
+          itemId: item.id,
+          item,
+        });
         newItems[index] = {
           ...newItems[index],
           itemId: value,
           description: item.name,
-          rate: item.salePrice,
+          rate: resolved.rate,
+          rateSource: resolved.source,
           gstRate: Number(item.gstRate ?? 0),
           hsnSac: item.hsnSac || '',
         };
+        if (resolved.source !== 'item master') {
+          notify.info(`Rate ${resolved.rate} from ${resolved.source}`);
+        }
       }
     } else {
       newItems[index][field] = value;
     }
 
-    if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId') {
+    if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId' || field === 'discountPct') {
       const computed = computeGstForLine({
         quantity: Number(newItems[index].quantity ?? 1),
         rate: Number(newItems[index].rate ?? 0),
         gstRate: Number(newItems[index].gstRate ?? 0),
         isIntra,
+        discountPct: Number(newItems[index].discountPct ?? 0),
       });
       newItems[index].amount = computed.taxableAmount;
       newItems[index].taxableAmount = computed.taxableAmount;
@@ -1772,7 +1793,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     });
   };
 
-  const computed = computeGstForLines({ lines: formData.items, isIntra });
+  const computed = computeGstForLines({
+    lines: formData.items,
+    isIntra,
+    invoiceDiscount:
+      Number(formData.invoiceDiscountValue) > 0
+        ? { type: formData.invoiceDiscountType || 'pct', value: Number(formData.invoiceDiscountValue) }
+        : null,
+    otherCharges: formData.otherCharges,
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1833,6 +1862,40 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
     const customer = customers.find((c) => c.id === parseInt(formData.customerId));
 
+    // Credit management: warn before pushing a customer past their limit or
+    // stacking onto already-overdue invoices. Warn-and-confirm, not a hard
+    // block — the operator may have collected payment out of band.
+    if (!isEdit && customer) {
+      const openInvoices = db.invoices.filter((i) => {
+        if (i.companyId !== currentCompany.id) return false;
+        if (parseInt(i.customerId) !== customer.id) return false;
+        const st = String(i.status || '').toLowerCase();
+        return st !== 'draft' && st !== 'cancelled' && st !== 'paid';
+      });
+      const outstanding = openInvoices.reduce((s, i) => s + Math.max(0, Number(i.total || 0) - Number(i.paidAmount || 0)), 0);
+      const creditLimit = Number(customer.creditLimit || 0);
+      const todayStr = todayIso();
+      const overdue = openInvoices.filter((i) => i.dueDate && i.dueDate < todayStr);
+
+      const warnings = [];
+      if (creditLimit > 0 && outstanding + computed.total > creditLimit) {
+        warnings.push(
+          `Credit limit ${formatMoney(creditLimit, currentCompany)} would be crossed — outstanding ${formatMoney(outstanding, currentCompany)} + this invoice ${formatMoney(computed.total, currentCompany)}.`
+        );
+      }
+      if (overdue.length > 0) {
+        warnings.push(`${overdue.length} invoice(s) already past due (oldest: ${overdue.map((i) => i.dueDate).sort()[0]}).`);
+      }
+      if (warnings.length) {
+        const ok = await confirmDialog({
+          title: 'Credit check',
+          message: warnings.join('\n') + '\n\nCreate the invoice anyway?',
+          confirmLabel: 'Create anyway',
+        });
+        if (!ok) return;
+      }
+    }
+
     const existingInvoice = isEdit ? db.invoices.find((i) => i.id === Number(initialData.id)) : null;
     if (isEdit && !existingInvoice) {
       notify.error('Invoice not found. It may have been removed.');
@@ -1850,6 +1913,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       taxType: isIntra ? 'CGST_SGST' : 'IGST',
       items: computed.lines,
       subtotal: computed.subtotal,
+      invoiceDiscountApplied: computed.invoiceDiscount,
+      otherCharges: computed.otherCharges,
+      otherChargesTotal: computed.otherChargesTotal,
       cgstTotal: computed.cgstTotal,
       sgstTotal: computed.sgstTotal,
       igstTotal: computed.igstTotal,
@@ -2153,6 +2219,27 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           {selectedCustomer ? (
             <p className="mt-1 text-xs ui-muted">Terms: {termsLabel(selectedCustomer)}</p>
           ) : null}
+          {selectedCustomer && Array.isArray(selectedCustomer.shipToAddresses) && selectedCustomer.shipToAddresses.length > 0 ? (
+            <div className="mt-2">
+              <label className="block text-xs ui-muted mb-1">Deliver to</label>
+              <select
+                value={formData.shipToCode || ''}
+                onChange={(e) => {
+                  const code = e.target.value;
+                  const addr = selectedCustomer.shipToAddresses.find((a) => a.code === code) || null;
+                  setFormData((p) => ({ ...p, shipToCode: code, shipToAddress: addr }));
+                }}
+                className="ui-select w-full px-3 py-2"
+              >
+                <option value="">Billing address</option>
+                {selectedCustomer.shipToAddresses.map((a) => (
+                  <option key={a.code} value={a.code}>
+                    {a.code} — {a.label || a.line1 || a.city}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
         </div>
 
         <div>
@@ -2175,6 +2262,24 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             placeholder="Estimate / Quotation / Sales Order"
           />
         </div>
+
+        {(db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Salesman</label>
+            <select
+              value={formData.salesmanId || ''}
+              onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="">— none —</option>
+              {(db.salesmen || [])
+                .filter((s) => s.companyId === currentCompany.id)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       <div>
@@ -2190,6 +2295,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
                 <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
                 <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Disc %</th>
                 <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
                 <th className="px-3 py-2"></th>
               </tr>
@@ -2235,6 +2341,18 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       step="0.01"
                     />
                   </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      value={item.discountPct || ''}
+                      onChange={(e) => updateItem(idx, 'discountPct', e.target.value)}
+                      className="ui-input w-16 px-2 py-1"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="0"
+                    />
+                  </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
@@ -2254,12 +2372,108 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           </button>
         </div>
 
-        <div className="mt-4 flex justify-end">
-          <div className="w-64 space-y-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs ui-muted mb-1">Invoice discount</label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={formData.invoiceDiscountType}
+                  onChange={(e) => setFormData((p) => ({ ...p, invoiceDiscountType: e.target.value }))}
+                  className="ui-select !h-9 w-20 px-2 text-sm"
+                >
+                  <option value="pct">%</option>
+                  <option value="amt">₹</option>
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.invoiceDiscountValue}
+                  onChange={(e) => setFormData((p) => ({ ...p, invoiceDiscountValue: e.target.value }))}
+                  className="ui-input !h-9 w-28 px-2 text-sm"
+                  placeholder="0"
+                />
+                {computed.invoiceDiscount > 0 ? (
+                  <span className="ui-caption">− {formatMoney(computed.invoiceDiscount, currentCompany)} across lines</span>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs ui-muted mb-1">Other charges (transport, reimbursement…)</label>
+              {(formData.otherCharges || []).map((c, ci) => (
+                <div key={ci} className="mb-1.5 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={c.label}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        otherCharges: p.otherCharges.map((x, i) => (i === ci ? { ...x, label: e.target.value } : x)),
+                      }))
+                    }
+                    className="ui-input !h-9 flex-1 px-2 text-sm"
+                    placeholder="Transport"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={c.amount}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        otherCharges: p.otherCharges.map((x, i) => (i === ci ? { ...x, amount: e.target.value } : x)),
+                      }))
+                    }
+                    className="ui-input !h-9 w-24 px-2 text-sm"
+                    placeholder="Amount"
+                  />
+                  <select
+                    value={c.gstRate}
+                    onChange={(e) =>
+                      setFormData((p) => ({
+                        ...p,
+                        otherCharges: p.otherCharges.map((x, i) => (i === ci ? { ...x, gstRate: e.target.value } : x)),
+                      }))
+                    }
+                    className="ui-select !h-9 w-24 px-2 text-sm"
+                  >
+                    {[0, 5, 12, 18, 28].map((r) => (
+                      <option key={r} value={r}>GST {r}%</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((p) => ({ ...p, otherCharges: p.otherCharges.filter((_, i) => i !== ci) }))}
+                    className="ui-icon-btn !h-8 !w-8"
+                    aria-label="Remove charge"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setFormData((p) => ({ ...p, otherCharges: [...(p.otherCharges || []), { label: '', amount: '', gstRate: 0 }] }))}
+                className="ui-btn ui-btn-secondary !h-8 text-xs"
+              >
+                + Add charge
+              </button>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <div className="w-64 space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
               <span>{formatMoney(computed.subtotal, currentCompany)}</span>
             </div>
+            {computed.otherChargesTotal > 0 ? (
+              <div className="flex justify-between">
+                <span>Other charges:</span>
+                <span>{formatMoney(computed.otherChargesTotal, currentCompany)}</span>
+              </div>
+            ) : null}
             {isIntra ? (
               <>
                 <div className="flex justify-between">
@@ -2280,6 +2494,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <div className="flex justify-between font-bold text-lg border-t pt-2">
               <span>Total:</span>
               <span>{formatMoney(computed.total, currentCompany)}</span>
+            </div>
             </div>
           </div>
         </div>
@@ -2376,12 +2591,13 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       newItems[index][field] = value;
     }
 
-    if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId') {
+    if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId' || field === 'discountPct') {
       const computed = computeGstForLine({
         quantity: Number(newItems[index].quantity ?? 1),
         rate: Number(newItems[index].rate ?? 0),
         gstRate: Number(newItems[index].gstRate ?? 0),
         isIntra,
+        discountPct: Number(newItems[index].discountPct ?? 0),
       });
       newItems[index].amount = computed.taxableAmount;
       newItems[index].taxableAmount = computed.taxableAmount;

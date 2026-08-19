@@ -78,18 +78,28 @@ export const canDetermineSupplyType = ({ companyState, partyState }) => {
   return Boolean(a && b);
 };
 
-export const computeGstForLine = ({ quantity, rate, gstRate, isIntra }) => {
+export const computeGstForLine = ({ quantity, rate, gstRate, isIntra, discountPct, discountAmount }) => {
   const qty = Number(quantity);
   const r = Number(rate);
   const gr = Number(gstRate);
 
-  const taxable = round2((Number.isFinite(qty) ? qty : 0) * (Number.isFinite(r) ? r : 0));
+  const gross = round2((Number.isFinite(qty) ? qty : 0) * (Number.isFinite(r) ? r : 0));
+  // Per-line discount: percentage first, then a flat amount — both optional.
+  const pct = Number(discountPct);
+  const amt = Number(discountAmount);
+  let discount = 0;
+  if (Number.isFinite(pct) && pct > 0) discount += gross * (Math.min(pct, 100) / 100);
+  if (Number.isFinite(amt) && amt > 0) discount += amt;
+  discount = round2(Math.min(discount, gross));
+  const taxable = round2(gross - discount);
   const gst = round2(taxable * ((Number.isFinite(gr) ? gr : 0) / 100));
 
   if (isIntra) {
     const half = round2(gst / 2);
     return {
       taxableAmount: taxable,
+      grossAmount: gross,
+      discountApplied: discount,
       gstAmount: gst,
       cgstAmount: half,
       sgstAmount: half,
@@ -101,6 +111,8 @@ export const computeGstForLine = ({ quantity, rate, gstRate, isIntra }) => {
 
   return {
     taxableAmount: taxable,
+    grossAmount: gross,
+    discountApplied: discount,
     gstAmount: gst,
     cgstAmount: 0,
     sgstAmount: 0,
@@ -110,13 +122,46 @@ export const computeGstForLine = ({ quantity, rate, gstRate, isIntra }) => {
   };
 };
 
-export const computeGstForLines = ({ lines, isIntra }) => {
+export const computeGstForLines = ({ lines, isIntra, invoiceDiscount, otherCharges }) => {
   const normalizedLines = Array.isArray(lines) ? lines : [];
+
+  // Invoice-level discount is applied proportionally to every line's taxable
+  // value BEFORE GST — the GST-correct treatment (discount known at supply).
+  const grossSubtotal = round2(
+    normalizedLines.reduce((sum, l) => {
+      const line = computeGstForLine({
+        quantity: Number(l.quantity ?? 1),
+        rate: Number(l.rate ?? 0),
+        gstRate: 0,
+        isIntra,
+        discountPct: l.discountPct,
+        discountAmount: l.discountAmount,
+      });
+      return sum + line.taxableAmount;
+    }, 0)
+  );
+  let invoiceDiscountValue = 0;
+  if (invoiceDiscount && grossSubtotal > 0) {
+    const v = Number(invoiceDiscount.value);
+    if (Number.isFinite(v) && v > 0) {
+      invoiceDiscountValue =
+        String(invoiceDiscount.type) === 'pct' ? round2(grossSubtotal * (Math.min(v, 100) / 100)) : round2(Math.min(v, grossSubtotal));
+    }
+  }
+  const scale = grossSubtotal > 0 ? (grossSubtotal - invoiceDiscountValue) / grossSubtotal : 1;
+
   const computedLines = normalizedLines.map((l) => {
     const quantity = Number(l.quantity ?? 1);
     const rate = Number(l.rate ?? 0);
     const gstRate = Number(l.gstRate ?? 0);
-    const computed = computeGstForLine({ quantity, rate, gstRate, isIntra });
+    const computed = computeGstForLine({
+      quantity,
+      rate: rate * scale,
+      gstRate,
+      isIntra,
+      discountPct: l.discountPct,
+      discountAmount: (Number(l.discountAmount) || 0) * scale,
+    });
 
     return {
       ...l,
@@ -137,15 +182,34 @@ export const computeGstForLines = ({ lines, isIntra }) => {
   const subtotal = round2(computedLines.reduce((sum, l) => sum + (l.taxableAmount || 0), 0));
   const cgstTotal = round2(computedLines.reduce((sum, l) => sum + (l.cgstAmount || 0), 0));
   const sgstTotal = round2(computedLines.reduce((sum, l) => sum + (l.sgstAmount || 0), 0));
-  const igstTotal = round2(computedLines.reduce((sum, l) => sum + (l.igstAmount || 0), 0));
-  const gstTotal = round2(cgstTotal + sgstTotal + igstTotal);
-  const total = round2(subtotal + gstTotal);
+  let igstTotal = round2(computedLines.reduce((sum, l) => sum + (l.igstAmount || 0), 0));
+  let cgstT = cgstTotal;
+  let sgstT = sgstTotal;
+
+  // Other charges (transport, packing, reimbursement…) are taxed like lines
+  // but reported separately from the item table.
+  const chargeRows = (Array.isArray(otherCharges) ? otherCharges : [])
+    .filter((c) => Number(c?.amount) > 0)
+    .map((c) => {
+      const computed = computeGstForLine({ quantity: 1, rate: Number(c.amount), gstRate: Number(c.gstRate ?? 0), isIntra });
+      return { label: String(c.label || 'Other charges'), amount: computed.taxableAmount, gstRate: Number(c.gstRate ?? 0), ...computed };
+    });
+  const otherChargesTotal = round2(chargeRows.reduce((s, c) => s + c.taxableAmount, 0));
+  cgstT = round2(cgstT + chargeRows.reduce((s, c) => s + c.cgstAmount, 0));
+  sgstT = round2(sgstT + chargeRows.reduce((s, c) => s + c.sgstAmount, 0));
+  igstTotal = round2(igstTotal + chargeRows.reduce((s, c) => s + c.igstAmount, 0));
+
+  const gstTotal = round2(cgstT + sgstT + igstTotal);
+  const total = round2(subtotal + otherChargesTotal + gstTotal);
 
   return {
     lines: computedLines,
     subtotal,
-    cgstTotal,
-    sgstTotal,
+    invoiceDiscount: invoiceDiscountValue,
+    otherCharges: chargeRows,
+    otherChargesTotal,
+    cgstTotal: cgstT,
+    sgstTotal: sgstT,
     igstTotal,
     gstTotal,
     total,

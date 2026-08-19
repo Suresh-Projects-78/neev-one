@@ -142,6 +142,21 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
           </div>
         </div>
       </div>
+
+      {invoice?.shipToAddress ? (
+        <div className="border rounded-lg p-3 text-xs text-gray-700">
+          <span className="font-semibold uppercase">Ship to ({invoice.shipToAddress.code}):</span>{' '}
+          {[invoice.shipToAddress.label, invoice.shipToAddress.line1, invoice.shipToAddress.city, invoice.shipToAddress.state, invoice.shipToAddress.pincode]
+            .filter(Boolean)
+            .join(', ')}
+        </div>
+      ) : null}
+      {String(docSettings?.templates?.invoice?.termsText || '').trim() ? (
+        <div className="border rounded-lg p-3 text-xs text-gray-600 whitespace-pre-line">
+          <div className="font-semibold uppercase text-gray-700 mb-1">Terms &amp; Conditions</div>
+          {docSettings.templates.invoice.termsText}
+        </div>
+      ) : null}
     </div>
   );
 
