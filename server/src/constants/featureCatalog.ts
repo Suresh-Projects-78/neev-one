@@ -107,6 +107,20 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     category: 'Operations',
   },
   {
+    key: 'batchExpiry',
+    label: 'Batch stock & expiry',
+    description: 'Batch/expiry tracking on items, FEFO picking, and the Batch Stock & Expiry view.',
+    defaultEnabled: true,
+    category: 'Operations',
+  },
+  {
+    key: 'reorderAlerts',
+    label: 'Reorder alerts',
+    description: 'Low-stock alerts against per-item reorder levels.',
+    defaultEnabled: true,
+    category: 'Operations',
+  },
+  {
     key: 'paymentReminders',
     label: 'Payment reminders',
     description: 'Due → +7 → +15 collection schedule with WhatsApp/email deep links.',

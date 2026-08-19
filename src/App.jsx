@@ -1634,6 +1634,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         name: String(initialData.name || ''),
         description: String(initialData.description || ''),
         category: String(initialData.category || ''),
+        brand: String(initialData.brand || ''),
         type: initialData.type || 'Goods',
         unit: initialData.unit || 'Pcs',
         hsnSac: String(initialData.hsnSac || ''),
@@ -1657,6 +1658,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       name: '',
       description: '',
       category: '',
+      brand: '',
       type: 'Goods',
       unit: 'Pcs',
       hsnSac: '',
@@ -1755,6 +1757,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         name,
         description: String(formData.description || '').trim(),
         category: String(formData.category || '').trim(),
+        brand: String(formData.brand || '').trim(),
         type: formData.type,
         unit: formData.unit,
         hsnSac: String(formData.hsnSac || ''),
@@ -1787,6 +1790,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       name,
       description: String(formData.description || '').trim(),
       category: String(formData.category || '').trim(),
+      brand: String(formData.brand || '').trim(),
       type: formData.type,
       unit: formData.unit,
       hsnSac: String(formData.hsnSac || ''),
@@ -1852,6 +1856,22 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           <datalist id="itemform-categories">
             {[...new Set((db.items || []).filter((i) => i.companyId === currentCompany.id).map((i) => String(i.category || '').trim()).filter(Boolean))].map((c) => (
               <option key={c} value={c} />
+            ))}
+          </datalist>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Brand</label>
+          <input
+            type="text"
+            list="itemform-brands"
+            value={formData.brand || ''}
+            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+            placeholder="For brand-level discounts"
+          />
+          <datalist id="itemform-brands">
+            {[...new Set((db.items || []).filter((i) => i.companyId === currentCompany.id).map((i) => String(i.brand || '').trim()).filter(Boolean))].map((b) => (
+              <option key={b} value={b} />
             ))}
           </datalist>
         </div>
@@ -10121,7 +10141,6 @@ const AppShell = () => {
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
           { key: 'recurringInvoices', label: 'Recurring', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
           { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
-          { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
         ],
       },
       {
@@ -10164,8 +10183,8 @@ const AppShell = () => {
           { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
           { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', feature: 'stockTransfers' },
           { key: 'batchSerial', label: 'Batches & Serials', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchSerial' },
-          { key: 'batchStock', label: 'Batch Stock & Expiry', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW' },
-          { key: 'reorderAlerts', label: 'Reorder Alerts', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW' },
+          { key: 'batchStock', label: 'Batch Stock & Expiry', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchExpiry' },
+          { key: 'reorderAlerts', label: 'Reorder Alerts', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'reorderAlerts' },
         ],
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tint: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
@@ -10212,6 +10231,7 @@ const AppShell = () => {
           { key: 'settingsGovernance', label: 'Governance', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsProfile', label: 'My Profile', icon: Users },
           { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
+          { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
           { key: 'settingsCurrencies', label: 'Currencies', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
           { key: 'dataImport', label: 'Import Data', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports' },
         ],

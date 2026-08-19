@@ -17,9 +17,12 @@ const emptyForm = {
   value: '',
   itemScope: 'ALL',
   itemId: '',
+  itemIds: [],
   category: '',
+  brand: '',
   customerScope: 'ALL',
   customerId: '',
+  customerIds: [],
   groupId: '',
   validFrom: '',
   validTo: '',
@@ -36,6 +39,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
   const customers = (db.customers || []).filter((c) => c.companyId === companyId);
   const groups = (db.accountGroups || []).filter((g) => g.companyId === companyId && String(g.groupCategory || '') === 'Customer');
   const categories = [...new Set(items.map((i) => String(i.category || '').trim()).filter(Boolean))];
+  const brands = [...new Set(items.map((i) => String(i.brand || '').trim()).filter(Boolean))];
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -57,12 +61,24 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
       notify.error('Pick the item this rule applies to.');
       return;
     }
+    if (form.itemScope === 'ITEMS' && !form.itemIds.length) {
+      notify.error('Pick at least one item this rule applies to.');
+      return;
+    }
     if (form.itemScope === 'CATEGORY' && !form.category.trim()) {
-      notify.error('Enter the item category this rule applies to.');
+      notify.error('Pick the item category this rule applies to.');
+      return;
+    }
+    if (form.itemScope === 'BRAND' && !form.brand.trim()) {
+      notify.error('Pick the brand this rule applies to.');
       return;
     }
     if (form.customerScope === 'CUSTOMER' && !form.customerId) {
       notify.error('Pick the customer this rule applies to.');
+      return;
+    }
+    if (form.customerScope === 'CUSTOMERS' && !form.customerIds.length) {
+      notify.error('Pick at least one customer this rule applies to.');
       return;
     }
     if (form.customerScope === 'GROUP' && !form.groupId) {
@@ -83,9 +99,12 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           value: Number(form.value) || 0,
           itemScope: form.itemScope,
           itemId: form.itemScope === 'ITEM' ? Number(form.itemId) : null,
+          itemIds: form.itemScope === 'ITEMS' ? form.itemIds.map(Number) : [],
           category: form.itemScope === 'CATEGORY' ? form.category.trim() : null,
+          brand: form.itemScope === 'BRAND' ? form.brand.trim() : null,
           customerScope: form.customerScope,
           customerId: form.customerScope === 'CUSTOMER' ? Number(form.customerId) : null,
+          customerIds: form.customerScope === 'CUSTOMERS' ? form.customerIds.map(Number) : [],
           groupId: form.customerScope === 'GROUP' ? Number(form.groupId) : null,
           validFrom: form.validFrom || null,
           validTo: form.validTo || null,
@@ -115,15 +134,21 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
     const itemPart =
       r.itemScope === 'ITEM'
         ? items.find((i) => Number(i.id) === Number(r.itemId))?.name || 'item'
-        : r.itemScope === 'CATEGORY'
-          ? `category "${r.category}"`
-          : 'all items';
+        : r.itemScope === 'ITEMS'
+          ? `${(r.itemIds || []).length} items`
+          : r.itemScope === 'CATEGORY'
+            ? `category "${r.category}"`
+            : r.itemScope === 'BRAND'
+              ? `brand "${r.brand}"`
+              : 'all items';
     const custPart =
       r.customerScope === 'CUSTOMER'
         ? getCustomerDisplayName(customers.find((c) => Number(c.id) === Number(r.customerId))) || 'customer'
-        : r.customerScope === 'GROUP'
-          ? groups.find((g) => Number(g.id) === Number(r.groupId))?.name || 'group'
-          : 'all customers';
+        : r.customerScope === 'CUSTOMERS'
+          ? `${(r.customerIds || []).length} customers`
+          : r.customerScope === 'GROUP'
+            ? groups.find((g) => Number(g.id) === Number(r.groupId))?.name || 'group'
+            : 'all customers';
     return `${itemPart} · ${custPart}`;
   };
 
@@ -173,7 +198,9 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               <select value={form.itemScope} onChange={set('itemScope')} className="ui-select w-full px-3 py-2">
                 <option value="ALL">All items</option>
                 <option value="ITEM">One item</option>
+                <option value="ITEMS">Multiple items</option>
                 <option value="CATEGORY">A category</option>
+                <option value="BRAND">A brand</option>
               </select>
             </div>
             {form.itemScope === 'ITEM' ? (
@@ -186,15 +213,53 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                   ))}
                 </select>
               </div>
+            ) : form.itemScope === 'ITEMS' ? (
+              <div>
+                <label className="ui-label">Items ({form.itemIds.length} selected)</label>
+                <div className="ui-input max-h-36 overflow-y-auto p-2 space-y-1">
+                  {items.map((i) => (
+                    <label key={i.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        checked={form.itemIds.includes(i.id)}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            itemIds: e.target.checked ? [...p.itemIds, i.id] : p.itemIds.filter((x) => x !== i.id),
+                          }))
+                        }
+                      />
+                      {i.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
             ) : form.itemScope === 'CATEGORY' ? (
               <div>
                 <label className="ui-label">Category</label>
-                <input list="discount-categories" value={form.category} onChange={set('category')} className="ui-input w-full px-3 py-2" placeholder="e.g. Electronics" />
-                <datalist id="discount-categories">
+                <select value={form.category} onChange={set('category')} className="ui-select w-full px-3 py-2">
+                  <option value="">Select category</option>
                   {categories.map((c) => (
-                    <option key={c} value={c} />
+                    <option key={c} value={c}>{c}</option>
                   ))}
-                </datalist>
+                </select>
+                {categories.length === 0 ? (
+                  <div className="text-xs ui-muted mt-1">No categories yet — set a Category on items first.</div>
+                ) : null}
+              </div>
+            ) : form.itemScope === 'BRAND' ? (
+              <div>
+                <label className="ui-label">Brand</label>
+                <select value={form.brand} onChange={set('brand')} className="ui-select w-full px-3 py-2">
+                  <option value="">Select brand</option>
+                  {brands.map((b) => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+                {brands.length === 0 ? (
+                  <div className="text-xs ui-muted mt-1">No brands yet — set a Brand on items first.</div>
+                ) : null}
               </div>
             ) : (
               <div />
@@ -204,10 +269,33 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               <select value={form.customerScope} onChange={set('customerScope')} className="ui-select w-full px-3 py-2">
                 <option value="ALL">All customers</option>
                 <option value="CUSTOMER">One customer</option>
+                <option value="CUSTOMERS">Multiple customers</option>
                 <option value="GROUP">A customer group</option>
               </select>
             </div>
-            {form.customerScope === 'CUSTOMER' ? (
+            {form.customerScope === 'CUSTOMERS' ? (
+              <div>
+                <label className="ui-label">Customers ({form.customerIds.length} selected)</label>
+                <div className="ui-input max-h-36 overflow-y-auto p-2 space-y-1">
+                  {customers.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        checked={form.customerIds.includes(c.id)}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            customerIds: e.target.checked ? [...p.customerIds, c.id] : p.customerIds.filter((x) => x !== c.id),
+                          }))
+                        }
+                      />
+                      {getCustomerDisplayName(c)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : form.customerScope === 'CUSTOMER' ? (
               <div>
                 <label className="ui-label">Customer</label>
                 <select value={form.customerId} onChange={set('customerId')} className="ui-select w-full px-3 py-2">

@@ -5,8 +5,8 @@
  * {
  *   id, companyId, name, active,
  *   validFrom, validTo,            // promotional window, either side optional
- *   itemScope: 'ALL'|'ITEM'|'CATEGORY', itemId, category,
- *   customerScope: 'ALL'|'CUSTOMER'|'GROUP', customerId, groupId,
+ *   itemScope: 'ALL'|'ITEM'|'ITEMS'|'CATEGORY'|'BRAND', itemId, itemIds[], category, brand,
+ *   customerScope: 'ALL'|'CUSTOMER'|'CUSTOMERS'|'GROUP', customerId, customerIds[], groupId,
  *   type: 'PERCENT'|'FIXED',       // FIXED = amount off per unit
  *   value,                          // used when there are no tiers
  *   qtyTiers: [{ minQty, value }]   // quantity breaks: buy 10 → 5%, 50 → 10%…
@@ -33,9 +33,17 @@ const matchesItem = (rule, item) => {
   const scope = String(rule.itemScope || 'ALL');
   if (scope === 'ALL') return true;
   if (scope === 'ITEM') return String(rule.itemId) === String(item?.id);
+  if (scope === 'ITEMS') {
+    const ids = Array.isArray(rule.itemIds) ? rule.itemIds : [];
+    return ids.some((id) => String(id) === String(item?.id));
+  }
   if (scope === 'CATEGORY') {
     const cat = String(item?.category || '').trim().toLowerCase();
     return cat && cat === String(rule.category || '').trim().toLowerCase();
+  }
+  if (scope === 'BRAND') {
+    const brand = String(item?.brand || '').trim().toLowerCase();
+    return brand && brand === String(rule.brand || '').trim().toLowerCase();
   }
   return false;
 };
@@ -45,6 +53,10 @@ const matchesCustomer = (rule, customer) => {
   if (scope === 'ALL') return true;
   if (!customer) return false;
   if (scope === 'CUSTOMER') return String(rule.customerId) === String(customer.id);
+  if (scope === 'CUSTOMERS') {
+    const ids = Array.isArray(rule.customerIds) ? rule.customerIds : [];
+    return ids.some((id) => String(id) === String(customer.id));
+  }
   if (scope === 'GROUP') return String(rule.groupId) === String(customer.groupId);
   return false;
 };
