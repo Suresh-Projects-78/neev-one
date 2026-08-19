@@ -147,6 +147,7 @@ const PosScreen = lazy(() => import('./features/sales/PosScreen'));
 const DiscountRules = lazy(() => import('./features/sales/DiscountRules'));
 const SalesOrders = lazy(() => import('./features/sales/SalesOrders'));
 const BatchStock = lazy(() => import('./features/inventory/BatchStock'));
+const Gstr2bReco = lazy(() => import('./features/reports/Gstr2bReco'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -5172,6 +5173,7 @@ const REPORT_META = {
   cashFlow: { icon: Coins, desc: 'Where money came from and where it went.' },
   gstr1: { icon: BadgePercent, desc: 'Outward supplies, ready for the GSTR-1 return.' },
   gstr3b: { icon: BadgePercent, desc: 'Summary return: tax on sales less input credit.' },
+  gstr2bReco: { icon: BadgePercent, desc: 'Match the portal\u2019s 2B against your bills — know which ITC is safe.' },
   salesReports: { icon: ClipboardList, desc: 'Billing by status and totals across customers.' },
 };
 
@@ -9920,6 +9922,7 @@ const AppShell = () => {
           items: [
             { key: 'gstr1', label: 'GSTR-1' },
             { key: 'gstr3b', label: 'GSTR-3B' },
+            { key: 'gstr2bReco', label: 'GSTR-2B Reconciliation' },
           ],
         },
         {
@@ -11222,6 +11225,8 @@ const AppShell = () => {
         return <BatchSerialManager />;
       case 'batchStock':
         return <BatchStock db={dbForUser} currentCompany={currentCompany} />;
+      case 'gstr2bReco':
+        return <Gstr2bReco db={dbForUser} currentCompany={currentCompany} />;
       case 'priceLists':
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'discountRules':
