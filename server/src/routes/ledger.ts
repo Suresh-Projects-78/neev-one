@@ -52,6 +52,72 @@ ledgerRouter.post('/orgs/:orgId/ledger/setup', requirePermission(MODULE, Permiss
   res.json({ accounts });
 });
 
+// Create one ledger account. Exists so client-side chart entries (a bank
+// account added under "Bank Accounts", a new cash box) become real server
+// ledgers — with controlKind CASH/BANK they immediately appear as payment
+// modes in receipt/payment entry.
+const accountCreateSchema = z.object({
+  code: z.string().max(40).optional(),
+  name: z.string().min(1).max(160),
+  accountType: z.enum(['ASSET', 'LIABILITY', 'EQUITY', 'INCOME', 'EXPENSE']),
+  controlKind: z.enum(['CASH', 'BANK']).optional().nullable(),
+  sourceKey: z.string().max(120).optional().nullable(),
+});
+
+ledgerRouter.post('/orgs/:orgId/ledger/accounts', requirePermission(MODULE, PermissionAction.CREATE, SUB), async (req, res) => {
+  if (!requireOrgMatch(req, res)) return;
+  const { accountId, orgId } = req.tenant!;
+  const body = accountCreateSchema.parse(req.body);
+  await ensureLedgerSetup(accountId, orgId, req.auth!.userId);
+
+  // Same client chart row re-synced (e.g. rename) updates instead of duplicating.
+  const sourceKey = String(body.sourceKey || '').trim() || null;
+  if (sourceKey) {
+    const existing = await prisma.ledgerAccount.findFirst({
+      where: { orgId, sourceSystem: 'client-chart', sourceKey },
+      select: { id: true },
+    });
+    if (existing) {
+      const updated = await prisma.ledgerAccount.update({
+        where: { id: existing.id },
+        data: { name: body.name, controlKind: body.controlKind ?? undefined, isActive: true },
+        select: { id: true, code: true, name: true, accountType: true, controlKind: true },
+      });
+      return res.json({ account: updated });
+    }
+  }
+
+  // Allocate the next free code in the account-type's range when none given.
+  let code = String(body.code || '').trim();
+  if (!code) {
+    const prefix = body.controlKind === 'BANK' ? '12' : body.controlKind === 'CASH' ? '11' : '19';
+    const peers = await prisma.ledgerAccount.findMany({
+      where: { orgId, code: { startsWith: prefix } },
+      select: { code: true },
+    });
+    const max = peers.reduce((m, p) => Math.max(m, Number(p.code) || 0), Number(`${prefix}00`));
+    code = String(max + 1);
+  }
+
+  const account = await prisma.ledgerAccount.create({
+    data: {
+      accountId,
+      orgId,
+      branchId: null,
+      code,
+      name: body.name,
+      accountType: body.accountType,
+      controlKind: body.controlKind ?? null,
+      sourceSystem: sourceKey ? 'client-chart' : null,
+      sourceKey,
+      createdByUserId: req.auth!.userId,
+    },
+    select: { id: true, code: true, name: true, accountType: true, controlKind: true },
+  });
+
+  res.status(201).json({ account });
+});
+
 ledgerRouter.get('/orgs/:orgId/ledger/accounts', requirePermission(MODULE, PermissionAction.VIEW, SUB), async (req, res) => {
   if (!requireOrgMatch(req, res)) return;
   const accounts = await prisma.ledgerAccount.findMany({

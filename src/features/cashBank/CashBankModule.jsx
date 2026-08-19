@@ -240,17 +240,43 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   }, [cashBankAccounts, selectedAccountId]);
 
   const allTxns = useMemo(() => {
-    return safeArray(db.bankTransactions)
+    const imported = safeArray(db.bankTransactions)
       .filter((t) => t.companyId === companyId)
-      .filter((t) => (selectedAccountId ? String(t.cashBankAccountId) === String(selectedAccountId) : true))
+      .filter((t) => (selectedAccountId ? String(t.cashBankAccountId) === String(selectedAccountId) : true));
+
+    // Receipts/payments entered through Payment/Receipt entry land in this
+    // account's book too — the ledger they posted to is matched via the chart
+    // row's serverLedgerAccountId (set when the ledger synced to the server).
+    const acct = cashBankAccounts.find((a) => String(a.id) === String(selectedAccountId));
+    const serverLedgerId = String(acct?.serverLedgerAccountId || '').trim();
+    const recorded = !serverLedgerId
+      ? []
+      : safeArray(db.payments)
+          .filter((p) => p.companyId === companyId)
+          .filter((p) => String(p.ledgerAccountId || '') === serverLedgerId)
+          .map((p) => ({
+            id: `pay-${p.id}`,
+            companyId,
+            cashBankAccountId: selectedAccountId,
+            date: p.date,
+            description:
+              `${p.voucherType === 'receipt' ? 'Receipt' : 'Payment'}${p.number ? ` ${p.number}` : ''} — ${p.customerName || p.vendorName || p.partyName || ''}`.trim(),
+            amount: Number(p.amount ?? 0),
+            direction: p.voucherType === 'receipt' ? 'IN' : 'OUT',
+            ledgerId: null,
+            readOnly: true,
+            status: 'Recorded',
+          }));
+
+    return [...imported, ...recorded]
       .slice()
       .sort((a, b) => {
         const da = String(a.date || '');
         const dbb = String(b.date || '');
         if (da !== dbb) return da < dbb ? 1 : -1;
-        return Number(b.id) - Number(a.id);
+        return String(b.id).localeCompare(String(a.id));
       });
-  }, [db.bankTransactions, companyId, selectedAccountId]);
+  }, [db.bankTransactions, db.payments, companyId, selectedAccountId, cashBankAccounts]);
 
   const [view, setView] = useState('uncategorised'); // 'uncategorised' | 'categorised' | 'all'
 
@@ -1968,7 +1994,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                           {isOut ? '-' : formatMoney(Number(t.amount ?? 0), currentCompany)}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          {categorised ? (
+                          {t.readOnly ? (
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]">Recorded</span>
+                          ) : categorised ? (
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]">Categorised</span>
                           ) : (
                             <button
@@ -1981,6 +2009,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                           )}
                         </td>
                         <td className="px-4 py-3 text-right relative">
+                          {t.readOnly ? null : (<>
                           <button
                             type="button"
                             onClick={() => setOpenActionId((p) => (String(p) === String(t.id) ? null : t.id))}
@@ -2052,6 +2081,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                               </button>
                             </div>
                           ) : null}
+                          </>)}
                         </td>
                       </tr>
                     );

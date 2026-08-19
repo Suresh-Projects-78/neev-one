@@ -36,6 +36,16 @@ const invoiceItemSchema = z.object({
   igstAmount: z.number().optional().nullable(),
   lineTotal: z.number().optional().nullable(),
   taxType: z.string().optional().nullable(),
+  // Batch-tracked lines carry their batch identity; without these the
+  // write-through dropped them and hydration lost batch detail.
+  batchId: z.union([z.string(), z.number()]).optional().nullable(),
+  batchNo: z.string().optional().nullable(),
+  expiryDate: z.string().optional().nullable(),
+  serials: z.array(z.string()).optional(),
+  // Line discounts (same silent-strip class as batch fields).
+  discountPct: z.union([z.string(), z.number()]).optional().nullable(),
+  discountAmount: z.union([z.string(), z.number()]).optional().nullable(),
+  discountManual: z.boolean().optional(),
 });
 
 const invoiceUpsertSchema = z.object({

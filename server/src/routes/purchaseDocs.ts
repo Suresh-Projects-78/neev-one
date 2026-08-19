@@ -101,6 +101,12 @@ const itemSchema = z.object({
   taxableAmount: z.number().optional().nullable(),
   gstAmount: z.number().optional().nullable(),
   lineTotal: z.number().optional().nullable(),
+  // Batch-tracked receipts: zod strips unknown keys, so without these the
+  // write-through silently dropped batch detail entered on the bill.
+  batchNo: z.string().optional().nullable(),
+  mfgDate: z.string().optional().nullable(),
+  expiryDate: z.string().optional().nullable(),
+  serials: z.array(z.string()).optional(),
 });
 
 const docSchema = z.object({

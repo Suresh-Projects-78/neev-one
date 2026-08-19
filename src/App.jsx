@@ -129,6 +129,7 @@ import { SettingsRoles } from './features/admin/SettingsRoles';
 import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
+import { createLedgerAccount } from './api/ledger';
 import { PageHeader, StatTile, ThemeToggle, SkeletonStats } from './components/ui/Primitives';
 import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
@@ -2811,6 +2812,40 @@ const ChartAccountForm = ({
     return isUnderNamedRoot(gid, 'bank accounts');
   }, [formData.groupId, isUnderNamedRoot]);
 
+  const isCashGroupSelected = useMemo(() => {
+    const gid = String(formData.groupId || '').trim();
+    if (!gid) return false;
+    return isUnderNamedRoot(gid, 'cash-in-hand');
+  }, [formData.groupId, isUnderNamedRoot]);
+
+  // A cash/bank chart ledger must also exist as a server ledger account —
+  // that is what the receipt/payment "mode" dropdown and GL postings use.
+  // Best-effort: an offline save keeps the chart row; sync retries next edit.
+  const syncCashBankLedgerToServer = async (chartRow) => {
+    if (!isBankGroupSelected && !isCashGroupSelected) return;
+    try {
+      const { account } = await createLedgerAccount({
+        name: chartRow.name,
+        accountType: 'ASSET',
+        controlKind: isBankGroupSelected ? 'BANK' : 'CASH',
+        sourceKey: `coa-${currentCompany.id}-${chartRow.id}`,
+      });
+      if (account?.id) {
+        setDb((prev) => ({
+          ...prev,
+          chartOfAccounts: (Array.isArray(prev.chartOfAccounts) ? prev.chartOfAccounts : []).map((a) =>
+            a.companyId === currentCompany.id && String(a.id) === String(chartRow.id)
+              ? { ...a, serverLedgerAccountId: account.id }
+              : a
+          ),
+        }));
+        notify.success(`${chartRow.name} is now available in Payment/Receipt entry.`);
+      }
+    } catch (err) {
+      notify.error(`Ledger saved locally, but server sync failed: ${String(err?.message || err)}`);
+    }
+  };
+
   const openCreateGroupFromPicker = (typedName) => {
     openModal(
       <SimpleAccountGroupCreateForm
@@ -2935,6 +2970,7 @@ const ChartAccountForm = ({
         journalEntries: updatedJournalEntries,
       });
 
+      syncCashBankLedgerToServer(updated);
       onCreated?.(updated);
       onClose?.();
       return;
@@ -2968,6 +3004,7 @@ const ChartAccountForm = ({
       chartOfAccounts: [...(Array.isArray(db.chartOfAccounts) ? db.chartOfAccounts : []), newAccount],
     });
 
+    syncCashBankLedgerToServer(newAccount);
     onCreated?.(newAccount);
     onClose?.();
   };

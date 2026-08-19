@@ -22,6 +22,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
   const [cart, setCart] = useState([]); // {itemId, name, rate, gstRate, qty}
   const [tender, setTender] = useState('Cash');
   const [customerName, setCustomerName] = useState('');
+  const [customerMobile, setCustomerMobile] = useState('');
   const [busy, setBusy] = useState(false);
   const [dayCloseOpen, setDayCloseOpen] = useState(false);
   const DENOMS = [500, 200, 100, 50, 20, 10, 5, 2, 1];
@@ -188,6 +189,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
         status: 'Paid',
         posSale: true,
         tender,
+        customerMobile: customerMobile.trim(),
         createdAt: new Date().toISOString(),
       };
       const nextPayId = (db.payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1;
@@ -233,6 +235,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
 
       setCart([]);
       setCustomerName('');
+      setCustomerMobile('');
       notify.success(`${number} — ${formatMoney(computed.total, currentCompany)} received by ${tender}.`);
     } finally {
       setBusy(false);
@@ -356,6 +359,13 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                 onChange={(e) => setCustomerName(e.target.value)}
                 className="ui-input w-full px-3 py-2 text-sm"
                 placeholder="Customer name (optional — Walk-in)"
+              />
+              <input
+                type="tel"
+                value={customerMobile}
+                onChange={(e) => setCustomerMobile(e.target.value.replace(/[^\d+ -]/g, '').slice(0, 15))}
+                className="ui-input w-full px-3 py-2 text-sm"
+                placeholder="Customer mobile (optional)"
               />
               <div className="flex gap-2">
                 {['Cash', 'UPI', 'Card'].map((t) => (

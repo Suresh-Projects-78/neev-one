@@ -32,4 +32,16 @@ export const getAccountLedgerLines = (ledgerAccountId, { from = '', to = '', all
 
 export const getLedgerAccounts = () => apiFetch(`${base()}/accounts`, opts);
 
+/**
+ * Creates (or re-syncs, keyed by sourceKey) one server ledger account.
+ * Used when a cash/bank ledger is added to the client chart of accounts so it
+ * becomes a real payment mode in receipt/payment entry.
+ */
+export const createLedgerAccount = ({ name, accountType, controlKind, sourceKey }) =>
+  apiFetch(`${base()}/accounts`, {
+    ...opts,
+    method: 'POST',
+    body: { name, accountType, controlKind, sourceKey },
+  });
+
 export const getJournalEntries = (limit = 50) => apiFetch(`${base()}/entries?limit=${limit}`, opts);
