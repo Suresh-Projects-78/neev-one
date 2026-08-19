@@ -2244,7 +2244,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     if (newInvoice.backendInvoiceId && isEnabled('einvoice')) {
       (async () => {
         try {
-          const settings = await getEInvoiceSettingsApi();
+          // Reading the gateway settings needs the settings permission; a
+          // sales user without it simply skips auto-registration — silently,
+          // because the invoice itself saved fine.
+          let settings = null;
+          try {
+            settings = await getEInvoiceSettingsApi();
+          } catch {
+            return;
+          }
           if (!settings?.autoRegister || !settings?.baseUrl) return;
           const customer = (db.customers || []).find((c) => c.id === newInvoice.customerId) || {};
           const result = await registerEInvoiceApi(

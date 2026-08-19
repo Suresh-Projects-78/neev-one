@@ -223,6 +223,8 @@ export const ROLE_PRESETS: Record<string, { label: string; description: string; 
       ['SALES', '*', [A.VIEW, A.CREATE, A.EDIT]],
       ['MASTERS', 'Customers', [A.VIEW, A.CREATE, A.EDIT]],
       ['MASTERS', 'Items', [A.VIEW]],
+      // Branch/warehouse lists are reference data every document form needs.
+      ['MASTERS', 'Company/Branch setup', [A.VIEW]],
       ['INVENTORY', '*', [A.VIEW]],
       ['REPORTS', 'Sales Reports', [A.VIEW]],
     ],
@@ -233,6 +235,8 @@ export const ROLE_PRESETS: Record<string, { label: string; description: string; 
     grants: [
       ['INVENTORY', '*', [A.VIEW, A.CREATE, A.EDIT]],
       ['MASTERS', 'Items', [A.VIEW]],
+      // Branch/warehouse lists are reference data every stock form needs.
+      ['MASTERS', 'Company/Branch setup', [A.VIEW]],
       ['SALES', 'Invoices', [A.VIEW]],
       ['PURCHASE', 'Bills', [A.VIEW]],
     ],
