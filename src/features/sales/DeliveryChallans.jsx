@@ -9,6 +9,7 @@ import EwbTransportForm from '../../components/EwbTransportForm';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
+import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -18,13 +19,24 @@ import { buildEwayBillPayload } from '../../utils/einvoice';
  */
 export default function DeliveryChallans({ db, setDb, currentCompany, onConvert }) {
   const companyId = currentCompany.id;
+  const dcFilters = useColumnFilters();
   const challans = useMemo(
     () =>
-      (Array.isArray(db.deliveryChallans) ? db.deliveryChallans : [])
-        .filter((c) => c.companyId === companyId)
-        .slice()
-        .sort((a, b) => String(b.date).localeCompare(String(a.date))),
-    [db.deliveryChallans, companyId]
+      dcFilters.applyFilters(
+        (Array.isArray(db.deliveryChallans) ? db.deliveryChallans : [])
+          .filter((c) => c.companyId === companyId)
+          .slice()
+          .sort((a, b) => String(b.date).localeCompare(String(a.date))),
+        {
+          number: (r) => r.number,
+          date: (r) => r.date,
+          customer: (r) => r.customerName,
+          purpose: (r) => r.purpose,
+          value: (r) => r.value,
+          status: (r) => r.status,
+        }
+      ),
+    [db.deliveryChallans, companyId, dcFilters.applyFilters]
   );
 
   const [open, setOpen] = useState(false);
@@ -234,6 +246,19 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                 <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
+              <FilterRow
+                columns={[
+                  { key: 'number', placeholder: 'No.' },
+                  { key: 'date', placeholder: 'Date' },
+                  { key: 'customer', placeholder: 'Customer' },
+                  { key: 'purpose', placeholder: 'Purpose' },
+                  { key: 'value', placeholder: 'Value' },
+                  { key: 'status', options: ['Open', 'Invoiced', 'Returned', 'Cancelled'] },
+                  {},
+                ]}
+                filters={dcFilters.filters}
+                setFilter={dcFilters.setFilter}
+              />
             </thead>
             <tbody>
               {challans.map((c) => (

@@ -37,6 +37,7 @@ import {
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { PageHeader, StatusPill, EmptyState } from '../../components/ui/Primitives';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
+import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 
 const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
   const initial = String(invoice?.status || '').trim();
@@ -193,6 +194,7 @@ export const InvoicesList = ({
   }, [warehouses]);
 
   const [searchText, setSearchText] = useState('');
+  const colFilters = useColumnFilters();
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -296,7 +298,7 @@ export const InvoicesList = ({
       return true;
     };
 
-    return (Array.isArray(invoices) ? invoices : [])
+    const base = (Array.isArray(invoices) ? invoices : [])
       .filter((inv) => matchesSearch(inv))
       .filter((inv) => {
         if (!wantStatus) return true;
@@ -310,7 +312,20 @@ export const InvoicesList = ({
         if (da !== dbb) return da < dbb ? 1 : -1;
         return Number(b?.id || 0) - Number(a?.id || 0);
       });
-  }, [dateFrom, dateTo, invoices, searchText, statusFilter]);
+
+    return colFilters.applyFilters(base, {
+      number: (r) => r.number,
+      customer: (r) => r.customerName,
+      warehouse: (r) => {
+        const wh = warehouseById.get(String(r?.warehouseId || '').trim());
+        return wh?.name || r?.warehouseId || '';
+      },
+      date: (r) => r.date,
+      due: (r) => r.dueDate,
+      total: (r) => r.total,
+      status: (r) => getDerivedStatus(r),
+    });
+  }, [dateFrom, dateTo, invoices, searchText, statusFilter, colFilters.applyFilters, warehouseById]);
 
   const openNewInvoice = () => {
     if (typeof onNewInvoice === 'function') {
@@ -773,6 +788,21 @@ export const InvoicesList = ({
               {col('status') ? <th scope="col">Status</th> : null}
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
+            <FilterRow
+              columns={[
+                ...(gridEnabled ? [{}] : []),
+                { key: 'number', placeholder: 'No.' },
+                ...(col('customer') ? [{ key: 'customer', placeholder: 'Customer' }] : []),
+                ...(col('warehouse') ? [{ key: 'warehouse', placeholder: 'Warehouse' }] : []),
+                ...(col('date') ? [{ key: 'date', placeholder: 'Date' }] : []),
+                ...(col('due') ? [{ key: 'due', placeholder: 'Due' }] : []),
+                { key: 'total', placeholder: 'Total' },
+                ...(col('status') ? [{ key: 'status', options: ['Paid', 'Partial', 'Unpaid', 'Draft', 'Overdue', 'Cancelled'] }] : []),
+                {},
+              ]}
+              filters={colFilters.filters}
+              setFilter={colFilters.setFilter}
+            />
           </thead>
           <tbody className="ui-rows">
             {filteredInvoices.length === 0 ? (
@@ -1229,7 +1259,6 @@ export const EstimatesList = ({
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
-  const estimates = db.estimates.filter((e) => e.companyId === currentCompany.id);
   const [openMenu, setOpenMenu] = useState(null);
   const menuRef = useRef(null);
 
@@ -1237,6 +1266,27 @@ export const EstimatesList = ({
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
+
+  const estFilters = useColumnFilters();
+  const estimates = estFilters.applyFilters(
+    db.estimates
+      .filter((e) => e.companyId === currentCompany.id)
+      .slice()
+      .sort((a, b) => {
+        const da = String(a?.date || '');
+        const dbb = String(b?.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+      }),
+    {
+      number: (r) => r.number,
+      customer: (r) => r.customerName,
+      warehouse: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || r?.warehouseId || '',
+      date: (r) => r.date,
+      due: (r) => r.dueDate || r.expiryDate,
+      total: (r) => r.total,
+    }
+  );
 
   const MENU_WIDTH = 224; // w-56
   const MENU_HEIGHT_ESTIMATE = 240;
@@ -1419,6 +1469,21 @@ export const EstimatesList = ({
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'No.' },
+                { key: 'customer', placeholder: 'Customer' },
+                { key: 'warehouse', placeholder: 'Warehouse' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'due', placeholder: 'Due' },
+                { key: 'total', placeholder: 'Total' },
+                {},
+              ]}
+              filters={estFilters.filters}
+              setFilter={estFilters.setFilter}
+            />
+            <tr className="hidden">
+            </tr>
           </thead>
           <tbody className="divide-y">
             {estimates.length === 0 ? (
@@ -1574,12 +1639,31 @@ export const CreditNotesList = ({
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
-  const creditNotes = db.creditNotes.filter((c) => c.companyId === currentCompany.id);
-
   const warehouseById = useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
+
+  const cnFilters = useColumnFilters();
+  const creditNotes = cnFilters.applyFilters(
+    db.creditNotes
+      .filter((c) => c.companyId === currentCompany.id)
+      .slice()
+      .sort((a, b) => {
+        const da = String(a?.date || '');
+        const dbb = String(b?.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+      }),
+    {
+      number: (r) => r.number,
+      original: (r) => r.originalInvoiceNumber,
+      customer: (r) => r.customerName,
+      warehouse: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || r?.warehouseId || '',
+      date: (r) => r.date,
+      total: (r) => r.total,
+    }
+  );
 
   const openNewCreditNote = () => {
     if (typeof onNewCreditNote === 'function') {
@@ -1623,6 +1707,18 @@ export const CreditNotesList = ({
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'No.' },
+                { key: 'original', placeholder: 'Invoice' },
+                { key: 'customer', placeholder: 'Customer' },
+                { key: 'warehouse', placeholder: 'Warehouse' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'total', placeholder: 'Total' },
+              ]}
+              filters={cnFilters.filters}
+              setFilter={cnFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y">
             {creditNotes.length === 0 ? (

@@ -22,6 +22,7 @@ import {
   isIntraStateSupply,
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
+import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
@@ -960,6 +961,7 @@ export const BillsList = ({
 }) => {
   const bills = db.bills.filter((b) => b.companyId === currentCompany.id);
   const [statusFilter, setStatusFilter] = useState('All');
+  const colFilters = useColumnFilters();
   const [openMenu, setOpenMenu] = useState(null);
   const menuRef = useRef(null);
 
@@ -1015,11 +1017,31 @@ export const BillsList = ({
     return 'Unpaid';
   };
 
-  const filteredBills = bills.filter((b) => {
-    const derived = getDerivedStatus(b);
-    if (statusFilter === 'All') return true;
-    return derived === statusFilter;
-  });
+  const filteredBills = colFilters.applyFilters(
+    bills
+      .filter((b) => {
+        const derived = getDerivedStatus(b);
+        if (statusFilter === 'All') return true;
+        return derived === statusFilter;
+      })
+      .slice()
+      .sort((a, b) => {
+        const da = String(a?.date || '');
+        const dbb = String(b?.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+      }),
+    {
+      number: (r) => r.number,
+      vendor: (r) => r.vendorName,
+      warehouse: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || r?.warehouseId || '',
+      date: (r) => r.date,
+      refNo: (r) => r.refNo,
+      refDate: (r) => r.refDate,
+      total: (r) => r.total,
+      status: (r) => getDerivedStatus(r),
+    }
+  );
 
   const openRecordPayment = (bill) => {
     // The server-posting disbursement form, same as the Payments screen, so a
@@ -1220,6 +1242,21 @@ export const BillsList = ({
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'No.' },
+                { key: 'vendor', placeholder: 'Vendor' },
+                { key: 'warehouse', placeholder: 'Warehouse' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'refNo', placeholder: 'Ref' },
+                { key: 'refDate', placeholder: 'Ref date' },
+                { key: 'total', placeholder: 'Total' },
+                { key: 'status', options: ['Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'] },
+                {},
+              ]}
+              filters={colFilters.filters}
+              setFilter={colFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y">
             {filteredBills.length === 0 ? (
@@ -1908,12 +1945,32 @@ export const DebitNoteForm = ({
 };
 
 export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebitNote, warehouses = [], defaultWarehouseId = '' }) => {
-  const debitNotes = db.debitNotes.filter((dn) => dn.companyId === currentCompany.id);
-
   const warehouseById = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
+
+  const dnFilters = useColumnFilters();
+  const debitNotes = dnFilters.applyFilters(
+    db.debitNotes
+      .filter((dn) => dn.companyId === currentCompany.id)
+      .slice()
+      .sort((a, b) => {
+        const da = String(a?.date || '');
+        const dbb = String(b?.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+      }),
+    {
+      number: (r) => r.number,
+      original: (r) => r.originalBillNumber,
+      vendor: (r) => r.vendorName,
+      warehouse: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || r?.warehouseId || '',
+      date: (r) => r.date,
+      amount: (r) => r.total,
+      status: (r) => r.status,
+    }
+  );
 
   return (
     <div className="space-y-4">
@@ -1955,6 +2012,20 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'No.' },
+                { key: 'original', placeholder: 'Bill' },
+                { key: 'vendor', placeholder: 'Vendor' },
+                { key: 'warehouse', placeholder: 'Warehouse' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'amount', placeholder: 'Amount' },
+                { key: 'status', placeholder: 'Status' },
+                {},
+              ]}
+              filters={dnFilters.filters}
+              setFilter={dnFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {debitNotes.length === 0 ? (
