@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
+import { isTracked, needsExpiry } from '../../utils/batches';
 import { Copy, CreditCard, MoreVertical, Plus, Trash2 } from 'lucide-react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -210,6 +211,24 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     const vendorObj = vendors.find((v) => v.id === parseInt(formData.vendorId));
     const billVendorName = getVendorDisplayName(vendorObj);
 
+    // Batch-tracked items must arrive with their batch details — checked
+    // BEFORE the server write so a validation failure cannot half-save.
+    const itemsByIdForBatch = new Map(itemsMaster.map((i) => [String(i.id), i]));
+    if (!wantsDraft) {
+      for (const l of computed.lines) {
+        const master = itemsByIdForBatch.get(String(l.itemId));
+        if (!isTracked(master)) continue;
+        if (!String(l.batchNo || '').trim()) {
+          notify.error(`"${master.name}" is batch-tracked — enter a batch number on its line.`);
+          return;
+        }
+        if (needsExpiry(master) && !String(l.expiryDate || '').trim()) {
+          notify.error(`"${master.name}" needs an expiry date on its batch.`);
+          return;
+        }
+      }
+    }
+
     // Server first: a non-draft bill is a liability and must reach the books.
     // The local copy mirrors it for the UI; drafts stay local until real.
     let backendDocId = null;
@@ -267,13 +286,35 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       createdAt: new Date().toISOString(),
     };
 
+    // Batch-tracked lines create their batch records on receipt.
+    const newBatches = [];
+    let nextBatchId = (db.batches || []).reduce((m, b) => Math.max(m, Number(b.id) || 0), 0);
+    for (const l of computed.lines) {
+      const master = itemsByIdForBatch.get(String(l.itemId));
+      if (!isTracked(master)) continue;
+      if (String(l.batchNo || '').trim()) {
+        newBatches.push({
+          id: ++nextBatchId,
+          companyId: currentCompany.id,
+          itemId: l.itemId,
+          batchNo: String(l.batchNo).trim(),
+          mfgDate: l.mfgDate || '',
+          expiryDate: l.expiryDate || '',
+          qtyIn: Number(l.quantity) || 0,
+          sourceBillNumber: newBill.number,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+
     setDb({
       ...db,
       bills: [...db.bills, newBill],
+      batches: newBatches.length ? [...(db.batches || []), ...newBatches] : db.batches,
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'bill', usedNumber: billNumber, branchId: branchIdForNumbering }),
     });
     onClose?.();
-    notify.success('Bill created successfully!');
+    notify.success(`Bill created successfully!${newBatches.length ? ` ${newBatches.length} batch(es) received.` : ''}`);
   };
 
   return (
@@ -406,54 +447,94 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               </tr>
             </thead>
             <tbody>
-              {computed.lines.map((item, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="ui-col-meta px-3 py-2">
-                    <ItemPicker
-                      db={db}
-                      setDb={setDb}
-                      currentCompany={currentCompany}
-                      value={item.itemId}
-                      onChange={(itemId, picked) => updateItem(idx, 'itemId', itemId, picked)}
-                      label={null}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      value={item.description}
-                      onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="ui-input w-full px-2 py-1"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      value={item.quantity}
-                      onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="ui-input w-full px-2 py-1"
-                      min="0"
-                      step="0.01"
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="number"
-                      value={item.rate}
-                      onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="ui-input w-full px-2 py-1"
-                      min="0"
-                      step="0.01"
-                    />
-                  </td>
-                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
-                  <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {computed.lines.map((item, idx) => {
+                const master = itemsMaster.find((i) => String(i.id) === String(item.itemId));
+                const tracked = isTracked(master);
+                return (
+                  <React.Fragment key={idx}>
+                    <tr className="border-t">
+                      <td className="ui-col-meta px-3 py-2">
+                        <ItemPicker
+                          db={db}
+                          setDb={setDb}
+                          currentCompany={currentCompany}
+                          value={item.itemId}
+                          onChange={(itemId, picked) => updateItem(idx, 'itemId', itemId, picked)}
+                          label={null}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => updateItem(idx, 'description', e.target.value)}
+                          className="ui-input w-full px-2 py-1"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
+                          className="ui-input w-full px-2 py-1"
+                          min="0"
+                          step="0.01"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={item.rate}
+                          onChange={(e) => updateItem(idx, 'rate', e.target.value)}
+                          className="ui-input w-full px-2 py-1"
+                          min="0"
+                          step="0.01"
+                        />
+                      </td>
+                      <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
+                      <td className="px-3 py-2">
+                        <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                    {tracked ? (
+                      <tr className="border-t-0">
+                        <td colSpan={6} className="px-3 pb-2 pt-0">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="ui-muted font-medium">Batch:</span>
+                            <input
+                              type="text"
+                              value={item.batchNo || ''}
+                              onChange={(e) => updateItem(idx, 'batchNo', e.target.value)}
+                              className="ui-input !h-8 w-32 px-2 text-xs"
+                              placeholder="Batch no *"
+                            />
+                            <span className="ui-muted">Mfg</span>
+                            <input
+                              type="date"
+                              value={item.mfgDate || ''}
+                              onChange={(e) => updateItem(idx, 'mfgDate', e.target.value)}
+                              className="ui-input !h-8 w-36 px-2 text-xs"
+                            />
+                            {needsExpiry(master) ? (
+                              <>
+                                <span className="ui-muted">Expiry</span>
+                                <input
+                                  type="date"
+                                  value={item.expiryDate || ''}
+                                  onChange={(e) => updateItem(idx, 'expiryDate', e.target.value)}
+                                  className="ui-input !h-8 w-36 px-2 text-xs"
+                                />
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

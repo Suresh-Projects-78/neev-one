@@ -146,6 +146,7 @@ const DeliveryChallans = lazy(() => import('./features/sales/DeliveryChallans'))
 const PosScreen = lazy(() => import('./features/sales/PosScreen'));
 const DiscountRules = lazy(() => import('./features/sales/DiscountRules'));
 const SalesOrders = lazy(() => import('./features/sales/SalesOrders'));
+const BatchStock = lazy(() => import('./features/inventory/BatchStock'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -10037,6 +10038,7 @@ const AppShell = () => {
           { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
           { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', feature: 'stockTransfers' },
           { key: 'batchSerial', label: 'Batches & Serials', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchSerial' },
+          { key: 'batchStock', label: 'Batch Stock & Expiry', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW' },
         ],
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tint: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
@@ -11218,6 +11220,8 @@ const AppShell = () => {
         return <ImportCenter />;
       case 'batchSerial':
         return <BatchSerialManager />;
+      case 'batchStock':
+        return <BatchStock db={dbForUser} currentCompany={currentCompany} />;
       case 'priceLists':
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'discountRules':

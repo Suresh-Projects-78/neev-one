@@ -15,6 +15,7 @@ import { resolveSaleRate } from '../../utils/pricing';
 import EwbTransportForm from '../../components/EwbTransportForm';
 import EInvoiceWorkflow from './EInvoiceWorkflow';
 import { resolveDiscountForLine } from '../../utils/discounts';
+import { isTracked, fefoPick, batchesForItem } from '../../utils/batches';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
@@ -1801,6 +1802,16 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         if (resolved.source !== 'item master') {
           notify.info(`Rate ${resolved.rate} from ${resolved.source}`);
         }
+        // Batch-tracked items default to the FEFO batch (earliest expiry).
+        if (isTracked(item)) {
+          const pick = fefoPick(db, currentCompany.id, item.id, Number(newItems[index].quantity) || 1);
+          newItems[index].batchId = pick ? pick.id : '';
+          newItems[index].batchNo = pick ? pick.batchNo : '';
+          if (pick) notify.info(`Batch ${pick.batchNo} (FEFO${pick.expiryDate ? `, exp ${pick.expiryDate}` : ''})`);
+        } else {
+          newItems[index].batchId = '';
+          newItems[index].batchNo = '';
+        }
       }
     } else {
       newItems[index][field] = value;
@@ -1932,6 +1943,31 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     if (hasMissingItem) {
       notify.error('Please select an Item for every line. Items are mandatory for GST.');
       return;
+    }
+
+    // Batch-tracked lines must name a batch with enough remaining stock.
+    if (!wantsDraft) {
+      for (const l of formData.items || []) {
+        const master = items.find((i) => String(i.id) === String(l.itemId));
+        if (!isTracked(master)) continue;
+        if (!l.batchId) {
+          notify.error(`"${master.name}" is batch-tracked — pick a batch on its line.`);
+          return;
+        }
+        const batch = batchesForItem(db, currentCompany.id, l.itemId, {
+          includeEmpty: true,
+          excludeInvoiceId: isEdit ? initialData?.id : undefined,
+        }).find((b) => String(b.id) === String(l.batchId));
+        const q = Number(l.quantity) || 0;
+        if (!batch) {
+          notify.error(`Batch on "${master.name}" no longer exists — pick again.`);
+          return;
+        }
+        if (q > batch.remaining + 0.0001) {
+          notify.error(`Batch ${batch.batchNo} has only ${batch.remaining} left — line needs ${q}.`);
+          return;
+        }
+      }
     }
 
     const customer = customers.find((c) => c.id === parseInt(formData.customerId));
@@ -2381,8 +2417,13 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               </tr>
             </thead>
             <tbody>
-              {formData.items.map((item, idx) => (
-                <tr key={idx} className="border-t" onKeyDown={(e) => handleRowKeyDown(e, idx)}>
+              {formData.items.map((item, idx) => {
+                const lineMaster = items.find((i) => String(i.id) === String(item.itemId));
+                const lineTracked = isTracked(lineMaster);
+                const lineBatches = lineTracked ? batchesForItem(db, currentCompany.id, item.itemId) : [];
+                return (
+                <React.Fragment key={idx}>
+                <tr className="border-t" onKeyDown={(e) => handleRowKeyDown(e, idx)}>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -2440,7 +2481,35 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                     </button>
                   </td>
                 </tr>
-              ))}
+                {lineTracked ? (
+                  <tr className="border-t-0">
+                    <td colSpan={7} className="px-3 pb-2 pt-0">
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span className="ui-muted font-medium">Batch:</span>
+                        <select
+                          value={item.batchId || ''}
+                          onChange={(e) => {
+                            const b = lineBatches.find((x) => String(x.id) === e.target.value);
+                            updateItem(idx, 'batchId', e.target.value);
+                            updateItem(idx, 'batchNo', b ? b.batchNo : '');
+                          }}
+                          className="ui-select !h-8 w-72 px-2 text-xs"
+                        >
+                          <option value="">Select batch (FEFO order)</option>
+                          {lineBatches.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              {b.batchNo} — {b.remaining} left{b.expiryDate ? ` · exp ${b.expiryDate}` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        {lineBatches.length === 0 ? <span className="text-[rgb(var(--warn-ink))]">No batches in stock — receive via a bill first.</span> : null}
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+                </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
