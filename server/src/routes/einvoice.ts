@@ -11,6 +11,7 @@ import {
   saveEInvoiceSetting,
   registerOnIrp,
   testIrpConnection,
+  generateEwbByIrn,
 } from '../services/einvoice.js';
 
 /**
@@ -37,6 +38,8 @@ const orgOk = (req: any, res: any) => {
 /** Never returns secrets — only whether they are set. */
 const publicSetting = (row: any) => ({
   mode: row?.mode || 'SANDBOX',
+  provider: row?.provider || 'GSP',
+  publicKeyPem: row?.publicKeyPem || '',
   baseUrl: row?.baseUrl || '',
   gstin: row?.gstin || '',
   username: row?.username || '',
@@ -57,6 +60,8 @@ einvoiceRouter.get('/orgs/:orgId/einvoice/settings', SETTINGS_VIEW, async (req, 
 
 const settingsSchema = z.object({
   mode: z.enum(['SANDBOX', 'PRODUCTION']).optional(),
+  provider: z.enum(['GSP', 'NIC']).optional(),
+  publicKeyPem: z.string().max(10000).optional().nullable(),
   baseUrl: z.string().max(500).optional().nullable(),
   gstin: z.string().max(15).optional().nullable(),
   username: z.string().max(200).optional().nullable(),
@@ -154,4 +159,59 @@ einvoiceRouter.post('/orgs/:orgId/invoices/:invoiceId/einvoice', INVOICE_EDIT, a
     ackDate: updated.irnAckDate,
     signedQr: updated.irnSignedQr,
   });
+});
+
+const ewbSchema = z.object({
+  distance: z.number().min(0).max(4000).optional(),
+  transporterId: z.string().max(15).optional().nullable(),
+  transporterName: z.string().max(100).optional().nullable(),
+  transMode: z.string().max(2).optional().nullable(), // 1 road, 2 rail, 3 air, 4 ship
+  vehicleNo: z.string().max(20).optional().nullable(),
+  vehicleType: z.string().max(1).optional().nullable(), // R regular, O ODC
+  transDocNo: z.string().max(20).optional().nullable(),
+  transDocDate: z.string().max(10).optional().nullable(), // dd/mm/yyyy
+});
+
+/** Generate an e-Way Bill from the invoice's IRN (NIC provider). */
+einvoiceRouter.post('/orgs/:orgId/invoices/:invoiceId/ewaybill', INVOICE_EDIT, async (req, res) => {
+  if (!orgOk(req, res)) return;
+  const { accountId, orgId } = req.tenant!;
+
+  if (!(await isFeatureEnabled(accountId, orgId, 'einvoice'))) {
+    return res.status(400).json({ error: 'e-Invoicing is switched off for this company (Settings → Features).' });
+  }
+
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: String(req.params.invoiceId), accountId, orgId },
+  });
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  if (!invoice.irn || invoice.irnStatus !== 'REGISTERED') {
+    return res.status(400).json({ error: 'Register the invoice on the IRP first — the e-Way Bill is generated from its IRN.' });
+  }
+  if (invoice.ewbNo) {
+    return res.status(409).json({ error: `Invoice already has e-Way Bill ${invoice.ewbNo}` });
+  }
+
+  const input = ewbSchema.parse(req.body || {});
+  const details: Record<string, unknown> = {};
+  if (input.distance !== undefined) details.Distance = input.distance;
+  if (input.transporterId) details.TransId = input.transporterId;
+  if (input.transporterName) details.TransName = input.transporterName;
+  if (input.transMode) details.TransMode = input.transMode;
+  if (input.vehicleNo) details.VehNo = input.vehicleNo;
+  if (input.vehicleType) details.VehType = input.vehicleType;
+  if (input.transDocNo) details.TransDocNo = input.transDocNo;
+  if (input.transDocDate) details.TransDocDt = input.transDocDate;
+
+  const result = await generateEwbByIrn(orgId, invoice.irn, details);
+  if (!result.ok || !result.ewbNo) {
+    return res.status(502).json({ error: result.error || 'e-Way Bill generation failed' });
+  }
+
+  const updated = await prisma.invoice.update({
+    where: { id: invoice.id },
+    data: { ewbNo: result.ewbNo, ewbDate: result.ewbDate || null, ewbValidTill: result.ewbValidTill || null },
+  });
+
+  res.json({ ok: true, ewbNo: updated.ewbNo, ewbDate: updated.ewbDate, ewbValidTill: updated.ewbValidTill });
 });

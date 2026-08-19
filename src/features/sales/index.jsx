@@ -10,7 +10,7 @@ import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStat
 import { useFeatures } from '../../permissions/useFeatures';
 import { createDocApi, hasApiSession as hasDocsApiSession } from '../../api/purchaseDocs';
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
-import { registerEInvoiceApi, getEInvoiceSettingsApi } from '../../api/einvoice';
+import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
@@ -1031,6 +1031,35 @@ export const InvoicesList = ({
                       <FileText size={16} className="ui-muted" />
                       <span>{inv.irn ? `IRN: ${String(inv.irn).slice(0, 12)}…` : 'Register on IRP (get IRN)'}</span>
                     </button>
+                    {inv.irn && !inv.ewbNo ? (
+                      <button
+                        type="button"
+                        className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                        onClick={async () => {
+                          setOpenMenu(null);
+                          try {
+                            const result = await generateEwaybillApi(inv.backendInvoiceId, {});
+                            setDb((prev) => ({
+                              ...prev,
+                              invoices: (prev.invoices || []).map((x) =>
+                                x.id === inv.id
+                                  ? { ...x, ewbNo: result.ewbNo, ewbDate: result.ewbDate, ewbValidTill: result.ewbValidTill }
+                                  : x
+                              ),
+                            }));
+                            notify.success(`e-Way Bill ${result.ewbNo} for ${inv.number} (valid till ${result.ewbValidTill || '—'})`);
+                          } catch (err) {
+                            notify.error(String(err?.message || 'e-Way Bill generation failed.'));
+                          }
+                        }}
+                      >
+                        <FileText size={16} className="ui-muted" />
+                        <span>Generate e-Way Bill (from IRN)</span>
+                      </button>
+                    ) : null}
+                    {inv.ewbNo ? (
+                      <div className="px-4 py-2 text-left text-xs ui-muted">EWB {inv.ewbNo}</div>
+                    ) : null}
                     <button
                       type="button"
                       className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"

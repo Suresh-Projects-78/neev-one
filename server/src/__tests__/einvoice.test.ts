@@ -1,8 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
+import { generateKeyPairSync, privateDecrypt, constants as cryptoConstants } from 'node:crypto';
 import { buildApp } from '../app.js';
 import { prisma } from '../utils/prisma.js';
-import { registerOnIrp, getEInvoiceConfig } from '../services/einvoice.js';
+import {
+  registerOnIrp,
+  getEInvoiceConfig,
+  nicCrypto,
+  clearNicSessions,
+  generateEwbByIrn,
+} from '../services/einvoice.js';
 
 /**
  * e-Invoice (IRP) integration: settings round-trip (secrets never echoed),
@@ -179,5 +186,136 @@ describe('IRP registration', () => {
       .set(auth(owner))
       .send({ payload: {} })
       .expect(400);
+  });
+});
+
+describe('NIC direct provider', () => {
+  /**
+   * A stub NIC server implementing the real spec crypto: RSA-PKCS1 decrypt of
+   * the auth payload, AES-256-ECB Sek wrapping, AES-encrypted request/response
+   * bodies. If our client interoperates with this, it speaks the NIC dialect.
+   */
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+  const SEK = Buffer.alloc(32, 7); // the "server"-side session key
+
+  const nicServer = (assertions: { sawAuth?: boolean; lastInvoicePayload?: any; lastPath?: string } = {}) =>
+    (async (url: string, init: any) => {
+      assertions.lastPath = String(url);
+      if (String(url).includes('/eivital/')) {
+        assertions.sawAuth = true;
+        // Decrypt exactly the way NIC would.
+        const encrypted = Buffer.from(JSON.parse(init.body).Data, 'base64');
+        const b64Json = privateDecrypt({ key: privateKey, padding: cryptoConstants.RSA_PKCS1_PADDING }, encrypted).toString('utf8');
+        const creds = JSON.parse(Buffer.from(b64Json, 'base64').toString('utf8'));
+        expect(creds.UserName).toBe('nic_user');
+        expect(creds.Password).toBe('nic_pass');
+        const appKey = Buffer.from(creds.AppKey, 'base64');
+        expect(appKey.length).toBe(32);
+        return {
+          status: 200,
+          json: async () => ({
+            Status: '1',
+            Data: { AuthToken: 'tok-123', Sek: nicCrypto.aesEncrypt(appKey, SEK), TokenExpiry: '2026-08-19 23:59:59' },
+          }),
+          text: async () => '',
+        };
+      }
+      // Core call: decrypt request with SEK, answer encrypted with SEK.
+      expect(init.headers.AuthToken).toBe('tok-123');
+      expect(init.headers.user_name).toBe('nic_user');
+      const reqPayload = JSON.parse(nicCrypto.aesDecrypt(SEK, JSON.parse(init.body).Data).toString('utf8'));
+      assertions.lastInvoicePayload = reqPayload;
+      const responseData = String(url).includes('/eiewb/')
+        ? { EwbNo: 331002345678, EwbDt: '2026-08-19 13:00:00', EwbValidTill: '2026-08-20 23:59:00' }
+        : { Irn: 'nic-irn-sha256', AckNo: 112010012345, AckDt: '2026-08-19 12:30:00', SignedQRCode: 'nic.qr.jwt', Status: 'ACT' };
+      return {
+        status: 200,
+        json: async () => ({ Status: '1', Data: nicCrypto.aesEncrypt(SEK, Buffer.from(JSON.stringify(responseData), 'utf8')) }),
+        text: async () => '',
+      };
+    }) as any;
+
+  beforeAll(async () => {
+    clearNicSessions();
+    await request(app)
+      .put(`/api/orgs/${owner.orgId}/einvoice/settings`)
+      .set(auth(owner))
+      .send({
+        provider: 'NIC',
+        mode: 'SANDBOX',
+        baseUrl: 'https://einv-apisandbox.nic.in',
+        gstin: '29ABCDE1234F1Z5',
+        username: 'nic_user',
+        password: 'nic_pass',
+        clientId: 'nic-client',
+        clientSecret: 'nic-secret',
+        publicKeyPem,
+      })
+      .expect(200);
+  });
+
+  it('completes the auth handshake and registers an IRN through real crypto', async () => {
+    const seen: any = {};
+    const result = await registerOnIrp(owner.orgId, { Version: '1.1', DocDtls: { No: 'INV-NIC-1' } }, nicServer(seen));
+    expect(seen.sawAuth).toBe(true);
+    expect(seen.lastInvoicePayload?.DocDtls?.No).toBe('INV-NIC-1');
+    expect(result.ok).toBe(true);
+    expect(result.irn).toBe('nic-irn-sha256');
+    expect(result.ackNo).toBe('112010012345');
+    expect(result.signedQr).toBe('nic.qr.jwt');
+  });
+
+  it('reuses the cached session on the next call', async () => {
+    const seen: any = { sawAuth: false };
+    const result = await registerOnIrp(owner.orgId, { DocDtls: { No: 'INV-NIC-2' } }, nicServer(seen));
+    expect(result.ok).toBe(true);
+    expect(seen.sawAuth).toBe(false); // no second handshake
+  });
+
+  it('generates an e-Way Bill from the IRN', async () => {
+    const seen: any = {};
+    const result = await generateEwbByIrn(owner.orgId, 'nic-irn-sha256', { VehNo: 'KA01AB1234', TransMode: '1' }, nicServer(seen));
+    expect(result.ok).toBe(true);
+    expect(result.ewbNo).toBe('331002345678');
+    expect(String(seen.lastPath)).toContain('/eiewb/');
+    expect(seen.lastInvoicePayload?.Irn).toBe('nic-irn-sha256');
+    expect(seen.lastInvoicePayload?.VehNo).toBe('KA01AB1234');
+  });
+
+  it('surfaces NIC error details decoded from base64', async () => {
+    clearNicSessions();
+    const errServer = (async (url: string, init: any) => {
+      if (String(url).includes('/eivital/')) {
+        const encrypted = Buffer.from(JSON.parse(init.body).Data, 'base64');
+        const b64Json = privateDecrypt({ key: privateKey, padding: cryptoConstants.RSA_PKCS1_PADDING }, encrypted).toString('utf8');
+        const creds = JSON.parse(Buffer.from(b64Json, 'base64').toString('utf8'));
+        const appKey = Buffer.from(creds.AppKey, 'base64');
+        return {
+          status: 200,
+          json: async () => ({ Status: '1', Data: { AuthToken: 'tok-e', Sek: nicCrypto.aesEncrypt(appKey, SEK) } }),
+          text: async () => '',
+        };
+      }
+      const details = Buffer.from(JSON.stringify([{ ErrorCode: '2150', ErrorMessage: 'Duplicate IRN' }]), 'utf8').toString('base64');
+      return { status: 200, json: async () => ({ Status: '0', ErrorDetails: details }), text: async () => '' };
+    }) as any;
+    const result = await registerOnIrp(owner.orgId, {}, errServer);
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('Duplicate IRN');
+  });
+
+  it('fails with a clear message when the public key is missing', async () => {
+    clearNicSessions();
+    await request(app)
+      .put(`/api/orgs/${owner.orgId}/einvoice/settings`)
+      .set(auth(owner))
+      .send({ publicKeyPem: '' })
+      .expect(200);
+    const result = await registerOnIrp(owner.orgId, {}, (async () => {
+      throw new Error('should not be called');
+    }) as any);
+    expect(result.ok).toBe(false);
+    expect(String(result.error)).toContain('public key');
   });
 });

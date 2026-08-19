@@ -471,6 +471,11 @@ model Invoice {
   irnError        String?
   irnRegisteredAt DateTime?
 
+  /// e-Way Bill generated from the IRN (NIC /eiewb API).
+  ewbNo        String?
+  ewbDate      String?
+  ewbValidTill String?
+
   createdByUserId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1247,9 +1252,18 @@ model EInvoiceSetting {
   /// SANDBOX until the org's production credentials are verified.
   mode String @default("SANDBOX")
 
-  /// GSP / gateway base URL, e.g. https://api.mastergst.com/einvoice
+  /// GSP = simple REST gateway (MasterGST/ClearTax style, static headers).
+  /// NIC = direct NIC e-Invoice API (RSA auth handshake + AES-256-ECB SEK).
+  provider String @default("GSP")
+
+  /// GSP: gateway base URL, e.g. https://api.mastergst.com/einvoice
+  /// NIC: system base URL, e.g. https://einv-apisandbox.nic.in
   baseUrl String?
   gstin   String?
+
+  /// NIC only: the e-Invoice system's RSA public key (PEM), downloaded from
+  /// the portal. Used to encrypt the auth payload.
+  publicKeyPem String?
 
   username    String?
   passwordEnc String?

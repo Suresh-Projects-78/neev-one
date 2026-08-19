@@ -30,3 +30,11 @@ export async function registerEInvoiceApi(backendInvoiceId, payload) {
     body: { payload },
   });
 }
+
+/** Generates an e-Way Bill from the invoice's IRN (NIC provider). */
+export async function generateEwaybillApi(backendInvoiceId, transport = {}) {
+  return apiFetch(`/orgs/${requireOrgId()}/invoices/${encodeURIComponent(backendInvoiceId)}/ewaybill`, {
+    method: 'POST',
+    body: transport,
+  });
+}

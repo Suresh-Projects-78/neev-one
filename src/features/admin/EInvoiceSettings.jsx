@@ -22,12 +22,14 @@ export default function EInvoiceSettings() {
   const [meta, setMeta] = useState({ hasPassword: false, hasClientSecret: false, verifiedAt: null, lastError: null });
   const [form, setForm] = useState({
     mode: 'SANDBOX',
+    provider: 'GSP',
     baseUrl: '',
     gstin: '',
     username: '',
     password: '',
     clientId: '',
     clientSecret: '',
+    publicKeyPem: '',
     headersJson: '',
     autoRegister: false,
   });
@@ -45,10 +47,12 @@ export default function EInvoiceSettings() {
         setForm((p) => ({
           ...p,
           mode: s.mode || 'SANDBOX',
+          provider: s.provider || 'GSP',
           baseUrl: s.baseUrl || '',
           gstin: s.gstin || '',
           username: s.username || '',
           clientId: s.clientId || '',
+          publicKeyPem: s.publicKeyPem || '',
           headersJson: s.headersJson || '',
           autoRegister: Boolean(s.autoRegister),
         }));
@@ -122,6 +126,13 @@ export default function EInvoiceSettings() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div>
+          <label className="block text-xs ui-muted">Provider</label>
+          <select value={form.provider} onChange={set('provider')} className="ui-select w-full px-3 py-2 ui-surface">
+            <option value="GSP">GSP REST gateway (MasterGST / ClearTax style)</option>
+            <option value="NIC">NIC direct API (einvoice1.gst.gov.in)</option>
+          </select>
+        </div>
+        <div>
           <label className="block text-xs ui-muted">Mode</label>
           <select value={form.mode} onChange={set('mode')} className="ui-select w-full px-3 py-2 ui-surface">
             <option value="SANDBOX">Sandbox (testing)</option>
@@ -129,12 +140,12 @@ export default function EInvoiceSettings() {
           </select>
         </div>
         <div>
-          <label className="block text-xs ui-muted">Gateway base URL</label>
+          <label className="block text-xs ui-muted">{form.provider === 'NIC' ? 'NIC base URL' : 'Gateway base URL'}</label>
           <input
             value={form.baseUrl}
             onChange={set('baseUrl')}
             className="ui-input w-full px-3 py-2"
-            placeholder="https://api.mastergst.com/einvoice"
+            placeholder={form.provider === 'NIC' ? 'https://einv-apisandbox.nic.in' : 'https://api.mastergst.com/einvoice'}
           />
         </div>
         <div>
@@ -180,6 +191,21 @@ export default function EInvoiceSettings() {
             placeholder='{"ip_address": "203.0.113.7"}'
           />
         </div>
+        {form.provider === 'NIC' ? (
+          <div className="sm:col-span-2">
+            <label className="block text-xs ui-muted">NIC e-Invoice public key (PEM)</label>
+            <textarea
+              value={form.publicKeyPem}
+              onChange={set('publicKeyPem')}
+              className="ui-input w-full px-3 py-2 font-mono text-xs"
+              rows={4}
+              placeholder={'-----BEGIN PUBLIC KEY-----\n…download from Help → API sandbox on einvoice1.gst.gov.in…\n-----END PUBLIC KEY-----'}
+            />
+            <div className="text-xs ui-muted mt-1">
+              Used to encrypt the sign-in payload (RSA). Sandbox and production publish different keys.
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
