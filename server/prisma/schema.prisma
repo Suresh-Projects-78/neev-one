@@ -461,6 +461,16 @@ model Invoice {
   sourceSystem String?
   sourceKey    String?
 
+  /// e-Invoice (IRP) registration result. IRN is the invoice's identity on
+  /// the GST network; the signed QR must be printed on the document.
+  irn             String?
+  irnStatus       String?   // REGISTERED | FAILED | CANCELLED
+  irnAckNo        String?
+  irnAckDate      String?
+  irnSignedQr     String?
+  irnError        String?
+  irnRegisteredAt DateTime?
+
   createdByUserId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1215,6 +1225,44 @@ model EmailSetting {
   fromName  String?
   fromEmail String?
   replyTo   String?
+
+  verifiedAt DateTime?
+  lastError  String?
+
+  updatedByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([accountId, orgId])
+}
+
+/// e-Invoice (IRP) connection for an org. The IRP is reached through a GSP /
+/// API-gateway REST endpoint; credentials are replayed on every call, so they
+/// are stored encrypted (same AES-256-GCM helper as SMTP), never returned raw.
+model EInvoiceSetting {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String @unique
+
+  /// SANDBOX until the org's production credentials are verified.
+  mode String @default("SANDBOX")
+
+  /// GSP / gateway base URL, e.g. https://api.mastergst.com/einvoice
+  baseUrl String?
+  gstin   String?
+
+  username    String?
+  passwordEnc String?
+
+  clientId        String?
+  clientSecretEnc String?
+
+  /// Extra static headers the gateway wants, stored as a JSON object string
+  /// (e.g. {"ip_address": "…"}). Merged into every request.
+  headersJson String?
+
+  /// Fire IRP registration automatically when a non-draft invoice is created.
+  autoRegister Boolean @default(false)
 
   verifiedAt DateTime?
   lastError  String?

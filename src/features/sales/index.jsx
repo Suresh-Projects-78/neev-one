@@ -10,6 +10,7 @@ import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStat
 import { useFeatures } from '../../permissions/useFeatures';
 import { createDocApi, hasApiSession as hasDocsApiSession } from '../../api/purchaseDocs';
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
+import { registerEInvoiceApi, getEInvoiceSettingsApi } from '../../api/einvoice';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
@@ -993,6 +994,46 @@ export const InvoicesList = ({
                     <button
                       type="button"
                       className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                      onClick={async () => {
+                        setOpenMenu(null);
+                        if (inv.irn) {
+                          notify.info(`${inv.number} already has IRN ${inv.irn}`);
+                          return;
+                        }
+                        if (!inv.backendInvoiceId) {
+                          notify.error('This invoice is not on the server yet — only server-backed invoices can be registered.');
+                          return;
+                        }
+                        if (!String(currentCompany?.gstin || '').trim()) {
+                          notify.error('Set the company GSTIN in Company Profile before registering on the IRP.');
+                          return;
+                        }
+                        const customer = (db.customers || []).find((c) => c.id === inv.customerId) || {};
+                        try {
+                          const result = await registerEInvoiceApi(
+                            inv.backendInvoiceId,
+                            buildEInvoicePayload({ invoice: inv, company: currentCompany, customer })
+                          );
+                          setDb((prev) => ({
+                            ...prev,
+                            invoices: (prev.invoices || []).map((x) =>
+                              x.id === inv.id
+                                ? { ...x, irn: result.irn, irnAckNo: result.ackNo, irnAckDate: result.ackDate, irnSignedQr: result.signedQr }
+                                : x
+                            ),
+                          }));
+                          notify.success(`IRN for ${inv.number}: ${result.irn}`);
+                        } catch (err) {
+                          notify.error(String(err?.message || 'IRP registration failed.'));
+                        }
+                      }}
+                    >
+                      <FileText size={16} className="ui-muted" />
+                      <span>{inv.irn ? `IRN: ${String(inv.irn).slice(0, 12)}…` : 'Register on IRP (get IRN)'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                       onClick={() => {
                         setOpenMenu(null);
                         if (!String(currentCompany?.gstin || '').trim()) {
@@ -1548,6 +1589,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const isEdit = Boolean(initialData && (initialData.id !== undefined && initialData.id !== null));
   const formRef = useRef(null);
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
+  const { isEnabled } = useFeatures();
 
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   const resolveBranchIdFromWarehouseId = (warehouseId) => {
@@ -1975,6 +2017,33 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
     if (sourceEstimateId) notify.success('Invoice created and estimate converted successfully!');
     else notify.success('Invoice created successfully!');
+
+    // Auto-register on the IRP when the org opted in (fire-and-forget: the
+    // invoice is already saved; a gateway failure only means "no IRN yet").
+    if (newInvoice.backendInvoiceId && isEnabled('einvoice')) {
+      (async () => {
+        try {
+          const settings = await getEInvoiceSettingsApi();
+          if (!settings?.autoRegister || !settings?.baseUrl) return;
+          const customer = (db.customers || []).find((c) => c.id === newInvoice.customerId) || {};
+          const result = await registerEInvoiceApi(
+            newInvoice.backendInvoiceId,
+            buildEInvoicePayload({ invoice: newInvoice, company: currentCompany, customer })
+          );
+          setDb((prev) => ({
+            ...prev,
+            invoices: (prev.invoices || []).map((x) =>
+              x.id === newInvoice.id
+                ? { ...x, irn: result.irn, irnAckNo: result.ackNo, irnAckDate: result.ackDate, irnSignedQr: result.signedQr }
+                : x
+            ),
+          }));
+          notify.success(`IRN for ${newInvoice.number}: ${result.irn}`);
+        } catch (err) {
+          notify.error(`IRP auto-registration failed: ${String(err?.message || err)}`);
+        }
+      })();
+    }
   };
 
   return (

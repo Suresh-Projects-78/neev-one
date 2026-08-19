@@ -120,6 +120,7 @@ import { AccountGroupForm } from './features/accounts/AccountGroupTypeForms';
 import { SettingsWarehousesBranches } from './features/admin/SettingsWarehousesBranches';
 import { SettingsUsersRoles } from './features/admin/SettingsUsersRoles';
 import { SettingsBranches } from './features/admin/SettingsBranches';
+import EInvoiceSettings from './features/admin/EInvoiceSettings';
 import { SettingsWarehouses } from './features/admin/SettingsWarehouses';
 import { SettingsUsers } from './features/admin/SettingsUsers';
 import { SettingsRoles } from './features/admin/SettingsRoles';
@@ -7089,6 +7090,8 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
           </div>
         )}
       </div>
+
+      <EInvoiceSettings />
 
       <div className="border rounded-xl p-5 shadow-sm ui-surface">
         <div className="flex items-start justify-between gap-4">
