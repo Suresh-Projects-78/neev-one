@@ -977,7 +977,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
   );
 };
 
-const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Customer' }) => {
+const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Customer', disabled = false, disabledHint = '' }) => {
   // Customers live on the server now. The local list stays as a fallback so a
   // network failure does not empty the picker in the middle of an invoice.
   const serverCustomers = useServerMasters(
@@ -1040,15 +1040,19 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
       <label className="block text-sm font-medium mb-1">{label}</label>
       <button
         type="button"
+        disabled={disabled}
+        title={disabled ? disabledHint || 'Locked' : undefined}
         onClick={() => {
+          if (disabled) return;
           setCustomerPopupMode('select');
           setCustomerSearch('');
           setShowCustomerPopup(true);
         }}
-        className="w-full px-3 py-2 border rounded-lg ui-surface text-left"
+        className={`w-full px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
       >
         {selectedCustomerName || 'Select Customer'}
       </button>
+      {disabled && disabledHint ? <div className="text-xs ui-muted mt-1">{disabledHint}</div> : null}
 
       {showCustomerPopup && (
         <Modal

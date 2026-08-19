@@ -154,6 +154,7 @@ const PaymentReminders = lazy(() => import('./features/sales/PaymentReminders'))
 const TallyExport = lazy(() => import('./features/reports/TallyExport'));
 const ReorderAlerts = lazy(() => import('./features/inventory/ReorderAlerts'));
 const TdsTcsReport = lazy(() => import('./features/reports/TdsTcsReport'));
+const SalesBySalesman = lazy(() => import('./features/reports/SalesBySalesman'));
 const FixedAssets = lazy(() => import('./features/accounting/FixedAssets'));
 const YearEndClose = lazy(() => import('./features/accounting/YearEndClose'));
 const CostCenters = lazy(() => import('./features/accounting/CostCenters'));
@@ -10036,7 +10037,10 @@ const AppShell = () => {
         {
           key: 'sales',
           title: 'Sales',
-          items: [{ key: 'salesReports', label: 'Sales Reports' }],
+          items: [
+            { key: 'salesReports', label: 'Sales Reports' },
+            { key: 'salesBySalesman', label: 'Sales by Salesman' },
+          ],
         },
         {
           key: 'accountant',
@@ -10115,7 +10119,6 @@ const AppShell = () => {
           { key: 'salesOrders', label: 'Sales Orders', icon: ClipboardList, perm: 'SALES::Invoices::VIEW', feature: 'salesOrders' },
           { key: 'deliveryChallans', label: 'Delivery Challans', icon: Truck, perm: 'SALES::Invoices::VIEW', feature: 'deliveryChallans' },
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
-          { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
           { key: 'recurringInvoices', label: 'Recurring', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
           { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
           { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
@@ -10182,6 +10185,7 @@ const AppShell = () => {
           { key: 'priceLists', label: 'Price Lists', icon: Tags, perm: 'MASTERS::Items::VIEW', feature: 'priceLists' },
           { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
           { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
+          { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
           { key: 'bankCash', label: 'Chart of Accounts', icon: Building2, perm: 'ACCOUNTING::Chart of Accounts::VIEW' },
           { key: 'gstRates', label: 'GST Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
           { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
@@ -11352,6 +11356,8 @@ const AppShell = () => {
         return <Gstr2bReco db={dbForUser} currentCompany={currentCompany} />;
       case 'paymentReminders':
         return <PaymentReminders db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'salesBySalesman':
+        return <SalesBySalesman db={dbForUser} currentCompany={currentCompany} />;
       case 'tallyExport':
         return <TallyExport db={dbForUser} currentCompany={currentCompany} />;
       case 'tdsTcs':

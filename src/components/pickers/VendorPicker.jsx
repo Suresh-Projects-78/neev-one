@@ -798,7 +798,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   );
 };
 
-const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Vendor' }) => {
+const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Vendor', disabled = false, disabledHint = '' }) => {
   // Same pattern as the customer picker: server list, local fallback.
   const serverVendors = useServerMasters(
     useCallback((search) => listVendors(search).then((d) => d?.vendors || []), []),
@@ -859,15 +859,19 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
       <label className="block text-sm font-medium mb-1">{label}</label>
       <button
         type="button"
+        disabled={disabled}
+        title={disabled ? disabledHint || 'Locked' : undefined}
         onClick={() => {
+          if (disabled) return;
           setVendorPopupMode('select');
           setVendorSearch('');
           setShowVendorPopup(true);
         }}
-        className="w-full px-3 py-2 border rounded-lg ui-surface text-left"
+        className={`w-full px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
       >
         {selectedVendorName || 'Select Vendor'}
       </button>
+      {disabled && disabledHint ? <div className="text-xs ui-muted mt-1">{disabledHint}</div> : null}
 
       {showVendorPopup && (
         <Modal

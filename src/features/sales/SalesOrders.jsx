@@ -39,6 +39,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     date: new Date().toISOString().slice(0, 10),
     expectedDate: '',
     customerId: '',
+    salesmanId: '',
     notes: '',
     items: [emptyLine],
   });
@@ -157,12 +158,13 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       gstTotal: computed.gstTotal,
       total: computed.total,
       status: 'Open',
+      salesmanId: form.salesmanId || '',
       notes: form.notes,
       createdAt: new Date().toISOString(),
     };
     setDb((prev) => ({ ...prev, salesOrders: [...(prev.salesOrders || []), order] }));
     setOpen(false);
-    setForm({ date: new Date().toISOString().slice(0, 10), expectedDate: '', customerId: '', notes: '', items: [emptyLine] });
+    setForm({ date: new Date().toISOString().slice(0, 10), expectedDate: '', customerId: '', salesmanId: '', notes: '', items: [emptyLine] });
     notify.success(`Sales order ${order.number} created.`);
   };
 
@@ -234,6 +236,21 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
               <label className="ui-label">Notes</label>
               <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="Customer PO ref…" />
             </div>
+            {(db.salesmen || []).some((sm) => sm.companyId === companyId) ? (
+              <div>
+                <label className="ui-label">Salesman</label>
+                <select
+                  value={form.salesmanId || ''}
+                  onChange={(e) => setForm((p) => ({ ...p, salesmanId: e.target.value ? Number(e.target.value) : '' }))}
+                  className="ui-select w-full px-3 py-2"
+                >
+                  <option value="">— none —</option>
+                  {(db.salesmen || []).filter((sm) => sm.companyId === companyId).map((sm) => (
+                    <option key={sm.id} value={sm.id}>{sm.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
 
           <table className="w-full text-sm">

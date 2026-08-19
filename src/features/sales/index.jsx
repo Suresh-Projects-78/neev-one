@@ -2846,6 +2846,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       date: initialData?.date || defaultDate,
       dueDate: initialData?.dueDate || defaultDueDate,
       customerId: initialData?.customerId !== undefined && initialData?.customerId !== null ? String(initialData.customerId) : '',
+      salesmanId: initialData?.salesmanId ?? '',
       items: normalizedItems,
     };
   });
@@ -2961,6 +2962,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       date: formData.date,
       dueDate: formData.dueDate,
       customerId: formData.customerId,
+      salesmanId: formData.salesmanId || '',
       customerName: getCustomerDisplayName(customer),
       customerGstin: customerGstin,
       placeOfSupplyState: customerState,
@@ -3081,6 +3083,23 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             required
           />
         </div>
+        {(db.salesmen || []).some((sm) => sm.companyId === currentCompany.id) ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Salesman</label>
+            <select
+              value={formData.salesmanId || ''}
+              onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="">— none —</option>
+              {(db.salesmen || [])
+                .filter((sm) => sm.companyId === currentCompany.id)
+                .map((sm) => (
+                  <option key={sm.id} value={sm.id}>{sm.name}</option>
+                ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       <div>
@@ -3559,6 +3578,8 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
             currentCompany={currentCompany}
             value={formData.customerId}
             onChange={(customerId) => setFormData((prev) => ({ ...prev, customerId }))}
+            disabled={Boolean(String(formData.originalInvoiceId || '').trim()) && Boolean(String(formData.customerId || '').trim())}
+            disabledHint="Customer comes from the original invoice"
           />
         </div>
       </div>

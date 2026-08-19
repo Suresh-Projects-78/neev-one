@@ -1834,6 +1834,8 @@ export const DebitNoteForm = ({
             currentCompany={currentCompany}
             value={formData.vendorId}
             onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
+            disabled={Boolean(String(formData.originalBillId || '').trim()) && Boolean(String(formData.vendorId || '').trim())}
+            disabledHint="Vendor comes from the original bill"
           />
         </div>
       </div>
