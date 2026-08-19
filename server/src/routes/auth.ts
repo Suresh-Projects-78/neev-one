@@ -44,7 +44,7 @@ function signToken(payload: { userId: string; accountId: string }) {
   return jwt.sign(payload, secret, {
     // jsonwebtoken types require a strict ms-string type; env is a plain string.
     expiresIn: (process.env.JWT_EXPIRES_IN || '8h') as any,
-    issuer: process.env.JWT_ISSUER,
+    issuer: process.env.JWT_ISSUER || 'accounting',
     audience: process.env.JWT_AUDIENCE,
   });
 }
@@ -58,7 +58,7 @@ function requireAuth(req: any) {
   if (!secret) throw new Error('Server misconfigured: JWT_SECRET missing');
 
   const decoded: any = jwt.verify(token, secret, {
-    issuer: process.env.JWT_ISSUER,
+    issuer: process.env.JWT_ISSUER || 'accounting',
     audience: process.env.JWT_AUDIENCE,
   });
   if (!decoded?.userId || !decoded?.accountId) throw new Error('Unauthorized');

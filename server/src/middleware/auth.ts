@@ -30,7 +30,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     const secret = getJwtSecret();
     if (!secret) return res.status(500).json({ error: 'Server misconfigured: JWT_SECRET missing' });
     const payload = jwt.verify(token, secret, {
-      issuer: process.env.JWT_ISSUER,
+      issuer: process.env.JWT_ISSUER || 'accounting',
       audience: process.env.JWT_AUDIENCE,
     }) as any;
 
