@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createVendor, listVendors } from '../../api/masters';
-import { useServerMasters } from '../../hooks/useServerMasters';
+import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
@@ -73,6 +73,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
     return {
       displayName: '',
       groupId: sundryCreditorsGroup?.id ? String(sundryCreditorsGroup.id) : '',
+      openingBalance: isEdit ? Number(initialData?.openingBalance ?? 0) : 0,
+      openingBalanceType: isEdit ? (initialData?.openingBalanceType || 'Cr') : 'Cr',
       contactPerson: '',
       mobile: '',
       email: '',
@@ -447,6 +449,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       subType: String(typeRow?.name || ''),
       main: String(typeRow?.main || 'Balance Sheet'),
       balance: 0,
+      openingBalance: Math.round((Number(formData.openingBalance) || 0) * 100) / 100,
+      openingBalanceType: formData.openingBalanceType || 'Dr',
       createdAt: new Date().toISOString(),
     };
 
@@ -494,6 +498,32 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             setGroupCreateOpen(true);
           }}
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">Opening Balance</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.openingBalance}
+            onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
+            className="ui-input w-full px-3 py-2"
+            placeholder="0.00"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Dr / Cr</label>
+          <select
+            value={formData.openingBalanceType}
+            onChange={(e) => setFormData((p) => ({ ...p, openingBalanceType: e.target.value }))}
+            className="ui-select w-full px-3 py-2"
+          >
+            <option value="Dr">Dr — they owe us</option>
+            <option value="Cr">Cr — we owe them</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -775,7 +805,31 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
     (db?.vendors || []).filter((v) => Number(v.companyId) === Number(currentCompany?.id))
   );
 
-  const vendors = serverVendors.rows;
+  // Server rows mirror into the local collection; the picker lists ONLY local
+  // rows so every selection is a local numeric id (backendPartyId rides
+  // along). This is what makes Number(partyId) checks downstream valid again.
+  useEffect(() => {
+    if (serverVendors.source !== 'server' || typeof setDb !== 'function') return;
+    mirrorServerRows({
+      setDb,
+      collection: 'vendors',
+      backendKey: 'backendPartyId',
+      serverRows: serverVendors.rows,
+      companyId: currentCompany?.id,
+      mapRow: (srv) => ({
+        name: srv.name || '',
+        gstin: srv.gstin || '',
+        gstRegistration: srv.gstRegistration || 'Unregistered',
+        state: srv.state || srv.billingState || '',
+        email: srv.email || '',
+        mobile: srv.phone || srv.mobile || '',
+        paymentTermDays: srv.paymentTermDays ?? null,
+        createdAt: srv.createdAt || new Date().toISOString(),
+      }),
+    });
+  }, [serverVendors.source, serverVendors.rows, setDb, currentCompany?.id]);
+
+  const vendors = (db?.vendors || []).filter((c) => Number(c.companyId) === Number(currentCompany?.id));
 
   const findVendor = (id) =>
     vendors.find((v) => String(v.id) === String(id)) ||

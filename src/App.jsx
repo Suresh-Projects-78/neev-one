@@ -5028,6 +5028,7 @@ const SalesReports = ({ db, currentCompany }) => {
  * clickable cards, so they take the hover lift.
  */
 const REPORT_META = {
+  ledgerTrialBalance: { icon: BookOpen, desc: 'From posted journal entries — drill into any account\u2019s ledger.' },
   trialBalance: { icon: BookOpen, desc: 'Every account\u2019s closing balance. Must foot to zero.' },
   profitLoss: { icon: BarChart3, desc: 'What you earned and what it cost, over a period.' },
   balanceSheet: { icon: FileStack, desc: 'What the business owns and owes, at a date.' },
@@ -6007,6 +6008,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
     .sort((a, b) => Number(a.rate) - Number(b.rate));
 
   const [newRate, setNewRate] = useState('');
+  const [newRateName, setNewRateName] = useState('');
 
   const addRate = () => {
     const rate = Number(newRate);
@@ -6021,18 +6023,51 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
       return;
     }
 
+    const name = String(newRateName || '').trim() || `GST ${rate}%`;
+
     const nextId = Math.max(0, ...(db.gstRates || []).map((r) => Number(r.id) || 0)) + 1;
     const next = {
       id: nextId,
       companyId: currentCompany.id,
       rate,
+      name,
     };
+
+    // The named rate becomes a ledger of its own, so tax collected under it
+    // is visible in the chart of accounts, not just inside document totals.
+    const coa = Array.isArray(db.chartOfAccounts) ? db.chartOfAccounts : [];
+    const ledgerExists = coa.some(
+      (a) => a.companyId === currentCompany.id && String(a.name || '').trim().toLowerCase() === name.toLowerCase()
+    );
+    const nextCoaId = coa.reduce((m, a) => Math.max(m, Number(a.id) || 0), 0) + 1;
+    const dutiesGroup = (db.accountGroups || []).find(
+      (g) => g.companyId === currentCompany.id && /duties|taxes/i.test(String(g.name || ''))
+    );
+    const rateLedger = ledgerExists
+      ? null
+      : {
+          id: nextCoaId,
+          companyId: currentCompany.id,
+          code: `GST-${String(rate).replace('.', '_')}`,
+          name,
+          ledgerCategory: 'Tax',
+          groupId: dutiesGroup?.id ?? null,
+          type: 'Liability',
+          subType: 'Duties & Taxes',
+          main: 'Balance Sheet',
+          balance: 0,
+          gstRate: rate,
+          createdAt: new Date().toISOString(),
+        };
 
     setDb({
       ...db,
       gstRates: [...(db.gstRates || []), next],
+      ...(rateLedger ? { chartOfAccounts: [...coa, rateLedger] } : {}),
     });
     setNewRate('');
+    setNewRateName('');
+    notify.success(rateLedger ? `${name} added — ledger created under Duties & Taxes.` : `${name} added.`);
   };
 
   const deleteRate = (id) => {
@@ -6049,9 +6084,9 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-2">
-            <label className="block text-sm font-medium mb-1">Add GST Rate (%)</label>
+        <div className="grid grid-cols-4 gap-3">
+          <div>
+            <label className="block text-sm font-medium mb-1">Rate (%)</label>
             <input
               type="number"
               value={newRate}
@@ -6061,6 +6096,21 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
               max="100"
               step="0.01"
               placeholder="e.g. 18"
+            />
+            {Number(newRate) > 0 ? (
+              <div className="ui-caption mt-1">
+                Intra-state: CGST {Number(newRate) / 2}% + SGST {Number(newRate) / 2}% · Inter-state: IGST {Number(newRate)}%
+              </div>
+            ) : null}
+          </div>
+          <div className="col-span-2">
+            <label className="block text-sm font-medium mb-1">Name (becomes a ledger)</label>
+            <input
+              type="text"
+              value={newRateName}
+              onChange={(e) => setNewRateName(e.target.value)}
+              className="ui-input w-full px-3 py-2"
+              placeholder={Number(newRate) > 0 ? `GST ${Number(newRate)}%` : 'e.g. GST 18%'}
             />
           </div>
           <div className="flex items-end">
@@ -6200,7 +6250,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-1">
-            <label className="block text-xs font-medium mb-1">Apply To</label>
+            <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Apply To</label>
             <select
               value={scopeBranchId}
               onChange={(e) => setScopeBranchId(String(e.target.value || '').trim())}
@@ -6232,19 +6282,19 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
             const cfg = docSettings?.numbering?.[v.key];
             const isManual = String(cfg?.mode || '').toLowerCase() === 'manual';
             return (
-              <div key={v.key} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold">{v.label}</div>
-                  <div className="text-sm ui-muted">Preview: {formatVoucherNumberPreview(cfg)}</div>
+              <div key={v.key} className="border rounded-lg px-3 py-2 lg:flex lg:items-end lg:gap-3">
+                <div className="lg:w-44 flex items-baseline justify-between lg:block shrink-0 pb-1 lg:pb-0">
+                  <div className="font-semibold text-sm">{v.label}</div>
+                  <div className="ui-caption truncate" title={formatVoucherNumberPreview(cfg)}>{formatVoucherNumberPreview(cfg)}</div>
                 </div>
 
-                <div className="grid grid-cols-6 gap-3 mt-3">
+                <div className="grid grid-cols-6 gap-2 flex-1">
                   <div className="col-span-1">
-                    <label className="block text-xs font-medium mb-1">Mode</label>
+                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Mode</label>
                     <select
                       value={cfg?.mode || 'auto'}
                       onChange={(e) => updateNumberingSetting(v.key, { mode: e.target.value })}
-                      className="ui-select w-full px-2 py-2"
+                      className="ui-select w-full !h-8 !min-h-0 px-2 text-sm"
                     >
                       <option value="auto">Auto</option>
                       <option value="manual">Manual</option>
@@ -6252,27 +6302,27 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-xs font-medium mb-1">Prefix</label>
+                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
                     <input
                       type="text"
                       value={cfg?.prefix || ''}
                       onChange={(e) => updateNumberingSetting(v.key, { prefix: e.target.value })}
-                      className="ui-input w-full px-2 py-2"
+                      className="ui-input w-full !h-8 !min-h-0 px-2 text-sm"
                     />
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-xs font-medium mb-1">Suffix</label>
+                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Suffix</label>
                     <input
                       type="text"
                       value={cfg?.suffix || ''}
                       onChange={(e) => updateNumberingSetting(v.key, { suffix: e.target.value })}
-                      className="ui-input w-full px-2 py-2"
+                      className="ui-input w-full !h-8 !min-h-0 px-2 text-sm"
                     />
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-xs font-medium mb-1">Next No</label>
+                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Next No</label>
                     <input
                       type="number"
                       value={cfg?.nextNumber ?? 1}
@@ -7229,6 +7279,13 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
           return {
             ...c,
             name: legalName,
+            // Mirror the fields every GST document reads. The profile blob is
+            // the source of record for this page, but invoice/bill/note
+            // creation checks company.state and company.gstin at the root —
+            // saving here without mirroring left documents blocked on
+            // "Company state not set" forever.
+            state: stateName || c.state || '',
+            ...(payload.gstin !== undefined ? { gstin: String(payload.gstin || '').trim() } : {}),
             profile: {
               ...prevProfile,
               companySettings: payload,
@@ -9681,6 +9738,7 @@ const AppShell = () => {
           key: 'financials',
           title: 'Financials',
           items: [
+            { key: 'ledgerTrialBalance', label: 'Trial Balance (Ledger)' },
             { key: 'trialBalance', label: 'Trial Balance' },
             { key: 'profitLoss', label: 'P&L' },
             { key: 'balanceSheet', label: 'Balance Sheet' },
@@ -9809,7 +9867,6 @@ const AppShell = () => {
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tint: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
       { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, tint: 'approvals', feature: 'approvals' },
-      { type: 'item', key: 'ledgerTrialBalance', label: 'Trial Balance', icon: PhTrialBalance, ph: true, tint: 'tb', perm: 'ACCOUNTING::Ledger::VIEW' },
       { type: 'item', key: 'reports', label: 'Reports', icon: PhReports, ph: true, tint: 'reports', permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
       {
         type: 'group',
@@ -9819,15 +9876,15 @@ const AppShell = () => {
         ph: true,
         tint: 'master',
         items: [
-          { key: 'companies', label: 'Companies', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
+          { key: 'companies', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
           { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
+          { key: 'uoms', label: 'Units', icon: Boxes, perm: 'MASTERS::Items::VIEW' },
           { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
           { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
           { key: 'bankCash', label: 'Chart of Accounts', icon: Building2, perm: 'ACCOUNTING::Chart of Accounts::VIEW' },
           { key: 'gstRates', label: 'GST Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
           { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
           { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
-          { key: 'settingsNumbering', label: 'Numbering (series)', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
         ],
       },
       {

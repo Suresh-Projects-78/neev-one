@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, RefreshCw, X } from 'lucide-react';
+import { BookOpen, Download, Printer, RefreshCw, X } from 'lucide-react';
 
 import { getAccountLedgerLines, getTrialBalance } from '../../api/ledger';
 import { EmptyState, PageHeader, Spinner, TableSkeleton } from '../../components/ui/Primitives';
@@ -243,9 +243,61 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                         }${drill.truncated ? ' (first 1000 shown)' : ''}`}
                   </p>
                 </div>
-                <button type="button" onClick={() => setDrill(null)} className="ui-icon-btn" aria-label="Close account ledger">
-                  <X size={15} aria-hidden="true" />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  {drill.rows?.length ? (
+                    <>
+                      <button
+                        type="button"
+                        className="ui-btn ui-btn-secondary !h-8 text-xs"
+                        onClick={() => {
+                          const esc = (v) => {
+                            const t = String(v ?? '');
+                            return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+                          };
+                          const head = ['Date', 'Entry', 'Narration', 'Debit', 'Credit', 'Running'];
+                          const lines = drill.rows.map((l) =>
+                            [l.date, l.entryNo, l.narration || '', l.debit || '', l.credit || '', l.running].map(esc).join(',')
+                          );
+                          const csv = '\ufeff' + [head.join(','), ...lines].join('\r\n');
+                          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${drill.account?.code || 'ledger'}-${drill.account?.name || ''}.csv`.replace(/\s+/g, '-');
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          URL.revokeObjectURL(url);
+                        }}
+                      >
+                        <Download size={13} aria-hidden="true" /> CSV
+                      </button>
+                      <button
+                        type="button"
+                        className="ui-btn ui-btn-secondary !h-8 text-xs"
+                        onClick={() => {
+                          // Separate sheet: the same rows in a print-ready window.
+                          const w = window.open('', '_blank');
+                          if (!w) return;
+                          const safe = (x) => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+                          w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safe(drill.account?.name)}</title>
+<style>body{font-family:Arial;margin:24px;color:#111}h1{font-size:16px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #ddd;padding:5px;text-align:left}.r{text-align:right}th{background:#f5f6f8}</style>
+</head><body><h1>${safe(drill.account?.code)} · ${safe(drill.account?.name)}</h1><table><thead><tr><th>Date</th><th>Entry</th><th>Narration</th><th class="r">Debit</th><th class="r">Credit</th><th class="r">Running</th></tr></thead><tbody>
+${drill.rows.map((l) => `<tr><td>${safe(l.date)}</td><td>${safe(l.entryNo)}</td><td>${safe(l.narration)}</td><td class="r">${l.debit || ''}</td><td class="r">${l.credit || ''}</td><td class="r">${l.running}</td></tr>`).join('')}
+</tbody></table></body></html>`);
+                          w.document.close();
+                          w.focus();
+                          w.print();
+                        }}
+                      >
+                        <Printer size={13} aria-hidden="true" /> Sheet
+                      </button>
+                    </>
+                  ) : null}
+                  <button type="button" onClick={() => setDrill(null)} className="ui-icon-btn" aria-label="Close account ledger">
+                    <X size={15} aria-hidden="true" />
+                  </button>
+                </div>
               </header>
 
               {drill.rows?.length ? (

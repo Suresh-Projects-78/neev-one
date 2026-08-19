@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Building2, ChevronRight, CornerDownRight, Pencil, Plus } from 'lucide-react';
+import { Building2, ChevronRight, CornerDownRight, Pencil } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
@@ -87,11 +87,6 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
       cur = byId.get(cur)?.parentCompanyId;
     }
     return false;
-  };
-
-  const openCreate = (parentCompanyId = '') => {
-    setEditing({ parentCompanyId });
-    setForm({ name: '', gstin: '', state: '', parentCompanyId: parentCompanyId || '' });
   };
 
   const openEdit = (c) => {
@@ -221,9 +216,6 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
                 Set active <ChevronRight size={13} aria-hidden="true" />
               </button>
             ) : null}
-            <button type="button" onClick={() => openCreate(String(c.id))} className="ui-btn ui-btn-ghost !h-8 text-xs">
-              <Plus size={13} aria-hidden="true" /> Child
-            </button>
             <button type="button" onClick={() => openEdit(c)} className="ui-icon-btn !h-8 !w-8" aria-label={`Edit ${c.name}`}>
               <Pencil size={14} aria-hidden="true" />
             </button>
@@ -239,13 +231,8 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Companies"
-        description="The group at a glance — switch the active company, add subsidiaries, see who owes what."
-        actions={
-          <button type="button" onClick={() => openCreate('')} className="ui-btn ui-btn-primary">
-            <Plus size={15} aria-hidden="true" /> New company
-          </button>
-        }
+        title="Company Profile"
+        description="The group at a glance — switch the active company and see who owes what."
       />
 
       {editing ? (

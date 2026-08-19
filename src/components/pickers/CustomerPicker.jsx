@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createCustomer, listCustomers } from '../../api/masters';
-import { useServerMasters } from '../../hooks/useServerMasters';
+import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
@@ -74,6 +74,8 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     return {
       displayName: '',
       groupId: sundryDebtorsGroup?.id ? String(sundryDebtorsGroup.id) : '',
+      openingBalance: isEdit ? Number(initialData?.openingBalance ?? 0) : 0,
+      openingBalanceType: isEdit ? (initialData?.openingBalanceType || 'Dr') : 'Dr',
       contactPerson: '',
       mobile: '',
       email: '',
@@ -459,6 +461,8 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       subType: String(typeRow?.name || ''),
       main: String(typeRow?.main || 'Balance Sheet'),
       balance: 0,
+      openingBalance: Math.round((Number(formData.openingBalance) || 0) * 100) / 100,
+      openingBalanceType: formData.openingBalanceType || 'Dr',
       createdAt: new Date().toISOString(),
     };
 
@@ -505,6 +509,32 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             setGroupCreateOpen(true);
           }}
         />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium mb-1">Opening Balance</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={formData.openingBalance}
+            onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
+            className="ui-input w-full px-3 py-2"
+            placeholder="0.00"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Dr / Cr</label>
+          <select
+            value={formData.openingBalanceType}
+            onChange={(e) => setFormData((p) => ({ ...p, openingBalanceType: e.target.value }))}
+            className="ui-select w-full px-3 py-2"
+          >
+            <option value="Dr">Dr — they owe us</option>
+            <option value="Cr">Cr — we owe them</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -885,7 +915,31 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
     (db?.customers || []).filter((c) => Number(c.companyId) === Number(currentCompany?.id))
   );
 
-  const customers = serverCustomers.rows;
+  // Server rows mirror into the local collection; the picker lists ONLY local
+  // rows so every selection is a local numeric id (backendPartyId rides
+  // along). This is what makes Number(partyId) checks downstream valid again.
+  useEffect(() => {
+    if (serverCustomers.source !== 'server' || typeof setDb !== 'function') return;
+    mirrorServerRows({
+      setDb,
+      collection: 'customers',
+      backendKey: 'backendPartyId',
+      serverRows: serverCustomers.rows,
+      companyId: currentCompany?.id,
+      mapRow: (srv) => ({
+        name: srv.name || '',
+        gstin: srv.gstin || '',
+        gstRegistration: srv.gstRegistration || 'Unregistered',
+        state: srv.state || srv.billingState || '',
+        email: srv.email || '',
+        mobile: srv.phone || srv.mobile || '',
+        paymentTermDays: srv.paymentTermDays ?? null,
+        createdAt: srv.createdAt || new Date().toISOString(),
+      }),
+    });
+  }, [serverCustomers.source, serverCustomers.rows, setDb, currentCompany?.id]);
+
+  const customers = (db?.customers || []).filter((c) => Number(c.companyId) === Number(currentCompany?.id));
 
   // Server ids are strings; documents written before the migration hold numbers.
   const findCustomer = (id) =>

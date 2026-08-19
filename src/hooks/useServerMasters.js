@@ -47,3 +47,54 @@ export const useServerMasters = (loader, localRows, { enabled = true } = {}) => 
 };
 
 export default useServerMasters;
+
+/**
+ * Mirror server master rows into the local collection so pickers can speak a
+ * single id space (local numeric ids), with backend ids carried alongside.
+ *
+ * Why: pickers used to swap wholesale to server rows on load. Server ids are
+ * cuids; every `Number(id)`/`parseInt(id)` check downstream then failed —
+ * "Party (Customer) is required" with a customer visibly selected, item lines
+ * resolving the wrong SKU, and locally created ("dummy") masters vanishing
+ * from lists the moment the server answered. One id space ends the class.
+ *
+ * Match order: backend id first, then case-insensitive name — a local row
+ * created before write-through adopts its server twin instead of duplicating.
+ */
+export const mirrorServerRows = ({ setDb, collection, backendKey, serverRows, companyId, mapRow }) => {
+  if (!Array.isArray(serverRows) || !serverRows.length) return;
+  setDb((prev) => {
+    const locals = Array.isArray(prev[collection]) ? prev[collection] : [];
+    const byBackend = new Map(locals.map((r) => [String(r?.[backendKey] || ''), r]));
+    const byName = new Map(
+      locals
+        .filter((r) => Number(r?.companyId) === Number(companyId))
+        .map((r) => [String(r?.name || r?.companyName || '').trim().toLowerCase(), r])
+    );
+    let nextId = locals.reduce((m, r) => Math.max(m, Number(r?.id) || 0), 0);
+    const additions = [];
+    const adoptions = new Map(); // localId -> backendId
+
+    for (const srv of serverRows) {
+      const sid = String(srv?.id || '');
+      if (!sid || byBackend.has(sid)) continue;
+      const nameKey = String(srv?.name || '').trim().toLowerCase();
+      const twin = nameKey ? byName.get(nameKey) : null;
+      if (twin && !twin[backendKey]) {
+        adoptions.set(twin.id, sid);
+        continue;
+      }
+      if (twin) continue; // same name already linked to another server row
+      additions.push({ id: ++nextId, companyId, [backendKey]: sid, ...mapRow(srv) });
+    }
+
+    if (!additions.length && !adoptions.size) return prev;
+    return {
+      ...prev,
+      [collection]: [
+        ...locals.map((r) => (adoptions.has(r.id) ? { ...r, [backendKey]: adoptions.get(r.id) } : r)),
+        ...additions,
+      ],
+    };
+  });
+};

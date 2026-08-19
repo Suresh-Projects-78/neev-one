@@ -400,9 +400,9 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
 
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-medium">Period:</div>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="ui-input px-3 py-2" />
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm" />
           <span className="ui-subtle">to</span>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="ui-input px-3 py-2" />
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm" />
           <button
             type="button"
             onClick={() => {

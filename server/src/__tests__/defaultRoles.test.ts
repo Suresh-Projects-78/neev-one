@@ -133,3 +133,14 @@ describe('enforcement', () => {
     await request(app).get(`/api/orgs/${owner.orgId}/roles`).set(auth(salesCtx)).expect(403);
   });
 });
+
+describe('role creation payload shapes', () => {
+  it('accepts the catalog string form the UI sends', async () => {
+    const res = await request(app)
+      .post(`/api/orgs/${owner.orgId}/roles`)
+      .set(auth(owner))
+      .send({ name: 'String Perms Role', roleType: 'CUSTOM', permissions: ['SALES::Invoices::VIEW', 'SALES::Invoices::CREATE'] })
+      .expect(201);
+    expect(res.body.role.permissions.length).toBe(2);
+  });
+});

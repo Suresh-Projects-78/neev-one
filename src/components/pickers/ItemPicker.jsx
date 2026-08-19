@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createItem, listItems } from '../../api/masters';
-import { useServerMasters } from '../../hooks/useServerMasters';
+import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 
 const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item', autoFocus = false }) => {
   const serverItems = useServerMasters(
@@ -10,7 +10,31 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
     (db?.items || []).filter((i) => Number(i.companyId) === Number(currentCompany?.id))
   );
 
-  const items = serverItems.rows;
+  // Server rows feed the local collection; the picker itself lists ONLY local
+  // rows, so every selection is a local numeric id (backendItemId rides along).
+  useEffect(() => {
+    if (serverItems.source !== 'server' || typeof setDb !== 'function') return;
+    mirrorServerRows({
+      setDb,
+      collection: 'items',
+      backendKey: 'backendItemId',
+      serverRows: serverItems.rows,
+      companyId: currentCompany?.id,
+      mapRow: (srv) => ({
+        name: srv.name || '',
+        code: srv.code || '',
+        unit: srv.unit || 'Pcs',
+        hsnSac: srv.hsnSac || '',
+        gstRate: Number(srv.gstRate ?? 0),
+        salePrice: Number(srv.salePrice ?? srv.rate ?? 0),
+        purchasePrice: Number(srv.purchasePrice ?? 0),
+        trackBy: srv.trackBy || 'NONE',
+        createdAt: srv.createdAt || new Date().toISOString(),
+      }),
+    });
+  }, [serverItems.source, serverItems.rows, setDb, currentCompany?.id]);
+
+  const items = (db?.items || []).filter((i) => Number(i.companyId) === Number(currentCompany?.id));
   const triggerRef = useRef(null);
   const [showItemPopup, setShowItemPopup] = useState(false);
 
@@ -20,6 +44,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
     if (autoFocus) triggerRef.current?.focus();
   }, [autoFocus]);
   const [itemSearch, setItemSearch] = useState('');
+  const [newUnitDraft, setNewUnitDraft] = useState(null); // null = closed, '' = typing
   const [mode, setMode] = useState('select');
   const canCreate = typeof setDb === 'function';
 
@@ -69,6 +94,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
     name: '',
     type: 'Goods',
     unit: 'Pcs',
+    description: '',
     hsnSac: '',
     gstRate: 0,
     salePrice: 0,
@@ -81,6 +107,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
       name: '',
       type: 'Goods',
       unit: 'Pcs',
+      description: '',
       hsnSac: '',
       gstRate: 0,
       salePrice: 0,
@@ -206,13 +233,24 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       itemType: String(newItem.type || 'Goods') === 'Service' ? 'SERVICE' : 'STOCK',
                       unit: String(newItem.unit || 'Pcs'),
                       hsnSac: String(newItem.hsnSac || '') || undefined,
+                      description: String(newItem.description || '') || undefined,
                       gstRate: parseFloat(newItem.gstRate) || 0,
                       salePrice: parseFloat(newItem.salePrice) || 0,
                       purchasePrice: parseFloat(newItem.purchasePrice) || 0,
                     });
                     await serverItems.reload();
+                    // Link the local record to its server twin so the mirror
+                    // never duplicates it, then hand back the LOCAL id.
                     const serverItem = saved?.item;
-                    onChange(String(serverItem?.id || nextId), serverItem || created);
+                    if (serverItem?.id && typeof setDb === 'function') {
+                      setDb((prev) => ({
+                        ...prev,
+                        items: (prev.items || []).map((it) =>
+                          it.id === nextId ? { ...it, backendItemId: String(serverItem.id) } : it
+                        ),
+                      }));
+                    }
+                    onChange(String(nextId), created);
                   } catch {
                     onChange(String(nextId), created);
                   }
@@ -242,6 +280,16 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       autoFocus
                     />
                   </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <textarea
+                      value={newItem.description || ''}
+                      onChange={(e) => setNewItem((p) => ({ ...p, description: e.target.value }))}
+                      rows={2}
+                      className="ui-input w-full px-3 py-2"
+                      placeholder="What this item is — copied onto document lines"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Type</label>
                     <select
@@ -257,7 +305,13 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     <label className="block text-sm font-medium mb-1">Unit</label>
                     <select
                       value={String(newItem.unit ?? '').trim()}
-                      onChange={(e) => setNewItem((p) => ({ ...p, unit: e.target.value }))}
+                      onChange={(e) => {
+                        if (e.target.value === '__new__') {
+                          setNewUnitDraft('');
+                          return;
+                        }
+                        setNewItem((p) => ({ ...p, unit: e.target.value }));
+                      }}
                       className="ui-select w-full px-3 py-2"
                     >
                       {String(newItem.unit ?? '').trim() && !uomNames.includes(String(newItem.unit ?? '').trim()) ? (
@@ -269,7 +323,41 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                           {u.name}
                         </option>
                       ))}
+                      {canCreate ? <option value="__new__">+ New unit…</option> : null}
                     </select>
+                    {newUnitDraft !== null ? (
+                      <div className="mt-2 flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={newUnitDraft}
+                          onChange={(e) => setNewUnitDraft(e.target.value)}
+                          placeholder="e.g. Box, Kg, Hour"
+                          className="ui-input flex-1 !h-8 !min-h-0 text-sm"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          className="ui-btn ui-btn-primary !h-8 text-xs"
+                          onClick={() => {
+                            const name = String(newUnitDraft || '').trim();
+                            if (!name) return;
+                            setDb((prev) => {
+                              const prevUoms = Array.isArray(prev.uoms) ? prev.uoms : [];
+                              if (prevUoms.some((u) => u.companyId === currentCompany.id && String(u.name).toLowerCase() === name.toLowerCase())) return prev;
+                              const nextUomId = prevUoms.reduce((mx, u) => Math.max(mx, Number(u.id) || 0), 0) + 1;
+                              return { ...prev, uoms: [...prevUoms, { id: nextUomId, companyId: currentCompany.id, name }] };
+                            });
+                            setNewItem((p) => ({ ...p, unit: name }));
+                            setNewUnitDraft(null);
+                          }}
+                        >
+                          Add
+                        </button>
+                        <button type="button" className="ui-btn ui-btn-ghost !h-8 text-xs" onClick={() => setNewUnitDraft(null)}>
+                          Cancel
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">HSN/SAC</label>

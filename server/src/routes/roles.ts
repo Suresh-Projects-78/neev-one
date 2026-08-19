@@ -10,12 +10,35 @@ import { ensureDefaultRoles } from '../services/defaultRoles.js';
 export const rolesRouter = Router();
 rolesRouter.use(requireAuth, requireTenantContext);
 
-const permissionInput = z.object({
+const permissionObject = z.object({
   module: z.string().min(1),
   subModule: z.string().optional().nullable(),
   action: z.enum(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'APPROVE', 'EXPORT']),
   allowed: z.boolean().default(true),
 });
+
+/**
+ * Accept both shapes: the object form above, and the catalog's string keys
+ * ("MODULE::Resource::ACTION") that the Role form and the Role Permission
+ * matrix hold natively. The UI sent strings and this schema rejected every
+ * create with "Expected object, received string" — no custom role could be
+ * made at all.
+ */
+const permissionInput = z.union([
+  permissionObject,
+  z
+    .string()
+    .regex(/^[^:]+::[^:]+::(VIEW|CREATE|EDIT|DELETE|APPROVE|EXPORT)$/)
+    .transform((key) => {
+      const [module, subModule, action] = key.split('::');
+      return {
+        module,
+        subModule: subModule === '*' ? null : subModule,
+        action: action as 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' | 'APPROVE' | 'EXPORT',
+        allowed: true,
+      };
+    }),
+]);
 
 const roleSchema = z.object({
   name: z.string().min(1).max(80),

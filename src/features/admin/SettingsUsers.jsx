@@ -1,8 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
-import { confirmDialog } from '../../components/ui/notify';
-import {
-  listUsers,
+import { confirmDialog, notify } from '../../components/ui/notify';
+import { listUsers,
   listRoles,
   createUser,
   deleteUser,
@@ -12,8 +11,7 @@ import {
   changeUserPassword,
   listBranches,
   assignUserBranches,
-  getUserBranches,
-} from '../../api/admin';
+  getUserBranches, createRole } from '../../api/admin';
 import Modal from '../../components/ui/Modal';
 
 const normalizeId = (v) => String(v ?? '').trim();
@@ -29,6 +27,7 @@ const getBranchLabel = (b) => {
 export function SettingsUsers({ orgId }) {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [newRoleDraft, setNewRoleDraft] = useState(null); // null closed, string = name being typed
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -430,14 +429,64 @@ export function SettingsUsers({ orgId }) {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Role</label>
-                <select className="ui-select w-full px-3 py-2 ui-surface" value={form.roleId} onChange={onChange('roleId')}>
+                <select
+                  className="ui-select w-full px-3 py-2 ui-surface"
+                  value={form.roleId}
+                  onChange={(e) => {
+                    if (e.target.value === '__new__') {
+                      setNewRoleDraft('');
+                      return;
+                    }
+                    onChange('roleId')(e);
+                  }}
+                >
                   <option value="">— No role —</option>
                   {assignableRoles.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
                     </option>
                   ))}
+                  <option value="__new__">+ Create new role…</option>
                 </select>
+                {newRoleDraft !== null ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newRoleDraft}
+                      onChange={(e) => setNewRoleDraft(e.target.value)}
+                      placeholder="Role name, e.g. Billing Clerk"
+                      className="ui-input flex-1 !h-8 !min-h-0 text-sm"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="ui-btn ui-btn-primary !h-8 text-xs"
+                      onClick={async () => {
+                        const name = String(newRoleDraft || '').trim();
+                        if (!name) return;
+                        try {
+                          // Created empty on purpose: grants are edited in the
+                          // Role Permissions matrix, not guessed here.
+                          const res = await createRole(orgId, { name, roleType: 'CUSTOM', permissions: [] });
+                          const role = res?.role;
+                          if (role) {
+                            setRoles((prev) => [...prev, role]);
+                            setForm((p) => ({ ...p, roleId: role.id }));
+                            notify.success(`${name} created — set its permissions in Role Permissions.`);
+                          }
+                          setNewRoleDraft(null);
+                        } catch (err) {
+                          notify.error(String(err?.message || 'Unable to create the role.'));
+                        }
+                      }}
+                    >
+                      Create
+                    </button>
+                    <button type="button" className="ui-btn ui-btn-ghost !h-8 text-xs" onClick={() => setNewRoleDraft(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </div>
 
