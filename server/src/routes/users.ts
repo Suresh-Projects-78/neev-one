@@ -253,6 +253,27 @@ usersRouter.post('/users', requirePermission('SETTINGS', PermissionAction.CREATE
 
   // memberships
   const orgIds = body.orgIds.length ? Array.from(new Set(body.orgIds)) : [req.tenant!.orgId];
+
+  // C-8: body-supplied org/branch ids must belong to the caller's account —
+  // otherwise this is an unvalidated cross-account foreign key.
+  const ownedOrgs = await prisma.org.findMany({ where: { accountId, id: { in: orgIds } }, select: { id: true } });
+  const ownedOrgIds = new Set(ownedOrgs.map((o) => o.id));
+  for (const orgId of orgIds) {
+    if (!ownedOrgIds.has(orgId)) {
+      return res.status(400).json({ error: `Org ${orgId} does not belong to this account` });
+    }
+    const requestedBranches = Array.from(new Set(body.branchIdsByOrg[orgId] || []));
+    if (requestedBranches.length) {
+      const ownedBranches = await prisma.branch.findMany({
+        where: { accountId, orgId, id: { in: requestedBranches } },
+        select: { id: true },
+      });
+      if (ownedBranches.length !== requestedBranches.length) {
+        return res.status(400).json({ error: `One or more branches do not belong to org ${orgId}` });
+      }
+    }
+  }
+
   for (const orgId of orgIds) {
     await prisma.userOrgMembership.upsert({
       where: { accountId_orgId_userId: { accountId, orgId, userId: user.id } },

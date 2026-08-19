@@ -55,6 +55,12 @@ export default defineConfig([
       // props or a config object reads as unused. The vars pattern already
       // covered imports; args covers `({ icon: Icon }) => <Icon />`.
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^[A-Z_]' }],
+      // Advisory, not defects: "preserve-manual-memoization" means the React
+      // compiler skips optimizing that component (it still renders correctly),
+      // and the fast-refresh rule only degrades HMR granularity in dev. Both
+      // were failing `npm run verify` and burying real errors.
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-refresh/only-export-components': 'warn',
     },
   },
 ])

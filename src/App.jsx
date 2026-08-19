@@ -9353,7 +9353,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
               notify.error('Set the company GSTIN in Company Profile before exporting a return.');
               return;
             }
-            const json = buildGstr1Json({ invoices, creditNotes, company: currentCompany, period });
+            const json = buildGstr1Json({ invoices, creditNotes, items: db.items || [], company: currentCompany, period });
             downloadJson(`GSTR1_${currentCompany.gstin}_${period}.json`, json);
             notify.success(`GSTR-1 JSON for ${period} downloaded.`);
           }}

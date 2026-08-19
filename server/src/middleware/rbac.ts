@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { PermissionAction, type PermissionAction as PermissionActionType } from '../constants/enums.js';
+import { type PermissionAction as PermissionActionType } from '../constants/enums.js';
+import { flattenCatalog } from '../constants/permissionCatalog.js';
 import { prisma } from '../utils/prisma.js';
 import { resolveAccess } from '../services/access.js';
 
@@ -98,32 +99,12 @@ async function bootstrapOwnerRoleIfCreator(accountId: string, orgId: string, use
       select: { id: true },
     }));
 
-  // Ensure at least the requested module/subModule/action exists for this org.
-  // (Other permissions may be added later via settings.)
-  // Note: Permission table is global (not org-scoped).
-  // We do not know the requested permission here, so we seed a small core set.
-  const core: Array<{ module: string; subModule: string; action: string }> = [
-    { module: 'MASTERS', subModule: 'Company/Branch setup', action: PermissionAction.VIEW },
-    { module: 'MASTERS', subModule: 'Company/Branch setup', action: PermissionAction.CREATE },
-    { module: 'MASTERS', subModule: 'Company/Branch setup', action: PermissionAction.EDIT },
-    { module: 'MASTERS', subModule: 'Company/Branch setup', action: PermissionAction.DELETE },
-    { module: 'SETTINGS', subModule: 'Users', action: PermissionAction.VIEW },
-    { module: 'SETTINGS', subModule: 'Users', action: PermissionAction.CREATE },
-    { module: 'SETTINGS', subModule: 'Users', action: PermissionAction.EDIT },
-    { module: 'SETTINGS', subModule: 'Users', action: PermissionAction.DELETE },
-    { module: 'SETTINGS', subModule: 'Roles', action: PermissionAction.VIEW },
-    { module: 'SETTINGS', subModule: 'Roles', action: PermissionAction.CREATE },
-    { module: 'SETTINGS', subModule: 'Roles', action: PermissionAction.EDIT },
-    { module: 'SETTINGS', subModule: 'Roles', action: PermissionAction.DELETE },
-    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.VIEW },
-    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.CREATE },
-    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.EDIT },
-    { module: 'SALES', subModule: 'Invoices', action: PermissionAction.DELETE },
-    { module: 'ACCOUNTING', subModule: 'Ledger', action: PermissionAction.VIEW },
-    { module: 'ACCOUNTING', subModule: 'Ledger', action: PermissionAction.CREATE },
-    { module: 'ACCOUNTING', subModule: 'Ledger', action: PermissionAction.EDIT },
-    { module: 'ACCOUNTING', subModule: 'Ledger', action: PermissionAction.APPROVE },
-  ];
+  // C-4: seed the FULL catalog, not a partial core set. The old partial seed
+  // meant the Owner's effective grants depended on which endpoints they
+  // happened to hit first (the lazy ensureOwnerPermissionForCreator patched
+  // holes one request at a time). Seeding everything up front makes the
+  // Owner's access deterministic; the lazy fallback stays for legacy orgs.
+  const core: Array<{ module: string; subModule: string; action: string }> = flattenCatalog();
 
   const permissionIds: string[] = [];
   for (const p of core) {

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Install server deps
+        run: npm ci
+        working-directory: server
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: server
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck server
+        run: npm run typecheck
+
+      - name: Server tests
+        run: npm test
+        working-directory: server
+        env:
+          JWT_SECRET: ci-test-secret
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build server
+        run: npm run build
+        working-directory: server

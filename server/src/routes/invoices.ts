@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma.js';
@@ -55,6 +55,7 @@ const invoiceUpsertSchema = z.object({
   customerGstin: z.string().optional().nullable(),
   placeOfSupplyState: z.string().optional().nullable(),
   taxType: z.string().optional().nullable(),
+  reverseCharge: z.boolean().optional(),
   subtotal: z.number().optional(),
   cgstTotal: z.number().optional(),
   sgstTotal: z.number().optional(),
@@ -102,6 +103,7 @@ const normalizeInvoiceResponse = (row: any) => {
     customerGstin: row.customerGstin || '',
     placeOfSupplyState: row.placeOfSupplyState || '',
     taxType: row.taxType || '',
+    reverseCharge: !!row.reverseCharge,
     subtotal: toNumber(row.subtotal),
     cgstTotal: toNumber(row.cgstTotal),
     sgstTotal: toNumber(row.sgstTotal),
@@ -117,20 +119,74 @@ const normalizeInvoiceResponse = (row: any) => {
   };
 };
 
+// Financial fields whose changes are recorded field-by-field in AuditLog.
+const AUDITED_FIELDS = [
+  'number', 'date', 'dueDate', 'customerId', 'customerName', 'customerGstin',
+  'placeOfSupplyState', 'taxType', 'reverseCharge', 'subtotal', 'cgstTotal',
+  'sgstTotal', 'igstTotal', 'gstTotal', 'total', 'paidAmount', 'status',
+  'warehouseId', 'itemsJson',
+] as const;
+
+/** Write a per-field diff of an invoice mutation. Never fails the request. */
+async function auditInvoiceChange(
+  req: Request,
+  action: 'UPDATE' | 'STATUS' | 'DELETE',
+  before: any,
+  after: any | null,
+) {
+  try {
+    const changes: Record<string, { from: unknown; to: unknown }> = {};
+    if (after) {
+      for (const f of AUDITED_FIELDS) {
+        const a = before?.[f];
+        const b = after?.[f];
+        // Decimal columns come back as objects/strings; compare numerically
+        // when both sides are numeric, as strings otherwise.
+        const bothNumeric =
+          a !== null && a !== undefined && a !== '' && !isNaN(Number(a)) &&
+          b !== null && b !== undefined && b !== '' && !isNaN(Number(b));
+        const same = bothNumeric ? toNumber(a) === toNumber(b) : String(a ?? '') === String(b ?? '');
+        if (!same) changes[f] = { from: a ?? null, to: b ?? null };
+      }
+      if (!Object.keys(changes).length) return;
+    }
+    await prisma.auditLog.create({
+      data: {
+        accountId: req.tenant!.accountId,
+        orgId: req.tenant!.orgId,
+        branchId: req.tenant!.branchId,
+        entity: 'INVOICE',
+        entityId: String(before?.id || ''),
+        action,
+        message:
+          action === 'DELETE'
+            ? `Invoice ${before?.number || ''} deleted (total ${toNumber(before?.total)})`
+            : `Invoice ${before?.number || ''} ${action === 'STATUS' ? 'status changed' : 'edited'}`,
+        metadata: JSON.stringify(after ? { changes } : { number: before?.number, total: toNumber(before?.total) }),
+        createdByUserId: req.auth!.userId,
+      },
+    });
+  } catch {
+    // Audit is best-effort; the financial write itself already succeeded.
+  }
+}
+
 invoicesRouter.get('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, PermissionAction.VIEW, INVOICE_SUBMODULE), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
   const branchId = req.tenant!.branchId;
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
-  const rows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT * FROM Invoice
-     WHERE accountId = ? AND orgId = ? AND branchId = ?
-     ORDER BY date DESC, createdAt DESC`,
-    accountId,
-    orgId,
-    branchId
-  );
+  // Typed + bounded: ?limit (default 500, max 1000) and ?offset page through
+  // large books instead of returning every row ever written (S-3/C-9).
+  const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 500));
+  const offset = Math.max(0, Number(req.query.offset) || 0);
+  const rows = await prisma.invoice.findMany({
+    where: { accountId, orgId, branchId },
+    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+    take: limit,
+    skip: offset,
+  });
 
   res.json({ invoices: rows.map((r: any) => normalizeInvoiceResponse(r)) });
 });
@@ -202,10 +258,10 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
     await prisma.$executeRawUnsafe(
       `INSERT INTO Invoice (
         id, accountId, orgId, branchId, warehouseId, number, date, dueDate, refNo, refDate,
-        customerId, customerName, customerGstin, placeOfSupplyState, taxType,
+        customerId, customerName, customerGstin, placeOfSupplyState, taxType, reverseCharge,
         subtotal, cgstTotal, sgstTotal, igstTotal, gstTotal, total, paidAmount,
         status, sourceEstimateId, itemsJson, createdByUserId, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       id,
       accountId,
       orgId,
@@ -221,6 +277,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       String(body.customerGstin || '').trim() || null,
       String(body.placeOfSupplyState || '').trim() || null,
       String(body.taxType || '').trim() || null,
+      body.reverseCharge ? 1 : 0,
       body.subtotal ?? 0,
       body.cgstTotal ?? 0,
       body.sgstTotal ?? 0,
@@ -354,7 +411,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
       `UPDATE Invoice SET
         warehouseId = ?, number = ?, date = ?, dueDate = ?, refNo = ?, refDate = ?,
         customerId = ?, customerName = ?, customerGstin = ?, placeOfSupplyState = ?, taxType = ?,
-        subtotal = ?, cgstTotal = ?, sgstTotal = ?, igstTotal = ?, gstTotal = ?, total = ?,
+        reverseCharge = ?, subtotal = ?, cgstTotal = ?, sgstTotal = ?, igstTotal = ?, gstTotal = ?, total = ?,
         paidAmount = ?, status = ?, sourceEstimateId = ?, itemsJson = ?, updatedAt = CURRENT_TIMESTAMP
        WHERE id = ?`,
       String(body.warehouseId || '').trim() || null,
@@ -368,6 +425,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
       String(body.customerGstin || '').trim() || null,
       String(body.placeOfSupplyState || '').trim() || null,
       String(body.taxType || '').trim() || null,
+      body.reverseCharge ?? existing.reverseCharge ? 1 : 0,
       body.subtotal ?? 0,
       body.cgstTotal ?? 0,
       body.sgstTotal ?? 0,
@@ -391,6 +449,8 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, existing.id);
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to update invoice' });
+
+  await auditInvoiceChange(req, 'UPDATE', existing, row);
 
   res.json({ invoice: normalizeInvoiceResponse(row), strippedFields: stripped });
 });
@@ -423,6 +483,8 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to update invoice status' });
 
+  await auditInvoiceChange(req, 'STATUS', existing, row);
+
   res.json({ invoice: normalizeInvoiceResponse(row) });
 });
 
@@ -433,7 +495,7 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
   const existingRows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT id FROM Invoice WHERE id = ? AND accountId = ? AND orgId = ? AND branchId = ?`,
+    `SELECT id, number, total FROM Invoice WHERE id = ? AND accountId = ? AND orgId = ? AND branchId = ?`,
     invoiceId,
     accountId,
     orgId,
@@ -466,5 +528,6 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
   }
 
   await prisma.$executeRawUnsafe(`DELETE FROM Invoice WHERE id = ?`, existing.id);
+  await auditInvoiceChange(req, 'DELETE', existing, null);
   res.json({ ok: true, reversedEntries: posted.length });
 });

@@ -46,7 +46,6 @@ export const initDB = () => {
       {
         id: 1,
         username: 'admin',
-        password: 'admin123',
         role: 'admin',
         companyId: 1,
         email: 'admin@demo.com',

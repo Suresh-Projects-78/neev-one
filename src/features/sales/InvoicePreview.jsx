@@ -21,14 +21,21 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
   // Signed e-invoice QR, rendered from the JWT the IRP returned.
   const [irnQrDataUrl, setIrnQrDataUrl] = useState('');
   useEffect(() => {
+    let cancelled = false;
+    const apply = (v) => {
+      if (!cancelled) setIrnQrDataUrl(v);
+    };
     const src = invoice?.irnSignedQr;
     if (!src) {
-      setIrnQrDataUrl('');
-      return;
+      Promise.resolve().then(() => apply(''));
+    } else {
+      QRCode.toDataURL(String(src), { margin: 1, width: 192 })
+        .then(apply)
+        .catch(() => apply(''));
     }
-    QRCode.toDataURL(String(src), { margin: 1, width: 192 })
-      .then(setIrnQrDataUrl)
-      .catch(() => setIrnQrDataUrl(''));
+    return () => {
+      cancelled = true;
+    };
   }, [invoice?.irnSignedQr]);
   const templateId = String(docSettings?.templates?.invoice?.templateId || 'classic');
   const accentId = String(docSettings?.templates?.invoice?.accentId || 'blue');

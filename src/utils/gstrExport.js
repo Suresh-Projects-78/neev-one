@@ -58,7 +58,55 @@ const taxSplit = (doc, rate, taxable) => {
     : { iamt: 0, camt: r2(tax / 2), samt: r2(tax / 2) };
 };
 
+/** Portal UQC codes for common item units; anything unknown files as OTH. */
+const UQC_MAP = {
+  pcs: 'PCS', pc: 'PCS', piece: 'PCS', pieces: 'PCS', nos: 'NOS', no: 'NOS', number: 'NOS', numbers: 'NOS',
+  kg: 'KGS', kgs: 'KGS', kilogram: 'KGS', g: 'GMS', gm: 'GMS', gms: 'GMS', gram: 'GMS',
+  l: 'LTR', ltr: 'LTR', litre: 'LTR', liter: 'LTR', ml: 'MLT',
+  m: 'MTR', mtr: 'MTR', meter: 'MTR', metre: 'MTR', cm: 'CMS', ft: 'FTS', sqft: 'SQF', sqm: 'SQM',
+  box: 'BOX', set: 'SET', sets: 'SET', pack: 'PAC', pkt: 'PAC', dozen: 'DOZ', doz: 'DOZ',
+  pair: 'PRS', pairs: 'PRS', roll: 'ROL', bag: 'BAG', btl: 'BTL', bottle: 'BTL', can: 'CAN',
+  ton: 'TON', tonne: 'TON', qtl: 'QTL', bundle: 'BDL', bdl: 'BDL', unit: 'UNT', units: 'UNT',
+};
+const uqcFor = (unit) => UQC_MAP[String(unit || '').trim().toLowerCase()] || 'OTH';
+
+/** Usable line rows on a document, or empty when only totals exist. */
+const docLines = (doc) =>
+  (Array.isArray(doc.items) ? doc.items : []).filter(
+    (l) => Number(l?.amount) || (Number(l?.quantity) && Number(l?.rate))
+  );
+
+/**
+ * itms for one invoice. When line detail exists, group by actual GST rate —
+ * a 5%+18% invoice files as two itm_det rows instead of one snapped slab.
+ * Totals-only documents fall back to the implied whole-document rate.
+ */
 const invoiceItems = (doc) => {
+  const isInter = Number(doc.igstTotal ?? 0) > 0.004;
+  const lines = docLines(doc);
+  if (lines.length) {
+    const byRate = new Map();
+    for (const l of lines) {
+      const rt = Number(l.gstRate) || 0;
+      const txval = Number(l.amount) || Number(l.quantity) * Number(l.rate) || 0;
+      byRate.set(rt, (byRate.get(rt) || 0) + txval);
+    }
+    return [...byRate.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([rt, txvalRaw], i) => {
+        const txval = r2(txvalRaw);
+        const tax = r2((txval * rt) / 100);
+        return {
+          num: i + 1,
+          itm_det: {
+            rt,
+            txval,
+            ...(isInter ? { iamt: tax } : { camt: r2(tax / 2), samt: r2(tax / 2) }),
+            csamt: 0,
+          },
+        };
+      });
+  }
   const taxable = Number(doc.subtotal ?? doc.taxableTotal ?? 0);
   const rate = impliedRate(doc);
   const { iamt, camt, samt } = taxSplit(doc, rate, taxable);
@@ -75,19 +123,52 @@ const invoiceItems = (doc) => {
   ];
 };
 
-export function buildGstr1Json({ invoices = [], creditNotes = [], company = {}, period }) {
+/** B2CL threshold: inter-state invoices to unregistered buyers above this file invoice-wise. */
+const B2CL_LIMIT = 250000;
+
+export function buildGstr1Json({ invoices = [], creditNotes = [], items = [], company = {}, period }) {
   const active = (d) => !['draft', 'cancelled'].includes(String(d.status || '').toLowerCase());
   const inv = invoices.filter((d) => active(d) && inPeriod(d, period));
   const cdn = creditNotes.filter((d) => active(d) && inPeriod(d, period));
 
   const companyGstin = String(company.gstin || '').trim();
+  const itemById = new Map(items.map((it) => [String(it.id), it]));
 
   // b2b: registered buyers, grouped by their GSTIN, invoice-wise
   const byCtin = new Map();
   const b2csAgg = new Map();
+  // b2cl: inter-state to unregistered buyers above ₹2.5L — invoice-wise by POS
+  const b2clByPos = new Map();
+  // hsn: table 12 summary over all outward invoices, keyed hsn|rate|uqc
+  const hsnAgg = new Map();
 
   for (const d of inv) {
     const ctin = String(d.customerGstin || d.partyGstin || '').trim();
+    const isInter = Number(d.igstTotal ?? 0) > 0.004;
+    const rchrg = d.reverseCharge ? 'Y' : 'N';
+
+    // Table 12 HSN summary accumulates for every outward invoice.
+    for (const l of docLines(d)) {
+      const master = itemById.get(String(l.itemId));
+      const hsn = String(l.hsnSac || master?.hsnSac || '').trim();
+      if (!hsn) continue;
+      const rt = Number(l.gstRate) || 0;
+      const uqc = uqcFor(master?.unit);
+      const key = `${hsn}|${rt}|${uqc}`;
+      const txval = Number(l.amount) || Number(l.quantity) * Number(l.rate) || 0;
+      const tax = (txval * rt) / 100;
+      const prev = hsnAgg.get(key) || {
+        hsn_sc: hsn,
+        desc: String(l.description || master?.name || '').slice(0, 30),
+        uqc, rt, qty: 0, txval: 0, iamt: 0, camt: 0, samt: 0,
+      };
+      prev.qty += Number(l.quantity) || 0;
+      prev.txval += txval;
+      if (isInter) prev.iamt += tax;
+      else { prev.camt += tax / 2; prev.samt += tax / 2; }
+      hsnAgg.set(key, prev);
+    }
+
     if (ctin) {
       if (!byCtin.has(ctin)) byCtin.set(ctin, []);
       byCtin.get(ctin).push({
@@ -95,8 +176,17 @@ export function buildGstr1Json({ invoices = [], creditNotes = [], company = {}, 
         idt: portalDate(d.date),
         val: r2(d.total),
         pos: posCode(d.placeOfSupplyState, ctin) || companyGstin.slice(0, 2),
-        rchrg: 'N',
+        rchrg,
         inv_typ: 'R',
+        itms: invoiceItems(d),
+      });
+    } else if (isInter && Number(d.total) > B2CL_LIMIT) {
+      const pos = posCode(d.placeOfSupplyState, '') || companyGstin.slice(0, 2);
+      if (!b2clByPos.has(pos)) b2clByPos.set(pos, []);
+      b2clByPos.get(pos).push({
+        inum: d.number,
+        idt: portalDate(d.date),
+        val: r2(d.total),
         itms: invoiceItems(d),
       });
     } else {
@@ -124,13 +214,13 @@ export function buildGstr1Json({ invoices = [], creditNotes = [], company = {}, 
       nt_num: d.number,
       nt_dt: portalDate(d.date),
       pos: posCode(d.placeOfSupplyState, ctin) || companyGstin.slice(0, 2),
-      rchrg: 'N',
+      rchrg: d.reverseCharge ? 'Y' : 'N',
       val: r2(d.total),
       itms: invoiceItems(d),
     });
   }
 
-  return {
+  const out = {
     gstin: companyGstin,
     fp: period,
     version: 'GST3.1',
@@ -147,6 +237,27 @@ export function buildGstr1Json({ invoices = [], creditNotes = [], company = {}, 
     })),
     cdnr: [...cdnr.entries()].map(([ctin, notes]) => ({ ctin, nt: notes })),
   };
+  if (b2clByPos.size) {
+    out.b2cl = [...b2clByPos.entries()].map(([pos, invs]) => ({ pos, inv: invs }));
+  }
+  if (hsnAgg.size) {
+    out.hsn = {
+      data: [...hsnAgg.values()].map((h, i) => ({
+        num: i + 1,
+        hsn_sc: h.hsn_sc,
+        desc: h.desc,
+        uqc: h.uqc,
+        rt: h.rt,
+        qty: r2(h.qty),
+        txval: r2(h.txval),
+        iamt: r2(h.iamt),
+        camt: r2(h.camt),
+        samt: r2(h.samt),
+        csamt: 0,
+      })),
+    };
+  }
+  return out;
 }
 
 export function buildGstr3bJson({ invoices = [], creditNotes = [], bills = [], expenses = [], debitNotes = [], company = {}, period }) {

@@ -1728,6 +1728,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       otherCharges: Array.isArray(initialData?.otherCharges) ? initialData.otherCharges : [],
       salesmanId: initialData?.salesmanId ?? '',
       costCenterId: initialData?.costCenterId ?? '',
+      reverseCharge: !!initialData?.reverseCharge,
       shipToCode: initialData?.shipToCode || '',
       shipToAddress: initialData?.shipToAddress || null,
     };
@@ -2189,6 +2190,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         paidAmount: Number(newInvoice.paidAmount ?? 0),
         status: String(newInvoice.status || 'Draft').trim(),
         sourceEstimateId: newInvoice.sourceEstimateId ? String(newInvoice.sourceEstimateId) : '',
+        reverseCharge: !!newInvoice.reverseCharge,
         items: Array.isArray(newInvoice.items) ? newInvoice.items : [],
       };
 
@@ -2395,6 +2397,18 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             className="ui-input"
             placeholder="Estimate / Quotation / Sales Order"
           />
+        </div>
+
+        <div className="flex items-end pb-2">
+          <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!formData.reverseCharge}
+              onChange={(e) => setFormData({ ...formData, reverseCharge: e.target.checked })}
+              className="ui-checkbox"
+            />
+            Reverse charge (RCM)
+          </label>
         </div>
 
         {(db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (

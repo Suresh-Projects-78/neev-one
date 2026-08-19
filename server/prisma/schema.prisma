@@ -435,6 +435,8 @@ model Invoice {
   customerGstin      String?
   placeOfSupplyState String?
   taxType            String?
+  // GSTR-1 rchrg flag: supply attracts reverse charge (buyer pays the tax).
+  reverseCharge      Boolean @default(false)
 
   subtotal   Decimal @default(0)
   cgstTotal  Decimal @default(0)
