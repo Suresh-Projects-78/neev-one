@@ -1681,6 +1681,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           ? normalizedItems
           : [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
       sourceEstimateId: initialData?.sourceEstimateId ?? null,
+      sourceChallanId: initialData?.sourceChallanId ?? null,
       invoiceDiscountType: initialData?.invoiceDiscountType || 'pct',
       invoiceDiscountValue: Number(initialData?.invoiceDiscountValue) || '',
       otherCharges: Array.isArray(initialData?.otherCharges) ? initialData.otherCharges : [],
@@ -2095,10 +2096,16 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         )
       : db.estimates;
 
+    const sourceChallanId = formData.sourceChallanId;
     setDb({
       ...db,
       invoices: [...db.invoices, newInvoice],
       estimates: updatedEstimates,
+      deliveryChallans: sourceChallanId
+        ? (db.deliveryChallans || []).map((c) =>
+            Number(c.id) === Number(sourceChallanId) ? { ...c, status: 'Invoiced', invoiceNumber: newInvoice.number } : c
+          )
+        : db.deliveryChallans,
       companies: bumpCompanyNextNumber({
         db,
         companyId: currentCompany.id,

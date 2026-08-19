@@ -11204,11 +11204,14 @@ const AppShell = () => {
             setDb={setDb}
             currentCompany={currentCompany}
             onConvert={(challan) => {
+              // Status flips to Invoiced only when the invoice actually saves
+              // (sourceChallanId is picked up by the invoice submit).
               setInvoiceEditor({
                 open: true,
                 initial: {
                   customerId: challan.customerId,
                   refNo: challan.number,
+                  sourceChallanId: challan.id,
                   items: challan.items.map((l) => ({
                     itemId: String(l.itemId),
                     description: l.description,

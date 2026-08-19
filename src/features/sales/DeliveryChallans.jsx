@@ -86,13 +86,11 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
     notify.success(`Delivery challan ${challan.number} created.`);
   };
 
+  // Status flips to Invoiced when the invoice actually saves — the invoice
+  // form owns that via sourceChallanId; converting just opens the editor.
   const convert = (challan) => {
     if (typeof onConvert !== 'function') return;
     onConvert(challan);
-    setDb((prev) => ({
-      ...prev,
-      deliveryChallans: (prev.deliveryChallans || []).map((c) => (c.id === challan.id ? { ...c, status: 'Invoiced' } : c)),
-    }));
   };
 
   return (

@@ -73,6 +73,9 @@ export const getDocSettings = (db, company, { branchId = null } = {}) => {
   const ensureTemplate = (voucherKey, templateId, accentId) => {
     const existing = base?.templates?.[voucherKey] || {};
     return {
+      // Preserve everything stored (termsText and future options) — only the
+      // two defaults are normalized.
+      ...existing,
       templateId: existing.templateId || templateId,
       accentId: existing.accentId || accentId,
     };
