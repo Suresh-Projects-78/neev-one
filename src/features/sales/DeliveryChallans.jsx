@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Truck } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import Modal from '../../components/ui/Modal';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
+import EwbTransportForm from '../../components/EwbTransportForm';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
+import { buildEwayBillPayload } from '../../utils/einvoice';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -91,6 +94,57 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
   const convert = (challan) => {
     if (typeof onConvert !== 'function') return;
     onConvert(challan);
+  };
+
+  const [ewbFor, setEwbFor] = useState(null); // challan getting an e-way bill
+
+  const downloadJson = (filename, data) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const generateChallanEwb = (challan, transport) => {
+    if (!String(currentCompany?.gstin || '').trim()) {
+      notify.error('Set the company GSTIN before generating e-way bill JSON.');
+      return;
+    }
+    const customer = customers.find((c) => c.id === parseInt(challan.customerId)) || {};
+    // A challan is a document with lines and a value but no GST split —
+    // present it to the builder in the invoice shape it expects.
+    const pseudoDoc = {
+      number: challan.number,
+      date: challan.date,
+      customerName: challan.customerName,
+      items: challan.items.map((l) => ({ ...l, taxableAmount: (Number(l.quantity) || 1) * (Number(l.rate) || 0), gstRate: 0 })),
+      subtotal: challan.value,
+      total: challan.value,
+      cgstTotal: 0,
+      sgstTotal: 0,
+      igstTotal: 0,
+    };
+    downloadJson(
+      `EWB_${challan.number}.json`,
+      buildEwayBillPayload({
+        invoice: pseudoDoc,
+        company: currentCompany,
+        customer,
+        transport,
+        docType: 'CHL',
+        // NIC sub-supply: 4 = job work; 8 = others (approval, own use…)
+        subSupplyType: challan.purpose === 'Job Work' ? '4' : '8',
+      })
+    );
+    setDb((prev) => ({
+      ...prev,
+      deliveryChallans: (prev.deliveryChallans || []).map((c) => (c.id === challan.id ? { ...c, ewbTransport: transport } : c)),
+    }));
+    setEwbFor(null);
+    notify.success(`e-Way Bill JSON for ${challan.number} downloaded — upload via the e-way bill bulk tool.`);
   };
 
   return (
@@ -191,11 +245,16 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(c.value || 0, currentCompany)}</td>
                   <td className="px-4 py-2.5"><StatusPill status={c.status} /></td>
                   <td className="px-4 py-2.5 text-right">
-                    {c.status === 'Open' ? (
-                      <button type="button" onClick={() => convert(c)} className="ui-btn ui-btn-secondary !h-8 text-xs">
-                        Convert to Invoice
+                    <div className="flex items-center justify-end gap-2">
+                      <button type="button" onClick={() => setEwbFor(c)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                        e-Way Bill
                       </button>
-                    ) : null}
+                      {c.status === 'Open' ? (
+                        <button type="button" onClick={() => convert(c)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                          Convert to Invoice
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -203,6 +262,16 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           </table>
         </div>
       )}
+
+      {ewbFor ? (
+        <Modal onClose={() => setEwbFor(null)} title={`e-Way Bill — ${ewbFor.number}`} maxWidthClass="max-w-2xl">
+          <EwbTransportForm
+            submitLabel="Download EWB JSON"
+            onCancel={() => setEwbFor(null)}
+            onSubmit={(t) => generateChallanEwb(ewbFor, t)}
+          />
+        </Modal>
+      ) : null}
     </div>
   );
 }

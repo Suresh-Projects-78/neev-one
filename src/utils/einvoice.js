@@ -112,7 +112,7 @@ export function buildEInvoicePayload({ invoice, company, customer = {} }) {
   };
 }
 
-export function buildEwayBillPayload({ invoice, company, customer = {}, transport = {} }) {
+export function buildEwayBillPayload({ invoice, company, customer = {}, transport = {}, docType = 'INV', subSupplyType = '1' }) {
   const sellerState = stateCode(company.state, company.gstin);
   const buyerGstin = String(invoice.customerGstin || customer.gstin || '').trim();
   const buyerState = stateCode(invoice.placeOfSupplyState || customer.state, buyerGstin) || sellerState;
@@ -124,8 +124,8 @@ export function buildEwayBillPayload({ invoice, company, customer = {}, transpor
       {
         userGstin: String(company.gstin || '').trim(),
         supplyType: 'O',
-        subSupplyType: '1',
-        docType: 'INV',
+        subSupplyType: String(subSupplyType || '1'),
+        docType: String(docType || 'INV'),
         docNo: String(invoice.number || ''),
         docDate: nicDate(invoice.date),
         fromGstin: String(company.gstin || '').trim(),
@@ -148,6 +148,8 @@ export function buildEwayBillPayload({ invoice, company, customer = {}, transpor
         transDistance: String(transport.distanceKm || '0'),
         transporterName: String(transport.transporterName || ''),
         transporterId: String(transport.transporterId || ''),
+        transDocNo: String(transport.transDocNo || ''),
+        transDocDate: transport.transDocDate ? nicDate(transport.transDocDate) : '',
         vehicleNo: String(transport.vehicleNo || ''),
         vehicleType: 'R',
         itemList: itemList(invoice, isIntra).map((it) => ({

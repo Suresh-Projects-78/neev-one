@@ -12,6 +12,7 @@ import { createDocApi, hasApiSession as hasDocsApiSession } from '../../api/purc
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
+import EwbTransportForm from '../../components/EwbTransportForm';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
@@ -1036,22 +1037,41 @@ export const InvoicesList = ({
                       <button
                         type="button"
                         className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
-                        onClick={async () => {
+                        onClick={() => {
                           setOpenMenu(null);
-                          try {
-                            const result = await generateEwaybillApi(inv.backendInvoiceId, {});
-                            setDb((prev) => ({
-                              ...prev,
-                              invoices: (prev.invoices || []).map((x) =>
-                                x.id === inv.id
-                                  ? { ...x, ewbNo: result.ewbNo, ewbDate: result.ewbDate, ewbValidTill: result.ewbValidTill }
-                                  : x
-                              ),
-                            }));
-                            notify.success(`e-Way Bill ${result.ewbNo} for ${inv.number} (valid till ${result.ewbValidTill || '—'})`);
-                          } catch (err) {
-                            notify.error(String(err?.message || 'e-Way Bill generation failed.'));
-                          }
+                          openModal(
+                            <EwbTransportForm
+                              onCancel={() => openModal(null)}
+                              onSubmit={async (t) => {
+                                try {
+                                  const result = await generateEwaybillApi(inv.backendInvoiceId, {
+                                    distance: Number(t.distanceKm) || 0,
+                                    transporterId: t.transporterId || null,
+                                    transporterName: t.transporterName || null,
+                                    transMode: t.mode || '1',
+                                    vehicleNo: t.vehicleNo || null,
+                                    transDocNo: t.transDocNo || null,
+                                    transDocDate: t.transDocDate
+                                      ? t.transDocDate.split('-').reverse().join('/')
+                                      : null,
+                                  });
+                                  setDb((prev) => ({
+                                    ...prev,
+                                    invoices: (prev.invoices || []).map((x) =>
+                                      x.id === inv.id
+                                        ? { ...x, ewbNo: result.ewbNo, ewbDate: result.ewbDate, ewbValidTill: result.ewbValidTill, ewbTransport: t }
+                                        : x
+                                    ),
+                                  }));
+                                  openModal(null);
+                                  notify.success(`e-Way Bill generated — EWB No: ${result.ewbNo}, valid until: ${result.ewbValidTill || '—'}`);
+                                } catch (err) {
+                                  notify.error(String(err?.message || 'e-Way Bill generation failed.'));
+                                }
+                              }}
+                            />,
+                            { title: `e-Way Bill — ${inv.number}`, maxWidthClass: 'max-w-2xl' }
+                          );
                         }}
                       >
                         <FileText size={16} className="ui-muted" />
@@ -1059,7 +1079,10 @@ export const InvoicesList = ({
                       </button>
                     ) : null}
                     {inv.ewbNo ? (
-                      <div className="px-4 py-2 text-left text-xs ui-muted">EWB {inv.ewbNo}</div>
+                      <div className="px-4 py-2 text-left text-xs ui-muted">
+                        EWB No: {inv.ewbNo}
+                        {inv.ewbValidTill ? ` · valid until ${inv.ewbValidTill}` : ''}
+                      </div>
                     ) : null}
                     <button
                       type="button"
@@ -1091,11 +1114,21 @@ export const InvoicesList = ({
                           return;
                         }
                         const customer = (db.customers || []).find((c) => c.id === inv.customerId) || {};
-                        downloadJson(
-                          `EWB_${inv.number}.json`,
-                          buildEwayBillPayload({ invoice: inv, company: currentCompany, customer })
+                        openModal(
+                          <EwbTransportForm
+                            submitLabel="Download EWB JSON"
+                            onCancel={() => openModal(null)}
+                            onSubmit={(t) => {
+                              downloadJson(
+                                `EWB_${inv.number}.json`,
+                                buildEwayBillPayload({ invoice: inv, company: currentCompany, customer, transport: t })
+                              );
+                              openModal(null);
+                              notify.success(`e-Way Bill JSON for ${inv.number} downloaded — upload via the e-way bill bulk tool.`);
+                            }}
+                          />,
+                          { title: `e-Way Bill JSON — ${inv.number}`, maxWidthClass: 'max-w-2xl' }
                         );
-                        notify.success(`e-Way Bill JSON for ${inv.number} downloaded — upload via the e-way bill bulk tool.`);
                       }}
                     >
                       <FileText size={16} className="ui-muted" />
