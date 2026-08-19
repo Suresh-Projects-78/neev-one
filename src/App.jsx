@@ -149,6 +149,7 @@ const SalesOrders = lazy(() => import('./features/sales/SalesOrders'));
 const BatchStock = lazy(() => import('./features/inventory/BatchStock'));
 const Gstr2bReco = lazy(() => import('./features/reports/Gstr2bReco'));
 const PaymentReminders = lazy(() => import('./features/sales/PaymentReminders'));
+const TallyExport = lazy(() => import('./features/reports/TallyExport'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -5175,6 +5176,7 @@ const REPORT_META = {
   gstr1: { icon: BadgePercent, desc: 'Outward supplies, ready for the GSTR-1 return.' },
   gstr3b: { icon: BadgePercent, desc: 'Summary return: tax on sales less input credit.' },
   gstr2bReco: { icon: BadgePercent, desc: 'Match the portal\u2019s 2B against your bills — know which ITC is safe.' },
+  tallyExport: { icon: FileStack, desc: 'Masters + vouchers as Tally XML — what the CA asks for.' },
   salesReports: { icon: ClipboardList, desc: 'Billing by status and totals across customers.' },
 };
 
@@ -9931,6 +9933,11 @@ const AppShell = () => {
           title: 'Sales',
           items: [{ key: 'salesReports', label: 'Sales Reports' }],
         },
+        {
+          key: 'accountant',
+          title: 'Accountant',
+          items: [{ key: 'tallyExport', label: 'Tally Export' }],
+        },
       ],
       []
     );
@@ -11231,6 +11238,8 @@ const AppShell = () => {
         return <Gstr2bReco db={dbForUser} currentCompany={currentCompany} />;
       case 'paymentReminders':
         return <PaymentReminders db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'tallyExport':
+        return <TallyExport db={dbForUser} currentCompany={currentCompany} />;
       case 'priceLists':
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'discountRules':
