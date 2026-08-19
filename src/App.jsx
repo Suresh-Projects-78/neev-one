@@ -145,6 +145,7 @@ const Salesmen = lazy(() => import('./features/sales/Salesmen'));
 const DeliveryChallans = lazy(() => import('./features/sales/DeliveryChallans'));
 const PosScreen = lazy(() => import('./features/sales/PosScreen'));
 const DiscountRules = lazy(() => import('./features/sales/DiscountRules'));
+const SalesOrders = lazy(() => import('./features/sales/SalesOrders'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -9988,6 +9989,7 @@ const AppShell = () => {
           { key: 'pos', label: 'POS', icon: Receipt, perm: 'SALES::Invoices::CREATE', feature: 'pos' },
           { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW', feature: 'standaloneReceiptsPayments' },
           { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW', feature: 'estimates' },
+          { key: 'salesOrders', label: 'Sales Orders', icon: ClipboardList, perm: 'SALES::Invoices::VIEW', feature: 'salesOrders' },
           { key: 'deliveryChallans', label: 'Delivery Challans', icon: Truck, perm: 'SALES::Invoices::VIEW', feature: 'deliveryChallans' },
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
           { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
@@ -11220,6 +11222,33 @@ const AppShell = () => {
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'discountRules':
         return <DiscountRules db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'salesOrders':
+        return (
+          <SalesOrders
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            onConvertToInvoice={(order) => {
+              setInvoiceEditor({
+                open: true,
+                initial: {
+                  customerId: order.customerId,
+                  refNo: order.number,
+                  sourceSalesOrderId: order.id,
+                  items: (order.items || []).map((l) => ({
+                    itemId: String(l.itemId),
+                    description: l.description,
+                    quantity: Number(l.quantity) || 1,
+                    rate: Number(l.rate) || 0,
+                    gstRate: Number(l.gstRate) || 0,
+                    hsnSac: l.hsnSac || '',
+                  })),
+                },
+              });
+              setActive('invoices');
+            }}
+          />
+        );
       case 'recurringInvoices':
         return <RecurringInvoices db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'salesmen':

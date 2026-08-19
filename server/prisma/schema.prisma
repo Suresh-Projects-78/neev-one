@@ -605,6 +605,39 @@ model PurchaseOrderDoc {
   @@index([accountId, orgId, branchId, date])
 }
 
+/// A sales order — the customer's confirmed intent, between quote and
+/// invoice. No ledger posting (it is not yet revenue); delivery and billing
+/// track against it via challans/invoices carrying sourceSalesOrderId.
+model SalesOrderDoc {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  number       String
+  date         String
+  expectedDate String?
+  partyId      String?
+  partyName    String
+  partyGstin   String?
+  warehouseId  String?
+
+  subtotal Decimal @default(0)
+  gstTotal Decimal @default(0)
+  total    Decimal @default(0)
+
+  status    String @default("Open")
+  itemsJson String
+  notes     String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, branchId, number])
+  @@index([accountId, orgId, branchId, date])
+}
+
 /// An expense voucher — money out that is not a stock purchase: rent, travel,
 /// utilities. Posts Dr Indirect Expenses (+ input GST) / Cr Accounts Payable,
 /// so unpaid expenses sit in the same payable book as bills.

@@ -70,6 +70,28 @@ describe('quote-stage documents', () => {
     expect(list.body.documents.length).toBe(0);
   });
 
+  it('creates a sales order with an SO number, expected date and warehouse', async () => {
+    const created = await request(app)
+      .post(`/api/orgs/${A.orgId}/sales-orders`)
+      .set(auth(A))
+      .send({
+        date: '2026-08-19',
+        expectedDate: '2026-08-25',
+        partyName: 'Buyer Ltd',
+        total: 1180,
+        status: 'Open',
+        items: [{ itemId: '1', description: 'Widget', quantity: 10, rate: 100, gstRate: 18 }],
+      })
+      .expect(201);
+    expect(created.body.document.number).toMatch(/^SO-/);
+    expect(created.body.document.expectedDate).toBe('2026-08-25');
+    expect(created.body.document.status).toBe('Open');
+
+    const list = await request(app).get(`/api/orgs/${A.orgId}/sales-orders`).set(auth(A)).expect(200);
+    expect(list.body.documents.length).toBe(1);
+    expect(list.body.documents[0].items[0].quantity).toBe(10);
+  });
+
   it('quote documents never touch the ledger', async () => {
     const tb = await request(app).get(`/api/orgs/${A.orgId}/ledger/trial-balance`).set(auth(A)).expect(200);
     expect(tb.body.rows.length).toBe(0);

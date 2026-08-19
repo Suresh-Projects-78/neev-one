@@ -24,6 +24,7 @@ const PATHS = {
   expense: 'expenses',
   estimate: 'estimates',
   purchaseOrder: 'purchase-orders',
+  salesOrder: 'sales-orders',
 };
 
 const pathFor = (kind) => {

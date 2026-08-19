@@ -1721,6 +1721,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           : [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
       sourceEstimateId: initialData?.sourceEstimateId ?? null,
       sourceChallanId: initialData?.sourceChallanId ?? null,
+      sourceSalesOrderId: initialData?.sourceSalesOrderId ?? null,
       invoiceDiscountType: initialData?.invoiceDiscountType || 'pct',
       invoiceDiscountValue: Number(initialData?.invoiceDiscountValue) || '',
       otherCharges: Array.isArray(initialData?.otherCharges) ? initialData.otherCharges : [],

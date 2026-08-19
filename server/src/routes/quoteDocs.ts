@@ -22,11 +22,11 @@ export const quoteDocsRouter = Router();
 // after purchaseDocs (whose router-level requireAuth ran first on /api).
 quoteDocsRouter.use(requireAuth, requireTenantContext);
 
-type QuoteKind = 'ESTIMATE' | 'PURCHASE_ORDER';
+type QuoteKind = 'ESTIMATE' | 'PURCHASE_ORDER' | 'SALES_ORDER';
 
 const CONFIG: Record<
   QuoteKind,
-  { path: string; model: 'estimate' | 'purchaseOrderDoc'; module: string; resource: string; feature: string }
+  { path: string; model: 'estimate' | 'purchaseOrderDoc' | 'salesOrderDoc'; module: string; resource: string; feature: string }
 > = {
   ESTIMATE: { path: 'estimates', model: 'estimate', module: 'SALES', resource: 'Estimates', feature: 'estimates' },
   PURCHASE_ORDER: {
@@ -35,6 +35,13 @@ const CONFIG: Record<
     module: 'PURCHASE',
     resource: 'Purchase Orders',
     feature: 'purchaseOrders',
+  },
+  SALES_ORDER: {
+    path: 'sales-orders',
+    model: 'salesOrderDoc',
+    module: 'SALES',
+    resource: 'Sales Orders',
+    feature: 'salesOrders',
   },
 };
 
@@ -135,7 +142,7 @@ function register(kind: QuoteKind) {
             number,
             date: body.date,
             ...(kind === 'ESTIMATE' ? { validUntil: body.validUntil ?? null } : {}),
-            ...(kind === 'PURCHASE_ORDER'
+            ...(kind === 'PURCHASE_ORDER' || kind === 'SALES_ORDER'
               ? { expectedDate: body.expectedDate ?? null, warehouseId: body.warehouseId ?? null }
               : {}),
             partyId: body.partyId ?? null,
@@ -197,4 +204,4 @@ function register(kind: QuoteKind) {
   );
 }
 
-(['ESTIMATE', 'PURCHASE_ORDER'] as QuoteKind[]).forEach(register);
+(['ESTIMATE', 'PURCHASE_ORDER', 'SALES_ORDER'] as QuoteKind[]).forEach(register);
