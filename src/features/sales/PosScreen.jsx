@@ -23,10 +23,92 @@ export default function PosScreen({ db, setDb, currentCompany }) {
   const [tender, setTender] = useState('Cash');
   const [customerName, setCustomerName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [dayCloseOpen, setDayCloseOpen] = useState(false);
+  const DENOMS = [500, 200, 100, 50, 20, 10, 5, 2, 1];
+  const [denomCounts, setDenomCounts] = useState({});
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todaysSales = useMemo(
+    () => (db.invoices || []).filter((i) => i.companyId === companyId && i.posSale && i.date === today && String(i.status).toLowerCase() !== 'cancelled'),
+    [db.invoices, companyId, today]
+  );
+  const byTender = useMemo(() => {
+    const m = { Cash: 0, UPI: 0, Card: 0 };
+    for (const s of todaysSales) m[s.tender || 'Cash'] = (m[s.tender || 'Cash'] || 0) + Number(s.total || 0);
+    return m;
+  }, [todaysSales]);
+  const countedCash = DENOMS.reduce((s, d) => s + d * (Number(denomCounts[d]) || 0), 0);
+  const overShort = Math.round((countedCash - byTender.Cash) * 100) / 100;
+
+  const saveDayClose = () => {
+    const nextId = (db.posDayCloses || []).reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1;
+    const record = {
+      id: nextId,
+      companyId,
+      date: today,
+      invoices: todaysSales.length,
+      cash: byTender.Cash,
+      upi: byTender.UPI,
+      card: byTender.Card,
+      total: byTender.Cash + byTender.UPI + byTender.Card,
+      countedCash,
+      overShort,
+      denomCounts: { ...denomCounts },
+      closedAt: new Date().toISOString(),
+    };
+    setDb((prev) => ({ ...prev, posDayCloses: [...(prev.posDayCloses || []), record] }));
+
+    const w = window.open('', '_blank', 'width=380,height=640');
+    if (w) {
+      w.document.write(
+        `<pre style="font-family:monospace;font-size:12px;padding:12px">` +
+          `${currentCompany.name}\nZ REPORT · ${today}\n` +
+          `--------------------------------\n` +
+          `Invoices     ${record.invoices}\n` +
+          `Cash         ${record.cash.toFixed(2)}\nUPI          ${record.upi.toFixed(2)}\nCard         ${record.card.toFixed(2)}\n` +
+          `TOTAL        ${record.total.toFixed(2)}\n` +
+          `--------------------------------\n` +
+          `Counted cash ${countedCash.toFixed(2)}\nExpected     ${record.cash.toFixed(2)}\n` +
+          `${overShort === 0 ? 'TALLIED' : overShort > 0 ? `OVER  +${overShort.toFixed(2)}` : `SHORT ${overShort.toFixed(2)}`}\n` +
+          `</pre>`
+      );
+      w.document.close();
+      w.print();
+    }
+    setDayCloseOpen(false);
+    setDenomCounts({});
+    notify.success(`Day closed — ${record.invoices} sale(s), ${overShort === 0 ? 'cash tallied' : overShort > 0 ? `over by ₹${overShort}` : `short by ₹${-overShort}`}.`);
+  };
 
   const filtered = items.filter(
-    (i) => !search || String(i.name || '').toLowerCase().includes(search.toLowerCase()) || String(i.code || '').toLowerCase().includes(search.toLowerCase())
+    (i) =>
+      !search ||
+      String(i.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      String(i.code || '').toLowerCase().includes(search.toLowerCase()) ||
+      String(i.barcode || '').toLowerCase() === search.toLowerCase()
   );
+
+  /**
+   * Barcode scanners are keyboards that type fast and press Enter. Enter in
+   * the search box with an exact barcode/code match adds the item and clears
+   * the box, so back-to-back scans just work.
+   */
+  const onSearchKeyDown = (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const term = search.trim().toLowerCase();
+    if (!term) return;
+    const hit =
+      items.find((i) => String(i.barcode || '').toLowerCase() === term) ||
+      items.find((i) => String(i.code || '').toLowerCase() === term) ||
+      (filtered.length === 1 ? filtered[0] : null);
+    if (hit) {
+      addToCart(hit);
+      setSearch('');
+    } else {
+      notify.error(`No item matches "${search.trim()}"`);
+    }
+  };
 
   const addToCart = (item) => {
     setCart((prev) => {
@@ -159,7 +241,58 @@ export default function PosScreen({ db, setDb, currentCompany }) {
 
   return (
     <div className="space-y-4">
-      <PageHeader title="Point of Sale" description="Counter sales — tap items, take payment, invoice and receipt book themselves." />
+      <div className="flex items-center justify-between">
+        <PageHeader title="Point of Sale" description="Counter sales — tap items, take payment, invoice and receipt book themselves." />
+        <button type="button" onClick={() => setDayCloseOpen(true)} className="ui-btn ui-btn-secondary">
+          Day Close ({todaysSales.length})
+        </button>
+      </div>
+
+      {dayCloseOpen ? (
+        <div className="ui-card space-y-4 p-5">
+          <h3 className="ui-title text-base">Day close — {today}</h3>
+          <div className="grid gap-3 sm:grid-cols-4 text-sm">
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Invoices</div><div className="text-xl font-bold">{todaysSales.length}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Cash</div><div className="text-xl font-bold">{formatMoney(byTender.Cash, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">UPI</div><div className="text-xl font-bold">{formatMoney(byTender.UPI, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Card</div><div className="text-xl font-bold">{formatMoney(byTender.Card, currentCompany)}</div></div>
+          </div>
+
+          <div>
+            <div className="ui-label mb-1">Cash denomination count</div>
+            <div className="flex flex-wrap gap-2">
+              {DENOMS.map((d) => (
+                <label key={d} className="flex items-center gap-1 text-sm">
+                  <span className="ui-muted w-10 text-right">₹{d} ×</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={denomCounts[d] ?? ''}
+                    onChange={(e) => setDenomCounts((p) => ({ ...p, [d]: e.target.value }))}
+                    className="ui-input !h-8 w-16 px-2 text-sm"
+                    placeholder="0"
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="mt-2 text-sm">
+              Counted: <strong>{formatMoney(countedCash, currentCompany)}</strong> · Expected cash: <strong>{formatMoney(byTender.Cash, currentCompany)}</strong> ·{' '}
+              {overShort === 0 ? (
+                <span className="ui-amount-pos font-semibold">Tallied</span>
+              ) : overShort > 0 ? (
+                <span className="font-semibold">Over {formatMoney(overShort, currentCompany)}</span>
+              ) : (
+                <span className="ui-amount-neg font-semibold">Short {formatMoney(-overShort, currentCompany)}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setDayCloseOpen(false)} className="ui-btn ui-btn-secondary">Cancel</button>
+            <button type="button" onClick={saveDayClose} className="ui-btn ui-btn-primary">Close day & print Z report</button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
@@ -167,8 +300,9 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={onSearchKeyDown}
             className="ui-input mb-3 w-full px-3 py-2"
-            placeholder="Search item name or code…"
+            placeholder="Search name / code — or scan a barcode"
             autoFocus
           />
           <div className="grid max-h-[30rem] grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">

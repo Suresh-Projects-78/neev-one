@@ -150,6 +150,7 @@ const BatchStock = lazy(() => import('./features/inventory/BatchStock'));
 const Gstr2bReco = lazy(() => import('./features/reports/Gstr2bReco'));
 const PaymentReminders = lazy(() => import('./features/sales/PaymentReminders'));
 const TallyExport = lazy(() => import('./features/reports/TallyExport'));
+const ReorderAlerts = lazy(() => import('./features/inventory/ReorderAlerts'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -1615,6 +1616,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         purchasePrice: Number.isFinite(Number(initialData.purchasePrice)) ? Number(initialData.purchasePrice) : 0,
         mrp: Number.isFinite(Number(initialData.mrp)) ? Number(initialData.mrp) : '',
         trackingType: initialData.trackingType || 'NONE',
+        barcode: String(initialData.barcode || ''),
+        reorderLevel: Number.isFinite(Number(initialData.reorderLevel)) ? Number(initialData.reorderLevel) : '',
         openingQty: Number.isFinite(Number(initialData.openingQty))
           ? Number(initialData.openingQty)
           : Number.isFinite(Number(initialData.stock))
@@ -1636,6 +1639,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       purchasePrice: 0,
       mrp: '',
       trackingType: 'NONE',
+      barcode: '',
+      reorderLevel: '',
       openingQty: 0,
     };
   });
@@ -1732,6 +1737,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
         mrp: Number.isFinite(mrp) && mrp > 0 ? mrp : null,
         trackingType: formData.trackingType || 'NONE',
+        barcode: String(formData.barcode || '').trim(),
+        reorderLevel: Number(formData.reorderLevel) > 0 ? Number(formData.reorderLevel) : null,
         openingQty: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
         // keep legacy field in sync (older screens/data)
         stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : Number(existing?.stock ?? 0) || 0,
@@ -1762,6 +1769,8 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       purchasePrice: Number.isFinite(purchasePrice) ? purchasePrice : 0,
       mrp: Number.isFinite(mrp) && mrp > 0 ? mrp : null,
       trackingType: formData.trackingType || 'NONE',
+      barcode: String(formData.barcode || '').trim(),
+      reorderLevel: Number(formData.reorderLevel) > 0 ? Number(formData.reorderLevel) : null,
       openingQty: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
       stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
     };
@@ -1955,6 +1964,28 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             min="0"
             step="0.01"
             placeholder="Maximum retail price"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Barcode</label>
+          <input
+            type="text"
+            value={formData.barcode}
+            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+            placeholder="Scan or type EAN/UPC"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Reorder level</label>
+          <input
+            type="number"
+            value={formData.reorderLevel}
+            onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+            min="0"
+            step="1"
+            placeholder="Alert when stock falls to this"
           />
         </div>
         {String(formData.type || '').toLowerCase() === 'goods' ? (
@@ -10051,6 +10082,7 @@ const AppShell = () => {
           { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', feature: 'stockTransfers' },
           { key: 'batchSerial', label: 'Batches & Serials', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchSerial' },
           { key: 'batchStock', label: 'Batch Stock & Expiry', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW' },
+          { key: 'reorderAlerts', label: 'Reorder Alerts', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW' },
         ],
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tint: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
@@ -11234,6 +11266,8 @@ const AppShell = () => {
         return <BatchSerialManager />;
       case 'batchStock':
         return <BatchStock db={dbForUser} currentCompany={currentCompany} />;
+      case 'reorderAlerts':
+        return <ReorderAlerts db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'gstr2bReco':
         return <Gstr2bReco db={dbForUser} currentCompany={currentCompany} />;
       case 'paymentReminders':
