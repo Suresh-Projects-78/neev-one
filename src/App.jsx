@@ -27,6 +27,7 @@ import {
   Pencil,
   Plus,
   Receipt,
+  RefreshCw,
   Settings,
   Shield,
   ShoppingCart,
@@ -143,6 +144,8 @@ const PriceLists = lazy(() => import('./features/pricing/PriceLists'));
 const Salesmen = lazy(() => import('./features/sales/Salesmen'));
 const DeliveryChallans = lazy(() => import('./features/sales/DeliveryChallans'));
 const PosScreen = lazy(() => import('./features/sales/PosScreen'));
+const DiscountRules = lazy(() => import('./features/sales/DiscountRules'));
+const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
 import ChartCard from './components/charts/ChartCard';
@@ -1598,6 +1601,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         code: String(initialData.code || ''),
         name: String(initialData.name || ''),
         description: String(initialData.description || ''),
+        category: String(initialData.category || ''),
         type: initialData.type || 'Goods',
         unit: initialData.unit || 'Pcs',
         hsnSac: String(initialData.hsnSac || ''),
@@ -1618,6 +1622,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       code: `ITM${Date.now()}`,
       name: '',
       description: '',
+      category: '',
       type: 'Goods',
       unit: 'Pcs',
       hsnSac: '',
@@ -1713,6 +1718,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         code,
         name,
         description: String(formData.description || '').trim(),
+        category: String(formData.category || '').trim(),
         type: formData.type,
         unit: formData.unit,
         hsnSac: String(formData.hsnSac || ''),
@@ -1742,6 +1748,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       code,
       name,
       description: String(formData.description || '').trim(),
+      category: String(formData.category || '').trim(),
       type: formData.type,
       unit: formData.unit,
       hsnSac: String(formData.hsnSac || ''),
@@ -1791,6 +1798,22 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             rows={2}
             placeholder="Shown on documents alongside the item name"
           />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Category</label>
+          <input
+            type="text"
+            list="itemform-categories"
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+            placeholder="For category-level discounts"
+          />
+          <datalist id="itemform-categories">
+            {[...new Set((db.items || []).filter((i) => i.companyId === currentCompany.id).map((i) => String(i.category || '').trim()).filter(Boolean))].map((c) => (
+              <option key={c} value={c} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Type</label>
@@ -9968,6 +9991,8 @@ const AppShell = () => {
           { key: 'deliveryChallans', label: 'Delivery Challans', icon: Truck, perm: 'SALES::Invoices::VIEW', feature: 'deliveryChallans' },
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
           { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
+          { key: 'recurringInvoices', label: 'Recurring', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
+          { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
         ],
       },
       {
@@ -11193,6 +11218,10 @@ const AppShell = () => {
         return <BatchSerialManager />;
       case 'priceLists':
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'discountRules':
+        return <DiscountRules db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'recurringInvoices':
+        return <RecurringInvoices db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'salesmen':
         return <Salesmen db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'pos':

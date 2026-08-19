@@ -100,6 +100,13 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     category: 'Operations',
   },
   {
+    key: 'discountRules',
+    label: 'Discount rules',
+    description: 'Quantity breaks, customer specials, category and promotional discounts, auto-applied.',
+    defaultEnabled: true,
+    category: 'Operations',
+  },
+  {
     key: 'expenses',
     label: 'Expenses',
     description: 'Record expenses separately from vendor bills.',

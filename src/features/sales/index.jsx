@@ -14,6 +14,7 @@ import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from
 import { resolveSaleRate } from '../../utils/pricing';
 import EwbTransportForm from '../../components/EwbTransportForm';
 import EInvoiceWorkflow from './EInvoiceWorkflow';
+import { resolveDiscountForLine } from '../../utils/discounts';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
@@ -1804,6 +1805,38 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       newItems[index][field] = value;
     }
 
+    // Discount rules: on item pick or quantity change, the best matching rule
+    // fills the discount columns. A manual Disc% edit is the operator's call —
+    // rules never overwrite that field once touched by hand.
+    if (field === 'itemId' || field === 'quantity') {
+      const line = newItems[index];
+      const item = items.find((i) => String(i.id) === String(line.itemId));
+      if (item && !line.discountManual) {
+        const ruleHit = resolveDiscountForLine({
+          db,
+          companyId: currentCompany.id,
+          customer: selectedCustomer,
+          item,
+          qty: Number(line.quantity ?? 1),
+          rate: Number(line.rate ?? 0),
+          date: formData.date,
+        });
+        const prevPct = Number(line.discountPct) || 0;
+        const prevFixed = Number(line.discountAmount) || 0;
+        line.discountPct = ruleHit?.pct || 0;
+        line.discountAmount = ruleHit?.fixedPerUnit ? ruleHit.fixedPerUnit * (Number(line.quantity) || 1) : 0;
+        line.discountRule = ruleHit?.ruleName || '';
+        if (ruleHit && (line.discountPct !== prevPct || line.discountAmount !== prevFixed)) {
+          notify.info(
+            `${ruleHit.pct ? `${ruleHit.pct}% off` : `₹${ruleHit.fixedPerUnit}/unit off`} — ${ruleHit.ruleName}`
+          );
+        }
+      }
+    }
+    if (field === 'discountPct') {
+      newItems[index].discountManual = true;
+    }
+
     if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId' || field === 'discountPct') {
       const computed = computeGstForLine({
         quantity: Number(newItems[index].quantity ?? 1),
@@ -1811,6 +1844,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         gstRate: Number(newItems[index].gstRate ?? 0),
         isIntra,
         discountPct: Number(newItems[index].discountPct ?? 0),
+        discountAmount: Number(newItems[index].discountAmount ?? 0),
       });
       newItems[index].amount = computed.taxableAmount;
       newItems[index].taxableAmount = computed.taxableAmount;

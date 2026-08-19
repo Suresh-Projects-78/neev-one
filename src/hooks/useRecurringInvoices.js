@@ -23,6 +23,23 @@ const addMonths = (iso, n) => {
   return date.toISOString().slice(0, 10);
 };
 
+/** Next run for a template's frequency (default monthly). */
+export const advanceRunDate = (iso, frequency) => {
+  switch (String(frequency || 'MONTHLY')) {
+    case 'WEEKLY': {
+      const d = new Date(`${String(iso).slice(0, 10)}T00:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + 7);
+      return d.toISOString().slice(0, 10);
+    }
+    case 'QUARTERLY':
+      return addMonths(iso, 3);
+    case 'YEARLY':
+      return addMonths(iso, 12);
+    default:
+      return addMonths(iso, 1);
+  }
+};
+
 export function useRecurringInvoices({ enabled, db, setDb, currentCompanyId }) {
   const ranFor = useRef('');
 
@@ -46,7 +63,7 @@ export function useRecurringInvoices({ enabled, db, setDb, currentCompanyId }) {
         let run = t.nextRunDate;
         let guard = 0;
         let touched = false;
-        while (run && run <= today && guard < 12) {
+        while (run && run <= today && guard < 12 && (!t.endDate || run <= t.endDate)) {
           guard += 1;
           touched = true;
           created += 1;
@@ -70,7 +87,7 @@ export function useRecurringInvoices({ enabled, db, setDb, currentCompanyId }) {
             recurringTemplateId: t.id,
             createdAt: new Date().toISOString(),
           });
-          run = addMonths(run, 1);
+          run = advanceRunDate(run, t.frequency);
         }
         return touched ? { ...t, nextRunDate: run, lastRunAt: new Date().toISOString() } : t;
       });
