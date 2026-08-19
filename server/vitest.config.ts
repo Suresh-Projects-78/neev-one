@@ -23,8 +23,9 @@ export default defineConfig({
       DISABLE_RATE_LIMIT: 'true',
       BCRYPT_ROUNDS: '4',
       JWT_SECRET: 'test-secret-do-not-use-in-production',
-      // CI has no .env; without an issuer jsonwebtoken rejects sign options.
+      // CI has no .env; without these jsonwebtoken rejects sign options.
       JWT_ISSUER: 'accounting',
+      JWT_AUDIENCE: 'accounting-web',
       // Failure-path tests point at a host that does not answer; a short
       // timeout keeps them fast instead of waiting on the OS.
       SMTP_TIMEOUT_MS: '800',

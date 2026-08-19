@@ -45,7 +45,7 @@ function signToken(payload: { userId: string; accountId: string }) {
     // jsonwebtoken types require a strict ms-string type; env is a plain string.
     expiresIn: (process.env.JWT_EXPIRES_IN || '8h') as any,
     issuer: process.env.JWT_ISSUER || 'accounting',
-    audience: process.env.JWT_AUDIENCE,
+    audience: process.env.JWT_AUDIENCE || 'accounting-web',
   });
 }
 
@@ -59,7 +59,7 @@ function requireAuth(req: any) {
 
   const decoded: any = jwt.verify(token, secret, {
     issuer: process.env.JWT_ISSUER || 'accounting',
-    audience: process.env.JWT_AUDIENCE,
+    audience: process.env.JWT_AUDIENCE || 'accounting-web',
   });
   if (!decoded?.userId || !decoded?.accountId) throw new Error('Unauthorized');
   return { userId: String(decoded.userId), accountId: String(decoded.accountId) };

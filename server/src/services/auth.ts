@@ -32,7 +32,7 @@ export function signAccessToken(payload: { userId: string; accountId: string; si
   return jwt.sign(payload, secret, {
     expiresIn: ACCESS_TOKEN_TTL as any,
     issuer: process.env.JWT_ISSUER || 'accounting',
-    audience: process.env.JWT_AUDIENCE,
+    audience: process.env.JWT_AUDIENCE || 'accounting-web',
   });
 }
 
