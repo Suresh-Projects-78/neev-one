@@ -31,6 +31,19 @@ export async function registerEInvoiceApi(backendInvoiceId, payload) {
   });
 }
 
+/** Full stored e-invoice record (IRN, ack, signed invoice/QR, payload, cancel state). */
+export async function getEInvoiceDetailsApi(backendInvoiceId) {
+  return apiFetch(`/orgs/${requireOrgId()}/invoices/${encodeURIComponent(backendInvoiceId)}/einvoice`);
+}
+
+/** Cancels a registered IRN (24-hour window). reason: '1'..'4'. */
+export async function cancelEInvoiceApi(backendInvoiceId, { reason, remarks }) {
+  return apiFetch(`/orgs/${requireOrgId()}/invoices/${encodeURIComponent(backendInvoiceId)}/einvoice/cancel`, {
+    method: 'POST',
+    body: { reason, remarks },
+  });
+}
+
 /** Generates an e-Way Bill from the invoice's IRN (NIC provider). */
 export async function generateEwaybillApi(backendInvoiceId, transport = {}) {
   return apiFetch(`/orgs/${requireOrgId()}/invoices/${encodeURIComponent(backendInvoiceId)}/ewaybill`, {

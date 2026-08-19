@@ -305,6 +305,120 @@ describe('NIC direct provider', () => {
     expect(result.error).toContain('Duplicate IRN');
   });
 
+  it('stores the signed invoice and payload, then cancels within the window', async () => {
+    clearNicSessions();
+    // point the org back at a working NIC config
+    await request(app)
+      .put(`/api/orgs/${owner.orgId}/einvoice/settings`)
+      .set(auth(owner))
+      .send({ publicKeyPem })
+      .expect(200);
+    await setFeature('einvoice', true);
+
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/invoices`)
+      .set(auth(owner))
+      .send({
+        date: '2026-08-02',
+        customerName: 'Cancel Buyer',
+        subtotal: 500,
+        gstTotal: 90,
+        total: 590,
+        status: 'Unpaid',
+        items: [{ description: 'Widget', quantity: 1, rate: 500, gstRate: 18 }],
+      })
+      .expect(201);
+    const invoiceId = created.body.invoice.id;
+
+    const nicWithSigned = ((seen: any) => (async (url: string, init: any) => {
+      if (String(url).includes('/eivital/')) {
+        const encrypted = Buffer.from(JSON.parse(init.body).Data, 'base64');
+        const b64Json = privateDecrypt({ key: privateKey, padding: cryptoConstants.RSA_PKCS1_PADDING }, encrypted).toString('utf8');
+        const creds = JSON.parse(Buffer.from(b64Json, 'base64').toString('utf8'));
+        const appKey = Buffer.from(creds.AppKey, 'base64');
+        return { status: 200, json: async () => ({ Status: '1', Data: { AuthToken: 'tok-c', Sek: nicCrypto.aesEncrypt(appKey, SEK) } }), text: async () => '' };
+      }
+      const reqPayload = JSON.parse(nicCrypto.aesDecrypt(SEK, JSON.parse(init.body).Data).toString('utf8'));
+      seen.lastPayload = reqPayload;
+      seen.lastPath = String(url);
+      const data = String(url).includes('/Cancel')
+        ? { Irn: reqPayload.Irn, CancelDate: '2026-08-19 15:00:00' }
+        : { Irn: 'irn-cancel-test', AckNo: 7, AckDt: '2026-08-19 14:00:00', SignedQRCode: 'qr.jwt', SignedInvoice: 'signed.invoice.jwt' };
+      return { status: 200, json: async () => ({ Status: '1', Data: nicCrypto.aesEncrypt(SEK, Buffer.from(JSON.stringify(data), 'utf8')) }), text: async () => '' };
+    }) as any);
+
+    const seen: any = {};
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = nicWithSigned(seen);
+    try {
+      const reg = await request(app)
+        .post(`/api/orgs/${owner.orgId}/invoices/${invoiceId}/einvoice`)
+        .set(auth(owner))
+        .send({ payload: { Version: '1.1', DocDtls: { No: created.body.invoice.number } } })
+        .expect(200);
+      expect(reg.body.signedInvoice).toBe('signed.invoice.jwt');
+
+      // Full record endpoint returns everything stored.
+      const details = await request(app)
+        .get(`/api/orgs/${owner.orgId}/invoices/${invoiceId}/einvoice`)
+        .set(auth(owner))
+        .expect(200);
+      expect(details.body.irn).toBe('irn-cancel-test');
+      expect(details.body.signedInvoice).toBe('signed.invoice.jwt');
+      expect(details.body.payload?.Version).toBe('1.1');
+
+      // Cancel within the window.
+      const cancel = await request(app)
+        .post(`/api/orgs/${owner.orgId}/invoices/${invoiceId}/einvoice/cancel`)
+        .set(auth(owner))
+        .send({ reason: '2', remarks: 'Wrong rate' })
+        .expect(200);
+      expect(cancel.body.status).toBe('CANCELLED');
+      expect(String(seen.lastPath)).toContain('/Cancel');
+      expect(seen.lastPayload.Irn).toBe('irn-cancel-test');
+      expect(seen.lastPayload.CnlRsn).toBe('2');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+
+    const row = await prisma.invoice.findUnique({ where: { id: invoiceId } });
+    expect(row?.irnStatus).toBe('CANCELLED');
+    expect(row?.irnCancelReason).toContain('Data entry mistake');
+
+    // A cancelled IRN cannot be cancelled again.
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/invoices/${invoiceId}/einvoice/cancel`)
+      .set(auth(owner))
+      .send({ reason: '4' })
+      .expect(400);
+  });
+
+  it('refuses cancellation after the 24-hour window', async () => {
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/invoices`)
+      .set(auth(owner))
+      .send({
+        date: '2026-08-03',
+        customerName: 'Old Buyer',
+        subtotal: 100,
+        total: 100,
+        status: 'Unpaid',
+        items: [],
+      })
+      .expect(201);
+    const invoiceId = created.body.invoice.id;
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { irn: 'old-irn', irnStatus: 'REGISTERED', irnRegisteredAt: new Date(Date.now() - 25 * 60 * 60 * 1000) },
+    });
+    const res = await request(app)
+      .post(`/api/orgs/${owner.orgId}/invoices/${invoiceId}/einvoice/cancel`)
+      .set(auth(owner))
+      .send({ reason: '3' })
+      .expect(400);
+    expect(String(res.body.error)).toContain('24-hour');
+  });
+
   it('fails with a clear message when the public key is missing', async () => {
     clearNicSessions();
     await request(app)

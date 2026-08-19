@@ -13,6 +13,7 @@ import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
 import EwbTransportForm from '../../components/EwbTransportForm';
+import EInvoiceWorkflow from './EInvoiceWorkflow';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
@@ -996,42 +997,46 @@ export const InvoicesList = ({
                     <button
                       type="button"
                       className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
-                      onClick={async () => {
+                      onClick={() => {
                         setOpenMenu(null);
-                        if (inv.irn) {
-                          notify.info(`${inv.number} already has IRN ${inv.irn}`);
-                          return;
-                        }
-                        if (!inv.backendInvoiceId) {
-                          notify.error('This invoice is not on the server yet — only server-backed invoices can be registered.');
-                          return;
-                        }
-                        if (!String(currentCompany?.gstin || '').trim()) {
-                          notify.error('Set the company GSTIN in Company Profile before registering on the IRP.');
-                          return;
-                        }
                         const customer = (db.customers || []).find((c) => c.id === inv.customerId) || {};
-                        try {
-                          const result = await registerEInvoiceApi(
-                            inv.backendInvoiceId,
-                            buildEInvoicePayload({ invoice: inv, company: currentCompany, customer })
-                          );
-                          setDb((prev) => ({
-                            ...prev,
-                            invoices: (prev.invoices || []).map((x) =>
-                              x.id === inv.id
-                                ? { ...x, irn: result.irn, irnAckNo: result.ackNo, irnAckDate: result.ackDate, irnSignedQr: result.signedQr }
-                                : x
-                            ),
-                          }));
-                          notify.success(`IRN for ${inv.number}: ${result.irn}`);
-                        } catch (err) {
-                          notify.error(String(err?.message || 'IRP registration failed.'));
-                        }
+                        openModal(
+                          <EInvoiceWorkflow
+                            invoice={inv}
+                            company={currentCompany}
+                            customer={customer}
+                            onClose={() => openModal(null)}
+                            onRegistered={(d) =>
+                              setDb((prev) => ({
+                                ...prev,
+                                invoices: (prev.invoices || []).map((x) =>
+                                  x.id === inv.id
+                                    ? { ...x, irn: d.irn, irnStatus: d.status, irnAckNo: d.ackNo, irnAckDate: d.ackDate, irnSignedQr: d.signedQr }
+                                    : x
+                                ),
+                              }))
+                            }
+                            onCancelled={(d) =>
+                              setDb((prev) => ({
+                                ...prev,
+                                invoices: (prev.invoices || []).map((x) =>
+                                  x.id === inv.id ? { ...x, irnStatus: 'CANCELLED', irnCancelReason: d.cancelReason } : x
+                                ),
+                              }))
+                            }
+                          />,
+                          { title: `e-Invoice — ${inv.number}`, maxWidthClass: 'max-w-3xl' }
+                        );
                       }}
                     >
                       <FileText size={16} className="ui-muted" />
-                      <span>{inv.irn ? `IRN: ${String(inv.irn).slice(0, 12)}…` : 'Register on IRP (get IRN)'}</span>
+                      <span>
+                        {inv.irnStatus === 'CANCELLED'
+                          ? 'e-Invoice (IRN cancelled)'
+                          : inv.irn
+                            ? `e-Invoice · IRN ${String(inv.irn).slice(0, 10)}…`
+                            : 'e-Invoice (get IRN)'}
+                      </span>
                     </button>
                     {inv.irn && !inv.ewbNo ? (
                       <button

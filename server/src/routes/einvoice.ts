@@ -12,6 +12,7 @@ import {
   registerOnIrp,
   testIrpConnection,
   generateEwbByIrn,
+  cancelIrnOnIrp,
 } from '../services/einvoice.js';
 
 /**
@@ -147,6 +148,8 @@ einvoiceRouter.post('/orgs/:orgId/invoices/:invoiceId/einvoice', INVOICE_EDIT, a
       irnAckNo: result.ackNo || null,
       irnAckDate: result.ackDate || null,
       irnSignedQr: result.signedQr || null,
+      irnSignedInvoice: result.signedInvoice || null,
+      einvoicePayloadJson: JSON.stringify(payload),
       irnError: null,
       irnRegisteredAt: new Date(),
     },
@@ -158,7 +161,74 @@ einvoiceRouter.post('/orgs/:orgId/invoices/:invoiceId/einvoice', INVOICE_EDIT, a
     ackNo: updated.irnAckNo,
     ackDate: updated.irnAckDate,
     signedQr: updated.irnSignedQr,
+    signedInvoice: updated.irnSignedInvoice,
   });
+});
+
+/** Full stored e-invoice record for one invoice — for the workflow panel and downloads. */
+einvoiceRouter.get('/orgs/:orgId/invoices/:invoiceId/einvoice', INVOICE_EDIT, async (req, res) => {
+  if (!orgOk(req, res)) return;
+  const { accountId, orgId } = req.tenant!;
+  const invoice = await prisma.invoice.findFirst({ where: { id: String(req.params.invoiceId), accountId, orgId } });
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  res.json({
+    irn: invoice.irn,
+    status: invoice.irnStatus,
+    ackNo: invoice.irnAckNo,
+    ackDate: invoice.irnAckDate,
+    signedQr: invoice.irnSignedQr,
+    signedInvoice: invoice.irnSignedInvoice,
+    payload: invoice.einvoicePayloadJson ? JSON.parse(invoice.einvoicePayloadJson) : null,
+    registeredAt: invoice.irnRegisteredAt,
+    cancelledAt: invoice.irnCancelledAt,
+    cancelReason: invoice.irnCancelReason,
+    error: invoice.irnError,
+  });
+});
+
+const cancelSchema = z.object({
+  reason: z.enum(['1', '2', '3', '4']),
+  remarks: z.string().max(100).optional(),
+});
+
+const CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/** Cancel a registered IRN — the GST network allows it within 24 hours. */
+einvoiceRouter.post('/orgs/:orgId/invoices/:invoiceId/einvoice/cancel', INVOICE_EDIT, async (req, res) => {
+  if (!orgOk(req, res)) return;
+  const { accountId, orgId } = req.tenant!;
+
+  if (!(await isFeatureEnabled(accountId, orgId, 'einvoice'))) {
+    return res.status(400).json({ error: 'e-Invoicing is switched off for this company (Settings → Features).' });
+  }
+
+  const invoice = await prisma.invoice.findFirst({ where: { id: String(req.params.invoiceId), accountId, orgId } });
+  if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+  if (!invoice.irn || invoice.irnStatus !== 'REGISTERED') {
+    return res.status(400).json({ error: 'This invoice has no active IRN to cancel.' });
+  }
+  if (invoice.irnRegisteredAt && Date.now() - invoice.irnRegisteredAt.getTime() > CANCEL_WINDOW_MS) {
+    return res.status(400).json({
+      error: 'The 24-hour IRN cancellation window has passed. Issue a credit note against this invoice instead.',
+    });
+  }
+
+  const input = cancelSchema.parse(req.body || {});
+  const result = await cancelIrnOnIrp(orgId, invoice.irn, { reason: input.reason, remarks: input.remarks });
+  if (!result.ok) return res.status(502).json({ error: result.error || 'IRN cancellation failed' });
+
+  const reasonLabel =
+    { '1': 'Duplicate', '2': 'Data entry mistake', '3': 'Order cancelled', '4': 'Others' }[input.reason] || input.reason;
+  const updated = await prisma.invoice.update({
+    where: { id: invoice.id },
+    data: {
+      irnStatus: 'CANCELLED',
+      irnCancelledAt: new Date(),
+      irnCancelReason: `${reasonLabel}${input.remarks ? ` — ${input.remarks}` : ''}`,
+    },
+  });
+
+  res.json({ ok: true, status: updated.irnStatus, cancelledAt: updated.irnCancelledAt });
 });
 
 const ewbSchema = z.object({

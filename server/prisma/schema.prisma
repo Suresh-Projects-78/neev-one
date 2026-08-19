@@ -468,8 +468,14 @@ model Invoice {
   irnAckNo        String?
   irnAckDate      String?
   irnSignedQr     String?
+  /// The full SignedInvoice JWT the IRP returns — the legal e-invoice.
+  irnSignedInvoice String?
+  /// The INV-01 JSON that was registered, kept verbatim for audit/re-download.
+  einvoicePayloadJson String?
   irnError        String?
   irnRegisteredAt DateTime?
+  irnCancelledAt  DateTime?
+  irnCancelReason String?
 
   /// e-Way Bill generated from the IRN (NIC /eiewb API).
   ewbNo        String?

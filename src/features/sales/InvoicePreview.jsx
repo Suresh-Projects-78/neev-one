@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import QRCode from 'qrcode';
 
 import { ACCENT_OPTIONS, getDocSettings } from '../../utils/docSettings';
 import { formatMoney } from '../../utils/money';
@@ -16,6 +17,19 @@ const InfoRow = ({ label, value, right = false }) => {
 
 const InvoicePreview = ({ db, currentCompany, invoice }) => {
   const docSettings = useMemo(() => getDocSettings(db, currentCompany), [db, currentCompany]);
+
+  // Signed e-invoice QR, rendered from the JWT the IRP returned.
+  const [irnQrDataUrl, setIrnQrDataUrl] = useState('');
+  useEffect(() => {
+    const src = invoice?.irnSignedQr;
+    if (!src) {
+      setIrnQrDataUrl('');
+      return;
+    }
+    QRCode.toDataURL(String(src), { margin: 1, width: 192 })
+      .then(setIrnQrDataUrl)
+      .catch(() => setIrnQrDataUrl(''));
+  }, [invoice?.irnSignedQr]);
   const templateId = String(docSettings?.templates?.invoice?.templateId || 'classic');
   const accentId = String(docSettings?.templates?.invoice?.accentId || 'blue');
   const accent = ACCENT_OPTIONS.find((a) => a.id === accentId) || ACCENT_OPTIONS[0];
@@ -143,6 +157,17 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
         </div>
       </div>
 
+      {invoice?.irn ? (
+        <div className="flex items-start justify-between gap-3 border rounded-lg p-3">
+          <div className="min-w-0 text-xs text-gray-700">
+            <div className="font-semibold uppercase">e-Invoice</div>
+            <div className="break-all font-mono">IRN: {invoice.irn}</div>
+            {invoice.irnAckNo ? <div>Ack: {invoice.irnAckNo} · {invoice.irnAckDate || ''}</div> : null}
+            {invoice.irnStatus === 'CANCELLED' ? <div className="font-semibold">IRN CANCELLED</div> : null}
+          </div>
+          {irnQrDataUrl ? <img src={irnQrDataUrl} alt="Signed e-invoice QR" className="h-24 w-24 flex-shrink-0" /> : null}
+        </div>
+      ) : null}
       {invoice?.shipToAddress ? (
         <div className="border rounded-lg p-3 text-xs text-gray-700">
           <span className="font-semibold uppercase">Ship to ({invoice.shipToAddress.code}):</span>{' '}

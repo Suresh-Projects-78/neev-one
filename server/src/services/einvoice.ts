@@ -120,6 +120,7 @@ export type IrpResult = {
   ackNo?: string;
   ackDate?: string;
   signedQr?: string;
+  signedInvoice?: string;
   error?: string;
   raw?: unknown;
 };
@@ -152,6 +153,7 @@ const parseIrpResponse = (body: any): IrpResult => {
         ackNo: String(layer.AckNo ?? layer.ackNo ?? layer.ack_no ?? ''),
         ackDate: String(layer.AckDt ?? layer.ackDt ?? layer.ack_dt ?? layer.AckDate ?? ''),
         signedQr: String(layer.SignedQRCode ?? layer.signedQRCode ?? layer.signed_qr_code ?? ''),
+        signedInvoice: String(layer.SignedInvoice ?? layer.signedInvoice ?? layer.signed_invoice ?? ''),
         raw: body,
       };
     }
@@ -355,6 +357,7 @@ async function nicCall(
     ackNo: decoded?.AckNo != null ? String(decoded.AckNo) : '',
     ackDate: decoded?.AckDt ? String(decoded.AckDt) : '',
     signedQr: decoded?.SignedQRCode ? String(decoded.SignedQRCode) : '',
+    signedInvoice: decoded?.SignedInvoice ? String(decoded.SignedInvoice) : '',
     raw: decoded,
   };
 }
@@ -402,6 +405,54 @@ export async function registerOnIrp(
     return { ok: false, error: parsed.error || `Gateway answered ${res.status}`, raw: body };
   }
   return parseIrpResponse(body);
+}
+
+/**
+ * Cancel a registered IRN. NIC allows this only within 24 hours of
+ * registration; reason codes: 1 duplicate, 2 data entry mistake,
+ * 3 order cancelled, 4 others.
+ */
+export async function cancelIrnOnIrp(
+  orgId: string,
+  irn: string,
+  { reason, remarks }: { reason: string; remarks?: string },
+  doFetch: FetchLike = fetch as unknown as FetchLike
+): Promise<IrpResult> {
+  const cfg = await getEInvoiceConfig(orgId);
+  if (!cfg) return { ok: false, error: SANDBOX_HINT };
+
+  const payload = { Irn: String(irn), CnlRsn: String(reason || '2'), CnlRem: String(remarks || 'Cancelled').slice(0, 100) };
+
+  if (cfg.provider === 'NIC') {
+    const result = await nicCall(orgId, cfg, '/eicore/v1.03/Invoice/Cancel', payload, doFetch);
+    if (!result.ok) return result;
+    const decoded: any = result.raw || {};
+    // Cancel responses answer with the Irn + CancelDate rather than an Ack.
+    return { ok: true, irn: String(decoded.Irn || irn), ackDate: String(decoded.CancelDate || ''), raw: decoded };
+  }
+
+  // GSP gateways expose a plain cancel endpoint next to /invoice.
+  let res: Awaited<ReturnType<FetchLike>>;
+  try {
+    res = await doFetch(`${cfg.baseUrl}/invoice/cancel`, {
+      method: 'POST',
+      headers: authHeaders(cfg),
+      body: JSON.stringify(payload),
+    });
+  } catch (err: any) {
+    return { ok: false, error: `Could not reach the e-Invoice gateway: ${String(err?.message || err)}` };
+  }
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch {
+    return { ok: false, error: `Gateway answered ${res.status} with a non-JSON body` };
+  }
+  if (res.status >= 400) {
+    const parsed = parseIrpResponse(body);
+    return { ok: false, error: parsed.error || `Gateway answered ${res.status}`, raw: body };
+  }
+  return { ok: true, irn, raw: body };
 }
 
 /**
