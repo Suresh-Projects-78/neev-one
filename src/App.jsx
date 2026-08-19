@@ -153,6 +153,9 @@ const PaymentReminders = lazy(() => import('./features/sales/PaymentReminders'))
 const TallyExport = lazy(() => import('./features/reports/TallyExport'));
 const ReorderAlerts = lazy(() => import('./features/inventory/ReorderAlerts'));
 const TdsTcsReport = lazy(() => import('./features/reports/TdsTcsReport'));
+const FixedAssets = lazy(() => import('./features/accounting/FixedAssets'));
+const YearEndClose = lazy(() => import('./features/accounting/YearEndClose'));
+const CostCenters = lazy(() => import('./features/accounting/CostCenters'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -1153,6 +1156,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
   const [formData, setFormData] = useState(() => ({
     number: generateVoucherNumber({ db, company: currentCompany, voucherKey: 'expense', branchId: activeBranchId || null }) || '',
     date: new Date().toISOString().split('T')[0],
+    costCenterId: '',
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     status: 'Unpaid',
     description: '',
@@ -1360,6 +1364,24 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
             <option>Supplies</option>
           </select>
         </div>
+
+        {(db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Cost Center</label>
+            <select
+              value={formData.costCenterId || ''}
+              onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="">— none —</option>
+              {(db.costCenters || [])
+                .filter((c) => c.companyId === currentCompany.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+            </select>
+          </div>
+        ) : null}
 
         <div>
           <label className="block text-sm font-medium mb-1">Ref No</label>
@@ -3376,6 +3398,15 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Year-end lock: nothing back-dates into closed books.
+    {
+      const lock = (db.fyLocks || []).find((l) => l.companyId === currentCompany.id);
+      if (lock && String(formData.date || '').slice(0, 10) <= lock.upTo) {
+        notify.error(`Books are locked up to ${lock.upTo} (Year-End Close). Pick a later date or unlock the year.`);
+        return;
+      }
+    }
+
     let jvNumber = String(formData.number || '').trim();
     if (isJvAuto) {
       if (lockJvNumber) jvNumber = String(generatedJvNumber || '').trim();
@@ -5211,6 +5242,9 @@ const REPORT_META = {
   gstr2bReco: { icon: BadgePercent, desc: 'Match the portal\u2019s 2B against your bills — know which ITC is safe.' },
   tallyExport: { icon: FileStack, desc: 'Masters + vouchers as Tally XML — what the CA asks for.' },
   tdsTcs: { icon: Landmark, desc: 'Per-party 194Q/206C accumulation and the payable for challan filing.' },
+  fixedAssets: { icon: Building2, desc: 'Asset register + WDV depreciation schedule with the yearly journal.' },
+  yearEndClose: { icon: BookOpen, desc: 'P&L to capital, then lock the year against back-dating.' },
+  costCenters: { icon: BarChart3, desc: 'P&L by branch/project — who actually makes money.' },
   salesReports: { icon: ClipboardList, desc: 'Billing by status and totals across customers.' },
 };
 
@@ -9973,6 +10007,9 @@ const AppShell = () => {
           items: [
             { key: 'tallyExport', label: 'Tally Export' },
             { key: 'tdsTcs', label: 'TDS / TCS (194Q & 206C)' },
+            { key: 'fixedAssets', label: 'Fixed Assets' },
+            { key: 'yearEndClose', label: 'Year-End Close' },
+            { key: 'costCenters', label: 'Cost Centers' },
           ],
         },
       ],
@@ -11282,6 +11319,12 @@ const AppShell = () => {
         return <TallyExport db={dbForUser} currentCompany={currentCompany} />;
       case 'tdsTcs':
         return <TdsTcsReport db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'fixedAssets':
+        return <FixedAssets db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'yearEndClose':
+        return <YearEndClose db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+      case 'costCenters':
+        return <CostCenters db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'priceLists':
         return <PriceLists db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'discountRules':

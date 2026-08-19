@@ -1,0 +1,122 @@
+import React, { useMemo, useState } from 'react';
+import { Plus, Trash2, PieChart } from 'lucide-react';
+import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { notify, confirmDialog } from '../../components/ui/notify';
+import { formatMoney } from '../../utils/money';
+
+/**
+ * Cost centers — P&L by branch / project / vertical.
+ *
+ * Invoices and expenses carry an optional costCenterId; this page manages
+ * the list and answers "which vertical actually makes money": income,
+ * expense and net per center, plus an Unallocated row so nothing hides.
+ */
+const num = (v) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
+
+export default function CostCenters({ db, setDb, currentCompany }) {
+  const companyId = currentCompany.id;
+  const centers = useMemo(() => (db.costCenters || []).filter((c) => c.companyId === companyId), [db.costCenters, companyId]);
+  const [name, setName] = useState('');
+
+  const rows = useMemo(() => {
+    const live = (d) => !['draft', 'cancelled'].includes(String(d.status || '').toLowerCase());
+    const slots = new Map(centers.map((c) => [String(c.id), { center: c, income: 0, expense: 0 }]));
+    const un = { center: { id: null, name: 'Unallocated' }, income: 0, expense: 0 };
+
+    for (const inv of (db.invoices || []).filter((d) => d.companyId === companyId && live(d))) {
+      const slot = slots.get(String(inv.costCenterId)) || un;
+      slot.income += num(inv.subtotal) + num(inv.otherChargesTotal);
+    }
+    for (const ex of (db.expenses || []).filter((d) => d.companyId === companyId && live(d))) {
+      const slot = slots.get(String(ex.costCenterId)) || un;
+      slot.expense += num(ex.taxableTotal ?? ex.subtotal ?? ex.amount);
+    }
+    const list = [...slots.values()].map((s) => ({ ...s, net: s.income - s.expense }));
+    if (un.income || un.expense) list.push({ ...un, net: un.income - un.expense });
+    return list.sort((a, b) => b.net - a.net);
+  }, [db, companyId, centers]);
+
+  const add = () => {
+    const n = name.trim();
+    if (!n) {
+      notify.error('Give the cost center a name (branch, project, vertical…)');
+      return;
+    }
+    const nextId = (db.costCenters || []).reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
+    setDb((prev) => ({ ...prev, costCenters: [...(prev.costCenters || []), { id: nextId, companyId, name: n, createdAt: new Date().toISOString() }] }));
+    setName('');
+    notify.success(`Cost center "${n}" added.`);
+  };
+
+  const remove = async (c) => {
+    const ok = await confirmDialog({ title: 'Remove cost center', message: `Remove "${c.name}"? Documents keep their tag but report as Unallocated.`, confirmLabel: 'Remove' });
+    if (!ok) return;
+    setDb((prev) => ({ ...prev, costCenters: (prev.costCenters || []).filter((x) => x.id !== c.id) }));
+  };
+
+  const money = (v) => formatMoney(Number(v || 0), currentCompany);
+
+  return (
+    <div className="space-y-5">
+      <PageHeader title="Cost Centers" description="P&L by branch, project or vertical — tag invoices and expenses, see who actually makes money." />
+
+      <div className="ui-card flex flex-wrap items-end gap-3 p-4">
+        <div>
+          <label className="ui-label">New cost center</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
+            className="ui-input w-56 px-3 py-2"
+            placeholder="Retail counter / Project X…"
+          />
+        </div>
+        <button type="button" onClick={add} className="ui-btn ui-btn-primary">
+          <Plus size={15} aria-hidden="true" /> Add
+        </button>
+        <div className="ui-caption pb-2">Then pick it on invoices and expenses.</div>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="ui-card">
+          <EmptyState icon={PieChart} title="No cost centers yet" description="Add one per branch/project, then tag documents with it." />
+        </div>
+      ) : (
+        <div className="ui-card overflow-x-auto">
+          <table className="ui-table w-full">
+            <thead>
+              <tr>
+                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Cost center</th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Income</th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Expense</th>
+                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Net</th>
+                <th className="px-4 py-2.5"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="border-t">
+                  <td className="ui-col-entity px-4 py-2.5 font-medium">{r.center.name}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{money(r.income)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{money(r.expense)}</td>
+                  <td className={`px-4 py-2.5 text-right font-semibold ${r.net >= 0 ? 'ui-amount-pos' : 'ui-amount-neg'}`}>{money(r.net)}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    {r.center.id != null ? (
+                      <button type="button" onClick={() => remove(r.center)} className="ui-icon-btn !h-8 !w-8" aria-label={`Remove ${r.center.name}`}>
+                        <Trash2 size={14} />
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

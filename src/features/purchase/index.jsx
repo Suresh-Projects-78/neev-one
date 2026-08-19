@@ -197,6 +197,15 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       return;
     }
 
+    // Year-end lock: nothing back-dates into closed books.
+    {
+      const lock = (db.fyLocks || []).find((l) => l.companyId === currentCompany.id);
+      if (lock && String(formData.date || '').slice(0, 10) <= lock.upTo) {
+        notify.error(`Books are locked up to ${lock.upTo} (Year-End Close). Pick a later date or unlock the year.`);
+        return;
+      }
+    }
+
     if (!companyState) {
       notify.error('Please set Company State in Company Profile before creating GST bills.');
       return;

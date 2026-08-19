@@ -1727,6 +1727,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       invoiceDiscountValue: Number(initialData?.invoiceDiscountValue) || '',
       otherCharges: Array.isArray(initialData?.otherCharges) ? initialData.otherCharges : [],
       salesmanId: initialData?.salesmanId ?? '',
+      costCenterId: initialData?.costCenterId ?? '',
       shipToCode: initialData?.shipToCode || '',
       shipToAddress: initialData?.shipToAddress || null,
     };
@@ -1926,6 +1927,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     if (!formData.customerId) {
       notify.error('Customer is required');
       return;
+    }
+
+    // Year-end lock: nothing back-dates into closed books.
+    {
+      const lock = (db.fyLocks || []).find((l) => l.companyId === currentCompany.id);
+      if (lock && String(formData.date || '').slice(0, 10) <= lock.upTo) {
+        notify.error(`Books are locked up to ${lock.upTo} (Year-End Close). Pick a later date or unlock the year.`);
+        return;
+      }
     }
 
     if (!companyState) {
@@ -2378,6 +2388,24 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             placeholder="Estimate / Quotation / Sales Order"
           />
         </div>
+
+        {(db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Cost Center</label>
+            <select
+              value={formData.costCenterId || ''}
+              onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="">— none —</option>
+              {(db.costCenters || [])
+                .filter((c) => c.companyId === currentCompany.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+            </select>
+          </div>
+        ) : null}
 
         {(db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
           <div>
