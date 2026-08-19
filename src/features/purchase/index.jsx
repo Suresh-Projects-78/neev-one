@@ -1475,7 +1475,7 @@ export const DebitNoteForm = ({
     setFormData((prev) => ({ ...prev, items: nextItems }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     let debitNumber = String(formData.number || '').trim();
@@ -1563,10 +1563,43 @@ export const DebitNoteForm = ({
 
     const vendorObj = vendors.find((v) => v.id === parseInt(formData.vendorId));
 
+    // Server first: a debit note reverses a booked liability, so it must
+    // reach the books. The local copy mirrors it for the UI.
+    let backendDocId = null;
+    let serverNumber = '';
+    if (hasApiSession()) {
+      try {
+        const saved = await createDocApi('debitNote', {
+          number: debitNumber || undefined,
+          date: formData.date,
+          againstDocId: originalBill?.backendDocId ? String(originalBill.backendDocId) : null,
+          partyId: vendorObj?.backendPartyId ? String(vendorObj.backendPartyId) : null,
+          partyName: getVendorDisplayName(vendorObj) || originalBill.vendorName || '',
+          partyGstin: vendorGstin || null,
+          placeOfSupplyState: vendorState || null,
+          taxType: isIntra ? 'CGST_SGST' : 'IGST',
+          subtotal: computed.subtotal,
+          cgstTotal: computed.cgstTotal,
+          sgstTotal: computed.sgstTotal,
+          igstTotal: computed.igstTotal,
+          gstTotal: computed.gstTotal,
+          total: computed.total,
+          status: 'Open',
+          items: computed.lines,
+        });
+        backendDocId = saved?.id || null;
+        serverNumber = String(saved?.number || '');
+      } catch (err) {
+        notify.error(String(err?.message || 'Debit note not saved to the server.'));
+        return;
+      }
+    }
+
     const newDebitNote = {
       id: db.debitNotes.length + 1,
       companyId: currentCompany.id,
-      number: debitNumber,
+      backendDocId,
+      number: serverNumber || debitNumber,
       date: formData.date,
       warehouseId: String(formData.warehouseId || '').trim(),
       originalBillId: originalBill.id,

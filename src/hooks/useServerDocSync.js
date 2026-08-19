@@ -52,6 +52,8 @@ const KINDS = [
   ['expense', 'expenses', 'backendDocId', 'vendorName', (d) => ({ category: d.category || '', description: d.description || '', taxableTotal: num(d.subtotal) })],
   ['estimate', 'estimates', 'backendDocId', 'customerName', (d) => ({ validUntil: d.validUntil || '' })],
   ['purchaseOrder', 'purchaseOrders', 'backendDocId', 'vendorName', (d) => ({ expectedDate: d.expectedDate || '', warehouseId: d.warehouseId || '' })],
+  ['creditNote', 'creditNotes', 'backendDocId', 'customerName', (d) => ({ originalInvoiceNumber: d.refNo || '', customerGstin: d.partyGstin || '' })],
+  ['debitNote', 'debitNotes', 'backendDocId', 'vendorName', (d) => ({ originalBillNumber: d.refNo || '', vendorGstin: d.partyGstin || '' })],
 ];
 
 export function useServerDocSync({ enabled, currentCompanyId, setDb }) {

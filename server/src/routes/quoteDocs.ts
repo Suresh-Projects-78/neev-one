@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
+import { requireAuth } from '../middleware/auth.js';
+import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { isFeatureEnabled } from '../services/features.js';
@@ -16,6 +18,9 @@ import { ensureDefaultSeries, allocateNumber } from '../services/numbering.js';
  * money documents needed: to survive the browser profile.
  */
 export const quoteDocsRouter = Router();
+// Explicit, not inherited: until now this router relied on being mounted
+// after purchaseDocs (whose router-level requireAuth ran first on /api).
+quoteDocsRouter.use(requireAuth, requireTenantContext);
 
 type QuoteKind = 'ESTIMATE' | 'PURCHASE_ORDER';
 

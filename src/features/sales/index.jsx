@@ -2757,7 +2757,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     let creditNumber = String(formData.number || '').trim();
@@ -2811,10 +2811,43 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
     const customer = customers.find((c) => c.id === parseInt(formData.customerId));
 
+    // Server first: a credit note reverses booked revenue, so it must reach
+    // the books. The local copy mirrors it for the UI.
+    let backendDocId = null;
+    let serverNumber = '';
+    if (hasDocsApiSession()) {
+      try {
+        const saved = await createDocApi('creditNote', {
+          number: creditNumber || undefined,
+          date: formData.date,
+          againstDocId: originalInvoice?.backendInvoiceId ? String(originalInvoice.backendInvoiceId) : null,
+          partyId: customer?.backendPartyId ? String(customer.backendPartyId) : null,
+          partyName: getCustomerDisplayName(customer) || originalInvoice.customerName || '',
+          partyGstin: customerGstin || null,
+          placeOfSupplyState: customerState || null,
+          taxType: isIntra ? 'CGST_SGST' : 'IGST',
+          subtotal: computed.subtotal,
+          cgstTotal: computed.cgstTotal,
+          sgstTotal: computed.sgstTotal,
+          igstTotal: computed.igstTotal,
+          gstTotal: computed.gstTotal,
+          total: computed.total,
+          status: 'Open',
+          items: computed.lines,
+        });
+        backendDocId = saved?.id || null;
+        serverNumber = String(saved?.number || '');
+      } catch (err) {
+        notify.error(String(err?.message || 'Credit note not saved to the server.'));
+        return;
+      }
+    }
+
     const newCreditNote = {
       id: getNextNumericId(db.creditNotes),
       companyId: currentCompany.id,
-      number: creditNumber,
+      backendDocId,
+      number: serverNumber || creditNumber,
       date: formData.date,
       originalInvoiceId: originalInvoice.id,
       originalInvoiceNumber: originalInvoice.number,

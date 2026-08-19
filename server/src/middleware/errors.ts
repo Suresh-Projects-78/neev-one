@@ -55,5 +55,11 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
     }
   }
 
+  // Unexpected 500s can carry internals (Prisma/driver text) in err.message —
+  // never hand those to the client in production.
+  if (status >= 500 && process.env.NODE_ENV === 'production') {
+    message = 'Server error';
+  }
+
   res.status(status).json({ error: message });
 }
