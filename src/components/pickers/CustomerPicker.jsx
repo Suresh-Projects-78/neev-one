@@ -432,7 +432,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         return;
       }
 
-      notify.error('Customer updated!');
+      notify.success('Customer updated!');
       return;
     }
 
@@ -476,7 +476,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       return;
     }
 
-    notify.error('Customer created!');
+    notify.success('Customer created!');
   };
 
   return (

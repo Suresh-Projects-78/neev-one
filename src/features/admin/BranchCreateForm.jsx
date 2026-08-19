@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createBranch } from '../../api/admin';
+import { notify } from '../../components/ui/notify';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 
@@ -48,6 +49,11 @@ export function BranchCreateForm({ orgId, onCreated }) {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!String(form.state || '').trim()) {
+      setError('State is required — pick the branch state.');
+      notify.error('State is required — pick the branch state.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -61,6 +67,7 @@ export function BranchCreateForm({ orgId, onCreated }) {
       };
       const res = await createBranch(orgId, payload);
       onCreated?.(res.branch);
+      notify.success(`Branch "${payload.branchName}" created.`);
       setForm((p) => ({ ...p, branchCode: '', branchName: '' }));
     } catch (err) {
       setError(err.message || 'Failed');

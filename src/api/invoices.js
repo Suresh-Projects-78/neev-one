@@ -16,11 +16,19 @@ export async function listInvoicesApi() {
 
 export async function createInvoiceApi(payload) {
   const orgId = requireOrgId();
-  const data = await apiFetch(`/orgs/${orgId}/invoices`, {
-    method: 'POST',
-    body: payload,
-  });
-  return data?.invoice || null;
+  try {
+    const data = await apiFetch(`/orgs/${orgId}/invoices`, {
+      method: 'POST',
+      body: payload,
+    });
+    return data?.invoice || null;
+  } catch (err) {
+    // Server's unique-constraint handler answers a bare "Already exists".
+    if (/already exists/i.test(String(err?.message || '')) && payload?.number) {
+      throw new Error(`Invoice number "${payload.number}" is already used. Change the number and save again.`);
+    }
+    throw err;
+  }
 }
 
 export async function updateInvoiceApi(invoiceId, payload) {

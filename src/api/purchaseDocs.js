@@ -38,8 +38,17 @@ export async function listDocsApi(kind) {
 }
 
 export async function createDocApi(kind, payload) {
-  const data = await apiFetch(`/orgs/${requireOrgId()}/${pathFor(kind)}`, { method: 'POST', body: payload });
-  return data?.document || null;
+  try {
+    const data = await apiFetch(`/orgs/${requireOrgId()}/${pathFor(kind)}`, { method: 'POST', body: payload });
+    return data?.document || null;
+  } catch (err) {
+    // The server's unique-constraint handler answers a bare "Already exists" —
+    // name the actual conflict so the user knows what to change.
+    if (/already exists/i.test(String(err?.message || '')) && payload?.number) {
+      throw new Error(`Number "${payload.number}" is already used by another document. Change the number and save again.`);
+    }
+    throw err;
+  }
 }
 
 export async function deleteDocApi(kind, docId) {

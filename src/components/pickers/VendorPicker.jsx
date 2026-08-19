@@ -418,7 +418,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         onClose();
         return;
       }
-      notify.error('Vendor updated!');
+      notify.success('Vendor updated!');
       return;
     }
 
@@ -465,7 +465,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       return;
     }
 
-    notify.error('Vendor created!');
+    notify.success('Vendor created!');
   };
 
   return (

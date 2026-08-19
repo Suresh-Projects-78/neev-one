@@ -1,11 +1,11 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
-import { confirmDialog } from '../../components/ui/notify';
+import { confirmDialog, notify } from '../../components/ui/notify';
 import { listBranches, createBranch, updateBranch, deleteBranch } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 
-export function SettingsBranches({ orgId }) {
+export function SettingsBranches({ orgId, onBranchesChanged }) {
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -96,6 +96,11 @@ export function SettingsBranches({ orgId }) {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!String(form.state || '').trim()) {
+      setError('State is required — pick the branch state.');
+      notify.error('State is required — pick the branch state.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -107,8 +112,11 @@ export function SettingsBranches({ orgId }) {
       setBranches((prev) => [...prev, res.branch]);
       setForm({ branchCode: '', branchName: '', addressLine1: '', city: '', state: '', country: 'India', gstRegistrationType: 'UNREGISTERED', gstin: '' });
       setShowForm(false);
+      notify.success(`Branch "${res.branch?.branchName || payload.branchName}" created.`);
+      onBranchesChanged?.();
     } catch (err) {
       setError(err.message || 'Failed to create branch');
+      notify.error(err.message || 'Failed to create branch');
     } finally {
       setSaving(false);
     }
@@ -119,6 +127,7 @@ export function SettingsBranches({ orgId }) {
     try {
       await deleteBranch(orgId, id);
       setBranches((prev) => prev.filter((b) => b.id !== id));
+      onBranchesChanged?.();
     } catch (err) {
       setError(err.message || 'Failed to delete');
     }

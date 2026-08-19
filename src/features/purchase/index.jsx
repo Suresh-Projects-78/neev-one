@@ -1619,7 +1619,7 @@ export const DebitNoteForm = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Original Bill #</label>
+          <label className="block text-sm font-medium mb-1">Original Bill # *</label>
           <select value={formData.originalBillId} onChange={(e) => onSelectOriginalBill(e.target.value)} className="ui-select w-full px-3 py-2" required>
             <option value="">Select Bill</option>
             {companyBills.map((b) => (

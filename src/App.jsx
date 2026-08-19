@@ -1257,7 +1257,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'expense', usedNumber: expenseNumber, branchId: activeBranchId || null }),
     });
     onClose?.();
-    notify.error('Expense created!');
+    notify.success('Expense created!');
   };
 
   return (
@@ -1592,6 +1592,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       return {
         code: String(initialData.code || ''),
         name: String(initialData.name || ''),
+        description: String(initialData.description || ''),
         type: initialData.type || 'Goods',
         unit: initialData.unit || 'Pcs',
         hsnSac: String(initialData.hsnSac || ''),
@@ -1609,6 +1610,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
     return {
       code: `ITM${Date.now()}`,
       name: '',
+      description: '',
       type: 'Goods',
       unit: 'Pcs',
       hsnSac: '',
@@ -1625,6 +1627,30 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
     .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   const uomNames = uoms.map((u) => String(u.name || '').trim()).filter(Boolean);
   const unitValue = String(formData.unit ?? '').trim();
+
+  const [newUnitOpen, setNewUnitOpen] = useState(false);
+  const [newUnitName, setNewUnitName] = useState('');
+  const saveNewUnit = () => {
+    const name = String(newUnitName || '').trim();
+    if (!name) {
+      notify.error('Unit name is required');
+      return;
+    }
+    const exists = (db.uoms || []).some(
+      (u) => u.companyId === currentCompany.id && String(u.name || '').trim().toLowerCase() === name.toLowerCase()
+    );
+    if (!exists) {
+      const nextUomId = Math.max(0, ...(db.uoms || []).map((u) => Number(u.id) || 0)) + 1;
+      setDb({
+        ...db,
+        uoms: [...(db.uoms || []), { id: nextUomId, companyId: currentCompany.id, name, createdAt: new Date().toISOString() }],
+      });
+    }
+    setFormData((p) => ({ ...p, unit: name }));
+    setNewUnitOpen(false);
+    setNewUnitName('');
+    notify.success(exists ? `Unit "${name}" selected.` : `Unit "${name}" added.`);
+  };
 
   const gstRates = (db.gstRates || [])
     .filter((r) => r.companyId === currentCompany.id)
@@ -1676,6 +1702,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         companyId: currentCompany.id,
         code,
         name,
+        description: String(formData.description || '').trim(),
         type: formData.type,
         unit: formData.unit,
         hsnSac: String(formData.hsnSac || ''),
@@ -1692,7 +1719,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         items: db.items.map((it) => (it.companyId === currentCompany.id && String(it.id) === String(existing.id) ? updated : it)),
       });
       onClose?.();
-      notify.error('Item updated!');
+      notify.success('Item updated!');
       return;
     }
 
@@ -1702,6 +1729,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       companyId: currentCompany.id,
       code,
       name,
+      description: String(formData.description || '').trim(),
       type: formData.type,
       unit: formData.unit,
       hsnSac: String(formData.hsnSac || ''),
@@ -1714,7 +1742,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
 
     setDb({ ...db, items: [...db.items, newItem] });
     onClose?.();
-    notify.error('Item created!');
+    notify.success('Item created!');
   };
 
   return (
@@ -1738,6 +1766,16 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             className="ui-input w-full px-3 py-2"
             required
+          />
+        </div>
+        <div className="col-span-2">
+          <label className="block text-sm font-medium mb-1">Description</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+            rows={2}
+            placeholder="Shown on documents alongside the item name"
           />
         </div>
         <div>
@@ -1799,7 +1837,13 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           <label className="block text-sm font-medium mb-1">Unit</label>
           <select
             value={unitValue}
-            onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+            onChange={(e) => {
+              if (e.target.value === '__new__') {
+                setNewUnitOpen(true);
+                return;
+              }
+              setFormData({ ...formData, unit: e.target.value });
+            }}
             className="ui-select w-full px-3 py-2"
           >
             {unitValue && !uomNames.includes(unitValue) && <option value={unitValue}>{unitValue} (legacy)</option>}
@@ -1809,7 +1853,33 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
                 {u.name}
               </option>
             ))}
+            <option value="__new__">+ New unit…</option>
           </select>
+          {newUnitOpen ? (
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="text"
+                value={newUnitName}
+                onChange={(e) => setNewUnitName(e.target.value)}
+                className="ui-input flex-1 px-3 py-2"
+                placeholder="e.g. Box, Kg, Hour"
+                autoFocus
+              />
+              <button type="button" onClick={saveNewUnit} className="ui-btn ui-btn-primary !h-9 text-xs">
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewUnitOpen(false);
+                  setNewUnitName('');
+                }}
+                className="ui-btn ui-btn-secondary !h-9 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : null}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Sale Price</label>
@@ -9556,6 +9626,7 @@ const AppShell = () => {
   const [branches, setBranches] = useState([]);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchesError, setBranchesError] = useState('');
+  const [branchesReloadKey, setBranchesReloadKey] = useState(0);
 
   const [authCtx, setAuthCtx] = useState({ loading: false, error: '', data: null });
 
@@ -10146,7 +10217,7 @@ const AppShell = () => {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, currentCompany?.id, currentCompany?.profile?.backendCompanyId, activeOrgId, dbStorageKey]);
+  }, [isAuthenticated, currentCompany?.id, currentCompany?.profile?.backendCompanyId, activeOrgId, dbStorageKey, branchesReloadKey]);
 
   // Ensure we always have an active branch id (some flows don't populate backendBranchId)
   useEffect(() => {
@@ -11008,7 +11079,7 @@ const AppShell = () => {
         return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="tax" showSidebar={false} />;
       case 'settingsBranches': {
         const orgId = resolveServerOrgId(currentCompany);
-        return <SettingsBranches orgId={orgId} />;
+        return <SettingsBranches orgId={orgId} onBranchesChanged={() => setBranchesReloadKey((k) => k + 1)} />;
       }
       case 'settingsWarehouses': {
         const orgId = resolveServerOrgId(currentCompany);
