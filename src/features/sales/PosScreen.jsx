@@ -5,6 +5,7 @@ import { notify } from '../../components/ui/notify';
 import { computeGstForLines } from '../../utils/gst';
 import { formatMoney } from '../../utils/money';
 import { createInvoiceApi } from '../../api/invoices';
+import { bumpCompanyNextNumber, generateVoucherNumber } from '../../utils/docSettings';
 
 /**
  * Point of sale — the fast lane for counter sales. Search or tap items, take
@@ -137,8 +138,11 @@ export default function PosScreen({ db, setDb, currentCompany }) {
     try {
       const buyer = customerName.trim() || 'Walk-in Customer';
       const nextInvId = (db.invoices || []).reduce((m, i) => Math.max(m, Number(i.id) || 0), 0) + 1;
+      // Branch-scoped POS series, like every other document type.
+      const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
       const posSeq = (db.invoices || []).filter((i) => i.companyId === companyId && String(i.number || '').startsWith('POS-')).length + 1;
-      const number = `POS-${posSeq}`;
+      const number =
+        generateVoucherNumber({ db, company: currentCompany, voucherKey: 'pos', branchId: activeBranchId || null }) || `POS-${posSeq}`;
       const today = new Date().toISOString().slice(0, 10);
 
       let backendInvoiceId;
@@ -215,6 +219,13 @@ export default function PosScreen({ db, setDb, currentCompany }) {
         ...prev,
         invoices: [...(prev.invoices || []), invoice],
         payments: [...(prev.payments || []), receipt],
+        companies: bumpCompanyNextNumber({
+          db: prev,
+          companyId,
+          voucherKey: 'pos',
+          usedNumber: number,
+          branchId: activeBranchId || null,
+        }),
       }));
 
       // Print-friendly receipt.

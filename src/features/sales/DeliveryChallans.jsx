@@ -10,6 +10,7 @@ import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
 import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { generateVoucherNumber } from '../../utils/docSettings';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -83,7 +84,13 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
     const challan = {
       id: nextId,
       companyId,
-      number: `DC-${nextId}`,
+      number:
+        generateVoucherNumber({
+          db,
+          company: currentCompany,
+          voucherKey: 'deliveryChallan',
+          branchId: String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim() || null,
+        }) || `DC-${nextId}`,
       date: form.date,
       customerId: form.customerId,
       customerName: getCustomerDisplayName(customer),

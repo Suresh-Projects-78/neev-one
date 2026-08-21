@@ -14,6 +14,13 @@ export const NUMBERING_VOUCHER_DEFS = [
   ...VOUCHER_DEFS,
   { key: 'warehouseTransfer', label: 'Warehouse Transfer', listKey: null },
   { key: 'branchTransfer', label: 'Branch Transfer', listKey: null },
+  // Every document a branch raises gets its own series, so two branches
+  // never collide on a number and each book reads as its own.
+  { key: 'salesOrder', label: 'Sales Order', listKey: 'salesOrders' },
+  { key: 'pos', label: 'POS Sale', listKey: null },
+  { key: 'deliveryChallan', label: 'Delivery Challan', listKey: 'deliveryChallans' },
+  { key: 'receipt', label: 'Receipt', listKey: null },
+  { key: 'payment', label: 'Payment', listKey: null },
 ];
 
 export const TEMPLATE_OPTIONS = [
@@ -94,6 +101,11 @@ export const getDocSettings = (db, company, { branchId = null } = {}) => {
       journalEntry: ensureNumbering('journalEntry', 'JE-'),
       warehouseTransfer: ensureNumbering('warehouseTransfer', 'WT-', { fallbackNextNumber: 1 }),
       branchTransfer: ensureNumbering('branchTransfer', 'BT-', { fallbackNextNumber: 1 }),
+      salesOrder: ensureNumbering('salesOrder', 'SO-', { fallbackNextNumber: 1 }),
+      pos: ensureNumbering('pos', 'POS-', { fallbackNextNumber: 1 }),
+      deliveryChallan: ensureNumbering('deliveryChallan', 'DC-', { fallbackNextNumber: 1 }),
+      receipt: ensureNumbering('receipt', 'RCPT-', { fallbackNextNumber: 1 }),
+      payment: ensureNumbering('payment', 'PAY-', { fallbackNextNumber: 1 }),
     },
     templates: {
       invoice: ensureTemplate('invoice', 'classic', 'blue'),
@@ -108,21 +120,22 @@ export const getDocSettings = (db, company, { branchId = null } = {}) => {
   };
 };
 
-export const formatVoucherNumberPreview = (numbering) => {
+export const formatVoucherNumberPreview = (numbering, offset = 0) => {
   if (!numbering) return '';
   if (String(numbering.mode || '').toLowerCase() === 'manual') return '(manual)';
   const prefix = String(numbering.prefix || '');
   const suffix = String(numbering.suffix || '');
-  const n = Number(numbering.nextNumber || 1);
+  const n = Number(numbering.nextNumber || 1) + (Number(offset) || 0);
   return `${prefix}${Number.isFinite(n) ? n : 1}${suffix}`;
 };
 
-export const generateVoucherNumber = ({ db, company, voucherKey, branchId = null }) => {
+/** `offset` numbers a run of documents created in one go (e.g. an import). */
+export const generateVoucherNumber = ({ db, company, voucherKey, branchId = null, offset = 0 }) => {
   const settings = getDocSettings(db, company, { branchId });
   const numbering = settings?.numbering?.[voucherKey];
   if (!numbering) return '';
   if (String(numbering.mode || '').toLowerCase() === 'manual') return '';
-  return formatVoucherNumberPreview(numbering);
+  return formatVoucherNumberPreview(numbering, offset);
 };
 
 export const parseVoucherNumberInt = (value, { prefix = '', suffix = '' } = {}) => {

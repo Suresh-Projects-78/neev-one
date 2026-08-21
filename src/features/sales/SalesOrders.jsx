@@ -4,6 +4,7 @@ import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitiv
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
+import { bumpCompanyNextNumber, generateVoucherNumber } from '../../utils/docSettings';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { computeGstForLines } from '../../utils/gst';
@@ -44,6 +45,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     items: [emptyLine],
   });
 
+  const branchIdForNumbering = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   const selectedCustomer = form.customerId ? customers.find((c) => c.id === parseInt(form.customerId)) : null;
   const { state: companyState } = getCompanyGstProfile(currentCompany);
   const { state: customerState } = getPartyGstProfile(selectedCustomer);
@@ -148,7 +150,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       id: nextId,
       companyId,
       backendDocId,
-      number: serverNumber || `SO-${nextId}`,
+      number: serverNumber || generateVoucherNumber({ db, company: currentCompany, voucherKey: 'salesOrder', branchId: branchIdForNumbering || null }) || `SO-${nextId}`,
       date: form.date,
       expectedDate: form.expectedDate || '',
       customerId: form.customerId,
@@ -162,7 +164,17 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       notes: form.notes,
       createdAt: new Date().toISOString(),
     };
-    setDb((prev) => ({ ...prev, salesOrders: [...(prev.salesOrders || []), order] }));
+    setDb((prev) => ({
+      ...prev,
+      salesOrders: [...(prev.salesOrders || []), order],
+      companies: bumpCompanyNextNumber({
+        db: prev,
+        companyId,
+        voucherKey: 'salesOrder',
+        usedNumber: order.number,
+        branchId: branchIdForNumbering || null,
+      }),
+    }));
     setOpen(false);
     setForm({ date: new Date().toISOString().slice(0, 10), expectedDate: '', customerId: '', salesmanId: '', notes: '', items: [emptyLine] });
     notify.success(`Sales order ${order.number} created.`);
@@ -175,7 +187,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     const challan = {
       id: nextId,
       companyId,
-      number: `DC-${nextId}`,
+      number: generateVoucherNumber({ db, company: currentCompany, voucherKey: 'deliveryChallan', branchId: branchIdForNumbering || null }) || `DC-${nextId}`,
       date: new Date().toISOString().slice(0, 10),
       customerId: order.customerId,
       customerName: order.customerName,
