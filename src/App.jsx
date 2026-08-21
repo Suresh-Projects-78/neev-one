@@ -11548,6 +11548,8 @@ const AppShell = () => {
                   currentCompany={currentCompany}
                   branches={branchesForUser}
                   warehouses={warehousesForUser}
+                  allBranches={branches}
+                  allWarehouses={warehouses}
                   initial={stockTransferEditor.initial}
                   mode={mode}
                   onBack={() => setStockTransferEditor({ open: false, initial: null })}

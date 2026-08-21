@@ -70,6 +70,13 @@ export const StockTransferEditor = ({
   currentCompany,
   branches,
   warehouses,
+  // A user may only raise documents for the branches/warehouses assigned to
+  // them, but a Transfer Out has to be able to name any destination in the
+  // company — that is the whole point of sending stock elsewhere. Sources come
+  // from `branches`/`warehouses` (already restricted upstream); destinations
+  // come from these full lists.
+  allBranches,
+  allWarehouses,
   initial,
   mode = 'warehouse',
   onBack,
@@ -173,6 +180,27 @@ export const StockTransferEditor = ({
     return map;
   }, [warehouseOptions]);
 
+  const destinationBranchOptions = useMemo(() => {
+    const list = safeArray(allBranches).length ? safeArray(allBranches) : safeArray(branches);
+    return list
+      .slice()
+      .sort((a, b) => getBranchLabel(a).localeCompare(getBranchLabel(b)))
+      .map((b) => ({ value: normalizeId(b?.id), label: getBranchLabel(b) || `Branch ${normalizeId(b?.id)}` }));
+  }, [allBranches, branches]);
+
+  const destinationWarehouseOptionsForBranch = useMemo(() => {
+    const list = safeArray(allWarehouses).length ? safeArray(allWarehouses) : safeArray(warehouses);
+    const map = new Map();
+    for (const w of list) {
+      const bid = normalizeId(w?.branchId);
+      if (!bid) continue;
+      const cur = map.get(bid) || [];
+      cur.push({ value: normalizeId(w?.id), label: getWarehouseLabel(w), branchId: bid });
+      map.set(bid, cur.sort((a, b) => a.label.localeCompare(b.label)));
+    }
+    return map;
+  }, [allWarehouses, warehouses]);
+
   const sourceBranchWarehouseOptions = useMemo(() => {
     const bid = normalizeId(form.sourceBranchId);
     if (!bid) return [];
@@ -182,8 +210,8 @@ export const StockTransferEditor = ({
   const targetBranchWarehouseOptions = useMemo(() => {
     const bid = normalizeId(mode === 'warehouse' ? form.sourceBranchId : form.targetBranchId);
     if (!bid) return [];
-    return warehouseOptionsForBranch.get(bid) || [];
-  }, [form.sourceBranchId, form.targetBranchId, mode, warehouseOptionsForBranch]);
+    return destinationWarehouseOptionsForBranch.get(bid) || [];
+  }, [form.sourceBranchId, form.targetBranchId, mode, destinationWarehouseOptionsForBranch]);
 
   useEffect(() => {
     // Derive branchIds from selected warehouses
@@ -535,7 +563,7 @@ export const StockTransferEditor = ({
                 disabled={readOnly}
               >
                 <option value="">Select Branch</option>
-                {branchOptions.map((o) => (
+                {destinationBranchOptions.map((o) => (
                   <option key={o.value} value={o.value} disabled={normalizeId(o.value) === normalizeId(form.sourceBranchId)}>
                     {o.label}
                   </option>

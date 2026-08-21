@@ -29,7 +29,13 @@ const branchSchema = z.object({
   shareHeadOfficeSettings: z.boolean().optional().default(false),
 });
 
-branchesRouter.get('/orgs/:orgId/branches', requirePermission('MASTERS', PermissionAction.VIEW, 'Company/Branch setup'), async (req, res) => {
+// Reference data, not administration: every document form (invoice, transfer,
+// stock entry) needs the branch and warehouse lists to render its location
+// pickers. Gating the READ behind MASTERS::Company/Branch setup meant any role
+// without that grant saw empty mandatory dropdowns and could not raise a
+// document at all. Creating or editing a branch/warehouse is still gated
+// below; membership already limits which rows a user may act on.
+branchesRouter.get('/orgs/:orgId/branches', async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
 
