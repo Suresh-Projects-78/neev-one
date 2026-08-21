@@ -70,6 +70,8 @@ import { CustomerForm } from './components/pickers/CustomerPicker';
 import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB, seedDummyDataV1 } from './data/db';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
 import { formatMoney, formatMoneyCompact, round2 } from './utils/money';
+import { downloadCsv, downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
+import { useColumnFilters, FilterRow } from './components/ColumnFilters';
 import { getCustomerDisplayName, getVendorDisplayName } from './utils/contacts';
 import {
   ACCENT_OPTIONS,
@@ -932,6 +934,10 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   const expenses = db.expenses.filter((e) => e.companyId === currentCompany.id);
   const [statusFilter, setStatusFilter] = useState('All');
   const [isCreating, setIsCreating] = useState(false);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const importInputRef = useRef(null);
+  const expenseColFilters = useColumnFilters();
 
   const getDerivedStatus = (expense) => {
     const total = Number(expense?.total ?? 0);
@@ -954,11 +960,212 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     return 'Unpaid';
   };
 
-  const filteredExpenses = expenses.filter((e) => {
-    const derived = getDerivedStatus(e);
-    if (statusFilter === 'All') return true;
-    return derived === statusFilter;
-  });
+  const inPeriod = (e) => {
+    const d = String(e?.date || '').slice(0, 10);
+    if (!d) return !fromDate && !toDate;
+    if (fromDate && d < fromDate) return false;
+    if (toDate && d > toDate) return false;
+    return true;
+  };
+
+  const filteredExpenses = expenseColFilters.applyFilters(
+    expenses
+      .filter((e) => {
+        const derived = getDerivedStatus(e);
+        if (statusFilter !== 'All' && derived !== statusFilter) return false;
+        return inPeriod(e);
+      })
+      .slice()
+      .sort((a, b) => {
+        const da = String(a?.date || '');
+        const dbb = String(b?.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+      }),
+    {
+      number: (r) => r.number,
+      date: (r) => r.date,
+      dueDate: (r) => r.dueDate,
+      description: (r) => r.description,
+      vendor: (r) => r.vendorName,
+      refNo: (r) => r.refNo,
+      amount: (r) => r.total,
+      status: (r) => getDerivedStatus(r),
+    }
+  );
+
+  const ledgerNamesOf = (e) =>
+    (Array.isArray(e?.lines) ? e.lines : []).map((l) => l.ledgerName).filter(Boolean).join('; ');
+
+  const exportExpenses = () => {
+    if (!filteredExpenses.length) {
+      notify.error('Nothing to export in the current view.');
+      return;
+    }
+    downloadCsv({
+      fileName: `Expenses_${currentCompany?.name || 'company'}${fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'today'}` : ''}`,
+      columns: [
+        { key: 'number', label: 'Voucher No' },
+        { key: 'date', label: 'Date' },
+        { key: 'dueDate', label: 'Due Date' },
+        { key: 'vendorName', label: 'Vendor' },
+        { key: 'refNo', label: 'Vendor Inv No' },
+        { key: 'refDate', label: 'Vendor Inv Date' },
+        { key: 'description', label: 'Narration' },
+        { key: 'ledgers', label: 'Expense Ledgers', value: (r) => ledgerNamesOf(r) },
+        { key: 'taxable', label: 'Taxable', value: (r) => round2(Number(r.subtotal ?? r.taxableTotal ?? 0)) },
+        { key: 'gstTotal', label: 'GST', value: (r) => round2(Number(r.gstTotal ?? 0)) },
+        { key: 'total', label: 'Total', value: (r) => round2(Number(r.total ?? 0)) },
+        { key: 'paidAmount', label: 'Paid', value: (r) => round2(Number(r.paidAmount ?? 0)) },
+        { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
+      ],
+      rows: filteredExpenses,
+    });
+    notify.success(`${filteredExpenses.length} expense(s) exported.`);
+  };
+
+  const downloadImportTemplate = () => {
+    downloadCsvTemplate({
+      fileName: 'Expense_Import_Template',
+      columns: [
+        { key: 'Date', label: 'Date' },
+        { key: 'Vendor', label: 'Vendor' },
+        { key: 'Vendor Inv No', label: 'Vendor Inv No' },
+        { key: 'Vendor Inv Date', label: 'Vendor Inv Date' },
+        { key: 'Narration', label: 'Narration' },
+        { key: 'Expense Ledger', label: 'Expense Ledger' },
+        { key: 'Description', label: 'Description' },
+        { key: 'Amount', label: 'Amount' },
+        { key: 'GST %', label: 'GST %' },
+      ],
+      sample: {
+        Date: new Date().toISOString().slice(0, 10),
+        Vendor: 'ABC Trading Co.',
+        'Vendor Inv No': 'INV-2024-058',
+        'Vendor Inv Date': new Date().toISOString().slice(0, 10),
+        Narration: 'Office rent for the month',
+        'Expense Ledger': 'Office Rent',
+        Description: 'Monthly rent',
+        Amount: '25000',
+        'GST %': '18',
+      },
+    });
+    notify.success('Template downloaded. One row per expense line; rows sharing a Vendor Inv No become one voucher.');
+  };
+
+  const importExpenses = async (file) => {
+    try {
+      const { rows } = parseCsv(await readFileText(file));
+      if (!rows.length) {
+        notify.error('That file has no data rows.');
+        return;
+      }
+
+      const ledgers = (db.chartOfAccounts || []).filter((a) => a.companyId === currentCompany.id);
+      const findLedger = (name) =>
+        ledgers.find((l) => String(l.name || '').trim().toLowerCase() === String(name || '').trim().toLowerCase());
+      const vendorsList = (db.vendors || []).filter((v) => v.companyId === currentCompany.id);
+      const findVendor = (name) =>
+        vendorsList.find((v) => getVendorDisplayName(v).trim().toLowerCase() === String(name || '').trim().toLowerCase());
+
+      // Lines that share a vendor invoice number (or, failing that, a
+      // date+vendor) belong to one voucher — the same grouping the entry form
+      // produces.
+      const groups = new Map();
+      const problems = [];
+      rows.forEach((r, i) => {
+        const ledgerName = r['Expense Ledger'] || '';
+        const ledger = findLedger(ledgerName);
+        const amount = Number(r.Amount || 0);
+        if (!ledger) {
+          problems.push(`Row ${i + 2}: no ledger named "${ledgerName}"`);
+          return;
+        }
+        if (!(amount > 0)) {
+          problems.push(`Row ${i + 2}: amount must be greater than zero`);
+          return;
+        }
+        const key = String(r['Vendor Inv No'] || '').trim() || `${r.Date}|${r.Vendor}`;
+        if (!groups.has(key)) groups.set(key, { head: r, lines: [] });
+        groups.get(key).lines.push({ ledger, description: r.Description || '', amount, gstRate: Number(r['GST %'] || 0) });
+      });
+
+      if (!groups.size) {
+        notify.error(problems[0] || 'Nothing importable in that file.');
+        return;
+      }
+
+      const { state: companyState } = getCompanyGstProfile(currentCompany);
+      let nextId = (db.expenses || []).reduce((m, x) => Math.max(m, Number(x?.id) || 0), 0);
+      const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
+      let seq = 0;
+      const created = [];
+
+      for (const { head, lines } of groups.values()) {
+        const vendor = findVendor(head.Vendor);
+        const { state: vendorState, gstin: vendorGstin, gstRegistration } = getPartyGstProfile(vendor);
+        const isIntra = isIntraStateSupply({ companyState, partyState: vendorState });
+        const charges = String(gstRegistration || '').trim().toLowerCase() === 'registered';
+
+        const built = lines.map((l) => {
+          const rate = charges ? l.gstRate : 0;
+          const gstAmount = round2((l.amount * rate) / 100);
+          return {
+            ledgerId: l.ledger.id,
+            ledgerName: l.ledger.name,
+            description: l.description,
+            amount: round2(l.amount),
+            gstRate: rate,
+            gstAmount,
+            cgstAmount: isIntra ? round2(gstAmount / 2) : 0,
+            sgstAmount: isIntra ? round2(gstAmount / 2) : 0,
+            igstAmount: isIntra ? 0 : gstAmount,
+            lineTotal: round2(l.amount + gstAmount),
+          };
+        });
+        const subtotal = round2(built.reduce((t, l) => t + l.amount, 0));
+        const gstTotal = round2(built.reduce((t, l) => t + l.gstAmount, 0));
+        seq += 1;
+        created.push({
+          id: ++nextId,
+          companyId: currentCompany.id,
+          number:
+            generateVoucherNumber({ db, company: currentCompany, voucherKey: 'expense', branchId: activeBranchId || null, offset: seq - 1 }) ||
+            `EXP-IMP-${nextId}`,
+          date: String(head.Date || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+          dueDate: String(head.Date || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
+          refNo: head['Vendor Inv No'] || '',
+          refDate: String(head['Vendor Inv Date'] || '').slice(0, 10),
+          description: head.Narration || '',
+          vendorId: vendor?.id ?? '',
+          vendorName: getVendorDisplayName(vendor),
+          vendorGstin,
+          placeOfSupplyState: vendorState,
+          taxType: isIntra ? 'CGST_SGST' : 'IGST',
+          lines: built,
+          subtotal,
+          taxableTotal: subtotal,
+          cgstTotal: round2(built.reduce((t, l) => t + l.cgstAmount, 0)),
+          sgstTotal: round2(built.reduce((t, l) => t + l.sgstAmount, 0)),
+          igstTotal: round2(built.reduce((t, l) => t + l.igstAmount, 0)),
+          gstTotal,
+          total: round2(subtotal + gstTotal),
+          amount: subtotal,
+          paidAmount: 0,
+          status: 'Unpaid',
+          importedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      setDb((prev) => ({ ...prev, expenses: [...(prev.expenses || []), ...created] }));
+      notify.success(
+        `${created.length} expense voucher(s) imported${problems.length ? `. ${problems.length} row(s) skipped: ${problems[0]}` : '.'}`
+      );
+    } catch (err) {
+      notify.error(String(err?.message || 'Import failed.'));
+    }
+  };
 
   const openRecordPayment = (expense) => {
     openModal(
@@ -1073,6 +1280,44 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         ))}
       </div>
 
+      <div className="ui-card p-4 flex flex-wrap items-end gap-3">
+        <div>
+          <label className="ui-label">From</label>
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="ui-input px-3 py-2" />
+        </div>
+        <div>
+          <label className="ui-label">To</label>
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="ui-input px-3 py-2" />
+        </div>
+        {fromDate || toDate ? (
+          <button type="button" onClick={() => { setFromDate(''); setToDate(''); }} className="ui-btn ui-btn-secondary !h-10">
+            Clear period
+          </button>
+        ) : null}
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button type="button" onClick={exportExpenses} className="ui-btn ui-btn-secondary !h-10">
+            <Download size={15} aria-hidden="true" /> Export
+          </button>
+          <button type="button" onClick={downloadImportTemplate} className="ui-btn ui-btn-secondary !h-10">
+            Import template
+          </button>
+          <button type="button" onClick={() => importInputRef.current?.click()} className="ui-btn ui-btn-secondary !h-10">
+            <Upload size={15} aria-hidden="true" /> Import
+          </button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0] || null;
+              e.target.value = '';
+              if (f) importExpenses(f);
+            }}
+          />
+        </div>
+      </div>
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
@@ -1080,14 +1325,30 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Voucher #</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Due Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Description</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Category</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Narration</th>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ref No</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ref Date</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Amount</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'No.' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'dueDate', placeholder: 'Due' },
+                { key: 'description', placeholder: 'Narration' },
+                { key: 'vendor', placeholder: 'Vendor' },
+                { key: 'refNo', placeholder: 'Ref' },
+                {},
+                { key: 'amount', placeholder: 'Amount' },
+                { key: 'status', options: ['Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'] },
+                {},
+              ]}
+              filters={expenseColFilters.filters}
+              setFilter={expenseColFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y">
             {filteredExpenses.length === 0 ? (
@@ -1113,7 +1374,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                   <td className="px-4 py-2.5 ui-col-meta">{expense.date}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.dueDate || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-meta truncate" title={expense.description || ''}>{expense.description}</td>
-                  <td className="px-4 py-2.5 ui-col-meta">{expense.category}</td>
+                  <td className="px-4 py-2.5 ui-col-entity">{expense.vendorName || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-id">{expense.refNo || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.refDate || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expense.total, currentCompany)}</td>
