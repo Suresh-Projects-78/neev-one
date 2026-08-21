@@ -133,11 +133,25 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
   pushFromDoc({ voucherType: 'debitNote', list: db?.debitNotes, direction: 'OUT' });
   pushFromDoc({ voucherType: 'creditNote', list: db?.creditNotes, direction: 'IN' });
 
-  // Stock Transfers (inter-warehouse / inter-branch). Only Approved affects stock.
+  // Stock Transfers (inter-warehouse / inter-branch).
+  //
+  // The two legs move at different moments: goods leave the source when the
+  // transfer is dispatched (Transfer Out), and only land at the destination
+  // when the receiving warehouse accepts them (Transfer In) — for the quantity
+  // it actually counted, which may be short. A shortfall written off as a loss
+  // is simply stock that left and never arrived; returning it to source
+  // instead cancels the outward leg down to the received quantity.
+  //
+  // 'Approved' is the legacy single-step status: both legs, full quantity.
+  const OUT_STATUSES = new Set(['In Transit', 'Received', 'Short Received', 'Closed', 'Approved']);
+  const IN_STATUSES = new Set(['Received', 'Short Received', 'Closed', 'Approved']);
+
   for (const t of safeArray(db?.stockTransfers)) {
     if (Number(t?.companyId) !== Number(companyId)) continue;
     const status = String(t?.status || '').trim();
-    if (status !== 'Approved') continue;
+    if (!OUT_STATUSES.has(status)) continue;
+    const landed = IN_STATUSES.has(status);
+    const returnedToSource = String(t?.mismatchResolution || '') === 'RETURN';
 
     const date = String(t?.date || '').trim();
     const voucherId = t?.id;
@@ -157,8 +171,14 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
       if (!item) continue;
       if (!isStockItem(item)) continue;
 
-      const qty = round2(Math.max(0, safeNum(l?.qty ?? l?.quantity ?? 0)));
-      if (qty <= 0) continue;
+      const sentQty = round2(Math.max(0, safeNum(l?.qty ?? l?.quantity ?? 0)));
+      const receivedQty = landed
+        ? round2(Math.max(0, safeNum(l?.receivedQty ?? l?.qty ?? l?.quantity ?? 0)))
+        : 0;
+      // Unreceived units either vanish (loss) or never left (return to source).
+      const outQty = returnedToSource && landed ? receivedQty : sentQty;
+      const qty = sentQty;
+      if (sentQty <= 0) continue;
 
       if (whFilter) {
         if (sourceWarehouseId && sourceWarehouseId === whFilter) {
@@ -172,13 +192,13 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
               warehouseId: sourceWarehouseId,
               itemId,
               qtyIn: 0,
-              qtyOut: qty,
+              qtyOut: outQty,
               voucherNote: targetLabel ? `To: ${targetLabel}` : 'To: -',
             })
           );
         }
 
-        if (targetWarehouseId && targetWarehouseId === whFilter) {
+        if (landed && receivedQty > 0 && targetWarehouseId && targetWarehouseId === whFilter) {
           movements.push(
             normalizeMovement({
               companyId,
@@ -188,7 +208,7 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
               voucherNumber,
               warehouseId: targetWarehouseId,
               itemId,
-              qtyIn: qty,
+              qtyIn: receivedQty,
               qtyOut: 0,
               voucherNote: sourceLabel ? `From: ${sourceLabel}` : 'From: -',
             })
@@ -207,12 +227,12 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
               warehouseId: sourceWarehouseId,
               itemId,
               qtyIn: 0,
-              qtyOut: qty,
+              qtyOut: outQty,
               voucherNote: targetLabel ? `To: ${targetLabel}` : 'To: -',
             })
           );
         }
-        if (targetWarehouseId) {
+        if (landed && receivedQty > 0 && targetWarehouseId) {
           movements.push(
             normalizeMovement({
               companyId,
@@ -222,7 +242,7 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
               voucherNumber,
               warehouseId: targetWarehouseId,
               itemId,
-              qtyIn: qty,
+              qtyIn: receivedQty,
               qtyOut: 0,
               voucherNote: sourceLabel ? `From: ${sourceLabel}` : 'From: -',
             })

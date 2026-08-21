@@ -18,6 +18,7 @@ const toNum = (v) => {
 };
 
 const normalizeId = (v) => String(v ?? '').trim();
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 const getBranchLabel = (b) => {
   if (!b) return '';
@@ -35,12 +36,33 @@ const getWarehouseLabel = (w) => {
 
 const getStatusPillClass = (status) => {
   const s = String(status || '').trim();
-  if (s === 'Approved') return 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]';
+  if (s === 'Approved' || s === 'Received' || s === 'Closed') return 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]';
   if (s === 'Rejected') return 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]';
+  if (s === 'Short Received') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
   if (s === 'Cancelled') return 'ui-sunken ui-fg';
+  if (s === 'In Transit') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
   if (s === 'Submitted') return 'bg-stone-100 ui-fg';
   return 'ui-sunken ui-fg';
 };
+
+/**
+ * Movement wording: a transfer is one document seen from two ends. The sending
+ * warehouse does a Transfer Out; the receiving one a Transfer In.
+ */
+export const movementLabel = (mode, direction) =>
+  direction === 'in'
+    ? `Transfer In (${mode === 'branch' ? 'Branch' : 'Warehouse'} movement)`
+    : `Transfer Out (${mode === 'branch' ? 'Branch' : 'Warehouse'} movement)`;
+
+/** Lines whose received quantity differs from what was sent. */
+export const mismatchLines = (transfer) =>
+  safeArray(transfer?.lines)
+    .map((l) => ({
+      itemId: normalizeId(l?.itemId),
+      sent: toNum(l?.qty || 0),
+      received: l?.receivedQty === undefined || l?.receivedQty === null ? toNum(l?.qty || 0) : toNum(l.receivedQty),
+    }))
+    .filter((l) => Math.abs(l.sent - l.received) > 0.0001);
 
 export const StockTransferEditor = ({
   db,
@@ -695,6 +717,100 @@ export const StockTransferEditor = ({
   );
 };
 
+/**
+ * Transfer In: the receiving warehouse counts what actually arrived. Anything
+ * other than the dispatched quantity is a mismatch the sender has to resolve.
+ */
+const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel }) => {
+  const itemsById = useMemo(() => {
+    const map = new Map();
+    for (const it of safeArray(db?.items)) {
+      if (Number(it?.companyId) !== Number(currentCompany?.id)) continue;
+      map.set(normalizeId(it?.id), it);
+    }
+    return map;
+  }, [db?.items, currentCompany?.id]);
+
+  const [rows, setRows] = useState(() =>
+    safeArray(transfer?.lines).map((l) => ({
+      itemId: normalizeId(l?.itemId),
+      sent: toNum(l?.qty || 0),
+      received: String(l?.receivedQty ?? l?.qty ?? 0),
+    }))
+  );
+  const [note, setNote] = useState('');
+
+  const anyMismatch = rows.some((r) => Math.abs(toNum(r.received) - r.sent) > 0.0001);
+
+  return (
+    <div className="space-y-4">
+      <div className="text-sm ui-muted">
+        Confirm what physically arrived. Short or excess quantities are flagged for resolution.
+      </div>
+
+      <div className="border rounded-xl overflow-hidden">
+        <table className="ui-table w-full">
+          <thead className="ui-sunken border-b">
+            <tr>
+              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Item</th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Sent</th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Received</th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Difference</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {rows.map((r, idx) => {
+              const item = itemsById.get(r.itemId);
+              const diff = round2(Math.max(0, toNum(r.received)) - r.sent);
+              return (
+                <tr key={idx} className={Math.abs(diff) > 0.0001 ? 'bg-[rgb(var(--warn-soft))]' : ''}>
+                  <td className="ui-col-entity px-4 py-2.5">{item?.name || `Item ${r.itemId}`}</td>
+                  <td className="px-4 py-2.5 text-right">{r.sent}</td>
+                  <td className="px-4 py-2.5 text-right">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={r.received}
+                      onChange={(e) =>
+                        setRows((prev) => prev.map((x, i) => (i === idx ? { ...x, received: e.target.value } : x)))
+                      }
+                      className="ui-input w-24 px-2 py-1 text-right"
+                    />
+                  </td>
+                  <td className={`px-4 py-2.5 text-right font-semibold ${Math.abs(diff) > 0.0001 ? 'text-[rgb(var(--warn-ink))]' : 'ui-muted'}`}>
+                    {diff === 0 ? '—' : diff > 0 ? `+${diff}` : diff}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <div>
+        <label className="ui-label">Note (optional)</label>
+        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="ui-input w-full px-3 py-2" placeholder="Damaged in transit, short packed…" />
+      </div>
+
+      {anyMismatch ? (
+        <div className="ui-pill ui-pill-warn">Quantities differ — the transfer will need a resolution before it closes.</div>
+      ) : null}
+
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="ui-btn ui-btn-secondary">Cancel</button>
+        <button
+          type="button"
+          onClick={() => onConfirm(rows.map((r) => ({ itemId: r.itemId, receivedQty: Math.max(0, round2(toNum(r.received))) })), note)}
+          className="ui-btn ui-btn-primary"
+        >
+          Confirm Receipt
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompany, onAction }) => {
   const branchById = useMemo(() => new Map(safeArray(branches).map((b) => [normalizeId(b?.id), b])), [branches]);
   const warehouseById = useMemo(() => new Map(safeArray(warehouses).map((w) => [normalizeId(w?.id), w])), [warehouses]);
@@ -727,9 +843,12 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
   });
 
   const canSubmit = status === 'Draft';
-  const canApprove = status === 'Submitted';
+  const canDispatch = status === 'Submitted';
   const canReject = status === 'Submitted';
+  const canReceive = status === 'In Transit';
+  const canResolve = status === 'Short Received';
   const canCancel = status === 'Draft' || status === 'Submitted';
+  const gaps = mismatchLines(transfer);
 
   return (
     <div className="space-y-4">
@@ -761,33 +880,60 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
         </div>
       ) : null}
 
+      {gaps.length && status === 'Short Received' ? (
+        <div className="rounded-xl border p-3 text-sm bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]">
+          {gaps.length} line(s) received short or in excess. Write the shortfall off as a loss, or return it to the
+          source warehouse.
+        </div>
+      ) : null}
+
+      {transfer?.mismatchResolution ? (
+        <div className="text-xs ui-muted">
+          Resolved as {transfer.mismatchResolution === 'LOSS' ? 'a stock loss' : 'a return to source'}
+          {transfer?.receiptNote ? ` — ${transfer.receiptNote}` : ''}
+        </div>
+      ) : null}
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Item</th>
-              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Qty</th>
+              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Sent</th>
+              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Received</th>
+              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Difference</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {lines.length === 0 ? (
               <tr>
-                <td colSpan={2} className="px-4 py-8 text-center ui-muted">
+                <td colSpan={4} className="px-4 py-8 text-center ui-muted">
                   No lines
                 </td>
               </tr>
             ) : (
-              lines.map((l, idx) => (
-                <tr key={idx} className="ui-hover-sunken">
-                  <td className="ui-col-entity px-4 py-3">
-                    <div className="font-medium">{l.name}</div>
-                    <div className="text-xs ui-muted">{l.itemId}</div>
-                  </td>
-                  <td className="ui-col-meta px-4 py-3 text-right font-semibold">
-                    {l.qty}{l.unit ? ` ${l.unit}` : ''}
-                  </td>
-                </tr>
-              ))
+              lines.map((l, idx) => {
+                const raw = safeArray(transfer?.lines)[idx] || {};
+                const settled = raw?.receivedQty !== undefined && raw?.receivedQty !== null;
+                const received = settled ? toNum(raw.receivedQty) : null;
+                const diff = settled ? round2(received - l.qty) : 0;
+                const off = settled && Math.abs(diff) > 0.0001;
+                return (
+                  <tr key={idx} className={off ? 'bg-[rgb(var(--warn-soft))]' : 'ui-hover-sunken'}>
+                    <td className="ui-col-entity px-4 py-3">
+                      <div className="font-medium">{l.name}</div>
+                      <div className="text-xs ui-muted">{l.itemId}</div>
+                    </td>
+                    <td className="ui-col-meta px-4 py-3 text-right font-semibold">
+                      {l.qty}{l.unit ? ` ${l.unit}` : ''}
+                    </td>
+                    <td className="ui-col-meta px-4 py-3 text-right">{settled ? received : '—'}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${off ? 'text-[rgb(var(--warn-ink))]' : 'ui-muted'}`}>
+                      {!settled || diff === 0 ? '—' : diff > 0 ? `+${diff}` : diff}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -804,15 +950,52 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           </button>
         ) : null}
 
-        {canApprove ? (
+        {canDispatch ? (
           <button
             type="button"
-            onClick={() => onAction?.('approve')}
+            onClick={() => onAction?.('dispatch')}
             className="px-3 py-2 rounded-lg text-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
           >
-            <Check size={16} /> Approve
+            <Check size={16} /> Transfer Out (dispatch)
           </button>
         ) : null}
+
+        {canReceive ? (
+          <button
+            type="button"
+            onClick={() => onAction?.('receive')}
+            className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
+          >
+            <Check size={16} /> Transfer In (receive)
+          </button>
+        ) : null}
+
+        {canResolve ? (
+          <>
+            <button
+              type="button"
+              onClick={() => onAction?.('resolveLoss')}
+              className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary"
+            >
+              Write off shortfall as loss
+            </button>
+            <button
+              type="button"
+              onClick={() => onAction?.('resolveReturn')}
+              className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
+            >
+              Return shortfall to source
+            </button>
+          </>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => onAction?.('print')}
+          className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
+        >
+          Print / Download
+        </button>
 
         {canReject ? (
           <button
@@ -838,7 +1021,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
   );
 };
 
-export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], warehouses = [], mode = 'warehouse', onNew, onEdit }) => {
+export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branches = [], warehouses = [], mode = 'warehouse', onNew, onEdit }) => {
   const companyId = currentCompany?.id;
 
   const [searchText, setSearchText] = useState('');
@@ -921,6 +1104,21 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
   const openCreate = () => onNew?.();
   const openEdit = (transfer) => onEdit?.(transfer);
 
+  // "Under warehouse — pending transfers should display": what is in transit
+  // toward the location the user is standing in.
+  const activeWarehouseId = normalizeId(localStorage.getItem('activeWarehouseId') || '');
+  const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
+  const pendingIn = useMemo(() => {
+    return safeArray(db?.stockTransfers)
+      .filter((t) => Number(t?.companyId) === Number(companyId))
+      .filter((t) => String(t?.status || '').trim() === 'In Transit')
+      .filter((t) =>
+        mode === 'branch'
+          ? !activeBranchId || normalizeId(t?.targetBranchId) === activeBranchId
+          : !activeWarehouseId || normalizeId(t?.targetWarehouseId) === activeWarehouseId
+      );
+  }, [db?.stockTransfers, companyId, mode, activeWarehouseId, activeBranchId]);
+
   const removeTransfer = async (transfer) => {
     const ok = await confirmDialog({ title: 'Please confirm', message: `Delete stock transfer ${transfer?.number || ''}?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
@@ -944,6 +1142,100 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
         }),
       };
     });
+  };
+
+  const patchTransfer = (transfer, patch) => {
+    setDb((prev) => ({
+      ...prev,
+      stockTransfers: safeArray(prev?.stockTransfers).map((t) =>
+        normalizeId(t?.id) === normalizeId(transfer?.id) ? { ...t, ...patch } : t
+      ),
+    }));
+  };
+
+  /** Transfer In: record what the receiving warehouse counted. */
+  const openReceive = (transfer) => {
+    if (typeof openModal !== 'function') return;
+    openModal(
+      <ReceiveTransferForm
+        transfer={transfer}
+        db={db}
+        currentCompany={currentCompany}
+        onCancel={() => openModal(null)}
+        onConfirm={(received, note) => {
+          const byId = new Map(received.map((r) => [String(r.itemId), r.receivedQty]));
+          const lines = safeArray(transfer?.lines).map((l) => {
+            const key = normalizeId(l?.itemId);
+            return byId.has(key) ? { ...l, receivedQty: byId.get(key) } : { ...l, receivedQty: toNum(l?.qty || 0) };
+          });
+          const short = lines.some((l) => Math.abs(toNum(l.receivedQty) - toNum(l.qty)) > 0.0001);
+          patchTransfer(transfer, {
+            lines,
+            status: short ? 'Short Received' : 'Received',
+            receivedAt: new Date().toISOString(),
+            receiptNote: String(note || '').trim(),
+          });
+          openModal(null);
+          notify[short ? 'info' : 'success'](
+            short
+              ? 'Receipt recorded with a quantity mismatch — resolve it to close the transfer.'
+              : `Transfer ${transfer?.number || ''} received in full.`
+          );
+        }}
+      />,
+      { title: `Transfer In — ${transfer?.number || ''}`.trim(), maxWidthClass: 'max-w-3xl' }
+    );
+  };
+
+  const resolveMismatch = async (transfer, resolution) => {
+    const asLoss = resolution === 'LOSS';
+    const ok = await confirmDialog({
+      title: asLoss ? 'Write off shortfall' : 'Return shortfall to source',
+      message: asLoss
+        ? 'The missing quantity leaves the source warehouse and never arrives — it is written off as a stock loss.'
+        : 'The missing quantity is treated as never dispatched and stays with the source warehouse.',
+      confirmLabel: 'Yes, continue',
+    });
+    if (!ok) return;
+    patchTransfer(transfer, { status: 'Closed', mismatchResolution: asLoss ? 'LOSS' : 'RETURN', resolvedAt: new Date().toISOString() });
+    notify.success(asLoss ? 'Shortfall written off as a loss.' : 'Shortfall returned to the source warehouse.');
+  };
+
+  /** The transfer document, printable and savable as PDF by the browser. */
+  const printTransfer = (transfer) => {
+    const itemName = (id) =>
+      safeArray(db?.items).find((i) => normalizeId(i?.id) === normalizeId(id))?.name || `Item ${normalizeId(id)}`;
+    const esc = (v) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const rows = safeArray(transfer?.lines)
+      .map((l) => {
+        const received = l?.receivedQty === undefined || l?.receivedQty === null ? '' : toNum(l.receivedQty);
+        return `<tr><td>${esc(itemName(l?.itemId))}</td><td class="r">${toNum(l?.qty || 0)}</td><td class="r">${received === '' ? '—' : received}</td></tr>`;
+      })
+      .join('');
+
+    const w = window.open('', '_blank');
+    if (!w) {
+      notify.error('Allow pop-ups to print the transfer document.');
+      return;
+    }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(transfer?.number || 'Transfer')}</title>
+      <style>body{font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12px;color:#111;margin:24px}
+      h1{font-size:18px;margin:0 0 4px}table{border-collapse:collapse;width:100%;margin-top:12px}
+      th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f5f5f5}.r{text-align:right}
+      .meta{display:flex;gap:32px;margin-top:8px}.meta div{font-size:12px}</style></head><body>
+      <h1>${esc(mode === 'branch' ? 'Branch Transfer' : 'Warehouse Transfer')} — ${esc(transfer?.number || '')}</h1>
+      <div>Status: ${esc(transfer?.status || 'Draft')} · Date: ${esc(transfer?.date || '')}</div>
+      <div class="meta">
+        <div><strong>From</strong><br>${esc(transfer?.sourceBranchName || '')}<br>${esc(transfer?.sourceWarehouseName || '')}</div>
+        <div><strong>To</strong><br>${esc(transfer?.targetBranchName || '')}<br>${esc(transfer?.targetWarehouseName || '')}</div>
+      </div>
+      ${transfer?.reason ? `<p><strong>Reason:</strong> ${esc(transfer.reason)}</p>` : ''}
+      <table><thead><tr><th>Item</th><th class="r">Sent</th><th class="r">Received</th></tr></thead><tbody>${rows}</tbody></table>
+      <p style="margin-top:32px">Dispatched by ____________________ &nbsp;&nbsp; Received by ____________________</p>
+      </body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
   };
 
   const approveWithStockCheck = async (transfer) => {
@@ -970,7 +1262,8 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
       }
     }
 
-    updateStatus(transfer, 'Approved');
+    updateStatus(transfer, 'In Transit');
+    notify.success(`Transfer ${transfer?.number || ''} dispatched — awaiting receipt at the destination.`);
   };
 
   const MENU_WIDTH = 224; // w-56
@@ -1003,16 +1296,49 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
           <h3 className="ui-title text-lg">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>
-          <div className="text-sm ui-muted">{mode === 'branch' ? 'Between branches' : 'Within the same branch'}</div>
+          <div className="text-sm ui-muted">
+            {mode === 'branch'
+              ? 'Transfer Out (Branch movement) → Transfer In (Branch movement)'
+              : 'Transfer Out (Warehouse movement) → Transfer In (Warehouse movement)'}
+          </div>
           </div>
           <button
             type="button"
             onClick={openCreate}
             className="ui-btn ui-btn-primary "
           >
-          <Plus size={18} /> New Transfer
+          <Plus size={18} /> New Transfer Out
           </button>
         </div>
+
+        {pendingIn.length ? (
+          <div className="rounded-xl border p-4 bg-[rgb(var(--warn-soft))]">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <div className="font-semibold text-[rgb(var(--warn-ink))]">
+                  {pendingIn.length} transfer(s) awaiting your Transfer In
+                </div>
+                <div className="text-xs text-[rgb(var(--warn-ink))]">
+                  Stock has left the sending {mode === 'branch' ? 'branch' : 'warehouse'} and is in transit. It lands here
+                  only once you confirm the quantities actually received.
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {pendingIn.map((t) => (
+                <div key={normalizeId(t?.id)} className="flex items-center justify-between gap-3 flex-wrap ui-surface rounded-lg border px-3 py-2">
+                  <div className="text-sm">
+                    <span className="font-medium">{t?.number || 'Transfer'}</span>
+                    <span className="ui-muted"> · {t?.date || ''} · from {t?.sourceWarehouseName || t?.sourceBranchName || '-'}</span>
+                  </div>
+                  <button type="button" onClick={() => openReceive(t)} className="ui-btn ui-btn-primary !h-8 text-xs">
+                    Transfer In (receive)
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
@@ -1144,6 +1470,8 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
               const editable = status === 'Draft';
               const canSubmit = status === 'Draft';
               const canApprove = status === 'Submitted';
+              const canReceive = status === 'In Transit';
+              const canResolve = status === 'Short Received';
               const canReject = status === 'Submitted';
               const canCancel = status === 'Draft' || status === 'Submitted';
 
@@ -1197,9 +1525,59 @@ export const StockTransfersList = ({ db, setDb, currentCompany, branches = [], w
                       className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                     >
                       <Check size={16} className="ui-muted" />
-                      <span>Approve</span>
+                      <span>Transfer Out (dispatch)</span>
                     </button>
                   ) : null}
+
+                  {canReceive ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOpenMenu(null);
+                        openReceive(t);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                    >
+                      <Check size={16} className="ui-muted" />
+                      <span>Transfer In (receive)</span>
+                    </button>
+                  ) : null}
+
+                  {canResolve ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenMenu(null);
+                          resolveMismatch(t, 'LOSS');
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
+                      >
+                        Write off shortfall as loss
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOpenMenu(null);
+                          resolveMismatch(t, 'RETURN');
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
+                      >
+                        Return shortfall to source
+                      </button>
+                    </>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenu(null);
+                      printTransfer(t);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
+                  >
+                    Print / Download
+                  </button>
 
                   {canReject ? (
                     <button

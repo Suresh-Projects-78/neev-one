@@ -11562,6 +11562,7 @@ const AppShell = () => {
             db={dbForUser}
             setDb={setDb}
             currentCompany={currentCompany}
+            openModal={openModal}
             branches={branchesForUser}
             warehouses={warehousesForUser}
             mode={active === 'branchTransfers' ? 'branch' : 'warehouse'}
