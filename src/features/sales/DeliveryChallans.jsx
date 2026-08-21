@@ -11,6 +11,7 @@ import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
 import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 import { generateVoucherNumber } from '../../utils/docSettings';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -21,11 +22,14 @@ import { generateVoucherNumber } from '../../utils/docSettings';
 export default function DeliveryChallans({ db, setDb, currentCompany, onConvert }) {
   const companyId = currentCompany.id;
   const dcFilters = useColumnFilters();
+  const dcSearch = useListSearch(
+    (Array.isArray(db.deliveryChallans) ? db.deliveryChallans : []).filter((c) => c.companyId === companyId),
+    ['number', 'customerName', 'purpose', 'date', 'status', 'vehicleNo']
+  );
   const challans = useMemo(
     () =>
       dcFilters.applyFilters(
-        (Array.isArray(db.deliveryChallans) ? db.deliveryChallans : [])
-          .filter((c) => c.companyId === companyId)
+        dcSearch.filtered
           .slice()
           .sort((a, b) => String(b.date).localeCompare(String(a.date))),
         {
@@ -37,7 +41,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           status: (r) => r.status,
         }
       ),
-    [db.deliveryChallans, companyId, dcFilters.applyFilters]
+    [dcSearch.filtered, dcFilters.applyFilters]
   );
 
   const [open, setOpen] = useState(false);
@@ -235,6 +239,30 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           </div>
         </div>
       ) : null}
+
+      <ListToolbar
+        search={dcSearch.query}
+        onSearch={dcSearch.setQuery}
+        placeholder="Search challans (number, customer, purpose, vehicle)"
+        count={challans.length}
+        countLabel="challans"
+        onExport={() =>
+          exportRows({
+            fileName: `DeliveryChallans_${currentCompany?.name || 'company'}`,
+            label: 'challan(s)',
+            columns: [
+              { key: 'number', label: 'DC #' },
+              { key: 'date', label: 'Date' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'purpose', label: 'Purpose' },
+              { key: 'vehicleNo', label: 'Vehicle' },
+              { key: 'value', label: 'Value', value: (r) => Number(r.value || 0) },
+              { key: 'status', label: 'Status' },
+            ],
+            rows: challans,
+          })
+        }
+      />
 
       {challans.length === 0 ? (
         <div className="ui-card">

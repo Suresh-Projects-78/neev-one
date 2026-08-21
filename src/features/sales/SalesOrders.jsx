@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, ClipboardList } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
@@ -213,7 +215,21 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     .map((o) => ({ order: o, prog: progressOf(o) }))
     .filter(({ prog }) => prog.billed < prog.ordered);
 
-  const shown = showPending ? pendingRows.map((r) => r.order) : orders;
+  const soSearch = useListSearch(showPending ? pendingRows.map((r) => r.order) : orders, [
+    'number',
+    'customerName',
+    'date',
+    'status',
+    'notes',
+  ]);
+  const soFilters = useColumnFilters();
+  const shown = soFilters.applyFilters(soSearch.filtered, {
+    number: (r) => r.number,
+    date: (r) => r.date,
+    customer: (r) => r.customerName,
+    total: (r) => r.total,
+    status: (r) => r.status,
+  });
 
   return (
     <div className="space-y-5">
@@ -305,6 +321,31 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
         </div>
       ) : null}
 
+      <ListToolbar
+        search={soSearch.query}
+        onSearch={soSearch.setQuery}
+        placeholder="Search sales orders (number, customer, status)"
+        count={shown.length}
+        countLabel="orders"
+        onExport={() =>
+          exportRows({
+            fileName: `SalesOrders_${currentCompany?.name || 'company'}`,
+            label: 'sales order(s)',
+            columns: [
+              { key: 'number', label: 'SO #' },
+              { key: 'date', label: 'Date' },
+              { key: 'expectedDate', label: 'Expected' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+              { key: 'notes', label: 'Notes' },
+            ],
+            rows: shown,
+          })
+        }
+      />
+
       {shown.length === 0 ? (
         <div className="ui-card">
           <EmptyState icon={ClipboardList} title={showPending ? 'No pending orders' : 'No sales orders'} description="Confirmed customer orders live here until delivered and billed." />
@@ -322,6 +363,19 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                 <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
+              <FilterRow
+                columns={[
+                  { key: 'number', placeholder: 'No.' },
+                  { key: 'date', placeholder: 'Date' },
+                  { key: 'customer', placeholder: 'Customer' },
+                  { key: 'total', placeholder: 'Total' },
+                  {},
+                  { key: 'status', placeholder: 'Status' },
+                  {},
+                ]}
+                filters={soFilters.filters}
+                setFilter={soFilters.setFilter}
+              />
             </thead>
             <tbody>
               {shown.map((o) => {

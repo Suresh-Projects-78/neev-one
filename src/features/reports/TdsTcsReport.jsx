@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Download, Landmark } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { fyRange, getTdsConfig, tds194qRows, tcs206cRows } from '../../utils/tdsTcs';
@@ -97,6 +98,8 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
     notify.success(`Journal JE-${isTds ? 'TDS' : 'TCS'}-${nextId} drafted for ${money(totalTax)} — review it under Journal Entries.`);
   };
 
+  const ttSearch = useListSearch(rows, ['party', 'gstin']);
+  const ttSearchRows = ttSearch.filtered;
   return (
     <div className="space-y-5">
       <PageHeader
@@ -132,6 +135,29 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
         </button>
       </div>
 
+      <ListToolbar
+        search={ttSearch.query}
+        onSearch={ttSearch.setQuery}
+        placeholder="Search parties (name, GSTIN)"
+        count={ttSearchRows.length}
+        countLabel="parties"
+        onExport={() =>
+          exportRows({
+            fileName: `TdsTcs_${currentCompany?.name || 'company'}`,
+            label: 'row(s)',
+            columns: [
+              { key: 'party', label: 'Party' },
+              { key: 'gstin', label: 'GSTIN' },
+              { key: 'docs', label: 'Docs' },
+              { key: 'cumulative', label: 'Cumulative', value: (r) => Number(r.cumulative || 0) },
+              { key: 'excess', label: 'Excess', value: (r) => Number(r.excess || 0) },
+              { key: 'tax', label: 'Tax', value: (r) => Number(r.tax || 0) },
+            ],
+            rows: ttSearchRows,
+          })
+        }
+      />
+
       {rows.length === 0 ? (
         <div className="ui-card">
           <EmptyState icon={Landmark} title="No transactions this FY" description={tab === 'tds' ? 'Purchase bills drive 194Q.' : 'Receipts drive 206C(1H).'} />
@@ -150,7 +176,7 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {ttSearchRows.map((r, i) => (
                 <tr key={i} className={`border-t ${r.tax > 0 ? '' : 'opacity-60'}`}>
                   <td className="ui-col-entity px-4 py-2.5 font-medium">
                     {r.party}

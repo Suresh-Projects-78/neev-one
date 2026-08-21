@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { PackageSearch } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
@@ -121,11 +122,36 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
     }
   };
 
+  const raSearch = useListSearch(rows, ['name', 'lastVendorName']);
+  const raSearchRows = raSearch.filtered;
   return (
     <div className="space-y-5">
       <PageHeader
         title="Reorder Alerts"
         description="Stock items at or below their reorder level. Suggested order refills to 2× the level; one click drafts the PO to the last supplier."
+      />
+
+      <ListToolbar
+        search={raSearch.query}
+        onSearch={raSearch.setQuery}
+        placeholder="Search items (name, vendor)"
+        count={raSearchRows.length}
+        countLabel="items"
+        onExport={() =>
+          exportRows({
+            fileName: `ReorderAlerts_${currentCompany?.name || 'company'}`,
+            label: 'alert(s)',
+            columns: [
+              { key: 'name', label: 'Item' },
+              { key: 'inStock', label: 'In stock', value: (r) => Number(r.inStock ?? r.stock ?? 0) },
+              { key: 'reorderLevel', label: 'Reorder level', value: (r) => Number(r.reorderLevel || 0) },
+              { key: 'suggestedQty', label: 'Suggested qty', value: (r) => Number(r.suggestedQty || 0) },
+              { key: 'lastVendorName', label: 'Last vendor' },
+              { key: 'lastRate', label: 'Last rate', value: (r) => Number(r.lastRate || 0) },
+            ],
+            rows: raSearchRows,
+          })
+        }
       />
 
       {rows.length === 0 ? (
@@ -151,7 +177,7 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {raSearchRows.map((r) => (
                 <tr key={r.item.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5 font-medium">{r.item.name}</td>
                   <td className={`px-4 py-2.5 text-right font-semibold ${r.closing <= 0 ? 'ui-amount-neg' : ''}`}>{r.closing}</td>

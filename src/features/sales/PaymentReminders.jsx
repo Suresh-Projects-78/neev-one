@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Bell, Copy, Mail, MessageCircle } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import {
@@ -41,13 +42,17 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
     sendNow: rows.filter((r) => needsReminder(r.invoice, today)).length,
   };
 
-  const shown = rows.filter((r) => {
-    if (filter === 'DUE') return r.stage === 1;
-    if (filter === 'S2') return r.stage === 2;
-    if (filter === 'S3') return r.stage === 3;
-    if (filter === 'SENDNOW') return needsReminder(r.invoice, today);
-    return true;
-  });
+  const prSearch = useListSearch(
+    rows.filter((r) => {
+      if (filter === 'DUE') return r.stage === 1;
+      if (filter === 'S2') return r.stage === 2;
+      if (filter === 'S3') return r.stage === 3;
+      if (filter === 'SENDNOW') return needsReminder(r.invoice, today);
+      return true;
+    }),
+    [(r) => r.invoice?.number, (r) => r.invoice?.customerName, (r) => r.invoice?.dueDate]
+  );
+  const shown = prSearch.filtered;
 
   const markSent = (invoice, channel) => {
     const entry = { date: today, channel, stage: reminderStageSafe(invoice) };
@@ -118,6 +123,29 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
           </button>
         ))}
       </div>
+
+      <ListToolbar
+        search={prSearch.query}
+        onSearch={prSearch.setQuery}
+        placeholder="Search collectibles (invoice, customer)"
+        count={shown.length}
+        countLabel="invoices"
+        onExport={() =>
+          exportRows({
+            fileName: `PaymentReminders_${currentCompany?.name || 'company'}`,
+            label: 'collectible(s)',
+            columns: [
+              { key: 'invoice', label: 'Invoice', value: (r) => r.invoice?.number || '' },
+              { key: 'customer', label: 'Customer', value: (r) => r.invoice?.customerName || '' },
+              { key: 'dueDate', label: 'Due date', value: (r) => r.invoice?.dueDate || '' },
+              { key: 'overdueDays', label: 'Overdue days', value: (r) => r.overdueDays ?? '' },
+              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance || 0) },
+              { key: 'stage', label: 'Stage', value: (r) => r.stage ?? '' },
+            ],
+            rows: shown,
+          })
+        }
+      />
 
       {shown.length === 0 ? (
         <div className="ui-card">

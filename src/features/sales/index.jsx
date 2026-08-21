@@ -38,6 +38,7 @@ import { computeInventorySummaryByItemId, isStockItem } from '../../utils/invent
 import { PageHeader, StatusPill, EmptyState } from '../../components/ui/Primitives';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
 const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
   const initial = String(invoice?.status || '').trim();
@@ -326,6 +327,25 @@ export const InvoicesList = ({
       status: (r) => getDerivedStatus(r),
     });
   }, [dateFrom, dateTo, invoices, searchText, statusFilter, colFilters.applyFilters, warehouseById]);
+
+  const exportInvoices = () =>
+    exportRows({
+      fileName: `Invoices_${currentCompany?.name || 'company'}`,
+      label: 'invoice(s)',
+      columns: [
+        { key: 'number', label: 'Invoice #' },
+        { key: 'date', label: 'Date' },
+        { key: 'dueDate', label: 'Due Date' },
+        { key: 'customerName', label: 'Customer' },
+        { key: 'warehouse', label: 'Warehouse', value: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || '' },
+        { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+        { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
+        { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+        { key: 'paidAmount', label: 'Paid', value: (r) => Number(r.paidAmount || 0) },
+        { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
+      ],
+      rows: filteredInvoices,
+    });
 
   const openNewInvoice = () => {
     if (typeof onNewInvoice === 'function') {
@@ -746,6 +766,9 @@ export const InvoicesList = ({
               className="ui-btn ui-btn-ghost"
             >
               Clear filters
+            </button>
+            <button type="button" onClick={exportInvoices} className="ui-btn ui-btn-secondary">
+              <Download size={15} aria-hidden="true" /> Export
             </button>
             {gridEnabled ? <GridControls grid={grid} /> : null}
           </div>
@@ -1268,9 +1291,12 @@ export const EstimatesList = ({
   }, [warehouses]);
 
   const estFilters = useColumnFilters();
+  const estSearch = useListSearch(
+    db.estimates.filter((e) => e.companyId === currentCompany.id),
+    ['number', 'customerName', 'refNo', 'date']
+  );
   const estimates = estFilters.applyFilters(
-    db.estimates
-      .filter((e) => e.companyId === currentCompany.id)
+    estSearch.filtered
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -1456,6 +1482,31 @@ export const EstimatesList = ({
           <Plus size={20} /> New Estimate
         </button>
       </div>
+
+      <ListToolbar
+        search={estSearch.query}
+        onSearch={estSearch.setQuery}
+        placeholder="Search estimates (number, customer, ref)"
+        count={estimates.length}
+        countLabel="estimates"
+        onExport={() =>
+          exportRows({
+            fileName: `Estimates_${currentCompany?.name || 'company'}`,
+            label: 'estimate(s)',
+            columns: [
+              { key: 'number', label: 'Estimate #' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'date', label: 'Date' },
+              { key: 'dueDate', label: 'Due' },
+              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+            ],
+            rows: estimates,
+          })
+        }
+      />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full">
@@ -1645,9 +1696,12 @@ export const CreditNotesList = ({
   }, [warehouses]);
 
   const cnFilters = useColumnFilters();
+  const cnSearch = useListSearch(
+    db.creditNotes.filter((c) => c.companyId === currentCompany.id),
+    ['number', 'customerName', 'originalInvoiceNumber', 'date']
+  );
   const creditNotes = cnFilters.applyFilters(
-    db.creditNotes
-      .filter((c) => c.companyId === currentCompany.id)
+    cnSearch.filtered
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -1695,6 +1749,28 @@ export const CreditNotesList = ({
           <Plus size={20} /> New Credit Note
         </button>
       </div>
+
+      <ListToolbar
+        search={cnSearch.query}
+        onSearch={cnSearch.setQuery}
+        placeholder="Search credit notes (number, customer, invoice)"
+        count={creditNotes.length}
+        countLabel="credit notes"
+        onExport={() =>
+          exportRows({
+            fileName: `CreditNotes_${currentCompany?.name || 'company'}`,
+            label: 'credit note(s)',
+            columns: [
+              { key: 'number', label: 'Credit #' },
+              { key: 'originalInvoiceNumber', label: 'Original Invoice' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+            ],
+            rows: creditNotes,
+          })
+        }
+      />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full">

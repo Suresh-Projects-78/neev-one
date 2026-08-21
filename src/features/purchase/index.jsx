@@ -23,6 +23,7 @@ import {
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
@@ -590,12 +591,34 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 };
 
 export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, warehouses = [], onConvertToBill }) => {
-  const purchaseOrders = db.purchaseOrders.filter((po) => po.companyId === currentCompany.id);
-
   const warehouseById = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
+
+  const poSearch = useListSearch(
+    db.purchaseOrders.filter((po) => po.companyId === currentCompany.id),
+    ['number', 'vendorName', 'date', 'status']
+  );
+  const poFilters = useColumnFilters();
+  const purchaseOrders = poFilters.applyFilters(
+    poSearch.filtered
+      .slice()
+      .sort((a, b) => {
+        const da = String(a?.date || '');
+        const dbb = String(b?.date || '');
+        if (da !== dbb) return da < dbb ? 1 : -1;
+        return Number(b?.id || 0) - Number(a?.id || 0);
+      }),
+    {
+      number: (r) => r.number,
+      vendor: (r) => r.vendorName,
+      warehouse: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || '',
+      date: (r) => r.date,
+      amount: (r) => r.total,
+      status: (r) => r.status,
+    }
+  );
 
   const createPo = () => {
     openModal(<PurchaseOrderForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />);
@@ -610,6 +633,28 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
         </button>
       </div>
 
+      <ListToolbar
+        search={poSearch.query}
+        onSearch={poSearch.setQuery}
+        placeholder="Search purchase orders (number, vendor, status)"
+        count={purchaseOrders.length}
+        countLabel="orders"
+        onExport={() =>
+          exportRows({
+            fileName: `PurchaseOrders_${currentCompany?.name || 'company'}`,
+            label: 'purchase order(s)',
+            columns: [
+              { key: 'number', label: 'PO #' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+            ],
+            rows: purchaseOrders,
+          })
+        }
+      />
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
@@ -622,6 +667,19 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'No.' },
+                { key: 'vendor', placeholder: 'Vendor' },
+                { key: 'warehouse', placeholder: 'Warehouse' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'amount', placeholder: 'Amount' },
+                { key: 'status', placeholder: 'Status' },
+                {},
+              ]}
+              filters={poFilters.filters}
+              setFilter={poFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {purchaseOrders.length === 0 ? (
@@ -959,7 +1017,11 @@ export const BillsList = ({
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
-  const bills = db.bills.filter((b) => b.companyId === currentCompany.id);
+  const billSearch = useListSearch(
+    db.bills.filter((b) => b.companyId === currentCompany.id),
+    ['number', 'vendorName', 'refNo', 'date']
+  );
+  const bills = billSearch.filtered;
   const [statusFilter, setStatusFilter] = useState('All');
   const colFilters = useColumnFilters();
   const [openMenu, setOpenMenu] = useState(null);
@@ -1213,6 +1275,32 @@ export const BillsList = ({
           <Plus size={20} /> New Bill
         </button>
       </div>
+
+      <ListToolbar
+        search={billSearch.query}
+        onSearch={billSearch.setQuery}
+        placeholder="Search bills (number, vendor, ref no)"
+        count={filteredBills.length}
+        countLabel="bills"
+        onExport={() =>
+          exportRows({
+            fileName: `Bills_${currentCompany?.name || 'company'}`,
+            label: 'bill(s)',
+            columns: [
+              { key: 'number', label: 'Bill #' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'refNo', label: 'Ref No' },
+              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+              { key: 'paidAmount', label: 'Paid', value: (r) => Number(r.paidAmount || 0) },
+              { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
+            ],
+            rows: filteredBills,
+          })
+        }
+      />
 
       <div className="flex items-center gap-2 flex-wrap">
         {['All', 'Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'].map((s) => (
@@ -1953,9 +2041,12 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   }, [warehouses]);
 
   const dnFilters = useColumnFilters();
+  const dnSearch = useListSearch(
+    db.debitNotes.filter((dn) => dn.companyId === currentCompany.id),
+    ['number', 'vendorName', 'originalBillNumber', 'date']
+  );
   const debitNotes = dnFilters.applyFilters(
-    db.debitNotes
-      .filter((dn) => dn.companyId === currentCompany.id)
+    dnSearch.filtered
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -2000,6 +2091,29 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
           <Plus size={20} /> New Debit Note
         </button>
       </div>
+
+      <ListToolbar
+        search={dnSearch.query}
+        onSearch={dnSearch.setQuery}
+        placeholder="Search debit notes (number, vendor, bill)"
+        count={debitNotes.length}
+        countLabel="debit notes"
+        onExport={() =>
+          exportRows({
+            fileName: `DebitNotes_${currentCompany?.name || 'company'}`,
+            label: 'debit note(s)',
+            columns: [
+              { key: 'number', label: 'Debit Note #' },
+              { key: 'originalBillNumber', label: 'Original Bill' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+            ],
+            rows: debitNotes,
+          })
+        }
+      />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
         <table className="ui-table w-full">

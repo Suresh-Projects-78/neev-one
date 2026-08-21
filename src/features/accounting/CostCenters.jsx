@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, PieChart } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 
@@ -59,6 +60,8 @@ export default function CostCenters({ db, setDb, currentCompany }) {
 
   const money = (v) => formatMoney(Number(v || 0), currentCompany);
 
+  const ccSearch = useListSearch(rows, [(r) => r.center?.name]);
+  const ccSearchRows = ccSearch.filtered;
   return (
     <div className="space-y-5">
       <PageHeader title="Cost Centers" description="P&L by branch, project or vertical — tag invoices and expenses, see who actually makes money." />
@@ -81,6 +84,27 @@ export default function CostCenters({ db, setDb, currentCompany }) {
         <div className="ui-caption pb-2">Then pick it on invoices and expenses.</div>
       </div>
 
+      <ListToolbar
+        search={ccSearch.query}
+        onSearch={ccSearch.setQuery}
+        placeholder="Search cost centres"
+        count={ccSearchRows.length}
+        countLabel="centres"
+        onExport={() =>
+          exportRows({
+            fileName: `CostCenters_${currentCompany?.name || 'company'}`,
+            label: 'cost centre(s)',
+            columns: [
+              { key: 'name', label: 'Cost center', value: (r) => r.center?.name || '' },
+              { key: 'income', label: 'Income', value: (r) => Number(r.income || 0) },
+              { key: 'expense', label: 'Expense', value: (r) => Number(r.expense || 0) },
+              { key: 'net', label: 'Net', value: (r) => Number(r.net || 0) },
+            ],
+            rows: ccSearchRows,
+          })
+        }
+      />
+
       {rows.length === 0 ? (
         <div className="ui-card">
           <EmptyState icon={PieChart} title="No cost centers yet" description="Add one per branch/project, then tag documents with it." />
@@ -98,7 +122,7 @@ export default function CostCenters({ db, setDb, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {ccSearchRows.map((r, i) => (
                 <tr key={i} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5 font-medium">{r.center.name}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{money(r.income)}</td>

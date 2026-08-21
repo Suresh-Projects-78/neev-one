@@ -72,6 +72,7 @@ import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/led
 import { formatMoney, formatMoneyCompact, round2 } from './utils/money';
 import { downloadCsv, downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
 import { useColumnFilters, FilterRow } from './components/ColumnFilters';
+import { ListToolbar, exportRows, useListSearch } from './components/ListToolbar';
 import { getCustomerDisplayName, getVendorDisplayName } from './utils/contacts';
 import {
   ACCENT_OPTIONS,
@@ -512,6 +513,15 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
 
 const VendorsList = ({ db, setDb, currentCompany }) => {
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
+  const vendorSearch = useListSearch(vendors, [(v) => getVendorDisplayName(v), 'phone', 'mobile', 'email', 'gstin']);
+  const vendorSearchFilters = useColumnFilters();
+  const shownVendors = vendorSearchFilters.applyFilters(vendorSearch.filtered, {
+    name: (r) => getVendorDisplayName(r),
+    phone: (r) => r.mobile || r.phone || '',
+    email: (r) => r.email,
+    gstReg: (r) => r.gstRegistration,
+    gstin: (r) => r.gstin,
+  });
   const [isCreating, setIsCreating] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
   const [viewingVendor, setViewingVendor] = useState(null);
@@ -651,6 +661,28 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
         </button>
       </div>
 
+      <ListToolbar
+        search={vendorSearch.query}
+        onSearch={vendorSearch.setQuery}
+        placeholder="Search vendors (name, phone, email, GSTIN)"
+        count={shownVendors.length}
+        countLabel="vendors"
+        onExport={() =>
+          exportRows({
+            fileName: `Vendors_${currentCompany?.name || 'company'}`,
+            label: 'vendor(s)',
+            columns: [
+              { key: 'name', label: 'Name', value: (r) => getVendorDisplayName(r) },
+              { key: 'phone', label: 'Phone', value: (r) => r.mobile || r.phone || '' },
+              { key: 'email', label: 'Email' },
+              { key: 'gstRegistration', label: 'GST Reg.' },
+              { key: 'gstin', label: 'GSTIN' },
+            ],
+            rows: shownVendors,
+          })
+        }
+      />
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
@@ -663,16 +695,29 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Balance</th>
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'name', placeholder: 'Name' },
+                { key: 'phone', placeholder: 'Phone' },
+                { key: 'email', placeholder: 'Email' },
+                { key: 'gstReg', options: ['Registered', 'Unregistered', 'Composition'] },
+                { key: 'gstin', placeholder: 'GSTIN' },
+                {},
+                {},
+              ]}
+              filters={vendorSearchFilters.filters}
+              setFilter={vendorSearchFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y">
-            {vendors.length === 0 ? (
+            {shownVendors.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No vendors found
                 </td>
               </tr>
             ) : (
-              vendors.map((vendor) => (
+              shownVendors.map((vendor) => (
                 <tr
                   key={vendor.id}
                   className="ui-hover-sunken cursor-pointer"
@@ -723,6 +768,15 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
 
 const CustomersList = ({ db, setDb, currentCompany }) => {
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
+  const customerSearch = useListSearch(customers, [(c) => getCustomerDisplayName(c), 'phone', 'mobile', 'email', 'gstin']);
+  const customerSearchFilters = useColumnFilters();
+  const shownCustomers = customerSearchFilters.applyFilters(customerSearch.filtered, {
+    name: (r) => getCustomerDisplayName(r),
+    phone: (r) => r.mobile || r.phone || '',
+    email: (r) => r.email,
+    gstReg: (r) => r.gstRegistration,
+    gstin: (r) => r.gstin,
+  });
   const [isCreating, setIsCreating] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
@@ -859,6 +913,28 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
         </button>
       </div>
 
+      <ListToolbar
+        search={customerSearch.query}
+        onSearch={customerSearch.setQuery}
+        placeholder="Search customers (name, phone, email, GSTIN)"
+        count={shownCustomers.length}
+        countLabel="customers"
+        onExport={() =>
+          exportRows({
+            fileName: `Customers_${currentCompany?.name || 'company'}`,
+            label: 'customer(s)',
+            columns: [
+              { key: 'name', label: 'Name', value: (r) => getCustomerDisplayName(r) },
+              { key: 'phone', label: 'Phone', value: (r) => r.mobile || r.phone || '' },
+              { key: 'email', label: 'Email' },
+              { key: 'gstRegistration', label: 'GST Reg.' },
+              { key: 'gstin', label: 'GSTIN' },
+            ],
+            rows: shownCustomers,
+          })
+        }
+      />
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
@@ -871,16 +947,29 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Balance</th>
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'name', placeholder: 'Name' },
+                { key: 'phone', placeholder: 'Phone' },
+                { key: 'email', placeholder: 'Email' },
+                { key: 'gstReg', options: ['Registered', 'Unregistered', 'Composition'] },
+                { key: 'gstin', placeholder: 'GSTIN' },
+                {},
+                {},
+              ]}
+              filters={customerSearchFilters.filters}
+              setFilter={customerSearchFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y">
-            {customers.length === 0 ? (
+            {shownCustomers.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No customers found
                 </td>
               </tr>
             ) : (
-              customers.map((customer) => (
+              shownCustomers.map((customer) => (
                 <tr
                   key={customer.id}
                   className="ui-hover-sunken cursor-pointer"
@@ -1898,6 +1987,16 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
 
 const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
   const items = db.items.filter((i) => i.companyId === currentCompany.id);
+  const itemSearch = useListSearch(items, ['code', 'name', 'hsnSac', 'category', 'brand', 'barcode']);
+  const itemSearchFilters = useColumnFilters();
+  const shownItems = itemSearchFilters.applyFilters(itemSearch.filtered, {
+    code: (r) => r.code,
+    name: (r) => r.name,
+    type: (r) => r.type,
+    hsn: (r) => r.hsnSac,
+    gst: (r) => r.gstRate,
+    price: (r) => r.salePrice,
+  });
   const inventoryByItemId = useMemo(() => {
     return computeInventorySummaryByItemId({ db, companyId: currentCompany.id });
   }, [db, currentCompany.id]);
@@ -1975,6 +2074,32 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
         </button>
       </div>
 
+      <ListToolbar
+        search={itemSearch.query}
+        onSearch={itemSearch.setQuery}
+        placeholder="Search items (code, name, HSN, brand, barcode)"
+        count={shownItems.length}
+        countLabel="items"
+        onExport={() =>
+          exportRows({
+            fileName: `Items_${currentCompany?.name || 'company'}`,
+            label: 'item(s)',
+            columns: [
+              { key: 'code', label: 'Code' },
+              { key: 'name', label: 'Name' },
+              { key: 'type', label: 'Type' },
+              { key: 'category', label: 'Category' },
+              { key: 'brand', label: 'Brand' },
+              { key: 'hsnSac', label: 'HSN/SAC' },
+              { key: 'gstRate', label: 'GST %', value: (r) => Number(r.gstRate || 0) },
+              { key: 'salePrice', label: 'Sale Price', value: (r) => Number(r.salePrice || 0) },
+              { key: 'purchasePrice', label: 'Purchase Price', value: (r) => Number(r.purchasePrice || 0) },
+            ],
+            rows: shownItems,
+          })
+        }
+      />
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
@@ -1988,16 +2113,30 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Stock</th>
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'code', placeholder: 'Code' },
+                { key: 'name', placeholder: 'Name' },
+                { key: 'type', options: ['Goods', 'Service'] },
+                { key: 'hsn', placeholder: 'HSN' },
+                { key: 'gst', placeholder: 'GST %' },
+                { key: 'price', placeholder: 'Price' },
+                {},
+                {},
+              ]}
+              filters={itemSearchFilters.filters}
+              setFilter={itemSearchFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y">
-            {items.length === 0 ? (
+            {shownItems.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-6 py-10 text-center ui-muted">
                   No items yet
                 </td>
               </tr>
             ) : null}
-            {items.map((item) => (
+            {shownItems.map((item) => (
               <tr key={item.id} className="ui-hover-sunken">
                 <td className="px-4 py-2.5 ui-col-entity">{item.code}</td>
                 <td className="px-4 py-2.5 ui-col-meta">{item.name}</td>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, RefreshCw } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { advanceRunDate } from '../../hooks/useRecurringInvoices';
@@ -152,6 +153,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
     setDb((prev) => ({ ...prev, recurringTemplates: (prev.recurringTemplates || []).filter((x) => x.id !== t.id) }));
   };
 
+  const recSearch = useListSearch(templates, ['customerName', 'frequency', 'status', 'nextRunDate']);
+  const shownTemplates = recSearch.filtered;
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -208,6 +211,29 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
         </div>
       ) : null}
 
+      <ListToolbar
+        search={recSearch.query}
+        onSearch={recSearch.setQuery}
+        placeholder="Search schedules (customer, frequency, status)"
+        count={shownTemplates.length}
+        countLabel="schedules"
+        onExport={() =>
+          exportRows({
+            fileName: `RecurringInvoices_${currentCompany?.name || 'company'}`,
+            label: 'schedule(s)',
+            columns: [
+              { key: 'customerName', label: 'Customer' },
+              { key: 'amount', label: 'Amount', value: (r) => Number(r.amount || 0) },
+              { key: 'frequency', label: 'Frequency' },
+              { key: 'nextRunDate', label: 'Next run' },
+              { key: 'endDate', label: 'Ends' },
+              { key: 'status', label: 'Status' },
+            ],
+            rows: shownTemplates,
+          })
+        }
+      />
+
       {templates.length === 0 ? (
         <div className="ui-card">
           <EmptyState
@@ -232,9 +258,9 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {templates.map((t) => {
+              {shownTemplates.map((t) => {
                 const { stage, count } = stageOf(t);
-                return (
+  return (
                   <tr key={t.id} className="border-t">
                     <td className="ui-col-entity px-4 py-2.5 font-medium">{t.customerName || '—'}</td>
                     <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(t.total || 0), currentCompany)}</td>

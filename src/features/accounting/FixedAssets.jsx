@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, Building2 } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { fyRange } from '../../utils/tdsTcs';
@@ -109,6 +110,8 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
 
   const money = (v) => formatMoney(Number(v || 0), currentCompany);
 
+  const faSearch = useListSearch(rows, ['name', 'block']);
+  const faSearchRows = faSearch.filtered;
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -169,6 +172,31 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
         </div>
       ) : null}
 
+      <ListToolbar
+        search={faSearch.query}
+        onSearch={faSearch.setQuery}
+        placeholder="Search assets (name, block)"
+        count={faSearchRows.length}
+        countLabel="assets"
+        onExport={() =>
+          exportRows({
+            fileName: `FixedAssets_${currentCompany?.name || 'company'}`,
+            label: 'asset(s)',
+            columns: [
+              { key: 'name', label: 'Asset' },
+              { key: 'block', label: 'Block' },
+              { key: 'purchaseDate', label: 'Purchased' },
+              { key: 'cost', label: 'Cost', value: (r) => Number(r.cost || 0) },
+              { key: 'openingWdv', label: 'Opening WDV', value: (r) => Number(r.openingWdv || 0) },
+              { key: 'rate', label: 'Rate %', value: (r) => Number(r.rate || 0) },
+              { key: 'depreciation', label: 'Depreciation', value: (r) => Number(r.depreciation || 0) },
+              { key: 'closingWdv', label: 'Closing WDV', value: (r) => Number(r.closingWdv || 0) },
+            ],
+            rows: faSearchRows,
+          })
+        }
+      />
+
       {rows.length === 0 ? (
         <div className="ui-card">
           <EmptyState icon={Building2} title="No assets registered" description="Add machines, vehicles, computers — depreciation computes itself every FY." />
@@ -190,7 +218,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ asset, openingWdv, rateApplied, halfRate, dep, closingWdv }) => (
+              {faSearchRows.map(({ asset, openingWdv, rateApplied, halfRate, dep, closingWdv }) => (
                 <tr key={asset.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5 font-medium">{asset.name}</td>
                   <td className="ui-col-meta px-4 py-2.5">{asset.block}</td>

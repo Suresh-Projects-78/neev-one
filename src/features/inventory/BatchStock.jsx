@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Boxes } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { batchStockRows } from '../../utils/batches';
 
 /**
@@ -49,6 +50,8 @@ export default function BatchStock({ db, currentCompany }) {
     ['90', `≤90 days (${counts.d90})`],
   ];
 
+  const bsSearch = useListSearch(shown, ['itemName', 'batchNo', 'expiryDate', 'source']);
+  const bsSearchRows = bsSearch.filtered;
   return (
     <div className="space-y-5">
       <PageHeader title="Batch Stock & Expiry" description="Every batch received via bills, consumed by invoices — with what expires when." />
@@ -65,6 +68,30 @@ export default function BatchStock({ db, currentCompany }) {
           </button>
         ))}
       </div>
+
+      <ListToolbar
+        search={bsSearch.query}
+        onSearch={bsSearch.setQuery}
+        placeholder="Search batches (item, batch no, expiry)"
+        count={bsSearchRows.length}
+        countLabel="batches"
+        onExport={() =>
+          exportRows({
+            fileName: `BatchStock_${currentCompany?.name || 'company'}`,
+            label: 'batch(es)',
+            columns: [
+              { key: 'itemName', label: 'Item' },
+              { key: 'batchNo', label: 'Batch' },
+              { key: 'mfgDate', label: 'Mfg' },
+              { key: 'expiryDate', label: 'Expiry' },
+              { key: 'inQty', label: 'In', value: (r) => Number(r.inQty || 0) },
+              { key: 'outQty', label: 'Out', value: (r) => Number(r.outQty || 0) },
+              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance ?? r.remaining ?? 0) },
+            ],
+            rows: bsSearchRows,
+          })
+        }
+      />
 
       {shown.length === 0 ? (
         <div className="ui-card">
@@ -87,7 +114,7 @@ export default function BatchStock({ db, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {shown.map((b) => (
+              {bsSearchRows.map((b) => (
                 <tr key={b.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5">{b.itemName}</td>
                   <td className="ui-col-id px-4 py-2.5 font-mono text-sm">{b.batchNo}</td>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, BadgePercent } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { getCustomerDisplayName } from '../../utils/contacts';
 
@@ -162,6 +163,9 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
     }
     return r.type === 'PERCENT' ? `${r.value}%` : `₹${r.value}/unit`;
   };
+
+  const drSearch = useListSearch(rules, ['name', 'type', (r) => scopeLabel(r)]);
+  const shownRules = drSearch.filtered;
 
   return (
     <div className="space-y-5">
@@ -378,6 +382,29 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
         </div>
       ) : null}
 
+      <ListToolbar
+        search={drSearch.query}
+        onSearch={drSearch.setQuery}
+        placeholder="Search rules (name, scope, type)"
+        count={shownRules.length}
+        countLabel="rules"
+        onExport={() =>
+          exportRows({
+            fileName: `DiscountRules_${currentCompany?.name || 'company'}`,
+            label: 'rule(s)',
+            columns: [
+              { key: 'name', label: 'Rule' },
+              { key: 'scope', label: 'Scope', value: (r) => scopeLabel(r) },
+              { key: 'discount', label: 'Discount', value: (r) => valueLabel(r) },
+              { key: 'validFrom', label: 'Valid from' },
+              { key: 'validTo', label: 'Valid to' },
+              { key: 'status', label: 'Status', value: (r) => (r.active === false ? 'Paused' : 'Active') },
+            ],
+            rows: shownRules,
+          })
+        }
+      />
+
       {rules.length === 0 ? (
         <div className="ui-card">
           <EmptyState icon={BadgePercent} title="No discount rules" description="Create quantity breaks, customer specials, or a promotional window — invoicing applies them automatically." />
@@ -396,7 +423,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {rules.map((r) => (
+              {shownRules.map((r) => (
                 <tr key={r.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5 font-medium">{r.name}</td>
                   <td className="ui-col-meta px-4 py-2.5 text-sm">{scopeLabel(r)}</td>

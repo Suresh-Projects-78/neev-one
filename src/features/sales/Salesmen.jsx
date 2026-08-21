@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, UserCheck } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 
@@ -66,6 +67,9 @@ export default function Salesmen({ db, setDb, currentCompany }) {
     return [...map.values()].sort((a, b) => b.sales - a.sales);
   }, [db.invoices, salesmen, companyId]);
 
+  const smSearch = useListSearch(perf, [(r) => r.salesman?.name, (r) => r.salesman?.phone]);
+  const shownPerf = smSearch.filtered;
+
   return (
     <div className="space-y-5">
       <PageHeader title="Salesmen" description="Who sold what — every invoice can carry a salesman; commission is computed on pre-GST sales." />
@@ -99,6 +103,29 @@ export default function Salesmen({ db, setDb, currentCompany }) {
         </div>
       </div>
 
+      <ListToolbar
+        search={smSearch.query}
+        onSearch={smSearch.setQuery}
+        placeholder="Search salesmen (name, phone)"
+        count={shownPerf.length}
+        countLabel="salesmen"
+        onExport={() =>
+          exportRows({
+            fileName: `Salesmen_${currentCompany?.name || 'company'}`,
+            label: 'salesman/men',
+            columns: [
+              { key: 'name', label: 'Salesman', value: (r) => r.salesman?.name || '' },
+              { key: 'phone', label: 'Phone', value: (r) => r.salesman?.phone || '' },
+              { key: 'commissionPct', label: 'Commission %', value: (r) => Number(r.salesman?.commissionPct || 0) },
+              { key: 'invoices', label: 'Invoices', value: (r) => r.invoices },
+              { key: 'sales', label: 'Sales (pre-GST)', value: (r) => Number(r.sales || 0) },
+              { key: 'commission', label: 'Commission due', value: (r) => Number(r.commission || 0) },
+            ],
+            rows: shownPerf,
+          })
+        }
+      />
+
       {salesmen.length === 0 ? (
         <div className="ui-card">
           <EmptyState icon={UserCheck} title="No salesmen yet" description="Add the team; then pick a salesman on each invoice." />
@@ -118,7 +145,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
               </tr>
             </thead>
             <tbody>
-              {perf.map(({ salesman: s, invoices, sales, commission }) => (
+              {shownPerf.map(({ salesman: s, invoices, sales, commission }) => (
                 <tr key={s.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5 font-medium">{s.name}</td>
                   <td className="ui-col-meta px-4 py-2.5">{s.phone || '—'}</td>
