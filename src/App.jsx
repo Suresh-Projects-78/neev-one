@@ -1144,7 +1144,9 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   );
 };
 
-const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
+const emptyExpenseLine = () => ({ ledgerId: '', description: '', amount: '', gstRate: 0 });
+
+const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null }) => {
   const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
   const expenseDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
   const expenseNumbering = expenseDocSettings?.numbering?.expense;
@@ -1156,40 +1158,97 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
 
   const [formData, setFormData] = useState(() => ({
-    number: generateVoucherNumber({ db, company: currentCompany, voucherKey: 'expense', branchId: activeBranchId || null }) || '',
-    date: new Date().toISOString().split('T')[0],
-    costCenterId: '',
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    status: 'Unpaid',
-    description: '',
-    category: 'Operating',
-    vendorId: '',
-    refNo: '',
-    refDate: '',
-    amount: 0,
-    gstRate: 0,
+    number: initialData?.number || generatedExpenseNumber || '',
+    date: initialData?.date || new Date().toISOString().split('T')[0],
+    costCenterId: initialData?.costCenterId ?? '',
+    dueDate: initialData?.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    description: initialData?.description || '',
+    vendorId: initialData?.vendorId ?? '',
+    refNo: initialData?.refNo || '',
+    refDate: initialData?.refDate || '',
+    lines: Array.isArray(initialData?.lines) && initialData.lines.length ? initialData.lines : [emptyExpenseLine()],
   }));
 
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
-  const gstRates = (db.gstRates || [])
-    .filter((r) => r.companyId === currentCompany.id)
-    .slice()
-    .sort((a, b) => Number(a.rate) - Number(b.rate));
 
-  const gstRateValues = gstRates.map((r) => String(Number(r.rate)));
-  const gstRateValue = String(formData.gstRate ?? 0);
+  // Every ledger sitting under a group whose category is Expense — that is
+  // "all ledgers created under Direct or Indirect expenses", including any
+  // sub-groups the user made themselves.
+  const expenseLedgers = useMemo(() => {
+    const groups = (db.accountGroups || []).filter((g) => g.companyId === currentCompany.id);
+    const groupById = new Map(groups.map((g) => [String(g.id), g]));
+    const isExpenseGroup = (gid) => {
+      let cur = groupById.get(String(gid || ''));
+      const seen = new Set();
+      while (cur && !seen.has(String(cur.id))) {
+        seen.add(String(cur.id));
+        if (String(cur.groupCategory || '').trim() === 'Expense') return true;
+        cur = cur.parentGroupId ? groupById.get(String(cur.parentGroupId)) : null;
+      }
+      return false;
+    };
+    return (db.chartOfAccounts || [])
+      .filter((a) => a.companyId === currentCompany.id && isExpenseGroup(a.groupId))
+      .map((a) => ({ ...a, groupName: String(groupById.get(String(a.groupId))?.name || '') }))
+      .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  }, [db.chartOfAccounts, db.accountGroups, currentCompany.id]);
+
   const { state: companyState } = getCompanyGstProfile(currentCompany);
   const gstEnabled = (currentCompany?.profile?.taxCompliances?.gstEnabled ?? currentCompany?.gstEnabled ?? true) !== false;
   const vendor = formData.vendorId ? vendors.find((v) => v.id === parseInt(formData.vendorId)) : null;
-  const { state: vendorState, gstin: vendorGstin } = getPartyGstProfile(vendor);
+  const { state: vendorState, gstin: vendorGstin, gstRegistration } = getPartyGstProfile(vendor);
   const isIntra = isIntraStateSupply({ companyState, partyState: vendorState });
 
-  const computed = computeGstForLine({
-    quantity: 1,
-    rate: Number(formData.amount || 0),
-    gstRate: Number(formData.gstRate || 0),
-    isIntra,
-  });
+  // GST rides on the vendor's registration: an unregistered or composition
+  // vendor cannot charge it, so those lines are taxable value only.
+  const vendorChargesGst = gstEnabled && String(gstRegistration || '').trim().toLowerCase() === 'registered';
+
+  const computed = useMemo(() => {
+    const rows = (formData.lines || []).map((l) => {
+      const amount = Number(l.amount) || 0;
+      const rate = vendorChargesGst ? Number(l.gstRate) || 0 : 0;
+      const gstAmount = round2((amount * rate) / 100);
+      return {
+        ledgerId: l.ledgerId,
+        description: String(l.description || '').trim(),
+        amount: round2(amount),
+        gstRate: rate,
+        gstAmount,
+        cgstAmount: isIntra ? round2(gstAmount / 2) : 0,
+        sgstAmount: isIntra ? round2(gstAmount / 2) : 0,
+        igstAmount: isIntra ? 0 : gstAmount,
+        lineTotal: round2(amount + gstAmount),
+      };
+    });
+    const subtotal = round2(rows.reduce((s, r) => s + r.amount, 0));
+    const gstTotal = round2(rows.reduce((s, r) => s + r.gstAmount, 0));
+    return {
+      rows,
+      subtotal,
+      gstTotal,
+      cgstTotal: round2(rows.reduce((s, r) => s + r.cgstAmount, 0)),
+      sgstTotal: round2(rows.reduce((s, r) => s + r.sgstAmount, 0)),
+      igstTotal: round2(rows.reduce((s, r) => s + r.igstAmount, 0)),
+      total: round2(subtotal + gstTotal),
+    };
+  }, [formData.lines, vendorChargesGst, isIntra]);
+
+  const updateLine = (idx, patch) =>
+    setFormData((p) => ({ ...p, lines: p.lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
+
+  const onPickLedger = (idx, ledgerId) => {
+    const led = expenseLedgers.find((l) => String(l.id) === String(ledgerId));
+    updateLine(idx, {
+      ledgerId,
+      // The ledger's own rate is the default; the operator can still override.
+      gstRate: led && led.gstRate !== null && led.gstRate !== undefined ? Number(led.gstRate) : 0,
+      description: formData.lines[idx]?.description || '',
+    });
+  };
+
+  const addLine = () => setFormData((p) => ({ ...p, lines: [...p.lines, emptyExpenseLine()] }));
+  const removeLine = (idx) =>
+    setFormData((p) => ({ ...p, lines: p.lines.length > 1 ? p.lines.filter((_, i) => i !== idx) : p.lines }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1213,10 +1272,23 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
       return;
     }
 
+    const usableLines = computed.rows.filter((r) => String(r.ledgerId || '').trim() && r.amount > 0);
+    if (!usableLines.length) {
+      notify.error('Add at least one expense ledger line with an amount.');
+      return;
+    }
+    const missingLedger = (formData.lines || []).some((l) => Number(l.amount) > 0 && !String(l.ledgerId || '').trim());
+    if (missingLedger) {
+      notify.error('Every line with an amount needs an expense ledger.');
+      return;
+    }
+
     if (gstEnabled && !companyState) {
       notify.error('Please set Company State in Tax & Compliances before creating GST expenses.');
       return;
     }
+
+    const ledgerName = (id) => expenseLedgers.find((l) => String(l.id) === String(id))?.name || '';
 
     // Server first: an unpaid expense is a liability; it must reach the books
     // or not exist. Drafts stay local until they become real.
@@ -1234,16 +1306,23 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
           partyName: getVendorDisplayName(vendor) || 'Expense',
           partyGstin: vendorGstin || null,
           placeOfSupplyState: vendorState || null,
-          category: formData.category || null,
           description: formData.description || null,
-          subtotal: computed.taxableAmount,
-          cgstTotal: computed.cgstAmount,
-          sgstTotal: computed.sgstAmount,
-          igstTotal: computed.igstAmount,
-          gstTotal: computed.gstAmount,
-          total: computed.lineTotal,
+          subtotal: computed.subtotal,
+          cgstTotal: computed.cgstTotal,
+          sgstTotal: computed.sgstTotal,
+          igstTotal: computed.igstTotal,
+          gstTotal: computed.gstTotal,
+          total: computed.total,
           status: 'Unpaid',
-          items: [],
+          items: usableLines.map((r) => ({
+            description: `${ledgerName(r.ledgerId)}${r.description ? ` — ${r.description}` : ''}`,
+            quantity: 1,
+            rate: r.amount,
+            gstRate: r.gstRate,
+            taxableAmount: r.amount,
+            gstAmount: r.gstAmount,
+            lineTotal: r.lineTotal,
+          })),
         });
         backendDocId = saved?.id || null;
         serverNumber = String(saved?.number || '');
@@ -1254,20 +1333,30 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
     }
 
     const newExpense = {
-      id: db.expenses.length + 1,
+      id: (db.expenses || []).reduce((m, x) => Math.max(m, Number(x?.id) || 0), 0) + 1,
       companyId: currentCompany.id,
-      ...formData,
       backendDocId,
       number: serverNumber || expenseNumber,
+      date: formData.date,
+      dueDate: formData.dueDate,
+      refNo: formData.refNo,
+      refDate: formData.refDate,
+      description: formData.description,
+      costCenterId: formData.costCenterId,
+      vendorId: formData.vendorId,
       vendorName: getVendorDisplayName(vendor),
       vendorGstin: vendorGstin,
       placeOfSupplyState: vendorState,
-      taxableTotal: computed.taxableAmount,
-      cgstTotal: computed.cgstAmount,
-      sgstTotal: computed.sgstAmount,
-      igstTotal: computed.igstAmount,
-      gstTotal: computed.gstAmount,
-      total: computed.lineTotal,
+      taxType: isIntra ? 'CGST_SGST' : 'IGST',
+      lines: usableLines.map((r) => ({ ...r, ledgerName: ledgerName(r.ledgerId) })),
+      taxableTotal: computed.subtotal,
+      subtotal: computed.subtotal,
+      cgstTotal: computed.cgstTotal,
+      sgstTotal: computed.sgstTotal,
+      igstTotal: computed.igstTotal,
+      gstTotal: computed.gstTotal,
+      total: computed.total,
+      amount: computed.subtotal,
       paidAmount: 0,
       status: wantsDraft ? 'Draft' : 'Unpaid',
       createdAt: new Date().toISOString(),
@@ -1282,41 +1371,20 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
     notify.success('Expense created!');
   };
 
+  const costCenters = (db.costCenters || []).filter((c) => c.companyId === currentCompany.id);
+
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => {
-            setSubmitAsDraft(true);
-            formRef.current?.requestSubmit();
-          }}
-          className="ui-btn ui-btn-secondary"
-        >
-          Save Draft
-        </button>
-      </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Voucher Number</label>
           <input
             type="text"
             value={formData.number}
             onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg ${lockExpenseNumber ? 'ui-sunken' : ''}`}
+            className={`ui-input w-full px-3 py-2 ${lockExpenseNumber ? 'ui-sunken' : ''}`}
             disabled={lockExpenseNumber}
             required
-          />
-        </div>
-
-        <div>
-          <VendorPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.vendorId}
-            onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
-            label="Vendor (optional)"
           />
         </div>
 
@@ -1332,6 +1400,38 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
         </div>
 
         <div>
+          <VendorPicker
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            value={formData.vendorId}
+            onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
+            label="Vendor"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Vendor Inv No.</label>
+          <input
+            type="text"
+            value={formData.refNo}
+            onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+            placeholder="Vendor's invoice number"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Vendor Inv Date</label>
+          <input
+            type="date"
+            value={formData.refDate}
+            onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+            className="ui-input w-full px-3 py-2"
+          />
+        </div>
+
+        <div>
           <label className="block text-sm font-medium mb-1">Due Date</label>
           <input
             type="date"
@@ -1342,32 +1442,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <input
-            type="text"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="ui-input w-full px-3 py-2"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Category</label>
-          <select
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="ui-select w-full px-3 py-2"
-          >
-            <option>Operating</option>
-            <option>Travel</option>
-            <option>Utilities</option>
-            <option>Supplies</option>
-          </select>
-        </div>
-
-        {(db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
+        {costCenters.length ? (
           <div>
             <label className="block text-sm font-medium mb-1">Cost Center</label>
             <select
@@ -1376,101 +1451,169 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose }) => {
               className="ui-select w-full px-3 py-2"
             >
               <option value="">— none —</option>
-              {(db.costCenters || [])
-                .filter((c) => c.companyId === currentCompany.id)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
+              {costCenters.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
             </select>
           </div>
         ) : null}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Ref No</label>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium mb-1">Narration</label>
           <input
             type="text"
-            value={formData.refNo}
-            onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             className="ui-input w-full px-3 py-2"
-            placeholder="Customer invoice no"
+            placeholder="What this spend was for"
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Ref Date</label>
-          <input
-            type="date"
-            value={formData.refDate}
-            onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="ui-input w-full px-3 py-2"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Amount (Taxable)</label>
-          <input
-            type="number"
-            value={formData.amount}
-            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-            className="ui-input w-full px-3 py-2"
-            min="0"
-            step="0.01"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">GST %</label>
-          <select
-            value={gstRateValue}
-            onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
-            className="ui-select w-full px-3 py-2"
-          >
-            {!gstRateValues.includes(gstRateValue) && <option value={gstRateValue}>{gstRateValue}% (legacy)</option>}
-            {gstRates.length === 0 ? (
-              <option value="0">0%</option>
-            ) : (
-              gstRates.map((r) => (
-                <option key={r.id} value={String(Number(r.rate))}>
-                  {Number(r.rate)}%
-                </option>
-              ))
-            )}
-          </select>
         </div>
       </div>
 
-      <div className="ui-sunken border rounded-lg p-3 text-sm space-y-1">
-        <div className="flex justify-between">
-          <span>GST:</span>
-          <span>{formatMoney(computed.gstAmount, currentCompany)}</span>
+      <div>
+        <div className="flex justify-between items-center mb-2">
+          <label className="block text-sm font-medium">Expense Ledgers (Direct / Indirect Expenses)</label>
+          <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
+            <Plus size={16} /> Add Row
+          </button>
         </div>
-        {isIntra ? (
-          <>
-            <div className="flex justify-between">
-              <span>CGST:</span>
-              <span>{formatMoney(computed.cgstAmount, currentCompany)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>SGST:</span>
-              <span>{formatMoney(computed.sgstAmount, currentCompany)}</span>
-            </div>
-          </>
-        ) : (
-          <div className="flex justify-between">
-            <span>IGST:</span>
-            <span>{formatMoney(computed.igstAmount, currentCompany)}</span>
+
+        {expenseLedgers.length === 0 ? (
+          <div className="ui-card p-4 text-sm ui-muted">
+            No expense ledgers yet. Create them under Master Data → Chart of Accounts, in a Direct or Indirect Expenses group.
           </div>
-        )}
-        <div className="flex justify-between font-semibold border-t pt-2">
-          <span>Total:</span>
-          <span>{formatMoney(computed.lineTotal, currentCompany)}</span>
+        ) : null}
+
+        <div className="border rounded-lg overflow-x-auto">
+          <table className="ui-table w-full ui-table-wide">
+            <thead className="ui-sunken border-b">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-10">#</th>
+                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Expense Ledger</th>
+                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Description</th>
+                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Amount</th>
+                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">GST %</th>
+                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST Amount</th>
+                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Total</th>
+                <th className="px-3 py-2"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {formData.lines.map((line, idx) => {
+                const row = computed.rows[idx] || { gstAmount: 0, lineTotal: 0 };
+                return (
+                  <tr key={idx}>
+                    <td className="px-3 py-2 text-sm ui-muted">{idx + 1}</td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={line.ledgerId || ''}
+                        onChange={(e) => onPickLedger(idx, e.target.value)}
+                        className="ui-select w-full px-2 py-1"
+                      >
+                        <option value="">Select ledger</option>
+                        {expenseLedgers.map((l) => (
+                          <option key={l.id} value={l.id}>
+                            {l.name}{l.groupName ? ` (${l.groupName})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={line.description || ''}
+                        onChange={(e) => updateLine(idx, { description: e.target.value })}
+                        className="ui-input w-full px-2 py-1"
+                        placeholder="Optional detail"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={line.amount}
+                        onChange={(e) => updateLine(idx, { amount: e.target.value })}
+                        className="ui-input w-28 px-2 py-1 text-right"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <select
+                        value={String(line.gstRate ?? 0)}
+                        onChange={(e) => updateLine(idx, { gstRate: Number(e.target.value) })}
+                        className="ui-select w-24 px-2 py-1"
+                        disabled={!vendorChargesGst}
+                        title={vendorChargesGst ? undefined : 'GST applies only to registered vendors'}
+                      >
+                        {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
+                          <option key={r} value={String(r)}>{r}%</option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="ui-col-amount px-3 py-2 text-right text-sm">{formatMoney(row.gstAmount, currentCompany)}</td>
+                    <td className="ui-col-amount px-3 py-2 text-right text-sm font-semibold">{formatMoney(row.lineTotal, currentCompany)}</td>
+                    <td className="px-3 py-2 text-right">
+                      <button type="button" onClick={() => removeLine(idx)} className="text-[rgb(var(--neg))]" aria-label={`Remove line ${idx + 1}`}>
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
+
+        {!vendorChargesGst && formData.vendorId ? (
+          <div className="text-xs ui-muted mt-2">
+            This vendor is {String(gstRegistration || 'Unregistered').toLowerCase()} — no GST is charged on these lines.
+          </div>
+        ) : null}
       </div>
 
       <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
-          Create Expense
+        <div className="w-80 space-y-2">
+          <div className="flex justify-between">
+            <span>Subtotal:</span>
+            <span>{formatMoney(computed.subtotal, currentCompany)}</span>
+          </div>
+          {isIntra ? (
+            <>
+              <div className="flex justify-between">
+                <span>CGST:</span>
+                <span>{formatMoney(computed.cgstTotal, currentCompany)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>SGST:</span>
+                <span>{formatMoney(computed.sgstTotal, currentCompany)}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <span>IGST:</span>
+              <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
+            </div>
+          )}
+          <div className="flex justify-between border-t pt-2 font-bold text-lg">
+            <span>Total Expense:</span>
+            <span>{formatMoney(computed.total, currentCompany)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setSubmitAsDraft(true);
+            formRef.current?.requestSubmit();
+          }}
+          className="ui-btn ui-btn-secondary"
+        >
+          Save Draft
+        </button>
+        <button type="submit" className="ui-btn ui-btn-primary">
+          Submit Expense
         </button>
       </div>
     </form>
@@ -2825,6 +2968,7 @@ const ChartAccountForm = ({
     bankAccountNumber: isEdit ? String(initialData?.bankDetails?.accountNumber || '').trim() : '',
     bankBranch: isEdit ? String(initialData?.bankDetails?.branch || '').trim() : '',
     bankIfsc: isEdit ? String(initialData?.bankDetails?.ifsc || '').trim() : '',
+    gstRate: isEdit ? String(initialData?.gstRate ?? '') : '',
   });
 
   const isBankGroupSelected = useMemo(() => {
@@ -2838,6 +2982,13 @@ const ChartAccountForm = ({
     if (!gid) return false;
     return isUnderNamedRoot(gid, 'cash-in-hand');
   }, [formData.groupId, isUnderNamedRoot]);
+
+  // Expense ledgers carry a default GST rate: expense booking reads it so an
+  // operator picking "Office Rent" gets its 18% without remembering it.
+  const isExpenseGroupSelected = useMemo(() => {
+    const g = groupById.get(String(formData.groupId || '').trim());
+    return String(g?.groupCategory || '').trim() === 'Expense';
+  }, [formData.groupId, groupById]);
 
   // A cash/bank chart ledger must also exist as a server ledger account —
   // that is what the receipt/payment "mode" dropdown and GL postings use.
@@ -2971,6 +3122,7 @@ const ChartAccountForm = ({
         openingBalance: Number.isFinite(openingBalance) ? openingBalance : 0,
         balance: Number.isFinite(openingBalance) ? openingBalance : 0,
         bankDetails,
+        gstRate: isExpenseGroupSelected && String(formData.gstRate || '').trim() !== '' ? Number(formData.gstRate) : null,
         updatedAt: new Date().toISOString(),
       };
 
@@ -3017,6 +3169,7 @@ const ChartAccountForm = ({
       openingBalance: Number.isFinite(openingBalance) ? openingBalance : 0,
       balance: Number.isFinite(openingBalance) ? openingBalance : 0,
       bankDetails,
+      gstRate: isExpenseGroupSelected && String(formData.gstRate || '').trim() !== '' ? Number(formData.gstRate) : null,
       createdAt: new Date().toISOString(),
     };
 
@@ -3090,6 +3243,23 @@ const ChartAccountForm = ({
           step="0.01"
         />
       </div>
+
+      {isExpenseGroupSelected ? (
+        <div>
+          <label className="block text-sm font-medium mb-1">Default GST rate</label>
+          <select
+            value={String(formData.gstRate ?? '')}
+            onChange={(e) => setFormData((p) => ({ ...p, gstRate: e.target.value }))}
+            className="ui-select w-full px-3 py-2"
+          >
+            <option value="">— none —</option>
+            {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
+              <option key={r} value={String(r)}>{r}%</option>
+            ))}
+          </select>
+          <div className="text-xs ui-muted mt-1">Expense booking fills this rate when the ledger is picked.</div>
+        </div>
+      ) : null}
 
       {isBankGroupSelected ? (
         <div className="border rounded-xl p-4 ui-sunken space-y-4">
