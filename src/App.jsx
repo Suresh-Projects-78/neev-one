@@ -3052,13 +3052,37 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
               <div className="font-bold ui-fg">Ledgers</div>
               <div className="text-xs ui-muted">View: Ledger → Group → Parent</div>
               <div className="mt-3">
-                <input
-                  type="text"
-                  value={ledgerSearch}
-                  onChange={(e) => setLedgerSearch(e.target.value)}
-                  className="ui-input w-full px-3 py-2 ui-surface"
-                  placeholder="Search ledgers (name, code, group)"
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={ledgerSearch}
+                    onChange={(e) => setLedgerSearch(e.target.value)}
+                    className="ui-input flex-1 min-w-[220px] px-3 py-2 ui-surface"
+                    placeholder="Search ledgers (name, code, group)"
+                  />
+                  <span className="text-xs ui-muted">{visibleLedgerRows.length} ledgers</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      exportRows({
+                        fileName: `ChartOfAccounts_${currentCompany?.name || 'company'}`,
+                        label: 'ledger(s)',
+                        columns: [
+                          { key: 'code', label: 'Code' },
+                          { key: 'name', label: 'Ledger' },
+                          { key: 'group', label: 'Group', value: (r) => r._group || r.groupName || '' },
+                          { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
+                          { key: 'openingBalance', label: 'Opening', value: (r) => Number(r.openingBalance || 0) },
+                          { key: 'balance', label: 'Balance', value: (r) => Number(r.balance || 0) },
+                        ],
+                        rows: visibleLedgerRows,
+                      })
+                    }
+                    className="ui-btn ui-btn-secondary"
+                  >
+                    <Download size={15} aria-hidden="true" /> Export
+                  </button>
+                </div>
               </div>
             </div>
             <table className="ui-table w-full">
@@ -3132,6 +3156,24 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                   className="ui-input w-full px-3 py-2 ui-surface"
                   placeholder="Search groups (name, category)"
                 />
+                <button
+                  type="button"
+                  onClick={() =>
+                    exportRows({
+                      fileName: `AccountGroups_${currentCompany?.name || 'company'}`,
+                      label: 'group(s)',
+                      columns: [
+                        { key: 'name', label: 'Group' },
+                        { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
+                        { key: 'groupCategory', label: 'Category' },
+                      ],
+                      rows: visibleGroupRows,
+                    })
+                  }
+                  className="ui-btn ui-btn-secondary mt-2"
+                >
+                  <Download size={15} aria-hidden="true" /> Export
+                </button>
               </div>
             </div>
             <table className="ui-table w-full">
@@ -3854,7 +3896,17 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
 };
 
 const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJournal }) => {
-  const journalEntries = db.journalEntries.filter((j) => j.companyId === currentCompany.id);
+  const jvSearch = useListSearch(
+    db.journalEntries.filter((j) => j.companyId === currentCompany.id),
+    ['number', 'narration', 'date', 'status']
+  );
+  const jvFilters = useColumnFilters();
+  const journalEntries = jvFilters.applyFilters(jvSearch.filtered, {
+    number: (r) => r.number,
+    date: (r) => r.date,
+    narration: (r) => r.narration,
+    status: (r) => r.status,
+  });
 
   const deleteEntry = async (jv) => {
     const ok = await confirmDialog({ title: 'Please confirm', message: `Delete journal entry "${String(jv?.number || '').trim() || 'this entry'}"?`, confirmLabel: 'Yes, continue' });
@@ -3879,6 +3931,29 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
         </button>
       </div>
 
+      <ListToolbar
+        search={jvSearch.query}
+        onSearch={jvSearch.setQuery}
+        placeholder="Search journal entries (number, narration)"
+        count={journalEntries.length}
+        countLabel="entries"
+        onExport={() =>
+          exportRows({
+            fileName: `JournalEntries_${currentCompany?.name || 'company'}`,
+            label: 'entry/entries',
+            columns: [
+              { key: 'number', label: 'JV #' },
+              { key: 'date', label: 'Date' },
+              { key: 'narration', label: 'Narration' },
+              { key: 'debit', label: 'Debit', value: (r) => Number(r.totalDebit ?? r.debit ?? 0) },
+              { key: 'credit', label: 'Credit', value: (r) => Number(r.totalCredit ?? r.credit ?? 0) },
+              { key: 'status', label: 'Status' },
+            ],
+            rows: journalEntries,
+          })
+        }
+      />
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
@@ -3891,6 +3966,19 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'JV #' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'narration', placeholder: 'Narration' },
+                {},
+                {},
+                { key: 'status', placeholder: 'Status' },
+                {},
+              ]}
+              filters={jvFilters.filters}
+              setFilter={jvFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {journalEntries.length === 0 ? (

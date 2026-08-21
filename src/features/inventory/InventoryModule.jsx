@@ -5,6 +5,7 @@ import { Boxes, PackageX, TrendingDown, Warehouse } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
 import { StatTile } from '../../components/ui/Primitives';
+import { useListSearch } from '../../components/ListToolbar';
 import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -90,13 +91,16 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
     return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
   }, [warehouses]);
 
-  const items = useMemo(() => {
+  const allStockItems = useMemo(() => {
     return safeArray(db.items)
       .filter((i) => i.companyId === companyId)
       .filter((i) => isStockItem(i))
       .slice()
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [db.items, companyId]);
+
+  const itemSearch = useListSearch(allStockItems, ['name', 'code', 'hsnSac', 'barcode', 'category', 'brand']);
+  const items = itemSearch.filtered;
 
   const summaryByItemId = useMemo(() => {
     return computeInventorySummaryByItemId({ db, companyId, fromDate, toDate, warehouseId });
@@ -416,6 +420,14 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
         </div>
 
         <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={itemSearch.query}
+            onChange={(e) => itemSearch.setQuery(e.target.value)}
+            className="ui-input px-3 py-2"
+            placeholder="Search items (name, code, HSN, barcode)"
+            aria-label="Search items"
+          />
           <button type="button" onClick={exportPdf} className="px-3 py-2 border rounded-lg ui-hover-sunken">
             Export PDF
           </button>

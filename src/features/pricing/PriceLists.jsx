@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, Tags } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 
@@ -89,12 +90,34 @@ export default function PriceLists({ db, setDb, currentCompany }) {
 
   const filteredItems = items.filter((i) => !search || String(i.name || '').toLowerCase().includes(search.toLowerCase()));
 
+  const plSearch = useListSearch(lists, ['name', 'description']);
+  const shownLists = plSearch.filtered;
   return (
     <div className="space-y-5">
       <PageHeader title="Price Lists" description="Rate cards per customer segment — Retail, Wholesale, key accounts. Invoicing picks the customer's list first." />
 
+      <ListToolbar
+        search={plSearch.query}
+        onSearch={plSearch.setQuery}
+        placeholder="Search price lists"
+        count={shownLists.length}
+        countLabel="lists"
+        onExport={() =>
+          exportRows({
+            fileName: `PriceLists_${currentCompany?.name || 'company'}`,
+            label: 'price list(s)',
+            columns: [
+              { key: 'name', label: 'Price list' },
+              { key: 'description', label: 'Description' },
+              { key: 'items', label: 'Items priced', value: (r) => (Array.isArray(r.rates) ? r.rates.length : 0) },
+            ],
+            rows: shownLists,
+          })
+        }
+      />
+
       <div className="flex flex-wrap items-center gap-2">
-        {lists.map((p) => (
+        {shownLists.map((p) => (
           <button
             key={p.id}
             type="button"

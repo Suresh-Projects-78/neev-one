@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
+import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog } from '../../components/ui/notify';
 import { listRoles, createRole, updateRole, deleteRole } from '../../api/admin';
 
@@ -384,12 +385,32 @@ export function SettingsRoles({ orgId }) {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
+              placeholder="Search roles"
               className="ui-input w-full pl-3 pr-3 py-2 ui-surface"
             />
           </div>
         </div>
-        <div />
+        <div className="flex items-center gap-2">
+          <span className="text-xs ui-muted whitespace-nowrap">{filteredRoles.length} rows</span>
+          <button
+            type="button"
+            onClick={() =>
+              exportRows({
+                fileName: 'Roles',
+                label: 'role(s)',
+                columns: [
+              { key: 'name', label: 'Role' },
+              { key: 'description', label: 'Description' },
+              { key: 'roleType', label: 'Type' },
+                ],
+                rows: filteredRoles,
+              })
+            }
+            className="ui-btn ui-btn-secondary"
+          >
+            Export
+          </button>
+        </div>
       </div>
 
       {error && <div className="text-sm text-[rgb(var(--neg))] bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg)/0.35)] rounded-lg p-3">{error}</div>}

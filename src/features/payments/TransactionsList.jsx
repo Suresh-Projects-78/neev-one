@@ -4,6 +4,8 @@ import { notify } from '../../components/ui/notify';
 import RecordPaymentForm from './RecordPaymentForm';
 import { formatMoney, round2 } from '../../utils/money';
 import { downloadCsv } from '../../utils/csv';
+import { ListToolbar, useListSearch } from '../../components/ListToolbar';
+import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -317,8 +319,20 @@ const TransactionView = ({ title, payload }) => {
 };
 
 const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }) => {
+  const search = useListSearch(rows, ['documentNumber', 'partyName', 'mode', 'reference', 'typeLabel', 'date']);
+  const colFilters = useColumnFilters();
+  const shown = colFilters.applyFilters(search.filtered, {
+    date: (r) => r.date,
+    typeLabel: (r) => r.typeLabel,
+    documentNumber: (r) => r.documentNumber,
+    partyName: (r) => r.partyName,
+    mode: (r) => r.mode,
+    reference: (r) => r.reference,
+    amount: (r) => r.amount,
+  });
+
   const exportRows = () => {
-    if (!rows.length) {
+    if (!shown.length) {
       notify.error('Nothing to export.');
       return;
     }
@@ -333,9 +347,9 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         { key: 'reference', label: 'Reference' },
         { key: 'amount', label: 'Amount', value: (r) => round2(Number(r.amount || 0)) },
       ],
-      rows,
+      rows: shown,
     });
-    notify.success(`${rows.length} ${title.toLowerCase()} exported.`);
+    notify.success(`${shown.length} ${title.toLowerCase()} exported.`);
   };
 
   return (
@@ -350,6 +364,14 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         </div>
       </div>
 
+      <ListToolbar
+        search={search.query}
+        onSearch={search.setQuery}
+        placeholder={`Search ${title.toLowerCase()} (document, party, mode, reference)`}
+        count={shown.length}
+        countLabel={title.toLowerCase()}
+      />
+
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
@@ -362,16 +384,29 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Reference</th>
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Amount</th>
             </tr>
+            <FilterRow
+              columns={[
+                { key: 'date', placeholder: 'Date' },
+                { key: 'typeLabel', placeholder: 'Type' },
+                { key: 'documentNumber', placeholder: 'Document' },
+                { key: 'partyName', placeholder: 'Party' },
+                { key: 'mode', placeholder: 'Mode' },
+                { key: 'reference', placeholder: 'Reference' },
+                { key: 'amount', placeholder: 'Amount' },
+              ]}
+              filters={colFilters.filters}
+              setFilter={colFilters.setFilter}
+            />
           </thead>
           <tbody className="divide-y">
-            {rows.length === 0 ? (
+            {shown.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-6 py-12 text-center ui-muted">
                   No transactions found
                 </td>
               </tr>
             ) : (
-              rows.map((r) => (
+              shown.map((r) => (
                 <tr
                   key={r.id}
                   className={onView ? 'ui-hover-sunken cursor-pointer' : 'ui-hover-sunken'}

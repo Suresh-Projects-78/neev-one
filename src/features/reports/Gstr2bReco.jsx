@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Upload, BadgePercent, Download } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { ListToolbar, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { parseGstr2b, reconcileGstr2b } from '../../utils/gstr2b';
@@ -70,6 +71,20 @@ export default function Gstr2bReco({ db, currentCompany }) {
     : [];
 
   const itcLine = (t) => money(t.igst + t.cgst + t.sgst);
+
+  // One search box over whichever tab is showing — the shapes differ (2B rows
+  // vs bills), so the accessors cover both.
+  const recoSearch = useListSearch(result ? result[tab] || [] : [], [
+    'inum',
+    'trdnm',
+    'ctin',
+    'number',
+    'refNo',
+    'vendorName',
+    'vendorGstin',
+    (r) => r.bill?.number,
+  ]);
+  const visibleReco = recoSearch.filtered;
 
   return (
     <div className="space-y-5">
@@ -145,6 +160,14 @@ export default function Gstr2bReco({ db, currentCompany }) {
             </button>
           </div>
 
+          <ListToolbar
+            search={recoSearch.query}
+            onSearch={recoSearch.setQuery}
+            placeholder="Search this view (invoice, supplier, GSTIN, bill)"
+            count={visibleReco.length}
+            countLabel="rows"
+          />
+
           <div className="ui-card overflow-x-auto">
             {tab === 'onlyInBooks' ? (
               <table className="ui-table w-full">
@@ -159,7 +182,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {result.onlyInBooks.map((b, i) => (
+                  {visibleReco.map((b, i) => (
                     <tr key={i} className="border-t">
                       <td className="ui-col-id px-4 py-2.5">{b.number}</td>
                       <td className="ui-col-meta px-4 py-2.5">{b.refNo || '—'}</td>
@@ -186,7 +209,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(result[tab] || []).map((r, i) => (
+                  {visibleReco.map((r, i) => (
                     <tr key={i} className="border-t">
                       <td className="ui-col-entity px-4 py-2.5">
                         {r.trdnm || '—'}

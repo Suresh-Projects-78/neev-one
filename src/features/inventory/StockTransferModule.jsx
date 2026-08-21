@@ -5,6 +5,8 @@ import { Check, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import ItemPicker from '../../components/pickers/ItemPicker';
+import { exportRows } from '../../components/ListToolbar';
+import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1085,6 +1087,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
       });
   }, [db?.stockTransfers, companyId, mode, warehouseById]);
 
+  const transferColFilters = useColumnFilters();
   const filteredTransfers = useMemo(() => {
     const q = String(searchText || '').trim().toLowerCase();
     const wantStatus = String(statusFilter || '').trim();
@@ -1098,13 +1101,22 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
       return hay.includes(q);
     };
 
-    return transfers
-      .filter((t) => matchesSearch(t))
-      .filter((t) => {
-        if (!wantStatus) return true;
-        return String(t?.status || '').trim() === wantStatus;
-      });
-  }, [searchText, statusFilter, transfers]);
+    return transferColFilters.applyFilters(
+      transfers
+        .filter((t) => matchesSearch(t))
+        .filter((t) => {
+          if (!wantStatus) return true;
+          return String(t?.status || '').trim() === wantStatus;
+        }),
+      {
+        number: (t) => t.number,
+        date: (t) => t.date,
+        from: (t) => [t.sourceBranchName, t.sourceWarehouseName].filter(Boolean).join(' / '),
+        to: (t) => [t.targetBranchName, t.targetWarehouseName].filter(Boolean).join(' / '),
+        status: (t) => t.status,
+      }
+    );
+  }, [searchText, statusFilter, transfers, transferColFilters.applyFilters]);
 
   useEffect(() => {
     if (!openMenu?.id) return;
@@ -1337,6 +1349,36 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
           >
           <Plus size={18} /> New Transfer Out
           </button>
+          <button
+            type="button"
+            onClick={() =>
+              exportRows({
+                fileName: `${mode === 'branch' ? 'BranchTransfers' : 'WarehouseTransfers'}_${currentCompany?.name || 'company'}`,
+                label: 'transfer(s)',
+                columns: [
+                  { key: 'number', label: 'Transfer #' },
+                  { key: 'date', label: 'Date' },
+                  { key: 'from', label: 'From', value: (r) => [r.sourceBranchName, r.sourceWarehouseName].filter(Boolean).join(' / ') },
+                  { key: 'to', label: 'To', value: (r) => [r.targetBranchName, r.targetWarehouseName].filter(Boolean).join(' / ') },
+                  { key: 'lines', label: 'Lines', value: (r) => safeArray(r.lines).length },
+                  { key: 'sentQty', label: 'Qty sent', value: (r) => safeArray(r.lines).reduce((t, l) => t + toNum(l?.qty || 0), 0) },
+                  {
+                    key: 'receivedQty',
+                    label: 'Qty received',
+                    value: (r) =>
+                      safeArray(r.lines).reduce((t, l) => t + (l?.receivedQty === undefined || l?.receivedQty === null ? 0 : toNum(l.receivedQty)), 0),
+                  },
+                  { key: 'status', label: 'Status' },
+                  { key: 'mismatchResolution', label: 'Resolution' },
+                  { key: 'reason', label: 'Reason' },
+                ],
+                rows: filteredTransfers,
+              })
+            }
+            className="ui-btn ui-btn-secondary"
+          >
+            Export
+          </button>
         </div>
 
         {pendingIn.length ? (
@@ -1403,6 +1445,18 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                 <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
                 <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
               </tr>
+            <FilterRow
+              columns={[
+                { key: 'number', placeholder: 'No.' },
+                { key: 'date', placeholder: 'Date' },
+                { key: 'from', placeholder: 'From' },
+                { key: 'to', placeholder: 'To' },
+                { key: 'status', placeholder: 'Status' },
+                {},
+              ]}
+              filters={transferColFilters.filters}
+              setFilter={transferColFilters.setFilter}
+            />
             </thead>
             <tbody className="divide-y">
               {filteredTransfers.length === 0 ? (

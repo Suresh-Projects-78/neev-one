@@ -5,6 +5,7 @@ import { MoreVertical, Pencil, Trash2 , Link2, CheckCircle2} from 'lucide-react'
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
+import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { StatTile } from '../../components/ui/Primitives';
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 
@@ -282,11 +283,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   const isCategorised = (t) => Boolean(t?.ledgerId);
 
+  const txnSearch = useListSearch(allTxns, ['description', 'narration', 'date', 'status']);
   const txns = useMemo(() => {
-    if (view === 'all') return allTxns;
-    if (view === 'categorised') return allTxns.filter((t) => isCategorised(t));
-    return allTxns.filter((t) => !isCategorised(t));
-  }, [allTxns, view]);
+    const base = txnSearch.filtered;
+    if (view === 'all') return base;
+    if (view === 'categorised') return base.filter((t) => isCategorised(t));
+    return base.filter((t) => !isCategorised(t));
+  }, [txnSearch.filtered, view]);
 
   const uncategorisedCount = useMemo(() => allTxns.filter((t) => !isCategorised(t)).length, [allTxns]);
 
@@ -1935,6 +1938,30 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             </select>
           </div>
         </div>
+
+        <ListToolbar
+          search={txnSearch.query}
+          onSearch={txnSearch.setQuery}
+          placeholder="Search transactions (description, narration, date)"
+          count={txns.length}
+          countLabel="transactions"
+          onExport={() =>
+            exportRows({
+              fileName: `CashBank_${selectedAccount?.name || 'account'}`,
+              label: 'transaction(s)',
+              columns: [
+                { key: 'date', label: 'Date' },
+                { key: 'description', label: 'Description' },
+                { key: 'ledger', label: 'Ledger', value: (t) => (t.ledgerId ? ledgerById.get(String(t.ledgerId))?.name || '' : '') },
+                { key: 'narration', label: 'Narration' },
+                { key: 'payment', label: 'Payment', value: (t) => (t.direction === 'OUT' ? Number(t.amount || 0) : '') },
+                { key: 'receipt', label: 'Receipt', value: (t) => (t.direction === 'OUT' ? '' : Number(t.amount || 0)) },
+                { key: 'status', label: 'Status', value: (t) => (t.readOnly ? 'Recorded' : t.ledgerId ? 'Categorised' : 'Uncategorised') },
+              ],
+              rows: txns,
+            })
+          }
+        />
 
         {!selectedAccount ? (
           <div className="text-sm ui-muted">Select an account to see its transactions.</div>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
+import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog, notify } from '../../components/ui/notify';
 import { listUsers,
   listRoles,
@@ -351,12 +352,33 @@ export function SettingsUsers({ orgId }) {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
+              placeholder="Search users (name, email)"
               className="ui-input w-full pl-3 pr-3 py-2 ui-surface"
             />
           </div>
         </div>
-        <div />
+        <div className="flex items-center gap-2">
+          <span className="text-xs ui-muted whitespace-nowrap">{filteredUsers.length} rows</span>
+          <button
+            type="button"
+            onClick={() =>
+              exportRows({
+                fileName: 'Users',
+                label: 'user(s)',
+                columns: [
+              { key: 'fullName', label: 'Name' },
+              { key: 'email', label: 'Email' },
+              { key: 'username', label: 'Username' },
+              { key: 'status', label: 'Status', value: (r) => (r.isActive === false ? 'Inactive' : 'Active') },
+                ],
+                rows: filteredUsers,
+              })
+            }
+            className="ui-btn ui-btn-secondary"
+          >
+            Export
+          </button>
+        </div>
       </div>
 
       {error && <div className="text-sm text-[rgb(var(--neg))] bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg)/0.35)] rounded-lg p-3">{error}</div>}

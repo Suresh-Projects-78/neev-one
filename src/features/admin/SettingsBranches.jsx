@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
+import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog, notify } from '../../components/ui/notify';
 import { listBranches, createBranch, updateBranch, deleteBranch } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
@@ -245,12 +246,34 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search"
+              placeholder="Search branches"
               className="ui-input w-full pl-3 pr-3 py-2 ui-surface"
             />
           </div>
         </div>
-        <div />
+        <div className="flex items-center gap-2">
+          <span className="text-xs ui-muted whitespace-nowrap">{filteredBranches.length} rows</span>
+          <button
+            type="button"
+            onClick={() =>
+              exportRows({
+                fileName: 'Branches',
+                label: 'branch(es)',
+                columns: [
+              { key: 'branchCode', label: 'Code' },
+              { key: 'branchName', label: 'Branch' },
+              { key: 'city', label: 'City' },
+              { key: 'state', label: 'State' },
+              { key: 'gstin', label: 'GSTIN' },
+                ],
+                rows: filteredBranches,
+              })
+            }
+            className="ui-btn ui-btn-secondary"
+          >
+            Export
+          </button>
+        </div>
       </div>
 
       {error && <div className="text-sm text-[rgb(var(--neg))] bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg)/0.35)] rounded-lg p-3">{error}</div>}
