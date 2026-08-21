@@ -2,7 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { notify } from '../../components/ui/notify';
 
 import RecordPaymentForm from './RecordPaymentForm';
-import { formatMoney } from '../../utils/money';
+import { formatMoney, round2 } from '../../utils/money';
+import { downloadCsv } from '../../utils/csv';
+import { Download } from 'lucide-react';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -315,11 +317,37 @@ const TransactionView = ({ title, payload }) => {
 };
 
 const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }) => {
+  const exportRows = () => {
+    if (!rows.length) {
+      notify.error('Nothing to export.');
+      return;
+    }
+    downloadCsv({
+      fileName: `${title}_${currentCompany?.name || 'company'}`,
+      columns: [
+        { key: 'date', label: 'Date' },
+        { key: 'typeLabel', label: 'Type' },
+        { key: 'documentNumber', label: 'Document #' },
+        { key: 'partyName', label: 'Party' },
+        { key: 'mode', label: 'Mode' },
+        { key: 'reference', label: 'Reference' },
+        { key: 'amount', label: 'Amount', value: (r) => round2(Number(r.amount || 0)) },
+      ],
+      rows,
+    });
+    notify.success(`${rows.length} ${title.toLowerCase()} exported.`);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="ui-title text-lg">{title}</h3>
-        {rightActions ? <div>{rightActions}</div> : null}
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={exportRows} className="ui-btn ui-btn-secondary">
+            <Download size={15} aria-hidden="true" /> Export
+          </button>
+          {rightActions ? <div>{rightActions}</div> : null}
+        </div>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">

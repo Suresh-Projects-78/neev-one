@@ -150,6 +150,7 @@ const DeliveryChallans = lazy(() => import('./features/sales/DeliveryChallans'))
 const PosScreen = lazy(() => import('./features/sales/PosScreen'));
 const DiscountRules = lazy(() => import('./features/sales/DiscountRules'));
 const SalesOrders = lazy(() => import('./features/sales/SalesOrders'));
+const ExpenseVoucher = lazy(() => import('./features/expenses/ExpenseVoucher'));
 const BatchStock = lazy(() => import('./features/inventory/BatchStock'));
 const Gstr2bReco = lazy(() => import('./features/reports/Gstr2bReco'));
 const PaymentReminders = lazy(() => import('./features/sales/PaymentReminders'));
@@ -1167,6 +1168,13 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     }
   };
 
+  const openVoucher = (expense) => {
+    openModal(
+      <ExpenseVoucher expense={expense} currentCompany={currentCompany} />,
+      { title: `Expense ${expense?.number || ''}`.trim(), maxWidthClass: 'max-w-4xl' }
+    );
+  };
+
   const openRecordPayment = (expense) => {
     openModal(
       <RecordPaymentForm
@@ -1369,7 +1377,14 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                         ? 'ui-sunken ui-fg'
                         : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
                 return (
-                  <tr key={expense.id} className="ui-hover-sunken">
+                  <tr
+                    key={expense.id}
+                    className="ui-hover-sunken cursor-pointer"
+                    onClick={(e) => {
+                      if (e.target?.closest?.('button')) return;
+                      openVoucher(expense);
+                    }}
+                  >
                   <td className="px-4 py-2.5 ui-col-entity">{expense.number || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.date}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.dueDate || '-'}</td>
