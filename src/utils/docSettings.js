@@ -138,6 +138,33 @@ export const generateVoucherNumber = ({ db, company, voucherKey, branchId = null
   return formatVoucherNumberPreview(numbering, offset);
 };
 
+/**
+ * The next number that is actually free.
+ *
+ * The stored counter can fall behind what the book contains — an import, a
+ * restored backup, or a voucher created before the counter existed. Trusting it
+ * blindly makes every new voucher collide with an existing number and the save
+ * is refused, which reads to the user as "the form does not work". Walking
+ * forward past taken numbers heals that without touching their data.
+ */
+export const nextFreeVoucherNumber = ({ db, company, voucherKey, branchId = null, takenNumbers = [] }) => {
+  const settings = getDocSettings(db, company, { branchId });
+  const numbering = settings?.numbering?.[voucherKey];
+  if (!numbering) return '';
+  if (String(numbering.mode || '').toLowerCase() === 'manual') return '';
+
+  const taken = new Set(
+    (Array.isArray(takenNumbers) ? takenNumbers : []).map((n) => String(n || '').trim()).filter(Boolean)
+  );
+
+  // Bounded so a pathological book can never spin the UI.
+  for (let offset = 0; offset < 10000; offset += 1) {
+    const candidate = formatVoucherNumberPreview(numbering, offset);
+    if (!taken.has(candidate)) return candidate;
+  }
+  return formatVoucherNumberPreview(numbering);
+};
+
 export const parseVoucherNumberInt = (value, { prefix = '', suffix = '' } = {}) => {
   const s = String(value || '').trim();
   const p = String(prefix || '');

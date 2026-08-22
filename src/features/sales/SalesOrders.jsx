@@ -6,7 +6,7 @@ import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
-import { bumpCompanyNextNumber, generateVoucherNumber } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { computeGstForLines } from '../../utils/gst';
@@ -152,7 +152,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       id: nextId,
       companyId,
       backendDocId,
-      number: serverNumber || generateVoucherNumber({ db, company: currentCompany, voucherKey: 'salesOrder', branchId: branchIdForNumbering || null }) || `SO-${nextId}`,
+      number: serverNumber || nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'salesOrder', branchId: branchIdForNumbering || null, takenNumbers: (db.salesOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || `SO-${nextId}`,
       date: form.date,
       expectedDate: form.expectedDate || '',
       customerId: form.customerId,
@@ -189,7 +189,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     const challan = {
       id: nextId,
       companyId,
-      number: generateVoucherNumber({ db, company: currentCompany, voucherKey: 'deliveryChallan', branchId: branchIdForNumbering || null }) || `DC-${nextId}`,
+      number: nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'deliveryChallan', branchId: branchIdForNumbering || null, takenNumbers: (db.deliveryChallans || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || `DC-${nextId}`,
       date: new Date().toISOString().slice(0, 10),
       customerId: order.customerId,
       customerName: order.customerName,

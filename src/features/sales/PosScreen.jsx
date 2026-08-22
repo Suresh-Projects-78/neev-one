@@ -5,7 +5,7 @@ import { notify } from '../../components/ui/notify';
 import { computeGstForLines } from '../../utils/gst';
 import { formatMoney } from '../../utils/money';
 import { createInvoiceApi } from '../../api/invoices';
-import { bumpCompanyNextNumber, generateVoucherNumber } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
 
 /**
  * Point of sale — the fast lane for counter sales. Search or tap items, take
@@ -142,7 +142,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
       const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
       const posSeq = (db.invoices || []).filter((i) => i.companyId === companyId && String(i.number || '').startsWith('POS-')).length + 1;
       const number =
-        generateVoucherNumber({ db, company: currentCompany, voucherKey: 'pos', branchId: activeBranchId || null }) || `POS-${posSeq}`;
+        nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'pos', branchId: activeBranchId || null, takenNumbers: (db.invoices || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || `POS-${posSeq}`;
       const today = new Date().toISOString().slice(0, 10);
 
       let backendInvoiceId;

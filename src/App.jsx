@@ -68,6 +68,7 @@ import AccountPicker from './components/pickers/AccountPicker';
 import VendorPicker, { VendorForm } from './components/pickers/VendorPicker';
 import { CustomerForm } from './components/pickers/CustomerPicker';
 import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB, seedDummyDataV1 } from './data/db';
+import { nextFreeVoucherNumber } from './utils/docSettings';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
 import { formatMoney, formatMoneyCompact, round2 } from './utils/money';
 import { downloadCsv, downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
@@ -81,7 +82,6 @@ import {
   VOUCHER_DEFS,
   bumpCompanyNextNumber,
   formatVoucherNumberPreview,
-  generateVoucherNumber,
   getDocSettings,
   getVoucherDef,
 } from './utils/docSettings';
@@ -1191,6 +1191,23 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       let seq = 0;
       const created = [];
 
+      // Reserve a free number per voucher up front, so an import can never
+      // hand out a number the book already uses.
+      const usedNumbers = (db.expenses || [])
+        .filter((e) => e.companyId === currentCompany.id)
+        .map((e) => String(e.number || '').trim());
+      const importedNumbers = [];
+      for (let i = 0; i < groups.size; i += 1) {
+        const n = nextFreeVoucherNumber({
+          db,
+          company: currentCompany,
+          voucherKey: 'expense',
+          branchId: activeBranchId || null,
+          takenNumbers: [...usedNumbers, ...importedNumbers],
+        });
+        importedNumbers.push(n);
+      }
+
       for (const { head, lines } of groups.values()) {
         const vendor = findVendor(head.Vendor);
         const { state: vendorState, gstin: vendorGstin, gstRegistration } = getPartyGstProfile(vendor);
@@ -1219,9 +1236,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         created.push({
           id: ++nextId,
           companyId: currentCompany.id,
-          number:
-            generateVoucherNumber({ db, company: currentCompany, voucherKey: 'expense', branchId: activeBranchId || null, offset: seq - 1 }) ||
-            `EXP-IMP-${nextId}`,
+          number: importedNumbers[seq - 1] || `EXP-IMP-${nextId}`,
           date: String(head.Date || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
           dueDate: String(head.Date || '').slice(0, 10) || new Date().toISOString().slice(0, 10),
           refNo: head['Vendor Inv No'] || '',
@@ -1248,7 +1263,19 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         });
       }
 
-      setDb((prev) => ({ ...prev, expenses: [...(prev.expenses || []), ...created] }));
+      setDb((prev) => {
+        let companies = prev.companies;
+        for (const row of created) {
+          companies = bumpCompanyNextNumber({
+            db: { ...prev, companies },
+            companyId: currentCompany.id,
+            voucherKey: 'expense',
+            usedNumber: row.number,
+            branchId: activeBranchId || null,
+          });
+        }
+        return { ...prev, expenses: [...(prev.expenses || []), ...created], companies };
+      });
       notify.success(
         `${created.length} expense voucher(s) imported${problems.length ? `. ${problems.length} row(s) skipped: ${problems[0]}` : '.'}`
       );
@@ -1517,7 +1544,16 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   const expenseNumbering = expenseDocSettings?.numbering?.expense;
   const isExpenseAuto = String(expenseNumbering?.mode || '').toLowerCase() === 'auto';
   const lockExpenseNumber = isExpenseAuto && !expenseNumbering?.allowManualOverride;
-  const generatedExpenseNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'expense', branchId: activeBranchId || null });
+  const takenExpenseNumbers = (db.expenses || [])
+    .filter((e) => e.companyId === currentCompany.id)
+    .map((e) => String(e.number || '').trim());
+  const generatedExpenseNumber = nextFreeVoucherNumber({
+    db,
+    company: currentCompany,
+    voucherKey: 'expense',
+    branchId: activeBranchId || null,
+    takenNumbers: takenExpenseNumbers,
+  });
 
   const formRef = useRef(null);
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
@@ -4144,7 +4180,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
   const jvNumbering = jvDocSettings?.numbering?.journalEntry;
   const isJvAuto = String(jvNumbering?.mode || '').toLowerCase() === 'auto';
   const lockJvNumber = isJvAuto && !jvNumbering?.allowManualOverride;
-  const generatedJvNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'journalEntry', branchId: activeBranchId || null });
+  const generatedJvNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'journalEntry', branchId: activeBranchId || null, takenNumbers: (db.journalEntries || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
   const isEdit = Boolean(initialData && initialData.id);
 

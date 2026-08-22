@@ -20,7 +20,7 @@ import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 
-import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { getNextNumericId } from '../../utils/ids';
 import { formatMoney } from '../../utils/money';
@@ -1876,7 +1876,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     const initialNumber = initialData?.number
       ? String(initialData.number)
       : isInvoiceAutoInit
-        ? String(generateVoucherNumber({ db, company: currentCompany, voucherKey: 'invoice', branchId: initBranchId || null }) || '')
+        ? String(nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'invoice', branchId: initBranchId || null, takenNumbers: (db.invoices || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '')
         : '';
 
     return {
@@ -1911,7 +1911,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const invoiceNumbering = invoiceDocSettings?.numbering?.invoice;
   const isInvoiceAuto = String(invoiceNumbering?.mode || '').toLowerCase() === 'auto';
   const lockInvoiceNumberOnCreate = !isEdit && isInvoiceAuto && !invoiceNumbering?.allowManualOverride;
-  const generatedInvoiceNumber = !isEdit ? generateVoucherNumber({ db, company: currentCompany, voucherKey: 'invoice', branchId: branchIdForNumbering }) : '';
+  const generatedInvoiceNumber = !isEdit ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'invoice', branchId: branchIdForNumbering, takenNumbers: (db.invoices || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) : '';
 
   const warehouseOptions = useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
@@ -2888,7 +2888,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
   const isEstimateAuto = String(estimateNumbering?.mode || '').toLowerCase() === 'auto';
   const lockEstimateNumberOnCreate = !isEdit && isEstimateAuto && !estimateNumbering?.allowManualOverride;
   const generatedEstimateNumber = !isEdit
-    ? generateVoucherNumber({ db, company: currentCompany, voucherKey: 'estimate', branchId: activeBranchId || null })
+    ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'estimate', branchId: activeBranchId || null, takenNumbers: (db.estimates || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) })
     : '';
 
   const [formData, setFormData] = useState(() => {
@@ -3312,7 +3312,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
   const isCreditAutoInit = String(creditNumberingInit?.mode || '').toLowerCase() === 'auto';
 
   const [formData, setFormData] = useState({
-    number: isCreditAutoInit ? generateVoucherNumber({ db, company: currentCompany, voucherKey: 'creditNote', branchId: initBranchId || null }) || '' : '',
+    number: isCreditAutoInit ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'creditNote', branchId: initBranchId || null, takenNumbers: (db.creditNotes || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '' : '',
     date: new Date().toISOString().split('T')[0],
     originalInvoiceId: '',
     customerId: '',
@@ -3325,7 +3325,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
   const creditNumbering = creditDocSettings?.numbering?.creditNote;
   const isCreditAuto = String(creditNumbering?.mode || '').toLowerCase() === 'auto';
   const lockCreditNumber = isCreditAuto && !creditNumbering?.allowManualOverride;
-  const generatedCreditNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'creditNote', branchId: branchIdForNumbering });
+  const generatedCreditNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'creditNote', branchId: branchIdForNumbering, takenNumbers: (db.creditNotes || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
   const warehouseOptions = useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];

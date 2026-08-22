@@ -177,7 +177,6 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
         : 0;
       // Unreceived units either vanish (loss) or never left (return to source).
       const outQty = returnedToSource && landed ? receivedQty : sentQty;
-      const qty = sentQty;
       if (sentQty <= 0) continue;
 
       if (whFilter) {

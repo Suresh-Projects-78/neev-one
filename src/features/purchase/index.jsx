@@ -11,7 +11,7 @@ import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
-import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getVendorDisplayName } from '../../utils/contacts';
 import { formatMoney, round2 } from '../../utils/money';
 import {
@@ -39,7 +39,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const billDocSettingsInit = getDocSettings(db, currentCompany, { branchId: initBranchId || null });
   const billNumberingInit = billDocSettingsInit?.numbering?.bill;
   const isBillAutoInit = String(billNumberingInit?.mode || '').toLowerCase() === 'auto';
-  const generatedBillNumberInit = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'bill', branchId: initBranchId || null });
+  const generatedBillNumberInit = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'bill', branchId: initBranchId || null, takenNumbers: (db.bills || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
   const formRef = useRef(null);
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
@@ -91,7 +91,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const billNumbering = billDocSettings?.numbering?.bill;
   const isBillAuto = String(billNumbering?.mode || '').toLowerCase() === 'auto';
   const lockBillNumber = isBillAuto && !billNumbering?.allowManualOverride;
-  const generatedBillNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'bill', branchId: branchIdForNumbering });
+  const generatedBillNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'bill', branchId: branchIdForNumbering, takenNumbers: (db.bills || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
   const warehouseOptions = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
@@ -737,10 +737,10 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
   const poNumbering = poDocSettings?.numbering?.purchaseOrder;
   const isPoAuto = String(poNumbering?.mode || '').toLowerCase() === 'auto';
   const lockPoNumber = isPoAuto && !poNumbering?.allowManualOverride;
-  const generatedPoNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null });
+  const generatedPoNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
   const [formData, setFormData] = useState({
-    number: isPoAuto ? generateVoucherNumber({ db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null }) || '' : '',
+    number: isPoAuto ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '' : '',
     date: new Date().toISOString().split('T')[0],
     vendorId: '',
     items: [{ itemId: '', description: '', quantity: 1, rate: 0, amount: 0 }],
@@ -1516,7 +1516,7 @@ export const DebitNoteForm = ({
   const debitDocSettingsInit = getDocSettings(db, currentCompany, { branchId: initBranchId || null });
   const debitNumberingInit = debitDocSettingsInit?.numbering?.debitNote;
   const isDebitAutoInit = String(debitNumberingInit?.mode || '').toLowerCase() === 'auto';
-  const generatedDebitNumberInit = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'debitNote', branchId: initBranchId || null });
+  const generatedDebitNumberInit = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'debitNote', branchId: initBranchId || null, takenNumbers: (db.debitNotes || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
   const warehouseOptions = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
@@ -1579,7 +1579,7 @@ export const DebitNoteForm = ({
   const debitNumbering = debitDocSettings?.numbering?.debitNote;
   const isDebitAuto = String(debitNumbering?.mode || '').toLowerCase() === 'auto';
   const lockDebitNumber = isDebitAuto && !debitNumbering?.allowManualOverride;
-  const generatedDebitNumber = generateVoucherNumber({ db, company: currentCompany, voucherKey: 'debitNote', branchId: branchIdForNumbering });
+  const generatedDebitNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'debitNote', branchId: branchIdForNumbering, takenNumbers: (db.debitNotes || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
   const vendor = formData.vendorId ? vendors.find((v) => v.id === parseInt(formData.vendorId)) : null;
   const { state: vendorState, gstin: vendorGstin } = getPartyGstProfile(vendor);

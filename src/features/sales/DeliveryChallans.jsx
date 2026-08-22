@@ -10,7 +10,7 @@ import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
 import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
-import { generateVoucherNumber } from '../../utils/docSettings';
+import { nextFreeVoucherNumber } from '../../utils/docSettings';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
 /**
@@ -89,12 +89,10 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
       id: nextId,
       companyId,
       number:
-        generateVoucherNumber({
-          db,
+        nextFreeVoucherNumber({db,
           company: currentCompany,
           voucherKey: 'deliveryChallan',
-          branchId: String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim() || null,
-        }) || `DC-${nextId}`,
+          branchId: String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim() || null, takenNumbers: (db.deliveryChallans || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || `DC-${nextId}`,
       date: form.date,
       customerId: form.customerId,
       customerName: getCustomerDisplayName(customer),
