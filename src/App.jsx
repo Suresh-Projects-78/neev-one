@@ -10674,6 +10674,7 @@ const AppShell = () => {
   }, [isAuthenticated, currentCompany?.profile?.backendBranchId]);
 
   const [activeWarehouseId, setActiveWarehouseId] = useState(() => String(localStorage.getItem('activeWarehouseId') || ''));
+  const [activeBranchId, setActiveBranchId] = useState(() => String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || ''));
   const [warehouses, setWarehouses] = useState([]);
   const [warehousesLoading, setWarehousesLoading] = useState(false);
   const [warehousesError, setWarehousesError] = useState('');
@@ -11334,6 +11335,37 @@ const AppShell = () => {
     [warehousesForUser]
   );
 
+  // Warehouses belonging to the branch currently in the header. A branch with
+  // one warehouse needs no picker; the transfer forms still read the active id.
+  const warehousesForActiveBranch = useMemo(() => {
+    const list = Array.isArray(warehousesForUser) ? warehousesForUser : [];
+    const bid = String(activeBranchId || '').trim();
+    if (!bid) return list;
+    const scoped = list.filter((w) => String(w?.branchId || '') === bid);
+    return scoped.length ? scoped : list;
+  }, [warehousesForUser, activeBranchId]);
+
+  /**
+   * Switching branch is the top-level shift: it re-scopes every screen, so the
+   * warehouse selection is dropped (the old one belongs to the old branch) and
+   * the warehouse list is refetched for the new branch.
+   */
+  const setActiveBranch = useCallback(
+    (branchId) => {
+      const nextId = branchId ? String(branchId) : '';
+      if (!nextId) return;
+      if (!branchesForUser.some((b) => String(b.id) === nextId)) return;
+
+      localStorage.setItem('activeBranchId', nextId);
+      localStorage.setItem('branchId', nextId);
+      localStorage.removeItem('activeWarehouseId');
+      setActiveBranchId(nextId);
+      setActiveWarehouseId('');
+      if (typeof reloadWarehouses === 'function') reloadWarehouses();
+    },
+    [branchesForUser, reloadWarehouses]
+  );
+
   useEffect(() => {
     if (!isAuthenticated) return;
     if (warehousesLoading) return;
@@ -11930,6 +11962,7 @@ const AppShell = () => {
                   warehouses={warehousesForUser}
                   allBranches={branches}
                   allWarehouses={warehouses}
+                  activeWarehouseId={activeWarehouseId}
                   initial={stockTransferEditor.initial}
                   mode={mode}
                   onBack={() => setStockTransferEditor({ open: false, initial: null })}
@@ -12529,10 +12562,25 @@ const AppShell = () => {
               <kbd className="ui-kbd hidden md:inline-flex">⌘K</kbd>
             </button>
 
-            {/* setActiveWarehouse existed with access checks and persistence,
-                but no control ever called it — a user with two warehouses had
-                no way to switch, and every stock screen reads the active one. */}
-            {warehousesForUser.length > 1 ? (
+            {/* The location shift lives here, on top of the software: branch
+                first, then a warehouse within it. Each control appears only
+                when there is a choice to make. */}
+            {branchesForUser.length > 1 ? (
+              <select
+                value={activeBranchId || ''}
+                onChange={(e) => setActiveBranch(e.target.value)}
+                className="ui-select hidden md:block !h-9 !min-h-0 max-w-[11rem] text-sm"
+                aria-label="Active branch"
+              >
+                {branchesForUser.map((b) => (
+                  <option key={b.id} value={String(b.id)}>
+                    {b.branchCode ? `${b.branchCode} - ${b.branchName || ''}`.trim() : b.branchName || `Branch ${b.id}`}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+
+            {warehousesForActiveBranch.length > 1 ? (
               <select
                 value={activeWarehouseId || ''}
                 onChange={(e) => setActiveWarehouse(e.target.value)}
@@ -12540,7 +12588,7 @@ const AppShell = () => {
                 aria-label="Active warehouse"
               >
                 <option value="">All warehouses</option>
-                {warehousesForUser.map((w) => (
+                {warehousesForActiveBranch.map((w) => (
                   <option key={w.id} value={String(w.id)}>
                     {w.name || `Warehouse ${w.id}`}
                   </option>

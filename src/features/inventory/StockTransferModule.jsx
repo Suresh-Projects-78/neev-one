@@ -79,6 +79,12 @@ export const StockTransferEditor = ({
   // come from these full lists.
   allBranches,
   allWarehouses,
+  // The header's warehouse selector is the live source of truth. Reading it
+  // from localStorage once at mount left the form showing whatever was active
+  // when it opened, so switching the header afterwards silently disagreed with
+  // the "From" line — and the transfer would have moved stock out of the wrong
+  // place.
+  activeWarehouseId = '',
   initial,
   mode = 'warehouse',
   onBack,
@@ -402,6 +408,32 @@ export const StockTransferEditor = ({
   const generatedTransferNumber = !isEdit
     ? generateVoucherNumber({ db, company: currentCompany, voucherKey, branchId: numberingBranchId })
     : '';
+
+  // A new transfer always sources from whatever the header currently points
+  // at; the branch comes off that warehouse's own record rather than a
+  // separately stored id that can disagree with it.
+  const headerWarehouse = warehouseById.get(normalizeId(activeWarehouseId)) || null;
+  const headerBranchId = normalizeId(headerWarehouse?.branchId);
+  if (!isEdit && !readOnly && normalizeId(activeWarehouseId)) {
+    const wantsWarehouse = normalizeId(activeWarehouseId);
+    const needsWarehouse = normalizeId(form.sourceWarehouseId) !== wantsWarehouse;
+    const needsBranch = headerBranchId && normalizeId(form.sourceBranchId) !== headerBranchId;
+    if (needsWarehouse || needsBranch) {
+      setForm((p) => {
+        const nextSourceWh = wantsWarehouse;
+        const nextSourceBranch = headerBranchId || p.sourceBranchId;
+        return {
+          ...p,
+          sourceWarehouseId: nextSourceWh,
+          sourceBranchId: nextSourceBranch,
+          // A destination in the old branch (or the source itself) no longer
+          // makes sense once the source moves.
+          targetWarehouseId: normalizeId(p.targetWarehouseId) === nextSourceWh ? '' : p.targetWarehouseId,
+          targetBranchId: mode === 'warehouse' ? nextSourceBranch : p.targetBranchId,
+        };
+      });
+    }
+  }
 
   const selectedSourceWarehouse = warehouseById.get(normalizeId(form.sourceWarehouseId)) || null;
   const selectedTargetWarehouse = warehouseById.get(normalizeId(form.targetWarehouseId)) || null;
