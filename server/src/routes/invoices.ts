@@ -75,8 +75,48 @@ const invoiceUpsertSchema = z.object({
   paidAmount: z.number().optional(),
   status: z.string().optional(),
   sourceEstimateId: z.string().optional().nullable(),
+  // Everything the entry forms collect that has no column of its own. Kept
+  // together so the server stops silently discarding them.
+  salesmanId: z.union([z.string(), z.number()]).optional().nullable(),
+  costCenterId: z.union([z.string(), z.number()]).optional().nullable(),
+  invoiceDiscountType: z.string().optional().nullable(),
+  invoiceDiscountValue: z.union([z.string(), z.number()]).optional().nullable(),
+  invoiceDiscountApplied: z.number().optional().nullable(),
+  otherCharges: z.array(z.record(z.any())).optional(),
+  otherChargesTotal: z.number().optional().nullable(),
+  shipToAddressId: z.union([z.string(), z.number()]).optional().nullable(),
+  sourceChallanId: z.union([z.string(), z.number()]).optional().nullable(),
+  sourceSalesOrderId: z.union([z.string(), z.number()]).optional().nullable(),
+  posSale: z.boolean().optional(),
+  tender: z.string().optional().nullable(),
+  customerMobile: z.string().optional().nullable(),
   items: z.array(invoiceItemSchema).default([]),
 });
+
+/** The extras, as stored: absent keys stay absent rather than becoming nulls. */
+const EXTRA_KEYS = [
+  'salesmanId',
+  'costCenterId',
+  'invoiceDiscountType',
+  'invoiceDiscountValue',
+  'invoiceDiscountApplied',
+  'otherCharges',
+  'otherChargesTotal',
+  'shipToAddressId',
+  'sourceChallanId',
+  'sourceSalesOrderId',
+  'posSale',
+  'tender',
+  'customerMobile',
+] as const;
+
+const extrasFrom = (body: any) => {
+  const out: Record<string, unknown> = {};
+  for (const k of EXTRA_KEYS) {
+    if (body?.[k] !== undefined && body?.[k] !== null && body?.[k] !== '') out[k] = body[k];
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+};
 
 const statusSchema = z.object({
   status: z.string().min(1),
@@ -123,6 +163,14 @@ const normalizeInvoiceResponse = (row: any) => {
     paidAmount: toNumber(row.paidAmount),
     status: row.status || 'Draft',
     sourceEstimateId: row.sourceEstimateId || null,
+    ...(() => {
+      try {
+        const parsed = JSON.parse(String(row?.extrasJson || 'null'));
+        return parsed && typeof parsed === 'object' ? parsed : {};
+      } catch {
+        return {};
+      }
+    })(),
     items,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -270,8 +318,8 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
         id, accountId, orgId, branchId, warehouseId, number, date, dueDate, refNo, refDate,
         customerId, customerName, customerGstin, placeOfSupplyState, taxType, reverseCharge,
         subtotal, cgstTotal, sgstTotal, igstTotal, gstTotal, total, paidAmount,
-        status, sourceEstimateId, itemsJson, createdByUserId, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        status, sourceEstimateId, itemsJson, extrasJson, createdByUserId, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       id,
       accountId,
       orgId,
@@ -298,6 +346,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       String(body.status || 'Draft').trim() || 'Draft',
       String(body.sourceEstimateId || '').trim() || null,
       JSON.stringify(body.items || []),
+      extrasFrom(body),
       userId
     );
   } catch (e: any) {
@@ -422,7 +471,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
         warehouseId = ?, number = ?, date = ?, dueDate = ?, refNo = ?, refDate = ?,
         customerId = ?, customerName = ?, customerGstin = ?, placeOfSupplyState = ?, taxType = ?,
         reverseCharge = ?, subtotal = ?, cgstTotal = ?, sgstTotal = ?, igstTotal = ?, gstTotal = ?, total = ?,
-        paidAmount = ?, status = ?, sourceEstimateId = ?, itemsJson = ?, updatedAt = CURRENT_TIMESTAMP
+        paidAmount = ?, status = ?, sourceEstimateId = ?, itemsJson = ?, extrasJson = ?, updatedAt = CURRENT_TIMESTAMP
        WHERE id = ?`,
       String(body.warehouseId || '').trim() || null,
       String(body.number || existing.number).trim(),
@@ -446,6 +495,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
       String(body.status || existing.status || 'Draft').trim() || 'Draft',
       String(body.sourceEstimateId || '').trim() || null,
       JSON.stringify(body.items || []),
+      extrasFrom(body),
       existing.id
     );
   } catch (e: any) {

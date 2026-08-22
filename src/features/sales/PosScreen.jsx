@@ -162,6 +162,9 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             gstTotal: computed.gstTotal,
             total: computed.total,
             status: 'Paid',
+            posSale: true,
+            tender,
+            customerMobile: customerMobile.trim() || undefined,
             items: computed.lines,
           });
           backendInvoiceId = String(saved?.id || '') || undefined;

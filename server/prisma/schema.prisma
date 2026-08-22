@@ -438,6 +438,14 @@ model Invoice {
   // GSTR-1 rchrg flag: supply attracts reverse charge (buyer pays the tax).
   reverseCharge      Boolean @default(false)
 
+  // Fields the entry forms collect that have no column of their own —
+  // salesman, cost centre, invoice-level discount, other charges, ship-to,
+  // the document this was raised from, POS details. They were being dropped on
+  // the way to the server, so a browser that had never seen the invoice
+  // rebuilt it without them. Stored as JSON so new UI fields do not each need
+  // a migration.
+  extrasJson         String?
+
   subtotal   Decimal @default(0)
   cgstTotal  Decimal @default(0)
   sgstTotal  Decimal @default(0)

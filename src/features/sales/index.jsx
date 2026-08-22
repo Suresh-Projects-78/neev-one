@@ -2363,6 +2363,21 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         status: String(newInvoice.status || 'Draft').trim(),
         sourceEstimateId: newInvoice.sourceEstimateId ? String(newInvoice.sourceEstimateId) : '',
         reverseCharge: !!newInvoice.reverseCharge,
+        // Fields the form collects that used to stop at the browser: without
+        // them a device that had never seen this invoice rebuilt it without
+        // its salesman, cost centre, discounts, charges or source document.
+        salesmanId: newInvoice.salesmanId ?? undefined,
+        costCenterId: newInvoice.costCenterId ?? undefined,
+        invoiceDiscountType: newInvoice.invoiceDiscountType ?? undefined,
+        invoiceDiscountValue: newInvoice.invoiceDiscountValue ?? undefined,
+        invoiceDiscountApplied: Number.isFinite(Number(newInvoice.invoiceDiscountApplied))
+          ? Number(newInvoice.invoiceDiscountApplied)
+          : undefined,
+        otherCharges: Array.isArray(newInvoice.otherCharges) && newInvoice.otherCharges.length ? newInvoice.otherCharges : undefined,
+        otherChargesTotal: Number.isFinite(Number(newInvoice.otherChargesTotal)) ? Number(newInvoice.otherChargesTotal) : undefined,
+        shipToAddressId: newInvoice.shipToAddressId ?? undefined,
+        sourceChallanId: newInvoice.sourceChallanId ?? undefined,
+        sourceSalesOrderId: newInvoice.sourceSalesOrderId ?? undefined,
         items: Array.isArray(newInvoice.items) ? newInvoice.items : [],
       };
 
