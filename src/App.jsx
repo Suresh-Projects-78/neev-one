@@ -69,6 +69,7 @@ import VendorPicker, { VendorForm } from './components/pickers/VendorPicker';
 import { CustomerForm } from './components/pickers/CustomerPicker';
 import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB, seedDummyDataV1 } from './data/db';
 import { nextFreeVoucherNumber } from './utils/docSettings';
+import { dueDateFor, termDaysFor, termsLabel } from './utils/paymentTerms';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
 import { formatMoney, formatMoneyCompact, round2 } from './utils/money';
 import { downloadCsv, downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
@@ -1538,6 +1539,9 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
 
 const emptyExpenseLine = () => ({ ledgerId: '', description: '', amount: '', gstRate: 0 });
 
+/** Sentinel value for the "create one" entry inside the ledger picker. */
+const NEW_LEDGER_OPTION = '__new_ledger__';
+
 const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null }) => {
   const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
   const expenseDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
@@ -1562,7 +1566,10 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
     number: initialData?.number || generatedExpenseNumber || '',
     date: initialData?.date || new Date().toISOString().split('T')[0],
     costCenterId: initialData?.costCenterId ?? '',
-    dueDate: initialData?.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    // Same day unless the vendor grants credit — the vendor's terms decide,
+    // not a blanket +30 days.
+    dueDate: initialData?.dueDate || initialData?.date || new Date().toISOString().split('T')[0],
+    dueDateTouched: Boolean(initialData?.dueDate),
     description: initialData?.description || '',
     vendorId: initialData?.vendorId ?? '',
     refNo: initialData?.refNo || '',
@@ -1597,6 +1604,13 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   const { state: companyState } = getCompanyGstProfile(currentCompany);
   const gstEnabled = (currentCompany?.profile?.taxCompliances?.gstEnabled ?? currentCompany?.gstEnabled ?? true) !== false;
   const vendor = formData.vendorId ? vendors.find((v) => v.id === parseInt(formData.vendorId)) : null;
+
+  // The due date follows the entry date plus whatever credit the vendor has on
+  // file, and keeps following them until the operator types their own date.
+  const derivedDueDate = vendor ? dueDateFor(formData.date, vendor, 0) : String(formData.date || '');
+  if (!formData.dueDateTouched && derivedDueDate && derivedDueDate !== formData.dueDate) {
+    setFormData((p) => (p.dueDateTouched ? p : { ...p, dueDate: derivedDueDate }));
+  }
   const { state: vendorState, gstin: vendorGstin, gstRegistration } = getPartyGstProfile(vendor);
   const isIntra = isIntraStateSupply({ companyState, partyState: vendorState });
 
@@ -1908,10 +1922,15 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
           <input
             type="date"
             value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value, dueDateTouched: true })}
             className="ui-input w-full px-3 py-2"
             required
           />
+          {vendor ? (
+            <div className="text-xs ui-muted mt-1">
+              {termDaysFor(vendor, 0) > 0 ? termsLabel(vendor, 0) : 'No credit period — due on the expense date'}
+            </div>
+          ) : null}
         </div>
 
         {costCenters.length ? (
@@ -1934,20 +1953,15 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Expense Ledgers (Direct / Indirect Expenses)</label>
-          <div className="flex items-center gap-3">
-            <button type="button" onClick={() => openLedgerCreate()} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-              <Plus size={16} /> New Ledger
-            </button>
-            <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-              <Plus size={16} /> Add Row
-            </button>
-          </div>
+          <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
+            <Plus size={16} /> Add Row
+          </button>
         </div>
 
         {expenseLedgers.length === 0 ? (
           <div className="ui-card p-4 text-sm ui-muted mb-2">
-            No expense ledgers yet — use <span className="font-medium">New Ledger</span> above, or create them under Master
-            Data → Chart of Accounts in a Direct or Indirect Expenses group.
+            No expense ledgers yet — pick <span className="font-medium">+ Create new ledger…</span> in the Expense Ledger
+            column, or create them under Master Data → Chart of Accounts in a Direct or Indirect Expenses group.
           </div>
         ) : null}
 
@@ -1974,7 +1988,13 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                     <td className="px-3 py-2">
                       <select
                         value={line.ledgerId || ''}
-                        onChange={(e) => onPickLedger(idx, e.target.value)}
+                        onChange={(e) => {
+                          if (e.target.value === NEW_LEDGER_OPTION) {
+                            openLedgerCreate(idx);
+                            return;
+                          }
+                          onPickLedger(idx, e.target.value);
+                        }}
                         className="ui-select w-full px-2 py-1"
                       >
                         <option value="">Select ledger</option>
@@ -1983,6 +2003,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                             {l.name}
                           </option>
                         ))}
+                        <option value={NEW_LEDGER_OPTION}>+ Create new ledger…</option>
                       </select>
                     </td>
                     <td className="px-3 py-2">
