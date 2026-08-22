@@ -67,8 +67,38 @@ const num = (v: any) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const KNOWN_BODY_KEYS = Object.keys(bodySchema.shape);
+
+/**
+ * Fields an entry form collects that the document has no column for.
+ * Without this the request schema silently dropped them and a browser that
+ * had never seen the document rebuilt it incomplete — the same class of loss
+ * that lost batch numbers on bills.
+ */
+const extrasOf = (body: any) => {
+  const known = new Set(KNOWN_BODY_KEYS);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(body || {})) {
+    if (known.has(k)) continue;
+    if (v === undefined || v === null || v === '') continue;
+    out[k] = v;
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+};
+
+const spreadExtras = (row: any) => {
+  try {
+    const parsed = JSON.parse(String(row?.extrasJson || 'null'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const normalize = (row: any) => ({
   ...row,
+  ...spreadExtras(row),
+  extrasJson: undefined,
   subtotal: num(row.subtotal),
   gstTotal: num(row.gstTotal),
   total: num(row.total),
@@ -154,6 +184,7 @@ function register(kind: QuoteKind) {
             status: body.status || 'Draft',
             notes: body.notes ?? null,
             itemsJson: JSON.stringify(body.items || []),
+            extrasJson: extrasOf(req.body),
             createdByUserId: userId,
           },
         });
@@ -184,6 +215,7 @@ function register(kind: QuoteKind) {
           ...(body.gstTotal !== undefined ? { gstTotal: new Prisma.Decimal(num(body.gstTotal).toFixed(2)) } : {}),
           ...(body.total !== undefined ? { total: new Prisma.Decimal(num(body.total).toFixed(2)) } : {}),
           ...(body.items !== undefined ? { itemsJson: JSON.stringify(body.items || []) } : {}),
+          extrasJson: extrasOf(req.body),
         },
       });
       res.json({ document: normalize(updated) });

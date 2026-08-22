@@ -535,6 +535,8 @@ model Bill {
 
   status    String  @default("Draft")
   itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
 
   /// Same single-currency rule as invoices: the books are kept in the base
   /// currency, and this is the rate the document was translated at.
@@ -574,6 +576,8 @@ model Estimate {
 
   status    String @default("Draft")
   itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
   notes     String?
 
   createdByUserId String
@@ -605,6 +609,8 @@ model PurchaseOrderDoc {
 
   status    String @default("Draft")
   itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
   notes     String?
 
   createdByUserId String
@@ -638,6 +644,8 @@ model SalesOrderDoc {
 
   status    String @default("Open")
   itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
   notes     String?
 
   createdByUserId String
@@ -686,6 +694,8 @@ model Expense {
 
   status    String @default("Unpaid")
   itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
 
   currency     String  @default("INR")
   exchangeRate Decimal @default(1)
@@ -736,6 +746,8 @@ model CreditNote {
 
   status    String  @default("Draft")
   itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
 
   /// Same single-currency rule as invoices: the books are kept in the base
   /// currency, and this is the rate the document was translated at.
@@ -788,6 +800,8 @@ model DebitNote {
 
   status    String  @default("Draft")
   itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
 
   /// Same single-currency rule as invoices: the books are kept in the base
   /// currency, and this is the rate the document was translated at.

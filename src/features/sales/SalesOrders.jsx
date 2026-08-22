@@ -137,6 +137,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           total: computed.total,
           status: 'Open',
           notes: form.notes || null,
+          salesmanId: form.salesmanId || undefined,
           items: computed.lines.filter((l) => String(l.itemId || '').trim()),
         });
         backendDocId = saved?.id || null;

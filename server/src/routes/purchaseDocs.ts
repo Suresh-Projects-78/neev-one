@@ -139,6 +139,34 @@ const num = (v: any) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const KNOWN_BODY_KEYS = Object.keys(docSchema.shape);
+
+/**
+ * Fields an entry form collects that the document has no column for.
+ * Without this the request schema silently dropped them and a browser that
+ * had never seen the document rebuilt it incomplete — the same class of loss
+ * that lost batch numbers on bills.
+ */
+const extrasOf = (body: any) => {
+  const known = new Set(KNOWN_BODY_KEYS);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(body || {})) {
+    if (known.has(k)) continue;
+    if (v === undefined || v === null || v === '') continue;
+    out[k] = v;
+  }
+  return Object.keys(out).length ? JSON.stringify(out) : null;
+};
+
+const spreadExtras = (row: any) => {
+  try {
+    const parsed = JSON.parse(String(row?.extrasJson || 'null'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const normalize = (row: any) => ({
   ...row,
   subtotal: num(row.subtotal),
@@ -159,6 +187,8 @@ const normalize = (row: any) => ({
     }
   })(),
   itemsJson: undefined,
+  ...spreadExtras(row),
+  extrasJson: undefined,
 });
 
 const orgOk = (req: any, res: any) => {
@@ -258,6 +288,7 @@ function register(kind: DocKind) {
             total: new Prisma.Decimal(num(body.total).toFixed(2)),
             status: body.status || 'Unpaid',
             itemsJson: JSON.stringify(body.items || []),
+            extrasJson: extrasOf(req.body),
             currency: docCurrency,
             exchangeRate: new Prisma.Decimal(String(fxRate)),
             baseTotal: new Prisma.Decimal(toBase(num(body.total), fxRate).toFixed(2)),

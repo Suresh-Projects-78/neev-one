@@ -3103,7 +3103,8 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
           total: Number(nextEstimateCore.total || 0),
           status: 'Draft',
           items: nextEstimateCore.items || [],
-        });
+                  salesmanId: formData.salesmanId || undefined,
+});
         backendDocId = saved?.id || null;
         serverNumber = String(saved?.number || '');
       } catch (err) {
