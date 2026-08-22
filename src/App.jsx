@@ -1294,7 +1294,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         </div>
 
         <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <ExpenseForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => setIsCreating(false)} />
+          <ExpenseForm db={db} setDb={setDb} currentCompany={currentCompany} openModal={openModal} onClose={() => setIsCreating(false)} />
         </div>
       </div>
     );
@@ -1511,7 +1511,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
 
 const emptyExpenseLine = () => ({ ledgerId: '', description: '', amount: '', gstRate: 0 });
 
-const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null }) => {
+const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null }) => {
   const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
   const expenseDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
   const expenseNumbering = expenseDocSettings?.numbering?.expense;
@@ -1609,6 +1609,59 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
       gstRate: led && led.gstRate !== null && led.gstRate !== undefined ? Number(led.gstRate) : 0,
       description: formData.lines[idx]?.description || '',
     });
+  };
+
+  // Creating the ledger without leaving the voucher: the picker is limited to
+  // expense groups, and the new ledger drops straight into the current line.
+  const expenseGroupIds = useMemo(() => {
+    const groups = (db.accountGroups || []).filter((g) => g.companyId === currentCompany.id);
+    const byId = new Map(groups.map((g) => [String(g.id), g]));
+    const isExpense = (g) => {
+      let cur = g;
+      const seen = new Set();
+      while (cur && !seen.has(String(cur.id))) {
+        seen.add(String(cur.id));
+        if (String(cur.groupCategory || '').trim() === 'Expense') return true;
+        cur = cur.parentGroupId ? byId.get(String(cur.parentGroupId)) : null;
+      }
+      return false;
+    };
+    return groups.filter(isExpense).map((g) => String(g.id));
+  }, [db.accountGroups, currentCompany.id]);
+
+  const openLedgerCreate = (lineIdxRaw = null) => {
+    // Guard against being wired straight to onClick, where the argument would
+    // be a click event rather than a line index.
+    const lineIdx = Number.isInteger(lineIdxRaw) ? lineIdxRaw : null;
+    if (typeof openModal !== 'function') {
+      notify.error('Create the ledger under Master Data → Chart of Accounts.');
+      return;
+    }
+    openModal(
+      <ChartAccountForm
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        openModal={openModal}
+        includeGroupIds={expenseGroupIds}
+        onCreated={(created) => {
+          if (!created?.id) return;
+          const idx = lineIdx === null ? formData.lines.findIndex((l) => !String(l.ledgerId || '').trim()) : lineIdx;
+          const target = idx >= 0 ? idx : formData.lines.length;
+          setFormData((p) => {
+            const lines = target >= p.lines.length ? [...p.lines, emptyExpenseLine()] : [...p.lines];
+            lines[target] = {
+              ...lines[target],
+              ledgerId: String(created.id),
+              gstRate: created.gstRate !== null && created.gstRate !== undefined ? Number(created.gstRate) : 0,
+            };
+            return { ...p, lines };
+          });
+        }}
+        onClose={() => openModal(null)}
+      />,
+      { title: 'New Expense Ledger', maxWidthClass: 'max-w-2xl' }
+    );
   };
 
   const addLine = () => setFormData((p) => ({ ...p, lines: [...p.lines, emptyExpenseLine()] }));
@@ -1740,41 +1793,59 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Voucher number and date sit to the right of the heading so the body
+          of the form keeps the full width for entry. */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Voucher Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`ui-input w-full px-3 py-2 ${lockExpenseNumber ? 'ui-sunken' : ''}`}
-            disabled={lockExpenseNumber}
-            required
-          />
+          <div className="ui-title text-base">Expense</div>
+          <div className="text-xs ui-muted">Book a spend against one or more expense ledgers.</div>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="ui-input w-full px-3 py-2"
-            required
-          />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-44">
+            <label className="block text-sm font-medium mb-1">Voucher No.</label>
+            <input
+              type="text"
+              value={formData.number}
+              onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+              className={`ui-input w-full px-3 py-2 ${lockExpenseNumber ? 'ui-sunken' : ''}`}
+              disabled={lockExpenseNumber}
+              required
+            />
+          </div>
+          <div className="w-44">
+            <label className="block text-sm font-medium mb-1">Date</label>
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="ui-input w-full px-3 py-2"
+              required
+            />
+          </div>
         </div>
+      </div>
 
-        <div>
-          <VendorPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.vendorId}
-            onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
-            label="Vendor"
-          />
-        </div>
+      {/* Vendor gets a line of its own — it drives GST on every line below. */}
+      <div>
+        <VendorPicker
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          value={formData.vendorId}
+          onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
+          label="Vendor"
+          showCreateButton
+        />
+        {formData.vendorId ? (
+          <div className="text-xs ui-muted mt-1">
+            {vendorChargesGst
+              ? `Registered vendor — GST applies at each ledger's rate (${isIntra ? 'CGST + SGST' : 'IGST'}).`
+              : `${String(gstRegistration || 'Unregistered')} vendor — no GST on this expense.`}
+          </div>
+        ) : null}
+      </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Vendor Inv No.</label>
           <input
@@ -1822,30 +1893,25 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
             </select>
           </div>
         ) : null}
-
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium mb-1">Narration</label>
-          <input
-            type="text"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="ui-input w-full px-3 py-2"
-            placeholder="What this spend was for"
-          />
-        </div>
       </div>
 
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Expense Ledgers (Direct / Indirect Expenses)</label>
-          <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-            <Plus size={16} /> Add Row
-          </button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => openLedgerCreate()} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
+              <Plus size={16} /> New Ledger
+            </button>
+            <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
+              <Plus size={16} /> Add Row
+            </button>
+          </div>
         </div>
 
         {expenseLedgers.length === 0 ? (
-          <div className="ui-card p-4 text-sm ui-muted">
-            No expense ledgers yet. Create them under Master Data → Chart of Accounts, in a Direct or Indirect Expenses group.
+          <div className="ui-card p-4 text-sm ui-muted mb-2">
+            No expense ledgers yet — use <span className="font-medium">New Ledger</span> above, or create them under Master
+            Data → Chart of Accounts in a Direct or Indirect Expenses group.
           </div>
         ) : null}
 
@@ -1878,7 +1944,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
                         <option value="">Select ledger</option>
                         {expenseLedgers.map((l) => (
                           <option key={l.id} value={l.id}>
-                            {l.name}{l.groupName ? ` (${l.groupName})` : ''}
+                            {l.name}
                           </option>
                         ))}
                       </select>
@@ -1903,19 +1969,25 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <select
-                        value={String(line.gstRate ?? 0)}
-                        onChange={(e) => updateLine(idx, { gstRate: Number(e.target.value) })}
-                        className="ui-select w-24 px-2 py-1"
-                        disabled={!vendorChargesGst}
-                        title={vendorChargesGst ? undefined : 'GST applies only to registered vendors'}
-                      >
-                        {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
-                          <option key={r} value={String(r)}>{r}%</option>
-                        ))}
-                      </select>
+                      {/* An unregistered vendor cannot charge GST, so the rate is
+                          not a choice at all — showing NA beats a dead dropdown. */}
+                      {vendorChargesGst ? (
+                        <select
+                          value={String(line.gstRate ?? 0)}
+                          onChange={(e) => updateLine(idx, { gstRate: Number(e.target.value) })}
+                          className="ui-select w-24 px-2 py-1"
+                        >
+                          {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
+                            <option key={r} value={String(r)}>{r}%</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="ui-muted text-sm" title="GST applies only to registered vendors">NA</span>
+                      )}
                     </td>
-                    <td className="ui-col-amount px-3 py-2 text-right text-sm">{formatMoney(row.gstAmount, currentCompany)}</td>
+                    <td className="ui-col-amount px-3 py-2 text-right text-sm">
+                      {vendorChargesGst ? formatMoney(row.gstAmount, currentCompany) : <span className="ui-muted">NA</span>}
+                    </td>
                     <td className="ui-col-amount px-3 py-2 text-right text-sm font-semibold">{formatMoney(row.lineTotal, currentCompany)}</td>
                     <td className="px-3 py-2 text-right">
                       <button type="button" onClick={() => removeLine(idx)} className="text-[rgb(var(--neg))]" aria-label={`Remove line ${idx + 1}`}>
@@ -1928,12 +2000,18 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
             </tbody>
           </table>
         </div>
+      </div>
 
-        {!vendorChargesGst && formData.vendorId ? (
-          <div className="text-xs ui-muted mt-2">
-            This vendor is {String(gstRegistration || 'Unregistered').toLowerCase()} — no GST is charged on these lines.
-          </div>
-        ) : null}
+      {/* Narration reads as a summary of the lines, so it comes after them. */}
+      <div>
+        <label className="block text-sm font-medium mb-1">Narration</label>
+        <input
+          type="text"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          className="ui-input w-full px-3 py-2"
+          placeholder="What this spend was for"
+        />
       </div>
 
       <div className="flex justify-end">
@@ -1942,21 +2020,28 @@ const ExpenseForm = ({ db, setDb, currentCompany, onClose, initialData = null })
             <span>Subtotal:</span>
             <span>{formatMoney(computed.subtotal, currentCompany)}</span>
           </div>
-          {isIntra ? (
-            <>
+          {vendorChargesGst ? (
+            isIntra ? (
+              <>
+                <div className="flex justify-between">
+                  <span>CGST:</span>
+                  <span>{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>SGST:</span>
+                  <span>{formatMoney(computed.sgstTotal, currentCompany)}</span>
+                </div>
+              </>
+            ) : (
               <div className="flex justify-between">
-                <span>CGST:</span>
-                <span>{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                <span>IGST:</span>
+                <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>SGST:</span>
-                <span>{formatMoney(computed.sgstTotal, currentCompany)}</span>
-              </div>
-            </>
+            )
           ) : (
-            <div className="flex justify-between">
-              <span>IGST:</span>
-              <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
+            <div className="flex justify-between ui-muted">
+              <span>GST:</span>
+              <span>NA</span>
             </div>
           )}
           <div className="flex justify-between border-t pt-2 font-bold text-lg">
@@ -3419,7 +3504,18 @@ const ChartAccountForm = ({
 
   const [formData, setFormData] = useState({
     name: isEdit ? String(initialData?.name || '').trim() : String(initialName || '').trim(),
-    groupId: isEdit ? defaultGroupForEdit : getDefaultGroupId('General'),
+    // When the caller restricts the groups (creating an expense ledger from the
+    // expense voucher, say), the default has to be one of those — the usual
+    // Cash-in-Hand default is not on the list and would render as blank.
+    groupId: isEdit
+      ? defaultGroupForEdit
+      : includeIds
+        ? String(
+            groups.find((g) => String(g.name || '').trim().toLowerCase() === 'indirect expenses')?.id ??
+              groups[0]?.id ??
+              ''
+          )
+        : getDefaultGroupId('General'),
     openingBalance: isEdit ? Number(initialData?.openingBalance ?? initialData?.balance ?? 0) : 0,
     bankName: isEdit ? String(initialData?.bankDetails?.bankName || '').trim() : '',
     bankAccountNumber: isEdit ? String(initialData?.bankDetails?.accountNumber || '').trim() : '',
@@ -4895,7 +4991,7 @@ const LedgerView = ({
     }
     if (key === 'expense') {
       const ex = (Array.isArray(db.expenses) ? db.expenses : []).find((x) => String(x?.id) === String(id));
-      openModal(<ExpenseForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} initialData={ex} />);
+      openModal(<ExpenseForm db={db} setDb={setDb} currentCompany={currentCompany} openModal={openModal} onClose={() => openModal(null)} initialData={ex} />);
       return;
     }
     if (key === 'journalEntry') {

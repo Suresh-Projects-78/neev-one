@@ -798,7 +798,19 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   );
 };
 
-const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Vendor', disabled = false, disabledHint = '' }) => {
+const VendorPicker = ({
+  db,
+  setDb,
+  currentCompany,
+  value,
+  onChange,
+  label = 'Vendor',
+  disabled = false,
+  disabledHint = '',
+  // Renders a "New" button beside the trigger, so creating a vendor is one
+  // click from the form rather than hidden inside the select popup.
+  showCreateButton = false,
+}) => {
   // Same pattern as the customer picker: server list, local fallback.
   const serverVendors = useServerMasters(
     useCallback((search) => listVendors(search).then((d) => d?.vendors || []), []),
@@ -857,20 +869,35 @@ const VendorPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ven
   return (
     <>
       <label className="block text-sm font-medium mb-1">{label}</label>
-      <button
-        type="button"
-        disabled={disabled}
-        title={disabled ? disabledHint || 'Locked' : undefined}
-        onClick={() => {
-          if (disabled) return;
-          setVendorPopupMode('select');
-          setVendorSearch('');
-          setShowVendorPopup(true);
-        }}
-        className={`w-full px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
-      >
-        {selectedVendorName || 'Select Vendor'}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={disabled}
+          title={disabled ? disabledHint || 'Locked' : undefined}
+          onClick={() => {
+            if (disabled) return;
+            setVendorPopupMode('select');
+            setVendorSearch('');
+            setShowVendorPopup(true);
+          }}
+          className={`flex-1 px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
+        >
+          {selectedVendorName || 'Select Vendor'}
+        </button>
+        {showCreateButton && !disabled ? (
+          <button
+            type="button"
+            onClick={() => {
+              setVendorPopupMode('create');
+              setVendorSearch('');
+              setShowVendorPopup(true);
+            }}
+            className="ui-btn ui-btn-secondary whitespace-nowrap"
+          >
+            + New Vendor
+          </button>
+        ) : null}
+      </div>
       {disabled && disabledHint ? <div className="text-xs ui-muted mt-1">{disabledHint}</div> : null}
 
       {showVendorPopup && (
