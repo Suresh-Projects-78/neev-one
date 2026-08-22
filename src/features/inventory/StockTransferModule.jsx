@@ -144,13 +144,6 @@ export const StockTransferEditor = ({
   const branchById = useMemo(() => new Map(safeArray(branches).map((b) => [normalizeId(b?.id), b])), [branches]);
   const warehouseById = useMemo(() => new Map(safeArray(warehouses).map((w) => [normalizeId(w?.id), w])), [warehouses]);
 
-  const branchOptions = useMemo(() => {
-    return safeArray(branches)
-      .slice()
-      .sort((a, b) => getBranchLabel(a).localeCompare(getBranchLabel(b)))
-      .map((b) => ({ value: normalizeId(b?.id), label: getBranchLabel(b) || `Branch ${normalizeId(b?.id)}` }));
-  }, [branches]);
-
   const itemById = useMemo(() => {
     const map = new Map();
     for (const it of safeArray(items)) {
@@ -158,29 +151,6 @@ export const StockTransferEditor = ({
     }
     return map;
   }, [items]);
-
-  const warehouseOptions = useMemo(() => {
-    return safeArray(warehouses)
-      .slice()
-      .sort((a, b) => getWarehouseLabel(a).localeCompare(getWarehouseLabel(b)))
-      .map((w) => ({
-        value: normalizeId(w?.id),
-        label: getWarehouseLabel(w),
-        branchId: normalizeId(w?.branchId),
-      }));
-  }, [warehouses]);
-
-  const warehouseOptionsForBranch = useMemo(() => {
-    const map = new Map();
-    for (const o of warehouseOptions) {
-      const bid = normalizeId(o.branchId);
-      if (!bid) continue;
-      const cur = map.get(bid) || [];
-      cur.push(o);
-      map.set(bid, cur);
-    }
-    return map;
-  }, [warehouseOptions]);
 
   const destinationBranchOptions = useMemo(() => {
     const list = safeArray(allBranches).length ? safeArray(allBranches) : safeArray(branches);
@@ -202,12 +172,6 @@ export const StockTransferEditor = ({
     }
     return map;
   }, [allWarehouses, warehouses]);
-
-  const sourceBranchWarehouseOptions = useMemo(() => {
-    const bid = normalizeId(form.sourceBranchId);
-    if (!bid) return [];
-    return warehouseOptionsForBranch.get(bid) || [];
-  }, [form.sourceBranchId, warehouseOptionsForBranch]);
 
   const targetBranchWarehouseOptions = useMemo(() => {
     const bid = normalizeId(mode === 'warehouse' ? form.sourceBranchId : form.targetBranchId);
@@ -464,48 +428,58 @@ export const StockTransferEditor = ({
           </div>
           <div className="ui-title text-lg">{String(form.number || '').trim() || 'Draft'}</div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(String(form.status || '').trim() || 'Draft')}`}>{String(form.status || '').trim() || 'Draft'}</span>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-44">
+            <label className="block text-sm font-medium mb-1">Voucher No.</label>
+            <input
+              type="text"
+              value={form.number}
+              onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))}
+              className={`ui-input w-full px-3 py-2 ${!isEdit && lockTransferNumberOnCreate ? 'ui-sunken' : ''}`}
+              placeholder="Auto"
+              disabled={readOnly || (!isEdit && lockTransferNumberOnCreate)}
+            />
+          </div>
+          <div className="w-44">
+            <label className="block text-sm font-medium mb-1">Date</label>
+            <input
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
+              className="ui-input w-full px-3 py-2"
+              required
+              disabled={readOnly}
+            />
+          </div>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(String(form.status || '').trim() || 'Draft')}`}>{String(form.status || '').trim() || 'Draft'}</span>
+        </div>
       </div>
 
       {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Source comes from the branch/warehouse chosen in the app header —
+            the shift belongs on top of the software, not repeated in every
+            form. Only the destination is chosen here. */}
         <div>
-          <label className="block text-sm font-medium mb-1">Transfer Number</label>
-          <input
-            type="text"
-            value={form.number}
-            onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg ${!isEdit && lockTransferNumberOnCreate ? 'ui-sunken' : ''}`}
-            placeholder="Auto"
-            disabled={readOnly || (!isEdit && lockTransferNumberOnCreate)}
-          />
+          <label className="block text-sm font-medium mb-1">From (active {mode === 'branch' ? 'branch' : 'warehouse'})</label>
+          <div className="ui-input ui-sunken w-full px-3 py-2">
+            {getBranchLabel(selectedSourceBranch) || '—'}
+            {mode === 'warehouse' ? ` · ${getWarehouseLabel(selectedSourceWarehouse) || '—'}` : ''}
+          </div>
+          <div className="mt-1 text-xs ui-muted">Switch it from the header selector above.</div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Transfer Date</label>
-          <input
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-            className="ui-input w-full px-3 py-2"
-            required
-            disabled={readOnly}
-          />
-        </div>
-
-        {mode === 'warehouse' ? (
+        {mode === 'branch' ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Branch *</label>
+            <label className="block text-sm font-medium mb-1">To Branch *</label>
             <select
-              value={form.sourceBranchId}
+              value={form.targetBranchId}
               onChange={(e) => {
                 const nextBranchId = String(e.target.value || '').trim();
                 setForm((p) => ({
                   ...p,
-                  sourceBranchId: nextBranchId,
                   targetBranchId: nextBranchId,
-                  sourceWarehouseId: '',
                   targetWarehouseId: '',
                 }));
               }}
@@ -514,98 +488,15 @@ export const StockTransferEditor = ({
               disabled={readOnly}
             >
               <option value="">Select Branch</option>
-              {branchOptions.map((o) => (
-                <option key={o.value} value={o.value}>
+              {destinationBranchOptions.map((o) => (
+                <option key={o.value} value={o.value} disabled={normalizeId(o.value) === normalizeId(form.sourceBranchId)}>
                   {o.label}
                 </option>
               ))}
             </select>
           </div>
-        ) : (
-          <>
-            <div>
-              <label className="block text-sm font-medium mb-1">From Branch *</label>
-              <select
-                value={form.sourceBranchId}
-                onChange={(e) => {
-                  const nextBranchId = String(e.target.value || '').trim();
-                  setForm((p) => ({
-                    ...p,
-                    sourceBranchId: nextBranchId,
-                    sourceWarehouseId: '',
-                  }));
-                }}
-                className="ui-select w-full px-3 py-2 ui-surface"
-                required
-                disabled={readOnly}
-              >
-                <option value="">Select Branch</option>
-                {branchOptions.map((o) => (
-                  <option key={o.value} value={o.value} disabled={normalizeId(o.value) === normalizeId(form.targetBranchId)}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+        ) : null}
 
-            <div>
-              <label className="block text-sm font-medium mb-1">To Branch *</label>
-              <select
-                value={form.targetBranchId}
-                onChange={(e) => {
-                  const nextBranchId = String(e.target.value || '').trim();
-                  setForm((p) => ({
-                    ...p,
-                    targetBranchId: nextBranchId,
-                    targetWarehouseId: '',
-                  }));
-                }}
-                className="ui-select w-full px-3 py-2 ui-surface"
-                required
-                disabled={readOnly}
-              >
-                <option value="">Select Branch</option>
-                {destinationBranchOptions.map((o) => (
-                  <option key={o.value} value={o.value} disabled={normalizeId(o.value) === normalizeId(form.sourceBranchId)}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </>
-        )}
-
-        <div>
-          <label className="block text-sm font-medium mb-1">From Warehouse *</label>
-          <select
-            value={form.sourceWarehouseId}
-            onChange={(e) => {
-              const nextId = String(e.target.value || '').trim();
-              setForm((p) => {
-                const sameAsTarget = nextId && normalizeId(p.targetWarehouseId) === normalizeId(nextId);
-                return {
-                  ...p,
-                  sourceWarehouseId: nextId,
-                  targetWarehouseId: sameAsTarget ? '' : p.targetWarehouseId,
-                };
-              });
-            }}
-            className="ui-select w-full px-3 py-2 ui-surface"
-            required
-            disabled={readOnly || !normalizeId(form.sourceBranchId)}
-          >
-            <option value="">{normalizeId(form.sourceBranchId) ? 'Select Warehouse' : 'Select Branch first'}</option>
-            {sourceBranchWarehouseOptions.map((o) => (
-              <option key={o.value} value={o.value} disabled={normalizeId(o.value) === normalizeId(form.targetWarehouseId)}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <div className="mt-1 text-xs ui-muted">
-            Branch: <span className="font-medium">{getBranchLabel(selectedSourceBranch) || '-'}</span> · State:{' '}
-            <span className="font-medium">{sourceState || '-'}</span>
-          </div>
-        </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">Receiver Warehouse *</label>
@@ -1051,6 +942,71 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
   );
 };
 
+/**
+ * The transfer as a document: what the row click opens. Print goes through the
+ * module's own print window; Download renders the same markup to a PDF.
+ */
+const TransferDocumentView = ({ transfer, branches, warehouses, db, currentCompany, onPrint }) => {
+  const docRef = useRef(null);
+  const [downloading, setDownloading] = useState(false);
+  const no = String(transfer?.number || '').trim();
+
+  const doDownload = async () => {
+    const el = docRef.current;
+    if (!el || downloading) return;
+    setDownloading(true);
+    const prevTitle = document.title;
+    const base = (no || 'transfer').replace(/[\\/:*?"<>|]/g, '-').trim() || 'transfer';
+    try {
+      if (no) document.title = no;
+      document.body.classList.add('print-mode');
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      await new Promise((resolve) => {
+        doc.html(el, {
+          x: 18,
+          y: 18,
+          width: 559,
+          windowWidth: Math.max(el.scrollWidth || 0, 980),
+          margin: [18, 18, 18, 18],
+          autoPaging: 'text',
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          callback: () => resolve(),
+        });
+      });
+      doc.save(`${base}.pdf`);
+    } catch {
+      notify.error('Unable to generate PDF. Please try again.');
+    } finally {
+      document.body.classList.remove('print-mode');
+      document.title = prevTitle;
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end gap-2">
+        <button type="button" onClick={onPrint} className="ui-btn ui-btn-secondary">
+          Print
+        </button>
+        <button type="button" onClick={doDownload} disabled={downloading} className="ui-btn ui-btn-primary">
+          {downloading ? 'Preparing…' : 'Download'}
+        </button>
+      </div>
+      <div ref={docRef}>
+        <StockTransferDetails
+          transfer={transfer}
+          branches={branches}
+          warehouses={warehouses}
+          db={db}
+          currentCompany={currentCompany}
+        />
+      </div>
+    </div>
+  );
+};
+
 export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branches = [], warehouses = [], mode = 'warehouse', onNew, onEdit }) => {
   const companyId = currentCompany?.id;
 
@@ -1239,6 +1195,22 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
     if (!ok) return;
     patchTransfer(transfer, { status: 'Closed', mismatchResolution: asLoss ? 'LOSS' : 'RETURN', resolvedAt: new Date().toISOString() });
     notify.success(asLoss ? 'Shortfall written off as a loss.' : 'Shortfall returned to the source warehouse.');
+  };
+
+  /** Opens the transfer as a document, with Print and Download beside it. */
+  const openDocument = (transfer) => {
+    if (typeof openModal !== 'function') return;
+    openModal(
+      <TransferDocumentView
+        transfer={transfer}
+        branches={branches}
+        warehouses={warehouses}
+        db={db}
+        currentCompany={currentCompany}
+        onPrint={() => printTransfer(transfer)}
+      />,
+      { title: `${transfer?.number || 'Transfer'}`, maxWidthClass: 'max-w-3xl' }
+    );
   };
 
   /** The transfer document, printable and savable as PDF by the browser. */
@@ -1492,7 +1464,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                         const el = e.target;
                         if (el?.closest?.('[data-transfer-menu-button]')) return;
                         if (el?.closest?.('[data-transfer-menu]')) return;
-                        openEdit(t);
+                        openDocument(t);
                       }}
                     >
                       <td className="ui-col-meta px-4 py-2.5 font-medium">{t?.number || '-'}</td>
@@ -1563,7 +1535,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                     type="button"
                     onClick={() => {
                       setOpenMenu(null);
-                      openEdit(t);
+                      openDocument(t);
                     }}
                     className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
                   >
