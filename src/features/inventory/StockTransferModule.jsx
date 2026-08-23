@@ -3,6 +3,7 @@ import { notify, confirmDialog } from '../../components/ui/notify';
 import { Check, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
+import { isTracked, needsExpiry, batchesForItem } from '../../utils/batches';
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { exportRows } from '../../components/ListToolbar';
@@ -156,7 +157,7 @@ export const StockTransferEditor = ({
       targetBranchId: mode === 'warehouse' ? activeBranchId : '',
       targetWarehouseId: '',
       reason: '',
-      lines: [{ itemId: '', description: '', qty: 1 }],
+      lines: [{ itemId: '', description: '', qty: 1, batchId: '', batchNo: '', expiryDate: '' }],
     };
 
     if (!initial) return base;
@@ -278,6 +279,10 @@ export const StockTransferEditor = ({
           } else if (!itemId) {
             next.description = '';
           }
+          // A batch belongs to one item — changing the item invalidates it.
+          next.batchId = '';
+          next.batchNo = '';
+          next.expiryDate = '';
         }
 
         return next;
@@ -288,7 +293,10 @@ export const StockTransferEditor = ({
   };
 
   const addLine = () => {
-    setForm((prev) => ({ ...prev, lines: [...safeArray(prev.lines), { itemId: '', description: '', qty: 1 }] }));
+    setForm((prev) => ({
+      ...prev,
+      lines: [...safeArray(prev.lines), { itemId: '', description: '', qty: 1, batchId: '', batchNo: '', expiryDate: '' }],
+    }));
   };
 
   const removeLine = (idx) => {
@@ -351,6 +359,23 @@ export const StockTransferEditor = ({
       const item = safeArray(items).find((it) => normalizeId(it?.id) === l.itemId) || null;
       if (!item) return 'Invalid item in lines';
       if (!isStockItem(item)) return 'Only stock items can be transferred';
+
+      // A batch-tracked item cannot move without saying which batch moves.
+      if (isTracked(item)) {
+        const raw = safeArray(form.lines).find((x) => normalizeId(x?.itemId) === l.itemId && toNum(x?.qty) === l.qty);
+        const batchId = normalizeId(raw?.batchId);
+        if (!batchId) return `Pick the batch of ${item.name} being transferred`;
+        const batch = batchesForItem(db, currentCompany?.id, l.itemId, { includeEmpty: true }).find(
+          (b) => normalizeId(b.id) === batchId
+        );
+        if (!batch) return `That batch of ${item.name} no longer exists`;
+        if (toNum(batch.remaining) + 0.0001 < l.qty) {
+          return `Batch ${batch.batchNo} of ${item.name} has only ${batch.remaining} left`;
+        }
+        if (needsExpiry(item) && !String(batch.expiryDate || '').trim()) {
+          return `Batch ${batch.batchNo} of ${item.name} has no expiry date recorded`;
+        }
+      }
     }
 
     return '';
@@ -373,6 +398,10 @@ export const StockTransferEditor = ({
           itemId: normalizeId(l?.itemId),
           description: String(l?.description || '').trim(),
           qty: toNum(l?.qty || 0),
+          // Batch-tracked lines carry which lot is moving; the rest stay empty.
+          batchId: normalizeId(l?.batchId),
+          batchNo: String(l?.batchNo || '').trim(),
+          expiryDate: String(l?.expiryDate || '').trim(),
         }))
         .filter((l) => l.itemId && l.qty > 0);
 
@@ -655,7 +684,8 @@ export const StockTransferEditor = ({
             </thead>
             <tbody>
               {safeArray(form.lines).map((l, idx) => (
-                <tr key={idx} className="border-t">
+                <React.Fragment key={idx}>
+                <tr className="border-t">
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -698,6 +728,50 @@ export const StockTransferEditor = ({
                     </button>
                   </td>
                 </tr>
+                {(() => {
+                  const master = normalizeId(l.itemId) ? itemById.get(normalizeId(l.itemId)) : null;
+                  if (!master || !isTracked(master)) return null;
+                  const available = batchesForItem(db, currentCompany?.id, normalizeId(l.itemId));
+                  return (
+                    <tr key={`batch-${idx}`} className="border-t-0">
+                      <td colSpan={4} className="px-3 pb-2 pt-0">
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="ui-muted font-medium">Batch:</span>
+                          <select
+                            value={l.batchId || ''}
+                            onChange={(e) => {
+                              const picked = available.find((b) => normalizeId(b.id) === normalizeId(e.target.value));
+                              updateLine(idx, {
+                                batchId: e.target.value,
+                                batchNo: picked ? String(picked.batchNo || '') : '',
+                                expiryDate: picked ? String(picked.expiryDate || '') : '',
+                              });
+                            }}
+                            className="ui-select !h-8 px-2 text-xs min-w-52"
+                            disabled={readOnly}
+                          >
+                            <option value="">Select batch *</option>
+                            {available.map((b) => (
+                              <option key={b.id} value={b.id}>
+                                {b.batchNo}
+                                {b.expiryDate ? ` · exp ${b.expiryDate}` : ''} · {b.remaining} left
+                              </option>
+                            ))}
+                          </select>
+                          {needsExpiry(master) && l.expiryDate ? (
+                            <span className="ui-muted">Expiry {l.expiryDate}</span>
+                          ) : null}
+                          {available.length === 0 ? (
+                            <span className="text-[rgb(var(--neg))]">
+                              No stock with a batch for this item — receive it on a purchase bill first.
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })()}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -735,6 +809,8 @@ const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel
       itemId: normalizeId(l?.itemId),
       sent: toNum(l?.qty || 0),
       received: String(l?.receivedQty ?? l?.qty ?? 0),
+      batchNo: String(l?.batchNo || '').trim(),
+      expiryDate: String(l?.expiryDate || '').trim(),
     }))
   );
   const [note, setNote] = useState('');
@@ -763,7 +839,15 @@ const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel
               const diff = round2(Math.max(0, toNum(r.received)) - r.sent);
               return (
                 <tr key={idx} className={Math.abs(diff) > 0.0001 ? 'bg-[rgb(var(--warn-soft))]' : ''}>
-                  <td className="ui-col-entity px-4 py-2.5">{item?.name || `Item ${r.itemId}`}</td>
+                  <td className="ui-col-entity px-4 py-2.5">
+                    <div>{item?.name || `Item ${r.itemId}`}</div>
+                    {r.batchNo ? (
+                      <div className="text-xs ui-muted">
+                        Batch {r.batchNo}
+                        {r.expiryDate ? ` · exp ${r.expiryDate}` : ''}
+                      </div>
+                    ) : null}
+                  </td>
                   <td className="px-4 py-2.5 text-right">{r.sent}</td>
                   <td className="px-4 py-2.5 text-right">
                     <input
@@ -920,7 +1004,11 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
                   <tr key={idx} className={off ? 'bg-[rgb(var(--warn-soft))]' : 'ui-hover-sunken'}>
                     <td className="ui-col-entity px-4 py-3">
                       <div className="font-medium">{l.name}</div>
-                      <div className="text-xs ui-muted">{l.itemId}</div>
+                      <div className="text-xs ui-muted">
+                        {raw?.batchNo
+                          ? `Batch ${raw.batchNo}${raw?.expiryDate ? ` · exp ${raw.expiryDate}` : ''}`
+                          : l.itemId}
+                      </div>
                     </td>
                     <td className="ui-col-meta px-4 py-3 text-right font-semibold">
                       {l.qty}{l.unit ? ` ${l.unit}` : ''}
@@ -1326,7 +1414,9 @@ export const StockTransfersList = ({
     const rows = safeArray(transfer?.lines)
       .map((l) => {
         const received = l?.receivedQty === undefined || l?.receivedQty === null ? '' : toNum(l.receivedQty);
-        return `<tr><td>${esc(itemName(l?.itemId))}</td><td class="r">${toNum(l?.qty || 0)}</td><td class="r">${received === '' ? '—' : received}</td></tr>`;
+        const batch = String(l?.batchNo || '').trim();
+        const batchCell = batch ? `${esc(batch)}${l?.expiryDate ? ` (exp ${esc(l.expiryDate)})` : ''}` : '—';
+        return `<tr><td>${esc(itemName(l?.itemId))}</td><td>${batchCell}</td><td class="r">${toNum(l?.qty || 0)}</td><td class="r">${received === '' ? '—' : received}</td></tr>`;
       })
       .join('');
 
@@ -1347,7 +1437,7 @@ export const StockTransfersList = ({
         <div><strong>To</strong><br>${esc(transfer?.targetBranchName || '')}<br>${esc(transfer?.targetWarehouseName || '')}</div>
       </div>
       ${transfer?.reason ? `<p><strong>Reason:</strong> ${esc(transfer.reason)}</p>` : ''}
-      <table><thead><tr><th>Item</th><th class="r">Sent</th><th class="r">Received</th></tr></thead><tbody>${rows}</tbody></table>
+      <table><thead><tr><th>Item</th><th>Batch</th><th class="r">Sent</th><th class="r">Received</th></tr></thead><tbody>${rows}</tbody></table>
       <p style="margin-top:32px">Dispatched by ____________________ &nbsp;&nbsp; Received by ____________________</p>
       </body></html>`);
     w.document.close();

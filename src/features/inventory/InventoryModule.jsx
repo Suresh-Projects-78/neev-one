@@ -99,7 +99,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [db.items, companyId]);
 
-  const itemSearch = useListSearch(allStockItems, ['name', 'code', 'hsnSac', 'barcode', 'category', 'brand']);
+  const itemSearch = useListSearch(allStockItems, ['name', 'code', 'hsnSac', 'barcode', 'category']);
   const items = itemSearch.filtered;
 
   const summaryByItemId = useMemo(() => {

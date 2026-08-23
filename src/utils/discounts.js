@@ -5,7 +5,7 @@
  * {
  *   id, companyId, name, active,
  *   validFrom, validTo,            // promotional window, either side optional
- *   itemScope: 'ALL'|'ITEM'|'ITEMS'|'CATEGORY'|'BRAND', itemId, itemIds[], category, brand,
+ *   itemScope: 'ALL'|'ITEM'|'ITEMS'|'CATEGORY', itemId, itemIds[], category,
  *   customerScope: 'ALL'|'CUSTOMER'|'CUSTOMERS'|'GROUP', customerId, customerIds[], groupId,
  *   type: 'PERCENT'|'FIXED',       // FIXED = amount off per unit
  *   value,                          // used when there are no tiers
@@ -40,10 +40,6 @@ const matchesItem = (rule, item) => {
   if (scope === 'CATEGORY') {
     const cat = String(item?.category || '').trim().toLowerCase();
     return cat && cat === String(rule.category || '').trim().toLowerCase();
-  }
-  if (scope === 'BRAND') {
-    const brand = String(item?.brand || '').trim().toLowerCase();
-    return brand && brand === String(rule.brand || '').trim().toLowerCase();
   }
   return false;
 };

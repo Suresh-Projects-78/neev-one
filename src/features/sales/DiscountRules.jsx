@@ -20,7 +20,6 @@ const emptyForm = {
   itemId: '',
   itemIds: [],
   category: '',
-  brand: '',
   customerScope: 'ALL',
   customerId: '',
   customerIds: [],
@@ -39,8 +38,16 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
   const items = (db.items || []).filter((i) => i.companyId === companyId);
   const customers = (db.customers || []).filter((c) => c.companyId === companyId);
   const groups = (db.accountGroups || []).filter((g) => g.companyId === companyId && String(g.groupCategory || '') === 'Customer');
-  const categories = [...new Set(items.map((i) => String(i.category || '').trim()).filter(Boolean))];
-  const brands = [...new Set(items.map((i) => String(i.brand || '').trim()).filter(Boolean))];
+  // The master first, plus anything still typed on an item, so an older rule
+  // can always be re-picked.
+  const categories = [
+    ...new Set([
+      ...(db.itemCategories || [])
+        .filter((c) => c.companyId === currentCompany.id)
+        .map((c) => String(c.name || '').trim()),
+      ...items.map((i) => String(i.category || '').trim()),
+    ].filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b));
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -68,10 +75,6 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
     }
     if (form.itemScope === 'CATEGORY' && !form.category.trim()) {
       notify.error('Pick the item category this rule applies to.');
-      return;
-    }
-    if (form.itemScope === 'BRAND' && !form.brand.trim()) {
-      notify.error('Pick the brand this rule applies to.');
       return;
     }
     if (form.customerScope === 'CUSTOMER' && !form.customerId) {
@@ -102,7 +105,6 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           itemId: form.itemScope === 'ITEM' ? Number(form.itemId) : null,
           itemIds: form.itemScope === 'ITEMS' ? form.itemIds.map(Number) : [],
           category: form.itemScope === 'CATEGORY' ? form.category.trim() : null,
-          brand: form.itemScope === 'BRAND' ? form.brand.trim() : null,
           customerScope: form.customerScope,
           customerId: form.customerScope === 'CUSTOMER' ? Number(form.customerId) : null,
           customerIds: form.customerScope === 'CUSTOMERS' ? form.customerIds.map(Number) : [],
@@ -139,9 +141,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           ? `${(r.itemIds || []).length} items`
           : r.itemScope === 'CATEGORY'
             ? `category "${r.category}"`
-            : r.itemScope === 'BRAND'
-              ? `brand "${r.brand}"`
-              : 'all items';
+            : 'all items';
     const custPart =
       r.customerScope === 'CUSTOMER'
         ? getCustomerDisplayName(customers.find((c) => Number(c.id) === Number(r.customerId))) || 'customer'
@@ -204,7 +204,6 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                 <option value="ITEM">One item</option>
                 <option value="ITEMS">Multiple items</option>
                 <option value="CATEGORY">A category</option>
-                <option value="BRAND">A brand</option>
               </select>
             </div>
             {form.itemScope === 'ITEM' ? (
@@ -249,20 +248,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                   ))}
                 </select>
                 {categories.length === 0 ? (
-                  <div className="text-xs ui-muted mt-1">No categories yet — set a Category on items first.</div>
-                ) : null}
-              </div>
-            ) : form.itemScope === 'BRAND' ? (
-              <div>
-                <label className="ui-label">Brand</label>
-                <select value={form.brand} onChange={set('brand')} className="ui-select w-full px-3 py-2">
-                  <option value="">Select brand</option>
-                  {brands.map((b) => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
-                {brands.length === 0 ? (
-                  <div className="text-xs ui-muted mt-1">No brands yet — set a Brand on items first.</div>
+                  <div className="text-xs ui-muted mt-1">No categories yet — add them under Master Data → Item Categories.</div>
                 ) : null}
               </div>
             ) : (

@@ -23,20 +23,54 @@ export const isTracked = (item) => {
 
 export const needsExpiry = (item) => String(item?.trackingType || '') === 'BATCH_EXPIRY';
 
-/** Qty consumed per batch id, from non-cancelled, non-draft invoices. */
+/**
+ * Qty consumed per batch id.
+ *
+ * Sales consume a batch outright. A stock transfer consumes it only while the
+ * goods are in flight — once the receiving warehouse approves them the units
+ * exist again, just somewhere else, and the batch is whole. Units written off
+ * as a loss on receipt never come back.
+ */
 export function consumedByBatch(db, companyId, { excludeInvoiceId } = {}) {
   const map = new Map();
+  const take = (batchId, qty) => {
+    if (batchId == null || batchId === '') return;
+    if (!(qty > 0)) return;
+    const k = String(batchId);
+    map.set(k, (map.get(k) || 0) + qty);
+  };
+
   for (const inv of db?.invoices || []) {
     if (inv.companyId !== companyId) continue;
     const st = String(inv.status || '').toLowerCase();
     if (st === 'cancelled' || st === 'draft') continue;
     if (excludeInvoiceId != null && Number(inv.id) === Number(excludeInvoiceId)) continue;
     for (const l of inv.items || []) {
-      if (l.batchId == null || l.batchId === '') continue;
-      const k = String(l.batchId);
-      map.set(k, (map.get(k) || 0) + num(l.quantity));
+      take(l.batchId, num(l.quantity));
     }
   }
+
+  const IN_FLIGHT = new Set(['Transferred Out', 'In Transit']);
+  const LANDED = new Set(['Transfer In', 'Received', 'Short Received', 'Closed', 'Approved']);
+  for (const t of db?.stockTransfers || []) {
+    if (Number(t?.companyId) !== Number(companyId)) continue;
+    const status = String(t?.status || '').trim();
+    const inFlight = IN_FLIGHT.has(status);
+    const landed = LANDED.has(status);
+    if (!inFlight && !landed) continue;
+    for (const l of t.lines || []) {
+      const sent = num(l?.qty ?? l?.quantity);
+      if (inFlight) {
+        take(l?.batchId, sent);
+        continue;
+      }
+      // Landed: only what never arrived and was written off is gone.
+      if (String(t?.mismatchResolution || '') !== 'LOSS') continue;
+      const received = l?.receivedQty === undefined || l?.receivedQty === null ? sent : num(l.receivedQty);
+      take(l?.batchId, sent - received);
+    }
+  }
+
   return map;
 }
 

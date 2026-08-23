@@ -2087,7 +2087,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
 const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
   const items = db.items.filter((i) => i.companyId === currentCompany.id);
-  const itemSearch = useListSearch(items, ['code', 'name', 'hsnSac', 'category', 'brand', 'barcode']);
+  const itemSearch = useListSearch(items, ['code', 'name', 'hsnSac', 'category', 'barcode']);
   const itemSearchFilters = useColumnFilters();
   const shownItems = itemSearchFilters.applyFilters(itemSearch.filtered, {
     code: (r) => r.code,
@@ -2177,7 +2177,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
       <ListToolbar
         search={itemSearch.query}
         onSearch={itemSearch.setQuery}
-        placeholder="Search items (code, name, HSN, brand, barcode)"
+        placeholder="Search items (code, name, HSN, category, barcode)"
         count={shownItems.length}
         countLabel="items"
         onExport={() =>
@@ -2189,7 +2189,6 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
               { key: 'name', label: 'Name' },
               { key: 'type', label: 'Type' },
               { key: 'category', label: 'Category' },
-              { key: 'brand', label: 'Brand' },
               { key: 'hsnSac', label: 'HSN/SAC' },
               { key: 'gstRate', label: 'GST %', value: (r) => Number(r.gstRate || 0) },
               { key: 'salePrice', label: 'Sale Price', value: (r) => Number(r.salePrice || 0) },
@@ -2268,6 +2267,8 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
   );
 };
 
+const NEW_CATEGORY_OPTION = '__new_item_category__';
+
 const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) => {
   const isEdit = Boolean(initialData);
 
@@ -2278,7 +2279,6 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         name: String(initialData.name || ''),
         description: String(initialData.description || ''),
         category: String(initialData.category || ''),
-        brand: String(initialData.brand || ''),
         type: initialData.type || 'Goods',
         unit: initialData.unit || 'Pcs',
         hsnSac: String(initialData.hsnSac || ''),
@@ -2302,7 +2302,6 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       name: '',
       description: '',
       category: '',
-      brand: '',
       type: 'Goods',
       unit: 'Pcs',
       hsnSac: '',
@@ -2316,6 +2315,50 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       openingQty: 0,
     };
   });
+
+  // Categories come from the master; an item that still carries a hand-typed
+  // one keeps it, and a new one can be added without leaving this form.
+  // The form opens with a snapshot of the book, so a category added from here
+  // is remembered locally too — otherwise it would read as "not in the master"
+  // until the form is reopened.
+  const [addedCategories, setAddedCategories] = useState([]);
+  const categoryNames = useMemo(() => {
+    const fromMaster = (db.itemCategories || [])
+      .filter((c) => c.companyId === currentCompany.id)
+      .map((c) => String(c.name || '').trim())
+      .filter(Boolean);
+    return [...new Set([...fromMaster, ...addedCategories])].sort((a, b) => a.localeCompare(b));
+  }, [db.itemCategories, currentCompany.id, addedCategories]);
+
+  const [newCategoryOpen, setNewCategoryOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  const saveNewCategory = () => {
+    const name = String(newCategoryName || '').trim();
+    if (!name) {
+      notify.error('Category name is required');
+      return;
+    }
+    const exists = (db.itemCategories || []).some(
+      (c) => c.companyId === currentCompany.id && String(c.name || '').trim().toLowerCase() === name.toLowerCase()
+    );
+    if (!exists) {
+      const nextId = Math.max(0, ...(db.itemCategories || []).map((c) => Number(c.id) || 0)) + 1;
+      setDb((prev) => ({
+        ...prev,
+        itemCategories: [...(prev.itemCategories || []), { id: nextId, companyId: currentCompany.id, name, description: '' }],
+      }));
+    }
+    setAddedCategories((prev) => (prev.includes(name) ? prev : [...prev, name]));
+    setFormData((prev) => ({ ...prev, category: name }));
+    setNewCategoryName('');
+    setNewCategoryOpen(false);
+    notify.success(`Category "${name}" added.`);
+  };
+
+  const trackingValue = String(formData.trackingType || 'NONE');
+  const batchEnabled = trackingValue === 'BATCH' || trackingValue === 'BATCH_EXPIRY';
+  const expiryEnabled = trackingValue === 'BATCH_EXPIRY';
 
   const uoms = (db.uoms || [])
     .filter((u) => u.companyId === currentCompany.id)
@@ -2401,7 +2444,6 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         name,
         description: String(formData.description || '').trim(),
         category: String(formData.category || '').trim(),
-        brand: String(formData.brand || '').trim(),
         type: formData.type,
         unit: formData.unit,
         hsnSac: String(formData.hsnSac || ''),
@@ -2434,7 +2476,6 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       name,
       description: String(formData.description || '').trim(),
       category: String(formData.category || '').trim(),
-      brand: String(formData.brand || '').trim(),
       type: formData.type,
       unit: formData.unit,
       hsnSac: String(formData.hsnSac || ''),
@@ -2487,37 +2528,60 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
             placeholder="Shown on documents alongside the item name"
           />
         </div>
-        <div>
+        <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">Category</label>
-          <input
-            type="text"
-            list="itemform-categories"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            className="ui-input w-full px-3 py-2"
-            placeholder="For category-level discounts"
-          />
-          <datalist id="itemform-categories">
-            {[...new Set((db.items || []).filter((i) => i.companyId === currentCompany.id).map((i) => String(i.category || '').trim()).filter(Boolean))].map((c) => (
-              <option key={c} value={c} />
+          <select
+            value={categoryNames.includes(formData.category) ? formData.category : formData.category ? formData.category : ''}
+            onChange={(e) => {
+              if (e.target.value === NEW_CATEGORY_OPTION) {
+                setNewCategoryOpen(true);
+                return;
+              }
+              setFormData({ ...formData, category: e.target.value });
+            }}
+            className="ui-select w-full px-3 py-2"
+          >
+            <option value="">No category</option>
+            {categoryNames.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
-          </datalist>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Brand</label>
-          <input
-            type="text"
-            list="itemform-brands"
-            value={formData.brand || ''}
-            onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-            className="ui-input w-full px-3 py-2"
-            placeholder="For brand-level discounts"
-          />
-          <datalist id="itemform-brands">
-            {[...new Set((db.items || []).filter((i) => i.companyId === currentCompany.id).map((i) => String(i.brand || '').trim()).filter(Boolean))].map((b) => (
-              <option key={b} value={b} />
-            ))}
-          </datalist>
+            {formData.category && !categoryNames.includes(formData.category) ? (
+              <option value={formData.category}>{formData.category} (not in the master)</option>
+            ) : null}
+            <option value={NEW_CATEGORY_OPTION}>+ Create a new category…</option>
+          </select>
+          <div className="text-xs ui-muted mt-1">Maintained under Master Data → Item Categories.</div>
+
+          {newCategoryOpen ? (
+            <div className="mt-2 rounded-lg border p-3 ui-sunken space-y-2">
+              <label className="block text-sm font-medium">New category</label>
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                className="ui-input w-full px-3 py-2"
+                placeholder="e.g. Beverages"
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewCategoryOpen(false);
+                    setNewCategoryName('');
+                  }}
+                  className="ui-btn ui-btn-secondary !h-8 text-xs"
+                >
+                  Cancel
+                </button>
+                <button type="button" onClick={saveNewCategory} className="ui-btn ui-btn-primary !h-8 text-xs">
+                  Add category
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Type</label>
@@ -2679,17 +2743,41 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
           />
         </div>
         {String(formData.type || '').toLowerCase() === 'goods' ? (
-          <div>
-            <label className="block text-sm font-medium mb-1">Tracking</label>
-            <select
-              value={formData.trackingType}
-              onChange={(e) => setFormData({ ...formData, trackingType: e.target.value })}
-              className="ui-select w-full px-3 py-2"
-            >
-              <option value="NONE">None</option>
-              <option value="BATCH">Batch (batch no + mfg date)</option>
-              <option value="BATCH_EXPIRY">Batch + Expiry</option>
-            </select>
+          <div className="col-span-2 rounded-lg border p-3 space-y-2">
+            <div className="text-sm font-medium">Batch &amp; expiry</div>
+            <label className="flex items-start gap-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="ui-checkbox mt-0.5"
+                checked={batchEnabled}
+                onChange={(e) =>
+                  setFormData({ ...formData, trackingType: e.target.checked ? 'BATCH' : 'NONE' })
+                }
+              />
+              <span>
+                Track batches
+                <span className="block text-xs ui-muted">
+                  Purchases, sales and transfers of this item will ask for a batch number.
+                </span>
+              </span>
+            </label>
+            <label className={`flex items-start gap-2 text-sm ${batchEnabled ? 'cursor-pointer' : 'ui-subtle cursor-not-allowed'}`}>
+              <input
+                type="checkbox"
+                className="ui-checkbox mt-0.5"
+                checked={expiryEnabled}
+                disabled={!batchEnabled}
+                onChange={(e) =>
+                  setFormData({ ...formData, trackingType: e.target.checked ? 'BATCH_EXPIRY' : 'BATCH' })
+                }
+              />
+              <span>
+                Track expiry
+                <span className="block text-xs ui-muted">
+                  Each batch also carries an expiry date, and the oldest is used first.
+                </span>
+              </span>
+            </label>
           </div>
         ) : (
           <div />
@@ -7026,6 +7114,289 @@ const UomsList = ({ db, setDb, currentCompany }) => {
   );
 };
 
+/**
+ * Item categories — the master behind the Category field on an item.
+ *
+ * Categories used to be typed free-hand on each item, so the same shelf could
+ * be spelled three ways and a category-level discount would miss two of them.
+ * They live here now; the item form picks from this list (and can add to it).
+ * Categories already typed on items are imported once, so nothing is lost.
+ */
+const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
+  const categories = (db.itemCategories || [])
+    .filter((c) => c.companyId === currentCompany.id)
+    .slice()
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+
+  const items = (db.items || []).filter((i) => i.companyId === currentCompany.id);
+
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [editing, setEditing] = useState(null); // { id, name, description }
+
+  const catSearch = useListSearch(categories, ['name', 'description']);
+  const catFilters = useColumnFilters();
+
+  const countFor = (name) => {
+    const key = String(name || '').trim().toLowerCase();
+    return items.filter((i) => String(i.category || '').trim().toLowerCase() === key).length;
+  };
+
+  const rows = catFilters.apply(catSearch.filtered, {
+    name: (c) => c.name,
+    description: (c) => c.description || '',
+    items: (c) => countFor(c.name),
+  });
+
+  // One-time import of whatever was already typed on items.
+  const orphans = [
+    ...new Set(
+      items
+        .map((i) => String(i.category || '').trim())
+        .filter(Boolean)
+        .filter((name) => !categories.some((c) => String(c.name || '').trim().toLowerCase() === name.toLowerCase()))
+    ),
+  ];
+
+  const importOrphans = () => {
+    if (!orphans.length) return;
+    let nextId = Math.max(0, ...(db.itemCategories || []).map((c) => Number(c.id) || 0));
+    const added = orphans.map((name) => ({ id: ++nextId, companyId: currentCompany.id, name, description: '' }));
+    setDb({ ...db, itemCategories: [...(db.itemCategories || []), ...added] });
+    notify.success(`${added.length} categor${added.length === 1 ? 'y' : 'ies'} imported from items.`);
+  };
+
+  const addCategory = () => {
+    const name = String(newName || '').trim();
+    if (!name) {
+      notify.error('Category name is required.');
+      return;
+    }
+    if (categories.some((c) => String(c.name || '').trim().toLowerCase() === name.toLowerCase())) {
+      notify.error('That category already exists.');
+      return;
+    }
+    const nextId = Math.max(0, ...(db.itemCategories || []).map((c) => Number(c.id) || 0)) + 1;
+    setDb({
+      ...db,
+      itemCategories: [
+        ...(db.itemCategories || []),
+        { id: nextId, companyId: currentCompany.id, name, description: String(newDescription || '').trim() },
+      ],
+    });
+    setNewName('');
+    setNewDescription('');
+    notify.success(`Category "${name}" created.`);
+  };
+
+  const saveEdit = () => {
+    const name = String(editing?.name || '').trim();
+    if (!name) {
+      notify.error('Category name is required.');
+      return;
+    }
+    const clash = categories.some(
+      (c) => Number(c.id) !== Number(editing.id) && String(c.name || '').trim().toLowerCase() === name.toLowerCase()
+    );
+    if (clash) {
+      notify.error('Another category already has that name.');
+      return;
+    }
+    const before = categories.find((c) => Number(c.id) === Number(editing.id));
+    const oldName = String(before?.name || '').trim();
+
+    setDb({
+      ...db,
+      itemCategories: (db.itemCategories || []).map((c) =>
+        Number(c.id) === Number(editing.id) ? { ...c, name, description: String(editing.description || '').trim() } : c
+      ),
+      // Items carry the category by name, so a rename has to follow through.
+      items: (db.items || []).map((i) =>
+        i.companyId === currentCompany.id && String(i.category || '').trim().toLowerCase() === oldName.toLowerCase()
+          ? { ...i, category: name }
+          : i
+      ),
+    });
+    setEditing(null);
+    notify.success('Category updated.');
+  };
+
+  const deleteCategory = async (cat) => {
+    const used = countFor(cat.name);
+    const ok = await confirmDialog({
+      title: 'Delete category',
+      message: used
+        ? `${used} item(s) use "${cat.name}". They keep the name on the item, but it will no longer be offered here.`
+        : `Delete category "${cat.name}"?`,
+      confirmLabel: 'Yes, delete',
+    });
+    if (!ok) return;
+    setDb({ ...db, itemCategories: (db.itemCategories || []).filter((c) => Number(c.id) !== Number(cat.id)) });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center gap-3 flex-wrap">
+        <div>
+          <h3 className="ui-title text-lg">Item Categories</h3>
+          <div className="text-sm ui-muted">The list every item picks its category from.</div>
+        </div>
+      </div>
+
+      {orphans.length ? (
+        <div className="rounded-xl border p-4 bg-[rgb(var(--warn-soft))] flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-sm text-[rgb(var(--warn-ink))]">
+            {orphans.length} categor{orphans.length === 1 ? 'y is' : 'ies are'} typed on items but not in this master:{' '}
+            {orphans.slice(0, 5).join(', ')}
+            {orphans.length > 5 ? '…' : ''}
+          </div>
+          <button type="button" onClick={importOrphans} className="ui-btn ui-btn-primary !h-8 text-xs">
+            Import them
+          </button>
+        </div>
+      ) : null}
+
+      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">Category name</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="ui-input w-full px-3 py-2"
+              placeholder="e.g. Beverages, Spare Parts"
+            />
+          </div>
+          <div className="md:col-span-3">
+            <label className="block text-sm font-medium mb-1">Description</label>
+            <input
+              type="text"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              className="ui-input w-full px-3 py-2"
+              placeholder="Optional"
+            />
+          </div>
+          <div className="flex items-end">
+            <button type="button" onClick={addCategory} className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg">
+              Add
+            </button>
+          </div>
+        </div>
+
+        <ListToolbar
+          search={catSearch.query}
+          onSearch={catSearch.setQuery}
+          placeholder="Search categories (name, description)"
+          count={rows.length}
+          countLabel="categories"
+          onExport={() =>
+            exportRows({
+              fileName: `ItemCategories_${currentCompany?.name || 'company'}`,
+              label: 'categor(y/ies)',
+              columns: [
+                { key: 'name', label: 'Category' },
+                { key: 'description', label: 'Description' },
+                { key: 'items', label: 'Items', value: (c) => countFor(c.name) },
+              ],
+              rows,
+            })
+          }
+        />
+
+        <div className="border rounded-lg overflow-hidden">
+          <table className="ui-table w-full">
+            <thead className="ui-sunken border-b">
+              <tr>
+                <ColumnHeader label="Category" col="name" state={catFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Description" col="description" state={catFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Items" col="items" state={catFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
+                <th className="px-4 py-2.5"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[rgb(var(--border))]">
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="px-6 py-10 text-center ui-muted">
+                    No categories yet
+                  </td>
+                </tr>
+              ) : (
+                rows.map((c) => {
+                  const isEditing = Number(editing?.id) === Number(c.id);
+                  return (
+                    <tr key={c.id} className="ui-hover-sunken">
+                      <td className="px-4 py-2.5 ui-col-entity">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editing.name}
+                            onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                            className="ui-input w-full px-2 !h-8"
+                          />
+                        ) : (
+                          <span className="font-medium">{c.name}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 ui-col-meta">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editing.description}
+                            onChange={(e) => setEditing({ ...editing, description: e.target.value })}
+                            className="ui-input w-full px-2 !h-8"
+                          />
+                        ) : (
+                          <span className="ui-muted">{c.description || '—'}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right ui-num">{countFor(c.name)}</td>
+                      <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                        {isEditing ? (
+                          <>
+                            <button type="button" onClick={saveEdit} className="ui-btn ui-btn-primary !h-8 text-xs mr-2">
+                              Save
+                            </button>
+                            <button type="button" onClick={() => setEditing(null)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setEditing({ id: c.id, name: c.name, description: c.description || '' })}
+                              className="ui-icon-btn mr-1"
+                              aria-label={`Edit ${c.name}`}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => deleteCategory(c)}
+                              className="ui-icon-btn text-[rgb(var(--neg))]"
+                              aria-label={`Delete ${c.name}`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="text-sm ui-muted">Items pick their Category from this master, and discount rules match on it.</div>
+      </div>
+    </div>
+  );
+};
+
 const GstRatesList = ({ db, setDb, currentCompany }) => {
   const gstRates = (db.gstRates || [])
     .filter((r) => r.companyId === currentCompany.id)
@@ -10966,6 +11337,7 @@ const AppShell = () => {
           { key: 'companies', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
           { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
           { key: 'uoms', label: 'Units', icon: Boxes, perm: 'MASTERS::Items::VIEW' },
+          { key: 'itemCategories', label: 'Item Categories', icon: Tags, perm: 'MASTERS::Items::VIEW' },
           { key: 'priceLists', label: 'Price Lists', icon: Tags, perm: 'MASTERS::Items::VIEW', feature: 'priceLists' },
           { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
           { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
@@ -12086,6 +12458,8 @@ const AppShell = () => {
         return <StockAdjustment db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'uoms':
         return <UomsList db={db} setDb={setDb} currentCompany={currentCompany} />;
+      case 'itemCategories':
+        return <ItemCategoriesList db={db} setDb={setDb} currentCompany={currentCompany} />;
       case 'vendors':
         return <VendorsList db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} />;
       case 'mdm':
