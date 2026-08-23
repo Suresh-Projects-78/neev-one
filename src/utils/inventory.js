@@ -142,9 +142,20 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
   // is simply stock that left and never arrived; returning it to source
   // instead cancels the outward leg down to the received quantity.
   //
-  // 'Approved' is the legacy single-step status: both legs, full quantity.
-  const OUT_STATUSES = new Set(['In Transit', 'Received', 'Short Received', 'Closed', 'Approved']);
-  const IN_STATUSES = new Set(['Received', 'Short Received', 'Closed', 'Approved']);
+  // Statuses carry history: 'Transferred Out' / 'Transfer In' are current,
+  // 'In Transit' / 'Received' are what earlier transfers were saved as, and
+  // 'Approved' is the legacy single-step status (both legs, full quantity).
+  // A rejected consignment goes back to the sender, so neither leg counts.
+  const OUT_STATUSES = new Set([
+    'Transferred Out',
+    'In Transit',
+    'Transfer In',
+    'Received',
+    'Short Received',
+    'Closed',
+    'Approved',
+  ]);
+  const IN_STATUSES = new Set(['Transfer In', 'Received', 'Short Received', 'Closed', 'Approved']);
 
   for (const t of safeArray(db?.stockTransfers)) {
     if (Number(t?.companyId) !== Number(companyId)) continue;

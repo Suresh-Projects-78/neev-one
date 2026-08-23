@@ -10758,13 +10758,20 @@ const AppShell = () => {
       });
     };
 
+    // A transfer belongs to both ends of it: the branch that sends it and the
+    // branch that has to approve it. Filtering on the sender alone would hide
+    // an inbound consignment from the only people who can receive it.
     const filterTransfers = (rows) => {
       const list = Array.isArray(rows) ? rows : [];
       return list.filter((t) => {
         if (Number(t?.companyId) !== Number(currentCompany?.id)) return true;
         const sourceBranchId = String(t?.sourceBranchId || '').trim();
-        if (!sourceBranchId) return false;
-        return allowedBranchIdSet.has(sourceBranchId);
+        const targetBranchId = String(t?.targetBranchId || '').trim();
+        if (!sourceBranchId && !targetBranchId) return false;
+        return (
+          (sourceBranchId && allowedBranchIdSet.has(sourceBranchId)) ||
+          (targetBranchId && allowedBranchIdSet.has(targetBranchId))
+        );
       });
     };
 
@@ -11912,6 +11919,8 @@ const AppShell = () => {
             branches={branchesForUser}
             warehouses={warehousesForUser}
             mode={active === 'branchTransfers' ? 'branch' : 'warehouse'}
+            activeWarehouseId={activeWarehouseId}
+            activeBranchId={activeBranchId}
             onNew={() => setStockTransferEditor({ open: true, initial: null })}
             onEdit={(initial) => setStockTransferEditor({ open: true, initial })}
           />
@@ -12261,7 +12270,7 @@ const AppShell = () => {
       default:
         return <SalesOverview db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} warehouses={warehousesForUser} />;
     }
-  }, [active, billEditor, branchesForUser, creditNoteEditor, currentCompany, dbForUser, debitNoteEditor, estimateEditor, invoiceEditor, journalEditor, openLedger, paymentEditor, receiptEditor, ledgerNav, stockTransferEditor, warehousesForUser, activeWarehouseId]);
+  }, [active, billEditor, branchesForUser, creditNoteEditor, currentCompany, dbForUser, debitNoteEditor, estimateEditor, invoiceEditor, journalEditor, openLedger, paymentEditor, receiptEditor, ledgerNav, stockTransferEditor, warehousesForUser, activeWarehouseId, activeBranchId]);
 
   if (!isAuthenticated) {
     return (

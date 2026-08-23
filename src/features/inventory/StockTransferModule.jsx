@@ -36,13 +36,59 @@ const getWarehouseLabel = (w) => {
   return name || `Warehouse ${String(w.id)}`;
 };
 
+/**
+ * A transfer moves in two steps and each step belongs to one side of it.
+ *
+ *   Draft            the sender is still writing it
+ *   Transferred Out  the sender submitted it — stock has left the source and
+ *                    the receiver sees it as Pending Approval
+ *   Transfer In      the receiver counted the goods and accepted them, so the
+ *                    stock lands (Short Received when the count disagrees)
+ *
+ * Older transfers were saved with the names on the right, so read them through
+ * `canonicalStatus` and write only the names on the left.
+ */
+export const TRANSFER_STATUS = {
+  DRAFT: 'Draft',
+  OUT: 'Transferred Out',
+  IN: 'Transfer In',
+  SHORT: 'Short Received',
+  CLOSED: 'Closed',
+  REJECTED: 'Rejected',
+  CANCELLED: 'Cancelled',
+};
+
+const LEGACY_STATUS = {
+  // Submitted never moved any stock, so it is really still a draft.
+  Submitted: TRANSFER_STATUS.DRAFT,
+  'In Transit': TRANSFER_STATUS.OUT,
+  Received: TRANSFER_STATUS.IN,
+  Approved: TRANSFER_STATUS.IN,
+};
+
+export const canonicalStatus = (transferOrStatus) => {
+  const raw =
+    typeof transferOrStatus === 'string' ? transferOrStatus : String(transferOrStatus?.status || '');
+  const s = raw.trim();
+  if (!s) return TRANSFER_STATUS.DRAFT;
+  return LEGACY_STATUS[s] || s;
+};
+
+/** What the transfer is called from where the user is standing. */
+export const statusForViewer = (transfer, { atTarget = false } = {}) => {
+  const s = canonicalStatus(transfer);
+  if (s === TRANSFER_STATUS.OUT && atTarget) return 'Pending Approval';
+  return s;
+};
+
 const getStatusPillClass = (status) => {
   const s = String(status || '').trim();
-  if (s === 'Approved' || s === 'Received' || s === 'Closed') return 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]';
+  if (s === 'Approved' || s === 'Received' || s === 'Transfer In' || s === 'Closed') return 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]';
   if (s === 'Rejected') return 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]';
   if (s === 'Short Received') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
   if (s === 'Cancelled') return 'ui-sunken ui-fg';
-  if (s === 'In Transit') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
+  if (s === 'Pending Approval') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
+  if (s === 'Transferred Out' || s === 'In Transit') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
   if (s === 'Submitted') return 'bg-stone-100 ui-fg';
   return 'ui-sunken ui-fg';
 };
@@ -398,7 +444,7 @@ export const StockTransferEditor = ({
     }
   };
 
-  const readOnly = String(form.status || '').trim() !== 'Draft';
+  const readOnly = canonicalStatus(form.status) !== TRANSFER_STATUS.DRAFT;
 
   const numberingBranchId = normalizeId(form.sourceBranchId) || null;
   const transferDocSettings = getDocSettings(db, currentCompany, { branchId: numberingBranchId });
@@ -483,7 +529,7 @@ export const StockTransferEditor = ({
               disabled={readOnly}
             />
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(String(form.status || '').trim() || 'Draft')}`}>{String(form.status || '').trim() || 'Draft'}</span>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(canonicalStatus(form.status))}`}>{canonicalStatus(form.status)}</span>
         </div>
       </div>
 
@@ -768,7 +814,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
   const branchById = useMemo(() => new Map(safeArray(branches).map((b) => [normalizeId(b?.id), b])), [branches]);
   const warehouseById = useMemo(() => new Map(safeArray(warehouses).map((w) => [normalizeId(w?.id), w])), [warehouses]);
 
-  const status = String(transfer?.status || '').trim() || 'Draft';
+  const status = canonicalStatus(transfer);
 
   const sb = branchById.get(normalizeId(transfer?.sourceBranchId)) || null;
   const tb = branchById.get(normalizeId(transfer?.targetBranchId)) || null;
@@ -795,12 +841,11 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
     };
   });
 
-  const canSubmit = status === 'Draft';
-  const canDispatch = status === 'Submitted';
-  const canReject = status === 'Submitted';
-  const canReceive = status === 'In Transit';
-  const canResolve = status === 'Short Received';
-  const canCancel = status === 'Draft' || status === 'Submitted';
+  const canSubmit = status === TRANSFER_STATUS.DRAFT;
+  const canReceive = status === TRANSFER_STATUS.OUT;
+  const canReject = status === TRANSFER_STATUS.OUT;
+  const canResolve = status === TRANSFER_STATUS.SHORT;
+  const canCancel = status === TRANSFER_STATUS.DRAFT;
   const gaps = mismatchLines(transfer);
 
   return (
@@ -897,19 +942,9 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           <button
             type="button"
             onClick={() => onAction?.('submit')}
-            className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary "
+            className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
           >
-            Submit
-          </button>
-        ) : null}
-
-        {canDispatch ? (
-          <button
-            type="button"
-            onClick={() => onAction?.('dispatch')}
-            className="px-3 py-2 rounded-lg text-sm bg-green-600 text-white hover:bg-green-700 flex items-center gap-2"
-          >
-            <Check size={16} /> Transfer Out (dispatch)
+            <Check size={16} /> Submit — Transfer Out
           </button>
         ) : null}
 
@@ -919,7 +954,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
             onClick={() => onAction?.('receive')}
             className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
           >
-            <Check size={16} /> Transfer In (receive)
+            <Check size={16} /> Approve — Transfer In
           </button>
         ) : null}
 
@@ -1039,7 +1074,19 @@ const TransferDocumentView = ({ transfer, branches, warehouses, db, currentCompa
   );
 };
 
-export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branches = [], warehouses = [], mode = 'warehouse', onNew, onEdit }) => {
+export const StockTransfersList = ({
+  db,
+  setDb,
+  currentCompany,
+  openModal,
+  branches = [],
+  warehouses = [],
+  mode = 'warehouse',
+  activeWarehouseId: activeWarehouseIdProp,
+  activeBranchId: activeBranchIdProp,
+  onNew,
+  onEdit,
+}) => {
   const companyId = currentCompany?.id;
 
   const [searchText, setSearchText] = useState('');
@@ -1059,9 +1106,12 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
     return safeArray(db?.stockTransfers)
       .filter((t) => Number(t?.companyId) === Number(companyId))
       .filter((t) => {
-        const sb = getBranchIdFromWarehouseId(t?.sourceWarehouseId);
-        const tb = getBranchIdFromWarehouseId(t?.targetWarehouseId);
-        if (!sb || !tb) return true;
+        // What the transfer recorded at the time beats a warehouse lookup: the
+        // warehouse list is scoped to the branch in the header, so a user
+        // standing in another branch cannot resolve these ids at all.
+        const sb = normalizeId(t?.sourceBranchId) || getBranchIdFromWarehouseId(t?.sourceWarehouseId);
+        const tb = normalizeId(t?.targetBranchId) || getBranchIdFromWarehouseId(t?.targetWarehouseId);
+        if (!sb || !tb) return mode !== 'branch';
         const isBranchTransfer = sb !== tb;
         if (mode === 'branch') return isBranchTransfer;
         return !isBranchTransfer;
@@ -1074,6 +1124,32 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
         return String(a?.number || '').localeCompare(String(b?.number || ''));
       });
   }, [db?.stockTransfers, companyId, mode, warehouseById]);
+
+  // Where the user is standing decides what a transfer is to them: the sender
+  // dispatches it, the receiver approves it. With no location picked (the "All
+  // warehouses" view) both sides are open, so a supervisor is not locked out.
+  const activeWarehouseId = normalizeId(
+    activeWarehouseIdProp !== undefined ? activeWarehouseIdProp : localStorage.getItem('activeWarehouseId') || ''
+  );
+  const activeBranchId = normalizeId(
+    activeBranchIdProp !== undefined
+      ? activeBranchIdProp
+      : localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || ''
+  );
+
+  const isAtSource = (t) =>
+    mode === 'branch'
+      ? !activeBranchId || normalizeId(t?.sourceBranchId) === activeBranchId
+      : !activeWarehouseId || normalizeId(t?.sourceWarehouseId) === activeWarehouseId;
+  const isAtTarget = (t) =>
+    mode === 'branch'
+      ? !activeBranchId || normalizeId(t?.targetBranchId) === activeBranchId
+      : !activeWarehouseId || normalizeId(t?.targetWarehouseId) === activeWarehouseId;
+
+  const locationLabel = (t, which) =>
+    mode === 'branch'
+      ? String((which === 'source' ? t?.sourceBranchName : t?.targetBranchName) || '').trim() || 'that branch'
+      : String((which === 'source' ? t?.sourceWarehouseName : t?.targetWarehouseName) || '').trim() || 'that warehouse';
 
   const transferColFilters = useColumnFilters();
   const filteredTransfers = useMemo(() => {
@@ -1094,17 +1170,18 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
         .filter((t) => matchesSearch(t))
         .filter((t) => {
           if (!wantStatus) return true;
-          return String(t?.status || '').trim() === wantStatus;
+          return canonicalStatus(t) === wantStatus;
         }),
       {
         number: (t) => t.number,
         date: (t) => t.date,
         from: (t) => [t.sourceBranchName, t.sourceWarehouseName].filter(Boolean).join(' / '),
         to: (t) => [t.targetBranchName, t.targetWarehouseName].filter(Boolean).join(' / '),
-        status: (t) => t.status,
+        status: (t) => statusForViewer(t, { atTarget: isAtTarget(t) }),
       }
     );
-  }, [searchText, statusFilter, transfers, transferColFilters.applyFilters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText, statusFilter, transfers, transferColFilters.applyFilters, activeWarehouseId, activeBranchId]);
 
   useEffect(() => {
     if (!openMenu?.id) return;
@@ -1132,14 +1209,10 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
   const openCreate = () => onNew?.();
   const openEdit = (transfer) => onEdit?.(transfer);
 
-  // "Under warehouse — pending transfers should display": what is in transit
-  // toward the location the user is standing in.
-  const activeWarehouseId = normalizeId(localStorage.getItem('activeWarehouseId') || '');
-  const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
   const pendingIn = useMemo(() => {
     return safeArray(db?.stockTransfers)
       .filter((t) => Number(t?.companyId) === Number(companyId))
-      .filter((t) => String(t?.status || '').trim() === 'In Transit')
+      .filter((t) => canonicalStatus(t) === TRANSFER_STATUS.OUT)
       .filter((t) =>
         mode === 'branch'
           ? !activeBranchId || normalizeId(t?.targetBranchId) === activeBranchId
@@ -1199,7 +1272,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
           const short = lines.some((l) => Math.abs(toNum(l.receivedQty) - toNum(l.qty)) > 0.0001);
           patchTransfer(transfer, {
             lines,
-            status: short ? 'Short Received' : 'Received',
+            status: short ? TRANSFER_STATUS.SHORT : TRANSFER_STATUS.IN,
             receivedAt: new Date().toISOString(),
             receiptNote: String(note || '').trim(),
           });
@@ -1207,7 +1280,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
           notify[short ? 'info' : 'success'](
             short
               ? 'Receipt recorded with a quantity mismatch — resolve it to close the transfer.'
-              : `Transfer ${transfer?.number || ''} received in full.`
+              : `Transfer ${transfer?.number || ''} approved — the stock is now in this ${mode === 'branch' ? 'branch' : 'warehouse'}.`
           );
         }}
       />,
@@ -1225,7 +1298,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
       confirmLabel: 'Yes, continue',
     });
     if (!ok) return;
-    patchTransfer(transfer, { status: 'Closed', mismatchResolution: asLoss ? 'LOSS' : 'RETURN', resolvedAt: new Date().toISOString() });
+    patchTransfer(transfer, { status: TRANSFER_STATUS.CLOSED, mismatchResolution: asLoss ? 'LOSS' : 'RETURN', resolvedAt: new Date().toISOString() });
     notify.success(asLoss ? 'Shortfall written off as a loss.' : 'Shortfall returned to the source warehouse.');
   };
 
@@ -1268,7 +1341,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
       th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}th{background:#f5f5f5}.r{text-align:right}
       .meta{display:flex;gap:32px;margin-top:8px}.meta div{font-size:12px}</style></head><body>
       <h1>${esc(mode === 'branch' ? 'Branch Transfer' : 'Warehouse Transfer')} — ${esc(transfer?.number || '')}</h1>
-      <div>Status: ${esc(transfer?.status || 'Draft')} · Date: ${esc(transfer?.date || '')}</div>
+      <div>Status: ${esc(canonicalStatus(transfer))} · Date: ${esc(transfer?.date || '')}</div>
       <div class="meta">
         <div><strong>From</strong><br>${esc(transfer?.sourceBranchName || '')}<br>${esc(transfer?.sourceWarehouseName || '')}</div>
         <div><strong>To</strong><br>${esc(transfer?.targetBranchName || '')}<br>${esc(transfer?.targetWarehouseName || '')}</div>
@@ -1282,7 +1355,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
     w.print();
   };
 
-  const approveWithStockCheck = async (transfer) => {
+  const submitTransferOut = async (transfer) => {
     const sourceWarehouseId = normalizeId(transfer?.sourceWarehouseId);
     const date = String(transfer?.date || '').trim();
 
@@ -1306,8 +1379,10 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
       }
     }
 
-    updateStatus(transfer, 'In Transit');
-    notify.success(`Transfer ${transfer?.number || ''} dispatched — awaiting receipt at the destination.`);
+    patchTransfer(transfer, { status: TRANSFER_STATUS.OUT, dispatchedAt: new Date().toISOString() });
+    notify.success(
+      `Transfer ${transfer?.number || ''} submitted — stock has left ${locationLabel(transfer, 'source')} and is awaiting approval at ${locationLabel(transfer, 'target')}.`
+    );
   };
 
   const MENU_WIDTH = 224; // w-56
@@ -1390,11 +1465,11 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
                 <div className="font-semibold text-[rgb(var(--warn-ink))]">
-                  {pendingIn.length} transfer(s) awaiting your Transfer In
+                  {pendingIn.length} transfer(s) pending your approval
                 </div>
                 <div className="text-xs text-[rgb(var(--warn-ink))]">
-                  Stock has left the sending {mode === 'branch' ? 'branch' : 'warehouse'} and is in transit. It lands here
-                  only once you confirm the quantities actually received.
+                  Stock has left the sending {mode === 'branch' ? 'branch' : 'warehouse'} and is in transit. Check the
+                  goods and approve — it lands in your stock only for the quantities you confirm.
                 </div>
               </div>
             </div>
@@ -1406,7 +1481,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                     <span className="ui-muted"> · {t?.date || ''} · from {t?.sourceWarehouseName || t?.sourceBranchName || '-'}</span>
                   </div>
                   <button type="button" onClick={() => openReceive(t)} className="ui-btn ui-btn-primary !h-8 text-xs">
-                    Transfer In (receive)
+                    Approve — Transfer In
                   </button>
                 </div>
               ))}
@@ -1429,11 +1504,13 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
             <div className="text-sm font-medium">Status:</div>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="ui-select px-3 py-2 text-sm">
               <option value="">All</option>
-              <option value="Draft">Draft</option>
-              <option value="Submitted">Submitted</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Cancelled">Cancelled</option>
+              <option value={TRANSFER_STATUS.DRAFT}>Draft</option>
+              <option value={TRANSFER_STATUS.OUT}>Transferred Out / Pending approval</option>
+              <option value={TRANSFER_STATUS.IN}>Transfer In</option>
+              <option value={TRANSFER_STATUS.SHORT}>Short Received</option>
+              <option value={TRANSFER_STATUS.CLOSED}>Closed</option>
+              <option value={TRANSFER_STATUS.REJECTED}>Rejected</option>
+              <option value={TRANSFER_STATUS.CANCELLED}>Cancelled</option>
             </select>
           </div>
         </div>
@@ -1459,7 +1536,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                 </tr>
               ) : (
                 filteredTransfers.map((t) => {
-                  const status = String(t?.status || '').trim() || 'Draft';
+                  const status = statusForViewer(t, { atTarget: isAtTarget(t) });
 
                   const sb = branchById.get(normalizeId(t?.sourceBranchId)) || null;
                   const tb = branchById.get(normalizeId(t?.targetBranchId)) || null;
@@ -1540,14 +1617,15 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
             {(() => {
               const t = transfers.find((x) => normalizeId(x?.id) === normalizeId(openMenu?.id));
               if (!t) return null;
-              const status = String(t?.status || '').trim() || 'Draft';
-              const editable = status === 'Draft';
-              const canSubmit = status === 'Draft';
-              const canApprove = status === 'Submitted';
-              const canReceive = status === 'In Transit';
-              const canResolve = status === 'Short Received';
-              const canReject = status === 'Submitted';
-              const canCancel = status === 'Draft' || status === 'Submitted';
+              const status = canonicalStatus(t);
+              const atSource = isAtSource(t);
+              const atTarget = isAtTarget(t);
+              const editable = status === TRANSFER_STATUS.DRAFT && atSource;
+              const canSubmit = status === TRANSFER_STATUS.DRAFT;
+              const canReceive = status === TRANSFER_STATUS.OUT;
+              const canResolve = status === TRANSFER_STATUS.SHORT && atTarget;
+              const canReject = status === TRANSFER_STATUS.OUT;
+              const canCancel = status === TRANSFER_STATUS.DRAFT && atSource;
 
               return (
                 <>
@@ -1580,26 +1658,18 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                     <button
                       type="button"
                       onClick={() => {
+                        if (!atSource) return;
                         setOpenMenu(null);
-                        updateStatus(t, 'Submitted');
+                        submitTransferOut(t);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
+                      disabled={!atSource}
+                      title={atSource ? undefined : `Only ${locationLabel(t, 'source')} can send this transfer out.`}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                        atSource ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed ui-surface'
+                      }`}
                     >
-                      Submit
-                    </button>
-                  ) : null}
-
-                  {canApprove ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOpenMenu(null);
-                        approveWithStockCheck(t);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
-                    >
-                      <Check size={16} className="ui-muted" />
-                      <span>Transfer Out (dispatch)</span>
+                      <Check size={16} className={atSource ? 'ui-muted' : 'ui-subtle'} />
+                      <span>Submit — Transfer Out</span>
                     </button>
                   ) : null}
 
@@ -1607,13 +1677,18 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                     <button
                       type="button"
                       onClick={() => {
+                        if (!atTarget) return;
                         setOpenMenu(null);
                         openReceive(t);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                      disabled={!atTarget}
+                      title={atTarget ? undefined : `Only ${locationLabel(t, 'target')} can approve this transfer.`}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                        atTarget ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed ui-surface'
+                      }`}
                     >
-                      <Check size={16} className="ui-muted" />
-                      <span>Transfer In (receive)</span>
+                      <Check size={16} className={atTarget ? 'ui-muted' : 'ui-subtle'} />
+                      <span>Approve — Transfer In</span>
                     </button>
                   ) : null}
 
@@ -1657,14 +1732,24 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                     <button
                       type="button"
                       onClick={async () => {
+                        if (!atTarget) return;
                         setOpenMenu(null);
-                        const ok = await confirmDialog({ title: 'Please confirm', message: 'Reject this transfer?', confirmLabel: 'Yes, continue' });
+                        const ok = await confirmDialog({
+                          title: 'Reject this transfer?',
+                          message: `The consignment goes back to ${locationLabel(t, 'source')} — the stock stays on their books and never lands here.`,
+                          confirmLabel: 'Yes, reject',
+                        });
                         if (!ok) return;
-                        updateStatus(t, 'Rejected');
+                        updateStatus(t, TRANSFER_STATUS.REJECTED);
+                        notify.info(`Transfer ${t?.number || ''} rejected — the stock returns to ${locationLabel(t, 'source')}.`);
                       }}
-                      className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                      disabled={!atTarget}
+                      title={atTarget ? undefined : `Only ${locationLabel(t, 'target')} can reject this transfer.`}
+                      className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                        atTarget ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed ui-surface'
+                      }`}
                     >
-                      <X size={16} className="ui-muted" />
+                      <X size={16} className={atTarget ? 'ui-muted' : 'ui-subtle'} />
                       <span>Reject</span>
                     </button>
                   ) : null}
@@ -1676,7 +1761,7 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
                         setOpenMenu(null);
                         const ok = await confirmDialog({ title: 'Please confirm', message: 'Cancel this transfer?', confirmLabel: 'Yes, continue' });
                         if (!ok) return;
-                        updateStatus(t, 'Cancelled');
+                        updateStatus(t, TRANSFER_STATUS.CANCELLED);
                       }}
                       className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
                     >
