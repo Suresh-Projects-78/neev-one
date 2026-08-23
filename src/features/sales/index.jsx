@@ -37,7 +37,7 @@ import {
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { PageHeader, StatusPill, EmptyState } from '../../components/ui/Primitives';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
-import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
 const ChangeInvoiceStatusPrompt = ({ invoice, setDb, onClose }) => {
@@ -762,6 +762,7 @@ export const InvoicesList = ({
                 setStatusFilter('');
                 setDateFrom('');
                 setDateTo('');
+                colFilters.clearAll();
               }}
               className="ui-btn ui-btn-ghost"
             >
@@ -802,30 +803,15 @@ export const InvoicesList = ({
                   />
                 </th>
               ) : null}
-              <th scope="col">Invoice #</th>
-              {col('customer') ? <th scope="col">Customer</th> : null}
-              {col('warehouse') ? <th scope="col">Warehouse</th> : null}
-              {col('date') ? <th scope="col">Date</th> : null}
-              {col('due') ? <th scope="col">Due</th> : null}
-              <th scope="col" className="ui-num">Total</th>
-              {col('status') ? <th scope="col">Status</th> : null}
+              <ColumnHeader label="Invoice #" col="number" state={colFilters} />
+              {col('customer') ? <ColumnHeader label="Customer" col="customer" state={colFilters} /> : null}
+              {col('warehouse') ? <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} /> : null}
+              {col('date') ? <ColumnHeader label="Date" col="date" state={colFilters} /> : null}
+              {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} /> : null}
+              <ColumnHeader label="Total" col="total" state={colFilters} className="ui-num" align="right" />
+              {col('status') ? <ColumnHeader label="Status" col="status" state={colFilters} /> : null}
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
-            <FilterRow
-              columns={[
-                ...(gridEnabled ? [{}] : []),
-                { key: 'number', placeholder: 'No.' },
-                ...(col('customer') ? [{ key: 'customer', placeholder: 'Customer' }] : []),
-                ...(col('warehouse') ? [{ key: 'warehouse', placeholder: 'Warehouse' }] : []),
-                ...(col('date') ? [{ key: 'date', placeholder: 'Date' }] : []),
-                ...(col('due') ? [{ key: 'due', placeholder: 'Due' }] : []),
-                { key: 'total', placeholder: 'Total' },
-                ...(col('status') ? [{ key: 'status', options: ['Paid', 'Partial', 'Unpaid', 'Draft', 'Overdue', 'Cancelled'] }] : []),
-                {},
-              ]}
-              filters={colFilters.filters}
-              setFilter={colFilters.setFilter}
-            />
           </thead>
           <tbody className="ui-rows">
             {filteredInvoices.length === 0 ? (
@@ -1512,27 +1498,14 @@ export const EstimatesList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Estimate #</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Due</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
+              <ColumnHeader label="Estimate #" col="number" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Customer" col="customer" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Date" col="date" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Due" col="due" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Total" col="total" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
-            <FilterRow
-              columns={[
-                { key: 'number', placeholder: 'No.' },
-                { key: 'customer', placeholder: 'Customer' },
-                { key: 'warehouse', placeholder: 'Warehouse' },
-                { key: 'date', placeholder: 'Date' },
-                { key: 'due', placeholder: 'Due' },
-                { key: 'total', placeholder: 'Total' },
-                {},
-              ]}
-              filters={estFilters.filters}
-              setFilter={estFilters.setFilter}
-            />
             <tr className="hidden">
             </tr>
           </thead>
@@ -1776,25 +1749,13 @@ export const CreditNotesList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Credit #</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Original Invoice</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
+              <ColumnHeader label="Credit #" col="number" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Original Invoice" col="original" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Customer" col="customer" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Date" col="date" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Total" col="total" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
             </tr>
-            <FilterRow
-              columns={[
-                { key: 'number', placeholder: 'No.' },
-                { key: 'original', placeholder: 'Invoice' },
-                { key: 'customer', placeholder: 'Customer' },
-                { key: 'warehouse', placeholder: 'Warehouse' },
-                { key: 'date', placeholder: 'Date' },
-                { key: 'total', placeholder: 'Total' },
-              ]}
-              filters={cnFilters.filters}
-              setFilter={cnFilters.setFilter}
-            />
           </thead>
           <tbody className="divide-y">
             {creditNotes.length === 0 ? (

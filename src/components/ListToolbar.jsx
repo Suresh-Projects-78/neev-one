@@ -7,7 +7,7 @@ import { notify } from './ui/notify';
 /**
  * The three things every list page owes the user: search across the row, a
  * per-column filter row (see ColumnFilters) and an export of what is on
- * screen. This is the search + export half; pair it with <FilterRow /> in the
+ * screen. This is the search + export half; pair it with <ColumnHeader /> cells in the
  * table head.
  *
  * Export always writes the *filtered* rows, so what you see is what you get.

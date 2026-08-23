@@ -9,7 +9,7 @@ import EwbTransportForm from '../../components/EwbTransportForm';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
-import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { nextFreeVoucherNumber } from '../../utils/docSettings';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
@@ -271,27 +271,14 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">DC #</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Purpose</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Value</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                <ColumnHeader label="DC #" col="number" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Date" col="date" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Customer" col="customer" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Purpose" col="purpose" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Value" col="value" state={dcFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
+                <ColumnHeader label="Status" col="status" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
                 <th className="px-4 py-2.5"></th>
               </tr>
-              <FilterRow
-                columns={[
-                  { key: 'number', placeholder: 'No.' },
-                  { key: 'date', placeholder: 'Date' },
-                  { key: 'customer', placeholder: 'Customer' },
-                  { key: 'purpose', placeholder: 'Purpose' },
-                  { key: 'value', placeholder: 'Value' },
-                  { key: 'status', options: ['Open', 'Invoiced', 'Returned', 'Cancelled'] },
-                  {},
-                ]}
-                filters={dcFilters.filters}
-                setFilter={dcFilters.setFilter}
-              />
             </thead>
             <tbody>
               {challans.map((c) => (

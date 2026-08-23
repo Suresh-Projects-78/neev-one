@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, ClipboardList } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
-import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
@@ -356,27 +356,14 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">SO #</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Total</th>
+                <ColumnHeader label="SO #" col="number" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Date" col="date" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Customer" col="customer" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Total" col="total" state={soFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
                 <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ordered / Delivered / Billed</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                <ColumnHeader label="Status" col="status" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
                 <th className="px-4 py-2.5"></th>
               </tr>
-              <FilterRow
-                columns={[
-                  { key: 'number', placeholder: 'No.' },
-                  { key: 'date', placeholder: 'Date' },
-                  { key: 'customer', placeholder: 'Customer' },
-                  { key: 'total', placeholder: 'Total' },
-                  {},
-                  { key: 'status', placeholder: 'Status' },
-                  {},
-                ]}
-                filters={soFilters.filters}
-                setFilter={soFilters.setFilter}
-              />
             </thead>
             <tbody>
               {shown.map((o) => {

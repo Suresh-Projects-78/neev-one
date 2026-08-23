@@ -6,7 +6,7 @@ import { computeInventorySummaryByItemId, isStockItem } from '../../utils/invent
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { exportRows } from '../../components/ListToolbar';
-import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1442,25 +1442,13 @@ export const StockTransfersList = ({ db, setDb, currentCompany, openModal, branc
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Transfer #</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">From</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">To</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                <ColumnHeader label="Transfer #" col="number" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="From" col="date" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="To" col="from" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Date" col="to" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="Status" col="status" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
                 <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
               </tr>
-            <FilterRow
-              columns={[
-                { key: 'number', placeholder: 'No.' },
-                { key: 'date', placeholder: 'Date' },
-                { key: 'from', placeholder: 'From' },
-                { key: 'to', placeholder: 'To' },
-                { key: 'status', placeholder: 'Status' },
-                {},
-              ]}
-              filters={transferColFilters.filters}
-              setFilter={transferColFilters.setFilter}
-            />
             </thead>
             <tbody className="divide-y">
               {filteredTransfers.length === 0 ? (

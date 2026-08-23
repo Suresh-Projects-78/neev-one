@@ -22,7 +22,7 @@ import {
   isIntraStateSupply,
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
-import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
@@ -659,27 +659,14 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">PO #</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Amount</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <ColumnHeader label="PO #" col="number" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Vendor" col="vendor" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Date" col="date" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Amount" col="amount" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Status" col="status" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
-            <FilterRow
-              columns={[
-                { key: 'number', placeholder: 'No.' },
-                { key: 'vendor', placeholder: 'Vendor' },
-                { key: 'warehouse', placeholder: 'Warehouse' },
-                { key: 'date', placeholder: 'Date' },
-                { key: 'amount', placeholder: 'Amount' },
-                { key: 'status', placeholder: 'Status' },
-                {},
-              ]}
-              filters={poFilters.filters}
-              setFilter={poFilters.setFilter}
-            />
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {purchaseOrders.length === 0 ? (
@@ -1320,31 +1307,16 @@ export const BillsList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Bill #</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ref No</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ref Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Total</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <ColumnHeader label="Bill #" col="number" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Vendor" col="vendor" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Date" col="date" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Ref No" col="refNo" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Ref Date" col="refDate" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Total" col="total" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Status" col="status" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
             </tr>
-            <FilterRow
-              columns={[
-                { key: 'number', placeholder: 'No.' },
-                { key: 'vendor', placeholder: 'Vendor' },
-                { key: 'warehouse', placeholder: 'Warehouse' },
-                { key: 'date', placeholder: 'Date' },
-                { key: 'refNo', placeholder: 'Ref' },
-                { key: 'refDate', placeholder: 'Ref date' },
-                { key: 'total', placeholder: 'Total' },
-                { key: 'status', options: ['Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'] },
-                {},
-              ]}
-              filters={colFilters.filters}
-              setFilter={colFilters.setFilter}
-            />
           </thead>
           <tbody className="divide-y">
             {filteredBills.length === 0 ? (
@@ -2119,29 +2091,15 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Debit Note #</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Original Bill</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Amount</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+              <ColumnHeader label="Debit Note #" col="number" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Original Bill" col="original" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Vendor" col="vendor" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Date" col="date" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Amount" col="amount" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Status" col="status" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
             </tr>
-            <FilterRow
-              columns={[
-                { key: 'number', placeholder: 'No.' },
-                { key: 'original', placeholder: 'Bill' },
-                { key: 'vendor', placeholder: 'Vendor' },
-                { key: 'warehouse', placeholder: 'Warehouse' },
-                { key: 'date', placeholder: 'Date' },
-                { key: 'amount', placeholder: 'Amount' },
-                { key: 'status', placeholder: 'Status' },
-                {},
-              ]}
-              filters={dnFilters.filters}
-              setFilter={dnFilters.setFilter}
-            />
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {debitNotes.length === 0 ? (

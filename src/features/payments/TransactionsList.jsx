@@ -5,7 +5,7 @@ import RecordPaymentForm from './RecordPaymentForm';
 import { formatMoney, round2 } from '../../utils/money';
 import { downloadCsv } from '../../utils/csv';
 import { ListToolbar, useListSearch } from '../../components/ListToolbar';
-import { useColumnFilters, FilterRow } from '../../components/ColumnFilters';
+import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -376,27 +376,14 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Type</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Document #</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Party</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Mode</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Reference</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Amount</th>
+              <ColumnHeader label="Date" col="date" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Type" col="typeLabel" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Document #" col="documentNumber" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Party" col="partyName" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Mode" col="mode" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Reference" col="reference" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <ColumnHeader label="Amount" col="amount" state={colFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
             </tr>
-            <FilterRow
-              columns={[
-                { key: 'date', placeholder: 'Date' },
-                { key: 'typeLabel', placeholder: 'Type' },
-                { key: 'documentNumber', placeholder: 'Document' },
-                { key: 'partyName', placeholder: 'Party' },
-                { key: 'mode', placeholder: 'Mode' },
-                { key: 'reference', placeholder: 'Reference' },
-                { key: 'amount', placeholder: 'Amount' },
-              ]}
-              filters={colFilters.filters}
-              setFilter={colFilters.setFilter}
-            />
           </thead>
           <tbody className="divide-y">
             {shown.length === 0 ? (

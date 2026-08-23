@@ -6,6 +6,7 @@ import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { StatTile } from '../../components/ui/Primitives';
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 
@@ -283,13 +284,32 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   const isCategorised = (t) => Boolean(t?.ledgerId);
 
+  const ledgerById = useMemo(() => {
+    const m = new Map();
+    for (const a of safeArray(db.chartOfAccounts).filter((x) => x.companyId === companyId)) {
+      m.set(String(a.id), a);
+    }
+    return m;
+  }, [db.chartOfAccounts, companyId]);
+
   const txnSearch = useListSearch(allTxns, ['description', 'narration', 'date', 'status']);
+  const txnFilters = useColumnFilters();
+  const statusOf = (t) => (t?.readOnly ? 'Recorded' : t?.ledgerId ? 'Categorised' : 'Uncategorised');
   const txns = useMemo(() => {
     const base = txnSearch.filtered;
-    if (view === 'all') return base;
-    if (view === 'categorised') return base.filter((t) => isCategorised(t));
-    return base.filter((t) => !isCategorised(t));
-  }, [txnSearch.filtered, view]);
+    const byView =
+      view === 'all' ? base : view === 'categorised' ? base.filter((t) => isCategorised(t)) : base.filter((t) => !isCategorised(t));
+    return txnFilters.apply(byView, {
+      date: (t) => t.date || '',
+      description: (t) => t.description || '',
+      ledger: (t) => (t.ledgerId ? ledgerById.get(String(t.ledgerId))?.name || '' : ''),
+      narration: (t) => t.narration || '',
+      payment: (t) => (t.direction === 'OUT' ? Number(t.amount || 0) : ''),
+      receipt: (t) => (t.direction === 'OUT' ? '' : Number(t.amount || 0)),
+      status: statusOf,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [txnSearch.filtered, view, txnFilters.filters, txnFilters.sort, ledgerById]);
 
   const uncategorisedCount = useMemo(() => allTxns.filter((t) => !isCategorised(t)).length, [allTxns]);
 
@@ -306,14 +326,6 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     return { moneyIn, moneyOut, net: moneyIn - moneyOut };
   }, [allTxns]);
   const categorisedCount = useMemo(() => allTxns.filter((t) => isCategorised(t)).length, [allTxns]);
-
-  const ledgerById = useMemo(() => {
-    const m = new Map();
-    for (const a of safeArray(db.chartOfAccounts).filter((x) => x.companyId === companyId)) {
-      m.set(String(a.id), a);
-    }
-    return m;
-  }, [db.chartOfAccounts, companyId]);
 
   const ledgerOptions = useMemo(() => {
     return safeArray(db.chartOfAccounts)
@@ -1978,13 +1990,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       disabled={txns.length === 0}
                     />
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Description</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Ledger</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Narration</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Payment</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Receipts</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                  <ColumnHeader label="Date" col="date" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
+                  <ColumnHeader label="Description" col="description" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
+                  <ColumnHeader label="Ledger" col="ledger" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
+                  <ColumnHeader label="Narration" col="narration" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
+                  <ColumnHeader label="Payment" col="payment" state={txnFilters} className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase" align="right" />
+                  <ColumnHeader label="Receipts" col="receipt" state={txnFilters} className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase" align="right" />
+                  <ColumnHeader label="Status" col="status" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
                   <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Action</th>
                 </tr>
               </thead>
