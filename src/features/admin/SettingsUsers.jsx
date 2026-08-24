@@ -477,12 +477,12 @@ export function SettingsUsers({ orgId }) {
                       value={newRoleDraft}
                       onChange={(e) => setNewRoleDraft(e.target.value)}
                       placeholder="Role name, e.g. Billing Clerk"
-                      className="ui-input flex-1 !h-8 !min-h-0 text-sm"
+                      className="ui-input flex-1 ui-btn-sm !min-h-0 text-sm"
                       autoFocus
                     />
                     <button
                       type="button"
-                      className="ui-btn ui-btn-primary !h-8 text-xs"
+                      className="ui-btn ui-btn-primary ui-btn-sm text-xs"
                       onClick={async () => {
                         const name = String(newRoleDraft || '').trim();
                         if (!name) return;
@@ -504,7 +504,7 @@ export function SettingsUsers({ orgId }) {
                     >
                       Create
                     </button>
-                    <button type="button" className="ui-btn ui-btn-ghost !h-8 text-xs" onClick={() => setNewRoleDraft(null)}>
+                    <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm text-xs" onClick={() => setNewRoleDraft(null)}>
                       Cancel
                     </button>
                   </div>

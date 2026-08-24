@@ -212,11 +212,11 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
 
           <div className="flex items-center gap-2">
             {!isActive ? (
-              <button type="button" onClick={() => setActive(c)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+              <button type="button" onClick={() => setActive(c)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                 Set active <ChevronRight size={13} aria-hidden="true" />
               </button>
             ) : null}
-            <button type="button" onClick={() => openEdit(c)} className="ui-icon-btn !h-8 !w-8" aria-label={`Edit ${c.name}`}>
+            <button type="button" onClick={() => openEdit(c)} className="ui-icon-btn ui-btn-sm !w-8" aria-label={`Edit ${c.name}`}>
               <Pencil size={14} aria-hidden="true" />
             </button>
           </div>

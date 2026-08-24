@@ -186,7 +186,7 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
                   <td className="ui-col-entity px-4 py-2.5">{r.last?.vendorName || '—'}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{r.last ? formatMoney(r.last.rate, currentCompany) : '—'}</td>
                   <td className="px-4 py-2.5 text-right">
-                    <button type="button" onClick={() => draftPo(r)} disabled={busyId === r.item.id} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                    <button type="button" onClick={() => draftPo(r)} disabled={busyId === r.item.id} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                       {busyId === r.item.id ? 'Drafting…' : 'Draft PO'}
                     </button>
                   </td>

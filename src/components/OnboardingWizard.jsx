@@ -111,7 +111,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
               </span>
             ))}
           </div>
-          <button type="button" onClick={finish} className="ui-btn ui-btn-ghost !h-8 text-xs">
+          <button type="button" onClick={finish} className="ui-btn ui-btn-ghost ui-btn-sm text-xs">
             Skip setup
           </button>
         </div>

@@ -140,7 +140,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
 
           <div className="flex flex-wrap gap-2">
             {TABS.map(([key, label]) => (
-              <button key={key} type="button" onClick={() => setTab(key)} className={`ui-btn !h-8 text-xs ${tab === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
+              <button key={key} type="button" onClick={() => setTab(key)} className={`ui-btn ui-btn-sm ${tab === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
                 {label}
               </button>
             ))}
@@ -154,7 +154,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
                   exportCsv(rows, ['Supplier GSTIN', 'Supplier', 'Invoice no', 'Date', 'Taxable', 'IGST', 'CGST', 'SGST', 'Total', 'Bill no', 'Diff'], (r) => [r.ctin, r.trdnm, r.inum, r.date, r.taxable, r.igst, r.cgst, r.sgst, r.total, r.bill?.number || '', r.diff ?? ''], `gstr2b-${tab}.csv`);
                 }
               }}
-              className="ui-btn ui-btn-secondary !h-8 text-xs"
+              className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
             >
               <Download size={13} aria-hidden="true" /> CSV
             </button>

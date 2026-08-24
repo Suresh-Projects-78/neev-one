@@ -118,7 +118,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
 
       <div className="flex flex-wrap gap-2">
         {filters.map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setFilter(key)} className={`ui-btn !h-8 text-xs ${filter === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
+          <button key={key} type="button" onClick={() => setFilter(key)} className={`ui-btn ui-btn-sm ${filter === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
             {label}
           </button>
         ))}
@@ -184,10 +184,10 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
                     <td className="ui-col-meta px-4 py-2.5 text-xs">{last ? `${last.date} · ${last.channel}` : 'Never'}</td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <button type="button" onClick={() => sendWhatsApp(inv)} className="ui-btn ui-btn-secondary !h-8 text-xs" title="WhatsApp">
+                        <button type="button" onClick={() => sendWhatsApp(inv)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs" title="WhatsApp">
                           <MessageCircle size={13} aria-hidden="true" /> WhatsApp
                         </button>
-                        <button type="button" onClick={() => sendEmail(inv)} className="ui-icon-btn !h-8 !w-8" aria-label="Email reminder" title="Email">
+                        <button type="button" onClick={() => sendEmail(inv)} className="ui-icon-btn ui-btn-sm !w-8" aria-label="Email reminder" title="Email">
                           <Mail size={14} />
                         </button>
                         <button type="button" onClick={() => copyMessage(inv)} className="ui-icon-btn !h-8 !w-8" aria-label="Copy message" title="Copy message">

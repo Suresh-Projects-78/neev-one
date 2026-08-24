@@ -121,16 +121,16 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setTab('tds')} className={`ui-btn !h-8 text-xs ${tab === 'tds' ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
+        <button type="button" onClick={() => setTab('tds')} className={`ui-btn ui-btn-sm ${tab === 'tds' ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
           TDS 194Q — purchases ({tdsRows.filter((r) => r.tax > 0).length} liable)
         </button>
-        <button type="button" onClick={() => setTab('tcs')} className={`ui-btn !h-8 text-xs ${tab === 'tcs' ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
+        <button type="button" onClick={() => setTab('tcs')} className={`ui-btn ui-btn-sm ${tab === 'tcs' ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
           TCS 206C — receipts ({tcsRows.filter((r) => r.tax > 0).length} liable)
         </button>
-        <button type="button" onClick={exportCsv} className="ui-btn ui-btn-secondary !h-8 text-xs">
+        <button type="button" onClick={exportCsv} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
           <Download size={13} aria-hidden="true" /> CSV
         </button>
-        <button type="button" onClick={draftJournal} className="ui-btn ui-btn-secondary !h-8 text-xs">
+        <button type="button" onClick={draftJournal} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
           Draft {tab === 'tds' ? 'TDS' : 'TCS'} journal ({money(totalTax)})
         </button>
       </div>

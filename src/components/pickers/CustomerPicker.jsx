@@ -888,7 +888,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 ],
               }))
             }
-            className="ui-btn ui-btn-secondary !h-8 text-xs"
+            className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
           >
             + Add ship-to
           </button>
@@ -910,7 +910,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               <button
                 type="button"
                 onClick={() => setFormData((p) => ({ ...p, shipToAddresses: p.shipToAddresses.filter((_, i) => i !== ai) }))}
-                className="ui-icon-btn !h-8 !w-8"
+                className="ui-icon-btn ui-btn-sm !w-8"
                 aria-label="Remove ship-to"
               >
                 ×

@@ -160,18 +160,18 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
             Book depreciation first (Fixed Assets → Draft depreciation journal), then any CA adjustments as journal entries.
           </li>
           <li>
-            <button type="button" onClick={draftClosingJournal} className="ui-btn ui-btn-secondary !h-8 text-xs">
+            <button type="button" onClick={draftClosingJournal} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
               <CalendarCheck size={13} aria-hidden="true" /> Draft closing journal ({money(Math.abs(net))})
             </button>
             <span className="ui-muted ml-2">P&amp;L → Capital Account, dated {fy.to}.</span>
           </li>
           <li>
             {lock ? (
-              <button type="button" onClick={unlockYear} className="ui-btn ui-btn-secondary !h-8 text-xs">
+              <button type="button" onClick={unlockYear} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                 <Unlock size={13} aria-hidden="true" /> Unlock books
               </button>
             ) : (
-              <button type="button" onClick={lockYear} className="ui-btn ui-btn-primary !h-8 text-xs">
+              <button type="button" onClick={lockYear} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
                 <Lock size={13} aria-hidden="true" /> Lock the year (freeze up to {fy.to})
               </button>
             )}

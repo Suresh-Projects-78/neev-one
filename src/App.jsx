@@ -2577,11 +2577,11 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
                     setNewCategoryOpen(false);
                     setNewCategoryName('');
                   }}
-                  className="ui-btn ui-btn-secondary !h-8 text-xs"
+                  className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                 >
                   Cancel
                 </button>
-                <button type="button" onClick={saveNewCategory} className="ui-btn ui-btn-primary !h-8 text-xs">
+                <button type="button" onClick={saveNewCategory} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
                   Add category
                 </button>
               </div>
@@ -7255,7 +7255,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
             {orphans.slice(0, 5).join(', ')}
             {orphans.length > 5 ? '…' : ''}
           </div>
-          <button type="button" onClick={importOrphans} className="ui-btn ui-btn-primary !h-8 text-xs">
+          <button type="button" onClick={importOrphans} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
             Import them
           </button>
         </div>
@@ -7360,10 +7360,10 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
                       <td className="px-4 py-2.5 text-right whitespace-nowrap">
                         {isEditing ? (
                           <>
-                            <button type="button" onClick={saveEdit} className="ui-btn ui-btn-primary !h-8 text-xs mr-2">
+                            <button type="button" onClick={saveEdit} className="ui-btn ui-btn-primary ui-btn-sm text-xs mr-2">
                               Save
                             </button>
-                            <button type="button" onClick={() => setEditing(null)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                            <button type="button" onClick={() => setEditing(null)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                               Cancel
                             </button>
                           </>

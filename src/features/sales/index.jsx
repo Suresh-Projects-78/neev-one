@@ -781,10 +781,10 @@ export const InvoicesList = ({
 
         {gridEnabled ? (
           <BulkBar count={selectedIds.size} onClear={() => setSelectedIds(new Set())}>
-            <button type="button" onClick={bulkExportCsv} className="ui-btn ui-btn-secondary !h-8">
+            <button type="button" onClick={bulkExportCsv} className="ui-btn ui-btn-secondary ui-btn-sm">
               Export CSV
             </button>
-            <button type="button" onClick={bulkDelete} className="ui-btn ui-btn-danger !h-8">
+            <button type="button" onClick={bulkDelete} className="ui-btn ui-btn-danger ui-btn-sm">
               Delete
             </button>
           </BulkBar>
@@ -1850,7 +1850,7 @@ export const CreditNotesList = ({
                           <button
                             type="button"
                             onClick={() => openKnockOff(cn)}
-                            className="ui-btn ui-btn-secondary !h-8 text-xs"
+                            className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                             title="Knock this off against the customer's open invoices"
                           >
                             Knock off {formatMoney(noteBalance(cn).unsettled, currentCompany)}
@@ -2766,7 +2766,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                             updateItem(idx, 'batchId', e.target.value);
                             updateItem(idx, 'batchNo', b ? b.batchNo : '');
                           }}
-                          className="ui-select !h-8 w-72 px-2 text-xs"
+                          className="ui-select ui-btn-sm w-72 px-2 text-xs"
                         >
                           <option value="">Select batch (FEFO order)</option>
                           {lineBatches.map((b) => (
@@ -2868,7 +2868,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   <button
                     type="button"
                     onClick={() => setFormData((p) => ({ ...p, otherCharges: p.otherCharges.filter((_, i) => i !== ci) }))}
-                    className="ui-icon-btn !h-8 !w-8"
+                    className="ui-icon-btn ui-btn-sm !w-8"
                     aria-label="Remove charge"
                   >
                     ×
@@ -2878,7 +2878,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <button
                 type="button"
                 onClick={() => setFormData((p) => ({ ...p, otherCharges: [...(p.otherCharges || []), { label: '', amount: '', gstRate: 0 }] }))}
-                className="ui-btn ui-btn-secondary !h-8 text-xs"
+                className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
               >
                 + Add charge
               </button>

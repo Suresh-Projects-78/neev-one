@@ -62,7 +62,7 @@ export default function BatchStock({ db, currentCompany }) {
             key={key}
             type="button"
             onClick={() => setFilter(key)}
-            className={`ui-btn !h-8 text-xs ${filter === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
+            className={`ui-btn ui-btn-sm ${filter === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
           >
             {label}
           </button>

@@ -76,7 +76,7 @@ export default function TallyExport({ db, currentCompany }) {
                 key={t}
                 type="button"
                 onClick={() => toggleType(t)}
-                className={`ui-btn !h-8 text-xs ${types.has(t) ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
+                className={`ui-btn ui-btn-sm ${types.has(t) ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
               >
                 {t} ({preview[t] ?? 0})
               </button>

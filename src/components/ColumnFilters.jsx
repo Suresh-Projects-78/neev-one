@@ -243,7 +243,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               state.setSort({ key, dir: 'asc' });
               onClose();
             }}
-            className={`ui-btn ui-btn-secondary !h-8 flex-1 text-xs ${state.sort?.key === key && state.sort?.dir === 'asc' ? 'ui-sunken' : ''}`}
+            className={`ui-btn ui-btn-secondary ui-btn-sm flex-1 text-xs ${state.sort?.key === key && state.sort?.dir === 'asc' ? 'ui-sunken' : ''}`}
           >
             A → Z
           </button>
@@ -253,7 +253,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               state.setSort({ key, dir: 'desc' });
               onClose();
             }}
-            className={`ui-btn ui-btn-secondary !h-8 flex-1 text-xs ${state.sort?.key === key && state.sort?.dir === 'desc' ? 'ui-sunken' : ''}`}
+            className={`ui-btn ui-btn-secondary ui-btn-sm flex-1 text-xs ${state.sort?.key === key && state.sort?.dir === 'desc' ? 'ui-sunken' : ''}`}
           >
             Z → A
           </button>
@@ -320,10 +320,10 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={clearNow} className="ui-btn ui-btn-secondary !h-8 text-xs">
+        <button type="button" onClick={clearNow} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
           Clear Filter
         </button>
-        <button type="button" onClick={applyNow} className="ui-btn ui-btn-primary !h-8 text-xs">
+        <button type="button" onClick={applyNow} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
           Apply Filter
         </button>
       </div>

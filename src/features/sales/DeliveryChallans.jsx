@@ -230,7 +230,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
               ))}
             </tbody>
           </table>
-          <button type="button" onClick={() => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }))} className="ui-btn ui-btn-secondary !h-8 text-xs">
+          <button type="button" onClick={() => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }))} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
             + Add line
           </button>
 
@@ -294,11 +294,11 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                   <td className="px-4 py-2.5"><StatusPill status={c.status} /></td>
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button type="button" onClick={() => setEwbFor(c)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                      <button type="button" onClick={() => setEwbFor(c)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                         e-Way Bill
                       </button>
                       {c.status === 'Open' ? (
-                        <button type="button" onClick={() => convert(c)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                        <button type="button" onClick={() => convert(c)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                           Convert to Invoice
                         </button>
                       ) : null}

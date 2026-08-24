@@ -62,11 +62,11 @@ export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = nu
  * Paise are rendered a size down and muted: scanning money means reading the
  * rupees, and the decimals are there for checking, not for scanning.
  */
-export const StatStrip = ({ items = [] }) => {
+export const StatStrip = ({ items = [], className = '' }) => {
   if (!items.length) return null;
 
   return (
-    <div className="ui-strip">
+    <div className={`ui-strip ${className}`.trim()}>
       {items.map((it, i) => {
         const shown = String(it.value ?? '');
         // Split on the last separator so Indian grouping (12,30,340.69) keeps

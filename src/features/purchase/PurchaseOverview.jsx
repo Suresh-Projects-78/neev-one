@@ -169,7 +169,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
         </div>
       ) : (
         <>
-          <StatStrip
+          <StatStrip className="ui-wake"
             items={[
               {
                 label: 'Purchased',
@@ -194,7 +194,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
             ]}
           />
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="ui-wake-group grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <ChartCard title="Spent by period" subtitle={`Last ${range.label.toLowerCase()}`}>
               {buckets.every((b) => b.value <= 0) ? (
                 <EmptyState icon={Receipt} title="Nothing in this window" description="Pick a longer period." />

@@ -215,12 +215,12 @@ export default function EInvoiceWorkflow({ invoice, company, customer, onRegiste
             </div>
             <div className="flex flex-wrap gap-2 pt-2">
               {details.payload ? (
-                <button type="button" onClick={() => download(`EINV_${invoice.number}.json`, details.payload)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                <button type="button" onClick={() => download(`EINV_${invoice.number}.json`, details.payload)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                   e-Invoice JSON
                 </button>
               ) : null}
               {details.signedInvoice ? (
-                <button type="button" onClick={() => download(`EINV_${invoice.number}_signed.jwt.json`, { irn: details.irn, signedInvoice: details.signedInvoice })} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                <button type="button" onClick={() => download(`EINV_${invoice.number}_signed.jwt.json`, { irn: details.irn, signedInvoice: details.signedInvoice })} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                   Signed invoice
                 </button>
               ) : null}
@@ -238,14 +238,14 @@ export default function EInvoiceWorkflow({ invoice, company, customer, onRegiste
                     cancelReason: details.cancelReason,
                   })
                 }
-                className="ui-btn ui-btn-secondary !h-8 text-xs"
+                className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
               >
                 Full record
               </button>
             </div>
             {registered ? (
               withinCancelWindow ? (
-                <button type="button" onClick={() => setCancelOpen((v) => !v)} className="ui-btn ui-btn-secondary !h-8 mt-2 text-xs text-[rgb(var(--neg))]">
+                <button type="button" onClick={() => setCancelOpen((v) => !v)} className="ui-btn ui-btn-secondary ui-btn-sm mt-2 text-xs text-[rgb(var(--neg))]">
                   Cancel IRN…
                 </button>
               ) : (

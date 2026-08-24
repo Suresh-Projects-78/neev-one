@@ -152,7 +152,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
           <div className="ui-card p-4">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="ui-title text-base">{active.name} — item rates</h3>
-              <button type="button" onClick={() => removeList(active)} className="ui-icon-btn !h-8 !w-8" aria-label="Delete list">
+              <button type="button" onClick={() => removeList(active)} className="ui-icon-btn ui-btn-sm !w-8" aria-label="Delete list">
                 <Trash2 size={14} />
               </button>
             </div>

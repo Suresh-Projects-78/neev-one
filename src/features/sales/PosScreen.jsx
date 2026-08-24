@@ -290,7 +290,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                     min="0"
                     value={denomCounts[d] ?? ''}
                     onChange={(e) => setDenomCounts((p) => ({ ...p, [d]: e.target.value }))}
-                    className="ui-input !h-8 w-16 px-2 text-sm"
+                    className="ui-input ui-btn-sm w-16 px-2 text-sm"
                     placeholder="0"
                   />
                 </label>

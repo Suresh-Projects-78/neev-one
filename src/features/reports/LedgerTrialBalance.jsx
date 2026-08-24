@@ -248,7 +248,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                     <>
                       <button
                         type="button"
-                        className="ui-btn ui-btn-secondary !h-8 text-xs"
+                        className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                         onClick={() => {
                           const esc = (v) => {
                             const t = String(v ?? '');
@@ -274,7 +274,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                       </button>
                       <button
                         type="button"
-                        className="ui-btn ui-btn-secondary !h-8 text-xs"
+                        className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                         onClick={() => {
                           // Separate sheet: the same rows in a print-ready window.
                           const w = window.open('', '_blank');

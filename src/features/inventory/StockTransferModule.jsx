@@ -1570,7 +1570,7 @@ export const StockTransfersList = ({
                     <span className="font-medium">{t?.number || 'Transfer'}</span>
                     <span className="ui-muted"> · {t?.date || ''} · from {t?.sourceWarehouseName || t?.sourceBranchName || '-'}</span>
                   </div>
-                  <button type="button" onClick={() => openReceive(t)} className="ui-btn ui-btn-primary !h-8 text-xs">
+                  <button type="button" onClick={() => openReceive(t)} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
                     Approve — Transfer In
                   </button>
                 </div>

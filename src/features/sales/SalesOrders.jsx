@@ -315,7 +315,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             </tbody>
           </table>
           <div className="flex items-center justify-between">
-            <button type="button" onClick={() => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }))} className="ui-btn ui-btn-secondary !h-8 text-xs">
+            <button type="button" onClick={() => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }))} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
               + Add line
             </button>
             <div className="text-sm font-semibold">Total: {formatMoney(computed.total, currentCompany)}</div>
@@ -387,12 +387,12 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {prog.delivered < prog.ordered ? (
-                          <button type="button" onClick={() => toChallan(o)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                          <button type="button" onClick={() => toChallan(o)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                             → Challan
                           </button>
                         ) : null}
                         {prog.billed < prog.ordered ? (
-                          <button type="button" onClick={() => toInvoice(o)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                          <button type="button" onClick={() => toInvoice(o)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                             → Invoice
                           </button>
                         ) : null}

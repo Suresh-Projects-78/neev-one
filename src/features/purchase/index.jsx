@@ -2632,7 +2632,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                           <button
                             type="button"
                             onClick={() => openKnockOff(dn)}
-                            className="ui-btn ui-btn-secondary !h-8 text-xs"
+                            className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                             title="Knock this off against the vendor's open bills"
                           >
                             Knock off {formatMoney(noteBalance(dn).unsettled, currentCompany)}

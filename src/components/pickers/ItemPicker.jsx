@@ -337,7 +337,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                         />
                         <button
                           type="button"
-                          className="ui-btn ui-btn-primary !h-8 text-xs"
+                          className="ui-btn ui-btn-primary ui-btn-sm text-xs"
                           onClick={() => {
                             const name = String(newUnitDraft || '').trim();
                             if (!name) return;
@@ -353,7 +353,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                         >
                           Add
                         </button>
-                        <button type="button" className="ui-btn ui-btn-ghost !h-8 text-xs" onClick={() => setNewUnitDraft(null)}>
+                        <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm text-xs" onClick={() => setNewUnitDraft(null)}>
                           Cancel
                         </button>
                       </div>

@@ -337,7 +337,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                   min="1"
                   value={t.minQty}
                   onChange={(e) => setForm((p) => ({ ...p, qtyTiers: p.qtyTiers.map((x, i) => (i === ti ? { ...x, minQty: e.target.value } : x)) }))}
-                  className="ui-input !h-8 w-20 px-2 text-sm"
+                  className="ui-input ui-btn-sm w-20 px-2 text-sm"
                 />
                 <span className="ui-muted">or more →</span>
                 <input
@@ -420,10 +420,10 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                   <td className="px-4 py-2.5"><StatusPill status={r.active === false ? 'Paused' : 'Active'} /></td>
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button type="button" onClick={() => toggle(r)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                      <button type="button" onClick={() => toggle(r)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                         {r.active === false ? 'Activate' : 'Pause'}
                       </button>
-                      <button type="button" onClick={() => remove(r)} className="ui-icon-btn !h-8 !w-8" aria-label={`Delete ${r.name}`}>
+                      <button type="button" onClick={() => remove(r)} className="ui-icon-btn ui-btn-sm !w-8" aria-label={`Delete ${r.name}`}>
                         <Trash2 size={14} />
                       </button>
                     </div>

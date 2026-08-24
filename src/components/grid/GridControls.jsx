@@ -109,7 +109,7 @@ export default function GridControls({ grid }) {
               aria-label="Name for the current view"
               className="ui-input !h-8 flex-1 text-sm"
             />
-            <button type="submit" className="ui-btn ui-btn-primary !h-8 !px-2.5" disabled={!newName.trim()}>
+            <button type="submit" className="ui-btn ui-btn-primary ui-btn-sm !px-2.5" disabled={!newName.trim()}>
               <Save size={14} aria-hidden="true" />
             </button>
           </form>

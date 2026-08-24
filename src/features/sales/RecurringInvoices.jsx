@@ -377,7 +377,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
                 <button
                   type="button"
                   onClick={() => setDraft((p) => ({ ...p, items: [...p.items, { ...emptyLine }] }))}
-                  className="ui-btn ui-btn-secondary !h-8 text-xs"
+                  className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                 >
                   <Plus size={14} /> Add line
                 </button>
@@ -499,13 +499,13 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
                     <td className="px-4 py-2.5"><StatusPill status={t.active === false ? 'Paused' : 'Active'} /></td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => runNow(t)} disabled={t.active === false} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                        <button type="button" onClick={() => runNow(t)} disabled={t.active === false} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                           Run now
                         </button>
-                        <button type="button" onClick={() => toggle(t)} className="ui-btn ui-btn-secondary !h-8 text-xs">
+                        <button type="button" onClick={() => toggle(t)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                           {t.active === false ? 'Resume' : 'Pause'}
                         </button>
-                        <button type="button" onClick={() => remove(t)} className="ui-icon-btn !h-8 !w-8" aria-label="Delete schedule">
+                        <button type="button" onClick={() => remove(t)} className="ui-icon-btn ui-btn-sm !w-8" aria-label="Delete schedule">
                           <Trash2 size={14} />
                         </button>
                       </div>
