@@ -11311,6 +11311,22 @@ const AppShell = () => {
     if (active !== 'warehouseTransfers' && active !== 'branchTransfers') setStockTransferEditor({ open: false, initial: null });
   }, [active]);
 
+  // What each settings area would tell you if you opened it. Shown beside its
+  // name in the rail, so "is email set up?" and "how many branches?" answer
+  // themselves. Cheap to read, and it keeps a 15-item list from being opaque.
+  const branchCountLabel = branches.length ? String(branches.length) : '';
+  const warehouseCountLabel = warehouses.length ? String(warehouses.length) : '';
+  const featureCountLabel = useMemo(() => {
+    const flags = currentCompany?.profile?.features;
+    if (!flags || typeof flags !== 'object') return '';
+    const values = Object.values(flags);
+    if (!values.length) return '';
+    return `${values.filter(Boolean).length}/${values.length}`;
+  }, [currentCompany?.profile?.features]);
+  const gstStateLabel =
+    (currentCompany?.profile?.taxCompliances?.gstEnabled ?? currentCompany?.gstEnabled ?? true) !== false ? 'GST on' : 'GST off';
+  const emailStateLabel = currentCompany?.profile?.emailSettings?.fromAddress ? '' : 'Not set';
+
   const navModel = useMemo(
     () => [
       { type: 'item', key: 'dashboard', label: 'Dashboard', icon: PhDashboard, ph: true, tint: 'dashboard' },
@@ -11422,26 +11438,39 @@ const AppShell = () => {
         icon: PhSettings,
         ph: true,
         tint: 'settings',
+        // Grouped, because this list is fifteen today and heading for
+        // twenty-five once Payroll, CRM, Attendance and Projects each bring
+        // their own. The state on the right answers the question the screen
+        // would answer, without opening it.
         items: [
+          { type: 'subgroup', label: 'Organisation' },
           { key: 'settingsCompany', label: 'Company', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches' },
-          { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'warehouses' },
+          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches', state: branchCountLabel },
+          { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'warehouses', state: warehouseCountLabel },
+
+          { type: 'subgroup', label: 'People' },
           { key: 'settingsUsers', label: 'Users', icon: Users, perm: 'SETTINGS::Users::VIEW' },
           { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsPermissions', label: 'Role Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
-          { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications' },
-          { key: 'settingsSecurity', label: 'Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
           { key: 'settingsGovernance', label: 'Governance', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsProfile', label: 'My Profile', icon: Users },
-          { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW' },
+
+          { type: 'subgroup', label: 'Product' },
+          { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
           { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
           { key: 'settingsCurrencies', label: 'Currencies', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
+
+          { type: 'subgroup', label: 'Compliance' },
+          { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW', state: gstStateLabel },
+
+          { type: 'subgroup', label: 'System' },
+          { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications', state: emailStateLabel },
+          { key: 'settingsSecurity', label: 'Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
           { key: 'dataImport', label: 'Import Data', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports' },
         ],
       },
     ],
-    []
+    [branchCountLabel, warehouseCountLabel, featureCountLabel, gstStateLabel, emailStateLabel]
   );
 
   // Hide anything the user cannot open. The server re-checks on every request;
@@ -13299,8 +13328,25 @@ const AppShell = () => {
                     {isOpen && (
                       <div className={`mt-0.5 space-y-0.5 pl-5 ${navCollapsed ? 'md:hidden' : ''}`}>
                         {entry.items.map((item) => {
+                          // A heading inside a group. Settings is fifteen items
+                          // and heading for twenty-five once Payroll, CRM and
+                          // Attendance arrive; without headings it is a list
+                          // you read every time instead of a shape you learn.
+                          if (item.type === 'subgroup') {
+                            return (
+                              <div
+                                key={`sub-${item.label}`}
+                                className="ui-t-label px-2.5 pt-3 pb-1 first:pt-1"
+                              >
+                                {item.label}
+                              </div>
+                            );
+                          }
+
                           const Icon = item.icon;
                           const isActive = active === item.key;
+                          // What the screen would tell you if you opened it.
+                          const state = typeof item.state === 'function' ? item.state() : item.state;
                           return (
                             <button
                               key={item.key}
@@ -13315,7 +13361,10 @@ const AppShell = () => {
                                 aria-hidden="true"
                                 style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
                               />
-                              <span>{item.label}</span>
+                              <span className="min-w-0 truncate">{item.label}</span>
+                              {state ? (
+                                <span className="ml-auto shrink-0 text-[11px] ui-subtle tabular-nums">{state}</span>
+                              ) : null}
                             </button>
                           );
                         })}
