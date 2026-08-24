@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { returnableLines, returnStatusLabel } from '../../utils/returns';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
@@ -1324,6 +1325,7 @@ export const BillsList = ({
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 const derived = getDerivedStatus(b);
+                const returnMark = returnStatusLabel(b, db.debitNotes || [], 'originalBillId');
                 const statusPillClass =
                   derived === 'Paid'
                     ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
@@ -1344,6 +1346,14 @@ export const BillsList = ({
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(b.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusPillClass}`}>{derived}</span>
+                      {returnMark ? (
+                        <span
+                          className="ml-1 px-2 py-1 rounded-full text-[11px] font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
+                          title={`${returnMark} against this bill`}
+                        >
+                          {returnMark}
+                        </span>
+                      ) : null}
                     </td>
                     <td
                       className="px-6 py-4"
@@ -1566,8 +1576,16 @@ export const DebitNoteForm = ({
       return;
     }
 
-    const copiedItems = (bill.items || []).map((line) => {
-      const qty = Number(line.quantity ?? 1);
+    // Only what has not gone back already — the mirror of the credit note rule.
+    const state = returnableLines(bill, db.debitNotes || [], 'originalBillId');
+
+    if (state.fullyReturned) {
+      notify.error(`${bill.number} has already been fully returned — there is nothing left to debit.`);
+      return;
+    }
+
+    const copiedItems = state.open.map((line) => {
+      const qty = Number(line.remainingQty) || 0;
       const rate = Number(line.rate ?? 0);
       const itemId = line.itemId !== undefined && line.itemId !== null ? String(line.itemId) : '';
       const master = itemId ? itemsMaster.find((i) => i.id === parseInt(itemId)) : null;
@@ -1576,13 +1594,18 @@ export const DebitNoteForm = ({
       return {
         itemId,
         description: master?.name || line.description || '',
-        quantity: Number.isFinite(qty) ? qty : 1,
+        quantity: qty,
+        maxQuantity: qty,
         rate: Number.isFinite(rate) ? rate : 0,
         gstRate: Number.isFinite(gstRate) ? gstRate : 0,
         hsnSac,
-        amount: (Number.isFinite(qty) ? qty : 1) * (Number.isFinite(rate) ? rate : 0),
+        amount: qty * (Number.isFinite(rate) ? rate : 0),
       };
     });
+
+    if (state.partlyReturned) {
+      notify.info(`${bill.number} was partly returned already — only the quantities still open are shown.`);
+    }
 
     setFormData((prev) => ({
       ...prev,
@@ -1704,6 +1727,33 @@ export const DebitNoteForm = ({
     if (!formData.vendorId) {
       notify.error('Vendor is required');
       return;
+    }
+
+    // Enforced at save as well as in the prefill, since lines can be typed over.
+    const returnState = returnableLines(originalBill, db.debitNotes || [], 'originalBillId');
+    if (returnState.fullyReturned) {
+      notify.error(`${originalBill.number} has already been fully returned.`);
+      return;
+    }
+    const remainingByItem = new Map(returnState.lines.map((l) => [String(l.itemId), l.remainingQty]));
+    for (const line of formData.items || []) {
+      const key = String(line.itemId || '');
+      if (!key) continue;
+      const want = Number(line.quantity) || 0;
+      if (want <= 0) continue;
+      const canReturn = remainingByItem.get(key);
+      if (canReturn === undefined) {
+        notify.error(`${line.description || `Item ${key}`} is not on ${originalBill.number}.`);
+        return;
+      }
+      if (want > canReturn + 0.0001) {
+        notify.error(
+          canReturn <= 0
+            ? `${line.description || `Item ${key}`} has already been returned in full.`
+            : `Only ${canReturn} of ${line.description || `item ${key}`} is still open to return.`
+        );
+        return;
+      }
     }
 
     if (!companyState) {

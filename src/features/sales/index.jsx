@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { returnableLines, returnStatusLabel } from '../../utils/returns';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag, RefreshCw } from 'lucide-react';
@@ -868,6 +869,17 @@ export const InvoicesList = ({
                     {col('status') ? (
                     <td>
                       <StatusPill status={derived} />
+                      {(() => {
+                        const returnMark = returnStatusLabel(inv, db.creditNotes || [], 'originalInvoiceId');
+                        return returnMark ? (
+                          <span
+                            className="ml-1 px-2 py-1 rounded-full text-[11px] font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
+                            title={`${returnMark} against this invoice`}
+                          >
+                            {returnMark}
+                          </span>
+                        ) : null;
+                      })()}
                     </td>
                     ) : null}
                     <td
@@ -3377,20 +3389,34 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       return;
     }
 
-    const copiedItems = (inv.items || []).map((line) => {
-      const qty = parseFloat(line.quantity || 0);
-      const rate = parseFloat(line.rate || 0);
+    // Only what has not come back already. A line returned in full is gone
+    // from the list; a line half returned offers the other half.
+    const state = returnableLines(inv, db.creditNotes || [], 'originalInvoiceId');
+
+    if (state.fullyReturned) {
+      notify.error(`${inv.number} has already been fully returned — there is nothing left to credit.`);
+      return;
+    }
+
+    const copiedItems = state.open.map((line) => {
+      const qty = Number(line.remainingQty) || 0;
+      const rate = parseFloat(line.rate || 0) || 0;
       const gstRate = parseFloat(line.gstRate || 0);
       return {
         itemId: line.itemId || '',
         description: line.description || '',
-        quantity: qty || 1,
-        rate: rate,
+        quantity: qty,
+        maxQuantity: qty,
+        rate,
         gstRate: Number.isFinite(gstRate) ? gstRate : 0,
         hsnSac: line.hsnSac || '',
-        amount: (qty || 0) * (rate || 0),
+        amount: qty * rate,
       };
     });
+
+    if (state.partlyReturned) {
+      notify.info(`${inv.number} was partly returned already — only the quantities still open are shown.`);
+    }
 
     setFormData({
       ...formData,
@@ -3464,6 +3490,34 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
     if (!formData.customerId) {
       notify.error('Customer is required');
       return;
+    }
+
+    // The prefill can be typed over, so the rule is enforced here too: nothing
+    // may come back that was not sold, or that has come back already.
+    const returnState = returnableLines(originalInvoice, db.creditNotes || [], 'originalInvoiceId');
+    if (returnState.fullyReturned) {
+      notify.error(`${originalInvoice.number} has already been fully returned.`);
+      return;
+    }
+    const remainingByItem = new Map(returnState.lines.map((l) => [String(l.itemId), l.remainingQty]));
+    for (const line of formData.items || []) {
+      const key = String(line.itemId || '');
+      if (!key) continue;
+      const want = Number(line.quantity) || 0;
+      if (want <= 0) continue;
+      const canReturn = remainingByItem.get(key);
+      if (canReturn === undefined) {
+        notify.error(`${line.description || `Item ${key}`} is not on ${originalInvoice.number}.`);
+        return;
+      }
+      if (want > canReturn + 0.0001) {
+        notify.error(
+          canReturn <= 0
+            ? `${line.description || `Item ${key}`} has already been returned in full.`
+            : `Only ${canReturn} of ${line.description || `item ${key}`} is still open to return.`
+        );
+        return;
+      }
     }
 
     if (!companyState) {

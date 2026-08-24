@@ -5,6 +5,9 @@ import { ListToolbar, exportRows, useListSearch } from '../../components/ListToo
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { advanceRunDate } from '../../hooks/useRecurringInvoices';
+import CustomerPicker from '../../components/pickers/CustomerPicker';
+import ItemPicker from '../../components/pickers/ItemPicker';
+import { computeGstForLines } from '../../utils/gst';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
@@ -26,7 +29,12 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
   const invoices = useMemo(() => (db.invoices || []).filter((i) => i.companyId === companyId), [db.invoices, companyId]);
 
   const [creatorOpen, setCreatorOpen] = useState(false);
+  // A schedule can copy an invoice that already exists, or be written from
+  // scratch — a retainer that has never been billed once still needs to repeat.
+  const [mode, setMode] = useState('NEW');
   const [sourceInvoiceId, setSourceInvoiceId] = useState('');
+  const emptyLine = { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 };
+  const [draft, setDraft] = useState({ customerId: '', notes: '', items: [{ ...emptyLine }] });
   const [frequency, setFrequency] = useState('MONTHLY');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -46,14 +54,105 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
     return { stage, latest, count: generated.length };
   };
 
+  const itemsMaster = useMemo(
+    () => (db.items || []).filter((i) => i.companyId === companyId),
+    [db.items, companyId]
+  );
+  const customers = useMemo(
+    () => (db.customers || []).filter((c) => c.companyId === companyId),
+    [db.customers, companyId]
+  );
+
+  const setLine = (idx, patch) =>
+    setDraft((prev) => ({ ...prev, items: prev.items.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
+
+  const pickItem = (idx, itemId, picked) => {
+    const master = picked || itemsMaster.find((i) => String(i.id) === String(itemId));
+    if (!master) {
+      setLine(idx, { itemId: '' });
+      return;
+    }
+    setLine(idx, {
+      itemId: String(master.id),
+      description: master.name || '',
+      rate: Number(master.salePrice ?? 0),
+      gstRate: Number(master.gstRate ?? 0),
+      hsnSac: master.hsnSac || '',
+    });
+  };
+
+  /** The lines a scratch schedule will repeat, priced and taxed. */
+  const draftTotals = useMemo(() => {
+    const lines = draft.items
+      .filter((l) => String(l.itemId || '').trim())
+      .map((l) => ({
+        ...l,
+        quantity: Number(l.quantity) || 0,
+        rate: Number(l.rate) || 0,
+        gstRate: Number(l.gstRate) || 0,
+        amount: Math.round((Number(l.quantity) || 0) * (Number(l.rate) || 0) * 100) / 100,
+      }));
+    const customer = customers.find((c) => String(c.id) === String(draft.customerId));
+    const companyStateName = String(currentCompany?.state || '').trim().toLowerCase();
+    const customerStateName = String(customer?.billingAddress?.state || customer?.state || '').trim().toLowerCase();
+    const isIntra = !companyStateName || !customerStateName || companyStateName === customerStateName;
+    const computed = computeGstForLines({ lines, isIntra });
+    return { lines: computed.lines || lines, ...computed, customer };
+  }, [draft.items, draft.customerId, customers, currentCompany?.state]);
+
   const createSchedule = () => {
+    if (!startDate) {
+      notify.error('Pick the first run date.');
+      return;
+    }
+
+    if (mode === 'NEW') {
+      if (!String(draft.customerId || '').trim()) {
+        notify.error('Pick the customer this repeats for.');
+        return;
+      }
+      if (!draftTotals.lines.length) {
+        notify.error('Add at least one line to repeat.');
+        return;
+      }
+      const nextTemplateId = (db.recurringTemplates || []).reduce((m, t) => Math.max(m, Number(t.id) || 0), 0) + 1;
+      const customerName = draftTotals.customer?.displayName || draftTotals.customer?.name || '';
+      setDb((prev) => ({
+        ...prev,
+        recurringTemplates: [
+          ...(prev.recurringTemplates || []),
+          {
+            id: nextTemplateId,
+            companyId,
+            sourceInvoiceId: null,
+            sourceNumber: '',
+            customerId: draft.customerId,
+            customerName,
+            items: draftTotals.lines,
+            subtotal: draftTotals.subtotal,
+            cgstTotal: draftTotals.cgstTotal,
+            sgstTotal: draftTotals.sgstTotal,
+            igstTotal: draftTotals.igstTotal,
+            gstTotal: draftTotals.gstTotal,
+            total: draftTotals.total,
+            notes: draft.notes || '',
+            frequency,
+            nextRunDate: startDate,
+            endDate: endDate || null,
+            active: true,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      }));
+      setCreatorOpen(false);
+      setDraft({ customerId: '', notes: '', items: [{ ...emptyLine }] });
+      notify.success(`${customerName || 'This schedule'} will repeat ${FREQ_LABEL[frequency].toLowerCase()} from ${startDate}.`);
+      return;
+    }
+
     const src = invoices.find((i) => Number(i.id) === Number(sourceInvoiceId));
     if (!src) {
       notify.error('Pick the invoice to repeat.');
-      return;
-    }
-    if (!startDate) {
-      notify.error('Pick the first run date.');
       return;
     }
     const nextId = (db.recurringTemplates || []).reduce((m, t) => Math.max(m, Number(t.id) || 0), 0) + 1;
@@ -169,7 +268,132 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
 
       {creatorOpen ? (
         <div className="ui-card space-y-4 p-5">
+          <div className="flex gap-2">
+            {[
+              { id: 'NEW', label: 'Write a new one' },
+              { id: 'COPY', label: 'Repeat an existing invoice' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMode(m.id)}
+                className={`px-3 py-1.5 rounded-lg text-sm border ${
+                  mode === m.id ? 'ui-sunken ui-fg ui-border-strong-c font-medium' : 'ui-surface ui-muted ui-border-c'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'NEW' ? (
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <CustomerPicker
+                  db={db}
+                  setDb={setDb}
+                  currentCompany={currentCompany}
+                  value={draft.customerId}
+                  onChange={(customerId) => setDraft((p) => ({ ...p, customerId }))}
+                />
+                <div>
+                  <label className="ui-label">Notes (optional)</label>
+                  <input
+                    type="text"
+                    value={draft.notes}
+                    onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
+                    className="ui-input w-full px-3 py-2"
+                    placeholder="Shown on every invoice this raises"
+                  />
+                </div>
+              </div>
+
+              <div className="border rounded-xl overflow-hidden">
+                <table className="ui-table w-full">
+                  <thead className="ui-sunken border-b">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Item</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-24">Qty</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-32">Rate</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-20">GST %</th>
+                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-32">Amount</th>
+                      <th className="w-10" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {draft.items.map((l, idx) => (
+                      <tr key={idx}>
+                        <td className="px-3 py-2">
+                          <ItemPicker
+                            db={db}
+                            setDb={setDb}
+                            currentCompany={currentCompany}
+                            value={l.itemId}
+                            onChange={(itemId, picked) => pickItem(idx, itemId, picked)}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={l.quantity}
+                            onChange={(e) => setLine(idx, { quantity: e.target.value })}
+                            className="ui-input w-full px-2 py-1 text-right"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={l.rate}
+                            onChange={(e) => setLine(idx, { rate: e.target.value })}
+                            className="ui-input w-full px-2 py-1 text-right"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-right ui-muted">{Number(l.gstRate) || 0}%</td>
+                        <td className="px-3 py-2 text-right font-medium">
+                          {formatMoney((Number(l.quantity) || 0) * (Number(l.rate) || 0), currentCompany)}
+                        </td>
+                        <td className="px-2 py-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setDraft((p) => ({ ...p, items: p.items.filter((_, i) => i !== idx) }))}
+                            disabled={draft.items.length === 1}
+                            className="ui-subtle hover:text-[rgb(var(--neg))] disabled:opacity-40"
+                            aria-label="Remove line"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setDraft((p) => ({ ...p, items: [...p.items, { ...emptyLine }] }))}
+                  className="ui-btn ui-btn-secondary !h-8 text-xs"
+                >
+                  <Plus size={14} /> Add line
+                </button>
+                <div className="text-sm">
+                  <span className="ui-muted mr-2">Each run:</span>
+                  <span className="font-semibold">{formatMoney(draftTotals.total || 0, currentCompany)}</span>
+                  <span className="ui-muted text-xs ml-2">
+                    ({formatMoney(draftTotals.subtotal || 0, currentCompany)} + {formatMoney(draftTotals.gstTotal || 0, currentCompany)} GST)
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-4">
+            {mode === 'COPY' ? (
             <div className="sm:col-span-2">
               <label className="ui-label">Repeat this invoice</label>
               <select value={sourceInvoiceId} onChange={(e) => setSourceInvoiceId(e.target.value)} className="ui-select w-full px-3 py-2">
@@ -186,6 +410,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
                   ))}
               </select>
             </div>
+            ) : null}
             <div>
               <label className="ui-label">Frequency</label>
               <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="ui-select w-full px-3 py-2">

@@ -11330,7 +11330,19 @@ const AppShell = () => {
           { key: 'deliveryChallans', label: 'Delivery Challans', icon: Truck, perm: 'SALES::Invoices::VIEW', feature: 'deliveryChallans' },
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
           { key: 'recurringInvoices', label: 'Recurring', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
+        ],
+      },
+      {
+        // Chasing money and talking to customers is its own job, done by its
+        // own people. It does not belong inside the invoicing menu.
+        type: 'group',
+        key: 'crmMenu',
+        label: 'CRM',
+        icon: Users,
+        tint: 'sales',
+        items: [
           { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
+          { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
         ],
       },
       {
@@ -12629,20 +12641,52 @@ const AppShell = () => {
             setDb={setDb}
             currentCompany={currentCompany}
             onConvertToInvoice={(order) => {
+              // Bill what is still unbilled, at the terms the order agreed —
+              // an invoice raised from an order should need no re-typing, and
+              // billing a line twice is the mistake this prevents.
+              const billed = new Map();
+              for (const inv of dbForUser.invoices || []) {
+                if (Number(inv?.sourceSalesOrderId) !== Number(order.id)) continue;
+                if (String(inv?.status || '').toLowerCase() === 'cancelled') continue;
+                for (const l of inv.items || []) {
+                  const k = String(l.itemId);
+                  billed.set(k, (billed.get(k) || 0) + (Number(l.quantity) || 0));
+                }
+              }
+              const lines = (order.items || [])
+                .map((l) => {
+                  const ordered = Number(l.quantity) || 0;
+                  const already = billed.get(String(l.itemId)) || 0;
+                  const remaining = Math.max(0, Math.round((ordered - already) * 1000) / 1000);
+                  return { ...l, remaining };
+                })
+                .filter((l) => l.remaining > 0)
+                .map((l) => ({
+                  ...l,
+                  itemId: String(l.itemId),
+                  quantity: l.remaining,
+                  rate: Number(l.rate) || 0,
+                  gstRate: Number(l.gstRate) || 0,
+                  hsnSac: l.hsnSac || '',
+                  amount: Math.round((l.remaining * (Number(l.rate) || 0)) * 100) / 100,
+                }));
+
+              if (!lines.length) {
+                notify.info(`${order.number} is fully billed — nothing left to invoice.`);
+                return;
+              }
+
               setInvoiceEditor({
                 open: true,
                 initial: {
                   customerId: order.customerId,
                   refNo: order.number,
+                  refDate: order.date || '',
+                  salesmanId: order.salesmanId || '',
+                  notes: order.notes || '',
+                  warehouseId: order.warehouseId || activeWarehouseId || '',
                   sourceSalesOrderId: order.id,
-                  items: (order.items || []).map((l) => ({
-                    itemId: String(l.itemId),
-                    description: l.description,
-                    quantity: Number(l.quantity) || 1,
-                    rate: Number(l.rate) || 0,
-                    gstRate: Number(l.gstRate) || 0,
-                    hsnSac: l.hsnSac || '',
-                  })),
+                  items: lines,
                 },
               });
               setActive('invoices');
@@ -12669,16 +12713,25 @@ const AppShell = () => {
                 initial: {
                   customerId: challan.customerId,
                   refNo: challan.number,
+                  refDate: challan.date || '',
+                  notes: challan.notes || '',
+                  warehouseId: challan.warehouseId || activeWarehouseId || '',
                   sourceChallanId: challan.id,
-                  items: challan.items.map((l) => ({
-                    itemId: String(l.itemId),
-                    description: l.description,
-                    quantity: Number(l.quantity) || 1,
-                    rate: Number(l.rate) || 0,
-                    gstRate: Number(
-                      (dbForUser.items || []).find((i) => String(i.id) === String(l.itemId))?.gstRate ?? 0
-                    ),
-                  })),
+                  items: (challan.items || []).map((l) => {
+                    const master = (dbForUser.items || []).find((i) => String(i.id) === String(l.itemId));
+                    const qty = Number(l.quantity) || 1;
+                    const rate = Number(l.rate) || 0;
+                    return {
+                      ...l,
+                      itemId: String(l.itemId),
+                      description: l.description || master?.name || '',
+                      quantity: qty,
+                      rate,
+                      gstRate: Number(l.gstRate ?? master?.gstRate ?? 0),
+                      hsnSac: l.hsnSac || master?.hsnSac || '',
+                      amount: Math.round(qty * rate * 100) / 100,
+                    };
+                  }),
                 },
               });
               setActive('invoices');
