@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { returnableLines, returnStatusLabel } from '../../utils/returns';
 import BillPreview from './BillPreview';
 import KnockOffForm from '../../components/KnockOffForm';
@@ -9,7 +9,7 @@ import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '..
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
 import { ClipboardList, Copy, CreditCard, Eye, FileStack, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { EmptyState } from '../../components/ui/Primitives';
+import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { dueDateFor } from '../../utils/paymentTerms';
@@ -715,6 +715,14 @@ export const PurchaseOrdersList = ({
     }
   );
 
+  // Over the filtered set, so the figure always describes what is on screen.
+  const poTotals = useMemo(() => {
+    let ordered = 0;
+    for (const po of purchaseOrders) ordered += Number(po.total || 0);
+    return [{ label: 'Ordered', value: formatMoney(ordered, currentCompany) }];
+  }, [purchaseOrders, currentCompany]);
+
+
   const createPo = () => {
     // A purchase order is entered the same way a bill is: its own page, not a
     // popup, because the two forms hold the same kind of work.
@@ -757,7 +765,8 @@ export const PurchaseOrdersList = ({
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
-        <table className="ui-table w-full">
+        <div className="ui-table-scroll">
+        <table className="ui-table w-full ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
               <ColumnHeader label="PO #" col="number" state={poFilters} className="ui-th" />
@@ -904,6 +913,13 @@ export const PurchaseOrdersList = ({
             )}
           </tbody>
         </table>
+        </div>
+        <TableTotals
+          count={purchaseOrders.length}
+          totalCount={poSearch.filtered.length}
+          noun="purchase orders"
+          figures={poTotals}
+        />
       </div>
     </div>
   );
@@ -1416,6 +1432,25 @@ export const BillsList = ({
     }
   );
 
+  // Over the filtered set, so the figure always describes what is on screen.
+  const billTotals = useMemo(() => {
+    let booked = 0;
+    let owed = 0;
+    let gst = 0;
+    for (const b of filteredBills) {
+      const total = Number(b.total || 0);
+      booked += total;
+      owed += Math.max(0, total - Number(b.paidAmount || 0));
+      gst += Number(b.gstTotal || 0);
+    }
+    return [
+      { label: 'Booked', value: formatMoney(booked, currentCompany) },
+      { label: 'Payable', value: formatMoney(owed, currentCompany), tone: owed > 0 ? 'neg' : undefined },
+      { label: 'GST', value: formatMoney(gst, currentCompany) },
+    ];
+  }, [filteredBills, currentCompany]);
+
+
   const openRecordPayment = (bill) => {
     // The server-posting disbursement form, same as the Payments screen, so a
     // payment recorded from a bill row reaches the ledger like any other.
@@ -1628,7 +1663,8 @@ export const BillsList = ({
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full">
+        <div className="ui-table-scroll">
+        <table className="ui-table w-full ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
               <ColumnHeader label="Bill #" col="number" state={colFilters} className="ui-th" />
@@ -1748,6 +1784,13 @@ export const BillsList = ({
             )}
           </tbody>
         </table>
+        </div>
+        <TableTotals
+          count={filteredBills.length}
+          totalCount={bills.length}
+          noun="bills"
+          figures={billTotals}
+        />
       </div>
 
       {openMenu?.id ? (

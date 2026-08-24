@@ -920,6 +920,52 @@
     border: 1px solid rgb(var(--border));
   }
 
+  /* --- long tables ---------------------------------------------------------
+     A list longer than the window loses its header, and the fourth number
+     along stops meaning anything — is it the amount or the balance? The header
+     stays put at the top of the list while the rows go past it.
+
+     The list gets its own scroll box rather than riding the page: an ancestor
+     with any non-visible overflow silently disables sticky, and the horizontal
+     scroller these tables already sit in is exactly that. Its own box also
+     keeps the totals bar under it on screen, which is the other half of the
+     point.
+
+     Opt-in, because a line-item grid inside a form has no business scrolling
+     separately from the form it belongs to.
+  --------------------------------------------------------------------------- */
+  .ui-table-scroll {
+    max-height: var(--table-scroll-h, calc(100dvh - 21rem));
+    min-height: 8rem;
+    overflow: auto;
+  }
+  .ui-table-sticky thead th {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: rgb(var(--surface));
+  }
+
+  /* The sum of what is on screen. On a list of money this is the question the
+     screen exists to answer, and answering it anywhere else means exporting to
+     a spreadsheet to add up a column. */
+  .ui-table-totals {
+    display: flex;
+    align-items: baseline;
+    gap: 0.375rem 1.5rem;
+    flex-wrap: wrap;
+    padding: 0.5625rem 0.875rem;
+    border-top: 1px solid rgb(var(--border-strong));
+    background-color: rgb(var(--surface-sunken));
+    font-size: 0.8125rem;
+  }
+  .ui-table-totals .fig {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: rgb(var(--fg));
+  }
+
   /* An anchored panel, for a choice too small to be worth dimming the page
      for. Same surface and radius as the dialog — it is the same object, priced
      differently: no scrim, no trapped keyboard, and it sits where the control

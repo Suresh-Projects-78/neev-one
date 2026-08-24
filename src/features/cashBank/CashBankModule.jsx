@@ -7,7 +7,7 @@ import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
-import { StatTile } from '../../components/ui/Primitives';
+import { StatTile, TableTotals } from '../../components/ui/Primitives';
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -310,6 +310,25 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [txnSearch.filtered, view, txnFilters.filters, txnFilters.sort, ledgerById]);
+
+  // Money in and money out for whatever the filters currently show, so the
+  // question "what moved through this account this period" is answered here
+  // rather than in a spreadsheet.
+  const txnTotals = useMemo(() => {
+    let inAmt = 0;
+    let outAmt = 0;
+    for (const t of txns) {
+      const amt = Number(t.amount || 0);
+      if (t.direction === 'OUT') outAmt += amt;
+      else inAmt += amt;
+    }
+    return [
+      { label: 'In', value: formatMoney(inAmt, currentCompany), tone: inAmt > 0 ? 'pos' : undefined },
+      { label: 'Out', value: formatMoney(outAmt, currentCompany), tone: outAmt > 0 ? 'neg' : undefined },
+      { label: 'Net', value: formatMoney(inAmt - outAmt, currentCompany) },
+    ];
+  }, [txns, currentCompany]);
+
 
   const uncategorisedCount = useMemo(() => allTxns.filter((t) => !isCategorised(t)).length, [allTxns]);
 
@@ -1979,7 +1998,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <div className="text-sm ui-muted">Select an account to see its transactions.</div>
         ) : (
           <div className="border rounded-xl overflow-hidden">
-            <table className="ui-table w-full">
+            <div className="ui-table-scroll">
+            <table className="ui-table w-full ui-table-sticky">
               <thead className="ui-sunken border-b">
                 <tr>
                   <th className="ui-th">
@@ -2128,6 +2148,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 )}
               </tbody>
             </table>
+            </div>
+            <TableTotals
+              count={txns.length}
+              totalCount={txnSearch.filtered.length}
+              noun="transactions"
+              figures={txnTotals}
+            />
           </div>
         )}
       </div>

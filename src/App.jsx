@@ -134,7 +134,7 @@ import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
 import { createLedgerAccount } from './api/ledger';
-import { PageHeader, StatTile, ThemeToggle, SkeletonStats } from './components/ui/Primitives';
+import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals } from './components/ui/Primitives';
 import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
@@ -1059,6 +1059,22 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     }
   );
 
+  // Over the filtered set, so the figure always describes what is on screen.
+  const expenseTotals = useMemo(() => {
+    let spent = 0;
+    let unpaid = 0;
+    for (const e of filteredExpenses) {
+      const total = Number(e.total || 0);
+      spent += total;
+      unpaid += Math.max(0, total - Number(e.paidAmount || 0));
+    }
+    return [
+      { label: 'Spent', value: formatMoney(spent, currentCompany) },
+      { label: 'Unpaid', value: formatMoney(unpaid, currentCompany), tone: unpaid > 0 ? 'neg' : undefined },
+    ];
+  }, [filteredExpenses, currentCompany]);
+
+
   const ledgerNamesOf = (e) =>
     (Array.isArray(e?.lines) ? e.lines : []).map((l) => l.ledgerName).filter(Boolean).join('; ');
 
@@ -1420,7 +1436,8 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full ui-table-wide">
+        <div className="ui-table-scroll">
+        <table className="ui-table w-full ui-table-wide ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
               <ColumnHeader label="Voucher #" col="number" state={expenseColFilters} className="ui-th" />
@@ -1492,6 +1509,13 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             )}
           </tbody>
         </table>
+        </div>
+        <TableTotals
+          count={filteredExpenses.length}
+          totalCount={expenses.length}
+          noun="vouchers"
+          figures={expenseTotals}
+        />
       </div>
     </div>
   );

@@ -329,3 +329,41 @@ export const SavedHint = ({ show, label = 'Saved' }) =>
       {label}
     </span>
   ) : null;
+
+/**
+ * What the rows on screen come to.
+ *
+ * Every list in this product is a list of money, and the question a person
+ * arrives with is almost never "which row" — it is "what does this lot come
+ * to". Without this the answer lives in a spreadsheet: filter here, export,
+ * sum a column there, come back.
+ *
+ * `count` is what is showing and `totalCount` is what exists, so a filtered
+ * view says so plainly rather than presenting a partial sum as the whole.
+ * Figures must be computed over the filtered set — not over the rendered rows —
+ * or the day this list gets a page window the number quietly becomes a lie.
+ */
+export const TableTotals = ({ count, totalCount, noun = 'rows', figures = [], className = '' }) => {
+  const shown = Number(count || 0);
+  const total = Number(totalCount ?? count ?? 0);
+  const filtered = total > shown;
+
+  return (
+    <div className={`ui-table-totals ${className}`.trim()}>
+      <span className="ui-t-label">
+        {shown.toLocaleString('en-IN')} {noun}
+        {filtered ? <span className="ui-muted"> of {total.toLocaleString('en-IN')}</span> : null}
+      </span>
+      {figures
+        .filter((f) => f && f.label)
+        .map((f) => (
+          <span key={f.label}>
+            <span className="ui-muted">{f.label}</span>{' '}
+            <span className="fig" style={f.tone ? { color: `rgb(var(--${f.tone}))` } : undefined}>
+              {f.value}
+            </span>
+          </span>
+        ))}
+    </div>
+  );
+};

@@ -39,7 +39,7 @@ import {
   isIntraStateSupply,
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
-import { PageHeader, StatusPill, EmptyState } from '../../components/ui/Primitives';
+import { PageHeader, StatusPill, EmptyState, TableTotals } from '../../components/ui/Primitives';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
@@ -362,6 +362,27 @@ export const InvoicesList = ({
       status: (r) => getDerivedStatus(r),
     });
   }, [dateFrom, dateTo, invoices, searchText, statusFilter, colFilters.applyFilters, warehouseById]);
+
+  // Summed over the filtered set, not over the rows the browser happens to have
+  // drawn — the day this list gets a page window, the figure must not quietly
+  // become the total of one page.
+  const invoiceTotals = useMemo(() => {
+    let billed = 0;
+    let outstandingSum = 0;
+    let gst = 0;
+    for (const inv of filteredInvoices) {
+      const total = Number(inv.total || 0);
+      billed += total;
+      outstandingSum += Math.max(0, total - Number(inv.paidAmount || 0));
+      gst += Number(inv.gstTotal || 0);
+    }
+    return [
+      { label: 'Billed', value: formatMoney(billed, currentCompany) },
+      { label: 'Outstanding', value: formatMoney(outstandingSum, currentCompany), tone: outstandingSum > 0 ? 'neg' : undefined },
+      { label: 'GST', value: formatMoney(gst, currentCompany) },
+    ];
+  }, [filteredInvoices, currentCompany]);
+
 
   const exportInvoices = () =>
     exportRows({
@@ -821,8 +842,8 @@ export const InvoicesList = ({
           </BulkBar>
         ) : null}
 
-        <div className="overflow-x-auto">
-        <table className="ui-table ui-table-wide">
+        <div className="overflow-x-auto ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
           <thead>
             <tr>
               {gridEnabled ? (
@@ -975,12 +996,12 @@ export const InvoicesList = ({
         </table>
         </div>
 
-        <div className="ui-card-foot">
-          <span>
-            Showing <span className="ui-fg font-medium">{filteredInvoices.length}</span> of{' '}
-            <span className="ui-fg font-medium">{invoices.length}</span> invoices
-          </span>
-        </div>
+        <TableTotals
+          count={filteredInvoices.length}
+          totalCount={invoices.length}
+          noun="invoices"
+          figures={invoiceTotals}
+        />
       </div>
 
       {openMenu?.id ? (
