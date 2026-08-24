@@ -1233,6 +1233,8 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
           amount: subtotal,
           paidAmount: 0,
           status: 'Unpaid',
+          branchId: activeBranchId || '',
+          warehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
           importedAt: new Date().toISOString(),
           createdAt: new Date().toISOString(),
         });
@@ -1785,6 +1787,9 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       amount: computed.subtotal,
       paidAmount: 0,
       status: wantsDraft ? 'Draft' : 'Unpaid',
+      // Where this was entered from, so the header's scope can find it later.
+      branchId: activeBranchId || '',
+      warehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
       createdAt: new Date().toISOString(),
     };
 
@@ -11117,12 +11122,47 @@ const AppShell = () => {
 
   // Filter local DB vouchers/transfers by allowed warehouses/branches for non-admin users.
   const dbForUser = useMemo(() => {
-    if (!hasBranchRestriction) return db;
+    const activeWh = String(activeWarehouseId || '').trim();
+    const activeBr = String(activeBranchId || '').trim();
+    const scoped = Boolean(activeWh) || Boolean(activeBr);
+    if (!hasBranchRestriction && !scoped) return db;
+
+    // Where the user says they are standing, from the header. Picking a
+    // warehouse means every list is that warehouse's work; "All warehouses" is
+    // the company-wide view. A document filed before warehouses existed has no
+    // warehouse of its own, so it only shows in the company-wide view.
+    const warehouseBranch = new Map(
+      (Array.isArray(warehouses) ? warehouses : []).map((w) => [String(w?.id), String(w?.branchId || '')])
+    );
+    const inActiveScope = (row) => {
+      if (!scoped) return true;
+      const whId = String(row?.warehouseId || '').trim();
+      const brId = String(row?.branchId || '').trim() || warehouseBranch.get(whId) || '';
+      // Older records were filed before the app asked where they belonged.
+      // Hiding them everywhere would lose them, so they stay visible.
+      if (!whId && !brId) return true;
+      if (activeWh) return whId ? whId === activeWh : brId === (warehouseBranch.get(activeWh) || '');
+      return brId === activeBr;
+    };
+    const transferInActiveScope = (t) => {
+      if (!scoped) return true;
+      if (activeWh) {
+        return (
+          String(t?.sourceWarehouseId || '').trim() === activeWh ||
+          String(t?.targetWarehouseId || '').trim() === activeWh
+        );
+      }
+      return (
+        String(t?.sourceBranchId || '').trim() === activeBr || String(t?.targetBranchId || '').trim() === activeBr
+      );
+    };
 
     const filterByWarehouse = (rows) => {
       const list = Array.isArray(rows) ? rows : [];
       return list.filter((r) => {
         if (Number(r?.companyId) !== Number(currentCompany?.id)) return true;
+        if (!inActiveScope(r)) return false;
+        if (!hasBranchRestriction) return true;
         const whId = String(r?.warehouseId || '').trim();
         if (!whId) return false;
         return allowedWarehouseIdSet.has(whId);
@@ -11136,6 +11176,8 @@ const AppShell = () => {
       const list = Array.isArray(rows) ? rows : [];
       return list.filter((t) => {
         if (Number(t?.companyId) !== Number(currentCompany?.id)) return true;
+        if (!transferInActiveScope(t)) return false;
+        if (!hasBranchRestriction) return true;
         const sourceBranchId = String(t?.sourceBranchId || '').trim();
         const targetBranchId = String(t?.targetBranchId || '').trim();
         if (!sourceBranchId && !targetBranchId) return false;
@@ -11154,9 +11196,21 @@ const AppShell = () => {
       debitNotes: filterByWarehouse(db?.debitNotes),
       estimates: filterByWarehouse(db?.estimates),
       purchaseOrders: filterByWarehouse(db?.purchaseOrders),
+      salesOrders: filterByWarehouse(db?.salesOrders),
+      deliveryChallans: filterByWarehouse(db?.deliveryChallans),
+      expenses: filterByWarehouse(db?.expenses),
       stockTransfers: filterTransfers(db?.stockTransfers),
     };
-  }, [db, hasBranchRestriction, allowedWarehouseIdSet, allowedBranchIdSet, currentCompany?.id]);
+  }, [
+    db,
+    hasBranchRestriction,
+    allowedWarehouseIdSet,
+    allowedBranchIdSet,
+    currentCompany?.id,
+    activeWarehouseId,
+    activeBranchId,
+    warehouses,
+  ]);
 
   const [active, setActive] = useState('dashboard');
 

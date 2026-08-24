@@ -48,6 +48,8 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
   });
 
   const branchIdForNumbering = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
+  // Where this was entered from, so the header's scope can find it later.
+  const warehouseIdForEntry = String(localStorage.getItem('activeWarehouseId') || '').trim();
   const selectedCustomer = form.customerId ? customers.find((c) => c.id === parseInt(form.customerId)) : null;
   const { state: companyState } = getCompanyGstProfile(currentCompany);
   const { state: customerState } = getPartyGstProfile(selectedCustomer);
@@ -165,6 +167,8 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       status: 'Open',
       salesmanId: form.salesmanId || '',
       notes: form.notes,
+      branchId: branchIdForNumbering || '',
+      warehouseId: warehouseIdForEntry || '',
       createdAt: new Date().toISOString(),
     };
     setDb((prev) => ({
@@ -197,6 +201,8 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       purpose: 'Supply on Approval',
       vehicleNo: '',
       notes: `Against ${order.number}`,
+      branchId: String(order.branchId || branchIdForNumbering || ''),
+      warehouseId: String(order.warehouseId || warehouseIdForEntry || ''),
       sourceSalesOrderId: order.id,
       items: (order.items || []).map((l) => ({ itemId: l.itemId, description: l.description, quantity: Number(l.quantity) || 1, rate: Number(l.rate) || 0 })),
       value: Number(order.subtotal || 0),

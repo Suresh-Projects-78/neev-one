@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
@@ -376,22 +377,14 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Warehouse *</label>
-          <select
-            value={formData.warehouseId}
-            onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="ui-select w-full px-3 py-2 ui-surface"
-            required
-          >
-            <option value="">Select Warehouse</option>
-            {warehouseOptions.map((w) => (
-              <option key={String(w.id)} value={String(w.id)}>
-                {w.name || `Warehouse ${w.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
+        <WarehouseField
+          value={formData.warehouseId}
+          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
+          options={warehouseOptions}
+          activeWarehouseId={defaultWarehouseId}
+          isEdit={Boolean(initialData)}
+          className="ui-select w-full px-3 py-2 ui-surface"
+        />
 
         <div>
           <label className="block text-sm font-medium mb-1">Bill Date</label>
@@ -1859,22 +1852,14 @@ export const DebitNoteForm = ({
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Warehouse *</label>
-          <select
-            value={formData.warehouseId}
-            onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="ui-select w-full px-3 py-2 ui-surface"
-            required
-          >
-            <option value="">Select Warehouse</option>
-            {warehouseOptions.map((w) => (
-              <option key={String(w.id)} value={String(w.id)}>
-                {w.name || `Warehouse ${w.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
+        <WarehouseField
+          value={formData.warehouseId}
+          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
+          options={warehouseOptions}
+          activeWarehouseId={defaultWarehouseId}
+          isEdit={Boolean(initialData)}
+          className="ui-select w-full px-3 py-2 ui-surface"
+        />
 
         <div>
           <label className="block text-sm font-medium mb-1">Debit Note Date</label>

@@ -197,6 +197,10 @@ export default function PosScreen({ db, setDb, currentCompany }) {
         posSale: true,
         tender,
         customerMobile: customerMobile.trim(),
+        // The counter this was rung up at, from the header — a POS sale takes
+        // stock off a real shelf, so it has to say which one.
+        branchId: activeBranchId || '',
+        warehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
         createdAt: new Date().toISOString(),
       };
       const nextPayId = (db.payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1;

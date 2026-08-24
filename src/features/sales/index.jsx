@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag, RefreshCw } from 'lucide-react';
 
@@ -2462,22 +2463,14 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Warehouse *</label>
-          <select
-            value={formData.warehouseId}
-            onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="ui-select"
-            required
-          >
-            <option value="">Select Warehouse</option>
-            {warehouseOptions.map((w) => (
-              <option key={String(w.id)} value={String(w.id)}>
-                {w.name || `Warehouse ${w.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
+        <WarehouseField
+          value={formData.warehouseId}
+          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
+          options={warehouseOptions}
+          activeWarehouseId={defaultWarehouseId}
+          isEdit={Boolean(initialData)}
+          className="ui-select"
+        />
 
         <div className="lg:col-span-2">
           <CustomerPicker
@@ -3608,22 +3601,14 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Warehouse *</label>
-          <select
-            value={formData.warehouseId}
-            onChange={(e) => setFormData((p) => ({ ...p, warehouseId: e.target.value }))}
-            className="ui-select"
-            required
-          >
-            <option value="">Select Warehouse</option>
-            {warehouseOptions.map((w) => (
-              <option key={String(w.id)} value={String(w.id)}>
-                {w.name || `Warehouse ${w.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
+        <WarehouseField
+          value={formData.warehouseId}
+          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
+          options={warehouseOptions}
+          activeWarehouseId={defaultWarehouseId}
+          isEdit={false}
+          className="ui-select"
+        />
         <div>
           <CustomerPicker
             db={db}

@@ -102,6 +102,9 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
       items: lines,
       value: lines.reduce((s, l) => s + l.quantity * l.rate, 0),
       status: 'Open',
+      // Where this was entered from, so the header's scope can find it later.
+      branchId: String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim(),
+      warehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
       createdAt: new Date().toISOString(),
     };
     setDb((prev) => ({ ...prev, deliveryChallans: [...(prev.deliveryChallans || []), challan] }));
