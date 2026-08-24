@@ -27,6 +27,7 @@ import { currenciesRouter } from './routes/currencies.js';
 import { importsRouter } from './routes/imports.js';
 import { batchSerialRouter } from './routes/batchSerial.js';
 import { paymentsRouter } from './routes/payments.js';
+import { gstinRouter } from './routes/gstin.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 export function buildApp() {
@@ -112,6 +113,7 @@ export function buildApp() {
   app.use('/api', governanceRouter);
   app.use('/api', featuresRouter);
   app.use('/api', partiesRouter);
+  app.use('/api', gstinRouter);
   app.use('/api', emailRouter);
   app.use('/api', securityRouter);
   app.use('/api', itemsRouter);

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createVendor, listVendors } from '../../api/masters';
+import { apiFetch } from '../../api/http';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
@@ -49,6 +50,11 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         gstRegistration: String(initialData.gstRegistration || 'Unregistered'),
         gstin: String(initialData.gstin || ''),
         pan: String(initialData.pan || ''),
+        legalName: String(initialData.legalName || ''),
+        tradeName: String(initialData.tradeName || ''),
+        gstStatus: String(initialData.gstStatus || ''),
+        gstTaxpayerType: String(initialData.gstTaxpayerType || ''),
+        gstRegistrationDate: String(initialData.gstRegistrationDate || ''),
         paymentTermDays:
           initialData.paymentTermDays === undefined || initialData.paymentTermDays === null
             ? ''
@@ -82,6 +88,11 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       gstRegistration: 'Unregistered',
       gstin: '',
       pan: '',
+      legalName: '',
+      tradeName: '',
+      gstStatus: '',
+      gstTaxpayerType: '',
+      gstRegistrationDate: '',
       paymentTermDays: '',
       billingAddress: {
         ...emptyAddress,
@@ -201,6 +212,59 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   const accountTypeById = new Map(accountTypes.map((t) => [String(t.id), t]));
 
   const gstRegistrationRequiresGstinUi = ['Registered', 'Composition', 'SEZ'].includes(formData.gstRegistration);
+
+  // Fetch from the GST portal. What comes back is a starting point, not a
+  // verdict: everything it fills stays editable, because the portal's idea of
+  // a trade name is often not what you call this vendor.
+  const [gstFetching, setGstFetching] = useState(false);
+  const [gstFetchNote, setGstFetchNote] = useState('');
+  const fetchFromGstPortal = async () => {
+    const gstin = normalizeGstin(formData.gstin);
+    if (!isValidGstin(gstin)) {
+      notify.error('Enter the full 15-character GSTIN first.');
+      return;
+    }
+    setGstFetching(true);
+    setGstFetchNote('');
+    try {
+      const data = await apiFetch(`/gstin/${gstin}`, { skipWarehouseHeader: true });
+      setFormData((prev) => {
+        const addr = { ...prev.billingAddress };
+        if (data.addressLine) addr.line1 = data.addressLine;
+        if (data.city) addr.city = data.city;
+        if (data.state) addr.state = data.state;
+        if (data.pincode) addr.pincode = String(data.pincode);
+        if (!String(addr.country || '').trim()) addr.country = INDIA_COUNTRY;
+        const legal = String(data.legalName || data.tradeName || '').trim();
+        return {
+          ...prev,
+          gstin,
+          pan: String(prev.pan || '').trim() || String(data.pan || ''),
+          displayName: legal || prev.displayName,
+          legalName: String(data.legalName || prev.legalName || ''),
+          tradeName: String(data.tradeName || prev.tradeName || ''),
+          gstStatus: String(data.status || ''),
+          gstTaxpayerType: String(data.taxpayerType || ''),
+          gstRegistrationDate: String(data.registrationDate || ''),
+          billingAddress: addr,
+        };
+      });
+      if (data.source === 'portal') {
+        notify.success('Fetched from the GST portal — check the details and edit anything that is off.');
+        setGstFetchNote('Filled from the GST portal. Everything here is editable.');
+      } else {
+        const why = String(data.note || data.error || '').trim();
+        notify.info('Filled the state and PAN the GSTIN itself encodes.');
+        setGstFetchNote(why || 'Portal lookup is not configured, so only the state and PAN were filled.');
+      }
+    } catch (err) {
+      const msg = String(err?.message || 'Could not reach the GST lookup service.');
+      notify.error(msg);
+      setGstFetchNote(msg);
+    } finally {
+      setGstFetching(false);
+    }
+  };
   const gstStateAuto = getGstStateFromGstin(formData.gstin);
 
   const updateBilling = (field, value) => {
@@ -471,6 +535,101 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="border rounded-lg p-3 space-y-3">
+        <div className="font-semibold">Is this vendor GST registered?</div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">GST Registration</label>
+          <select
+            value={formData.gstRegistration}
+            onChange={(e) => {
+              const nextReg = e.target.value;
+              const requiresGstin = ['Registered', 'Composition', 'SEZ'].includes(nextReg);
+              setGstFetchNote('');
+              setFormData((prev) => ({
+                ...prev,
+                gstRegistration: nextReg,
+                gstin: requiresGstin ? prev.gstin : '',
+                pan: requiresGstin ? prev.pan : '',
+              }));
+            }}
+            className="ui-select w-full px-3 py-2"
+          >
+            <option value="Registered">Registered</option>
+            <option value="Unregistered">Unregistered</option>
+            <option value="Composition">Composition</option>
+            <option value="SEZ">SEZ</option>
+            <option value="Overseas">Overseas</option>
+          </select>
+          {!gstRegistrationRequiresGstinUi ? (
+            <div className="text-xs ui-muted mt-1">
+              No GSTIN is asked for, and purchases from this vendor carry no input tax credit.
+            </div>
+          ) : null}
+        </div>
+
+        {gstRegistrationRequiresGstinUi ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">GSTIN *</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={formData.gstin}
+                onChange={(e) => {
+                  const nextGstin = e.target.value.toUpperCase();
+                  const nextAutoState = getGstStateFromGstin(nextGstin);
+                  setGstFetchNote('');
+                  setFormData((prev) => ({
+                    ...prev,
+                    gstin: nextGstin,
+                    billingAddress: {
+                      ...prev.billingAddress,
+                      state: nextAutoState || prev.billingAddress.state,
+                    },
+                  }));
+                }}
+                className="ui-input flex-1 px-3 py-2 font-mono"
+                placeholder="29ABCDE1234F1Z5"
+                maxLength={15}
+                required
+              />
+              <button
+                type="button"
+                onClick={fetchFromGstPortal}
+                disabled={gstFetching || !isValidGstin(formData.gstin)}
+                className="ui-btn ui-btn-secondary whitespace-nowrap"
+                title={isValidGstin(formData.gstin) ? 'Fetch this vendor from the GST portal' : 'Enter the full GSTIN first'}
+              >
+                {gstFetching ? 'Fetching…' : 'Fetch'}
+              </button>
+            </div>
+            <div className="text-xs ui-muted mt-1">
+              {gstFetchNote || 'Fetch pulls the vendor from the GST portal. Everything it fills stays editable.'}
+            </div>
+
+            {formData.gstStatus || formData.gstTaxpayerType || formData.gstRegistrationDate ? (
+              <div className="mt-2 text-xs ui-muted flex flex-wrap gap-x-4 gap-y-1">
+                {formData.gstStatus ? <span>Status: {formData.gstStatus}</span> : null}
+                {formData.gstTaxpayerType ? <span>Taxpayer: {formData.gstTaxpayerType}</span> : null}
+                {formData.gstRegistrationDate ? <span>Registered: {formData.gstRegistrationDate}</span> : null}
+              </div>
+            ) : null}
+
+            {formData.tradeName ? (
+              <div className="mt-2">
+                <label className="block text-sm font-medium mb-1">Trade name (from the portal)</label>
+                <input
+                  type="text"
+                  value={formData.tradeName}
+                  onChange={(e) => setFormData((p) => ({ ...p, tradeName: e.target.value }))}
+                  className="ui-input w-full px-3 py-2"
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+
       <div>
         <label className="block text-sm font-medium mb-1">Company Name</label>
         <input
@@ -569,56 +728,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       </div>
 
       <div className="border rounded-lg p-3 space-y-3">
-        <div className="font-semibold">GST Details</div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">GST Registration</label>
-            <select
-              value={formData.gstRegistration}
-              onChange={(e) => {
-                const nextReg = e.target.value;
-                const requiresGstin = ['Registered', 'Composition', 'SEZ'].includes(nextReg);
-                setFormData((prev) => ({
-                  ...prev,
-                  gstRegistration: nextReg,
-                  gstin: requiresGstin ? prev.gstin : '',
-                  pan: requiresGstin ? prev.pan : '',
-                }));
-              }}
-              className="ui-select w-full px-3 py-2"
-            >
-              <option value="Registered">Registered</option>
-              <option value="Unregistered">Unregistered</option>
-              <option value="Composition">Composition</option>
-              <option value="SEZ">SEZ</option>
-              <option value="Overseas">Overseas</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">GSTIN</label>
-            <input
-              type="text"
-              value={gstRegistrationRequiresGstinUi ? formData.gstin : ''}
-              onChange={(e) => {
-                if (!gstRegistrationRequiresGstinUi) return;
-                const nextGstin = e.target.value;
-                const nextAutoState = getGstStateFromGstin(nextGstin);
-                setFormData((prev) => ({
-                  ...prev,
-                  gstin: nextGstin,
-                  billingAddress: {
-                    ...prev.billingAddress,
-                    state: nextAutoState || prev.billingAddress.state,
-                  },
-                }));
-              }}
-              className={`w-full px-3 py-2 border rounded-lg ${gstRegistrationRequiresGstinUi ? '' : 'ui-sunken'}`}
-              placeholder={gstRegistrationRequiresGstinUi ? 'GSTIN (required)' : 'GSTIN (disabled)'}
-              disabled={!gstRegistrationRequiresGstinUi}
-              required={gstRegistrationRequiresGstinUi}
-            />
-          </div>
-        </div>
+        <div className="font-semibold">Tax & terms</div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
