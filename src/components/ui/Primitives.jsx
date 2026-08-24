@@ -122,21 +122,112 @@ export const StatusPill = ({ status }) => {
 };
 
 /** Empty state with an optional call to action. */
-export const EmptyState = ({ icon: Icon = null, title, description, action = null }) => (
-  <div className="ui-in flex flex-col items-center justify-center text-center py-14 px-6">
-    {Icon ? (
-      <div
-        className="h-11 w-11 rounded-full flex items-center justify-center mb-3"
-        style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
-      >
-        <Icon size={20} className="ui-subtle" aria-hidden="true" />
-      </div>
-    ) : null}
-    <div className="ui-title text-sm">{title}</div>
-    {description ? <div className="ui-muted text-sm mt-1 max-w-sm">{description}</div> : null}
-    {action ? <div className="mt-4">{action}</div> : null}
-  </div>
-);
+/**
+ * What a screen says when it has nothing to show.
+ *
+ * Three situations, three answers, because they are not the same thing:
+ *
+ *   new       nothing has ever been created here
+ *   filtered  records exist, the filters are hiding all of them
+ *   disabled  the module is switched off for this company
+ *
+ * The middle one is the reason this exists. With per-column filters on every
+ * list, filtering to nothing is a daily event, and an accountant who knows
+ * there are 77 orders reads "No purchase orders found" as data loss. Saying
+ * "all 77 are still here, three filters are hiding them" is the difference
+ * between a shrug and a support call.
+ */
+export const EmptyState = ({
+  icon: Icon = null,
+  title,
+  description,
+  action = null,
+  kind = 'new',
+  /** How many records exist behind the filters. Shown so the count is visible. */
+  totalCount = null,
+  /** [{ label, value, onRemove }] — the filters doing the hiding. */
+  filters = [],
+  onClearFilters = null,
+  /** [{ label, description, onSelect }] — the real ways to a first record. */
+  routes = [],
+}) => {
+  const isFiltered = kind === 'filtered';
+  const isDisabled = kind === 'disabled';
+
+  const headline =
+    title ||
+    (isFiltered ? 'Nothing matches these filters' : isDisabled ? 'This is switched off' : 'Nothing here yet');
+
+  const body =
+    description ||
+    (isFiltered && totalCount
+      ? `All ${totalCount} are still here. The filters below are narrowing them to nothing.`
+      : null);
+
+  return (
+    <div className="ui-in flex flex-col items-center justify-center text-center py-12 px-6">
+      {Icon ? (
+        <div
+          className="h-11 w-11 rounded-full flex items-center justify-center mb-3"
+          style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
+        >
+          <Icon size={20} className="ui-subtle" aria-hidden="true" />
+        </div>
+      ) : null}
+
+      <div className="ui-t-sec">{headline}</div>
+      {body ? <div className="ui-muted ui-t-body mt-1 max-w-md">{body}</div> : null}
+
+      {isFiltered && filters.length ? (
+        <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
+          {filters.map((f) => (
+            <span
+              key={`${f.label}-${f.value}`}
+              className="ui-sunken border ui-border-c rounded-full text-xs px-2.5 py-1 inline-flex items-center gap-1.5"
+            >
+              <span className="ui-muted">{f.label}</span>
+              <span className="font-medium">{f.value}</span>
+              {typeof f.onRemove === 'function' ? (
+                <button
+                  type="button"
+                  onClick={f.onRemove}
+                  className="ui-subtle hover:ui-fg"
+                  aria-label={`Remove the ${f.label} filter`}
+                >
+                  ×
+                </button>
+              ) : null}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      {isFiltered && typeof onClearFilters === 'function' ? (
+        <button type="button" onClick={onClearFilters} className="ui-btn ui-btn-secondary ui-btn-sm mt-3">
+          Clear filters
+        </button>
+      ) : null}
+
+      {!isFiltered && routes.length ? (
+        <div className="mt-4 grid gap-2 sm:grid-cols-3 w-full max-w-2xl text-left">
+          {routes.map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              onClick={r.onSelect}
+              className="ui-card p-3 hover:border-[rgb(var(--brand))] transition-colors"
+            >
+              <span className="block text-sm font-semibold">{r.label}</span>
+              {r.description ? <span className="block ui-muted text-xs mt-0.5 leading-4">{r.description}</span> : null}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {action ? <div className="mt-4">{action}</div> : null}
+    </div>
+  );
+};
 
 /* --- loading placeholders -------------------------------------------------
    Every skeleton mirrors the shape of the thing it stands in for, so the

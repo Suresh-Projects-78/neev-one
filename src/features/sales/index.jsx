@@ -280,6 +280,37 @@ export const InvoicesList = ({
     return 'Unpaid';
   };
 
+  // What is currently hiding rows, in the user's words. Shown on the empty
+  // state so "nothing here" never has to be read as "nothing exists".
+  const activeFilterChips = useMemo(() => {
+    const chips = [];
+    if (String(searchText || '').trim()) {
+      chips.push({ label: 'Search', value: String(searchText).trim(), onRemove: () => setSearchText('') });
+    }
+    if (String(statusFilter || '').trim()) {
+      chips.push({ label: 'Status', value: String(statusFilter).trim(), onRemove: () => setStatusFilter('') });
+    }
+    if (String(dateFrom || '').trim()) {
+      chips.push({ label: 'From', value: String(dateFrom).trim(), onRemove: () => setDateFrom('') });
+    }
+    if (String(dateTo || '').trim()) {
+      chips.push({ label: 'To', value: String(dateTo).trim(), onRemove: () => setDateTo('') });
+    }
+    for (const [key, f] of Object.entries(colFilters.filters || {})) {
+      const shown = Array.isArray(f?.values) ? f.values.filter(Boolean).join(', ') : String(f?.value || '');
+      chips.push({ label: key, value: shown || 'set', onRemove: () => colFilters.clearColumn(key) });
+    }
+    return chips;
+  }, [searchText, statusFilter, dateFrom, dateTo, colFilters]);
+
+  const clearAllInvoiceFilters = () => {
+    setSearchText('');
+    setStatusFilter('');
+    setDateFrom('');
+    setDateTo('');
+    colFilters.clearAll();
+  };
+
   const filteredInvoices = useMemo(() => {
     const q = String(searchText || '').trim().toLowerCase();
     const from = String(dateFrom || '').trim();
@@ -821,11 +852,34 @@ export const InvoicesList = ({
             {filteredInvoices.length === 0 ? (
               <tr>
                 <td colSpan={3 + (gridEnabled ? 1 : 0) + GRID_COLUMNS.filter((c) => !c.always && col(c.key)).length}>
-                  <EmptyState
-                    icon={FileText}
-                    title="No invoices found"
-                    description="Adjust the filters above, or create the first invoice for this branch."
-                  />
+                  {invoices.length === 0 ? (
+                    <EmptyState
+                      icon={FileText}
+                      kind="new"
+                      title="No invoices yet"
+                      description="An invoice is what turns a sale into money owed to you, and into the GST you have collected."
+                      routes={[
+                        {
+                          label: 'Raise one now',
+                          description: 'Pick a customer, add lines, save. Two minutes.',
+                          onSelect: () => onNewInvoice?.(),
+                        },
+                        {
+                          label: 'Import your history',
+                          description: 'Bring across invoices from your existing books.',
+                          onSelect: () => onNewInvoice?.(),
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={FileText}
+                      kind="filtered"
+                      totalCount={invoices.length}
+                      filters={activeFilterChips}
+                      onClearFilters={clearAllInvoiceFilters}
+                    />
+                  )}
                 </td>
               </tr>
             ) : (

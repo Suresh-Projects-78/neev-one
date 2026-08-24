@@ -8,7 +8,8 @@ import { notify, confirmDialog } from '../../components/ui/notify';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Copy, CreditCard, Eye, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ClipboardList, Copy, CreditCard, Eye, FileStack, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { EmptyState } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { dueDateFor } from '../../utils/paymentTerms';
@@ -682,6 +683,19 @@ export const PurchaseOrdersList = ({
     ['number', 'vendorName', 'date', 'status']
   );
   const poFilters = useColumnFilters();
+
+  // What is hiding rows right now, in the user's words.
+  const poFilterChips = React.useMemo(() => {
+    const chips = [];
+    if (String(poSearch.query || '').trim()) {
+      chips.push({ label: 'Search', value: String(poSearch.query).trim(), onRemove: () => poSearch.setQuery('') });
+    }
+    for (const [key, f] of Object.entries(poFilters.filters || {})) {
+      const shown = Array.isArray(f?.values) ? f.values.filter(Boolean).join(', ') : String(f?.value || '');
+      chips.push({ label: key, value: shown || 'set', onRemove: () => poFilters.clearColumn(key) });
+    }
+    return chips;
+  }, [poSearch, poFilters]);
   const purchaseOrders = poFilters.applyFilters(
     poSearch.filtered
       .slice()
@@ -758,8 +772,28 @@ export const PurchaseOrdersList = ({
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {purchaseOrders.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
-                  No purchase orders found. Click "New PO" to create one.
+                <td colSpan="7">
+                  {db.purchaseOrders.filter((x) => x.companyId === currentCompany.id).length === 0 ? (
+                    <EmptyState
+                      icon={ClipboardList}
+                      kind="new"
+                      title="Nothing ordered yet"
+                      description="A purchase order records what you asked a vendor for, so the bill that arrives can be checked against it."
+                      action={
+                        <button type="button" onClick={createPo} className="ui-btn ui-btn-primary">
+                          + New PO
+                        </button>
+                      }
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={ClipboardList}
+                      kind="filtered"
+                      totalCount={db.purchaseOrders.filter((x) => x.companyId === currentCompany.id).length}
+                      filters={poFilterChips}
+                      onClearFilters={() => { poSearch.setQuery(''); poFilters.clearAll(); }}
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
@@ -1246,6 +1280,27 @@ export const BillsList = ({
   const bills = billSearch.filtered;
   const [statusFilter, setStatusFilter] = useState('All');
   const colFilters = useColumnFilters();
+
+  const billFilterChips = React.useMemo(() => {
+    const chips = [];
+    if (String(billSearch.query || '').trim()) {
+      chips.push({ label: 'Search', value: String(billSearch.query).trim(), onRemove: () => billSearch.setQuery('') });
+    }
+    if (statusFilter && statusFilter !== 'All') {
+      chips.push({ label: 'Status', value: statusFilter, onRemove: () => setStatusFilter('All') });
+    }
+    for (const [key, f] of Object.entries(colFilters.filters || {})) {
+      const shown = Array.isArray(f?.values) ? f.values.filter(Boolean).join(', ') : String(f?.value || '');
+      chips.push({ label: key, value: shown || 'set', onRemove: () => colFilters.clearColumn(key) });
+    }
+    return chips;
+  }, [billSearch, statusFilter, colFilters]);
+
+  const clearAllBillFilters = () => {
+    billSearch.setQuery('');
+    setStatusFilter('All');
+    colFilters.clearAll();
+  };
   const [openMenu, setOpenMenu] = useState(null);
   const menuRef = useRef(null);
 
@@ -1590,8 +1645,28 @@ export const BillsList = ({
           <tbody className="divide-y">
             {filteredBills.length === 0 ? (
               <tr>
-                <td colSpan="9" className="px-6 py-12 text-center ui-muted">
-                  No bills found
+                <td colSpan="9">
+                  {db.bills.filter((x) => x.companyId === currentCompany.id).length === 0 ? (
+                    <EmptyState
+                      icon={FileStack}
+                      kind="new"
+                      title="No bills yet"
+                      description="A vendor bill is what you owe and the input GST you can claim against it."
+                      action={
+                        <button type="button" onClick={() => onNewBill?.()} className="ui-btn ui-btn-primary">
+                          + New Bill
+                        </button>
+                      }
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={FileStack}
+                      kind="filtered"
+                      totalCount={db.bills.filter((x) => x.companyId === currentCompany.id).length}
+                      filters={billFilterChips}
+                      onClearFilters={clearAllBillFilters}
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
