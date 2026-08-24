@@ -80,6 +80,80 @@ const delta = (current, previous) => {
 };
 
 /** Direction chip. Colour never carries the meaning alone — the arrow does too. */
+/**
+ * The shape of a number, at table scale.
+ *
+ * A change of +179% could be a steady climb or one lumpy week, and the
+ * percentage cannot tell you which. Twenty-four pixels of line can.
+ */
+/** Absolute movement, for figures that can be negative on either side. */
+function DiffChip({ value, company, invert = false }) {
+  const v = Math.round(value);
+  if (v === 0) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[0.8125rem] font-medium" style={{ color: 'rgb(var(--fg-muted))' }}>
+        <Minus size={13} aria-hidden="true" />
+        Flat
+      </span>
+    );
+  }
+  const rose = v > 0;
+  const good = invert ? !rose : rose;
+  const Icon = rose ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[0.8125rem] font-medium"
+      style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
+    >
+      <Icon size={13} aria-hidden="true" />
+      {formatMoney(Math.abs(v), company)}
+    </span>
+  );
+}
+
+/** Difference between two rates, in points — never as a percentage of itself. */
+function PointsChip({ value, invert = false }) {
+  const v = Math.round(value);
+  if (v === 0) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[0.8125rem] font-medium" style={{ color: 'rgb(var(--fg-muted))' }}>
+        <Minus size={13} aria-hidden="true" />
+        Flat
+      </span>
+    );
+  }
+  const rose = v > 0;
+  const good = invert ? !rose : rose;
+  const Icon = rose ? ArrowUpRight : ArrowDownRight;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[0.8125rem] font-medium"
+      style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
+    >
+      <Icon size={13} aria-hidden="true" />
+      {Math.abs(v)} pts
+    </span>
+  );
+}
+
+function MiniSpark({ series = [] }) {
+  const path = useMemo(() => {
+    if (series.length < 2) return '';
+    const max = Math.max(...series, 1);
+    const step = 100 / (series.length - 1);
+    return series
+      .map((v, i) => `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(2)} ${(20 - (v / max) * 18).toFixed(2)}`)
+      .join(' ');
+  }, [series]);
+
+  if (!path) return null;
+  return (
+    <svg viewBox="0 0 100 20" preserveAspectRatio="none" className="h-5 w-full" aria-hidden="true">
+      <path d={path} fill="none" stroke="rgb(var(--brand))" strokeWidth="1.75" vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
 function DeltaChip({ value, invert = false }) {
   if (value === null) {
     return <span className="ui-badge ui-badge-neutral">New</span>;
@@ -609,6 +683,132 @@ export default function DashboardOverview({
 
   const sparkOf = (key) => buckets.map((b) => b[key]);
 
+  /**
+   * What needs a person today.
+   *
+   * The nine charts below describe a quarter that has already happened. This
+   * describes the morning. Every row is derived from data the dashboard
+   * already holds — nothing new is fetched, and nothing here is a prediction.
+   *
+   * Ordered by how much it costs to ignore, not by size: money already late
+   * outranks money about to leave, which outranks paperwork.
+   */
+  const worklist = useMemo(() => {
+    const today = new Date(now);
+    const todayStr = today.toISOString().slice(0, 10);
+    const weekOut = new Date(now + 7 * DAY).toISOString().slice(0, 10);
+    const balanceOf = (d) => Math.max(0, num(d?.total) - num(d?.paidAmount));
+    const rows = [];
+
+    // Overdue: past the due date with money still on it.
+    const overdue = allInvoices.filter(
+      (i) => balanceOf(i) > 0 && String(i.dueDate || '') && String(i.dueDate) < todayStr
+    );
+    if (overdue.length) {
+      const value = overdue.reduce((t, i) => t + balanceOf(i), 0);
+      const oldest = overdue.slice().sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))[0];
+      const daysLate = Math.max(
+        0,
+        Math.round((now - new Date(`${oldest.dueDate}T00:00:00`).getTime()) / DAY)
+      );
+      rows.push({
+        id: 'overdue',
+        tone: 'neg',
+        title: `${overdue.length} invoice${overdue.length === 1 ? '' : 's'} overdue · ${formatMoney(value, currentCompany)}`,
+        detail: `Oldest ${oldest.number || 'invoice'}, ${daysLate} day${daysLate === 1 ? '' : 's'} past due`,
+        actionLabel: 'Review',
+        onAction: onOpenInvoices,
+      });
+    }
+
+    // Bills falling due inside a week: money about to leave, still stoppable.
+    const billsDue = (Array.isArray(db?.bills) ? db.bills : [])
+      .filter((b) => b.companyId === currentCompany?.id)
+      .filter((b) => String(b.status || '').toLowerCase() !== 'draft')
+      .filter((b) => balanceOf(b) > 0)
+      .filter((b) => String(b.dueDate || '') >= todayStr && String(b.dueDate || '') <= weekOut);
+    if (billsDue.length) {
+      const value = billsDue.reduce((t, b) => t + balanceOf(b), 0);
+      const soonest = billsDue.slice().sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))[0];
+      rows.push({
+        id: 'bills-due',
+        tone: 'warn',
+        title: `${billsDue.length} bill${billsDue.length === 1 ? '' : 's'} due within 7 days · ${formatMoney(value, currentCompany)}`,
+        detail: `Soonest ${soonest.number || 'bill'}${soonest.vendorName ? ` · ${soonest.vendorName}` : ''} · due ${soonest.dueDate}`,
+        actionLabel: 'Review',
+        onAction: onOpenPurchases,
+      });
+    }
+
+    // A draft owes you nothing. Until it goes out, nobody is late paying it.
+    const drafts = allInvoices.filter((i) => String(i.status || '').toLowerCase() === 'draft');
+    if (drafts.length) {
+      rows.push({
+        id: 'drafts',
+        tone: 'warn',
+        title: `${drafts.length} invoice${drafts.length === 1 ? '' : 's'} still in draft`,
+        detail: 'Nothing is owed until they go out',
+        actionLabel: 'Open',
+        onAction: onOpenInvoices,
+      });
+    }
+
+    // GSTR-1 for last month closes on the 11th of this one.
+    const filingDue = new Date(today.getFullYear(), today.getMonth(), 11);
+    if (filingDue.getTime() >= now) {
+      const daysLeft = Math.ceil((filingDue.getTime() - now) / DAY);
+      rows.push({
+        id: 'gstr1',
+        tone: daysLeft <= 3 ? 'neg' : 'info',
+        title: `GSTR-1 closes in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
+        detail: drafts.length
+          ? `${drafts.length} draft${drafts.length === 1 ? '' : 's'} would be excluded from the return`
+          : 'Every invoice in the period is out of draft',
+        actionLabel: null,
+      });
+    }
+
+    return rows;
+  }, [allInvoices, db, currentCompany, now, onOpenInvoices, onOpenPurchases]);
+
+  /**
+   * The period, and the one before it, side by side.
+   *
+   * Four tiles could hold four figures. A ruled grid holds eight, with last
+   * period beside each, in less height — and an accountant reads a column of
+   * figures faster than four boxes anyway. The sparkline stays, because a
+   * percentage does not say whether the change was a trend or one lumpy week.
+   */
+  const comparisonRows = useMemo(() => {
+    const overdueValue = allInvoices
+      .filter((i) => {
+        const bal = Math.max(0, num(i.total) - num(i.paidAmount));
+        const due = String(i.dueDate || '');
+        return bal > 0 && due && due < new Date(now).toISOString().slice(0, 10);
+      })
+      .reduce((t, i) => t + Math.max(0, num(i.total) - num(i.paidAmount)), 0);
+
+    const prevRate = prevBilled > 0 ? (prevCollected / prevBilled) * 100 : 0;
+    const avg = current.length ? billed / current.length : 0;
+    const prevAvg = previous.length ? prevBilled / previous.length : 0;
+
+    return [
+      { key: 'billed', label: 'Billed', now: billed, then: prevBilled, series: sparkOf('billed') },
+      { key: 'collected', label: 'Collected', now: collected, then: prevCollected, series: sparkOf('collected') },
+      { key: 'rate', label: 'Collection rate', now: collectedPct, then: Math.round(prevRate), unit: '%', invert: false },
+      { key: 'outstanding', label: 'Outstanding', now: outstanding, then: prevOutstanding, invert: true },
+      { key: 'overdue', label: '— of which overdue', now: overdueValue, then: null, invert: true, indent: true },
+      { key: 'spent', label: 'Spent', now: spent, then: prevSpent, invert: true },
+      // Not inverted: unlike outstanding or spend, a net movement that rises
+      // is the welcome direction.
+      { key: 'net', label: 'Net movement', now: collected - spent, then: prevCollected - prevSpent, mode: 'diff' },
+      { key: 'avg', label: 'Average invoice', now: avg, then: prevAvg },
+    ];
+  }, [
+    allInvoices, now, billed, prevBilled, collected, prevCollected, collectedPct,
+    outstanding, prevOutstanding, spent, prevSpent, current.length, previous.length, buckets,
+  ]);
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -676,48 +876,124 @@ export default function DashboardOverview({
         </div>
       ) : (
         <>
-          <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard
-              label="Billed"
-              value={billed}
-              company={currentCompany}
-              deltaValue={delta(billed, prevBilled)}
-              hint="vs last period"
-              series={sparkOf('billed')}
-              actionLabel="View invoices"
-              onAction={onOpenInvoices}
-            />
-            <MetricCard
-              label="Collected"
-              value={collected}
-              company={currentCompany}
-              deltaValue={delta(collected, prevCollected)}
-              hint={`${collectedPct}% of billed`}
-              series={sparkOf('collected')}
-              actionLabel="View receipts"
-              onAction={onOpenReceipts}
-            />
-            <MetricCard
-              label="Outstanding"
-              value={outstanding}
-              company={currentCompany}
-              deltaValue={delta(outstanding, prevOutstanding)}
-              invertDelta
-              hint={`${current.filter((i) => num(i.total) - num(i.paidAmount) > 0).length} unpaid`}
-              actionLabel="Chase payment"
-              onAction={onOpenInvoices}
-            />
-            <MetricCard
-              label="Average invoice"
-              value={current.length ? billed / current.length : 0}
-              company={currentCompany}
-              deltaValue={delta(
-                current.length ? billed / current.length : 0,
-                previous.length ? prevBilled / previous.length : 0
-              )}
-              hint="per invoice"
-            />
-          </div>
+          {/* What needs a person today. The charts below say how the quarter
+              went; this says where to start. An empty queue is a result, not a
+              blank panel — so it says so. */}
+          <section className="ui-card p-0 overflow-hidden ui-in" aria-label="What needs you today">
+            <div className="flex items-baseline gap-3 px-4 pt-3.5 pb-2">
+              <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>
+                What needs you
+              </h3>
+              <span className="ui-caption">
+                {worklist.length ? `${worklist.length} item${worklist.length === 1 ? '' : 's'}` : 'Nothing outstanding'}
+              </span>
+            </div>
+            {worklist.length === 0 ? (
+              <p className="px-4 pb-4 text-sm ui-muted">
+                Nothing is overdue, no bill falls due this week, and no invoice is sitting in draft. The quarter is below.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {worklist.map((row) => (
+                  <li key={row.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <span
+                      className="h-8 w-1 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: `rgb(var(--${row.tone}))` }}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium">{row.title}</span>
+                      <span className="block ui-caption">{row.detail}</span>
+                    </span>
+                    {row.actionLabel && row.onAction ? (
+                      <button
+                        type="button"
+                        onClick={row.onAction}
+                        className="ui-btn ui-btn-secondary ui-btn-sm ml-auto flex-shrink-0"
+                      >
+                        {row.actionLabel}
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* This period against the one before it. Eight figures where four
+              tiles stood, in less height, with the shape of each kept as a
+              sparkline — a percentage alone cannot say whether the change was a
+              trend or one lumpy week. */}
+          <section className="ui-card p-0 overflow-hidden ui-in" aria-label="This period against last">
+            <table className="ui-table w-full">
+              <thead>
+                <tr>
+                  <th className="ui-th">Measure</th>
+                  <th className="ui-th ui-num">This period</th>
+                  <th className="ui-th ui-num">Last period</th>
+                  <th className="ui-th ui-num">Change</th>
+                  <th className="ui-th w-24">Shape</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {comparisonRows.map((row) => {
+                  const showChange = row.then !== null && row.then !== undefined;
+                  const pct = showChange ? delta(row.now, row.then) : null;
+                  const fmtCell = (v) =>
+                    row.unit === '%' ? `${Math.round(v)}%` : formatMoney(v, currentCompany);
+                  return (
+                    <tr key={row.key}>
+                      <td className={`ui-cell ${row.indent ? 'pl-6 ui-muted' : ''}`}>{row.label}</td>
+                      <td className="ui-cell ui-num ui-money">{fmtCell(row.now)}</td>
+                      <td className="ui-cell ui-num ui-money ui-muted">{showChange ? fmtCell(row.then) : '—'}</td>
+                      <td className="ui-cell ui-num">
+                        {!showChange ? (
+                          <span className="ui-subtle">—</span>
+                        ) : row.mode === 'diff' ? (
+                          // A percentage change across zero is nonsense: net
+                          // moving from −7.6L to −26.9L computes as +254%, and
+                          // dividing by a negative paints that green. Show the
+                          // movement itself.
+                          <DiffChip value={row.now - row.then} company={currentCompany} invert={row.invert} />
+                        ) : row.unit === '%' ? (
+                          // A rate that moves from 56% to 43% has not fallen
+                          // 23%. It has fallen 13 points, and saying otherwise
+                          // is the oldest misleading statistic there is.
+                          <PointsChip value={Math.round(row.now) - Math.round(row.then)} invert={row.invert} />
+                        ) : (
+                          <DeltaChip value={pct} invert={row.invert} />
+                        )}
+                      </td>
+                      <td className="ui-cell">
+                        {row.series && row.series.length > 1 ? (
+                          <MiniSpark series={row.series} />
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {/* The four tiles each carried one jump. Losing the tiles should not
+                lose the jumps. */}
+            <div className="flex flex-wrap gap-2 border-t px-4 py-2.5">
+              {onOpenInvoices ? (
+                <button type="button" onClick={onOpenInvoices} className="ui-btn ui-btn-ghost ui-btn-sm">
+                  View invoices
+                </button>
+              ) : null}
+              {onOpenReceipts ? (
+                <button type="button" onClick={onOpenReceipts} className="ui-btn ui-btn-ghost ui-btn-sm">
+                  View receipts
+                </button>
+              ) : null}
+              {onOpenPurchases ? (
+                <button type="button" onClick={onOpenPurchases} className="ui-btn ui-btn-ghost ui-btn-sm">
+                  View purchases
+                </button>
+              ) : null}
+            </div>
+          </section>
 
           {isEnabled('insights') && insights.length > 0 ? (
             <section className="ui-card p-5 ui-in" aria-label="Insights from your books">
