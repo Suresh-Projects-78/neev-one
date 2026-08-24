@@ -920,6 +920,30 @@
     border: 1px solid rgb(var(--border));
   }
 
+  /* An anchored panel, for a choice too small to be worth dimming the page
+     for. Same surface and radius as the dialog — it is the same object, priced
+     differently: no scrim, no trapped keyboard, and it sits where the control
+     that opened it sits. */
+  .ui-popover {
+    position: fixed;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--border-strong));
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+    animation: ui-popover-in 120ms var(--ease-out) both;
+  }
+  @keyframes ui-popover-in {
+    from { opacity: 0; transform: translateY(-2px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-popover { animation: none; }
+  }
+
   /* --- entry summary -----------------------------------------------------
      On a twelve-line invoice the total sits below the fold while the operator
      types the lines that produce it, so they scroll down to check and back up
