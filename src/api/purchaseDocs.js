@@ -66,3 +66,18 @@ export async function updateDocApi(kind, docId, payload) {
   });
   return data?.document || null;
 }
+
+/**
+ * Record which documents an on-account note has been knocked off against.
+ *
+ * No amount moves, so nothing posts: the note's own entry already shifted the
+ * party's control account. This writes the sub-ledger detail — which bills or
+ * invoices that value answers — so a second browser sees the same picture.
+ */
+export async function saveSettlementApi(kind, docId, settlement) {
+  const data = await apiFetch(
+    `/orgs/${requireOrgId()}/${pathFor(kind)}/${encodeURIComponent(docId)}/settlement`,
+    { method: 'PATCH', body: settlement }
+  );
+  return data?.document || null;
+}

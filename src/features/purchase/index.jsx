@@ -5,7 +5,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance, documentOutstanding } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
+import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
 import { Copy, CreditCard, Eye, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
@@ -2473,20 +2473,30 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
         partyKey="vendorId"
         docLabel="bill"
         onCancel={() => openModal(null)}
-        onConfirm={(allocations) => {
+        onConfirm={async (allocations) => {
           const today = new Date().toISOString().slice(0, 10);
+          const stamped = allocations.map((a) => ({ ...a, date: today }));
+          const next = [...(note.allocations || []), ...stamped];
+
+          // The books already carry this note; what travels here is which
+          // documents its value answers, so a second browser agrees.
+          if (note.backendDocId && hasApiSession()) {
+            try {
+              await saveSettlementApi('debitNote', note.backendDocId, {
+                settlementMode: 'ON_ACCOUNT',
+                billIds: (note.billIds || []).map(String),
+                allocations: next,
+              });
+            } catch (err) {
+              notify.error(String(err?.message || 'Settlement not saved to the server.'));
+              return;
+            }
+          }
+
           setDb((prev) => ({
             ...prev,
             debitNotes: (prev.debitNotes || []).map((x) =>
-              String(x.id) === String(note.id)
-                ? {
-                    ...x,
-                    allocations: [
-                      ...(x.allocations || []),
-                      ...allocations.map((a) => ({ ...a, date: today })),
-                    ],
-                  }
-                : x
+              String(x.id) === String(note.id) ? { ...x, allocations: next } : x
             ),
           }));
           openModal(null);

@@ -166,6 +166,71 @@ describe('debit notes', () => {
   });
 });
 
+describe('a note raised on account', () => {
+  it('records what it was knocked off against without touching the books', async () => {
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/debit-notes`)
+      .set(auth(owner))
+      .send(docBody({ date: '2026-04-15', settlementMode: 'ON_ACCOUNT', billIds: ['b1', 'b2'] }))
+      .expect(201);
+
+    const noteId = created.body.document.id;
+    const before = await tb();
+
+    const settled = await request(app)
+      .patch(`/api/orgs/${owner.orgId}/debit-notes/${noteId}/settlement`)
+      .set(auth(owner))
+      .send({
+        settlementMode: 'ON_ACCOUNT',
+        billIds: ['b1', 'b2'],
+        allocations: [
+          { docId: 'b1', amount: 800, date: '2026-04-16' },
+          { docId: 'b2', amount: 380, date: '2026-04-16' },
+        ],
+      })
+      .expect(200);
+
+    expect(settled.body.document.allocations).toHaveLength(2);
+    expect(settled.body.document.settlementMode).toBe('ON_ACCOUNT');
+
+    // Settlement is sub-ledger detail: no amount moved, so no account moved.
+    const after = await tb();
+    expect(moved(before, after, 'AP')).toBe(0);
+    expect(moved(before, after, 'PURCHASES')).toBe(0);
+    expect(after.totals.balanced).toBe(true);
+  });
+
+  it('refuses to allocate more than the note is worth', async () => {
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/debit-notes`)
+      .set(auth(owner))
+      .send(docBody({ date: '2026-04-17', settlementMode: 'ON_ACCOUNT' }))
+      .expect(201);
+
+    const res = await request(app)
+      .patch(`/api/orgs/${owner.orgId}/debit-notes/${created.body.document.id}/settlement`)
+      .set(auth(owner))
+      .send({ allocations: [{ docId: 'b1', amount: 99999 }] })
+      .expect(400);
+
+    expect(String(res.body.error)).toMatch(/more than this note is worth/i);
+  });
+
+  it('rejects an allocation with no amount', async () => {
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/debit-notes`)
+      .set(auth(owner))
+      .send(docBody({ date: '2026-04-18', settlementMode: 'ON_ACCOUNT' }))
+      .expect(201);
+
+    await request(app)
+      .patch(`/api/orgs/${owner.orgId}/debit-notes/${created.body.document.id}/settlement`)
+      .set(auth(owner))
+      .send({ allocations: [{ docId: 'b1', amount: 0 }] })
+      .expect(400);
+  });
+});
+
 describe('importing the new document types', () => {
   const runImport = async (docType: string, csv: string) => {
     const staged = await request(app)

@@ -12,7 +12,7 @@ import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '../../api/invoices';
 import { useFeatures } from '../../permissions/useFeatures';
-import { createDocApi, hasApiSession as hasDocsApiSession } from '../../api/purchaseDocs';
+import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
@@ -1695,14 +1695,28 @@ export const CreditNotesList = ({
         partyKey="customerId"
         docLabel="invoice"
         onCancel={() => openModal(null)}
-        onConfirm={(allocations) => {
+        onConfirm={async (allocations) => {
           const today = new Date().toISOString().slice(0, 10);
+          const stamped = allocations.map((a) => ({ ...a, date: today }));
+          const next = [...(note.allocations || []), ...stamped];
+
+          if (note.backendDocId && hasDocsApiSession()) {
+            try {
+              await saveSettlementApi('creditNote', note.backendDocId, {
+                settlementMode: 'ON_ACCOUNT',
+                invoiceIds: (note.invoiceIds || []).map(String),
+                allocations: next,
+              });
+            } catch (err) {
+              notify.error(String(err?.message || 'Settlement not saved to the server.'));
+              return;
+            }
+          }
+
           setDb((prev) => ({
             ...prev,
             creditNotes: (prev.creditNotes || []).map((x) =>
-              String(x.id) === String(note.id)
-                ? { ...x, allocations: [...(x.allocations || []), ...allocations.map((a) => ({ ...a, date: today }))] }
-                : x
+              String(x.id) === String(note.id) ? { ...x, allocations: next } : x
             ),
           }));
           openModal(null);

@@ -134,6 +134,21 @@ const docSchema = z.object({
   items: z.array(itemSchema).default([]),
 });
 
+const settlementSchema = z.object({
+  settlementMode: z.string().optional(),
+  billIds: z.array(z.string()).optional(),
+  invoiceIds: z.array(z.string()).optional(),
+  allocations: z
+    .array(
+      z.object({
+        docId: z.string().min(1),
+        amount: z.number().positive(),
+        date: z.string().optional(),
+      })
+    )
+    .default([]),
+});
+
 const num = (v: any) => {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -329,6 +344,45 @@ function register(kind: DocKind) {
       }
 
       res.status(201).json({ document: normalize(created) });
+    }
+  );
+
+  /**
+   * Settlement detail — which bills a note raised on account has been knocked
+   * off against, and how much against each.
+   *
+   * This changes no amount and no account, so it posts nothing: the note's
+   * own entry already moved the money on the party's control account. What is
+   * recorded here is which documents that value answers, which is sub-ledger
+   * detail rather than a fact about the books.
+   */
+  purchaseDocsRouter.patch(
+    `/orgs/:orgId/${cfg.path}/:docId/settlement`,
+    requirePermission(cfg.module, PermissionAction.EDIT, cfg.resource),
+    async (req, res) => {
+      if (!orgOk(req, res)) return;
+      const { accountId, orgId } = req.tenant!;
+
+      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId } });
+      if (!doc) return res.status(404).json({ error: `${cfg.resource} not found` });
+
+      const parsed = settlementSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: 'Allocations must each name a document and an amount above zero.' });
+      }
+
+      const allocated = parsed.data.allocations.reduce((t, a) => t + a.amount, 0);
+      if (allocated > num(doc.total) + 0.0001) {
+        return res.status(400).json({ error: 'Allocated more than this note is worth.' });
+      }
+
+      const extras = { ...spreadExtras(doc), ...parsed.data };
+      const updated = await table().update({
+        where: { id: doc.id },
+        data: { extrasJson: JSON.stringify(extras) },
+      });
+
+      res.json({ document: normalize(updated) });
     }
   );
 
