@@ -451,11 +451,43 @@
   }
 
   /* --- tables --- */
+  /* A ruled grid, not a list of rows.
+     Vertical rules between columns make a wide financial table readable
+     across, which matters when a row carries eight fields and the eye has to
+     land on the right one. Applied here so all 90 tables get it from one
+     place, and a new module gets it by writing .ui-table. */
   .ui-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.8125rem;
+  }
+  .ui-table thead th + th,
+  .ui-table tbody td + td {
+    border-left: 1px solid rgb(var(--border));
+  }
+  /* Rows hold their height whatever the cell contains, so a status pill or a
+     two-line date does not make one row taller than its neighbours. */
+  .ui-table tbody tr {
+    height: calc(var(--row-pad-y) * 2 + 1.375rem);
+  }
+  /* An action button sets the row height if it is taller than the text beside
+     it. In a row, it is 28px, so the row is decided by its content and not by
+     its last column. */
+  .ui-table tbody .ui-icon-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    min-height: 1.75rem;
+  }
+
+  /* The quiet second line under a value: "in 30 days" under a due date,
+     "1 of 12" under a schedule. */
+  .ui-cell-sub {
+    display: block;
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    color: rgb(var(--fg-subtle));
+    margin-top: 0.0625rem;
   }
   .ui-table thead th {
     position: sticky;
