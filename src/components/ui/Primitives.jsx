@@ -52,6 +52,60 @@ export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = nu
   );
 };
 
+/**
+ * A row of headline figures on one surface, divided by hairlines.
+ *
+ * Separate cards give each number its own border, shadow and gutter, which is
+ * four boxes fighting for the same glance. One strip puts them on a single
+ * baseline so they read as a set, which is what a summary is.
+ *
+ * Paise are rendered a size down and muted: scanning money means reading the
+ * rupees, and the decimals are there for checking, not for scanning.
+ */
+export const StatStrip = ({ items = [] }) => {
+  if (!items.length) return null;
+
+  return (
+    <div className="ui-strip">
+      {items.map((it, i) => {
+        const shown = String(it.value ?? '');
+        // Split on the last separator so Indian grouping (12,30,340.69) keeps
+        // its lakh commas in the whole part.
+        const cut = shown.lastIndexOf('.');
+        const whole = cut > -1 ? shown.slice(0, cut) : shown;
+        const frac = cut > -1 ? shown.slice(cut) : '';
+
+        const dir = typeof it.delta === 'number' ? (it.delta > 0 ? 'pos' : it.delta < 0 ? 'neg' : null) : null;
+        const deltaClass =
+          it.deltaTone === 'muted' || dir === null
+            ? ''
+            : dir === 'pos'
+              ? 'ui-strip-delta-pos'
+              : 'ui-strip-delta-neg';
+
+        return (
+          <div key={it.key || it.label || i} className="ui-strip-cell">
+            <span className="ui-t-label">{it.label}</span>
+            <span className="ui-strip-figure" title={it.title || undefined}>
+              {whole}
+              {frac ? <span className="ui-strip-frac">{frac}</span> : null}
+            </span>
+            {typeof it.delta === 'number' ? (
+              <span className={`ui-strip-delta ${deltaClass}`}>
+                <span aria-hidden="true">{it.delta > 0 ? '\u2197' : it.delta < 0 ? '\u2198' : '\u2192'}</span>
+                {Math.abs(it.delta).toFixed(1)}%
+                <span className="sr-only">{it.delta > 0 ? ' up' : it.delta < 0 ? ' down' : ' flat'} on last period</span>
+              </span>
+            ) : it.hint ? (
+              <span className="ui-caption">{it.hint}</span>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 /** Status pill. Pass an explicit tone; the label carries the meaning, not the colour. */
 export const StatusPill = ({ status }) => {
   const s = String(status || '').trim().toLowerCase();

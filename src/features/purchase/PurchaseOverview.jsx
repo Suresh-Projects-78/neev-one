@@ -3,7 +3,7 @@ import { ClipboardList, Receipt, Wallet, FileText } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import ChartCard from '../../components/charts/ChartCard';
-import { PageHeader, EmptyState, StatTile } from '../../components/ui/Primitives';
+import { PageHeader, EmptyState, StatStrip } from '../../components/ui/Primitives';
 
 /**
  * The purchase module's own dashboard.
@@ -169,45 +169,30 @@ export default function PurchaseOverview({ db, currentCompany }) {
         </div>
       ) : (
         <>
-          <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatTile
-              label="Purchased"
-              amount={purchased}
-              format={(v) => formatMoneyCompact(v, currentCompany)}
-              title={formatMoney(purchased, currentCompany)}
-              hint={`Across ${docs.length} documents`}
-              icon={ClipboardList}
-              tint="purchases"
-            />
-            <StatTile
-              label="Paid out"
-              amount={paid}
-              format={(v) => formatMoneyCompact(v, currentCompany)}
-              title={formatMoney(paid, currentCompany)}
-              hint={purchased > 0 ? `${Math.round((paid / purchased) * 100)}% of purchased` : 'Nothing yet'}
-              tone="pos"
-              icon={Wallet}
-              tint="purchases"
-            />
-            <StatTile
-              label="Owed to vendors"
-              amount={outstanding}
-              format={(v) => formatMoneyCompact(v, currentCompany)}
-              title={formatMoney(outstanding, currentCompany)}
-              hint={`${unpaidCount} document${unpaidCount === 1 ? '' : 's'} unpaid`}
-              tone="neg"
-              icon={FileText}
-              tint="purchases"
-            />
-            <StatTile
-              label="Average document"
-              amount={docs.length ? purchased / docs.length : 0}
-              format={(v) => formatMoneyCompact(v, currentCompany)}
-              title={formatMoney(docs.length ? purchased / docs.length : 0, currentCompany)}
-              hint="Value per bill or expense"
-              icon={Receipt}
-            />
-          </div>
+          <StatStrip
+            items={[
+              {
+                label: 'Purchased',
+                value: formatMoney(purchased, currentCompany),
+                hint: `Across ${docs.length} documents`,
+              },
+              {
+                label: 'Paid out',
+                value: formatMoney(paid, currentCompany),
+                hint: purchased > 0 ? `${Math.round((paid / purchased) * 100)}% of purchased` : 'Nothing yet',
+              },
+              {
+                label: 'Owed to vendors',
+                value: formatMoney(outstanding, currentCompany),
+                hint: `${unpaidCount} document${unpaidCount === 1 ? '' : 's'} unpaid`,
+              },
+              {
+                label: 'Average document',
+                value: formatMoney(docs.length ? purchased / docs.length : 0, currentCompany),
+                hint: 'Value per bill or expense',
+              },
+            ]}
+          />
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             <ChartCard title="Spent by period" subtitle={`Last ${range.label.toLowerCase()}`}>

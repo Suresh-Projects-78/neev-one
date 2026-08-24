@@ -862,6 +862,71 @@
   .ui-skel-circle { border-radius: 999px; width: 2.25rem; height: 2.25rem; }
 
   /* --- stat tile --- */
+  /* --- KPI strip ----------------------------------------------------------
+     One surface carrying several figures, divided by hairlines, instead of a
+     row of separate cards each with its own border and shadow. Fewer boxes,
+     and the figures line up on one baseline so they read as a set.
+  --------------------------------------------------------------------------- */
+  .ui-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .ui-strip > * + * {
+    border-left: 1px solid rgb(var(--border));
+  }
+  .ui-strip-cell {
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+  }
+  /* The figure: rupees carry the weight, paise step back. Scanning a column
+     of money means reading the whole number; the decimals are for checking,
+     not for scanning. */
+  .ui-strip-figure {
+    font-size: 1.75rem;          /* 28px */
+    line-height: 2rem;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--fg));
+    white-space: nowrap;
+  }
+  .ui-strip-frac {
+    font-size: 1.125rem;         /* 18px */
+    font-weight: 500;
+    color: rgb(var(--fg-subtle));
+    letter-spacing: -0.02em;
+  }
+  /* Movement chip. Direction is an arrow as well as a colour, so it survives
+     a colour-blind reader and a black-and-white print. */
+  .ui-strip-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1875rem;
+    align-self: flex-start;
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    background-color: rgb(var(--surface-sunken));
+    color: rgb(var(--fg-muted));
+  }
+  .ui-strip-delta-pos { background-color: rgb(var(--pos-soft)); color: rgb(var(--pos)); }
+  .ui-strip-delta-neg { background-color: rgb(var(--neg-soft)); color: rgb(var(--neg)); }
+
+  @media (max-width: 900px) {
+    .ui-strip { grid-auto-flow: row; grid-auto-columns: auto; }
+    .ui-strip > * + * { border-left: 0; border-top: 1px solid rgb(var(--border)); }
+  }
+
   .ui-stat {
     position: relative;
     overflow: hidden;
