@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { returnableLines, returnStatusLabel } from '../../utils/returns';
+import KnockOffForm from '../../components/KnockOffForm';
+import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag, RefreshCw } from 'lucide-react';
@@ -1681,6 +1683,37 @@ export const CreditNotesList = ({
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
 
+  /** Settle an on-account credit note against the customer's open invoices. */
+  const openKnockOff = (note) => {
+    if (typeof openModal !== 'function') return;
+    openModal(
+      <KnockOffForm
+        note={note}
+        documents={db.invoices || []}
+        notes={db.creditNotes || []}
+        currentCompany={currentCompany}
+        partyKey="customerId"
+        docLabel="invoice"
+        onCancel={() => openModal(null)}
+        onConfirm={(allocations) => {
+          const today = new Date().toISOString().slice(0, 10);
+          setDb((prev) => ({
+            ...prev,
+            creditNotes: (prev.creditNotes || []).map((x) =>
+              String(x.id) === String(note.id)
+                ? { ...x, allocations: [...(x.allocations || []), ...allocations.map((a) => ({ ...a, date: today }))] }
+                : x
+            ),
+          }));
+          openModal(null);
+          const total = allocations.reduce((t, a) => t + Number(a.amount || 0), 0);
+          notify.success(`${formatMoney(total, currentCompany)} knocked off against ${allocations.length} invoice(s).`);
+        }}
+      />,
+      { title: `Knock off ${note?.number || ''}`.trim(), maxWidthClass: 'max-w-3xl' }
+    );
+  };
+
   const cnFilters = useColumnFilters();
   const cnSearch = useListSearch(
     db.creditNotes.filter((c) => c.companyId === currentCompany.id),
@@ -1768,12 +1801,13 @@ export const CreditNotesList = ({
               <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <ColumnHeader label="Date" col="date" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <ColumnHeader label="Total" col="total" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">On account</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {creditNotes.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center ui-muted">
+                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
                   No credit notes found
                 </td>
               </tr>
@@ -1785,11 +1819,33 @@ export const CreditNotesList = ({
                 return (
                   <tr key={cn.id} className="ui-hover-sunken">
                     <td className="ui-col-id px-4 py-2.5 font-medium">{cn.number}</td>
-                    <td className="ui-col-meta px-4 py-2.5">{cn.originalInvoiceNumber || '-'}</td>
+                    <td className="ui-col-meta px-4 py-2.5">
+                      {cn.originalInvoiceNumber || (
+                        <span className="ui-muted">
+                          {(cn.invoiceIds || []).length ? `${(cn.invoiceIds || []).length} invoices · on account` : '-'}
+                        </span>
+                      )}
+                    </td>
                     <td className="ui-col-entity px-4 py-2.5">{cn.customerName || '-'}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                     <td className="ui-col-date px-4 py-2.5">{cn.date || '-'}</td>
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(cn.total || 0, currentCompany)}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {isOnAccount(cn) ? (
+                        noteBalance(cn).unsettled > 0.0001 ? (
+                          <button
+                            type="button"
+                            onClick={() => openKnockOff(cn)}
+                            className="ui-btn ui-btn-secondary !h-8 text-xs"
+                            title="Knock this off against the customer's open invoices"
+                          >
+                            Knock off {formatMoney(noteBalance(cn).unsettled, currentCompany)}
+                          </button>
+                        ) : (
+                          <span className="ui-caption">Settled</span>
+                        )
+                      ) : null}
+                    </td>
                   </tr>
                 );
               })
@@ -3314,6 +3370,32 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
     return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
   }, [warehouses]);
 
+  /**
+   * Goods come back in a heap that no single invoice accounts for. Rather than
+   * make a clerk guess which one, the note is raised on account: the value
+   * waits on the customer's ledger until it is knocked off.
+   */
+  const [onAccountMode, setOnAccountMode] = useState(false);
+  const invoicesForCustomer = useMemo(() => {
+    const customerId = String(formData.customerId || '').trim();
+    if (!customerId) return [];
+    return companyInvoices
+      .filter((i) => String(i.customerId ?? '') === customerId)
+      .filter((i) => String(i.status || '').toLowerCase() !== 'cancelled')
+      .slice()
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyInvoices.length, formData.customerId]);
+
+  const toggleOnAccount = (next) => {
+    setOnAccountMode(next);
+    setFormData((prev) => ({
+      ...prev,
+      originalInvoiceId: next ? '' : prev.originalInvoiceId,
+      invoiceIds: next ? prev.invoiceIds || [] : [],
+    }));
+  };
+
   const [originalInvoiceQuery, setOriginalInvoiceQuery] = useState('');
 
   const selectedCustomer = formData.customerId ? customers.find((c) => c.id === parseInt(formData.customerId)) : null;
@@ -3477,8 +3559,12 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
     }
 
     const originalInvoice = companyInvoices.find((i) => i.id === parseInt(formData.originalInvoiceId));
-    if (!originalInvoice) {
+    if (!onAccountMode && !originalInvoice) {
       notify.error('Please select the original invoice');
+      return;
+    }
+    if (onAccountMode && !(formData.invoiceIds || []).length) {
+      notify.error('Tick the invoices this return covers.');
       return;
     }
 
@@ -3494,13 +3580,17 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
     // The prefill can be typed over, so the rule is enforced here too: nothing
     // may come back that was not sold, or that has come back already.
-    const returnState = returnableLines(originalInvoice, db.creditNotes || [], 'originalInvoiceId');
+    // On account there is no single invoice to check against; the knock-offs
+    // are what keep that note honest instead.
+    const returnState = onAccountMode
+      ? { fullyReturned: false, lines: [] }
+      : returnableLines(originalInvoice, db.creditNotes || [], 'originalInvoiceId');
     if (returnState.fullyReturned) {
       notify.error(`${originalInvoice.number} has already been fully returned.`);
       return;
     }
     const remainingByItem = new Map(returnState.lines.map((l) => [String(l.itemId), l.remainingQty]));
-    for (const line of formData.items || []) {
+    for (const line of onAccountMode ? [] : formData.items || []) {
       const key = String(line.itemId || '');
       if (!key) continue;
       const want = Number(line.quantity) || 0;
@@ -3577,11 +3667,15 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       backendDocId,
       number: serverNumber || creditNumber,
       date: formData.date,
-      originalInvoiceId: originalInvoice.id,
-      originalInvoiceNumber: originalInvoice.number,
+      originalInvoiceId: onAccountMode ? null : originalInvoice.id,
+      originalInvoiceNumber: onAccountMode ? '' : originalInvoice.number,
+      // On account: the value waits on the customer's ledger until knocked off.
+      settlementMode: onAccountMode ? 'ON_ACCOUNT' : 'DOCUMENT',
+      invoiceIds: onAccountMode ? (formData.invoiceIds || []).map(String) : [],
+      allocations: [],
       customerId: formData.customerId,
       warehouseId: String(formData.warehouseId || '').trim(),
-      customerName: getCustomerDisplayName(customer) || originalInvoice.customerName || '',
+      customerName: getCustomerDisplayName(customer) || originalInvoice?.customerName || '',
       customerGstin: customerGstin,
       placeOfSupplyState: customerState,
       taxType: isIntra ? 'CGST_SGST' : 'IGST',
@@ -3620,29 +3714,78 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Original Invoice #</label>
-          <input
-            type="text"
-            value={originalInvoiceQuery}
-            onChange={(e) => onOriginalInvoiceQueryChange(e.target.value)}
-            onPaste={(e) => {
-              const pasted = e.clipboardData?.getData('text');
-              if (typeof pasted === 'string') onOriginalInvoiceQueryChange(pasted);
-            }}
-            onBlur={() => {
-              // Normalize any pasted value and try one more exact match on blur.
-              onOriginalInvoiceQueryChange(originalInvoiceQuery);
-            }}
-            list="creditnote-original-invoice-options"
-            className="ui-input"
-            placeholder="Search / paste invoice number"
-            required
-          />
-          <datalist id="creditnote-original-invoice-options">
-            {companyInvoices.map((inv) => (
-              <option key={inv.id} value={String(inv.number || '')} />
-            ))}
-          </datalist>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium">
+              {onAccountMode ? 'Invoices this return covers' : 'Original Invoice #'}
+            </label>
+            <button
+              type="button"
+              onClick={() => toggleOnAccount(!onAccountMode)}
+              className="text-xs underline ui-muted hover:ui-fg"
+            >
+              {onAccountMode ? 'Against a single invoice instead' : 'Goods from several invoices?'}
+            </button>
+          </div>
+
+          {onAccountMode ? (
+            <div className="space-y-2">
+              <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
+                {invoicesForCustomer.length === 0 ? (
+                  <div className="text-xs ui-muted px-1">Pick the customer first — their invoices will be listed here.</div>
+                ) : (
+                  invoicesForCustomer.map((inv) => (
+                    <label key={inv.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        checked={(formData.invoiceIds || []).some((id) => String(id) === String(inv.id))}
+                        onChange={(e) =>
+                          setFormData((prev) => {
+                            const set = new Set((prev.invoiceIds || []).map(String));
+                            if (e.target.checked) set.add(String(inv.id));
+                            else set.delete(String(inv.id));
+                            return { ...prev, invoiceIds: [...set] };
+                          })
+                        }
+                      />
+                      <span className="truncate">
+                        {inv.number} · {inv.date} · {formatMoney(Number(inv.total || 0), currentCompany)}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+              <div className="text-xs ui-muted">
+                The value goes to the customer&apos;s ledger as unsettled, and you knock it off against their invoices
+                later — from the Sales Returns list.
+              </div>
+            </div>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={originalInvoiceQuery}
+                onChange={(e) => onOriginalInvoiceQueryChange(e.target.value)}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData?.getData('text');
+                  if (typeof pasted === 'string') onOriginalInvoiceQueryChange(pasted);
+                }}
+                onBlur={() => {
+                  // Normalize any pasted value and try one more exact match on blur.
+                  onOriginalInvoiceQueryChange(originalInvoiceQuery);
+                }}
+                list="creditnote-original-invoice-options"
+                className="ui-input"
+                placeholder="Search / paste invoice number"
+                required
+              />
+              <datalist id="creditnote-original-invoice-options">
+                {companyInvoices.map((inv) => (
+                  <option key={inv.id} value={String(inv.number || '')} />
+                ))}
+              </datalist>
+            </>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Credit Note Date</label>

@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { returnableLines, returnStatusLabel } from '../../utils/returns';
 import BillPreview from './BillPreview';
+import KnockOffForm from '../../components/KnockOffForm';
+import { isOnAccount, noteBalance, documentOutstanding } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
@@ -1310,10 +1312,14 @@ export const BillsList = ({
 
   const getDerivedStatus = (bill) => {
     const total = Number(bill?.total ?? 0);
-    const paid = Number(bill?.paidAmount ?? 0);
+    // Money the vendor was paid, plus value knocked off from debit notes raised
+    // on account: both reduce what is still owed on this bill.
+    const settled = documentOutstanding(bill, db.debitNotes || []);
+    const paid = settled.paid + settled.knocked;
 
     const raw = String(bill?.status || '').trim();
     if (raw === 'Draft') return 'Draft';
+    if (raw === 'Cancelled') return 'Cancelled';
     if (raw === 'Paid') return 'Paid';
     if (total > 0 && paid >= total - 0.0001) return 'Paid';
 
@@ -1869,6 +1875,32 @@ export const DebitNoteForm = ({
     };
   });
 
+  /**
+   * A return that spans several bills cannot honestly name one of them, so it
+   * is raised on account: the value sits against the vendor until someone
+   * knocks it off. That is a different document, so switching modes clears the
+   * single-bill link rather than leaving a half-set one behind.
+   */
+  const [onAccountMode, setOnAccountMode] = useState(false);
+  const billsForVendor = React.useMemo(() => {
+    const vendorId = String(formData.vendorId || '').trim();
+    if (!vendorId) return [];
+    return companyBills
+      .filter((b) => String(b.vendorId ?? '') === vendorId)
+      .filter((b) => String(b.status || '').toLowerCase() !== 'cancelled')
+      .slice()
+      .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+  }, [companyBills, formData.vendorId]);
+
+  const toggleOnAccount = (next) => {
+    setOnAccountMode(next);
+    setFormData((prev) => ({
+      ...prev,
+      originalBillId: next ? '' : prev.originalBillId,
+      billIds: next ? prev.billIds || [] : [],
+    }));
+  };
+
   const branchIdForNumbering = resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
   const debitDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const debitNumbering = debitDocSettings?.numbering?.debitNote;
@@ -2032,14 +2064,18 @@ export const DebitNoteForm = ({
     }
 
     const originalBill = companyBills.find((b) => b.id === parseInt(formData.originalBillId));
-    if (!originalBill) {
+    if (!onAccountMode && !originalBill) {
       notify.error('Please select the original bill');
       return;
     }
+    if (onAccountMode && !(formData.billIds || []).length) {
+      notify.error('Tick the bills this return covers.');
+      return;
+    }
 
-    const originalWarehouseId = String(originalBill?.warehouseId || '').trim();
+    const originalWarehouseId = String(onAccountMode ? '' : originalBill?.warehouseId || '').trim();
     const selectedWarehouseId = String(formData.warehouseId || '').trim();
-    if (originalWarehouseId && selectedWarehouseId && originalWarehouseId !== selectedWarehouseId) {
+    if (!onAccountMode && originalWarehouseId && selectedWarehouseId && originalWarehouseId !== selectedWarehouseId) {
       notify.error('Debit note warehouse must match the original bill warehouse.');
       return;
     }
@@ -2050,13 +2086,17 @@ export const DebitNoteForm = ({
     }
 
     // Enforced at save as well as in the prefill, since lines can be typed over.
-    const returnState = returnableLines(originalBill, db.debitNotes || [], 'originalBillId');
+    // A note raised on account answers no single bill, so there is nothing to
+    // check it against — its own knock-offs are what keep it honest.
+    const returnState = onAccountMode
+      ? { fullyReturned: false, lines: [] }
+      : returnableLines(originalBill, db.debitNotes || [], 'originalBillId');
     if (returnState.fullyReturned) {
       notify.error(`${originalBill.number} has already been fully returned.`);
       return;
     }
     const remainingByItem = new Map(returnState.lines.map((l) => [String(l.itemId), l.remainingQty]));
-    for (const line of formData.items || []) {
+    for (const line of onAccountMode ? [] : formData.items || []) {
       const key = String(line.itemId || '');
       if (!key) continue;
       const want = Number(line.quantity) || 0;
@@ -2133,7 +2173,7 @@ export const DebitNoteForm = ({
           date: formData.date,
           againstDocId: originalBill?.backendDocId ? String(originalBill.backendDocId) : null,
           partyId: vendorObj?.backendPartyId ? String(vendorObj.backendPartyId) : null,
-          partyName: getVendorDisplayName(vendorObj) || originalBill.vendorName || '',
+          partyName: getVendorDisplayName(vendorObj) || originalBill?.vendorName || '',
           partyGstin: vendorGstin || null,
           placeOfSupplyState: vendorState || null,
           taxType: isIntra ? 'CGST_SGST' : 'IGST',
@@ -2161,10 +2201,15 @@ export const DebitNoteForm = ({
       number: serverNumber || debitNumber,
       date: formData.date,
       warehouseId: String(formData.warehouseId || '').trim(),
-      originalBillId: originalBill.id,
-      originalBillNumber: originalBill.number,
+      originalBillId: onAccountMode ? null : originalBill.id,
+      originalBillNumber: onAccountMode ? '' : originalBill.number,
+      // On account: the value waits on the vendor's ledger until it is knocked
+      // off against their bills.
+      settlementMode: onAccountMode ? 'ON_ACCOUNT' : 'DOCUMENT',
+      billIds: onAccountMode ? (formData.billIds || []).map(String) : [],
+      allocations: [],
       vendorId: formData.vendorId,
-      vendorName: getVendorDisplayName(vendorObj) || originalBill.vendorName || '',
+      vendorName: getVendorDisplayName(vendorObj) || originalBill?.vendorName || '',
       vendorGstin: vendorGstin,
       placeOfSupplyState: vendorState,
       taxType: isIntra ? 'CGST_SGST' : 'IGST',
@@ -2210,16 +2255,65 @@ export const DebitNoteForm = ({
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Original Bill # *</label>
-          <select value={formData.originalBillId} onChange={(e) => onSelectOriginalBill(e.target.value)} className="ui-select w-full px-3 py-2" required>
-            <option value="">Select Bill</option>
-            {companyBills.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.number}
-              </option>
-            ))}
-          </select>
+        <div className="md:col-span-2">
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium">
+              {onAccountMode ? 'Bills this return covers' : 'Original Bill # *'}
+            </label>
+            <button
+              type="button"
+              onClick={() => toggleOnAccount(!onAccountMode)}
+              className="text-xs underline ui-muted hover:ui-fg"
+            >
+              {onAccountMode ? 'Against a single bill instead' : 'Goods from several bills?'}
+            </button>
+          </div>
+
+          {onAccountMode ? (
+            <div className="space-y-2">
+              <div className="border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
+                {billsForVendor.length === 0 ? (
+                  <div className="text-xs ui-muted px-1">
+                    Pick the vendor first — their bills will be listed here.
+                  </div>
+                ) : (
+                  billsForVendor.map((b) => (
+                    <label key={b.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        checked={(formData.billIds || []).some((id) => String(id) === String(b.id))}
+                        onChange={(e) =>
+                          setFormData((prev) => {
+                            const set = new Set((prev.billIds || []).map(String));
+                            if (e.target.checked) set.add(String(b.id));
+                            else set.delete(String(b.id));
+                            return { ...prev, billIds: [...set] };
+                          })
+                        }
+                      />
+                      <span className="truncate">
+                        {b.number} · {b.date} · {formatMoney(Number(b.total || 0), currentCompany)}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+              <div className="text-xs ui-muted">
+                The value goes to the vendor&apos;s ledger as unsettled, and you knock it off against their bills
+                later — from the Purchase Returns list.
+              </div>
+            </div>
+          ) : (
+            <select value={formData.originalBillId} onChange={(e) => onSelectOriginalBill(e.target.value)} className="ui-select w-full px-3 py-2" required>
+              <option value="">Select Bill</option>
+              {companyBills.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.number}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <WarehouseField
@@ -2367,6 +2461,43 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
 
+  /** Settle an on-account note against the vendor's open bills. */
+  const openKnockOff = (note) => {
+    if (typeof openModal !== 'function') return;
+    openModal(
+      <KnockOffForm
+        note={note}
+        documents={db.bills || []}
+        notes={db.debitNotes || []}
+        currentCompany={currentCompany}
+        partyKey="vendorId"
+        docLabel="bill"
+        onCancel={() => openModal(null)}
+        onConfirm={(allocations) => {
+          const today = new Date().toISOString().slice(0, 10);
+          setDb((prev) => ({
+            ...prev,
+            debitNotes: (prev.debitNotes || []).map((x) =>
+              String(x.id) === String(note.id)
+                ? {
+                    ...x,
+                    allocations: [
+                      ...(x.allocations || []),
+                      ...allocations.map((a) => ({ ...a, date: today })),
+                    ],
+                  }
+                : x
+            ),
+          }));
+          openModal(null);
+          const total = allocations.reduce((t, a) => t + Number(a.amount || 0), 0);
+          notify.success(`${formatMoney(total, currentCompany)} knocked off against ${allocations.length} bill(s).`);
+        }}
+      />,
+      { title: `Knock off ${note?.number || ''}`.trim(), maxWidthClass: 'max-w-3xl' }
+    );
+  };
+
   const dnFilters = useColumnFilters();
   const dnSearch = useListSearch(
     db.debitNotes.filter((dn) => dn.companyId === currentCompany.id),
@@ -2453,7 +2584,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               <ColumnHeader label="Date" col="date" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <ColumnHeader label="Amount" col="amount" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
               <ColumnHeader label="Status" col="status" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
+              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">On account</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
@@ -2471,13 +2602,35 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                 return (
                   <tr key={dn.id} className="ui-hover-sunken">
                     <td className="ui-col-id px-4 py-2.5 font-medium">{dn.number}</td>
-                    <td className="ui-col-meta px-4 py-2.5">{dn.originalBillNumber}</td>
+                    <td className="ui-col-meta px-4 py-2.5">
+                      {dn.originalBillNumber || (
+                        <span className="ui-muted">
+                          {(dn.billIds || []).length ? `${(dn.billIds || []).length} bills · on account` : '—'}
+                        </span>
+                      )}
+                    </td>
                     <td className="ui-col-entity px-4 py-2.5">{dn.vendorName}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                     <td className="ui-col-date px-4 py-2.5">{dn.date}</td>
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]">{dn.status || 'Draft'}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {isOnAccount(dn) ? (
+                        noteBalance(dn).unsettled > 0.0001 ? (
+                          <button
+                            type="button"
+                            onClick={() => openKnockOff(dn)}
+                            className="ui-btn ui-btn-secondary !h-8 text-xs"
+                            title="Knock this off against the vendor's open bills"
+                          >
+                            Knock off {formatMoney(noteBalance(dn).unsettled, currentCompany)}
+                          </button>
+                        ) : (
+                          <span className="ui-caption">Settled</span>
+                        )
+                      ) : null}
                     </td>
                   </tr>
                 );
