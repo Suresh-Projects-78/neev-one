@@ -11283,6 +11283,7 @@ const AppShell = () => {
   const [receiptEditor, setReceiptEditor] = useState({ open: false });
   const [paymentEditor, setPaymentEditor] = useState({ open: false });
   const [billEditor, setBillEditor] = useState({ open: false, initial: null });
+  const [poEditor, setPoEditor] = useState({ open: false, initial: null });
   const [debitNoteEditor, setDebitNoteEditor] = useState({ open: false, initialOriginalBillId: null });
   const [creditNoteEditor, setCreditNoteEditor] = useState({ open: false, initialOriginalInvoiceId: null });
   const [journalEditor, setJournalEditor] = useState({ open: false, initial: null });
@@ -12379,6 +12380,35 @@ const AppShell = () => {
       case 'purchaseOverview':
         return <PurchaseOverview db={dbForUser} currentCompany={currentCompany} />;
       case 'purchaseOrders':
+        if (poEditor.open) {
+          // Entered on its own page, the way a bill is — same shape of work,
+          // same shape of screen.
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="ui-title text-lg">{poEditor.initial ? 'Edit Purchase Order' : 'New Purchase Order'}</h3>
+                <button
+                  type="button"
+                  onClick={() => setPoEditor({ open: false, initial: null })}
+                  className="ui-btn ui-btn-secondary"
+                >
+                  Back
+                </button>
+              </div>
+              <div className="ui-surface rounded-xl shadow-sm p-6 border">
+                <PurchaseOrderForm
+                  db={dbForUser}
+                  setDb={setDb}
+                  currentCompany={currentCompany}
+                  warehouses={warehousesForUser}
+                  defaultWarehouseId={activeWarehouseId}
+                  initialData={poEditor.initial}
+                  onClose={() => setPoEditor({ open: false, initial: null })}
+                />
+              </div>
+            </div>
+          );
+        }
         return (
           <PurchaseOrdersList
             db={dbForUser}
@@ -12387,11 +12417,13 @@ const AppShell = () => {
             currentCompany={currentCompany}
             warehouses={warehousesForUser}
             defaultWarehouseId={activeWarehouseId}
+            onNewPo={() => setPoEditor({ open: true, initial: null })}
+            onEditPo={(po) => setPoEditor({ open: true, initial: po })}
             onConvertToBill={(po) => {
-              // Carry the order across: vendor, warehouse and lines prefill
-              // the bill; the PO number lands in the reference so the paper
-              // trail survives. The PO is marked Billed only here, at the
-              // moment of conversion — the bill form still allows editing.
+              // Carry the order across: vendor, warehouse and lines prefill the
+              // bill, and the bill remembers which order it answers. The order
+              // closes when that bill is actually saved — marking it here would
+              // close orders for bills the user then abandoned.
               setBillEditor({
                 open: true,
                 initial: {
@@ -12399,15 +12431,10 @@ const AppShell = () => {
                   warehouseId: po.warehouseId,
                   refNo: po.number,
                   refDate: po.date,
+                  sourcePurchaseOrderId: po.id,
                   items: po.items,
                 },
               });
-              setDb((prev) => ({
-                ...prev,
-                purchaseOrders: (prev.purchaseOrders || []).map((x) =>
-                  x.id === po.id ? { ...x, status: 'Billed', updatedAt: new Date().toISOString() } : x
-                ),
-              }));
               setActive('bills');
             }}
           />
@@ -12467,6 +12494,7 @@ const AppShell = () => {
             defaultWarehouseId={activeWarehouseId}
             onNewBill={() => setBillEditor({ open: true, initial: null })}
             onDuplicateBill={(initial) => setBillEditor({ open: true, initial })}
+            onEditBill={(bill) => setBillEditor({ open: true, initial: bill })}
             onRaiseDebitNote={(bill) => {
               setActive('debitNotes');
               setDebitNoteEditor({ open: true, initialOriginalBillId: bill?.id ?? null });
@@ -12751,7 +12779,7 @@ const AppShell = () => {
       default:
         return <SalesOverview db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} warehouses={warehousesForUser} />;
     }
-  }, [active, billEditor, branchesForUser, creditNoteEditor, currentCompany, dbForUser, debitNoteEditor, estimateEditor, invoiceEditor, journalEditor, openLedger, paymentEditor, receiptEditor, ledgerNav, stockTransferEditor, warehousesForUser, activeWarehouseId, activeBranchId]);
+  }, [active, billEditor, branchesForUser, creditNoteEditor, currentCompany, dbForUser, debitNoteEditor, estimateEditor, invoiceEditor, journalEditor, openLedger, paymentEditor, receiptEditor, ledgerNav, stockTransferEditor, warehousesForUser, activeWarehouseId, activeBranchId, poEditor]);
 
   if (!isAuthenticated) {
     return (

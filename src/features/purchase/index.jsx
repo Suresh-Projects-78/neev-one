@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { returnableLines, returnStatusLabel } from '../../utils/returns';
+import BillPreview from './BillPreview';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { createDocApi, deleteDocApi, hasApiSession } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Copy, CreditCard, MoreVertical, Plus, Trash2 } from 'lucide-react';
+import { Copy, CreditCard, Eye, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { dueDateFor } from '../../utils/paymentTerms';
@@ -84,6 +85,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           ? String(initialData.vendorId)
           : '',
       warehouseId: String(initialData?.warehouseId || base.warehouseId || '').trim(),
+      // Kept so a saved bill can close the order it came from.
+      sourcePurchaseOrderId: initialData.sourcePurchaseOrderId ?? null,
       items: copiedItems.length ? copiedItems : base.items,
     };
   });
@@ -296,6 +299,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       total: computed.total,
       paidAmount: 0,
       status: wantsDraft ? 'Draft' : 'Unpaid',
+      sourcePurchaseOrderId: formData.sourcePurchaseOrderId ?? null,
       createdAt: new Date().toISOString(),
     };
 
@@ -584,7 +588,88 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   );
 };
 
-export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, warehouses = [], onConvertToBill }) => {
+export const PurchaseOrdersList = ({
+  db,
+  setDb,
+  openModal,
+  currentCompany,
+  warehouses = [],
+  onConvertToBill,
+  onNewPo,
+  onEditPo,
+}) => {
+  const [poMenu, setPoMenu] = useState(null);
+
+  /**
+   * An order is Pending from the moment it is raised until a bill answers it,
+   * and then it is Closed. The bill is the fact, so the status is read from it
+   * rather than trusted from a flag someone forgot to set — a bill raised from
+   * the Bills screen against this PO closes it just the same.
+   */
+  const poStatusOf = React.useCallback(
+    (po) => {
+      const stored = String(po?.status || '').trim();
+      if (stored === 'Cancelled') return 'Cancelled';
+      const poNumber = String(po?.number || '').trim().toLowerCase();
+      const billed = (db?.bills || []).some((b) => {
+        if (String(b?.status || '').toLowerCase() === 'cancelled') return false;
+        if (String(b?.sourcePurchaseOrderId ?? '') === String(po?.id ?? '')) return true;
+        // Bills raised before the link existed still name the order in their
+        // reference, and that is the same fact written another way.
+        return Boolean(poNumber) && String(b?.refNo || '').trim().toLowerCase() === poNumber;
+      });
+      if (billed || stored === 'Billed' || stored === 'Closed') return 'Closed';
+      return 'Pending';
+    },
+    [db?.bills]
+  );
+
+  const openEditPo = (po) => {
+    if (typeof onEditPo === 'function') {
+      onEditPo(po);
+      return;
+    }
+    openModal(
+      <PurchaseOrderForm
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        initialData={po}
+        onClose={() => openModal(null)}
+      />
+    );
+  };
+
+  const cancelPo = async (po) => {
+    const ok = await confirmDialog({
+      title: `Cancel ${po?.number || 'this order'}?`,
+      message: 'The order stays on record as cancelled and can no longer be billed.',
+      confirmLabel: 'Yes, cancel it',
+    });
+    if (!ok) return;
+    setDb((prev) => ({
+      ...prev,
+      purchaseOrders: (prev.purchaseOrders || []).map((x) =>
+        String(x.id) === String(po.id) ? { ...x, status: 'Cancelled', cancelledAt: new Date().toISOString() } : x
+      ),
+    }));
+    notify.success(`${po?.number || 'Purchase order'} cancelled.`);
+  };
+
+  const deletePo = async (po) => {
+    const ok = await confirmDialog({
+      title: `Delete ${po?.number || 'this order'}?`,
+      message: 'It goes for good. Cancel it instead if you need the paper trail.',
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    setDb((prev) => ({
+      ...prev,
+      purchaseOrders: (prev.purchaseOrders || []).filter((x) => String(x.id) !== String(po.id)),
+    }));
+    notify.success(`${po?.number || 'Purchase order'} deleted.`);
+  };
+
   const warehouseById = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
@@ -610,11 +695,17 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
       warehouse: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || '',
       date: (r) => r.date,
       amount: (r) => r.total,
-      status: (r) => r.status,
+      status: (r) => poStatusOf(r),
     }
   );
 
   const createPo = () => {
+    // A purchase order is entered the same way a bill is: its own page, not a
+    // popup, because the two forms hold the same kind of work.
+    if (typeof onNewPo === 'function') {
+      onNewPo();
+      return;
+    }
     openModal(<PurchaseOrderForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />);
   };
 
@@ -674,6 +765,13 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
                 const whId = String(po?.warehouseId || '').trim();
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
+                const status = poStatusOf(po);
+                const pillClass =
+                  status === 'Closed'
+                    ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
+                    : status === 'Cancelled'
+                      ? 'ui-sunken ui-fg'
+                      : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
                 return (
                   <tr key={po.id} className="ui-hover-sunken">
                     <td className="ui-col-id px-4 py-2.5 font-medium">{po.number}</td>
@@ -682,20 +780,86 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
                     <td className="ui-col-date px-4 py-2.5">{po.date}</td>
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]">{po.status || 'Draft'}</span>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${pillClass}`}>{status}</span>
                     </td>
-                    <td className="px-4 py-2.5 text-right">
-                      {onConvertToBill && po.status !== 'Billed' ? (
-                        <button
-                          type="button"
-                          onClick={() => onConvertToBill(po)}
-                          className="ui-btn ui-btn-secondary !h-8 text-xs"
-                          title={`Raise a bill from ${po.number}`}
+                    <td className="px-4 py-2.5 text-right relative">
+                      <button
+                        type="button"
+                        data-po-menu-button={po.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPoMenu((prev) => (prev === po.id ? null : po.id));
+                        }}
+                        className="p-2 rounded-lg ui-hover-sunken"
+                        aria-haspopup="menu"
+                        aria-label={`Actions for ${po.number}`}
+                      >
+                        <MoreVertical size={18} />
+                      </button>
+
+                      {poMenu === po.id ? (
+                        <div
+                          className="absolute right-2 top-10 z-40 w-52 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden text-left"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          Convert to Bill
-                        </button>
-                      ) : po.status === 'Billed' ? (
-                        <span className="ui-caption">Billed</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPoMenu(null);
+                              if (status === 'Pending') openEditPo(po);
+                            }}
+                            disabled={status !== 'Pending'}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                              status === 'Pending' ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed'
+                            }`}
+                          >
+                            <Pencil size={15} /> Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPoMenu(null);
+                              if (status === 'Pending' && onConvertToBill) onConvertToBill(po);
+                            }}
+                            disabled={status !== 'Pending' || !onConvertToBill}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                              status === 'Pending' && onConvertToBill ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed'
+                            }`}
+                          >
+                            <Plus size={15} /> Convert to Bill
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPoMenu(null);
+                              if (status === 'Pending') cancelPo(po);
+                            }}
+                            disabled={status !== 'Pending'}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                              status === 'Pending' ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed'
+                            }`}
+                          >
+                            <X size={15} /> Cancel
+                          </button>
+
+                          <div className="border-t ui-border-c" />
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPoMenu(null);
+                              if (status !== 'Closed') deletePo(po);
+                            }}
+                            disabled={status === 'Closed'}
+                            className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
+                              status === 'Closed' ? 'ui-subtle cursor-not-allowed' : 'ui-hover-sunken text-[rgb(var(--neg))]'
+                            }`}
+                          >
+                            <Trash2 size={15} /> Delete
+                          </button>
+                        </div>
                       ) : null}
                     </td>
                   </tr>
@@ -709,7 +873,16 @@ export const PurchaseOrdersList = ({ db, setDb, openModal, currentCompany, wareh
   );
 };
 
-export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
+export const PurchaseOrderForm = ({
+  db,
+  setDb,
+  currentCompany,
+  onClose,
+  initialData = null,
+  warehouses = [],
+  defaultWarehouseId = '',
+}) => {
+  const isEditPo = Boolean(initialData?.id);
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
   const itemsMaster = db.items.filter((i) => i.companyId === currentCompany.id);
 
@@ -720,12 +893,34 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
   const lockPoNumber = isPoAuto && !poNumbering?.allowManualOverride;
   const generatedPoNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
-  const [formData, setFormData] = useState({
-    number: isPoAuto ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '' : '',
-    date: new Date().toISOString().split('T')[0],
-    vendorId: '',
-    items: [{ itemId: '', description: '', quantity: 1, rate: 0, amount: 0 }],
-    notes: '',
+  const [formData, setFormData] = useState(() => {
+    if (initialData) {
+      return {
+        number: String(initialData.number || ''),
+        date: String(initialData.date || new Date().toISOString().split('T')[0]),
+        vendorId: initialData.vendorId ? String(initialData.vendorId) : '',
+        warehouseId: String(initialData.warehouseId || defaultWarehouseId || '').trim(),
+        items:
+          Array.isArray(initialData.items) && initialData.items.length
+            ? initialData.items.map((l) => ({
+                itemId: String(l?.itemId || ''),
+                description: l?.description || '',
+                quantity: Number(l?.quantity ?? 1),
+                rate: Number(l?.rate ?? 0),
+                amount: Number(l?.amount ?? 0),
+              }))
+            : [{ itemId: '', description: '', quantity: 1, rate: 0, amount: 0 }],
+        notes: initialData.notes || '',
+      };
+    }
+    return {
+      number: isPoAuto ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '' : '',
+      date: new Date().toISOString().split('T')[0],
+      vendorId: '',
+      warehouseId: String(defaultWarehouseId || '').trim(),
+      items: [{ itemId: '', description: '', quantity: 1, rate: 0, amount: 0 }],
+      notes: '',
+    };
   });
 
   const addItem = () => {
@@ -825,6 +1020,37 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
       }
     }
 
+    if (isEditPo) {
+      setDb((prev) => ({
+        ...prev,
+        purchaseOrders: (prev.purchaseOrders || []).map((x) =>
+          String(x.id) === String(initialData.id)
+            ? {
+                ...x,
+                date: formData.date,
+                vendorId: formData.vendorId,
+                vendorName: getVendorDisplayName(vendorObj),
+                warehouseId: String(formData.warehouseId || '').trim(),
+                items: formData.items.map((l) => ({
+                  ...l,
+                  itemId: String(l.itemId || ''),
+                  quantity: Number(l.quantity ?? 1),
+                  rate: Number(l.rate ?? 0),
+                  amount: Number(l.amount ?? 0),
+                })),
+                subtotal,
+                total: subtotal,
+                notes: formData.notes,
+                updatedAt: new Date().toISOString(),
+              }
+            : x
+        ),
+      }));
+      onClose?.();
+      notify.success(`${formData.number || 'Purchase order'} updated.`);
+      return;
+    }
+
     const newPo = {
       id: db.purchaseOrders.length + 1,
       companyId: currentCompany.id,
@@ -840,10 +1066,12 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
         rate: Number(l.rate ?? 0),
         amount: Number(l.amount ?? 0),
       })),
+      warehouseId: String(formData.warehouseId || '').trim(),
       subtotal,
       total: subtotal,
       notes: formData.notes,
-      status: 'Draft',
+      // A raised order is pending until a bill answers it.
+      status: 'Pending',
       createdAt: new Date().toISOString(),
     };
 
@@ -892,6 +1120,16 @@ export const PurchaseOrderForm = ({ db, setDb, currentCompany, onClose }) => {
             required
           />
         </div>
+
+        <WarehouseField
+          value={formData.warehouseId}
+          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
+          options={Array.isArray(warehouses) ? warehouses : []}
+          activeWarehouseId={defaultWarehouseId}
+          isEdit={isEditPo}
+          required={false}
+          className="ui-select w-full px-3 py-2 ui-surface"
+        />
       </div>
 
       <div>
@@ -995,6 +1233,7 @@ export const BillsList = ({
   // for it but it was never a prop, so the branch was unreachable and a parent
   // could not hook into duplication at all.
   onDuplicateBill,
+  onEditBill,
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
@@ -1007,6 +1246,36 @@ export const BillsList = ({
   const colFilters = useColumnFilters();
   const [openMenu, setOpenMenu] = useState(null);
   const menuRef = useRef(null);
+
+  /** Open the bill as the document a vendor would recognise. */
+  const openBillDocument = (bill) => {
+    if (typeof openModal !== 'function') return;
+    openModal(<BillPreview db={db} currentCompany={currentCompany} bill={bill} />, {
+      title: `Purchase bill ${bill?.number || ''}`.trim(),
+      maxWidthClass: 'max-w-5xl',
+    });
+  };
+
+  /**
+   * Cancelling keeps the number and the paper trail; deleting does not. A bill
+   * that has been paid or partly returned is history, so it is cancelled, never
+   * removed.
+   */
+  const cancelBill = async (bill) => {
+    const ok = await confirmDialog({
+      title: `Cancel ${bill?.number || 'this bill'}?`,
+      message: 'The bill stays on record as cancelled, and stops counting towards payables and stock.',
+      confirmLabel: 'Yes, cancel it',
+    });
+    if (!ok) return;
+    setDb((prev) => ({
+      ...prev,
+      bills: (prev.bills || []).map((x) =>
+        String(x.id) === String(bill.id) ? { ...x, status: 'Cancelled', cancelledAt: new Date().toISOString() } : x
+      ),
+    }));
+    notify.success(`${bill?.number || 'Bill'} cancelled.`);
+  };
 
   const warehouseById = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
@@ -1326,6 +1595,13 @@ export const BillsList = ({
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 const derived = getDerivedStatus(b);
                 const returnMark = returnStatusLabel(b, db.debitNotes || [], 'originalBillId');
+                // What the vendor has been debited against this bill, so the
+                // list says how much of it is under dispute, not merely that
+                // some of it is.
+                const debitValue = (db.debitNotes || [])
+                  .filter((dn) => String(dn?.originalBillId ?? '') === String(b.id))
+                  .filter((dn) => String(dn?.status || '').toLowerCase() !== 'cancelled')
+                  .reduce((t, dn) => t + (Number(dn.total) || 0), 0);
                 const statusPillClass =
                   derived === 'Paid'
                     ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
@@ -1336,8 +1612,13 @@ export const BillsList = ({
                         : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
 
                 return (
-                  <tr key={b.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-4 py-2.5 font-medium">{b.number}</td>
+                  <tr
+                    key={b.id}
+                    className="ui-hover-sunken cursor-pointer"
+                    onClick={() => openBillDocument(b)}
+                    title="Open this bill as a document"
+                  >
+                    <td className="ui-col-id px-4 py-2.5 font-medium text-[rgb(var(--brand))]">{b.number}</td>
                     <td className="ui-col-entity px-4 py-2.5">{b.vendorName}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                     <td className="ui-col-date px-4 py-2.5">{b.date}</td>
@@ -1349,9 +1630,9 @@ export const BillsList = ({
                       {returnMark ? (
                         <span
                           className="ml-1 px-2 py-1 rounded-full text-[11px] font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
-                          title={`${returnMark} against this bill`}
+                          title={`Debit notes of ${formatMoney(debitValue, currentCompany)} raised against this bill`}
                         >
-                          {returnMark}
+                          Debit Note {formatMoney(debitValue, currentCompany)}
                         </span>
                       ) : null}
                     </td>
@@ -1421,11 +1702,50 @@ export const BillsList = ({
                   type="button"
                   onClick={() => {
                     setOpenMenu(null);
+                    openBillDocument(bill);
+                  }}
+                  className="w-full px-4 py-2 text-left ui-hover-sunken flex items-center gap-2"
+                >
+                  <Eye size={16} /> View / Print
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMenu(null);
+                    if (derived !== 'Cancelled') onEditBill?.(bill);
+                  }}
+                  disabled={derived === 'Cancelled'}
+                  className={`w-full px-4 py-2 text-left flex items-center gap-2 ${
+                    derived === 'Cancelled' ? 'ui-subtle cursor-not-allowed' : 'ui-hover-sunken ui-fg'
+                  }`}
+                >
+                  <Pencil size={16} /> Edit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMenu(null);
                     duplicateBill(bill);
                   }}
                   className="w-full px-4 py-2 text-left ui-hover-sunken flex items-center gap-2"
                 >
                   <Copy size={16} /> Duplicate
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMenu(null);
+                    if (derived !== 'Cancelled') cancelBill(bill);
+                  }}
+                  disabled={derived === 'Cancelled'}
+                  className={`w-full px-4 py-2 text-left flex items-center gap-2 ${
+                    derived === 'Cancelled' ? 'ui-subtle cursor-not-allowed' : 'ui-hover-sunken ui-fg'
+                  }`}
+                >
+                  <X size={16} /> Cancel
                 </button>
 
                 <button
