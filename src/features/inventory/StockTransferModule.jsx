@@ -827,10 +827,10 @@ const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Item</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Sent</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Received</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Difference</th>
+              <th className="ui-th">Item</th>
+              <th className="ui-th ui-num">Sent</th>
+              <th className="ui-th ui-num">Received</th>
+              <th className="ui-th ui-num">Difference</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -980,10 +980,10 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Item</th>
-              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Sent</th>
-              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Received</th>
-              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Difference</th>
+              <th className="ui-th">Item</th>
+              <th className="ui-th ui-num">Sent</th>
+              <th className="ui-th ui-num">Received</th>
+              <th className="ui-th ui-num">Difference</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -1609,12 +1609,12 @@ export const StockTransfersList = ({
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <ColumnHeader label="Transfer #" col="number" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="From" col="date" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="To" col="from" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Date" col="to" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Status" col="status" state={transferColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
+                <ColumnHeader label="Transfer #" col="number" state={transferColFilters} className="ui-th" />
+                <ColumnHeader label="From" col="date" state={transferColFilters} className="ui-th" />
+                <ColumnHeader label="To" col="from" state={transferColFilters} className="ui-th" />
+                <ColumnHeader label="Date" col="to" state={transferColFilters} className="ui-th" />
+                <ColumnHeader label="Status" col="status" state={transferColFilters} className="ui-th" />
+                <th className="ui-th">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">

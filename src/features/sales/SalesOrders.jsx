@@ -362,12 +362,12 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <ColumnHeader label="SO #" col="number" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Date" col="date" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Customer" col="customer" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Total" col="total" state={soFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ordered / Delivered / Billed</th>
-                <ColumnHeader label="Status" col="status" state={soFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="SO #" col="number" state={soFilters} className="ui-th" />
+                <ColumnHeader label="Date" col="date" state={soFilters} className="ui-th" />
+                <ColumnHeader label="Customer" col="customer" state={soFilters} className="ui-th" />
+                <ColumnHeader label="Total" col="total" state={soFilters} className="ui-th ui-num" align="right" />
+                <th className="ui-th">Ordered / Delivered / Billed</th>
+                <ColumnHeader label="Status" col="status" state={soFilters} className="ui-th" />
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

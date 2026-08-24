@@ -1239,11 +1239,11 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Invoice #</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Outstanding</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Allocate</th>
+                      <th className="ui-th w-12">Sel</th>
+                      <th className="ui-th">Invoice #</th>
+                      <th className="ui-th">Date</th>
+                      <th className="ui-th ui-num">Outstanding</th>
+                      <th className="ui-th ui-num">Allocate</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -1322,11 +1322,11 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Doc #</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Outstanding</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Allocate</th>
+                      <th className="ui-th w-12">Sel</th>
+                      <th className="ui-th">Doc #</th>
+                      <th className="ui-th">Date</th>
+                      <th className="ui-th ui-num">Outstanding</th>
+                      <th className="ui-th ui-num">Allocate</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -1982,7 +1982,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             <table className="ui-table w-full">
               <thead className="ui-sunken border-b">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">
+                  <th className="ui-th">
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
@@ -1990,14 +1990,14 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       disabled={txns.length === 0}
                     />
                   </th>
-                  <ColumnHeader label="Date" col="date" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
-                  <ColumnHeader label="Description" col="description" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
-                  <ColumnHeader label="Ledger" col="ledger" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
-                  <ColumnHeader label="Narration" col="narration" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
-                  <ColumnHeader label="Payment" col="payment" state={txnFilters} className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase" align="right" />
-                  <ColumnHeader label="Receipts" col="receipt" state={txnFilters} className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase" align="right" />
-                  <ColumnHeader label="Status" col="status" state={txnFilters} className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase" />
-                  <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Action</th>
+                  <ColumnHeader label="Date" col="date" state={txnFilters} className="ui-th" />
+                  <ColumnHeader label="Description" col="description" state={txnFilters} className="ui-th" />
+                  <ColumnHeader label="Ledger" col="ledger" state={txnFilters} className="ui-th" />
+                  <ColumnHeader label="Narration" col="narration" state={txnFilters} className="ui-th" />
+                  <ColumnHeader label="Payment" col="payment" state={txnFilters} className="ui-th ui-num" align="right" />
+                  <ColumnHeader label="Receipts" col="receipt" state={txnFilters} className="ui-th ui-num" align="right" />
+                  <ColumnHeader label="Status" col="status" state={txnFilters} className="ui-th" />
+                  <th className="ui-th ui-num">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

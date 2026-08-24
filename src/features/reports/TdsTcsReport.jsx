@@ -167,12 +167,12 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Party</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">GSTIN</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Docs</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Cumulative ({fy.label})</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Excess</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">{tab === 'tds' ? 'TDS @' : 'TCS @'} {rate}%</th>
+                <th className="ui-th">Party</th>
+                <th className="ui-th">GSTIN</th>
+                <th className="ui-th ui-num">Docs</th>
+                <th className="ui-th ui-num">Cumulative ({fy.label})</th>
+                <th className="ui-th ui-num">Excess</th>
+                <th className="ui-th ui-num">{tab === 'tds' ? 'TDS @' : 'TCS @'} {rate}%</th>
               </tr>
             </thead>
             <tbody>

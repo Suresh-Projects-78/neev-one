@@ -274,12 +274,12 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <ColumnHeader label="DC #" col="number" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Date" col="date" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Customer" col="customer" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Purpose" col="purpose" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Value" col="value" state={dcFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
-                <ColumnHeader label="Status" col="status" state={dcFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
+                <ColumnHeader label="DC #" col="number" state={dcFilters} className="ui-th" />
+                <ColumnHeader label="Date" col="date" state={dcFilters} className="ui-th" />
+                <ColumnHeader label="Customer" col="customer" state={dcFilters} className="ui-th" />
+                <ColumnHeader label="Purpose" col="purpose" state={dcFilters} className="ui-th" />
+                <ColumnHeader label="Value" col="value" state={dcFilters} className="ui-th ui-num" align="right" />
+                <ColumnHeader label="Status" col="status" state={dcFilters} className="ui-th" />
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

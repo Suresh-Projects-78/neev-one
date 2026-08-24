@@ -102,15 +102,15 @@ export default function BatchStock({ db, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Item</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Batch</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Mfg</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Expiry</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">In</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Out</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Balance</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Source</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Alert</th>
+                <th className="ui-th">Item</th>
+                <th className="ui-th">Batch</th>
+                <th className="ui-th">Mfg</th>
+                <th className="ui-th">Expiry</th>
+                <th className="ui-th ui-num">In</th>
+                <th className="ui-th ui-num">Out</th>
+                <th className="ui-th ui-num">Balance</th>
+                <th className="ui-th">Source</th>
+                <th className="ui-th">Alert</th>
               </tr>
             </thead>
             <tbody>

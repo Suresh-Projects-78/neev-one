@@ -637,12 +637,12 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Branch</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Warehouse</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Location</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Address</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">GST</th>
-                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+                <th className="ui-th">Branch</th>
+                <th className="ui-th">Warehouse</th>
+                <th className="ui-th">Location</th>
+                <th className="ui-th">Address</th>
+                <th className="ui-th">GST</th>
+                <th className="ui-th ui-num">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">

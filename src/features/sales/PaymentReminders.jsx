@@ -156,13 +156,13 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Invoice</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Due date</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Overdue</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Balance</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Stage</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Last reminder</th>
+                <th className="ui-th">Invoice</th>
+                <th className="ui-th">Customer</th>
+                <th className="ui-th">Due date</th>
+                <th className="ui-th ui-num">Overdue</th>
+                <th className="ui-th ui-num">Balance</th>
+                <th className="ui-th">Stage</th>
+                <th className="ui-th">Last reminder</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

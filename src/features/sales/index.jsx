@@ -1513,13 +1513,13 @@ export const EstimatesList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Estimate #" col="number" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Customer" col="customer" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Date" col="date" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Due" col="due" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Total" col="total" state={estFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
+              <ColumnHeader label="Estimate #" col="number" state={estFilters} className="ui-th" />
+              <ColumnHeader label="Customer" col="customer" state={estFilters} className="ui-th" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={estFilters} className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={estFilters} className="ui-th" />
+              <ColumnHeader label="Due" col="due" state={estFilters} className="ui-th" />
+              <ColumnHeader label="Total" col="total" state={estFilters} className="ui-th" />
+              <th className="ui-th">Actions</th>
             </tr>
             <tr className="hidden">
             </tr>
@@ -1809,13 +1809,13 @@ export const CreditNotesList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Credit #" col="number" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Original Invoice" col="original" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Customer" col="customer" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Date" col="date" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Total" col="total" state={cnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">On account</th>
+              <ColumnHeader label="Credit #" col="number" state={cnFilters} className="ui-th" />
+              <ColumnHeader label="Original Invoice" col="original" state={cnFilters} className="ui-th" />
+              <ColumnHeader label="Customer" col="customer" state={cnFilters} className="ui-th" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={cnFilters} className="ui-th" />
+              <ColumnHeader label="Total" col="total" state={cnFilters} className="ui-th" />
+              <th className="ui-th ui-num">On account</th>
             </tr>
           </thead>
           <tbody className="divide-y">

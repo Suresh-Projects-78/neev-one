@@ -746,13 +746,13 @@ export const PurchaseOrdersList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="PO #" col="number" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Vendor" col="vendor" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Date" col="date" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Amount" col="amount" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Status" col="status" state={poFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase"><span className="sr-only">Actions</span></th>
+              <ColumnHeader label="PO #" col="number" state={poFilters} className="ui-th" />
+              <ColumnHeader label="Vendor" col="vendor" state={poFilters} className="ui-th" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={poFilters} className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={poFilters} className="ui-th" />
+              <ColumnHeader label="Amount" col="amount" state={poFilters} className="ui-th" />
+              <ColumnHeader label="Status" col="status" state={poFilters} className="ui-th" />
+              <th className="ui-th ui-num"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
@@ -1576,15 +1576,15 @@ export const BillsList = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Bill #" col="number" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Vendor" col="vendor" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Date" col="date" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Ref No" col="refNo" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Ref Date" col="refDate" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Total" col="total" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Status" col="status" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
+              <ColumnHeader label="Bill #" col="number" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Vendor" col="vendor" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Ref No" col="refNo" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Ref Date" col="refDate" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Total" col="total" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Status" col="status" state={colFilters} className="ui-th" />
+              <th className="ui-th">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -2587,14 +2587,14 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Debit Note #" col="number" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Original Bill" col="original" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Vendor" col="vendor" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Date" col="date" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Amount" col="amount" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Status" col="status" state={dnFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">On account</th>
+              <ColumnHeader label="Debit Note #" col="number" state={dnFilters} className="ui-th" />
+              <ColumnHeader label="Original Bill" col="original" state={dnFilters} className="ui-th" />
+              <ColumnHeader label="Vendor" col="vendor" state={dnFilters} className="ui-th" />
+              <ColumnHeader label="Warehouse" col="warehouse" state={dnFilters} className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={dnFilters} className="ui-th" />
+              <ColumnHeader label="Amount" col="amount" state={dnFilters} className="ui-th" />
+              <ColumnHeader label="Status" col="status" state={dnFilters} className="ui-th" />
+              <th className="ui-th ui-num">On account</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">

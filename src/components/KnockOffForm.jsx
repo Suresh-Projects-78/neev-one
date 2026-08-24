@@ -107,10 +107,10 @@ const KnockOffForm = ({
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Document</th>
-                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Outstanding</th>
-                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-40">Knock off</th>
+                <th className="ui-th">Document</th>
+                <th className="ui-th">Date</th>
+                <th className="ui-th ui-num">Outstanding</th>
+                <th className="ui-th ui-num w-40">Knock off</th>
               </tr>
             </thead>
             <tbody className="divide-y">

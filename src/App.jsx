@@ -688,13 +688,13 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
         <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Name" col="name" state={vendorSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Phone" col="phone" state={vendorSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Email" col="email" state={vendorSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="GST Reg." col="gstReg" state={vendorSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="GSTIN" col="gstin" state={vendorSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Balance</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+              <ColumnHeader label="Name" col="name" state={vendorSearchFilters} className="ui-th" />
+              <ColumnHeader label="Phone" col="phone" state={vendorSearchFilters} className="ui-th" />
+              <ColumnHeader label="Email" col="email" state={vendorSearchFilters} className="ui-th" />
+              <ColumnHeader label="GST Reg." col="gstReg" state={vendorSearchFilters} className="ui-th" />
+              <ColumnHeader label="GSTIN" col="gstin" state={vendorSearchFilters} className="ui-th" />
+              <th className="ui-th">Balance</th>
+              <th className="ui-th ui-num">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -927,13 +927,13 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
         <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Name" col="name" state={customerSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Phone" col="phone" state={customerSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Email" col="email" state={customerSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="GST Reg." col="gstReg" state={customerSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="GSTIN" col="gstin" state={customerSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Balance</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+              <ColumnHeader label="Name" col="name" state={customerSearchFilters} className="ui-th" />
+              <ColumnHeader label="Phone" col="phone" state={customerSearchFilters} className="ui-th" />
+              <ColumnHeader label="Email" col="email" state={customerSearchFilters} className="ui-th" />
+              <ColumnHeader label="GST Reg." col="gstReg" state={customerSearchFilters} className="ui-th" />
+              <ColumnHeader label="GSTIN" col="gstin" state={customerSearchFilters} className="ui-th" />
+              <th className="ui-th">Balance</th>
+              <th className="ui-th ui-num">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -1423,16 +1423,16 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         <table className="ui-table w-full ui-table-wide">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Voucher #" col="number" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Date" col="date" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Due Date" col="dueDate" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Narration" col="description" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Ref No" col="refNo" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ref Date</th>
-              <ColumnHeader label="Amount" col="amount" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Status" col="status" state={expenseColFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Actions</th>
+              <ColumnHeader label="Voucher #" col="number" state={expenseColFilters} className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={expenseColFilters} className="ui-th" />
+              <ColumnHeader label="Due Date" col="dueDate" state={expenseColFilters} className="ui-th" />
+              <ColumnHeader label="Narration" col="description" state={expenseColFilters} className="ui-th" />
+              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} className="ui-th" />
+              <ColumnHeader label="Ref No" col="refNo" state={expenseColFilters} className="ui-th" />
+              <th className="ui-th">Ref Date</th>
+              <ColumnHeader label="Amount" col="amount" state={expenseColFilters} className="ui-th" />
+              <ColumnHeader label="Status" col="status" state={expenseColFilters} className="ui-th" />
+              <th className="ui-th">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -1932,13 +1932,13 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
           <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase w-10">#</th>
-                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Expense Ledger</th>
-                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Description</th>
-                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Amount</th>
-                <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">GST %</th>
-                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST Amount</th>
-                <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Total</th>
+                <th className="ui-th w-10">#</th>
+                <th className="ui-th">Expense Ledger</th>
+                <th className="ui-th">Description</th>
+                <th className="ui-th ui-num">Amount</th>
+                <th className="ui-th">GST %</th>
+                <th className="ui-th ui-num">GST Amount</th>
+                <th className="ui-th ui-num">Total</th>
                 <th className="px-3 py-2"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
@@ -2208,14 +2208,14 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Code" col="code" state={itemSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Name" col="name" state={itemSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Type" col="type" state={itemSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="HSN/SAC" col="hsn" state={itemSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="GST %" col="gst" state={itemSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Sale Price" col="price" state={itemSearchFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Stock</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+              <ColumnHeader label="Code" col="code" state={itemSearchFilters} className="ui-th" />
+              <ColumnHeader label="Name" col="name" state={itemSearchFilters} className="ui-th" />
+              <ColumnHeader label="Type" col="type" state={itemSearchFilters} className="ui-th" />
+              <ColumnHeader label="HSN/SAC" col="hsn" state={itemSearchFilters} className="ui-th" />
+              <ColumnHeader label="GST %" col="gst" state={itemSearchFilters} className="ui-th" />
+              <ColumnHeader label="Sale Price" col="price" state={itemSearchFilters} className="ui-th" />
+              <th className="ui-th">Stock</th>
+              <th className="ui-th ui-num">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -3267,11 +3267,11 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             <table className="ui-table w-full">
               <thead className="ui-sunken border-b">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Ledger</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Group</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Parent</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Balance</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+                  <th className="ui-th">Ledger</th>
+                  <th className="ui-th">Group</th>
+                  <th className="ui-th">Parent</th>
+                  <th className="ui-th ui-num">Balance</th>
+                  <th className="ui-th ui-num">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -3358,10 +3358,10 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             <table className="ui-table w-full">
               <thead className="ui-sunken border-b">
                 <tr>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Group</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Parent</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Category</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+                  <th className="ui-th">Group</th>
+                  <th className="ui-th">Parent</th>
+                  <th className="ui-th">Category</th>
+                  <th className="ui-th ui-num">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -4148,13 +4148,13 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="JV #" col="number" state={jvFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Date" col="date" state={jvFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Narration" col="narration" state={jvFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Debit</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Credit</th>
-              <ColumnHeader label="Status" col="status" state={jvFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+              <ColumnHeader label="JV #" col="number" state={jvFilters} className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={jvFilters} className="ui-th" />
+              <ColumnHeader label="Narration" col="narration" state={jvFilters} className="ui-th" />
+              <th className="ui-th ui-num">Debit</th>
+              <th className="ui-th ui-num">Credit</th>
+              <ColumnHeader label="Status" col="status" state={jvFilters} className="ui-th" />
+              <th className="ui-th ui-num">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
@@ -4600,10 +4600,10 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Account</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Group</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Debit</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Credit</th>
+              <th className="ui-th">Account</th>
+              <th className="ui-th">Group</th>
+              <th className="ui-th ui-num">Debit</th>
+              <th className="ui-th ui-num">Credit</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -6230,10 +6230,10 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
       <table className="ui-table w-full">
         <thead className="ui-sunken border-b">
           <tr>
-            <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Item</th>
-            <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Qty</th>
-            <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Rate</th>
-            <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Amount</th>
+            <th className="ui-th">Item</th>
+            <th className="ui-th ui-num">Qty</th>
+            <th className="ui-th ui-num">Rate</th>
+            <th className="ui-th ui-num">Amount</th>
           </tr>
         </thead>
         <tbody className="divide-y">
@@ -6775,15 +6775,15 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               <table className="ui-table w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Sr</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Product / Service</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">HSN/SAC</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Qty</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Rate</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST%</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST Amt</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Total</th>
+                    <th className="ui-th">Sr</th>
+                    <th className="ui-th">Product / Service</th>
+                    <th className="ui-th">HSN/SAC</th>
+                    <th className="ui-th ui-num">Qty</th>
+                    <th className="ui-th ui-num">Rate</th>
+                    <th className="ui-th ui-num">Taxable</th>
+                    <th className="ui-th ui-num">GST%</th>
+                    <th className="ui-th ui-num">GST Amt</th>
+                    <th className="ui-th ui-num">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -6960,12 +6960,12 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               <table className="ui-table w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Sr</th>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Product / Service</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Qty</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">GST%</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Total</th>
+                    <th className="ui-th">Sr</th>
+                    <th className="ui-th">Product / Service</th>
+                    <th className="ui-th ui-num">Qty</th>
+                    <th className="ui-th ui-num">Taxable</th>
+                    <th className="ui-th ui-num">GST%</th>
+                    <th className="ui-th ui-num">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -7086,7 +7086,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">UoM</th>
+                <th className="ui-th">UoM</th>
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
@@ -7314,9 +7314,9 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <ColumnHeader label="Category" col="name" state={catFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Description" col="description" state={catFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-                <ColumnHeader label="Items" col="items" state={catFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
+                <ColumnHeader label="Category" col="name" state={catFilters} className="ui-th" />
+                <ColumnHeader label="Description" col="description" state={catFilters} className="ui-th" />
+                <ColumnHeader label="Items" col="items" state={catFilters} className="ui-th ui-num" align="right" />
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
@@ -7529,7 +7529,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Rate (%)</th>
+                <th className="ui-th">Rate (%)</th>
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
@@ -9426,9 +9426,9 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <table className="ui-table w-full">
                     <thead className="ui-sunken border-b">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Email</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
+                        <th className="ui-th">Name</th>
+                        <th className="ui-th">Email</th>
+                        <th className="ui-th">Role</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -9667,8 +9667,8 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <table className="ui-table w-full">
                     <thead className="ui-sunken border-b">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Type</th>
+                        <th className="ui-th">Role</th>
+                        <th className="ui-th">Type</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -9841,9 +9841,9 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Role</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Description</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Type</th>
+                      <th className="ui-th">Role</th>
+                      <th className="ui-th">Description</th>
+                      <th className="ui-th">Type</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -9948,10 +9948,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Code</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Address</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                      <th className="ui-th">Name</th>
+                      <th className="ui-th">Code</th>
+                      <th className="ui-th">Address</th>
+                      <th className="ui-th">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -10088,11 +10088,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Name</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Code</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Location</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Branch</th>
-                      <th className="px-4 py-2 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                      <th className="ui-th">Name</th>
+                      <th className="ui-th">Code</th>
+                      <th className="ui-th">Location</th>
+                      <th className="ui-th">Branch</th>
+                      <th className="ui-th">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -10576,13 +10576,13 @@ const Gstr1Report = ({ db, currentCompany }) => {
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Tax Type</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">GST %</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">CGST</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">SGST</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">IGST</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">GST</th>
+              <th className="ui-th">Tax Type</th>
+              <th className="ui-th ui-num">GST %</th>
+              <th className="ui-th ui-num">Taxable</th>
+              <th className="ui-th ui-num">CGST</th>
+              <th className="ui-th ui-num">SGST</th>
+              <th className="ui-th ui-num">IGST</th>
+              <th className="ui-th ui-num">GST</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">
@@ -10616,17 +10616,17 @@ const Gstr1Report = ({ db, currentCompany }) => {
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Type</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Number</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Party</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">GSTIN</th>
-              <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">POS</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">CGST</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">SGST</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">IGST</th>
-              <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Total</th>
+              <th className="ui-th">Type</th>
+              <th className="ui-th">Number</th>
+              <th className="ui-th">Date</th>
+              <th className="ui-th">Party</th>
+              <th className="ui-th">GSTIN</th>
+              <th className="ui-th">POS</th>
+              <th className="ui-th ui-num">Taxable</th>
+              <th className="ui-th ui-num">CGST</th>
+              <th className="ui-th ui-num">SGST</th>
+              <th className="ui-th ui-num">IGST</th>
+              <th className="ui-th ui-num">Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[rgb(var(--border))]">

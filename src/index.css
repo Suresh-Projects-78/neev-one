@@ -485,6 +485,29 @@
     --row-pad-y: 0.3125rem;   /* 5px */
   }
 
+  /* One header cell, defined once. The audit found this same declaration
+     copied 346 times as a Tailwind string, which is why no two lists agreed
+     on header padding, size or weight. Pair with .ui-num to right-align. */
+  /* Alignment has to out-specify `.ui-table thead th`, which sets text-align
+     left at (0,1,2). The Tailwind text-right this replaced only won because
+     utilities outrank components regardless of specificity. */
+  .ui-table thead th.ui-num,
+  th.ui-th.ui-num {
+    text-align: right;
+  }
+
+  .ui-th {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.6875rem;          /* 11px */
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgb(var(--fg-subtle));
+    text-align: left;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
   .ui-num {
     text-align: right;
     font-variant-numeric: tabular-nums;

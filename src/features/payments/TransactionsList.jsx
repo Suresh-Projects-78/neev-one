@@ -285,8 +285,8 @@ const TransactionView = ({ title, payload }) => {
               <table className="ui-table w-full">
                 <thead className="ui-sunken border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Document #</th>
-                    <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase">Amount</th>
+                    <th className="ui-th">Document #</th>
+                    <th className="ui-th ui-num">Amount</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -376,13 +376,13 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Date" col="date" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Type" col="typeLabel" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Document #" col="documentNumber" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Party" col="partyName" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Mode" col="mode" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Reference" col="reference" state={colFilters} className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase" />
-              <ColumnHeader label="Amount" col="amount" state={colFilters} className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase" align="right" />
+              <ColumnHeader label="Date" col="date" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Type" col="typeLabel" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Document #" col="documentNumber" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Party" col="partyName" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Mode" col="mode" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Reference" col="reference" state={colFilters} className="ui-th" />
+              <ColumnHeader label="Amount" col="amount" state={colFilters} className="ui-th ui-num" align="right" />
             </tr>
           </thead>
           <tbody className="divide-y">

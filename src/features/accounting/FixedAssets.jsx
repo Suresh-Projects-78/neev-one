@@ -206,14 +206,14 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Asset</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Block</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Purchased</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Cost</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Opening WDV</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Rate</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Dep ({fy.label})</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Closing WDV</th>
+                <th className="ui-th">Asset</th>
+                <th className="ui-th">Block</th>
+                <th className="ui-th">Purchased</th>
+                <th className="ui-th ui-num">Cost</th>
+                <th className="ui-th ui-num">Opening WDV</th>
+                <th className="ui-th ui-num">Rate</th>
+                <th className="ui-th ui-num">Dep ({fy.label})</th>
+                <th className="ui-th ui-num">Closing WDV</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

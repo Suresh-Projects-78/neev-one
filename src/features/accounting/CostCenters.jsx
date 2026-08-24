@@ -114,10 +114,10 @@ export default function CostCenters({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Cost center</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Income</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Expense</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Net</th>
+                <th className="ui-th">Cost center</th>
+                <th className="ui-th ui-num">Income</th>
+                <th className="ui-th ui-num">Expense</th>
+                <th className="ui-th ui-num">Net</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

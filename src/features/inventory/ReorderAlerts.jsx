@@ -167,12 +167,12 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Item</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">In stock</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Reorder level</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Suggested qty</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Last vendor</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Last rate</th>
+                <th className="ui-th">Item</th>
+                <th className="ui-th ui-num">In stock</th>
+                <th className="ui-th ui-num">Reorder level</th>
+                <th className="ui-th ui-num">Suggested qty</th>
+                <th className="ui-th">Last vendor</th>
+                <th className="ui-th ui-num">Last rate</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

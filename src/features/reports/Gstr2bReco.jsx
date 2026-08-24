@@ -173,12 +173,12 @@ export default function Gstr2bReco({ db, currentCompany }) {
               <table className="ui-table w-full">
                 <thead>
                   <tr>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Bill</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Supplier inv no</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Vendor</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">GSTIN</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                    <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Total</th>
+                    <th className="ui-th">Bill</th>
+                    <th className="ui-th">Supplier inv no</th>
+                    <th className="ui-th">Vendor</th>
+                    <th className="ui-th">GSTIN</th>
+                    <th className="ui-th">Date</th>
+                    <th className="ui-th ui-num">Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -198,14 +198,14 @@ export default function Gstr2bReco({ db, currentCompany }) {
               <table className="ui-table w-full">
                 <thead>
                   <tr>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Supplier</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Invoice no</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                    <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Taxable</th>
-                    <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">ITC (I+C+S)</th>
-                    <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Total</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Book bill</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Note</th>
+                    <th className="ui-th">Supplier</th>
+                    <th className="ui-th">Invoice no</th>
+                    <th className="ui-th">Date</th>
+                    <th className="ui-th ui-num">Taxable</th>
+                    <th className="ui-th ui-num">ITC (I+C+S)</th>
+                    <th className="ui-th ui-num">Total</th>
+                    <th className="ui-th">Book bill</th>
+                    <th className="ui-th">Note</th>
                   </tr>
                 </thead>
                 <tbody>

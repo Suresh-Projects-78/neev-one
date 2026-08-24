@@ -103,14 +103,14 @@ export default function SalesBySalesman({ db, currentCompany }) {
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Salesman</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Invoices</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Invoiced Sales (pre-GST)</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Sales Orders</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Order Value</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Estimates</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Quote Value</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Commission</th>
+                <th className="ui-th">Salesman</th>
+                <th className="ui-th ui-num">Invoices</th>
+                <th className="ui-th ui-num">Invoiced Sales (pre-GST)</th>
+                <th className="ui-th ui-num">Sales Orders</th>
+                <th className="ui-th ui-num">Order Value</th>
+                <th className="ui-th ui-num">Estimates</th>
+                <th className="ui-th ui-num">Quote Value</th>
+                <th className="ui-th ui-num">Commission</th>
               </tr>
             </thead>
             <tbody className="divide-y">

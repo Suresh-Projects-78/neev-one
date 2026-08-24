@@ -135,12 +135,12 @@ export default function Salesmen({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Salesman</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Phone</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Commission %</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Invoices</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Sales (pre-GST)</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Commission due</th>
+                <th className="ui-th">Salesman</th>
+                <th className="ui-th">Phone</th>
+                <th className="ui-th">Commission %</th>
+                <th className="ui-th ui-num">Invoices</th>
+                <th className="ui-th ui-num">Sales (pre-GST)</th>
+                <th className="ui-th ui-num">Commission due</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

@@ -312,11 +312,11 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
                 <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium ui-muted uppercase">Item</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-24">Qty</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-32">Rate</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-20">GST %</th>
-                      <th className="px-3 py-2 text-right text-xs font-medium ui-muted uppercase w-32">Amount</th>
+                      <th className="ui-th">Item</th>
+                      <th className="ui-th ui-num w-24">Qty</th>
+                      <th className="ui-th ui-num w-32">Rate</th>
+                      <th className="ui-th ui-num w-20">GST %</th>
+                      <th className="ui-th ui-num w-32">Amount</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -472,13 +472,13 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Customer</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium ui-muted uppercase">Amount</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Frequency</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Next run</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Generated</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Lifecycle</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Schedule</th>
+                <th className="ui-th">Customer</th>
+                <th className="ui-th ui-num">Amount</th>
+                <th className="ui-th">Frequency</th>
+                <th className="ui-th">Next run</th>
+                <th className="ui-th">Generated</th>
+                <th className="ui-th">Lifecycle</th>
+                <th className="ui-th">Schedule</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

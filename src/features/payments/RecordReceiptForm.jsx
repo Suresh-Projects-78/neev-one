@@ -458,11 +458,11 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase w-12">Sel</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Invoice #</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Outstanding</th>
-                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Allocate</th>
+                <th className="ui-th w-12">Sel</th>
+                <th className="ui-th">Invoice #</th>
+                <th className="ui-th">Date</th>
+                <th className="ui-th ui-num">Outstanding</th>
+                <th className="ui-th ui-num">Allocate</th>
               </tr>
             </thead>
             <tbody className="divide-y">

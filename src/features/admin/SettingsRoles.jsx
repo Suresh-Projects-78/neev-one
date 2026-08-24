@@ -614,11 +614,11 @@ export function SettingsRoles({ orgId }) {
           <table className="ui-table w-full">
             <thead className="ui-sunken border-b">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Role Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Assigned Users</th>
-                <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Status</th>
-                <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Actions</th>
+                <th className="ui-th">Role Name</th>
+                <th className="ui-th">Description</th>
+                <th className="ui-th">Assigned Users</th>
+                <th className="ui-th">Status</th>
+                <th className="ui-th ui-num">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y">

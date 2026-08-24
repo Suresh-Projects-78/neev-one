@@ -400,11 +400,11 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           <table className="ui-table w-full">
             <thead>
               <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Rule</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Scope</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Discount</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Window</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium ui-muted uppercase">Status</th>
+                <th className="ui-th">Rule</th>
+                <th className="ui-th">Scope</th>
+                <th className="ui-th">Discount</th>
+                <th className="ui-th">Window</th>
+                <th className="ui-th">Status</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

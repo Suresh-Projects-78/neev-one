@@ -41,12 +41,12 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Voucher</th>
-              <th className="px-4 py-3 text-left text-xs font-medium ui-muted uppercase">Number</th>
-              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">In</th>
-              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Out</th>
-              <th className="px-4 py-3 text-right text-xs font-medium ui-muted uppercase">Balance</th>
+              <th className="ui-th">Date</th>
+              <th className="ui-th">Voucher</th>
+              <th className="ui-th">Number</th>
+              <th className="ui-th ui-num">In</th>
+              <th className="ui-th ui-num">Out</th>
+              <th className="ui-th ui-num">Balance</th>
             </tr>
           </thead>
           <tbody className="divide-y">
