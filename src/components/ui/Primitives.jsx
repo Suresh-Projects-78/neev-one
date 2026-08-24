@@ -12,8 +12,8 @@ import { useCountUp } from './useCountUp';
 export const PageHeader = ({ title, description, actions = null }) => (
   <div className="ui-in-fade flex flex-wrap items-start justify-between gap-3 mb-4">
     <div className="min-w-0">
-      <h1 className="ui-title text-lg leading-tight">{title}</h1>
-      {description ? <p className="ui-muted text-sm mt-0.5">{description}</p> : null}
+      <h1 className="ui-t-page">{title}</h1>
+      {description ? <p className="ui-muted ui-t-body mt-1">{description}</p> : null}
     </div>
     {actions ? <div className="flex items-center gap-2 shrink-0">{actions}</div> : null}
   </div>
