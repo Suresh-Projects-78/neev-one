@@ -38,7 +38,7 @@ const ExpiryCell = ({ expiryDate }) => {
   // Expiry is the reason batches are tracked, so a lot that is gone or nearly
   // gone says so instead of leaving the reader to compare dates.
   const tone =
-    days === null ? '' : days < 0 ? 'text-[rgb(var(--neg))] font-medium' : days <= 30 ? 'text-amber-700' : '';
+    days === null ? '' : days < 0 ? 'text-[rgb(var(--neg))] font-medium' : days <= 30 ? 'text-[rgb(var(--warn-ink))]' : '';
   const note = days === null ? '' : days < 0 ? ' (expired)' : days <= 30 ? ` (${days}d left)` : '';
 
   return (

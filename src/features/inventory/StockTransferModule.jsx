@@ -90,7 +90,7 @@ const getStatusPillClass = (status) => {
   if (s === 'Cancelled') return 'ui-sunken ui-fg';
   if (s === 'Pending Approval') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
   if (s === 'Transferred Out' || s === 'In Transit') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
-  if (s === 'Submitted') return 'bg-stone-100 ui-fg';
+  if (s === 'Submitted') return 'ui-sunken ui-fg';
   return 'ui-sunken ui-fg';
 };
 

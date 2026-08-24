@@ -236,7 +236,7 @@ export default function ImportCenter() {
 
           {issues.length ? (
             <div className="overflow-x-auto">
-              <div className="flex items-center gap-2 mb-2 text-sm text-amber-700">
+              <div className="flex items-center gap-2 mb-2 text-sm text-[rgb(var(--warn-ink))]">
                 <AlertTriangle size={16} /> These rows will be skipped. Line numbers match the file.
               </div>
               <table className="ui-table w-full text-sm">

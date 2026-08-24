@@ -16,7 +16,7 @@ Preview (rendered): https://claude.ai/code/artifact/b5f06c26-a4de-4879-979f-fbb1
 - **Removed:** ambient orange orbs (`ui-ambient`) leave product screens. They stay on auth and marketing.
 
 ## Typography
-Fonts are not yet installed. Add via self-host or Fontshare/Google before migration step 1.
+Loaded from Google Fonts in `src/index.css` (2026-08-24). Inter remains the fallback so a cold cache never drops to system-ui.
 
 - **Page titles:** Fraunces (variable serif, optical sizing) — already the brand voice. Keeping it in-product is what stops this looking like every other grotesque-only SaaS.
 - **Body + UI:** Geist — built for interfaces, sharp at 13–14px, real tabular figures. Explicitly not Inter, not Space Grotesk: every AI design tool converges there.
@@ -86,13 +86,22 @@ Measured across `src/`. Migration is done when these reach zero.
 |---------|-------|
 | `text-xs` / `text-sm` share of type usage | 1,857 / 2,019 |
 | Copies of the same `<th>` class string | 346 |
-| Hardcoded palette classes bypassing tokens | 319 |
+| Hardcoded palette classes in app chrome | 9 → 0 (fixed 2026-08-24) |
+| Hardcoded palette classes in print documents | 298 — correct, see note |
 | Competing radii (`lg` 323, `xl` 149, `full` 31, `md` 11) | 4 |
 | Pages using `PageHeader` vs raw heading | 36 / 59 |
 
+**Note on the 298.** The first audit counted 319 raw palette classes and called
+them debt. That was wrong. 298 of them live in `InvoicePreview.jsx`, the invoice
+template renderer in `App.jsx`, and `ExpenseVoucher.jsx` — printed documents,
+which are black on white in both themes because that is what comes out of a
+printer. Only 9 were real, in app chrome, and those are now tokens. Print
+surfaces are deliberately exempt from the token rule.
+
 ## Migration Order
 1. Type ramp + spacing rhythm into `src/index.css`. Six `space-y` values to three, four radii to two.
-2. Remove the 319 hardcoded palette classes. Fixes dark mode in those spots.
+2. ~~Remove the hardcoded palette classes.~~ Done — 9 real ones in app chrome
+   became tokens; the 298 in print documents stay as they are.
 3. Extract `DataTable`; retire the 346 copied header strings.
 4. Force `PageShell` on all 59 raw headings.
 5. Monospace money everywhere an amount displays.
@@ -107,3 +116,4 @@ Measured across `src/`. Migration is done when these reach zero.
 | 2026-08-24 | No card-in-card on lists | 2–3 more rows per screen, less framing noise. Departs from the Zoho/Tally convention deliberately |
 | 2026-08-24 | Fraunces stays in-product for page titles | Serif-only-for-brand was considered and rejected; the serif is the differentiator |
 | 2026-08-24 | Orange kept as the single accent | Already tokenized, and rare against Tally blue / Zoho red / QuickBooks green |
+| 2026-08-24 | Print surfaces exempt from the token rule | A printed invoice is black on white whatever theme the app is in. The audit's 319-colour finding was 93% print documents and only 9 real violations |

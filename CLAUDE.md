@@ -10,9 +10,12 @@ defined there. Do not deviate without explicit user approval.
 
 Hard rules that come up most often:
 
-- **Tokens only.** No `bg-gray-*`, `text-gray-*`, `border-gray-*` or any raw
-  palette class. Every color comes from a CSS variable in `src/index.css`, or
-  dark mode silently breaks.
+- **Tokens only, in app chrome.** No `bg-gray-*`, `text-gray-*`, `border-gray-*`
+  or any raw palette class. Every color comes from a CSS variable in
+  `src/index.css`, or dark mode silently breaks.
+  **Exception: printed documents.** `InvoicePreview.jsx`, `ExpenseVoucher.jsx`
+  and the invoice template renderer are black on white on purpose — a printed
+  invoice does not follow the app theme. Leave their raw classes alone.
 - **Two radii.** 8px on anything clickable, 12px on anything holding content.
   `rounded-full` for pills only.
 - **Money is monospace.** Every displayed amount uses the mono face with

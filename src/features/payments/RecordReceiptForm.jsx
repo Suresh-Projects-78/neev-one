@@ -411,7 +411,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             {modesError ? (
               <p className="mt-1 text-sm text-[rgb(var(--neg))]">{modesError}</p>
             ) : !modesLoading && modes.length === 0 ? (
-              <p className="mt-1 text-sm text-amber-700">
+              <p className="mt-1 text-sm text-[rgb(var(--warn-ink))]">
                 No cash or bank ledgers yet. Create one under Accounting → Ledgers.
               </p>
             ) : null}
