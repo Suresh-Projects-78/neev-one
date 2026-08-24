@@ -166,7 +166,7 @@ export const FeatureSettings = () => {
                 >
                   <input
                     type="checkbox"
-                    className="ui-input mt-1"
+                    className="ui-checkbox mt-1"
                     checked={Boolean(effective[f.key])}
                     disabled={disabled}
                     onChange={(e) => toggle(f.key, e.target.checked)}

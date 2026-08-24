@@ -210,7 +210,7 @@ export default function EInvoiceSettings() {
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm ui-fg select-none">
-          <input type="checkbox" checked={form.autoRegister} onChange={set('autoRegister')} className="ui-input h-4 w-4" />
+          <input type="checkbox" checked={form.autoRegister} onChange={set('autoRegister')} className="ui-checkbox h-4 w-4" />
           <span>Auto-register new invoices on the IRP</span>
         </label>
         <div className="flex items-center gap-2">

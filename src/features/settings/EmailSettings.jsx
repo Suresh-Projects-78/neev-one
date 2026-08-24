@@ -191,7 +191,7 @@ export const EmailSettings = () => {
                   <input
                     type="radio"
                     name="provider"
-                    className="ui-input mt-1"
+                    className="ui-checkbox mt-1"
                     checked={settings.provider === opt.value}
                     onChange={() => set({ provider: opt.value })}
                   />
@@ -387,7 +387,7 @@ export const EmailSettings = () => {
                 >
                   <input
                     type="checkbox"
-                    className="ui-input mt-1"
+                    className="ui-checkbox mt-1"
                     checked={Boolean(e.enabled)}
                     onChange={(ev) =>
                       setEvents((prev) =>

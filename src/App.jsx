@@ -8383,7 +8383,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               type="checkbox"
               checked={gstEnabled}
               onChange={(e) => setGstEnabled(e.target.checked)}
-              className="ui-input h-4 w-4"
+              className="ui-checkbox"
             />
             <span>Enabled</span>
           </label>
@@ -8463,7 +8463,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               type="checkbox"
               checked={tdsEnabled}
               onChange={(e) => setTdsEnabled(e.target.checked)}
-              className="ui-input h-4 w-4"
+              className="ui-checkbox"
             />
             <span>Enabled</span>
           </label>
@@ -8526,7 +8526,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               type="checkbox"
               checked={tcsEnabled}
               onChange={(e) => setTcsEnabled(e.target.checked)}
-              className="ui-input h-4 w-4"
+              className="ui-checkbox"
             />
             <span>Enabled</span>
           </label>
@@ -9532,7 +9532,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.delete(b.id);
                                     setUserEdit((p) => ({ ...p, branchIds: Array.from(next) }));
                                   }}
-                                  className="ui-input h-4 w-4"
+                                  className="ui-checkbox"
                                 />
                                 <span>{b.name}</span>
                               </label>
@@ -9566,7 +9566,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.delete(w.id);
                                     setUserEdit((p) => ({ ...p, warehouseIds: Array.from(next) }));
                                   }}
-                                  className="ui-input h-4 w-4"
+                                  className="ui-checkbox"
                                 />
                                 <span>{w.name}</span>
                               </label>
@@ -9634,7 +9634,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.add(key);
                                     setNewRole((prev) => ({ ...prev, permissions: Array.from(next) }));
                                   }}
-                                  className="ui-input h-4 w-4 mt-0.5"
+                                  className="ui-checkbox mt-0.5"
                                 />
                                 <div>
                                   <div className="font-medium">{p.label || key}</div>
@@ -9733,7 +9733,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                       else next.add(key);
                                       setRoleEdit((prev) => ({ ...prev, permissions: Array.from(next) }));
                                     }}
-                                    className="ui-input h-4 w-4 mt-0.5"
+                                    className="ui-checkbox mt-0.5"
                                   />
                                   <div>
                                     <div className="font-medium">{p.label || key}</div>
@@ -9816,7 +9816,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                 const next = new Set(newRole.permissions);
                                 if (next.has(key)) next.delete(key); else next.add(key);
                                 setNewRole((prev) => ({ ...prev, permissions: Array.from(next) }));
-                              }} className="ui-input h-4 w-4 mt-0.5" />
+                              }} className="ui-checkbox mt-0.5" />
                               <div>
                                 <div className="font-medium">{p.label || key}</div>
                                 <div className="text-xs ui-muted">{key}</div>
@@ -9892,7 +9892,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                             const next = new Set(roleEdit.permissions);
                             if (next.has(key)) next.delete(key); else next.add(key);
                             setRoleEdit((prev) => ({ ...prev, permissions: Array.from(next) }));
-                          }} className="ui-input h-4 w-4 mt-0.5" />
+                          }} className="ui-checkbox mt-0.5" />
                           <div>
                             <div className="font-medium">{p.label || key}</div>
                             <div className="text-xs ui-muted">{key}</div>
@@ -10248,7 +10248,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                                     else next.delete(x);
                                     updateForm({ industries: Array.from(next) });
                                   }}
-                                  className="ui-input h-4 w-4"
+                                  className="ui-checkbox"
                                 />
                                 <span>{x}</span>
                               </label>

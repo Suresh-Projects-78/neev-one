@@ -498,7 +498,7 @@ export function SettingsRoles({ orgId }) {
                       <div className="col-span-2 px-3 py-2 flex justify-center">
                         <input
                           type="checkbox"
-                          className="ui-input"
+                          className="ui-checkbox"
                           checked={isGroupChecked(group, 'full')}
                           onChange={(e) => toggleGroup(group, 'full', e.target.checked)}
                         />
@@ -506,7 +506,7 @@ export function SettingsRoles({ orgId }) {
                       <div className="col-span-1 px-3 py-2 flex justify-center">
                         <input
                           type="checkbox"
-                          className="ui-input"
+                          className="ui-checkbox"
                           checked={isGroupChecked(group, 'view')}
                           onChange={(e) => toggleGroup(group, 'view', e.target.checked)}
                         />
@@ -514,7 +514,7 @@ export function SettingsRoles({ orgId }) {
                       <div className="col-span-1 px-3 py-2 flex justify-center">
                         <input
                           type="checkbox"
-                          className="ui-input"
+                          className="ui-checkbox"
                           checked={isGroupChecked(group, 'edit')}
                           onChange={(e) => toggleGroup(group, 'edit', e.target.checked)}
                         />
@@ -522,7 +522,7 @@ export function SettingsRoles({ orgId }) {
                       <div className="col-span-1 px-3 py-2 flex justify-center">
                         <input
                           type="checkbox"
-                          className="ui-input"
+                          className="ui-checkbox"
                           checked={isGroupChecked(group, 'approve')}
                           onChange={(e) => toggleGroup(group, 'approve', e.target.checked)}
                         />
@@ -530,7 +530,7 @@ export function SettingsRoles({ orgId }) {
                       <div className="col-span-1 px-3 py-2 flex justify-center">
                         <input
                           type="checkbox"
-                          className="ui-input"
+                          className="ui-checkbox"
                           checked={isGroupChecked(group, 'del')}
                           onChange={(e) => toggleGroup(group, 'del', e.target.checked)}
                         />
@@ -545,7 +545,7 @@ export function SettingsRoles({ orgId }) {
                           <div className="col-span-2 px-3 py-2 flex justify-center">
                             <input
                               type="checkbox"
-                              className="ui-input"
+                              className="ui-checkbox"
                               checked={isItemColumnChecked(item, 'full')}
                               onChange={(e) => toggleItemColumn(item, 'full', e.target.checked)}
                             />
@@ -553,7 +553,7 @@ export function SettingsRoles({ orgId }) {
                           <div className="col-span-1 px-3 py-2 flex justify-center">
                             <input
                               type="checkbox"
-                              className="ui-input"
+                              className="ui-checkbox"
                               disabled={!item.supports?.view}
                               checked={isItemColumnChecked(item, 'view')}
                               onChange={(e) => toggleItemColumn(item, 'view', e.target.checked)}
@@ -562,7 +562,7 @@ export function SettingsRoles({ orgId }) {
                           <div className="col-span-1 px-3 py-2 flex justify-center">
                             <input
                               type="checkbox"
-                              className="ui-input"
+                              className="ui-checkbox"
                               disabled={!item.supports?.edit}
                               checked={isItemColumnChecked(item, 'edit')}
                               onChange={(e) => toggleItemColumn(item, 'edit', e.target.checked)}
@@ -571,7 +571,7 @@ export function SettingsRoles({ orgId }) {
                           <div className="col-span-1 px-3 py-2 flex justify-center">
                             <input
                               type="checkbox"
-                              className="ui-input"
+                              className="ui-checkbox"
                               disabled={!item.supports?.approve}
                               checked={isItemColumnChecked(item, 'approve')}
                               onChange={(e) => toggleItemColumn(item, 'approve', e.target.checked)}
@@ -580,7 +580,7 @@ export function SettingsRoles({ orgId }) {
                           <div className="col-span-1 px-3 py-2 flex justify-center">
                             <input
                               type="checkbox"
-                              className="ui-input"
+                              className="ui-checkbox"
                               disabled={!item.supports?.del}
                               checked={isItemColumnChecked(item, 'del')}
                               onChange={(e) => toggleItemColumn(item, 'del', e.target.checked)}
