@@ -920,6 +920,45 @@
     border: 1px solid rgb(var(--border));
   }
 
+  /* --- the rail ------------------------------------------------------------
+     An accordion rail reflows every time you consult it: opening Purchases
+     pushes Reports and Settings down, closing it pulls them back. Nobody learns
+     the shape of a map that redraws itself, and muscle memory is the whole
+     point of something you look at for eight hours.
+
+     So: a fixed strip of module icons that never moves, and beside it a column
+     holding the current module in full. Collapsing folds the column away and
+     leaves the strip, which is a better collapsed state than dropping the
+     labels and keeping the guessing.
+  --------------------------------------------------------------------------- */
+  /* The collapsed rail is the icon strip and nothing else. Written here rather
+     than as an arbitrary Tailwind width because `md:w-[4.5rem]` was never
+     generated — the class sat in the markup for months doing nothing, and the
+     rail stayed full width when collapsed. */
+  @media (min-width: 768px) {
+    .ui-rail-narrow { width: 3.75rem; }
+  }
+
+  .ui-rail-icon {
+    width: 2.375rem;
+    height: 2.375rem;
+    border-radius: var(--radius-btn);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(var(--fg-muted));
+    transition: background-color 140ms var(--ease-out), color 140ms var(--ease-out);
+  }
+  .ui-rail-icon:hover { background-color: rgb(var(--surface-sunken)); color: rgb(var(--fg)); }
+  .ui-rail-icon[data-active='true'] {
+    background-color: rgb(var(--accent-soft));
+    color: rgb(var(--brand-ink));
+  }
+  .ui-rail-icon:focus-visible {
+    outline: 2px solid rgb(var(--brand));
+    outline-offset: 2px;
+  }
+
   /* --- long tables ---------------------------------------------------------
      A list longer than the window loses its header, and the fourth number
      along stops meaning anything — is it the amount or the balance? The header

@@ -11383,7 +11383,6 @@ const AppShell = () => {
         tint: 'sales',
         items: [
           { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
-          { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
         ],
       },
       {
@@ -11402,18 +11401,9 @@ const AppShell = () => {
         ],
       },
       { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, tint: 'cash', perm: 'CASHBANK::Cash & Bank::VIEW' },
-      {
-        type: 'group',
-        key: 'expensesMenu',
-        label: 'Expenses',
-        icon: PhExpenses,
-        ph: true,
-        tint: 'expenses',
-        items: [
-          { key: 'expenses', label: 'Expenses', icon: Receipt, perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
-          { key: 'paymentsExpense', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW', feature: 'standaloneReceiptsPayments' },
-        ],
-      },
+      // A group of one is a menu that opens onto itself. With the duplicate
+      // Payments entry gone, Expenses is a destination, not a section.
+      { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, tint: 'expenses', perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
       {
         type: 'group',
         key: 'inventoryMenu',
@@ -11657,12 +11647,32 @@ const AppShell = () => {
     return null;
   }, [active, navModel]);
 
-  const [openGroups, setOpenGroups] = useState(() => (activeGroupKey ? { [activeGroupKey]: true } : {}));
+  /**
+   * Which module the icon strip is lit on. A group when the current screen
+   * lives inside one, otherwise the top-level entry itself — Reports counts its
+   * own report screens as its own, so drilling into GSTR-1 does not un-light it.
+   */
+  const REPORT_KEYS = useMemo(
+    () => new Set(['reports', 'trialBalance', 'profitLoss', 'balanceSheet', 'cashFlow', 'gstr1', 'gstr3b', 'salesReports']),
+    []
+  );
+  const activeModuleKey = useMemo(() => {
+    if (activeGroupKey) return activeGroupKey;
+    if (REPORT_KEYS.has(active)) return 'reports';
+    return active;
+  }, [activeGroupKey, active, REPORT_KEYS]);
 
+  // Peeking at another module's contents without going there yet. Null means
+  // the column is showing wherever you actually are.
+  const [peekModuleKey, setPeekModuleKey] = useState(null);
   useEffect(() => {
-    if (!activeGroupKey) return;
-    setOpenGroups((prev) => ({ ...prev, [activeGroupKey]: true }));
-  }, [activeGroupKey]);
+    setPeekModuleKey(null);
+  }, [active]);
+
+  const shownModule = useMemo(() => {
+    const key = peekModuleKey || activeModuleKey;
+    return visibleNav.find((e) => e.key === key) || visibleNav.find((e) => e.key === activeModuleKey) || null;
+  }, [peekModuleKey, activeModuleKey, visibleNav]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -13245,7 +13255,7 @@ const AppShell = () => {
           />
         ) : null}
         <aside
-          className={`shrink-0 transition-[width] duration-200 ${navCollapsed ? 'md:w-[4.5rem]' : 'md:w-56 lg:w-60'} ${
+          className={`shrink-0 transition-[width] duration-200 ${navCollapsed ? 'ui-rail-narrow' : 'md:w-56 lg:w-60'} ${
             mobileNavOpen
               ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[115] max-md:w-72 max-md:overflow-y-auto max-md:p-2 max-md:ui-in-left'
               : 'max-md:hidden'
@@ -13269,134 +13279,101 @@ const AppShell = () => {
               <span className={navCollapsed ? 'md:hidden' : ''}>Collapse</span>
             </button>
 
-            <div className="space-y-0.5 min-h-0 flex-1 overflow-y-auto">
-              {visibleNav.map((entry) => {
-                if (entry.type === 'item') {
+            <div className="flex min-h-0 flex-1 gap-1">
+              {/* The strip. Fixed width, fixed order, never reflows. */}
+              <div className="flex flex-col items-center gap-0.5 overflow-y-auto shrink-0">
+                {visibleNav.map((entry) => {
                   const Icon = entry.icon;
-                  const reportKeys = new Set([
-                    'reports',
-                    'trialBalance',
-                    'profitLoss',
-                    'balanceSheet',
-                    'cashFlow',
-                    'gstr1',
-                    'gstr3b',
-                    'salesReports',
-                  ]);
-                  const isReportsEntry = entry.key === 'reports';
-                  const isActive = active === entry.key || (isReportsEntry && reportKeys.has(active));
+                  const isActive = activeModuleKey === entry.key;
+                  const go = () => {
+                    // A group has no screen of its own, so land on its first
+                    // destination. A plain entry is its own destination.
+                    if (entry.type === 'group') setActive(entry.items[0].key);
+                    else setActive(entry.key);
+                    setPeekModuleKey(null);
+                  };
                   return (
                     <button
                       key={entry.key}
                       type="button"
-                      onClick={() => setActive(entry.key)}
-                      className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : ''}`}
+                      onClick={go}
+                      onMouseEnter={() => setPeekModuleKey(entry.key)}
+                      onFocus={() => setPeekModuleKey(entry.key)}
+                      className="ui-rail-icon"
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
-                      title={navCollapsed ? entry.label : undefined}
+                      title={entry.label}
+                      aria-label={entry.label}
                     >
                       <Icon
-                        size={16}
+                        size={18}
                         aria-hidden="true"
                         {...(entry.ph ? { weight: 'duotone' } : {})}
                         style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
                       />
-                      <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
                     </button>
                   );
-                }
+                })}
+              </div>
 
-                const GroupIcon = entry.icon;
-                const isOpen = !!openGroups[entry.key];
-                const isGroupActive = activeGroupKey === entry.key;
-
-                return (
-                  <div key={entry.key}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Collapsed rail: a group tap re-opens the rail with
-                        // that group expanded — a flyout would need its own
-                        // focus management for four entries.
-                        if (navCollapsed && window.innerWidth >= 768) {
-                          toggleNavCollapsed();
-                          setOpenGroups((prev) => ({ ...prev, [entry.key]: true }));
-                          return;
-                        }
-                        setOpenGroups((prev) => ({
-                          ...prev,
-                          [entry.key]: !prev[entry.key],
-                        }));
-                      }}
-                      className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
-                      aria-expanded={isOpen}
-                      style={isGroupActive ? { color: 'rgb(var(--fg))' } : undefined}
-                      title={navCollapsed ? entry.label : undefined}
-                    >
-                      <span className={`flex items-center gap-2.5 ${navCollapsed ? 'md:gap-0' : ''}`}>
-                        <GroupIcon
-                          size={16}
-                          aria-hidden="true"
-                          {...(entry.ph ? { weight: 'duotone' } : {})}
-                          style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
-                        />
-                        <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
-                      </span>
-                      <ChevronDown
-                        size={14}
-                        aria-hidden="true"
-                        className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'} ${navCollapsed ? 'md:hidden' : ''}`}
-                      />
-                    </button>
-
-                    {isOpen && (
-                      <div className={`mt-0.5 space-y-0.5 pl-5 ${navCollapsed ? 'md:hidden' : ''}`}>
-                        {entry.items.map((item) => {
-                          // A heading inside a group. Settings is fifteen items
-                          // and heading for twenty-five once Payroll, CRM and
-                          // Attendance arrive; without headings it is a list
-                          // you read every time instead of a shape you learn.
-                          if (item.type === 'subgroup') {
-                            return (
-                              <div
-                                key={`sub-${item.label}`}
-                                className="ui-t-label px-2.5 pt-3 pb-1 first:pt-1"
-                              >
-                                {item.label}
-                              </div>
-                            );
-                          }
-
-                          const Icon = item.icon;
-                          const isActive = active === item.key;
-                          // What the screen would tell you if you opened it.
-                          const state = typeof item.state === 'function' ? item.state() : item.state;
+              {/* The current module, in full. Hidden when collapsed — the strip
+                  survives, which is a better collapsed state than labelless
+                  rows. */}
+              <div
+                className={`min-w-0 flex-1 overflow-y-auto ${navCollapsed ? 'md:hidden' : ''}`}
+                onMouseLeave={() => setPeekModuleKey(null)}
+              >
+                {shownModule ? (
+                  <>
+                    <div className="ui-t-label px-2.5 pb-1 pt-1.5 flex items-center gap-1.5">
+                      <span className="truncate">{shownModule.label}</span>
+                      {peekModuleKey && peekModuleKey !== activeModuleKey ? (
+                        <span className="ui-subtle text-[10px] normal-case tracking-normal">peeking</span>
+                      ) : null}
+                    </div>
+                    <div className="space-y-0.5">
+                      {(shownModule.type === 'group' ? shownModule.items : [shownModule]).map((item) => {
+                        if (item.type === 'subgroup') {
                           return (
-                            <button
-                              key={item.key}
-                              type="button"
-                              onClick={() => setActive(item.key)}
-                              className="ui-nav-item"
-                              data-active={isActive}
-                              aria-current={isActive ? 'page' : undefined}
-                            >
-                              <Icon
-                                size={15}
-                                aria-hidden="true"
-                                style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
-                              />
-                              <span className="min-w-0 truncate">{item.label}</span>
-                              {state ? (
-                                <span className="ml-auto shrink-0 text-[11px] ui-subtle tabular-nums">{state}</span>
-                              ) : null}
-                            </button>
+                            <div key={`sub-${item.label}`} className="ui-t-label px-2.5 pt-3 pb-1 first:pt-1">
+                              {item.label}
+                            </div>
                           );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                        }
+                        const Icon = item.icon;
+                        const isActive = active === item.key;
+                        // What the screen would tell you if you opened it.
+                        const state = typeof item.state === 'function' ? item.state() : item.state;
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => setActive(item.key)}
+                            className="ui-nav-item w-full"
+                            data-active={isActive}
+                            aria-current={isActive ? 'page' : undefined}
+                          >
+                            <Icon
+                              size={15}
+                              aria-hidden="true"
+                              {...(item.ph ? { weight: 'duotone' } : {})}
+                              style={
+                                shownModule.tint || item.tint
+                                  ? { color: `rgb(var(--mod-${shownModule.tint || item.tint}))` }
+                                  : undefined
+                              }
+                            />
+                            <span className="min-w-0 truncate">{item.label}</span>
+                            {state ? (
+                              <span className="ml-auto shrink-0 text-[11px] ui-subtle tabular-nums">{state}</span>
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+              </div>
             </div>
 
             {/* Account, pinned to the bottom of the rail like Linear or Slack:
