@@ -2017,6 +2017,22 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   }, [warehouses]);
 
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
+
+  // The customer on this invoice, and what they already owe. Read here so the
+  // summary bar can show it while the invoice is still being written.
+  const customer = useMemo(
+    () => customers.find((c) => String(c.id) === String(formData?.customerId)) || null,
+    [customers, formData?.customerId]
+  );
+  const customerOutstanding = useMemo(() => {
+    if (!customer) return 0;
+    return (db.invoices || [])
+      .filter((inv) => inv.companyId === currentCompany.id)
+      .filter((inv) => String(inv.customerId) === String(customer.id))
+      .filter((inv) => String(inv.status || '').toLowerCase() !== 'cancelled')
+      .reduce((t, inv) => t + Math.max(0, Number(inv.total || 0) - Number(inv.paidAmount || 0)), 0);
+  }, [customer, db.invoices, currentCompany.id]);
+
   const items = db.items.filter((i) => i.companyId === currentCompany.id);
 
   const { state: companyState } = getCompanyGstProfile(currentCompany);
@@ -2562,8 +2578,28 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     }
   };
 
+  // Hands stay on the keyboard. These are the bindings a Tally operator
+  // already has in muscle memory, so entry does not slow down on arrival.
+  const onFormKeyDown = (e) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && String(e.key).toLowerCase() === 's') {
+      e.preventDefault();
+      formRef.current?.requestSubmit();
+      return;
+    }
+    if (e.key !== 'Enter' || e.shiftKey || mod) return;
+    // Enter inside a line opens the next one. Anywhere else it would submit
+    // the form early, which is the classic way to book a half-typed invoice.
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.tagName === 'TEXTAREA') return;
+    if (!target.closest('tbody')) return;
+    e.preventDefault();
+    addItem();
+  };
+
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
       {!isEdit && (
         <div className="flex justify-end">
           <button
@@ -2976,8 +3012,23 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
+      {/* The figure and the one action, kept on screen while the lines are
+          typed. What the customer already owes sits here too, because the
+          moment to see it is before more credit is extended, not after. */}
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Total</span>
+        <span className="fig text-lg">{formatMoney(computed.total, currentCompany)}</span>
+        <span className="ui-caption">
+          {formData.items.filter((l) => String(l.itemId || '').trim()).length} line(s)
+          {computed.gstTotal > 0 ? ` · ${formatMoney(computed.gstTotal, currentCompany)} GST` : ''}
+        </span>
+        {customerOutstanding > 0 ? (
+          <span className="ui-caption">
+            {getCustomerDisplayName(customer) || 'This customer'} owes{' '}
+            <span className="fig">{formatMoney(customerOutstanding, currentCompany)}</span> already
+          </span>
+        ) : null}
+        <button type="submit" className="ui-btn ui-btn-primary ml-auto">
           {isEdit ? 'Update Invoice' : 'Create Invoice'}
         </button>
       </div>
