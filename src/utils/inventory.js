@@ -12,6 +12,25 @@ export const isStockItem = (item) => {
   return t === 'goods' || t === 'good' || t === 'product' || t === 'inventory';
 };
 
+/**
+ * Which warehouse an item's opening stock sits in.
+ *
+ * Opening stock used to have no warehouse at all, while every stock check that
+ * matters — can I sell this, can I transfer it — is warehouse-scoped. The two
+ * did not meet: filtering by warehouse zeroed the opening balance, so an item
+ * stocked by an opening entry rather than a purchase was unsellable from every
+ * warehouse in the company, and the invoice form refused it as negative stock.
+ *
+ * Items saved before this existed name no warehouse. Their opening balance is
+ * therefore in no warehouse in particular, and it counts against whichever one
+ * is being asked about. That can over-count across several warehouses — but the
+ * alternative is what shipped before, where such an item was unsellable
+ * everywhere, and a stock figure that blocks every sale is worse than one that
+ * is optimistic until somebody assigns it. New items name their warehouse on
+ * the item form, so this only ever applies to the backlog.
+ */
+export const getItemOpeningWarehouseId = (item) => String(item?.openingWarehouseId || '').trim();
+
 export const getItemOpeningQty = (item) => {
   if (item?.openingQty !== undefined && item?.openingQty !== null && item?.openingQty !== '') {
     return round2(Math.max(0, safeNum(item.openingQty)));
@@ -303,9 +322,11 @@ export const computeInventorySummaryByItemId = ({ db, companyId, fromDate = '', 
     const itemId = String(item.id);
     const row = map.get(itemId);
     if (!row) continue;
-    // Opening stock in this app is not warehouse-scoped. When filtering by warehouse,
-    // start from 0 and apply only warehouse movements.
-    row.openingQty = whFilter ? 0 : getItemOpeningQty(item);
+    // Opening stock now names its warehouse. Unfiltered, every item's opening
+    // counts; filtered, only the opening that belongs to this warehouse does.
+    const openingWh = getItemOpeningWarehouseId(item);
+    const openingCounts = !whFilter || !openingWh || openingWh === whFilter;
+    row.openingQty = openingCounts ? getItemOpeningQty(item) : 0;
     row.closingQty = row.openingQty;
   }
 

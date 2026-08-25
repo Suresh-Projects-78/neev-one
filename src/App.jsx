@@ -2114,7 +2114,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   );
 };
 
-const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
+const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) => {
   const items = db.items.filter((i) => i.companyId === currentCompany.id);
   const itemSearch = useListSearch(items, ['code', 'name', 'hsnSac', 'category', 'barcode']);
   const itemSearchFilters = useColumnFilters();
@@ -2162,6 +2162,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
         db={db}
         setDb={setDb}
         currentCompany={currentCompany}
+        warehouses={warehouses}
         initialData={item}
         onClose={() => openModal(null)}
       />,
@@ -2193,7 +2194,13 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
         <button
           onClick={() =>
             openModal(
-              <ItemForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />,
+              <ItemForm
+                db={db}
+                setDb={setDb}
+                currentCompany={currentCompany}
+                warehouses={warehouses}
+                onClose={() => openModal(null)}
+              />,
               { title: 'New Item', maxWidthClass: 'max-w-3xl' }
             )
           }
@@ -2298,7 +2305,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany }) => {
 
 const NEW_CATEGORY_OPTION = '__new_item_category__';
 
-const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) => {
+const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = null, onClose }) => {
   const isEdit = Boolean(initialData);
 
   const [formData, setFormData] = useState(() => {
@@ -2318,6 +2325,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         trackingType: initialData.trackingType || 'NONE',
         barcode: String(initialData.barcode || ''),
         reorderLevel: Number.isFinite(Number(initialData.reorderLevel)) ? Number(initialData.reorderLevel) : '',
+        openingWarehouseId: String(initialData.openingWarehouseId || '').trim(),
         openingQty: Number.isFinite(Number(initialData.openingQty))
           ? Number(initialData.openingQty)
           : Number.isFinite(Number(initialData.stock))
@@ -2342,6 +2350,9 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
       barcode: '',
       reorderLevel: '',
       openingQty: 0,
+      // Opening stock has to land somewhere. The warehouse the user is already
+      // scoped to is the right guess; the field is editable either way.
+      openingWarehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
     };
   });
 
@@ -2484,6 +2495,7 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
         barcode: String(formData.barcode || '').trim(),
         reorderLevel: Number(formData.reorderLevel) > 0 ? Number(formData.reorderLevel) : null,
         openingQty: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
+        openingWarehouseId: String(formData.openingWarehouseId || '').trim(),
         // keep legacy field in sync (older screens/data)
         stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : Number(existing?.stock ?? 0) || 0,
       };
@@ -2635,6 +2647,21 @@ const ItemForm = ({ db, setDb, currentCompany, initialData = null, onClose }) =>
               min="0"
               step="0.01"
             />
+            {/* Stock that does not say where it is cannot be sold from
+                anywhere: every availability check is per warehouse. */}
+            <label className="block text-sm font-medium mb-1 mt-3">Opening stock is held at</label>
+            <select
+              value={formData.openingWarehouseId || ''}
+              onChange={(e) => setFormData({ ...formData, openingWarehouseId: e.target.value })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="">Not assigned — counts in any warehouse</option>
+              {(Array.isArray(warehouses) ? warehouses : []).map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
           </div>
         ) : (
           <div />
@@ -12606,7 +12633,15 @@ const AppShell = () => {
       case 'expenses':
         return <ExpensesList db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} />;
       case 'items':
-        return <ItemsList db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} />;
+        return (
+          <ItemsList
+            db={dbForUser}
+            setDb={setDb}
+            openModal={openModal}
+            currentCompany={currentCompany}
+            warehouses={warehousesForActiveBranch}
+          />
+        );
       case 'customers':
         return <CustomersList db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} />;
       case 'inventoryOverview':
