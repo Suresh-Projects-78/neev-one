@@ -32,7 +32,7 @@ const score = (label, group, q) => {
  * there is no reset-on-open effect to synchronise. A palette that reopens
  * showing the previous query is a palette people stop trusting.
  */
-export default function CommandPalette({ onClose, items = [], onSelect }) {
+export default function CommandPalette({ onClose, items = [], onSelect, searchRecords }) {
   const [query, setQuery] = useState('');
   // The highlight is stored with the query it belongs to, so a new query
   // resets it during render rather than in an effect that fires a second pass.
@@ -42,12 +42,23 @@ export default function CommandPalette({ onClose, items = [], onSelect }) {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items
+    const destinations = items
       .map((it) => ({ ...it, _s: score(it.label, it.group, q) }))
       .filter((it) => it._s > 0)
       .sort((a, b) => b._s - a._s || a.label.localeCompare(b.label))
       .slice(0, 40);
-  }, [items, query]);
+
+    // Records only appear once there is something to match. An empty palette
+    // showing eight hundred documents is a list, not an answer.
+    const records = q && typeof searchRecords === 'function' ? searchRecords(q) : [];
+    if (!records.length) return destinations;
+
+    // A document number is a precise thing to type. When the query looks like
+    // one — an exact or near-exact hit on a record — that record outranks a
+    // screen whose name merely contains the same letters.
+    const merged = [...records, ...destinations];
+    return merged.sort((a, b) => b._s - a._s).slice(0, 40);
+  }, [items, query, searchRecords]);
 
   // Focus lands in the input on mount; nothing else needs synchronising.
   useEffect(() => {
@@ -169,7 +180,10 @@ export default function CommandPalette({ onClose, items = [], onSelect }) {
                       style={{ color: i === active ? 'rgb(var(--brand))' : 'rgb(var(--fg-subtle))' }}
                     />
                   ) : null}
-                  <span className="min-w-0 flex-1 truncate text-sm">{it.label}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm">
+                    {it.label}
+                    {it.detail ? <span className="ui-subtle"> · {it.detail}</span> : null}
+                  </span>
                   <span className="ui-subtle text-xs">{it.group}</span>
                   {i === active ? <CornerDownLeft size={13} className="ui-subtle" aria-hidden="true" /> : null}
                 </div>

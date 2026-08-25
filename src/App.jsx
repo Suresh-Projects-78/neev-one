@@ -179,6 +179,8 @@ import PurchaseOverview from './features/purchase/PurchaseOverview';
 import PartyDetail from './features/parties/PartyDetail';
 import CompanyGroups from './features/companies/CompanyGroups';
 import CommandPalette from './components/ui/CommandPalette';
+import { buildRecordIndex, searchRecords } from './utils/searchIndex';
+import { setSearchSeed } from './utils/searchSeed';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
@@ -11666,6 +11668,30 @@ const AppShell = () => {
     return out;
   }, [visibleNav]);
 
+  /**
+   * The same nav, read as a set of screens the user can actually reach. The
+   * record index is built against this, so the palette cannot surface a
+   * document whose screen the sidebar is hiding.
+   */
+  const reachableScreens = useMemo(() => {
+    const keys = new Set();
+    for (const entry of visibleNav) {
+      if (entry.type === 'group') entry.items.forEach((i) => keys.add(i.key));
+      else keys.add(entry.key);
+    }
+    return keys;
+  }, [visibleNav]);
+
+  const recordIndex = useMemo(
+    () =>
+      buildRecordIndex({
+        db: dbForUser,
+        companyId: currentCompany?.id,
+        canOpen: (screen) => reachableScreens.has(screen),
+      }),
+    [dbForUser, currentCompany?.id, reachableScreens]
+  );
+
   const activeGroupKey = useMemo(() => {
     for (const entry of navModel) {
       if (entry.type !== 'group') continue;
@@ -13484,7 +13510,18 @@ const AppShell = () => {
         <CommandPalette
           onClose={() => setPaletteOpen(false)}
           items={paletteItems}
-          onSelect={(item) => setActive(item.key)}
+          searchRecords={(q) => searchRecords(recordIndex, q)}
+          onSelect={(item) => {
+            // A record hands its number to the list it opens, so the screen
+            // arrives filtered to the thing that was picked rather than showing
+            // eighty-eight rows and leaving the user to find it again.
+            if (item.screen) {
+              setSearchSeed(item.screen, item.seed);
+              setActive(item.screen);
+              return;
+            }
+            setActive(item.key);
+          }}
         />
         ) : null}
 

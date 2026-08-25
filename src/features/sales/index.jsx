@@ -28,6 +28,7 @@ import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '..
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { getNextNumericId } from '../../utils/ids';
 import { formatMoney } from '../../utils/money';
+import { consumeSearchSeed } from '../../utils/searchSeed';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import InvoicePreview from './InvoicePreview';
 import {
@@ -199,7 +200,9 @@ export const InvoicesList = ({
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
 
-  const [searchText, setSearchText] = useState('');
+  // Arriving from the palette: the chosen document's number filters the list
+  // on the way in, so the screen opens on the thing that was picked.
+  const [searchText, setSearchText] = useState(() => consumeSearchSeed('invoices'));
   const colFilters = useColumnFilters();
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -1370,7 +1373,8 @@ export const EstimatesList = ({
   const estFilters = useColumnFilters();
   const estSearch = useListSearch(
     db.estimates.filter((e) => e.companyId === currentCompany.id),
-    ['number', 'customerName', 'refNo', 'date']
+    ['number', 'customerName', 'refNo', 'date'],
+    'estimates'
   );
   const estimates = estFilters.applyFilters(
     estSearch.filtered
@@ -1807,7 +1811,8 @@ export const CreditNotesList = ({
   const cnFilters = useColumnFilters();
   const cnSearch = useListSearch(
     db.creditNotes.filter((c) => c.companyId === currentCompany.id),
-    ['number', 'customerName', 'originalInvoiceNumber', 'date']
+    ['number', 'customerName', 'originalInvoiceNumber', 'date'],
+    'creditNotes'
   );
   const creditNotes = cnFilters.applyFilters(
     cnSearch.filtered

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Download, Search } from 'lucide-react';
 
 import { downloadCsv } from '../utils/csv';
+import { consumeSearchSeed } from '../utils/searchSeed';
 import { notify } from './ui/notify';
 
 /**
@@ -58,8 +59,10 @@ export function ListToolbar({
  * Free-text search over chosen fields of each row.
  * `fields` is a list of accessors (function or key name).
  */
-export function useListSearch(rows, fields = []) {
-  const [query, setQuery] = useState('');
+export function useListSearch(rows, fields = [], seedKey = '') {
+  // A list opened from the command palette arrives filtered to the record that
+  // was chosen. Consumed once, so navigating back later shows the whole list.
+  const [query, setQuery] = useState(() => (seedKey ? consumeSearchSeed(seedKey) : ''));
 
   const filtered = useMemo(() => {
     const q = String(query || '').trim().toLowerCase();

@@ -680,7 +680,8 @@ export const PurchaseOrdersList = ({
 
   const poSearch = useListSearch(
     db.purchaseOrders.filter((po) => po.companyId === currentCompany.id),
-    ['number', 'vendorName', 'date', 'status']
+    ['number', 'vendorName', 'date', 'status'],
+    'purchaseOrders'
   );
   const poFilters = useColumnFilters();
 
@@ -1291,7 +1292,8 @@ export const BillsList = ({
 }) => {
   const billSearch = useListSearch(
     db.bills.filter((b) => b.companyId === currentCompany.id),
-    ['number', 'vendorName', 'refNo', 'date']
+    ['number', 'vendorName', 'refNo', 'date'],
+    'bills'
   );
   const bills = billSearch.filtered;
   const [statusFilter, setStatusFilter] = useState('All');
@@ -2629,7 +2631,8 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   const dnFilters = useColumnFilters();
   const dnSearch = useListSearch(
     db.debitNotes.filter((dn) => dn.companyId === currentCompany.id),
-    ['number', 'vendorName', 'originalBillNumber', 'date']
+    ['number', 'vendorName', 'originalBillNumber', 'date'],
+    'debitNotes'
   );
   const debitNotes = dnFilters.applyFilters(
     dnSearch.filtered
