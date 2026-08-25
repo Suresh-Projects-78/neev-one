@@ -11580,41 +11580,60 @@ const AppShell = () => {
           { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
         ],
       },
-      {
+            {
         type: 'group',
         key: 'settingsMenu',
         label: 'Settings',
         icon: PhSettings,
         ph: true,
         tint: 'settings',
-        // Grouped, because this list is fifteen today and heading for
-        // twenty-five once Payroll, CRM, Attendance and Projects each bring
-        // their own. The state on the right answers the question the screen
-        // would answer, without opening it.
+        /*
+         * Structured to the settings map, so the order and the section names
+         * are the ones the business asked for rather than the order these
+         * screens happened to get built in.
+         *
+         * Only screens that exist are listed. The map also calls for
+         * Automation and Integrations, and for per-module preference panes
+         * under Business — none of which are built. Listing them here as dead
+         * links would make the product look finished and behave broken, so
+         * they are tracked outside the rail until they do something.
+         */
         items: [
           { type: 'subgroup', label: 'Organisation' },
-          { key: 'settingsCompany', label: 'Company', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches', state: branchCountLabel },
+          { key: 'settingsCompany', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsBranches', label: 'Branches & Locations', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches', state: branchCountLabel },
           { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'warehouses', state: warehouseCountLabel },
+          { key: 'yearEndClose', label: 'Financial Year', icon: Settings, perm: 'ACCOUNTING::Ledger::VIEW' },
+          { key: 'settingsCurrencies', label: 'Currency', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
 
-          { type: 'subgroup', label: 'People' },
+          { type: 'subgroup', label: 'Business' },
+          { key: 'settingsFeatures', label: 'General Preferences', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
+          { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
+
+          { type: 'subgroup', label: 'Tax & Compliance' },
+          { key: 'settingsTax', label: 'GST', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW', state: gstStateLabel },
+          { key: 'gstRates', label: 'Tax Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
+
+          { type: 'subgroup', label: 'Users & Access' },
           { key: 'settingsUsers', label: 'Users', icon: Users, perm: 'SETTINGS::Users::VIEW' },
           { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
-          { key: 'settingsPermissions', label: 'Role Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
-          { key: 'settingsGovernance', label: 'Governance', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
+          { key: 'settingsPermissions', label: 'Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
+          { key: 'settingsGovernance', label: 'Approval Workflows', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
+          { key: 'settingsSecurity', label: 'Login & Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
 
-          { type: 'subgroup', label: 'Product' },
-          { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
-          { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
-          { key: 'settingsCurrencies', label: 'Currencies', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
+          { type: 'subgroup', label: 'Communication' },
+          { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications', state: emailStateLabel },
+          { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
 
-          { type: 'subgroup', label: 'Compliance' },
-          { key: 'settingsTax', label: 'Tax & Compliance', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW', state: gstStateLabel },
+          { type: 'subgroup', label: 'Documents' },
+          { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
+          { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
+
+          { type: 'subgroup', label: 'Automation' },
+          { key: 'recurringInvoices', label: 'Recurring Transactions', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
 
           { type: 'subgroup', label: 'System' },
-          { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications', state: emailStateLabel },
-          { key: 'settingsSecurity', label: 'Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
-          { key: 'dataImport', label: 'Import Data', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports' },
+          { key: 'dataImport', label: 'Data & Import', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports' },
         ],
       },
     ],
@@ -11748,8 +11767,20 @@ const AppShell = () => {
     return navModel
       .map((entry) => {
         if (entry.type !== 'group') return allow(entry) ? entry : null;
-        const items = entry.items.filter(allow);
-        return items.length ? { ...entry, items } : null;
+        const kept = entry.items.filter((i) => i.type === 'subgroup' || allow(i));
+        // A heading whose every item was hidden by a permission or a feature
+        // flag is a section that says nothing. Keep a heading only when a real
+        // item follows it before the next heading — otherwise Settings grows
+        // empty headings as modules are switched off.
+        const items = kept.filter((item, idx) => {
+          if (item.type !== 'subgroup') return true;
+          for (let i = idx + 1; i < kept.length; i += 1) {
+            if (kept[i].type === 'subgroup') break;
+            return true;
+          }
+          return false;
+        });
+        return items.some((i) => i.type !== 'subgroup') ? { ...entry, items } : null;
       })
       .filter(Boolean);
   }, [navModel, can, permsLoading, isEnabled]);
@@ -11818,7 +11849,9 @@ const AppShell = () => {
 
   useEffect(() => {
     if (!activeGroupKey) return;
-    setOpenGroups((prev) => ({ ...prev, [activeGroupKey]: true }));
+    // Also closes whatever else was open: arriving somewhere is the same kind
+    // of event as opening its group by hand.
+    setOpenGroups((prev) => (prev[activeGroupKey] ? prev : { [activeGroupKey]: true }));
   }, [activeGroupKey]);
 
   useEffect(() => {
@@ -13490,13 +13523,14 @@ const AppShell = () => {
                         // focus management for four entries.
                         if (navCollapsed && window.innerWidth >= 768) {
                           toggleNavCollapsed();
-                          setOpenGroups((prev) => ({ ...prev, [entry.key]: true }));
+                          setOpenGroups({ [entry.key]: true });
                           return;
                         }
-                        setOpenGroups((prev) => ({
-                          ...prev,
-                          [entry.key]: !prev[entry.key],
-                        }));
+                        // One group open at a time. With eleven modules and
+                        // Settings alone running to forty entries, two groups
+                        // open pushes the rest below the fold and the rail
+                        // becomes something you scroll rather than read.
+                        setOpenGroups((prev) => (prev[entry.key] ? {} : { [entry.key]: true }));
                       }}
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
                       aria-expanded={isOpen}
