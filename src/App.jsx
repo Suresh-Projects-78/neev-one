@@ -10844,6 +10844,49 @@ const AppShell = () => {
    * upward because downward from the foot of the rail is off the screen.
    */
   const [profileMenuPos, setProfileMenuPos] = useState(null);
+  const profileBtnRef = useRef(null);
+
+  /**
+   * Measured while open, not snapshotted on click.
+   *
+   * Taking the rectangle once at click time went stale the moment anything
+   * moved — an expanded nav group re-lays the rail out under the button, and
+   * the menu was left drawing itself off the top of the window from a position
+   * that had been true a frame earlier. Clamped both ways so it can never
+   * leave the viewport whatever the rail does.
+   */
+  useEffect(() => {
+    if (!profileMenuOpen) return undefined;
+    const place = () => {
+      const el = profileBtnRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const gap = 8;
+      // A zero rect means layout has not settled — measuring it would anchor
+      // the menu to the top-left corner of nowhere. Anchor to the foot of the
+      // rail, which is where the trigger is going to be, and try again next
+      // frame.
+      if (r.height === 0) {
+        setProfileMenuPos({ left: gap, bottom: gap });
+        requestAnimationFrame(place);
+        return;
+      }
+      const MENU_H = 300;
+      const desired = window.innerHeight - r.top + gap;
+      const highest = Math.max(gap, window.innerHeight - MENU_H - gap);
+      setProfileMenuPos({
+        left: Math.max(gap, Math.min(r.left, window.innerWidth - 248)),
+        bottom: Math.max(gap, Math.min(desired, highest)),
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [profileMenuOpen]);
 
   /**
    * How tall the rail can be.
@@ -11750,31 +11793,20 @@ const AppShell = () => {
   }, [active, navModel]);
 
   /**
-   * Which module the icon strip is lit on. A group when the current screen
-   * lives inside one, otherwise the top-level entry itself — Reports counts its
-   * own report screens as its own, so drilling into GSTR-1 does not un-light it.
+   * Which groups are open.
+   *
+   * The rail spent a day as a strip of unlabelled icons beside a column of the
+   * current module. It read well and tested badly: nine glyphs, four of them
+   * documents-with-lines, and no way to tell Purchases from Expenses without
+   * hovering each one. Labels are what make a rail learnable — the reflow it
+   * costs is the lesser problem.
    */
-  const REPORT_KEYS = useMemo(
-    () => new Set(['reports', 'trialBalance', 'profitLoss', 'balanceSheet', 'cashFlow', 'gstr1', 'gstr3b', 'salesReports']),
-    []
-  );
-  const activeModuleKey = useMemo(() => {
-    if (activeGroupKey) return activeGroupKey;
-    if (REPORT_KEYS.has(active)) return 'reports';
-    return active;
-  }, [activeGroupKey, active, REPORT_KEYS]);
+  const [openGroups, setOpenGroups] = useState(() => (activeGroupKey ? { [activeGroupKey]: true } : {}));
 
-  // Peeking at another module's contents without going there yet. Null means
-  // the column is showing wherever you actually are.
-  const [peekModuleKey, setPeekModuleKey] = useState(null);
   useEffect(() => {
-    setPeekModuleKey(null);
-  }, [active]);
-
-  const shownModule = useMemo(() => {
-    const key = peekModuleKey || activeModuleKey;
-    return visibleNav.find((e) => e.key === key) || visibleNav.find((e) => e.key === activeModuleKey) || null;
-  }, [peekModuleKey, activeModuleKey, visibleNav]);
+    if (!activeGroupKey) return;
+    setOpenGroups((prev) => ({ ...prev, [activeGroupKey]: true }));
+  }, [activeGroupKey]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -13394,102 +13426,134 @@ const AppShell = () => {
               <span className={navCollapsed ? 'md:hidden' : ''}>Collapse</span>
             </button>
 
-            <div
-              className="flex min-h-0 flex-1 gap-1"
-              onMouseLeave={() => setPeekModuleKey(null)}
-            >
-              {/* The strip. Fixed width, fixed order, never reflows. */}
-              <div className="flex flex-col items-center gap-0.5 overflow-y-auto shrink-0">
-                {visibleNav.map((entry) => {
+            <div className="space-y-0.5 min-h-0 flex-1 overflow-y-auto">
+              {visibleNav.map((entry) => {
+                if (entry.type === 'item') {
                   const Icon = entry.icon;
-                  const isActive = activeModuleKey === entry.key;
-                  const go = () => {
-                    // A group has no screen of its own, so land on its first
-                    // destination. A plain entry is its own destination.
-                    if (entry.type === 'group') setActive(entry.items[0].key);
-                    else setActive(entry.key);
-                    setPeekModuleKey(null);
-                  };
+                  const reportKeys = new Set([
+                    'reports',
+                    'trialBalance',
+                    'profitLoss',
+                    'balanceSheet',
+                    'cashFlow',
+                    'gstr1',
+                    'gstr3b',
+                    'salesReports',
+                  ]);
+                  const isReportsEntry = entry.key === 'reports';
+                  const isActive = active === entry.key || (isReportsEntry && reportKeys.has(active));
                   return (
                     <button
                       key={entry.key}
                       type="button"
-                      onClick={go}
-                      // Only a module with contents is worth peeking at.
-                      // Hovering a single-screen entry used to swap a full
-                      // column for one row, which reads as the rail emptying
-                      // itself rather than as a preview.
-                      onMouseEnter={() => (entry.type === 'group' ? setPeekModuleKey(entry.key) : setPeekModuleKey(null))}
-                      onFocus={() => (entry.type === 'group' ? setPeekModuleKey(entry.key) : setPeekModuleKey(null))}
-                      className="ui-rail-icon"
+                      onClick={() => setActive(entry.key)}
+                      className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : ''}`}
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
-                      title={entry.label}
-                      aria-label={entry.label}
+                      title={navCollapsed ? entry.label : undefined}
                     >
                       <Icon
-                        size={18}
+                        size={16}
                         aria-hidden="true"
                         {...(entry.ph ? { weight: 'duotone' } : {})}
                         style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
                       />
+                      <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
                     </button>
                   );
-                })}
-              </div>
+                }
 
-              {/* The current module, in full. Hidden when collapsed — the strip
-                  survives, which is a better collapsed state than labelless
-                  rows. */}
-              <div className={`min-w-0 flex-1 overflow-y-auto ${navCollapsed ? 'md:hidden' : ''}`}>
-                {shownModule ? (
-                  <>
-                    <div className="ui-t-label px-2.5 pb-1 pt-1.5">
-                      <span className="truncate">{shownModule.label}</span>
-                    </div>
-                    <div className="space-y-0.5">
-                      {(shownModule.type === 'group' ? shownModule.items : [shownModule]).map((item) => {
-                        if (item.type === 'subgroup') {
-                          return (
-                            <div key={`sub-${item.label}`} className="ui-t-label px-2.5 pt-3 pb-1 first:pt-1">
-                              {item.label}
-                            </div>
-                          );
+                const GroupIcon = entry.icon;
+                const isOpen = !!openGroups[entry.key];
+                const isGroupActive = activeGroupKey === entry.key;
+
+                return (
+                  <div key={entry.key}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Collapsed rail: a group tap re-opens the rail with
+                        // that group expanded — a flyout would need its own
+                        // focus management for four entries.
+                        if (navCollapsed && window.innerWidth >= 768) {
+                          toggleNavCollapsed();
+                          setOpenGroups((prev) => ({ ...prev, [entry.key]: true }));
+                          return;
                         }
-                        const Icon = item.icon;
-                        const isActive = active === item.key;
-                        // What the screen would tell you if you opened it.
-                        const state = typeof item.state === 'function' ? item.state() : item.state;
-                        return (
-                          <button
-                            key={item.key}
-                            type="button"
-                            onClick={() => setActive(item.key)}
-                            className="ui-nav-item w-full"
-                            data-active={isActive}
-                            aria-current={isActive ? 'page' : undefined}
-                          >
-                            <Icon
-                              size={15}
-                              aria-hidden="true"
-                              {...(item.ph ? { weight: 'duotone' } : {})}
-                              style={
-                                shownModule.tint || item.tint
-                                  ? { color: `rgb(var(--mod-${shownModule.tint || item.tint}))` }
-                                  : undefined
-                              }
-                            />
-                            <span className="min-w-0 truncate">{item.label}</span>
-                            {state ? (
-                              <span className="ml-auto shrink-0 text-[11px] ui-subtle tabular-nums">{state}</span>
-                            ) : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : null}
-              </div>
+                        setOpenGroups((prev) => ({
+                          ...prev,
+                          [entry.key]: !prev[entry.key],
+                        }));
+                      }}
+                      className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
+                      aria-expanded={isOpen}
+                      style={isGroupActive ? { color: 'rgb(var(--fg))' } : undefined}
+                      title={navCollapsed ? entry.label : undefined}
+                    >
+                      <span className={`flex items-center gap-2.5 ${navCollapsed ? 'md:gap-0' : ''}`}>
+                        <GroupIcon
+                          size={16}
+                          aria-hidden="true"
+                          {...(entry.ph ? { weight: 'duotone' } : {})}
+                          style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                        />
+                        <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
+                      </span>
+                      <ChevronDown
+                        size={14}
+                        aria-hidden="true"
+                        className={`transition-transform duration-200 ${isOpen ? 'rotate-0' : '-rotate-90'} ${navCollapsed ? 'md:hidden' : ''}`}
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <div className={`mt-0.5 space-y-0.5 pl-5 ${navCollapsed ? 'md:hidden' : ''}`}>
+                        {entry.items.map((item) => {
+                          // A heading inside a group. Settings is fifteen items
+                          // and heading for twenty-five once Payroll, CRM and
+                          // Attendance arrive; without headings it is a list
+                          // you read every time instead of a shape you learn.
+                          if (item.type === 'subgroup') {
+                            return (
+                              <div
+                                key={`sub-${item.label}`}
+                                className="ui-t-label px-2.5 pt-3 pb-1 first:pt-1"
+                              >
+                                {item.label}
+                              </div>
+                            );
+                          }
+
+                          const Icon = item.icon;
+                          const isActive = active === item.key;
+                          // What the screen would tell you if you opened it.
+                          const state = typeof item.state === 'function' ? item.state() : item.state;
+                          return (
+                            <button
+                              key={item.key}
+                              type="button"
+                              onClick={() => setActive(item.key)}
+                              className="ui-nav-item"
+                              data-active={isActive}
+                              aria-current={isActive ? 'page' : undefined}
+                            >
+                              <Icon
+                                size={15}
+                                aria-hidden="true"
+                                style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                              />
+                              <span className="min-w-0 truncate">{item.label}</span>
+                              {state ? (
+                                <span className="ml-auto shrink-0 text-[11px] ui-subtle tabular-nums">{state}</span>
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             {/* Account, pinned to the bottom of the rail like Linear or Slack:
@@ -13503,11 +13567,8 @@ const AppShell = () => {
             >
               <button
                 type="button"
-                onClick={(e) => {
-                  const r = e.currentTarget.getBoundingClientRect();
-                  setProfileMenuPos({ left: Math.max(8, r.left), bottom: Math.max(8, window.innerHeight - r.top + 8) });
-                  setProfileMenuOpen((v) => !v);
-                }}
+                ref={profileBtnRef}
+                onClick={() => setProfileMenuOpen((v) => !v)}
                 className="ui-nav-item w-full"
                 aria-haspopup="menu"
                 aria-expanded={profileMenuOpen}
