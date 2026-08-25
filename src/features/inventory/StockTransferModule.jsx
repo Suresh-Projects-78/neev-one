@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { Check, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { StatusPill } from '../../components/ui/Primitives';
 
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { isTracked, needsExpiry, batchesForItem } from '../../utils/batches';
@@ -82,17 +83,6 @@ export const statusForViewer = (transfer, { atTarget = false } = {}) => {
   return s;
 };
 
-const getStatusPillClass = (status) => {
-  const s = String(status || '').trim();
-  if (s === 'Approved' || s === 'Received' || s === 'Transfer In' || s === 'Closed') return 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]';
-  if (s === 'Rejected') return 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]';
-  if (s === 'Short Received') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
-  if (s === 'Cancelled') return 'ui-sunken ui-fg';
-  if (s === 'Pending Approval') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
-  if (s === 'Transferred Out' || s === 'In Transit') return 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
-  if (s === 'Submitted') return 'ui-sunken ui-fg';
-  return 'ui-sunken ui-fg';
-};
 
 /**
  * Movement wording: a transfer is one document seen from two ends. The sending
@@ -558,7 +548,7 @@ export const StockTransferEditor = ({
               disabled={readOnly}
             />
           </div>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(canonicalStatus(form.status))}`}>{canonicalStatus(form.status)}</span>
+          <StatusPill status={canonicalStatus(form.status)} />
         </div>
       </div>
 
@@ -939,7 +929,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
           <div className="text-lg font-semibold">{transfer?.number || 'Stock Transfer'}</div>
           <div className="text-sm ui-muted">{transfer?.date || '-'}</div>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(status)}`}>{status}</span>
+        <StatusPill status={status} />
       </div>
 
       <div className="grid grid-cols-2 gap-4 text-sm">
@@ -1659,7 +1649,7 @@ export const StockTransfersList = ({
                       <td className="ui-col-meta px-4 py-2.5">{toLabel || '-'}</td>
                       <td className="ui-col-date px-4 py-2.5">{t?.date || '-'}</td>
                       <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusPillClass(status)}`}>{status}</span>
+                        <StatusPill status={status} />
                       </td>
                       <td
                         className="px-4 py-2.5 relative"

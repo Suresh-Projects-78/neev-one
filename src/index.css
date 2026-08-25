@@ -449,6 +449,15 @@
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg-muted));
   }
+  /* Not-yet-real: a draft is not a state of the money, it is the absence of a
+     document. An outline says that without spending a hue — this palette is
+     deliberately orange-only, so `--info` is grey by design and a blue pill
+     was never available. Shape also survives colour blindness and print. */
+  .ui-pill-outline {
+    background-color: transparent;
+    color: rgb(var(--fg-subtle));
+    box-shadow: inset 0 0 0 1px rgb(var(--border-strong));
+  }
 
   /* --- tables --- */
   /* A ruled grid, not a list of rows.

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Moon, Sun } from 'lucide-react';
 import { useCountUp } from './useCountUp';
+import { resolveStatus } from '../../utils/statusRegistry';
 
 /**
  * Shared UI primitives for the app shell.
@@ -107,18 +108,39 @@ export const StatStrip = ({ items = [], className = '' }) => {
 };
 
 /** Status pill. Pass an explicit tone; the label carries the meaning, not the colour. */
-export const StatusPill = ({ status }) => {
-  const s = String(status || '').trim().toLowerCase();
-  const tone =
-    s === 'paid' || s === 'received' || s === 'posted' || s === 'active'
-      ? 'pos'
-      : s === 'overdue' || s === 'rejected' || s === 'cancelled' || s === 'failed'
-      ? 'neg'
-      : s === 'partial' || s === 'pending' || s === 'sent'
-      ? 'warn'
-      : 'neutral';
+/**
+ * A document's status, and optionally why.
+ *
+ * Tone comes from the registry rather than from a list kept here, so a status
+ * added anywhere in the product either registers itself or arrives visibly
+ * unknown. It used to arrive grey, which is how eleven of twenty-one statuses
+ * ended up meaning nothing — `Draft` and `Unpaid` were the same pill.
+ *
+ * `reason` is the answer to the question the word provokes. "Overdue" invites
+ * "by how long"; "Partial" invites "how much is left". It sits outside the
+ * pill so the pill stays a constant width and the reason can be dropped on a
+ * narrow screen without the status losing its meaning.
+ */
+export const StatusPill = ({ status, reason = '' }) => {
+  const { label, tone, known } = resolveStatus(status);
 
-  return <span className={`ui-pill ui-pill-${tone}`}>{status || '—'}</span>;
+  const pill = (
+    <span
+      className={`ui-pill ui-pill-${tone}`}
+      title={known ? undefined : `Unregistered status: ${label}`}
+      style={known ? undefined : { outline: '1px dashed rgb(var(--neg))', outlineOffset: '1px' }}
+    >
+      {label}
+    </span>
+  );
+
+  if (!reason) return pill;
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      {pill}
+      <span className="ui-caption">{reason}</span>
+    </span>
+  );
 };
 
 /** Empty state with an optional call to action. */

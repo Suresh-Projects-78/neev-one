@@ -262,6 +262,34 @@ export const InvoicesList = ({
     setOpenMenu(null);
   }, [searchText, statusFilter, dateFrom, dateTo]);
 
+/**
+ * The answer to the question the status word provokes.
+ *
+ * "Overdue" invites "by how long"; "Partial" invites "how much is left". Both
+ * answers are already on the row — they were just never shown, so the reader
+ * had to open the document to learn what the word meant.
+ */
+const statusReason = (doc, status, company, nowMs) => {
+  const s = String(status || '').toLowerCase();
+  const total = Number(doc?.total ?? 0);
+  const paid = Number(doc?.paidAmount ?? 0);
+
+  if (s === 'overdue' && doc?.dueDate) {
+    const due = new Date(`${String(doc.dueDate).slice(0, 10)}T00:00:00`);
+    const days = Math.max(0, Math.round((nowMs - due.getTime()) / 86400000));
+    return days ? `${days} day${days === 1 ? '' : 's'}` : '';
+  }
+  if (s === 'partial' && total > 0) {
+    return `${formatMoney(paid, company)} of ${formatMoney(total, company)}`;
+  }
+  if (s === 'unpaid' && doc?.dueDate) {
+    const due = new Date(`${String(doc.dueDate).slice(0, 10)}T00:00:00`);
+    const days = Math.round((due.getTime() - nowMs) / 86400000);
+    if (days >= 0) return `due in ${days} day${days === 1 ? '' : 's'}`;
+  }
+  return '';
+};
+
   const getDerivedStatus = (invoice) => {
     const total = Number(invoice?.total ?? 0);
     const paid = Number(invoice?.paidAmount ?? 0);
@@ -286,6 +314,10 @@ export const InvoicesList = ({
 
   // What is currently hiding rows, in the user's words. Shown on the empty
   // state so "nothing here" never has to be read as "nothing exists".
+  // Pinned once per mount, so "24 days overdue" is the same number in every
+  // row of one render pass.
+  const [nowMs] = useState(() => Date.now());
+
   const activeFilterChips = useMemo(() => {
     const chips = [];
     if (String(searchText || '').trim()) {
@@ -949,7 +981,7 @@ export const InvoicesList = ({
                     <td className="ui-col-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
                     {col('status') ? (
                     <td>
-                      <StatusPill status={derived} />
+                      <StatusPill status={derived} reason={statusReason(inv, derived, currentCompany, nowMs)} />
                       {(() => {
                         const returnMark = returnStatusLabel(inv, db.creditNotes || [], 'originalInvoiceId');
                         return returnMark ? (

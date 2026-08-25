@@ -11,7 +11,7 @@ import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '..
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
 import { ClipboardList, Copy, CreditCard, Eye, FileStack, MoreVertical, NotebookPen, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { EmptyState, TableTotals } from '../../components/ui/Primitives';
+import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { dueDateFor } from '../../utils/paymentTerms';
@@ -1323,6 +1323,10 @@ export const BillsList = ({
   const [statusFilter, setStatusFilter] = useState('All');
   const colFilters = useColumnFilters();
 
+  // Pinned once per mount: a clock read during render makes every derived
+  // age impure and re-renders disagree with each other.
+  const [nowMs] = useState(() => Date.now());
+
   const billFilterChips = React.useMemo(() => {
     const chips = [];
     if (String(billSearch.query || '').trim()) {
@@ -1406,6 +1410,25 @@ export const BillsList = ({
       window.removeEventListener('resize', onScrollOrResize);
     };
   }, [openMenu?.id]);
+
+/** The answer the status word provokes — how late, or how much is left. */
+const billStatusReason = (doc, status, company, nowMs) => {
+  const s = String(status || '').toLowerCase();
+  const total = Number(doc?.total ?? 0);
+  const paid = Number(doc?.paidAmount ?? 0);
+  if ((s === 'overdue' || s === 'over due') && doc?.dueDate) {
+    const due = new Date(`${String(doc.dueDate).slice(0, 10)}T00:00:00`);
+    const days = Math.max(0, Math.round((nowMs - due.getTime()) / 86400000));
+    return days ? `${days} day${days === 1 ? '' : 's'}` : '';
+  }
+  if (s === 'partial' && total > 0) return `${formatMoney(paid, company)} of ${formatMoney(total, company)}`;
+  if (s === 'unpaid' && doc?.dueDate) {
+    const due = new Date(`${String(doc.dueDate).slice(0, 10)}T00:00:00`);
+    const days = Math.round((due.getTime() - nowMs) / 86400000);
+    if (days >= 0) return `due in ${days} day${days === 1 ? '' : 's'}`;
+  }
+  return '';
+};
 
   const getDerivedStatus = (bill) => {
     const total = Number(bill?.total ?? 0);
@@ -1745,15 +1768,6 @@ export const BillsList = ({
                   .filter((dn) => String(dn?.originalBillId ?? '') === String(b.id))
                   .filter((dn) => String(dn?.status || '').toLowerCase() !== 'cancelled')
                   .reduce((t, dn) => t + (Number(dn.total) || 0), 0);
-                const statusPillClass =
-                  derived === 'Paid'
-                    ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
-                    : derived === 'Over due'
-                      ? 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'
-                      : derived === 'Draft'
-                        ? 'ui-sunken ui-fg'
-                        : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
-
                 return (
                   <tr
                     key={b.id}
@@ -1769,7 +1783,7 @@ export const BillsList = ({
                     <td className="ui-col-date px-4 py-2.5">{b.refDate || '-'}</td>
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(b.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusPillClass}`}>{derived}</span>
+                      <StatusPill status={derived} reason={billStatusReason(b, derived, currentCompany, nowMs)} />
                       {returnMark ? (
                         <span
                           className="ml-1 px-2 py-1 rounded-full text-[11px] font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
