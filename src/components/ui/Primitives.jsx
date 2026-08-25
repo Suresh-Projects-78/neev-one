@@ -367,3 +367,33 @@ export const TableTotals = ({ count, totalCount, noun = 'rows', figures = [], cl
     </div>
   );
 };
+
+/**
+ * The message that belongs under the box it is about.
+ *
+ * Renders nothing when there is no error, so it can sit in the markup
+ * permanently without reserving space or needing a conditional around it.
+ */
+export const FieldError = ({ error, id }) =>
+  error ? (
+    <p id={id} className="ui-field-error" role="alert">
+      {error}
+    </p>
+  ) : null;
+
+/**
+ * A count of what is wrong, next to the button that is refusing to proceed.
+ *
+ * Individual messages live at their fields; this exists because on a long form
+ * the failing field can be off screen, and "nothing happened when I pressed
+ * Save" is the worst possible feedback.
+ */
+export const FieldErrorSummary = ({ errors = {} }) => {
+  const n = Object.keys(errors).length;
+  if (!n) return null;
+  return (
+    <span className="ui-field-error" role="status">
+      {n} field{n === 1 ? '' : 's'} need{n === 1 ? 's' : ''} attention
+    </span>
+  );
+};

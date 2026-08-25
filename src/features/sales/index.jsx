@@ -39,7 +39,8 @@ import {
   isIntraStateSupply,
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
-import { PageHeader, StatusPill, EmptyState, TableTotals } from '../../components/ui/Primitives';
+import { PageHeader, StatusPill, EmptyState, TableTotals, FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
+import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
@@ -2045,6 +2046,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     () => customers.find((c) => String(c.id) === String(formData?.customerId)) || null,
     [customers, formData?.customerId]
   );
+  const fieldErrors = useFieldErrors('invoice');
+
   const customerOutstanding = useMemo(() => {
     if (!customer) return 0;
     return (db.invoices || [])
@@ -2214,28 +2217,29 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       }
     }
 
-    if (!invoiceNumber) {
-      notify.error('Invoice number is required');
-      return;
-    }
-
-    if (!String(formData.warehouseId || '').trim()) {
-      notify.error('Warehouse is required');
-      return;
-    }
-
+    // Everything that is about a field, gathered in one pass. Reporting these
+    // one at a time meant a form with three blanks took three submits to find
+    // out about the third.
     const invoiceNumberClash = db.invoices.some(
       (inv) => inv.companyId === currentCompany.id && String(inv.number || '').trim() === invoiceNumber && (!isEdit || inv.id !== Number(initialData?.id))
     );
-    if (invoiceNumberClash) {
-      notify.error('Invoice number already exists. Please change the number or update numbering settings in Company Profile.');
-      return;
-    }
 
-    if (!formData.customerId) {
-      notify.error('Customer is required');
-      return;
-    }
+    fieldErrors.reset();
+    fieldErrors.require('number', invoiceNumber, 'Invoice number is required');
+    fieldErrors.check(
+      'number',
+      !invoiceNumber || !invoiceNumberClash,
+      'That number is already used. Change it, or adjust numbering in Company Profile.'
+    );
+    fieldErrors.require('date', formData.date, 'Invoice date is required');
+    fieldErrors.require('warehouseId', formData.warehouseId, 'Warehouse is required');
+    fieldErrors.require('customerId', formData.customerId, 'Customer is required');
+    fieldErrors.check(
+      'items',
+      !(formData.items || []).some((l) => !String(l.itemId || '').trim()),
+      'Every line needs an item — GST is charged per item.'
+    );
+    if (fieldErrors.failed()) return;
 
     // Year-end lock: nothing back-dates into closed books.
     {
@@ -2257,11 +2261,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       return;
     }
 
-    const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
-    if (hasMissingItem) {
-      notify.error('Please select an Item for every line. Items are mandatory for GST.');
-      return;
-    }
 
     // Batch-tracked lines must name a batch with enough remaining stock.
     if (!wantsDraft) {
@@ -2620,7 +2619,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   };
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
       {!isEdit && (
         <div className="flex justify-end">
           <button
@@ -2641,6 +2640,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         onNumberChange={(v) => setFormData((p) => ({ ...p, number: v }))}
         numberLocked={lockInvoiceNumberOnCreate}
         numberHint={lockInvoiceNumberOnCreate ? 'Numbered automatically from the series' : ''}
+        numberError={fieldErrors.error('number')}
+        dateError={fieldErrors.error('date')}
         date={formData.date}
         onDateChange={(v) =>
           setFormData((p) => ({
@@ -2656,16 +2657,29 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <WarehouseField
-          value={formData.warehouseId}
-          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
-          options={warehouseOptions}
-          activeWarehouseId={defaultWarehouseId}
-          isEdit={Boolean(initialData)}
-          className="ui-select"
-        />
+        <div
+          ref={(el) => fieldErrors.register('warehouseId', el)}
+          data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
+        >
+          <WarehouseField
+            value={formData.warehouseId}
+            onChange={(warehouseId) => {
+              fieldErrors.clearField('warehouseId');
+              setFormData((p) => ({ ...p, warehouseId }));
+            }}
+            options={warehouseOptions}
+            activeWarehouseId={defaultWarehouseId}
+            isEdit={Boolean(initialData)}
+            className="ui-select"
+          />
+          <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
+        </div>
 
-        <div className="lg:col-span-2">
+        <div
+          className="lg:col-span-2"
+          ref={(el) => fieldErrors.register('customerId', el)}
+          data-invalid-within={fieldErrors.error('customerId') ? 'true' : undefined}
+        >
           <CustomerPicker
             db={db}
             setDb={setDb}
@@ -2678,6 +2692,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 // this on save from the same terms, so showing anything else
                 // here would just be a number that changes after saving.
                 const picked = customers.find((c) => String(c.id) === String(customerId));
+                fieldErrors.clearField('customerId');
                 return {
                   ...prev,
                   customerId,
@@ -2686,6 +2701,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               })
             }
           />
+          <FieldError error={fieldErrors.error('customerId')} id={fieldErrors.errorId('customerId')} />
           {selectedCustomer ? (
             <p className="mt-1 text-xs ui-muted">Terms: {termsLabel(selectedCustomer)}</p>
           ) : null}
@@ -2898,11 +2914,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           </table>
         </div>
 
-        <div className="mt-2">
+        <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
             <Plus size={15} aria-hidden="true" /> Add Item
             <span className="ui-subtle text-[11px] ml-1">or press Tab on the last row</span>
           </button>
+          <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -3049,6 +3066,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <span className="fig">{formatMoney(customerOutstanding, currentCompany)}</span> already
           </span>
         ) : null}
+        <FieldErrorSummary errors={fieldErrors.errors} />
         <button type="submit" className="ui-btn ui-btn-primary ml-auto">
           {isEdit ? 'Update Invoice' : 'Create Invoice'}
         </button>

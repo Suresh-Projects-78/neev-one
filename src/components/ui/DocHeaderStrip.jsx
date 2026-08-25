@@ -15,6 +15,8 @@ export const DocHeaderStrip = ({
   onNumberChange,
   numberLocked = false,
   numberHint = '',
+  numberError = '',
+  dateError = '',
   date,
   onDateChange,
   dueDate,
@@ -52,8 +54,16 @@ export const DocHeaderStrip = ({
           onChange={(e) => onNumberChange?.(e.target.value)}
           disabled={numberLocked}
           required
+          aria-invalid={numberError ? true : undefined}
+          aria-describedby={numberError ? 'doc-number-error' : undefined}
+          data-invalid={numberError ? 'true' : undefined}
           className="ui-input ui-mono !min-h-0 !py-1 !text-[13px] !w-36"
         />
+        {numberError ? (
+          <p id="doc-number-error" role="alert" className="ui-field-error">
+            {numberError}
+          </p>
+        ) : null}
       </div>
 
       <div>
@@ -67,8 +77,11 @@ export const DocHeaderStrip = ({
           value={date ?? ''}
           onChange={(e) => onDateChange?.(e.target.value)}
           required
+          aria-invalid={dateError ? true : undefined}
+          data-invalid={dateError ? 'true' : undefined}
           className="ui-input !min-h-0 !py-1 !text-[13px] !w-40"
         />
+        {dateError ? <p role="alert" className="ui-field-error">{dateError}</p> : null}
       </div>
 
       {onDueDateChange ? (

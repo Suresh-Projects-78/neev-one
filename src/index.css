@@ -920,6 +920,29 @@
     border: 1px solid rgb(var(--border));
   }
 
+  /* An error about a field, under that field. The corner is for things with no
+     home on screen — a locked period, a server that refused. */
+  .ui-field-error {
+    margin: 0;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: rgb(var(--neg));
+  }
+  /* Only real controls get the red edge. A wrapper marked invalid passes it to
+     whatever control it holds — pickers are components, not inputs, so the
+     wrapper is the only handle we have on them. */
+  input[data-invalid='true'],
+  select[data-invalid='true'],
+  textarea[data-invalid='true'],
+  [data-invalid-within='true'] :is(input, select, textarea, .ui-input, .ui-select) {
+    border-color: rgb(var(--neg));
+  }
+  input[data-invalid='true']:focus-visible,
+  select[data-invalid='true']:focus-visible,
+  textarea[data-invalid='true']:focus-visible {
+    outline-color: rgb(var(--neg));
+  }
+
   /* --- the rail ------------------------------------------------------------
      An accordion rail reflows every time you consult it: opening Purchases
      pushes Reports and Settings down, closing it pulls them back. Nobody learns
