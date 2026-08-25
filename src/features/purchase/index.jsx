@@ -10,7 +10,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { ClipboardList, Copy, CreditCard, Eye, FileStack, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { ClipboardList, Copy, CreditCard, Eye, FileStack, MoreVertical, NotebookPen, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -2658,6 +2658,20 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
     ['number', 'vendorName', 'originalBillNumber', 'date'],
     'debitNotes'
   );
+
+  // What is hiding rows right now. An empty list should not say "none yet" to
+  // somebody who has simply filtered them all away.
+  const dnFilterChips = React.useMemo(() => {
+    const chips = [];
+    if (String(dnSearch.query || '').trim()) {
+      chips.push({ label: 'Search', value: String(dnSearch.query).trim(), onRemove: () => dnSearch.setQuery('') });
+    }
+    for (const [key, f] of Object.entries(dnFilters.filters || {})) {
+      const shown = Array.isArray(f?.values) ? f.values.filter(Boolean).join(', ') : String(f?.value || '');
+      chips.push({ label: key, value: shown || 'set', onRemove: () => dnFilters.clearColumn(key) });
+    }
+    return chips;
+  }, [dnSearch, dnFilters]);
   const debitNotes = dnFilters.applyFilters(
     dnSearch.filtered
       .slice()
@@ -2745,8 +2759,25 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {debitNotes.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
-                  No debit notes found. Click "New Debit Note" to create one.
+                <td colSpan="7" className="px-0 py-0">
+                  {dnFilterChips.length === 0 ? (
+                    <EmptyState
+                      icon={NotebookPen}
+                      title="No purchase returns yet"
+                      description="A debit note reduces what you owe when goods go back to the vendor."
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={NotebookPen}
+                      kind="filtered"
+                      totalCount={(db.debitNotes || []).filter((d) => d.companyId === currentCompany.id).length}
+                      filters={dnFilterChips}
+                      onClearFilters={() => {
+                        dnSearch.setQuery('');
+                        dnFilters.clearAll();
+                      }}
+                    />
+                  )}
                 </td>
               </tr>
             ) : (

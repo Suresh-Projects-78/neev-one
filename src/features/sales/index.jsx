@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Trash2, Tag, RefreshCw } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Receipt, Trash2, Tag, RefreshCw } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -1376,6 +1376,20 @@ export const EstimatesList = ({
     ['number', 'customerName', 'refNo', 'date'],
     'estimates'
   );
+
+  // What is hiding rows right now, in the user's words. Without this an empty
+  // list says "none yet" to someone who has simply filtered them all away.
+  const estFilterChips = useMemo(() => {
+    const chips = [];
+    if (String(estSearch.query || '').trim()) {
+      chips.push({ label: 'Search', value: String(estSearch.query).trim(), onRemove: () => estSearch.setQuery('') });
+    }
+    for (const [key, f] of Object.entries(estFilters.filters || {})) {
+      const shown = Array.isArray(f?.values) ? f.values.filter(Boolean).join(', ') : String(f?.value || '');
+      chips.push({ label: key, value: shown || 'set', onRemove: () => estFilters.clearColumn(key) });
+    }
+    return chips;
+  }, [estSearch, estFilters]);
   const estimates = estFilters.applyFilters(
     estSearch.filtered
       .slice()
@@ -1607,8 +1621,30 @@ export const EstimatesList = ({
           <tbody className="divide-y">
             {estimates.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
-                  No estimates found
+                <td colSpan="7" className="px-0 py-0">
+                  {estFilterChips.length === 0 ? (
+                    <EmptyState
+                      icon={ClipboardList}
+                      title="No estimates yet"
+                      description="An estimate is a quote you can turn into an invoice once the customer agrees."
+                      action={
+                        <button type="button" onClick={openNewEstimate} className="ui-btn ui-btn-primary">
+                          <Plus size={16} /> New Estimate
+                        </button>
+                      }
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={ClipboardList}
+                      kind="filtered"
+                      totalCount={(db.estimates || []).filter((e) => e.companyId === currentCompany.id).length}
+                      filters={estFilterChips}
+                      onClearFilters={() => {
+                        estSearch.setQuery('');
+                        estFilters.clearAll();
+                      }}
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
@@ -1820,6 +1856,20 @@ export const CreditNotesList = ({
     ['number', 'customerName', 'originalInvoiceNumber', 'date'],
     'creditNotes'
   );
+
+  // What is hiding rows right now, in the user's words. Without this an empty
+  // list says "none yet" to someone who has simply filtered them all away.
+  const cnFilterChips = useMemo(() => {
+    const chips = [];
+    if (String(cnSearch.query || '').trim()) {
+      chips.push({ label: 'Search', value: String(cnSearch.query).trim(), onRemove: () => cnSearch.setQuery('') });
+    }
+    for (const [key, f] of Object.entries(cnFilters.filters || {})) {
+      const shown = Array.isArray(f?.values) ? f.values.filter(Boolean).join(', ') : String(f?.value || '');
+      chips.push({ label: key, value: shown || 'set', onRemove: () => cnFilters.clearColumn(key) });
+    }
+    return chips;
+  }, [cnSearch, cnFilters]);
   const creditNotes = cnFilters.applyFilters(
     cnSearch.filtered
       .slice()
@@ -1908,8 +1958,25 @@ export const CreditNotesList = ({
           <tbody className="divide-y">
             {creditNotes.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
-                  No credit notes found
+                <td colSpan="7" className="px-0 py-0">
+                  {cnFilterChips.length === 0 ? (
+                    <EmptyState
+                      icon={Receipt}
+                      title="No sales returns yet"
+                      description="A credit note reverses part or all of an invoice when goods come back."
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={Receipt}
+                      kind="filtered"
+                      totalCount={(db.creditNotes || []).filter((c) => c.companyId === currentCompany.id).length}
+                      filters={cnFilterChips}
+                      onClearFilters={() => {
+                        cnSearch.setQuery('');
+                        cnFilters.clearAll();
+                      }}
+                    />
+                  )}
                 </td>
               </tr>
             ) : (
