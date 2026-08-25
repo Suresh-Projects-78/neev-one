@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { Check, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { StatusPill } from '../../components/ui/Primitives';
+import { PermissionButton } from '../../permissions/ActionGuard';
 
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { isTracked, needsExpiry, batchesForItem } from '../../utils/batches';
@@ -1027,13 +1028,13 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
         ) : null}
 
         {canReceive ? (
-          <button
-            type="button"
+          <PermissionButton
+            permission="INVENTORY::Stock Transfer::APPROVE"
             onClick={() => onAction?.('receive')}
             className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
           >
             <Check size={16} /> Approve — Transfer In
-          </button>
+          </PermissionButton>
         ) : null}
 
         {canResolve ? (

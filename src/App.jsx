@@ -139,6 +139,7 @@ import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals, FieldErr
 import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
+import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import EmailSettings from './features/settings/EmailSettings';
@@ -1336,13 +1337,13 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">Expenses</h3>
-        <button
-          type="button"
+        <PermissionButton
+          permission="EXPENSES::Expenses::CREATE"
           onClick={() => setIsCreating(true)}
           className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Expense
-        </button>
+        </PermissionButton>
       </div>
 
       {expenseFlow.count > 0 ? (

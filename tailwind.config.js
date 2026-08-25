@@ -13,6 +13,7 @@ export default {
     'ui-pill-warn',
     'ui-pill-info',
     'ui-pill-outline',
+    'ui-not-allowed',
     'ui-pill-neutral',
     'ui-amount-pos',
     'ui-amount-neg',

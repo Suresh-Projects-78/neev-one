@@ -42,6 +42,7 @@ import {
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { PageHeader, StatusPill, EmptyState, TableTotals, FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
+import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
@@ -791,9 +792,13 @@ const statusReason = (doc, status, company, nowMs) => {
         title="Invoices"
         description="Sales invoices for the active branch"
         actions={
-          <button type="button" onClick={openNewInvoice} className="ui-btn ui-btn-primary">
+          <PermissionButton
+            permission="SALES::Invoices::CREATE"
+            onClick={openNewInvoice}
+            className="ui-btn ui-btn-primary"
+          >
             <Plus size={16} aria-hidden="true" /> New Invoice
-          </button>
+          </PermissionButton>
         }
       />
 

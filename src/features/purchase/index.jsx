@@ -6,6 +6,7 @@ import { isOnAccount, noteBalance, documentOutstanding } from '../../utils/onAcc
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
+import { PermissionButton } from '../../permissions/ActionGuard';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
@@ -1642,7 +1643,8 @@ const billStatusReason = (doc, status, company, nowMs) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-title text-lg">Bills</h3>
-        <button
+        <PermissionButton
+          permission="PURCHASE::Bills::CREATE"
           onClick={() => {
             if (typeof onNewBill === 'function') {
               onNewBill();
@@ -1662,7 +1664,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
           className="ui-btn ui-btn-primary "
         >
           <Plus size={20} /> New Bill
-        </button>
+        </PermissionButton>
       </div>
 
       <ListToolbar

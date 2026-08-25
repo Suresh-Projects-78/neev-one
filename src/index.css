@@ -952,6 +952,15 @@
     outline-color: rgb(var(--neg));
   }
 
+  /* An action you are not permitted to take. Dimmed and inert, but still
+     present and still focusable — a control you cannot reach is a control you
+     cannot ask your administrator about. The reason lives in the title. */
+  .ui-not-allowed {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: saturate(0.4);
+  }
+
   /* --- the rail ------------------------------------------------------------
      An accordion rail reflows every time you consult it: opening Purchases
      pushes Reports and Settings down, closing it pulls them back. Nobody learns
