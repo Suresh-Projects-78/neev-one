@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { TableSkeleton } from '../../components/ui/Primitives';
+import { StatusPill, TableSkeleton } from '../../components/ui/Primitives';
 import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog } from '../../components/ui/notify';
 import { listRoles, createRole, updateRole, deleteRole } from '../../api/admin';
@@ -632,9 +632,7 @@ export function SettingsRoles({ orgId }) {
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.description || '-'}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{Number(r.assignedUsersCount || 0)}</td>
                   <td className="ui-col-meta px-4 py-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]">
-                      Active
-                    </span>
+                    <StatusPill status="Active" />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="relative inline-block text-left">

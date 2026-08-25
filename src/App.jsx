@@ -135,7 +135,7 @@ import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
 import { createLedgerAccount } from './api/ledger';
-import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals, FieldError, FieldErrorSummary } from './components/ui/Primitives';
+import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals, FieldError, FieldErrorSummary, StatusPill } from './components/ui/Primitives';
 import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
@@ -1467,14 +1467,6 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             ) : (
               filteredExpenses.map((expense) => {
                 const derived = getDerivedStatus(expense);
-                const statusPillClass =
-                  derived === 'Paid'
-                    ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
-                    : derived === 'Over due'
-                      ? 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'
-                      : derived === 'Draft'
-                        ? 'ui-sunken ui-fg'
-                        : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
                 return (
                   <tr
                     key={expense.id}
@@ -1493,7 +1485,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                   <td className="px-4 py-2.5 ui-col-meta">{expense.refDate || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expense.total, currentCompany)}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusPillClass}`}>{derived}</span>
+                    <StatusPill status={derived} />
                   </td>
                   <td className="px-4 py-2.5 ui-col-meta">
                     <button
@@ -4255,11 +4247,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                   <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}
-                    >
-                      {(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'Balanced' : 'Unbalanced'}
-                    </span>
+                    <StatusPill status={(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'Balanced' : 'Unbalanced'} />
                   </td>
                   <td className="px-4 py-2.5 ui-col-meta">
                     <div className="flex justify-end gap-2">

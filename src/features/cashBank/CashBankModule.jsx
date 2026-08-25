@@ -7,7 +7,7 @@ import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
-import { StatTile, TableTotals } from '../../components/ui/Primitives';
+import { StatTile, TableTotals, StatusPill } from '../../components/ui/Primitives';
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -2054,16 +2054,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {t.readOnly ? (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]">Recorded</span>
+                            <StatusPill status="Recorded" />
                           ) : categorised ? (
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]">Categorised</span>
+                            <StatusPill status="Categorised" />
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => openCategorise(t)}
-                              className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-yellow-800 hover:bg-yellow-200"
-                            >
-                              Uncategorised
+                            /* The one status that is also the way to fix it. */
+                            <button type="button" onClick={() => openCategorise(t)} title="Categorise this line">
+                              <StatusPill status="Uncategorised" />
                             </button>
                           )}
                         </td>

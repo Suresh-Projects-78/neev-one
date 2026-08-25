@@ -836,12 +836,6 @@ export const PurchaseOrdersList = ({
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 const status = poStatusOf(po);
-                const pillClass =
-                  status === 'Closed'
-                    ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]'
-                    : status === 'Cancelled'
-                      ? 'ui-sunken ui-fg'
-                      : 'bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]';
                 return (
                   <tr key={po.id} className="ui-hover-sunken">
                     <td className="ui-col-id px-4 py-2.5 font-medium">{po.number}</td>
@@ -850,7 +844,7 @@ export const PurchaseOrdersList = ({
                     <td className="ui-col-date px-4 py-2.5">{po.date}</td>
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${pillClass}`}>{status}</span>
+                      <StatusPill status={status} />
                     </td>
                     <td className="px-4 py-2.5 text-right relative">
                       <button
@@ -2814,7 +2808,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                     <td className="ui-col-date px-4 py-2.5">{dn.date}</td>
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn))]">{dn.status || 'Draft'}</span>
+                      <StatusPill status={dn.status || 'Draft'} />
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       {isOnAccount(dn) ? (

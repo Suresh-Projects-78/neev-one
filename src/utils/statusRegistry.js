@@ -58,6 +58,13 @@ const REGISTRY = [
   { key: 'sent', label: 'Sent', tone: 'neutral', aliases: ['sent'] },
   { key: 'returned', label: 'Returned', tone: 'warn', aliases: ['returned'] },
 
+  // --- reconciliation ------------------------------------------------------
+  { key: 'recorded', label: 'Recorded', tone: 'pos', aliases: ['recorded'] },
+  { key: 'categorised', label: 'Categorised', tone: 'pos', aliases: ['categorised', 'categorized'] },
+  { key: 'uncategorised', label: 'Uncategorised', tone: 'warn', aliases: ['uncategorised', 'uncategorized'] },
+  { key: 'balanced', label: 'Balanced', tone: 'pos', aliases: ['balanced'] },
+  { key: 'unbalanced', label: 'Unbalanced', tone: 'neg', aliases: ['unbalanced'] },
+
   // --- external filings ----------------------------------------------------
   { key: 'registered', label: 'Registered', tone: 'pos', aliases: ['registered'] },
   { key: 'failed', label: 'Failed', tone: 'neg', aliases: ['failed', 'error'] },
