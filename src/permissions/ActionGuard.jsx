@@ -52,9 +52,7 @@ export const ActionGuard = ({ permission, children }) => {
    *
    * An empty permission set means "we do not know", not "you may do nothing".
    * It happens while the request is in flight, when the endpoint errors, and
-   * in deployments where the permission service is not wired up at all — and
-   * in this very repository the endpoint currently answers 400, which would
-   * otherwise disable every guarded action in the product for everyone.
+   * in deployments where the permission service is not wired up at all.
    *
    * Failing open here is safe because this guard is a courtesy, not the
    * enforcement. The server holds a hundred and nine route checks and never
