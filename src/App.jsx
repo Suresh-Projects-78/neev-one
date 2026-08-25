@@ -13394,7 +13394,10 @@ const AppShell = () => {
               <span className={navCollapsed ? 'md:hidden' : ''}>Collapse</span>
             </button>
 
-            <div className="flex min-h-0 flex-1 gap-1">
+            <div
+              className="flex min-h-0 flex-1 gap-1"
+              onMouseLeave={() => setPeekModuleKey(null)}
+            >
               {/* The strip. Fixed width, fixed order, never reflows. */}
               <div className="flex flex-col items-center gap-0.5 overflow-y-auto shrink-0">
                 {visibleNav.map((entry) => {
@@ -13412,8 +13415,12 @@ const AppShell = () => {
                       key={entry.key}
                       type="button"
                       onClick={go}
-                      onMouseEnter={() => setPeekModuleKey(entry.key)}
-                      onFocus={() => setPeekModuleKey(entry.key)}
+                      // Only a module with contents is worth peeking at.
+                      // Hovering a single-screen entry used to swap a full
+                      // column for one row, which reads as the rail emptying
+                      // itself rather than as a preview.
+                      onMouseEnter={() => (entry.type === 'group' ? setPeekModuleKey(entry.key) : setPeekModuleKey(null))}
+                      onFocus={() => (entry.type === 'group' ? setPeekModuleKey(entry.key) : setPeekModuleKey(null))}
                       className="ui-rail-icon"
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
@@ -13434,17 +13441,11 @@ const AppShell = () => {
               {/* The current module, in full. Hidden when collapsed — the strip
                   survives, which is a better collapsed state than labelless
                   rows. */}
-              <div
-                className={`min-w-0 flex-1 overflow-y-auto ${navCollapsed ? 'md:hidden' : ''}`}
-                onMouseLeave={() => setPeekModuleKey(null)}
-              >
+              <div className={`min-w-0 flex-1 overflow-y-auto ${navCollapsed ? 'md:hidden' : ''}`}>
                 {shownModule ? (
                   <>
-                    <div className="ui-t-label px-2.5 pb-1 pt-1.5 flex items-center gap-1.5">
+                    <div className="ui-t-label px-2.5 pb-1 pt-1.5">
                       <span className="truncate">{shownModule.label}</span>
-                      {peekModuleKey && peekModuleKey !== activeModuleKey ? (
-                        <span className="ui-subtle text-[10px] normal-case tracking-normal">peeking</span>
-                      ) : null}
                     </div>
                     <div className="space-y-0.5">
                       {(shownModule.type === 'group' ? shownModule.items : [shownModule]).map((item) => {
