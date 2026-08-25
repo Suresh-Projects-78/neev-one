@@ -135,7 +135,7 @@ import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
 import { createLedgerAccount } from './api/ledger';
-import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals } from './components/ui/Primitives';
+import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals, FieldError, FieldErrorSummary } from './components/ui/Primitives';
 import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
@@ -191,6 +191,7 @@ import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
 import { useTheme } from './components/ui/useTheme';
 import { useDensity } from './components/ui/useDensity';
+import { useFieldErrors } from './components/ui/useFieldErrors';
 const normalizeId = (v) => String(v ?? '').trim();
 
 const getBranchLabel = (b) => {
@@ -1531,6 +1532,7 @@ const emptyExpenseLine = () => ({ ledgerId: '', description: '', amount: '', gst
 const NEW_LEDGER_OPTION = '__new_ledger__';
 
 const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null }) => {
+  const expenseErrors = useFieldErrors('expense');
   const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
   const expenseDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
   const expenseNumbering = expenseDocSettings?.numbering?.expense;
@@ -1717,27 +1719,26 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       if (lockExpenseNumber) expenseNumber = String(generatedExpenseNumber || '').trim();
       else if (!expenseNumber) expenseNumber = String(generatedExpenseNumber || '').trim();
     }
-    if (!expenseNumber) {
-      notify.error('Expense voucher number is required');
-      return;
-    }
-
     const expenseNumberClash = db.expenses.some((ex) => ex.companyId === currentCompany.id && String(ex.number || '').trim() === expenseNumber);
-    if (expenseNumberClash) {
-      notify.error('Expense voucher number already exists. Please change the number or update numbering settings in Company Profile.');
-      return;
-    }
-
     const usableLines = computed.rows.filter((r) => String(r.ledgerId || '').trim() && r.amount > 0);
-    if (!usableLines.length) {
-      notify.error('Add at least one expense ledger line with an amount.');
-      return;
-    }
-    const missingLedger = (formData.lines || []).some((l) => Number(l.amount) > 0 && !String(l.ledgerId || '').trim());
-    if (missingLedger) {
-      notify.error('Every line with an amount needs an expense ledger.');
-      return;
-    }
+
+    // One pass, every failure, each at its own field.
+    expenseErrors.reset();
+    expenseErrors.require('number', expenseNumber, 'Voucher number is required');
+    expenseErrors.check(
+      'number',
+      !expenseNumber || !expenseNumberClash,
+      'That number is already used. Change it, or adjust numbering in Company Profile.'
+    );
+    expenseErrors.require('date', formData.date, 'Voucher date is required');
+    expenseErrors.require('dueDate', formData.dueDate, 'Due date is required');
+    expenseErrors.check('lines', usableLines.length > 0, 'Add at least one line with a ledger and an amount.');
+    expenseErrors.check(
+      'lines',
+      !(formData.lines || []).some((l) => Number(l.amount) > 0 && !String(l.ledgerId || '').trim()),
+      'Every line with an amount needs an expense ledger.'
+    );
+    if (expenseErrors.failed()) return;
 
     if (gstEnabled && !companyState) {
       notify.error('Please set Company State in Tax & Compliances before creating GST expenses.');
@@ -1833,7 +1834,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   const costCenters = (db.costCenters || []).filter((c) => c.companyId === currentCompany.id);
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
       {/* Voucher number and date sit to the right of the heading so the body
           of the form keeps the full width for entry. */}
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -1847,21 +1848,31 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
             <input
               type="text"
               value={formData.number}
-              onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+              onChange={(e) => {
+                expenseErrors.clearField('number');
+                setFormData({ ...formData, number: e.target.value });
+              }}
               className={`ui-input w-full px-3 py-2 ${lockExpenseNumber ? 'ui-sunken' : ''}`}
               disabled={lockExpenseNumber}
               required
+              {...expenseErrors.props('number')}
             />
+            <FieldError error={expenseErrors.error('number')} id={expenseErrors.errorId('number')} />
           </div>
           <div className="w-44">
             <label className="block text-sm font-medium mb-1">Date</label>
             <input
               type="date"
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              onChange={(e) => {
+                expenseErrors.clearField('date');
+                setFormData({ ...formData, date: e.target.value });
+              }}
               className="ui-input w-full px-3 py-2"
               required
+              {...expenseErrors.props('date')}
             />
+            <FieldError error={expenseErrors.error('date')} id={expenseErrors.errorId('date')} />
           </div>
         </div>
       </div>
@@ -1913,10 +1924,15 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
           <input
             type="date"
             value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value, dueDateTouched: true })}
+            onChange={(e) => {
+              expenseErrors.clearField('dueDate');
+              setFormData({ ...formData, dueDate: e.target.value, dueDateTouched: true });
+            }}
             className="ui-input w-full px-3 py-2"
             required
+            {...expenseErrors.props('dueDate')}
           />
+          <FieldError error={expenseErrors.error('dueDate')} id={expenseErrors.errorId('dueDate')} />
           {vendor ? (
             <div className="text-xs ui-muted mt-1">
               {termDaysFor(vendor, 0) > 0 ? termsLabel(vendor, 0) : 'No credit period — due on the expense date'}
@@ -1944,9 +1960,12 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Expense Ledgers (Direct / Indirect Expenses)</label>
-          <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-            <Plus size={16} /> Add Row
-          </button>
+          <span className="flex items-center gap-3">
+            <FieldError error={expenseErrors.error('lines')} id={expenseErrors.errorId('lines')} />
+            <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
+              <Plus size={16} /> Add Row
+            </button>
+          </span>
         </div>
 
         {expenseLedgers.length === 0 ? (
@@ -2310,6 +2329,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
 const NEW_CATEGORY_OPTION = '__new_item_category__';
 
 const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = null, onClose }) => {
+  const itemErrors = useFieldErrors('item');
   const isEdit = Boolean(initialData);
 
   const [formData, setFormData] = useState(() => {
@@ -2447,14 +2467,6 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
 
     const code = String(formData.code || '').trim();
     const name = String(formData.name || '').trim();
-    if (!code) {
-      notify.error('Item code is required');
-      return;
-    }
-    if (!name) {
-      notify.error('Item name is required');
-      return;
-    }
 
     const gstRate = parseFloat(String(formData.gstRate ?? '0'));
     const salePrice = parseFloat(String(formData.salePrice ?? '0'));
@@ -2468,10 +2480,12 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
         String(it.code || '').trim().toLowerCase() === code.toLowerCase() &&
         (!isEdit || String(it.id) !== String(initialData?.id))
     );
-    if (clash) {
-      notify.error('Item code already exists. Please use a different code.');
-      return;
-    }
+    // Both blanks and the clash reported together, at their own fields.
+    itemErrors.reset();
+    itemErrors.require('code', code, 'Item code is required');
+    itemErrors.check('code', !code || !clash, 'That code is already used by another item.');
+    itemErrors.require('name', name, 'Item name is required');
+    if (itemErrors.failed()) return;
 
     if (isEdit) {
       const existing = (db.items || []).find((it) => it.companyId === currentCompany.id && String(it.id) === String(initialData?.id));
@@ -2541,27 +2555,37 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Code</label>
           <input
             type="text"
             value={formData.code}
-            onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+            onChange={(e) => {
+              itemErrors.clearField('code');
+              setFormData({ ...formData, code: e.target.value });
+            }}
             className="ui-input w-full px-3 py-2"
             required
+            {...itemErrors.props('code')}
           />
+          <FieldError error={itemErrors.error('code')} id={itemErrors.errorId('code')} />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Name</label>
           <input
             type="text"
             value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            onChange={(e) => {
+              itemErrors.clearField('name');
+              setFormData({ ...formData, name: e.target.value });
+            }}
             className="ui-input w-full px-3 py-2"
             required
+            {...itemErrors.props('name')}
           />
+          <FieldError error={itemErrors.error('name')} id={itemErrors.errorId('name')} />
         </div>
         <div className="col-span-2">
           <label className="block text-sm font-medium mb-1">Description</label>

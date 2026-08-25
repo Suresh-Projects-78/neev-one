@@ -5,6 +5,8 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance, documentOutstanding } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
+import { useFieldErrors } from '../../components/ui/useFieldErrors';
+import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
@@ -32,6 +34,7 @@ import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
+  const fieldErrors = useFieldErrors('bill');
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   const resolveBranchIdFromWarehouseId = (warehouseId) => {
     const wid = String(warehouseId || '').trim();
@@ -186,26 +189,26 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       if (lockBillNumber) billNumber = String(generatedBillNumber || '').trim();
       else if (!billNumber) billNumber = String(generatedBillNumber || '').trim();
     }
-    if (!billNumber) {
-      notify.error('Bill number is required');
-      return;
-    }
-
-    if (!String(formData.warehouseId || '').trim()) {
-      notify.error('Warehouse is required');
-      return;
-    }
-
+    // Everything about a field, gathered in one pass and shown at the fields —
+    // not one at a time in the opposite corner of the screen.
     const billNumberClash = db.bills.some((b) => b.companyId === currentCompany.id && String(b.number || '').trim() === billNumber);
-    if (billNumberClash) {
-      notify.error('Bill number already exists. Please change the number or update numbering settings in Company Profile.');
-      return;
-    }
 
-    if (!formData.vendorId) {
-      notify.error('Vendor is required');
-      return;
-    }
+    fieldErrors.reset();
+    fieldErrors.require('number', billNumber, 'Bill number is required');
+    fieldErrors.check(
+      'number',
+      !billNumber || !billNumberClash,
+      'That number is already used. Change it, or adjust numbering in Company Profile.'
+    );
+    fieldErrors.require('date', formData.date, 'Bill date is required');
+    fieldErrors.require('warehouseId', formData.warehouseId, 'Warehouse is required');
+    fieldErrors.require('vendorId', formData.vendorId, 'Vendor is required');
+    fieldErrors.check(
+      'items',
+      !(formData.items || []).some((l) => !String(l.itemId || '').trim()),
+      'Every line needs an item — GST is charged per item.'
+    );
+    if (fieldErrors.failed()) return;
 
     // Year-end lock: nothing back-dates into closed books.
     {
@@ -218,12 +221,6 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
     if (!companyState) {
       notify.error('Please set Company State in Company Profile before creating GST bills.');
-      return;
-    }
-
-    const hasMissingItem = (formData.items || []).some((l) => !String(l.itemId || '').trim());
-    if (hasMissingItem) {
-      notify.error('Please select an Item for every line. Items are mandatory for GST.');
       return;
     }
 
@@ -338,7 +335,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   };
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
       <div className="flex justify-end">
         <button
           type="button"
@@ -357,14 +354,22 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           <input
             type="text"
             value={formData.number}
-            onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+            onChange={(e) => {
+              fieldErrors.clearField('number');
+              setFormData({ ...formData, number: e.target.value });
+            }}
             className={`w-full px-3 py-2 border rounded-lg ${lockBillNumber ? 'ui-sunken' : ''}`}
             disabled={lockBillNumber}
             required
+            {...fieldErrors.props('number')}
           />
+          <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
         </div>
 
-        <div>
+        <div
+          ref={(el) => fieldErrors.register('vendorId', el)}
+          data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
+        >
           <VendorPicker
             db={db}
             setDb={setDb}
@@ -375,6 +380,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                 // Requirement 12: the bill due date follows the vendor's agreed
                 // credit period rather than a blanket +30 days.
                 const picked = vendors.find((v) => String(v.id) === String(vendorId));
+                fieldErrors.clearField('vendorId');
                 return {
                   ...prev,
                   vendorId,
@@ -383,25 +389,39 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               })
             }
           />
+          <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
         </div>
 
-        <WarehouseField
-          value={formData.warehouseId}
-          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
-          options={warehouseOptions}
-          activeWarehouseId={defaultWarehouseId}
-          isEdit={Boolean(initialData)}
-          className="ui-select w-full px-3 py-2 ui-surface"
-        />
+        <div
+          ref={(el) => fieldErrors.register('warehouseId', el)}
+          data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
+        >
+          <WarehouseField
+            value={formData.warehouseId}
+            onChange={(warehouseId) => {
+              fieldErrors.clearField('warehouseId');
+              setFormData((p) => ({ ...p, warehouseId }));
+            }}
+            options={warehouseOptions}
+            activeWarehouseId={defaultWarehouseId}
+            isEdit={Boolean(initialData)}
+            className="ui-select w-full px-3 py-2 ui-surface"
+          />
+          <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
+        </div>
 
         <div>
           <label className="block text-sm font-medium mb-1">Bill Date</label>
           <input
             type="date"
             value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            onChange={(e) => {
+              fieldErrors.clearField('date');
+              setFormData({ ...formData, date: e.target.value });
+            }}
             className="ui-input w-full px-3 py-2"
             required
+            {...fieldErrors.props('date')}
           />
         </div>
 
@@ -441,9 +461,12 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="block text-sm font-medium">Line Items</label>
-          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-            <Plus size={16} /> Add Item
-          </button>
+          <span className="flex items-center gap-3">
+            <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
+            <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
+              <Plus size={16} /> Add Item
+            </button>
+          </span>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -582,7 +605,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end items-center gap-3">
+        <FieldErrorSummary errors={fieldErrors.errors} />
         <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
           Create Bill
         </button>
