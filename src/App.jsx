@@ -11608,6 +11608,12 @@ const AppShell = () => {
 
           { type: 'subgroup', label: 'Business' },
           { key: 'settingsFeatures', label: 'General Preferences', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
+          { key: 'settingsSales', label: 'Sales', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsPurchases', label: 'Purchases', icon: ShoppingCart, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsInventory', label: 'Inventory', icon: Package, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsAccounting', label: 'Accounting', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsPaymentsReceipts', label: 'Payments & Receipts', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsDocuments', label: 'Documents', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
 
           { type: 'subgroup', label: 'Tax & Compliance' },
@@ -12873,6 +12879,15 @@ const AppShell = () => {
         return <RolePermissionManager />;
       case 'settingsFeatures':
         return <FeatureSettings />;
+      // The Business panes are the same screen filtered to one part of the
+      // business, not six copies of it.
+      case 'settingsSales':
+      case 'settingsPurchases':
+      case 'settingsInventory':
+      case 'settingsAccounting':
+      case 'settingsPaymentsReceipts':
+      case 'settingsDocuments':
+        return <FeatureSettings pane={active} />;
       case 'settingsEmail':
         return <EmailSettings />;
       case 'settingsSecurity':

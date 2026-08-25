@@ -4,6 +4,7 @@ import { Check, Lock, RotateCcw, Save } from 'lucide-react';
 import { getFeatureCatalog, setFeatures } from '../../api/features';
 import { PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 import { useFeatures } from '../../permissions/useFeatures';
+import { paneForFeature, isGeneralFeature, paneMeta } from './businessPanes';
 
 const CATEGORY_ORDER = ['Operations', 'Accounting', 'Inventory', 'Governance', 'Communication', 'Data'];
 
@@ -22,7 +23,7 @@ const CATEGORY_BLURB = {
  * Everything switched off here disappears from navigation and from forms, so a
  * single-shop customer is not asked for a branch on every invoice.
  */
-export const FeatureSettings = () => {
+export const FeatureSettings = ({ pane = '' }) => {
   const { reload: reloadFeatures } = useFeatures();
 
   const [catalog, setCatalog] = useState([]);
@@ -62,14 +63,26 @@ export const FeatureSettings = () => {
     [values, baseline]
   );
 
+  /**
+   * Only the switches that belong on this screen.
+   *
+   * With no pane this is General Preferences, which keeps everything that has
+   * not been given a home of its own — so a capability added on the server
+   * later appears here rather than nowhere.
+   */
+  const shown = useMemo(
+    () => catalog.filter((f) => (pane ? paneForFeature(f.key) === pane : isGeneralFeature(f.key))),
+    [catalog, pane]
+  );
+
   const byCategory = useMemo(() => {
     const map = new Map();
-    for (const f of catalog) {
+    for (const f of shown) {
       if (!map.has(f.category)) map.set(f.category, []);
       map.get(f.category).push(f);
     }
     return map;
-  }, [catalog]);
+  }, [shown]);
 
   // A child cannot be on while its parent is off; the server resolves this too,
   // but showing it live explains why a toggle stopped responding.
@@ -109,8 +122,11 @@ export const FeatureSettings = () => {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Features"
-        description="Switch capabilities on or off for this company. Anything off is hidden from menus and forms."
+        title={paneMeta(pane)?.label || 'General Preferences'}
+        description={
+          paneMeta(pane)?.blurb ||
+          'Capabilities that do not belong to one part of the business. Anything off is hidden from menus and forms.'
+        }
         actions={
           <>
             {dirty ? <span className="ui-pill ui-pill-warn">Unsaved changes</span> : null}
