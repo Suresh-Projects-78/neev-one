@@ -9,6 +9,7 @@ import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   BadgePercent,
   BarChart3,
@@ -10831,6 +10832,49 @@ const AppShell = () => {
   const { density, set: setDensity } = useDensity();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  /**
+   * Where to draw the account menu.
+   *
+   * It has to leave the rail entirely. <main> runs a fade animation, and an
+   * animation creates a stacking context — so a menu painted inside the
+   * sidebar, at any z-index, still ends up underneath the page content. It was
+   * being sliced down the middle by the content panel.
+   *
+   * Rendered to <body> at fixed coordinates measured off the trigger, opening
+   * upward because downward from the foot of the rail is off the screen.
+   */
+  const [profileMenuPos, setProfileMenuPos] = useState(null);
+
+  /**
+   * How tall the rail can be.
+   *
+   * The account block is pinned to the foot of the rail, so the rail has to
+   * reach the foot of the window — otherwise it ends wherever the icon list
+   * ends and the avatar floats in the middle of the screen with nothing under
+   * it.
+   *
+   * The height cannot be written as CSS arithmetic because the rail's top edge
+   * moves: the unconfirmed-email banner sits above it and goes away once the
+   * address is confirmed. So it is measured, and re-measured when the window
+   * resizes or the banner comes and goes.
+   */
+  const navRef = useRef(null);
+  const [navHeight, setNavHeight] = useState(null);
+  useEffect(() => {
+    const measure = () => {
+      const el = navRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      setNavHeight(Math.max(240, Math.round(window.innerHeight - top - 12)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const t = setInterval(measure, 800);
+    return () => {
+      window.removeEventListener('resize', measure);
+      clearInterval(t);
+    };
+  }, []);
   const profileMenuRef = useRef(null);
   const getDbStorageKey = () => {
     const token = String(localStorage.getItem('token') || '').trim();
@@ -10949,6 +10993,10 @@ const AppShell = () => {
     const onMouseDown = (e) => {
       if (!profileMenuRef.current) return;
       if (profileMenuRef.current.contains(e.target)) return;
+      // The menu is portalled to <body>, so it is not inside the trigger's
+      // ref. Without this, every click on a menu item counted as a click
+      // outside and shut the menu before the item could act.
+      if (e.target instanceof Element && e.target.closest('[data-account-menu]')) return;
       setProfileMenuOpen(false);
     };
     document.addEventListener('mousedown', onMouseDown);
@@ -13325,7 +13373,12 @@ const AppShell = () => {
         >
           <nav
             aria-label="Main"
-            className="ui-panel p-2 md:sticky md:top-[4.5rem] flex flex-col md:max-h-[calc(100dvh-5rem)]"
+            /* Height, not max-height: the account block is pinned to the foot
+               of the rail, and a content-sized rail leaves it floating in the
+               middle of the screen with nothing under it. */
+            ref={navRef}
+            style={navHeight ? { height: navHeight } : undefined}
+            className="ui-panel p-2 md:sticky md:top-[4.5rem] flex flex-col"
           >
             {/* Collapse control: desktop only — on a phone the rail already
                 stacks above the content and hiding labels saves nothing. */}
@@ -13449,7 +13502,11 @@ const AppShell = () => {
             >
               <button
                 type="button"
-                onClick={() => setProfileMenuOpen((v) => !v)}
+                onClick={(e) => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  setProfileMenuPos({ left: Math.max(8, r.left), bottom: Math.max(8, window.innerHeight - r.top + 8) });
+                  setProfileMenuOpen((v) => !v);
+                }}
                 className="ui-nav-item w-full"
                 aria-haspopup="menu"
                 aria-expanded={profileMenuOpen}
@@ -13466,11 +13523,18 @@ const AppShell = () => {
                 <ChevronDown size={14} aria-hidden="true" className={`rotate-180 ${navCollapsed ? 'md:hidden' : ''}`} />
               </button>
 
-              {profileMenuOpen && (
+              {profileMenuOpen && profileMenuPos
+                ? createPortal(
                 <div
                   role="menu"
-                  className="absolute left-0 bottom-full mb-2 w-60 rounded-lg overflow-hidden z-50 ui-card ui-in-pop"
-                  style={{ boxShadow: 'var(--shadow-pop)', '--pop-origin': 'bottom left' }}
+                  data-account-menu
+                  className="fixed w-60 rounded-lg overflow-hidden z-[130] ui-card ui-in-pop"
+                  style={{
+                    left: profileMenuPos.left,
+                    bottom: profileMenuPos.bottom,
+                    boxShadow: 'var(--shadow-pop)',
+                    '--pop-origin': 'bottom left',
+                  }}
                 >
                   <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
                     <div className="text-sm font-semibold ui-title truncate">{userEmail}</div>
@@ -13559,8 +13623,10 @@ const AppShell = () => {
                   >
                     Sign out
                   </button>
-                </div>
-              )}
+                </div>,
+                    document.body
+                  )
+                : null}
             </div>
           </nav>
         </aside>
