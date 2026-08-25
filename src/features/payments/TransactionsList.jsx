@@ -3,6 +3,7 @@ import { notify } from '../../components/ui/notify';
 
 import RecordPaymentForm from './RecordPaymentForm';
 import { formatMoney, round2 } from '../../utils/money';
+import { TableTotals } from '../../components/ui/Primitives';
 import { downloadCsv } from '../../utils/csv';
 import { ListToolbar, useListSearch } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
@@ -373,7 +374,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full">
+        <table className="ui-table w-full ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
               <ColumnHeader label="Date" col="date" state={colFilters} className="ui-th" />
@@ -413,6 +414,12 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
             )}
           </tbody>
         </table>
+        <TableTotals
+          count={shown.length}
+          totalCount={(rows || []).length}
+          noun="transactions"
+          figures={[{ label: 'Value', value: formatMoney(shown.reduce((t, r) => t + Number(r.amount || 0), 0), currentCompany) }]}
+        />
       </div>
     </div>
   );

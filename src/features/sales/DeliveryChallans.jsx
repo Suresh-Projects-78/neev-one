@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Truck } from 'lucide-react';
-import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import Modal from '../../components/ui/Modal';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
@@ -271,7 +271,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
         </div>
       ) : (
         <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full">
+          <table className="ui-table w-full ui-table-sticky">
             <thead>
               <tr>
                 <ColumnHeader label="DC #" col="number" state={dcFilters} className="ui-th" />
@@ -308,6 +308,12 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
               ))}
             </tbody>
           </table>
+          <TableTotals
+            count={challans.length}
+            totalCount={dcSearch.filtered.length}
+            noun="challans"
+            figures={[{ label: 'Goods value', value: formatMoney(challans.reduce((t, r) => t + Number(r.value || 0), 0), currentCompany) }]}
+          />
         </div>
       )}
 

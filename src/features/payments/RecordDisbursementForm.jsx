@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { notify } from '../../components/ui/notify';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
+import { useFieldErrors } from '../../components/ui/useFieldErrors';
+import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
@@ -22,6 +24,7 @@ const canPayDoc = (doc) => {
 };
 
 const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
+  const fieldErrors = useFieldErrors('payment');
   const companyId = currentCompany.id;
 
   const initial = useMemo(() => {
@@ -208,16 +211,17 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
     e.preventDefault();
 
     const amount = Number(formData.amount ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      notify.error('Payment amount must be greater than 0');
-      return;
-    }
-
     const vendorIdNum = Number(formData.vendorId);
-    if (!Number.isFinite(vendorIdNum) || !vendorIdNum) {
-      notify.error('Party (Vendor) is required');
-      return;
+
+    // One pass, each failure at its own field. Allocation problems below name a
+    // specific document, so they keep their toast.
+    fieldErrors.reset();
+    fieldErrors.check('amount', Number.isFinite(amount) && amount > 0, 'Enter an amount greater than zero');
+    fieldErrors.check('vendorId', Number.isFinite(vendorIdNum) && !!vendorIdNum, 'Vendor is required');
+    if (!hideMode) {
+      fieldErrors.require('ledgerAccountId', ledgerAccountId, 'Choose where the money was paid from');
     }
+    if (fieldErrors.failed()) return;
 
     if (computed.allocated > amount + 0.0001) {
       notify.error('Total allocated cannot be more than payment amount');
@@ -244,11 +248,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         notify.error(`Allocation exceeds outstanding for ${line.voucherType} ${doc.number || ''}.`);
         return;
       }
-    }
-
-    if (!hideMode && !String(ledgerAccountId || "").trim()) {
-      notify.error('Choose the cash or bank account the money was paid from');
-      return;
     }
 
     const vendors = safeArray(db.vendors).filter((v) => v.companyId === companyId);
@@ -397,7 +396,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
   }, [allocations]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Payment Date</label>
@@ -414,26 +413,37 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
           <input
             type="number"
             value={formData.amount}
-            onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
+            onChange={(e) => {
+              fieldErrors.clearField('amount');
+              setFormData((p) => ({ ...p, amount: e.target.value }));
+            }}
             className="ui-input w-full px-3 py-2"
             min="0"
             step="0.01"
             required
+            {...fieldErrors.props('amount')}
           />
+          <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
         </div>
 
-        <div className="col-span-2">
+        <div
+          className="col-span-2"
+          ref={(el) => fieldErrors.register('vendorId', el)}
+          data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
+        >
           <VendorPicker
             db={db}
             setDb={setDb}
             currentCompany={currentCompany}
             value={formData.vendorId}
             onChange={(vendorId) => {
+              fieldErrors.clearField('vendorId');
               setFormData((p) => ({ ...p, vendorId }));
               setAllocations({});
             }}
             label="Vendor"
           />
+          <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
         </div>
 
         {!hideMode ? (
@@ -443,10 +453,14 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
             </label>
             <select
               value={ledgerAccountId}
-              onChange={(e) => setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }))}
+              onChange={(e) => {
+                fieldErrors.clearField('ledgerAccountId');
+                setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }));
+              }}
               className="ui-select w-full px-3 py-2"
               disabled={modesLoading}
               required
+              {...fieldErrors.props('ledgerAccountId')}
             >
               <option value="">{modesLoading ? 'Loading accounts…' : 'Select cash or bank account'}</option>
               {modes.map((m) => (
@@ -570,7 +584,8 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         />
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end items-center gap-2">
+        <FieldErrorSummary errors={fieldErrors.errors} />
         <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
           Cancel
         </button>

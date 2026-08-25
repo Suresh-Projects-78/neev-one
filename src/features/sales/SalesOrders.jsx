@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, ClipboardList } from 'lucide-react';
-import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
@@ -359,7 +359,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
         </div>
       ) : (
         <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full">
+          <table className="ui-table w-full ui-table-sticky">
             <thead>
               <tr>
                 <ColumnHeader label="SO #" col="number" state={soFilters} className="ui-th" />
@@ -403,6 +403,12 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
               })}
             </tbody>
           </table>
+          <TableTotals
+            count={shown.length}
+            totalCount={orders.length}
+            noun="sales orders"
+            figures={[{ label: 'Value', value: formatMoney(shown.reduce((t, r) => t + Number(r.total || 0), 0), currentCompany) }]}
+          />
         </div>
       )}
     </div>

@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { notify } from '../../components/ui/notify';
+import { useFieldErrors } from '../../components/ui/useFieldErrors';
+import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { createPayment } from '../../api/payments';
@@ -24,6 +26,7 @@ const canCollectAgainstInvoice = (inv) => {
 };
 
 const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
+  const fieldErrors = useFieldErrors('receipt');
   const companyId = currentCompany.id;
 
   const initial = useMemo(() => {
@@ -183,16 +186,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     e.preventDefault();
 
     const amount = Number(formData.amount ?? 0);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      notify.error('Receipt amount must be greater than 0');
-      return;
-    }
-
     const customerIdNum = Number(formData.customerId);
-    if (!Number.isFinite(customerIdNum) || !customerIdNum) {
-      notify.error('Party (Customer) is required');
-      return;
+
+    // Collected in one pass and shown at the fields. Allocation problems below
+    // name a specific invoice, so they stay in the corner — there is no single
+    // box to point them at.
+    fieldErrors.reset();
+    fieldErrors.check('amount', Number.isFinite(amount) && amount > 0, 'Enter an amount greater than zero');
+    fieldErrors.check('customerId', Number.isFinite(customerIdNum) && !!customerIdNum, 'Customer is required');
+    if (!hideMode) {
+      fieldErrors.require('ledgerAccountId', ledgerAccountId, 'Choose where the money was received');
     }
+    if (fieldErrors.failed()) return;
 
     // Validate allocations are within invoice balances
     for (const line of computed.lines) {
@@ -217,10 +222,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       return;
     }
 
-    if (!hideMode && !String(ledgerAccountId || "").trim()) {
-      notify.error('Choose the cash or bank account the money was received into');
-      return;
-    }
 
     const customers = safeArray(db.customers).filter((c) => c.companyId === companyId);
     const customer = customers.find((c) => Number(c.id) === customerIdNum) || null;
@@ -351,7 +352,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Receipt Date</label>
@@ -368,25 +369,36 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           <input
             type="number"
             value={formData.amount}
-            onChange={(e) => setFormData((p) => ({ ...p, amount: e.target.value }))}
+            onChange={(e) => {
+              fieldErrors.clearField('amount');
+              setFormData((p) => ({ ...p, amount: e.target.value }));
+            }}
             className="ui-input w-full px-3 py-2"
             min="0"
             step="0.01"
             required
+            {...fieldErrors.props('amount')}
           />
+          <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
         </div>
 
-        <div className="col-span-2">
+        <div
+          className="col-span-2"
+          ref={(el) => fieldErrors.register('customerId', el)}
+          data-invalid-within={fieldErrors.error('customerId') ? 'true' : undefined}
+        >
           <CustomerPicker
             db={db}
             setDb={setDb}
             currentCompany={currentCompany}
             value={formData.customerId}
             onChange={(customerId) => {
+              fieldErrors.clearField('customerId');
               setFormData((p) => ({ ...p, customerId }));
               setAllocations({});
             }}
           />
+          <FieldError error={fieldErrors.error('customerId')} id={fieldErrors.errorId('customerId')} />
         </div>
 
         {!hideMode ? (
@@ -396,10 +408,14 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             </label>
             <select
               value={ledgerAccountId}
-              onChange={(e) => setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }))}
+              onChange={(e) => {
+                fieldErrors.clearField('ledgerAccountId');
+                setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }));
+              }}
               className="ui-select w-full px-3 py-2"
               disabled={modesLoading}
               required
+              {...fieldErrors.props('ledgerAccountId')}
             >
               <option value="">{modesLoading ? 'Loading accounts…' : 'Select cash or bank account'}</option>
               {modes.map((m) => (
@@ -408,6 +424,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 </option>
               ))}
             </select>
+            <FieldError error={fieldErrors.error('ledgerAccountId')} id={fieldErrors.errorId('ledgerAccountId')} />
             {modesError ? (
               <p className="mt-1 text-sm text-[rgb(var(--neg))]">{modesError}</p>
             ) : !modesLoading && modes.length === 0 ? (
@@ -527,7 +544,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         />
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end items-center gap-2">
+        <FieldErrorSummary errors={fieldErrors.errors} />
         <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
           Cancel
         </button>
