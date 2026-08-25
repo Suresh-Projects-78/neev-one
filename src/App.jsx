@@ -189,6 +189,7 @@ import { resendVerification } from './api/email';
 import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
 import { useTheme } from './components/ui/useTheme';
+import { useDensity } from './components/ui/useDensity';
 const normalizeId = (v) => String(v ?? '').trim();
 
 const getBranchLabel = (b) => {
@@ -10827,6 +10828,7 @@ const AppShell = () => {
   const { can, loading: permsLoading } = usePermissions();
   const { isEnabled } = useFeatures();
   const { theme, toggle: toggleTheme } = useTheme();
+  const { density, set: setDensity } = useDensity();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef(null);
@@ -11496,7 +11498,6 @@ const AppShell = () => {
           { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsPermissions', label: 'Role Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsGovernance', label: 'Governance', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
-          { key: 'settingsProfile', label: 'My Profile', icon: Users },
 
           { type: 'subgroup', label: 'Product' },
           { key: 'settingsFeatures', label: 'Features', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
@@ -13488,6 +13489,64 @@ const AppShell = () => {
                   >
                     My profile
                   </button>
+
+                  {/* Personal preferences, not the company's. Appearance and
+                      density belong to the person sitting here — they follow
+                      them between machines and have nothing to do with the
+                      org's tax profile, so they do not belong in Settings. */}
+                  <div style={{ borderTop: '1px solid rgb(var(--border))' }} className="px-3 pt-2.5 pb-1">
+                    <span className="ui-t-label">Appearance</span>
+                  </div>
+                  <div className="px-3 pb-2 flex gap-1.5">
+                    {[
+                      { key: 'light', label: 'Light' },
+                      { key: 'dark', label: 'Dark' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={theme === opt.key}
+                        onClick={() => {
+                          if (theme !== opt.key) toggleTheme();
+                        }}
+                        className="ui-btn ui-btn-sm flex-1"
+                        style={
+                          theme === opt.key
+                            ? { backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }
+                            : { color: 'rgb(var(--fg-muted))' }
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="px-3 pt-1 pb-1">
+                    <span className="ui-t-label">Row density</span>
+                  </div>
+                  <div className="px-3 pb-2.5 flex gap-1.5">
+                    {[
+                      { key: 'comfortable', label: 'Comfortable' },
+                      { key: 'compact', label: 'Compact' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={density === opt.key}
+                        onClick={() => setDensity(opt.key)}
+                        className="ui-btn ui-btn-sm flex-1"
+                        style={
+                          density === opt.key
+                            ? { backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }
+                            : { color: 'rgb(var(--fg-muted))' }
+                        }
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <button
                     type="button"
                     role="menuitem"
@@ -13496,7 +13555,7 @@ const AppShell = () => {
                       setProfileMenuOpen(false);
                     }}
                     className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--neg-soft))]"
-                    style={{ color: 'rgb(var(--neg))' }}
+                    style={{ color: 'rgb(var(--neg))', borderTop: '1px solid rgb(var(--border))' }}
                   >
                     Sign out
                   </button>
