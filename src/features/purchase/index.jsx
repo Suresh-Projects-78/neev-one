@@ -2729,7 +2729,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
-        <table className="ui-table w-full">
+        <table className="ui-table w-full ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
               <ColumnHeader label="Debit Note #" col="number" state={dnFilters} className="ui-th" />
@@ -2793,6 +2793,14 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
             )}
           </tbody>
         </table>
+        <TableTotals
+          count={debitNotes.length}
+          totalCount={(db.debitNotes || []).filter((d) => d.companyId === currentCompany.id).length}
+          noun="debit notes"
+          figures={[
+            { label: 'Value', value: formatMoney(debitNotes.reduce((t, d) => t + Number(d.total || 0), 0), currentCompany) },
+          ]}
+        />
       </div>
     </div>
   );

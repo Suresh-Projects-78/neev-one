@@ -1590,7 +1590,7 @@ export const EstimatesList = ({
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full">
+        <table className="ui-table w-full ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
               <ColumnHeader label="Estimate #" col="number" state={estFilters} className="ui-th" />
@@ -1668,6 +1668,12 @@ export const EstimatesList = ({
             )}
           </tbody>
         </table>
+        <TableTotals
+          count={estimates.length}
+          totalCount={(db.estimates || []).filter((e) => e.companyId === currentCompany.id).length}
+          noun="estimates"
+          figures={[{ label: 'Value', value: formatMoney(estimates.reduce((t, e) => t + Number(e.total || 0), 0), currentCompany) }]}
+        />
       </div>
 
       {openMenu?.id ? (
@@ -1887,7 +1893,7 @@ export const CreditNotesList = ({
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full">
+        <table className="ui-table w-full ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
               <ColumnHeader label="Credit #" col="number" state={cnFilters} className="ui-th" />
@@ -1947,6 +1953,14 @@ export const CreditNotesList = ({
             )}
           </tbody>
         </table>
+        <TableTotals
+          count={creditNotes.length}
+          totalCount={(db.creditNotes || []).filter((c) => c.companyId === currentCompany.id).length}
+          noun="credit notes"
+          figures={[
+            { label: 'Value', value: formatMoney(creditNotes.reduce((t, c) => t + Number(c.total || 0), 0), currentCompany) },
+          ]}
+        />
       </div>
     </div>
   );
