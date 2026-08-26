@@ -142,6 +142,7 @@ import { usePermissions } from './permissions/usePermissions';
 import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
+import TermsSettings from './features/settings/TermsSettings';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
@@ -1285,7 +1286,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
 
   const openVoucher = (expense) => {
     openModal(
-      <ExpenseVoucher expense={expense} currentCompany={currentCompany} />,
+      <ExpenseVoucher expense={expense} currentCompany={currentCompany} db={db} />,
       { title: `Expense ${expense?.number || ''}`.trim(), maxWidthClass: 'max-w-4xl' }
     );
   };
@@ -11578,6 +11579,7 @@ const AppShell = () => {
           { key: 'gstRates', label: 'GST Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
           { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
           { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
+          { key: 'settingsTerms', label: 'Terms & Conditions', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
         ],
       },
             {
@@ -12877,6 +12879,8 @@ const AppShell = () => {
       }
       case 'settingsPermissions':
         return <RolePermissionManager />;
+      case 'settingsTerms':
+        return <TermsSettings db={db} setDb={setDb} currentCompany={currentCompany} />;
       case 'settingsFeatures':
         return <FeatureSettings />;
       // The Business panes are the same screen filtered to one part of the

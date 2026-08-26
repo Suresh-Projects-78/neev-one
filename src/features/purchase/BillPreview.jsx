@@ -1,3 +1,4 @@
+import { getDocSettings } from '../../utils/docSettings';
 import React, { useMemo, useState } from 'react';
 import { Printer, Download, Share2 } from 'lucide-react';
 
@@ -22,6 +23,9 @@ const esc = (v) =>
     .replace(/>/g, '&gt;');
 
 const BillPreview = ({ db, currentCompany, bill }) => {
+  // Terms are stored per document type and were only ever printed on the
+  // invoice, so a bill could hold terms that nothing put on the page.
+  const billTerms = String(getDocSettings(db, currentCompany)?.templates?.bill?.termsText || '').trim();
   const [busy, setBusy] = useState('');
 
   const vendor = useMemo(
@@ -92,6 +96,8 @@ const BillPreview = ({ db, currentCompany, bill }) => {
         .grand{border-top:1px solid #111;font-weight:700;font-size:14px}
         .note{margin-top:18px;padding:8px 10px;background:#fff6ed;border:1px solid #f6c99b}
         .sign{margin-top:48px;display:flex;justify-content:space-between}
+      .terms { margin-top:10px; border:1px solid #999; border-radius:4px; padding:6px 8px; font-size:10px; color:#444; }
+      .terms-h { font-weight:700; text-transform:uppercase; color:#222; margin-bottom:2px; }
       </style></head><body>
       <div class="head">
         <div>
@@ -142,9 +148,11 @@ const BillPreview = ({ db, currentCompany, bill }) => {
           : ''
       }
 
+      ${billTerms ? `<div class="terms"><div class="terms-h">Terms &amp; Conditions</div>${esc(billTerms).replace(/\n/g, '<br/>')}</div>` : ''}
+
       <div class="sign"><div>Received by ____________________</div><div>For ${esc(currentCompany?.name || '')}</div></div>
       </body></html>`;
-  }, [bill, lines, currentCompany, companyGstin, companyState, vendor, returnedValue, returned.fullyReturned]);
+  }, [bill, lines, currentCompany, companyGstin, companyState, vendor, returnedValue, returned.fullyReturned, billTerms]);
 
   const print = () => {
     const w = window.open('', '_blank');

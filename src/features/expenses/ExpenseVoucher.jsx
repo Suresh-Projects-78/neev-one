@@ -1,3 +1,4 @@
+import { getDocSettings } from '../../utils/docSettings';
 import React, { useMemo, useRef, useState } from 'react';
 import { Printer, Download } from 'lucide-react';
 
@@ -9,7 +10,7 @@ import { notify } from '../../components/ui/notify';
  * they click an expense — header, party, the expense ledgers charged, tax
  * split and totals — printable and downloadable as PDF.
  */
-const ExpenseVoucherDoc = ({ expense, currentCompany }) => {
+const ExpenseVoucherDoc = ({ expense, currentCompany, terms = '' }) => {
   const company = currentCompany || {};
   const lines = useMemo(() => {
     if (Array.isArray(expense?.lines) && expense.lines.length) return expense.lines;
@@ -138,6 +139,13 @@ const ExpenseVoucherDoc = ({ expense, currentCompany }) => {
         </div>
       </div>
 
+      {terms ? (
+        <div className="mt-6 border rounded p-3 text-xs text-gray-600 whitespace-pre-line">
+          <div className="font-semibold uppercase text-gray-700 mb-1">Terms &amp; Conditions</div>
+          {terms}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-2 gap-8 mt-10 text-xs text-gray-500">
         <div className="border-t pt-2">Prepared by</div>
         <div className="border-t pt-2 text-right">Authorised signatory</div>
@@ -147,7 +155,11 @@ const ExpenseVoucherDoc = ({ expense, currentCompany }) => {
 };
 
 /** Voucher with the Print / Download chrome around it. */
-export default function ExpenseVoucher({ expense, currentCompany }) {
+export default function ExpenseVoucher({ expense, currentCompany, db = null }) {
+  // Terms were stored for the expense voucher and printed by nothing.
+  const terms = String(
+    (db ? getDocSettings(db, currentCompany) : null)?.templates?.expense?.termsText || ''
+  ).trim();
   const previewRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const no = String(expense?.number || '').trim();
@@ -217,7 +229,7 @@ export default function ExpenseVoucher({ expense, currentCompany }) {
       </div>
 
       <div ref={previewRef}>
-        <ExpenseVoucherDoc expense={expense} currentCompany={currentCompany} />
+        <ExpenseVoucherDoc expense={expense} currentCompany={currentCompany} terms={terms} />
       </div>
     </div>
   );
