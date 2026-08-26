@@ -208,18 +208,10 @@ permissionsRouter.post(
 /**
  * Lockout protection for the org creator.
  *
- * Two distinct cases, deliberately kept apart:
- *  1. The creator's ADMIN role holds nothing yet (a pre-catalog org, or a fresh
- *     bootstrap that failed): grant the whole Administrator preset once.
- *  2. Otherwise only re-grant the handful of administration permissions needed
- *     to reach this screen again. Re-applying the full preset on every load
- *     would silently undo a deliberate reduction the admin just saved.
+ * The creator's ADMIN role is reconciled against the whole Administrator preset
+ * on every load, so an org seeded before a module shipped picks it up rather
+ * than staying frozen at the catalogue of its signup day.
  */
-const LOCKOUT_GUARD = [
-  'SETTINGS::Roles::VIEW',
-  'SETTINGS::Roles::EDIT',
-  'SETTINGS::Users::VIEW',
-];
 
 async function syncOwnerRoleIfCreator(accountId: string, orgId: string, userId: string) {
   const org = await prisma.org.findFirst({ where: { accountId, id: orgId }, select: { createdByUserId: true } });
@@ -237,9 +229,23 @@ async function syncOwnerRoleIfCreator(accountId: string, orgId: string, userId: 
   });
   const heldKeys = new Set(held.map((h) => permKey(h.permission.module, h.permission.subModule, h.permission.action)));
 
-  const wanted = heldKeys.size === 0
-    ? new Set(expandPreset('ADMIN').map((r) => permKey(r.module, r.subModule, r.action)))
-    : new Set(LOCKOUT_GUARD);
+  /*
+   * The org creator's ADMIN role holds the whole ADMIN preset. Always.
+   *
+   * This used to top up the full preset only when the role held nothing at
+   * all, and otherwise added a minimal anti-lockout set. That reads as
+   * "do not override an owner who trimmed their own role", but the effect was
+   * that any org seeded before a module existed stayed frozen at the catalogue
+   * of its signup day. An account created in December held nineteen
+   * permissions against a catalogue that had grown to a hundred and forty-six,
+   * and the navigation — correctly — hid everything it could not reach. The
+   * owner of the business could see Purchases, Expenses and Settings.
+   *
+   * Owner means everything. An owner who wants someone restricted has four
+   * other presets and a role editor to do it with; what they should never have
+   * is a product that quietly shrinks as it grows.
+   */
+  const wanted = new Set(expandPreset('ADMIN').map((r) => permKey(r.module, r.subModule, r.action)));
 
   const missing = [...wanted].filter((k) => !heldKeys.has(k));
   if (missing.length === 0) return;
