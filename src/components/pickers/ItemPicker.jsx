@@ -99,6 +99,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
     gstRate: 0,
     salePrice: 0,
     purchasePrice: 0,
+    openingQty: 0,
   }));
 
   const resetNewItem = () => {
@@ -112,6 +113,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
       gstRate: 0,
       salePrice: 0,
       purchasePrice: 0,
+      openingQty: 0,
     });
   };
 
@@ -215,7 +217,14 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     gstRate: parseFloat(newItem.gstRate) || 0,
                     salePrice: parseFloat(newItem.salePrice) || 0,
                     purchasePrice: parseFloat(newItem.purchasePrice) || 0,
-                    stock: 0,
+                    // What is on the shelf right now. Hardcoding this to zero
+                    // meant an item created from an invoice line could never be
+                    // put on that invoice: the negative-stock guard refused it
+                    // for having no stock, and this form offered no way to say
+                    // otherwise. A new business's first sale hit that wall.
+                    openingQty: parseFloat(newItem.openingQty) || 0,
+                    openingWarehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
+                    stock: parseFloat(newItem.openingQty) || 0,
                   };
 
                   setDb((prev) => {
@@ -411,6 +420,22 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       step="0.01"
                     />
                   </div>
+                  {String(newItem.type || 'Goods') !== 'Service' ? (
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Opening Stock</label>
+                      <input
+                        type="number"
+                        value={newItem.openingQty}
+                        onChange={(e) => setNewItem((p) => ({ ...p, openingQty: e.target.value }))}
+                        className="ui-input w-full px-3 py-2"
+                        min="0"
+                        step="0.01"
+                      />
+                      <p className="ui-caption mt-1">
+                        What is on the shelf now. Leave at zero and this item cannot be sold until a purchase records some.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex justify-end gap-2">
                   <button

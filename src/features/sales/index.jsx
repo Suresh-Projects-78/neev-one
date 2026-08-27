@@ -2215,6 +2215,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     const newItems = [...formData.items];
 
     if (field === 'itemId') {
+      // Every other field clears its error the moment it is answered; the line
+      // grid did not, so "Every line needs an item" sat there after the line
+      // had one, and the count beside Save still said a field needed attention.
+      fieldErrors.clearField('items');
       const item = pickedItem || items.find((i) => i.id === parseInt(value));
       if (item) {
         // Price list first, then this customer's last paid rate, then master.

@@ -473,6 +473,38 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
     data: { accountId: auth.accountId, orgId: org.id, branchId: branch.id, userId: auth.userId },
   });
 
+  /*
+   * Every org gets a warehouse, for the same reason it gets a branch.
+   *
+   * Warehouse is a required field on an invoice, a bill and a stock transfer.
+   * A tenant created with a branch and no warehouse could not raise its first
+   * invoice at all: the form demanded a warehouse and the dropdown held only
+   * "Select Warehouse". The first thing a new customer tried to do was the one
+   * thing they could not.
+   *
+   * Named "Main Store" rather than after the branch, because a business with
+   * one location still calls it the store, not the head office.
+   */
+  const mainWarehouse = await prisma.warehouse.create({
+    data: {
+      accountId: auth.accountId,
+      orgId: org.id,
+      branchId: branch.id,
+      name: 'Main Store',
+      createdByUserId: auth.userId,
+    },
+  });
+
+  await prisma.userWarehouseAccess.create({
+    data: {
+      accountId: auth.accountId,
+      orgId: org.id,
+      branchId: branch.id,
+      warehouseId: mainWarehouse.id,
+      userId: auth.userId,
+    },
+  });
+
   // Ensure the creator can manage setup screens immediately.
   await bootstrapOwnerRole(auth.accountId, org.id, auth.userId);
 
