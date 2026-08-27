@@ -2004,18 +2004,39 @@ export const normalizeDB = (db) => {
     });
   }
 
-  if (!Array.isArray(next.gstRates)) {
+  {
+    /*
+     * The statutory GST slabs, per company.
+     *
+     * This used to run only when gstRates was not an array at all. An
+     * authenticated tenant starts from initEmptyDB, which sets it to `[]` — an
+     * array, so the backfill never fired and the rate list stayed empty
+     * forever. The GST dropdown on an item offered "0%" and nothing else, so a
+     * business could not charge tax on its first sale, in a product whose
+     * entire purpose is GST.
+     *
+     * It went unnoticed because the demo seed carried all five rates, and
+     * every tenant was demo-seeded. Removing the mock is what exposed it.
+     *
+     * Missing slabs are added, existing ones left alone — 0, 5, 12, 18 and 28
+     * are set by statute, not preference, so a company holding none of them is
+     * misconfigured rather than opinionated.
+     */
     const companies = Array.isArray(next.companies) ? next.companies : [];
-    const defaultRates = [0, 5, 12, 18, 28];
-    let nextId = 1;
+    const statutory = [0, 5, 12, 18, 28];
+    const rates = Array.isArray(next.gstRates) ? [...next.gstRates] : [];
+    let nextId = rates.reduce((m, r) => Math.max(m, Number(r?.id || 0)), 0) + 1;
 
-    next.gstRates = companies.flatMap((c) =>
-      defaultRates.map((rate) => ({
-        id: nextId++,
-        companyId: c.id,
-        rate,
-      }))
-    );
+    for (const c of companies) {
+      const have = new Set(
+        rates.filter((r) => r.companyId === c.id).map((r) => Number(r.rate))
+      );
+      for (const rate of statutory) {
+        if (have.has(rate)) continue;
+        rates.push({ id: nextId++, companyId: c.id, rate });
+      }
+    }
+    next.gstRates = rates;
   }
 
   if (!Array.isArray(next.uoms)) {

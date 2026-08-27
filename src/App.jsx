@@ -8259,7 +8259,6 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
               onChange={(next) => setFormData((p) => ({ ...p, state: next }))}
               options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
               placeholder="Select State"
-              allowCustom
             />
           </div>
 
@@ -8506,7 +8505,6 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                 onChange={(next) => setGst((p) => ({ ...p, state: next }))}
                 options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
                 placeholder="Select State"
-                allowCustom
               />
             </div>
 
@@ -8577,7 +8575,6 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                 onChange={(next) => setTds((p) => ({ ...p, state: next }))}
                 options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
                 placeholder="Select State"
-                allowCustom
               />
             </div>
           </div>
@@ -8640,7 +8637,6 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                 onChange={(next) => setTcs((p) => ({ ...p, state: next }))}
                 options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
                 placeholder="Select State"
-                allowCustom
               />
             </div>
           </div>
