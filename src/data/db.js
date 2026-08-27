@@ -3103,6 +3103,63 @@ export const normalizeDB = (db) => {
     }
   }
 
+
+  /*
+   * Purge the demo seed.
+   *
+   * Every authenticated tenant used to be handed seventy-five invented
+   * customers, vendors and items plus a year of invented invoices, bills,
+   * estimates and journals. It made the product impossible to evaluate: every
+   * list, total, ageing bucket and chart was fiction, and a real transaction
+   * entered beside it was lost in the noise.
+   *
+   * The seed is deterministic, which is what makes removing it safe. Generated
+   * parties and items are named `Customer 001`, `Vendor 044`, `Product 002`,
+   * `Service 006`; generated documents all carry a `-D` infix — `INV-D00018`,
+   * `BILL-D00003`. Anything a person actually typed matches neither, so this
+   * takes the fiction and leaves the facts.
+   *
+   * Documents that reference a purged party go too. Keeping an invoice whose
+   * customer no longer exists would trade invented data for broken data.
+   */
+  {
+    const arr = (v) => (Array.isArray(v) ? v : []);
+    const DEMO_PARTY = /^(Customer|Vendor|Product|Service)\s+\d{3}$/;
+    const DEMO_DOC = /-D\d{5}$/;
+    const DOC_LISTS = [
+      'invoices', 'bills', 'estimates', 'salesOrders', 'deliveryChallans',
+      'creditNotes', 'debitNotes', 'purchaseOrders', 'expenses',
+      'journalEntries', 'receipts', 'payments', 'warehouseTransfers',
+      'branchTransfers', 'stockTransfers',
+    ];
+
+    const demoParty = (row) => DEMO_PARTY.test(String(row?.name || '').trim());
+    const purgedIds = { customers: new Set(), vendors: new Set(), items: new Set() };
+
+    for (const listName of ['customers', 'vendors', 'items']) {
+      const rows = arr(next[listName]);
+      const keep = [];
+      for (const row of rows) {
+        if (demoParty(row)) purgedIds[listName].add(String(row?.id));
+        else keep.push(row);
+      }
+      if (keep.length !== rows.length) next[listName] = keep;
+    }
+
+    const orphaned = (doc) => {
+      const c = String(doc?.customerId ?? '');
+      const v = String(doc?.vendorId ?? '');
+      return (c && purgedIds.customers.has(c)) || (v && purgedIds.vendors.has(v));
+    };
+
+    for (const listName of DOC_LISTS) {
+      const rows = arr(next[listName]);
+      if (!rows.length) continue;
+      const keep = rows.filter((d) => !DEMO_DOC.test(String(d?.number || '').trim()) && !orphaned(d));
+      if (keep.length !== rows.length) next[listName] = keep;
+    }
+  }
+
   return next;
 };
 

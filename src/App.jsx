@@ -68,7 +68,7 @@ import PopupSelect from './components/pickers/PopupSelect';
 import AccountPicker from './components/pickers/AccountPicker';
 import VendorPicker, { VendorForm } from './components/pickers/VendorPicker';
 import { CustomerForm } from './components/pickers/CustomerPicker';
-import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB, seedDummyDataV1 } from './data/db';
+import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB } from './data/db';
 import { nextFreeVoucherNumber } from './utils/docSettings';
 import { dueDateFor, termDaysFor, termsLabel } from './utils/paymentTerms';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
@@ -11029,11 +11029,14 @@ const AppShell = () => {
           createdAt: nowIso,
         };
 
-        const withCompany = { ...prev, companies: [nextCompany] };
-        return seedDummyDataV1(withCompany, { companyId: 1, count: 75 });
+        // The company row is all a fresh tenant needs. It used to arrive with
+        // seventy-five invented customers, vendors and items and a year of
+        // invented transactions, which made the product impossible to evaluate
+        // against real books — every list, total and chart was fiction.
+        return { ...prev, companies: [nextCompany] };
       }
 
-      return seedDummyDataV1(prev, { companyId, count: 75 });
+      return prev;
     });
   }, [isAuthenticated, dbStorageKey, setDb]);
 
