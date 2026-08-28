@@ -1662,6 +1662,7 @@ export const EstimatesList = ({
               <ColumnHeader label="Date" col="date" state={estFilters} className="ui-th" />
               <ColumnHeader label="Due" col="due" state={estFilters} className="ui-th" />
               <ColumnHeader label="Total" col="total" state={estFilters} className="ui-th" />
+              <ColumnHeader label="Status" col="status" state={estFilters} className="ui-th" />
               <th className="ui-th">Actions</th>
             </tr>
             <tr className="hidden">
@@ -1670,7 +1671,7 @@ export const EstimatesList = ({
           <tbody className="divide-y">
             {estimates.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-0 py-0">
+                <td colSpan="8" className="px-0 py-0">
                   {estFilterChips.length === 0 ? (
                     <EmptyState
                       icon={ClipboardList}
@@ -1718,6 +1719,16 @@ export const EstimatesList = ({
                   <td className="ui-col-date px-4 py-2.5">{est.date || '-'}</td>
                   <td className="ui-col-date px-4 py-2.5">{est.dueDate || '-'}</td>
                   <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(est.total || 0, currentCompany)}</td>
+                  {/*
+                    An estimate that has already become an invoice looked
+                    exactly like one still waiting on the customer. The only
+                    place that fact appeared was a greyed-out menu item you had
+                    to open the row menu to find, so a list of quotes could not
+                    be read at a glance — which is the whole job of a list.
+                  */}
+                  <td className="px-4 py-2.5">
+                    <StatusPill status={est.status || 'Draft'} />
+                  </td>
                   <td
                     className="px-4 py-2.5 relative"
                     onMouseDown={(e) => e.stopPropagation()}
@@ -1811,11 +1822,15 @@ export const EstimatesList = ({
                     if (!isConverted) convertToInvoice(est);
                   }}
                   disabled={isConverted}
+                  // A disabled control that will not say why is a dead end.
+                  // This one is correct to disable — converting twice would
+                  // invoice the same quote again — but it was silent about it.
+                  title={isConverted ? 'Already converted to an invoice. Duplicate it if you need to quote this again.' : undefined}
                   className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ isConverted ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken'
                   }`}
                 >
                   <FileText size={16} className={isConverted ? 'ui-subtle' : 'ui-muted'} />
-                  <span>Convert to Invoice</span>
+                  <span>{isConverted ? 'Converted to invoice' : 'Convert to Invoice'}</span>
                 </button>
 
                 <div className="border-t ui-border-c" />

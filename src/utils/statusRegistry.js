@@ -56,6 +56,11 @@ const REGISTRY = [
   { key: 'posted', label: 'Posted', tone: 'pos', aliases: ['posted'] },
   { key: 'active', label: 'Active', tone: 'pos', aliases: ['active'] },
   { key: 'sent', label: 'Sent', tone: 'neutral', aliases: ['sent'] },
+  // A quote that became an invoice. Positive: the deal closed, and it is the
+  // signal that stops anyone quoting the same job twice.
+  { key: 'converted', label: 'Converted', tone: 'pos', aliases: ['converted'] },
+  { key: 'invoiced', label: 'Invoiced', tone: 'pos', aliases: ['invoiced'] },
+  { key: 'expired', label: 'Expired', tone: 'neutral', aliases: ['expired', 'lapsed'] },
   { key: 'returned', label: 'Returned', tone: 'warn', aliases: ['returned'] },
 
   // --- reconciliation ------------------------------------------------------
