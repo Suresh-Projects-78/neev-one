@@ -12232,7 +12232,15 @@ const AppShell = () => {
             db={dbForUser}
             currentCompany={currentCompany}
             branches={branchesForUser}
-            onNewInvoice={() => setActive('invoices')}
+            // "New invoice" has to actually start one. This was wired
+            // identically to onOpenInvoices, so the dashboard's primary action
+            // — and the one in its empty state, which exists to get a first
+            // document raised — only dropped you on the list to press New
+            // Invoice again.
+            onNewInvoice={() => {
+              setActive('invoices');
+              setInvoiceEditor({ open: true, initial: null });
+            }}
             onOpenInvoices={() => setActive('invoices')}
             onOpenReceipts={() => setActive('receipts')}
             onOpenCustomers={() => setActive('customers')}
