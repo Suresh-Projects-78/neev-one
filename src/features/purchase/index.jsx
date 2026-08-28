@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { returnableLines, returnStatusLabel } from '../../utils/returns';
 import BillPreview from './BillPreview';
 import KnockOffForm from '../../components/KnockOffForm';
@@ -636,7 +637,35 @@ export const PurchaseOrdersList = ({
   onNewPo,
   onEditPo,
 }) => {
+  /**
+   * { id, left, top } — the row menu and where to put it.
+   *
+   * Position is carried because the menu is rendered in a portal on <body>
+   * rather than inside the row. Absolutely positioned inside the cell, it sat
+   * within .ui-table-scroll, whose overflow:auto cut it off: on a list with
+   * one row the container ended at 370px while "Convert to Bill" ran to 389,
+   * so half of it was invisible and unclickable. Same escape the sales lists
+   * already make.
+   */
   const [poMenu, setPoMenu] = useState(null);
+
+  const PO_MENU_WIDTH = 208;
+  const PO_MENU_HEIGHT = 150;
+
+  const openPoMenu = (poId, anchorEl) => {
+    if (!anchorEl) return setPoMenu({ id: poId, left: 0, top: 0 });
+    const rect = anchorEl.getBoundingClientRect();
+    const pad = 12;
+    const vw = window.innerWidth || 1024;
+    const vh = window.innerHeight || 768;
+    let left = rect.right - PO_MENU_WIDTH;
+    left = Math.max(pad, Math.min(left, vw - PO_MENU_WIDTH - pad));
+    // Flip above the button when there is no room below it.
+    let top = rect.bottom + 8;
+    if (top + PO_MENU_HEIGHT > vh - pad) top = rect.top - PO_MENU_HEIGHT - 8;
+    top = Math.max(pad, Math.min(top, vh - pad - 40));
+    setPoMenu({ id: poId, left, top });
+  };
 
   /**
    * An order is Pending from the moment it is raised until a bill answers it,
@@ -863,7 +892,8 @@ export const PurchaseOrdersList = ({
                         data-po-menu-button={po.id}
                         onClick={(e) => {
                           e.stopPropagation();
-                          setPoMenu((prev) => (prev === po.id ? null : po.id));
+                          if (poMenu?.id === po.id) setPoMenu(null);
+                          else openPoMenu(po.id, e.currentTarget);
                         }}
                         className="p-2 rounded-lg ui-hover-sunken"
                         aria-haspopup="menu"
@@ -872,9 +902,10 @@ export const PurchaseOrdersList = ({
                         <MoreVertical size={18} />
                       </button>
 
-                      {poMenu === po.id ? (
+                      {poMenu?.id === po.id ? createPortal(
                         <div
-                          className="absolute right-2 top-10 z-40 w-52 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden text-left"
+                          className="fixed z-[120] w-52 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden text-left"
+                          style={{ left: poMenu.left, top: poMenu.top }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -934,7 +965,8 @@ export const PurchaseOrdersList = ({
                           >
                             <Trash2 size={15} /> Delete
                           </button>
-                        </div>
+                        </div>,
+                        document.body
                       ) : null}
                     </td>
                   </tr>
