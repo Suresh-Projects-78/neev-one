@@ -67,7 +67,21 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
     if (syncedFor.current === key) return;
     syncedFor.current = key;
 
+    /**
+     * The claim above is released again if this run does not finish.
+     *
+     * It used to be permanent, and the run that made it almost never got to
+     * use it: the effect is set up, torn down and set up again during boot
+     * (React's development remount, and again when the company id arrives),
+     * so the run holding the claim was cancelled while its fetches were still
+     * in the air and dropped every document it had just downloaded. Each
+     * later run then found the key already claimed and returned immediately.
+     * The result was hydration that never once merged anything — an invoice,
+     * a customer and a payment sat on the server, and the browser showed
+     * empty lists with no way to ever see them.
+     */
     let cancelled = false;
+    let merged = false;
 
     (async () => {
       const collected = {};
@@ -121,10 +135,14 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
         }
         return next;
       });
+      merged = true;
     })();
 
     return () => {
       cancelled = true;
+      // Cancelled before it merged: give the claim back so the next run redoes
+      // the work, rather than leaving the session permanently un-hydrated.
+      if (!merged) syncedFor.current = '';
     };
   }, [enabled, currentCompanyId, setDb]);
 }
