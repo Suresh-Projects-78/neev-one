@@ -34,7 +34,7 @@ const REGISTRY = [
   // state of the money. It has to be distinguishable from Unpaid at a glance —
   // that pair being identical was the defect this registry exists to fix.
   { key: 'draft', label: 'Draft', tone: 'outline', aliases: ['draft'] },
-  { key: 'unpaid', label: 'Unpaid', tone: 'neutral', aliases: ['unpaid', 'open', 'issued'] },
+  { key: 'unpaid', label: 'Unpaid', tone: 'neutral', aliases: ['unpaid', 'issued'] },
   { key: 'partial', label: 'Partial', tone: 'warn', aliases: ['partial', 'partially paid'] },
   { key: 'overdue', label: 'Overdue', tone: 'neg', aliases: ['overdue', 'over due'] },
   { key: 'paid', label: 'Paid', tone: 'pos', aliases: ['paid', 'settled'] },
@@ -52,6 +52,18 @@ const REGISTRY = [
   { key: 'shortReceived', label: 'Short received', tone: 'warn', aliases: ['short received', 'short'] },
 
   // --- order / document lifecycle -----------------------------------------
+  /**
+   * "Open" is not "Unpaid", and folding the two together was a mistake in the
+   * first version of this file.
+   *
+   * Every status: 'Open' the product writes is on a sales order, a purchase
+   * order or a delivery challan — a commitment waiting to be fulfilled, with
+   * nothing owed on it yet. Aliasing it to Unpaid put "Unpaid" on an order
+   * that had not been delivered, let alone billed, and told the proprietor
+   * money was owed that nobody had been invoiced for. An invoice never carries
+   * this word: its status is derived as Unpaid, Partial, Paid or Overdue.
+   */
+  { key: 'open', label: 'Open', tone: 'neutral', aliases: ['open'] },
   { key: 'closed', label: 'Closed', tone: 'pos', aliases: ['closed', 'completed', 'fulfilled'] },
   { key: 'posted', label: 'Posted', tone: 'pos', aliases: ['posted'] },
   { key: 'active', label: 'Active', tone: 'pos', aliases: ['active'] },
