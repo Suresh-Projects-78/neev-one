@@ -368,14 +368,21 @@ export const SavedHint = ({ show, label = 'Saved' }) =>
 /**
  * "1 invoices" is the kind of thing that makes a product look unfinished.
  *
- * Every noun this takes today is a plain +s plural, so the rule covers them;
- * `-ies` is handled because "entries" is the obvious next one. `nounOne` is
- * there for anything the rule would get wrong.
+ * Covers the twenty-two nouns the lists actually use: plain +s ("invoices"),
+ * -ies ("entries", "categories", "parties"), the -es that follows a sibilant
+ * ("batches"), and the one irregular in the set — "salesmen", which has no
+ * trailing s at all and would otherwise come through untouched.
+ *
+ * Anything this would get wrong takes `nounOne` instead of a longer rule.
  */
-const singularise = (noun) => {
+const IRREGULAR_SINGULARS = { salesmen: 'salesman', men: 'man', people: 'person', children: 'child' };
+
+export const singularise = (noun) => {
   const s = String(noun || '');
+  const hit = IRREGULAR_SINGULARS[s.toLowerCase()];
+  if (hit) return hit;
   if (/ies$/i.test(s)) return `${s.slice(0, -3)}y`;
-  if (/ses$/i.test(s)) return s.slice(0, -2);
+  if (/(ch|sh|s|x|z)es$/i.test(s)) return s.slice(0, -2);
   return s.replace(/s$/i, '');
 };
 

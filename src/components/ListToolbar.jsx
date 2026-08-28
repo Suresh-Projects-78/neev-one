@@ -4,6 +4,7 @@ import { Download, Search } from 'lucide-react';
 import { downloadCsv } from '../utils/csv';
 import { consumeSearchSeed } from '../utils/searchSeed';
 import { notify } from './ui/notify';
+import { singularise } from './ui/Primitives';
 
 /**
  * The three things every list page owes the user: search across the row, a
@@ -42,7 +43,7 @@ export function ListToolbar({
 
       {Number.isFinite(count) ? (
         <div className="text-xs ui-muted whitespace-nowrap">
-          {count} {countLabel}
+          {count} {count === 1 ? singularise(countLabel) : countLabel}
         </div>
       ) : null}
 
