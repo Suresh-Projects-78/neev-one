@@ -15,15 +15,45 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
   const returnFocusRef = useRef(null);
   const titleId = useId();
 
+  /**
+   * onClose through a ref, so the key handler below never has to re-subscribe.
+   */
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
-    // Remember where focus was, so closing puts it back on the control that
-    // opened this rather than dumping the user at the top of the document.
-    returnFocusRef.current = document.activeElement;
-    panelRef.current?.focus();
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
+  /**
+   * Claim focus once, on open — never again.
+   *
+   * This used to live in the same effect as the key handler, which depends on
+   * onClose. Callers pass an inline arrow, so onClose is a new function on
+   * every render, so the effect tore down and re-ran on every render — and
+   * each run called panel.focus().
+   *
+   * The result: typing into any field in any dialog moved focus to the dialog
+   * itself after the first character. The first letter landed, the rest went
+   * nowhere, and you had to click back into the box for each one. It hit item
+   * creation hardest, where a name is the first thing typed.
+   *
+   * Focus goes to whatever asks for it with data-autofocus, and to the panel
+   * only when nothing does.
+   */
+  useEffect(() => {
+    returnFocusRef.current = document.activeElement;
+    const panel = panelRef.current;
+    const wants = panel?.querySelector('[data-autofocus]');
+    (wants && typeof wants.focus === 'function' ? wants : panel)?.focus();
+    return () => {
+      const back = returnFocusRef.current;
+      if (back && typeof back.focus === 'function' && document.contains(back)) back.focus();
+    };
+  }, []);
+
+  useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') {
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -48,12 +78,8 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
     };
 
     window.addEventListener('keydown', onKey);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      const back = returnFocusRef.current;
-      if (back && typeof back.focus === 'function') back.focus();
-    };
-  }, [onClose]);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return createPortal(
     <div
