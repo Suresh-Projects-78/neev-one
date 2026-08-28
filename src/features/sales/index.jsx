@@ -407,8 +407,17 @@ const statusReason = (doc, status, company, nowMs) => {
     let billed = 0;
     let outstandingSum = 0;
     let gst = 0;
+    let draft = 0;
     for (const inv of filteredInvoices) {
       const total = Number(inv.total || 0);
+      // A draft is an intention, not a liability — the same rule the dashboard
+      // and the money-out stream apply. Counting one here told the proprietor
+      // that ₹2,950 was billed and outstanding on a document nobody had sent,
+      // and put its tax into the GST figure before any tax was due.
+      if (String(inv.status || '').toLowerCase() === 'draft') {
+        draft += total;
+        continue;
+      }
       billed += total;
       outstandingSum += Math.max(0, total - Number(inv.paidAmount || 0));
       gst += Number(inv.gstTotal || 0);
@@ -417,6 +426,9 @@ const statusReason = (doc, status, company, nowMs) => {
       { label: 'Billed', value: formatMoney(billed, currentCompany) },
       { label: 'Outstanding', value: formatMoney(outstandingSum, currentCompany), tone: outstandingSum > 0 ? 'neg' : undefined },
       { label: 'GST', value: formatMoney(gst, currentCompany) },
+      // Shown rather than dropped: the money is real, it just is not owed yet,
+      // and a footer that silently ignored these rows would be its own defect.
+      ...(draft > 0 ? [{ label: 'In draft', value: formatMoney(draft, currentCompany) }] : []),
     ];
   }, [filteredInvoices, currentCompany]);
 

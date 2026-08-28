@@ -365,7 +365,21 @@ export const SavedHint = ({ show, label = 'Saved' }) =>
  * Figures must be computed over the filtered set — not over the rendered rows —
  * or the day this list gets a page window the number quietly becomes a lie.
  */
-export const TableTotals = ({ count, totalCount, noun = 'rows', figures = [], className = '' }) => {
+/**
+ * "1 invoices" is the kind of thing that makes a product look unfinished.
+ *
+ * Every noun this takes today is a plain +s plural, so the rule covers them;
+ * `-ies` is handled because "entries" is the obvious next one. `nounOne` is
+ * there for anything the rule would get wrong.
+ */
+const singularise = (noun) => {
+  const s = String(noun || '');
+  if (/ies$/i.test(s)) return `${s.slice(0, -3)}y`;
+  if (/ses$/i.test(s)) return s.slice(0, -2);
+  return s.replace(/s$/i, '');
+};
+
+export const TableTotals = ({ count, totalCount, noun = 'rows', nounOne, figures = [], className = '' }) => {
   const shown = Number(count || 0);
   const total = Number(totalCount ?? count ?? 0);
   const filtered = total > shown;
@@ -373,7 +387,7 @@ export const TableTotals = ({ count, totalCount, noun = 'rows', figures = [], cl
   return (
     <div className={`ui-table-totals ${className}`.trim()}>
       <span className="ui-t-label">
-        {shown.toLocaleString('en-IN')} {noun}
+        {shown.toLocaleString('en-IN')} {shown === 1 ? nounOne || singularise(noun) : noun}
         {filtered ? <span className="ui-muted"> of {total.toLocaleString('en-IN')}</span> : null}
       </span>
       {figures
