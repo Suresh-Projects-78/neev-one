@@ -2016,13 +2016,14 @@ export const CreditNotesList = ({
               <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} className="ui-th" />
               <ColumnHeader label="Date" col="date" state={cnFilters} className="ui-th" />
               <ColumnHeader label="Total" col="total" state={cnFilters} className="ui-th" />
+              <ColumnHeader label="Status" col="status" state={cnFilters} className="ui-th" />
               <th className="ui-th ui-num">On account</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {creditNotes.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-0 py-0">
+                <td colSpan="8" className="px-0 py-0">
                   {cnFilterChips.length === 0 ? (
                     <EmptyState
                       icon={Receipt}
@@ -2062,6 +2063,14 @@ export const CreditNotesList = ({
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                     <td className="ui-col-date px-4 py-2.5">{cn.date || '-'}</td>
                     <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(cn.total || 0, currentCompany)}</td>
+                    {/*
+                      Whether this credit has actually reached the books. A
+                      draft does not post, and without this column there was
+                      nothing on screen to say so.
+                    */}
+                    <td className="px-4 py-2.5">
+                      <StatusPill status={cn.status || 'Open'} />
+                    </td>
                     <td className="px-4 py-2.5 text-right">
                       {isOnAccount(cn) ? (
                         noteBalance(cn).unsettled > 0.0001 ? (
@@ -3998,7 +4007,22 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       igstTotal: computed.igstTotal,
       gstTotal: computed.gstTotal,
       total: computed.total,
-      status: 'Draft',
+      /**
+       * Issued, not Draft.
+       *
+       * This was hardcoded to Draft, and the ledger — correctly — does not
+       * post drafts. There is no action anywhere to take a credit note out of
+       * draft and no status column to reveal it was in one, so every sales
+       * return raised through this form was inert: the goods came back on the
+       * stock report, the customer's account was never credited, the output
+       * GST was never reversed, and the screen said "Credit note created
+       * successfully!".
+       *
+       * An invoice raised from the equivalent button posts immediately. A
+       * credit note is the same kind of act in the other direction, and the
+       * form has one button whose meaning is "issue this".
+       */
+      status: 'Open',
       createdAt: new Date().toISOString(),
     };
 
