@@ -85,8 +85,23 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
     return parts.join(', ');
   }, [company?.address, company?.city, company?.state, company?.country]);
 
+  /**
+   * The paper is painted here, not by whoever renders this.
+   *
+   * Everything below is deliberately raw gray-on-white — a printed invoice does
+   * not follow the app theme, and DESIGN.md exempts this file for that reason.
+   * But the exemption only works if something actually puts white behind it,
+   * and this root never did: it inherited a transparent background, so in dark
+   * mode `text-gray-900` was near-black ink on a near-black surface. The
+   * customer name, place of supply, tax type and status were all invisible —
+   * the labels survived only because gray-500 is light enough to show.
+   *
+   * Four of the five places that render this passed no background of their own.
+   * Painting it on the document itself makes every one of them correct, and
+   * matches ExpenseVoucher, which has always done this.
+   */
   const content = (
-    <div className="space-y-4">
+    <div className="bg-white text-gray-900 rounded-xl p-6 space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-lg font-bold text-gray-900">{company?.name || 'Company'}</div>
