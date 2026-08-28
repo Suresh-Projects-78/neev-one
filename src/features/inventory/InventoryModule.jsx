@@ -4,7 +4,7 @@ import { notify } from '../../components/ui/notify';
 import { Boxes, PackageX, TrendingDown, Warehouse } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
-import { StatTile } from '../../components/ui/Primitives';
+import { PageHeader, StatTile } from '../../components/ui/Primitives';
 import { useListSearch } from '../../components/ListToolbar';
 import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 
@@ -340,6 +340,16 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
 
   return (
     <div className="space-y-6">
+      {/*
+        This screen opened straight into a filter row: no title, no description,
+        nothing naming what you were looking at. Every other module leads with a
+        PageHeader, and without one this read as a fragment of a page.
+      */}
+      <PageHeader
+        title="Inventory"
+        description="Opening, movement and closing stock for the period, by item."
+      />
+
       {items.length > 0 ? (
         <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatTile
@@ -428,10 +438,18 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
             placeholder="Search items (name, code, HSN, barcode)"
             aria-label="Search items"
           />
-          <button type="button" onClick={exportPdf} className="px-3 py-2 border rounded-lg ui-hover-sunken">
+          {/*
+            Both secondary. This is a report — it has no create action, so
+            nothing here earns the primary. Giving the orange to Export Excel
+            made an export look like the point of the screen, and the two
+            buttons were styled by two different systems besides. whitespace-
+            nowrap because "Export PDF" was wrapping onto two lines and
+            breaking the button.
+          */}
+          <button type="button" onClick={exportPdf} className="ui-btn ui-btn-secondary whitespace-nowrap">
             Export PDF
           </button>
-          <button type="button" onClick={exportCsv} className="px-3 py-2 ui-btn ui-btn-primary rounded-lg ">
+          <button type="button" onClick={exportCsv} className="ui-btn ui-btn-secondary whitespace-nowrap">
             Export Excel
           </button>
         </div>

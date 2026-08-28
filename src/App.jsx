@@ -135,7 +135,7 @@ import { createWarehouse, listWarehouses } from './api/admin';
 import { listBranches } from './api/admin';
 import { getMyAuthContext } from './api/auth';
 import { createLedgerAccount } from './api/ledger';
-import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals, FieldError, FieldErrorSummary, StatusPill } from './components/ui/Primitives';
+import { PageHeader, StatTile, ThemeToggle, SkeletonStats, TableTotals, FieldError, FieldErrorSummary, StatusPill, EmptyState } from './components/ui/Primitives';
 import DocHeaderStrip from './components/ui/DocHeaderStrip';
 import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
@@ -1462,8 +1462,36 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
           <tbody className="divide-y">
             {filteredExpenses.length === 0 ? (
               <tr>
-                <td colSpan="10" className="px-6 py-12 text-center ui-muted">
-                  No expenses found
+                <td colSpan="10" className="p-0">
+                  {/*
+                    Was the bare words "No expenses found", where Bills gets an
+                    icon, a sentence explaining what the record is for, and a
+                    button to make one. Same component now, and it tells the
+                    two cases apart: nothing recorded yet, against filters
+                    hiding what is there.
+                  */}
+                  <EmptyState
+                    icon={Receipt}
+                    kind={expenses.length ? 'filtered' : 'new'}
+                    totalCount={expenses.length}
+                    title={expenses.length ? 'No expenses match these filters' : 'No expenses yet'}
+                    description={
+                      expenses.length
+                        ? 'Widen the period or clear the status filter to see the rest.'
+                        : 'An expense voucher is money the business spent, and the input GST you can claim against it.'
+                    }
+                    action={
+                      expenses.length ? null : (
+                        <PermissionButton
+                          permission="EXPENSES::Expenses::CREATE"
+                          onClick={() => setIsCreating(true)}
+                          className="ui-btn ui-btn-primary"
+                        >
+                          <Plus size={16} /> New Expense
+                        </PermissionButton>
+                      )
+                    }
+                  />
                 </td>
               </tr>
             ) : (
@@ -4233,8 +4261,17 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
           <tbody className="divide-y divide-[rgb(var(--border))]">
             {journalEntries.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-6 py-12 text-center ui-muted">
-                  No journal entries found. Click "New Entry" to create one.
+                <td colSpan="7" className="p-0">
+                  <EmptyState
+                    icon={BookOpen}
+                    title="No journal entries yet"
+                    description="A journal entry posts a debit and a matching credit directly to the ledger — for adjustments the documents do not cover."
+                    action={
+                      <button type="button" onClick={onNewJournal} className="ui-btn ui-btn-primary">
+                        <Plus size={16} /> New Entry
+                      </button>
+                    }
+                  />
                 </td>
               </tr>
             ) : (
@@ -6209,7 +6246,7 @@ const SalesReports = ({ db, currentCompany }) => {
  * clickable cards, so they take the hover lift.
  */
 const REPORT_META = {
-  ledgerTrialBalance: { icon: BookOpen, desc: 'From posted journal entries — drill into any account\u2019s ledger.' },
+  ledgerTrialBalance: { icon: BookOpen, desc: 'Every posting to every account, in order — drill into any account\u2019s ledger.' },
   trialBalance: { icon: BookOpen, desc: 'Every account\u2019s closing balance. Must foot to zero.' },
   profitLoss: { icon: BarChart3, desc: 'What you earned and what it cost, over a period.' },
   balanceSheet: { icon: FileStack, desc: 'What the business owns and owes, at a date.' },
@@ -11424,7 +11461,11 @@ const AppShell = () => {
           key: 'financials',
           title: 'Financials',
           items: [
-            { key: 'ledgerTrialBalance', label: 'Trial Balance (Ledger)' },
+            // Two reports that both said "Trial Balance" — you could not tell
+            // from the hub which one you wanted. They are different things:
+            // one walks each account's postings, the other lists closing
+            // balances and must foot to zero. Named for what they are.
+            { key: 'ledgerTrialBalance', label: 'General Ledger' },
             { key: 'trialBalance', label: 'Trial Balance' },
             { key: 'profitLoss', label: 'P&L' },
             { key: 'balanceSheet', label: 'Balance Sheet' },
@@ -11553,7 +11594,22 @@ const AppShell = () => {
         label: 'CRM',
         icon: Users,
         tint: 'sales',
+        /*
+         * The people, not just the chasing.
+         *
+         * This group held a single entry — Payment Reminders — while Customers,
+         * Vendors and Salesmen sat under Master Data among items, units, tax
+         * rates and document numbering. So a module named for dealing with
+         * people contained no people, and the people were filed with the
+         * catalogue and the configuration.
+         *
+         * Master Data keeps what the business sells and how documents behave.
+         * Who the business deals with lives here, next to chasing them.
+         */
         items: [
+          { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
+          { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
+          { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
           { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
         ],
       },
@@ -11608,9 +11664,6 @@ const AppShell = () => {
           { key: 'uoms', label: 'Units', icon: Boxes, perm: 'MASTERS::Items::VIEW' },
           { key: 'itemCategories', label: 'Item Categories', icon: Tags, perm: 'MASTERS::Items::VIEW' },
           { key: 'priceLists', label: 'Price Lists', icon: Tags, perm: 'MASTERS::Items::VIEW', feature: 'priceLists' },
-          { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
-          { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
-          { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
           { key: 'bankCash', label: 'Chart of Accounts', icon: Building2, perm: 'ACCOUNTING::Chart of Accounts::VIEW' },
           { key: 'gstRates', label: 'GST Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
           { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },

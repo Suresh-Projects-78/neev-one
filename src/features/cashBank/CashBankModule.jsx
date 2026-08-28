@@ -1846,23 +1846,28 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <div className="text-sm ui-muted">Reconcile bank/cash transactions with receipts and payments.</div>
         </div>
 
+        {/*
+          One primary action, and it has to be the one you can actually take.
+          This header carried five buttons of equal weight, and the only one
+          styled as primary — Add Transaction — is disabled until a cash or bank
+          account exists. So the first thing a new company saw here was five
+          grey buttons and nothing to press, with the real starting point (New
+          Account) dressed as a secondary.
+
+          The primary now follows the state: New Account until there is one,
+          Add Transaction after. Delete Selected is gone from the header until
+          something is selected, rather than sitting there permanently dead.
+        */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={deleteSelectedTxns}
-            disabled={!anySelected}
-            className={`px-4 py-2 rounded-lg border ${ anySelected ? 'ui-surface ui-hover-sunken ui-border-c text-[rgb(var(--neg))]' : 'ui-sunken ui-muted ui-border-c'
-            }`}
-          >
-            Delete Selected
-          </button>
-          <button
-            type="button"
-            onClick={openCreateAccount}
-            className="ui-btn ui-btn-secondary"
-          >
-            New Account
-          </button>
+          {anySelected ? (
+            <button
+              type="button"
+              onClick={deleteSelectedTxns}
+              className="ui-btn ui-btn-secondary text-[rgb(var(--neg))]"
+            >
+              Delete Selected
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={downloadUploadTemplate}
@@ -1873,19 +1878,24 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           <button
             type="button"
             onClick={openUpload}
-            className={`px-4 py-2 rounded-lg border ${ accountsEmpty ? 'ui-sunken ui-muted ui-border-c' : 'ui-surface ui-hover-sunken ui-border-c'
-            }`}
+            disabled={accountsEmpty}
+            title={accountsEmpty ? 'Add a cash or bank account first.' : undefined}
+            className="ui-btn ui-btn-secondary disabled:opacity-50"
           >
             Upload Statement
           </button>
           <button
             type="button"
-            onClick={openAddTxn}
-            className={`px-4 py-2 rounded-lg ${ accountsEmpty ? 'ui-sunken ui-muted' : 'ui-btn ui-btn-primary '
-            }`}
+            onClick={openCreateAccount}
+            className={accountsEmpty ? 'ui-btn ui-btn-primary' : 'ui-btn ui-btn-secondary'}
           >
-            Add Transaction
+            New Account
           </button>
+          {accountsEmpty ? null : (
+            <button type="button" onClick={openAddTxn} className="ui-btn ui-btn-primary">
+              Add Transaction
+            </button>
+          )}
         </div>
       </div>
 
