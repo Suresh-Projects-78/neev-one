@@ -27,7 +27,7 @@ import GridControls, { BulkBar } from '../../components/grid/GridControls';
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { getNextNumericId } from '../../utils/ids';
-import { formatMoney } from '../../utils/money';
+import { formatMoney, round2 } from '../../utils/money';
 import { consumeSearchSeed } from '../../utils/searchSeed';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import InvoicePreview from './InvoicePreview';
@@ -2247,6 +2247,29 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     }
   };
 
+  /**
+   * What is actually on the shelf, per item, for the warehouse this invoice
+   * ships from.
+   *
+   * The save already refuses to oversell, but only once everything is typed
+   * and the button is pressed. Showing the number the moment an item is
+   * chosen turns that late refusal into something you can see coming — and a
+   * line that already exceeds stock says so where the line is, not in a toast
+   * after the fact.
+   */
+  const availableByItemId = useMemo(() => {
+    const whId = String(formData.warehouseId || '').trim();
+    try {
+      const summary = computeInventorySummaryByItemId({ db, companyId: currentCompany.id, warehouseId: whId });
+      const map = new Map();
+      for (const [itemId, row] of summary.entries()) map.set(String(itemId), Number(row?.closingQty ?? 0));
+      return map;
+    } catch {
+      return new Map();
+    }
+    // db is the whole book; the lines that matter are its stock documents.
+  }, [db, currentCompany.id, formData.warehouseId]);
+
   const updateItem = (index, field, value, pickedItem = null) => {
     const newItems = [...formData.items];
 
@@ -2997,6 +3020,27 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       label={null}
                       autoFocus={idx === focusRowIndex}
                     />
+                    {/*
+                      Stock, the moment the item is chosen. Only for goods —
+                      a service has no shelf — and only once a line has an
+                      item on it.
+                    */}
+                    {item.itemId && lineMaster && isStockItem(lineMaster) ? (() => {
+                      const available = Number(availableByItemId.get(String(item.itemId)) ?? 0);
+                      const wanted = Number(item.quantity ?? 0);
+                      const short = Number.isFinite(wanted) && wanted > available;
+                      const unit = String(lineMaster.unit || '').trim();
+                      return (
+                        <p
+                          className="ui-caption mt-1"
+                          style={short ? { color: 'rgb(var(--neg))' } : undefined}
+                        >
+                          {short
+                            ? `Only ${available}${unit ? ` ${unit}` : ''} in stock — short by ${round2(wanted - available)}`
+                            : `In stock: ${available}${unit ? ` ${unit}` : ''}`}
+                        </p>
+                      );
+                    })() : null}
                   </td>
                   <td className="px-3 py-2">
                     <input
