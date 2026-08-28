@@ -2,6 +2,21 @@ import React, { useState } from 'react';
 import { ArrowRight, Building2, Check, UserPlus } from 'lucide-react';
 
 import { notify } from './ui/notify';
+import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../utils/gst';
+
+/**
+ * State is a list, not a sentence.
+ *
+ * Every tax split in the product turns on comparing this string to the
+ * customer's state. A free text box let a new company type "Karntaka" on the
+ * very first screen it ever sees, and from then on every intra-state sale
+ * matched nothing and charged IGST instead of CGST + SGST — on documents that
+ * had already gone to customers. The four state pickers elsewhere were closed
+ * to typed values for this reason; the front door was still open.
+ */
+const STATE_NAMES = Object.entries(GST_STATE_BY_CODE)
+  .sort((a, b) => a[0].localeCompare(b[0]))
+  .map(([, name]) => name);
 
 /**
  * First-run wizard. A new company used to land on an empty dashboard with
@@ -45,9 +60,22 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
     onDone?.();
   };
 
+  // The first two digits of a GSTIN *are* the state code, so a GSTIN and a
+  // contradicting state cannot both be right. Saying which one the number
+  // implies is more use than refusing and leaving them to guess.
+  const gstinState = getGstStateFromGstin(gstin);
+
   const saveCompany = () => {
     if (!companyName.trim()) {
       notify.error('The company needs a name.');
+      return;
+    }
+    if (!state.trim()) {
+      notify.error('Pick the state — it decides CGST + SGST against IGST on every invoice.');
+      return;
+    }
+    if (gstinState && gstinState !== state.trim()) {
+      notify.error(`That GSTIN begins ${gstin.trim().slice(0, 2)}, which is ${gstinState}, not ${state.trim()}.`);
       return;
     }
     setDb((prev) => ({
@@ -130,11 +158,34 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="ui-label">GSTIN (optional)</label>
-                  <input type="text" value={gstin} onChange={(e) => setGstin(e.target.value)} className="ui-input" placeholder="27ABCDE1234F1Z5" />
+                  <input
+                    type="text"
+                    value={gstin}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setGstin(next);
+                      // Filling the state from the number saves a step and is
+                      // the only reading of the two fields that can be right.
+                      const derived = getGstStateFromGstin(next);
+                      if (derived) setState(derived);
+                    }}
+                    className="ui-input"
+                    placeholder="27ABCDE1234F1Z5"
+                  />
                 </div>
                 <div>
                   <label className="ui-label">State</label>
-                  <input type="text" value={state} onChange={(e) => setState(e.target.value)} className="ui-input" placeholder="Maharashtra" />
+                  <select value={state} onChange={(e) => setState(e.target.value)} className="ui-select ui-surface">
+                    <option value="">Select a state</option>
+                    {STATE_NAMES.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                  {gstinState && state && gstinState !== state ? (
+                    <p className="ui-caption mt-1">The GSTIN says {gstinState}.</p>
+                  ) : null}
                 </div>
               </div>
             </div>

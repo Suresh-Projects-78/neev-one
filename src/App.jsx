@@ -11114,7 +11114,18 @@ const AppShell = () => {
   useServerDocSync({ enabled: isAuthenticated, currentCompanyId: currentCompany?.id, setDb });
 
   const [onboardDismissed, setOnboardDismissed] = useState(false);
-  const showOnboarding = isAuthenticated && !onboardDismissed && shouldOnboard(db, currentCompany);
+  // Latch it. shouldOnboard asks whether there are no customers and no
+  // invoices, and step two of the wizard creates a customer — so recomputing
+  // this every render made the wizard close itself the moment somebody
+  // completed a step, before the third step ("raise the first invoice", the
+  // whole point of it) had ever been on screen. It also meant finish() never
+  // ran, so the seen-it flag was never written and the wizard came back on the
+  // next load. Whether to open is a question about the moment of arrival; once
+  // open, only the user closes it.
+  const [onboardLatched, setOnboardLatched] = useState(false);
+  const onboardEligible = isAuthenticated && shouldOnboard(db, currentCompany);
+  if (onboardEligible && !onboardLatched && !onboardDismissed) setOnboardLatched(true);
+  const showOnboarding = isAuthenticated && !onboardDismissed && onboardLatched;
 
   // Templates marked "repeat monthly" raise their due drafts on sign-in.
   useRecurringInvoices({
