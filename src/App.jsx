@@ -8782,6 +8782,17 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             // saving here without mirroring left documents blocked on
             // "Company state not set" forever.
             state: stateName || c.state || '',
+            // Same reason, and the rest of the address is not optional either.
+            // The invoice and expense-voucher print blocks read these four keys
+            // and nothing else, and the e-invoice payload falls back to the
+            // literal '-' for Addr1 and 0 for Pin when they are blank — so a
+            // company that filled this page in and saved it successfully was
+            // still printing a GST invoice with no supplier address on it and
+            // submitting a placeholder pincode to the IRP.
+            address: [regAddress1, payload.regAddress2].filter(Boolean).join(', '),
+            city: regCity,
+            pincode: regPincode,
+            country: regCountry,
             ...(payload.gstin !== undefined ? { gstin: String(payload.gstin || '').trim() } : {}),
             profile: {
               ...prevProfile,

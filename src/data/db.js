@@ -3181,6 +3181,37 @@ export const normalizeDB = (db) => {
     }
   }
 
+  // Heal companies whose registered address only ever reached the profile blob.
+  //
+  // Company Profile writes `profile.companySettings.reg*`, but every consumer of
+  // a company address — both print views and the e-invoice payload — reads the
+  // root `address` / `city` / `pincode`. Only `state` was mirrored, so a company
+  // could fill the page in, be told "Company settings saved.", and still print a
+  // GST invoice with no supplier address on it.
+  //
+  // Only fills a blank root key: a value already at the root was put there by
+  // something else and is not this migration's to overwrite.
+  {
+    const companies = Array.isArray(next.companies) ? next.companies : [];
+    let changed = false;
+    const healed = companies.map((c) => {
+      const cs = c?.profile?.companySettings;
+      if (!cs || typeof cs !== 'object') return c;
+      const blank = (v) => String(v ?? '').trim() === '';
+      const line = [cs.regAddress1, cs.regAddress2].map((v) => String(v || '').trim()).filter(Boolean).join(', ');
+      const patch = {};
+      if (blank(c.address) && line) patch.address = line;
+      if (blank(c.city) && !blank(cs.regCity)) patch.city = String(cs.regCity).trim();
+      if (blank(c.pincode) && !blank(cs.regPincode)) patch.pincode = String(cs.regPincode).trim();
+      if (blank(c.country) && !blank(cs.regCountry)) patch.country = String(cs.regCountry).trim();
+      if (blank(c.state) && !blank(cs.regStateName)) patch.state = String(cs.regStateName).trim();
+      if (!Object.keys(patch).length) return c;
+      changed = true;
+      return { ...c, ...patch };
+    });
+    if (changed) next.companies = healed;
+  }
+
   return next;
 };
 
