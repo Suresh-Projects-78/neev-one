@@ -81,7 +81,7 @@ const fromPaise = (p: number) => p / 100;
 // Chart of accounts
 // ---------------------------------------------------------------------------
 
-const DEFAULT_ACCOUNTS: Array<{
+export const DEFAULT_ACCOUNTS: Array<{
   code: string;
   name: string;
   accountType: string;
@@ -106,6 +106,18 @@ const DEFAULT_ACCOUNTS: Array<{
   { code: '9998', name: 'Rounding Difference', accountType: 'EXPENSE', controlKind: 'ROUNDING' },
   { code: '9999', name: 'Suspense / Uncategorised', accountType: 'ASSET', controlKind: 'SUSPENSE' },
 ];
+
+/**
+ * The cash and bank accounts ledger setup creates on its own.
+ *
+ * These exist so postings always have a control account to resolve, not
+ * because anyone chose them. They are deliberately NOT offered as payment
+ * modes: "Received into" lists the accounts the business actually opened.
+ * Setup identifies its own rows by code, so code is what identifies them here.
+ */
+export const SETUP_CASH_BANK_CODES = DEFAULT_ACCOUNTS.filter(
+  (a) => a.controlKind === 'CASH' || a.controlKind === 'BANK'
+).map((a) => a.code);
 
 const DEFAULT_JOURNALS: Array<{ code: string; name: string; type: string }> = [
   { code: 'SAL', name: 'Sales', type: 'SALE' },

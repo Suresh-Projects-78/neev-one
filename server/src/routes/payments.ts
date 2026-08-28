@@ -6,7 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
-import { ensureLedgerSetup, postEntry, reverseEntry } from '../services/ledger.js';
+import { SETUP_CASH_BANK_CODES, ensureLedgerSetup, postEntry, reverseEntry } from '../services/ledger.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { baseCurrencyFor, isBase, rateFor, round2, toBase } from '../services/fx.js';
@@ -67,11 +67,18 @@ paymentsRouter.get('/orgs/:orgId/payment-modes', async (req, res) => {
   const { accountId, orgId, branchId } = req.tenant!;
   await ensureLedgerSetup(accountId, orgId, req.auth!.userId);
 
+  // Only the cash and bank accounts somebody actually opened. Setup creates a
+  // Cash-in-Hand and a Bank Accounts control account for every org so that
+  // postings resolve, and those were being offered here as though the user had
+  // set them up — a business with no ledgers of its own was invited to receive
+  // money into an account it had never heard of. They stay in the chart and
+  // keep taking the postings; they are just not choices.
   const modes = await prisma.ledgerAccount.findMany({
     where: {
       orgId,
       isActive: true,
       controlKind: { in: ['CASH', 'BANK'] },
+      code: { notIn: SETUP_CASH_BANK_CODES },
       OR: [{ branchId: null }, { branchId }],
     },
     orderBy: { code: 'asc' },

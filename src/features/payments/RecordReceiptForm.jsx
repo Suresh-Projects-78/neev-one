@@ -434,7 +434,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               <p className="mt-1 text-sm text-[rgb(var(--neg))]">{modesError}</p>
             ) : !modesLoading && modes.length === 0 ? (
               <p className="mt-1 text-sm text-[rgb(var(--warn-ink))]">
-                No cash or bank ledgers yet. Create one under Accounting → Ledgers.
+                No cash or bank accounts yet. Add one under Master Data → Chart of Accounts, under the Bank
+                Accounts or Cash-in-Hand group, and it appears here.
               </p>
             ) : null}
           </div>

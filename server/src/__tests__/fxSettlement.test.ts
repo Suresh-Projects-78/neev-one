@@ -65,9 +65,23 @@ const fxNet = (body: any) => {
   return row ? Number(row.credit || 0) - Number(row.debit || 0) : 0;
 };
 
+/**
+ * The org's bank account, opened on first use.
+ *
+ * Payment modes list only accounts the business opened, so a fresh org has
+ * none until one is created — the setup control account is not a choice.
+ */
+let bankAccountId = '';
 const bankId = async () => {
+  if (bankAccountId) return bankAccountId;
+  const created = await request(app)
+    .post(`/api/orgs/${owner.orgId}/ledger/accounts`)
+    .set(auth(owner))
+    .send({ name: 'HDFC Current A/c', accountType: 'ASSET', controlKind: 'BANK' })
+    .expect(201);
+  bankAccountId = created.body.account.id as string;
   const res = await request(app).get(`/api/orgs/${owner.orgId}/payment-modes`).set(auth(owner)).expect(200);
-  return res.body.modes.find((m: any) => m.controlKind === 'BANK').id as string;
+  return res.body.modes.find((m: any) => m.id === bankAccountId).id as string;
 };
 
 /** A USD invoice booked at the 1 May rate of 80. */

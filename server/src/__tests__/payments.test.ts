@@ -39,9 +39,37 @@ async function makeOwner(): Promise<Ctx> {
   return { token: signup.body.token, orgId: setup.body.company.orgId, branchId: setup.body.branch.id };
 }
 
-const modesFor = async (c: Ctx) => {
+/** What the endpoint answers as-is, with no accounts opened first. */
+const rawModes = async (c: Ctx) => {
   const res = await request(app).get(`/api/orgs/${c.orgId}/payment-modes`).set(auth(c)).expect(200);
   return res.body.modes as Array<{ id: string; controlKind: string; name: string }>;
+};
+
+/** Opening a real cash or bank account, the way the chart of accounts does. */
+const openLedger = async (c: Ctx, name: string, controlKind: 'CASH' | 'BANK') => {
+  const res = await request(app)
+    .post(`/api/orgs/${c.orgId}/ledger/accounts`)
+    .set(auth(c))
+    .send({ name, accountType: 'ASSET', controlKind })
+    .expect(201);
+  return res.body.account.id as string;
+};
+
+/**
+ * Payment modes for an org that has opened its accounts.
+ *
+ * Modes list only the cash and bank accounts a business actually created, so
+ * every test that pays or receives has to open one first — exactly as a real
+ * org does before its first receipt.
+ */
+const provisioned = new Set<string>();
+const modesFor = async (c: Ctx) => {
+  if (!provisioned.has(c.orgId)) {
+    provisioned.add(c.orgId);
+    await openLedger(c, 'HDFC Current A/c', 'BANK');
+    await openLedger(c, 'Petty Cash', 'CASH');
+  }
+  return rawModes(c);
 };
 
 beforeAll(async () => {
@@ -49,6 +77,14 @@ beforeAll(async () => {
 }, 60_000);
 
 describe('payment modes', () => {
+  it('offers nothing until the business opens a cash or bank account', async () => {
+    // Setup gives every org a Cash-in-Hand and a Bank Accounts control
+    // account so postings resolve. Nobody chose them, so "Received into"
+    // must not offer them — an empty list is the honest answer here.
+    const fresh = await makeOwner();
+    expect(await rawModes(fresh)).toEqual([]);
+  });
+
   it('offers the real cash and bank ledgers, not a hardcoded list', async () => {
     const modes = await modesFor(owner);
     const kinds = modes.map((m) => m.controlKind).sort();
@@ -56,6 +92,9 @@ describe('payment modes', () => {
     // Every mode is an actual ledger account, so a receipt knows where the
     // money landed.
     for (const m of modes) expect(m.id).toBeTruthy();
+    // The setup control accounts are not among them.
+    expect(modes.map((m) => m.name)).not.toContain('Cash-in-Hand');
+    expect(modes.map((m) => m.name)).not.toContain('Bank Accounts');
   });
 });
 
