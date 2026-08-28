@@ -22,7 +22,11 @@ const INVOICE_MODULE = 'SALES';
 const INVOICE_SUBMODULE = 'Invoices';
 
 const invoiceItemSchema = z.object({
-  itemId: z.string().optional().nullable(),
+  itemId: z
+    .union([z.string(), z.number()])
+    .transform((v) => String(v))
+    .optional()
+    .nullable(),
   description: z.string().optional().nullable(),
   quantity: z.number().optional().nullable(),
   rate: z.number().optional().nullable(),

@@ -92,7 +92,19 @@ const CONFIG: Record<
 };
 
 const itemSchema = z.object({
-  itemId: z.string().optional().nullable(),
+  /**
+   * Item ids arrive as numbers from the browser book, where records are keyed
+   * by an incrementing integer, and as strings from anything server-issued.
+   * Demanding a string rejected the browser's own payload: raising a credit
+   * note against an invoice failed outright with "Expected string, received
+   * number", which is a sentence about a schema shown to somebody trying to
+   * take goods back.
+   */
+  itemId: z
+    .union([z.string(), z.number()])
+    .transform((v) => String(v))
+    .optional()
+    .nullable(),
   description: z.string().optional().nullable(),
   quantity: z.number().optional().nullable(),
   rate: z.number().optional().nullable(),
