@@ -8,21 +8,24 @@ import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { getNextNumericId } from '../../utils/ids';
 import { formatMoney, round2 } from '../../utils/money';
+import { documentOutstanding } from '../../utils/onAccount';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
-const getInvoiceBalance = (inv) => {
-  const total = Number(inv?.total ?? 0);
-  const paid = Number(inv?.paidAmount ?? 0);
-  const bal = total - paid;
-  return Number.isFinite(bal) ? Math.max(0, round2(bal)) : 0;
-};
+/**
+ * What the customer still owes on an invoice, after credit notes.
+ *
+ * Was total minus paid, which ignores a sales return: after crediting an
+ * invoice this screen still asked for the full amount, so collecting "the
+ * balance" took money the customer no longer owed.
+ */
+const getInvoiceBalance = (inv, notes) => documentOutstanding(inv, notes).outstanding;
 
-const canCollectAgainstInvoice = (inv) => {
+const canCollectAgainstInvoice = (inv, notes) => {
   const rawStatus = String(inv?.status || '').trim();
   if (rawStatus === 'Draft') return false;
   if (rawStatus === 'Cancelled') return false;
-  return getInvoiceBalance(inv) > 0.0001;
+  return getInvoiceBalance(inv, notes) > 0.0001;
 };
 
 const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
@@ -88,13 +91,15 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       });
   }, [db.invoices, companyId]);
 
+  const creditNotes = safeArray(db?.creditNotes);
+
   const outstandingInvoices = useMemo(() => {
     const cid = Number(formData.customerId);
     if (!Number.isFinite(cid) || !cid) return [];
 
     return invoices
       .filter((inv) => Number(inv.customerId) === cid)
-      .filter((inv) => canCollectAgainstInvoice(inv));
+      .filter((inv) => canCollectAgainstInvoice(inv, creditNotes));
   }, [formData.customerId, invoices]);
 
   const selectedInvoiceIds = useMemo(() => {
@@ -118,7 +123,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       const want = Number(row?.amount ?? 0);
       const amt = Number.isFinite(want) ? Math.max(0, want) : 0;
       if (amt <= 0) continue;
-      const balance = getInvoiceBalance(inv);
+      const balance = getInvoiceBalance(inv, creditNotes);
       const capped = Math.min(balance, amt);
       if (capped <= 0) continue;
 
@@ -138,7 +143,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       advance,
       lines,
     };
-  }, [allocations, formData.amount, outstandingInvoices]);
+  }, [allocations, creditNotes, formData.amount, outstandingInvoices]);
 
   const toggleInvoice = (inv, selected) => {
     const key = String(inv.id);
@@ -163,7 +168,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           }, 0);
 
         const remaining = Math.max(0, totalAmount - alreadyAllocated);
-        const suggested = Math.min(getInvoiceBalance(inv), remaining || getInvoiceBalance(inv));
+        const suggested = Math.min(getInvoiceBalance(inv, creditNotes), remaining || getInvoiceBalance(inv, creditNotes));
         nextAmount = round2(suggested);
       }
 
@@ -206,11 +211,11 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         notify.error('One of the selected invoices was not found. Please refresh and try again.');
         return;
       }
-      if (!canCollectAgainstInvoice(inv)) {
+      if (!canCollectAgainstInvoice(inv, creditNotes)) {
         notify.error(`Cannot record against invoice ${inv.number || ''} (Draft/Cancelled/No balance).`);
         return;
       }
-      const balance = getInvoiceBalance(inv);
+      const balance = getInvoiceBalance(inv, creditNotes);
       if (Number(line.amount) > balance + 0.0001) {
         notify.error(`Allocation exceeds outstanding for invoice ${inv.number || ''}.`);
         return;
@@ -500,7 +505,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                   const key = String(inv.id);
                   const selected = Boolean(allocations[key]?.selected);
                   const allocValue = allocations[key]?.amount ?? '';
-                  const bal = getInvoiceBalance(inv);
+                  const bal = getInvoiceBalance(inv, creditNotes);
 
                   return (
                     <tr key={inv.id} className="ui-hover-sunken">

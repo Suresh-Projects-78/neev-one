@@ -7,20 +7,24 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
+import { documentOutstanding } from '../../utils/onAccount';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
-const getDocBalance = (doc) => {
-  const total = Number(doc?.total ?? 0);
-  const paid = Number(doc?.paidAmount ?? 0);
-  const bal = total - paid;
-  return Number.isFinite(bal) ? Math.max(0, round2(bal)) : 0;
-};
+/**
+ * What is still owed on a bill, after debit notes.
+ *
+ * This was total minus paid, which ignores a purchase return entirely. Raise a
+ * debit note against a bill and this screen still offered the full original
+ * amount — so paying "the outstanding balance" paid the vendor a second time
+ * for goods that had already gone back.
+ */
+const getDocBalance = (doc, notes) => documentOutstanding(doc, notes).outstanding;
 
-const canPayDoc = (doc) => {
+const canPayDoc = (doc, notes) => {
   const rawStatus = String(doc?.status || '').trim();
   if (rawStatus === 'Draft') return false;
-  return getDocBalance(doc) > 0.0001;
+  return getDocBalance(doc, notes) > 0.0001;
 };
 
 const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
@@ -97,32 +101,34 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       });
   }, [db.expenses, companyId]);
 
+  const debitNotes = safeArray(db?.debitNotes);
+
   const outstandingDocs = useMemo(() => {
     const vid = Number(formData.vendorId);
     if (!Number.isFinite(vid) || !vid) return [];
 
     const billRows = bills
       .filter((b) => Number(b.vendorId) === vid)
-      .filter((b) => canPayDoc(b))
+      .filter((b) => canPayDoc(b, debitNotes))
       .map((b) => ({
         key: `bill:${b.id}`,
         voucherType: 'bill',
         id: Number(b.id),
         number: b.number,
         date: b.date,
-        balance: getDocBalance(b),
+        balance: getDocBalance(b, debitNotes),
       }));
 
     const expenseRows = expenses
       .filter((e) => Number(e.vendorId) === vid)
-      .filter((e) => canPayDoc(e))
+      .filter((e) => canPayDoc(e, debitNotes))
       .map((e) => ({
         key: `expense:${e.id}`,
         voucherType: 'expense',
         id: Number(e.id),
         number: e.number,
         date: e.date,
-        balance: getDocBalance(e),
+        balance: getDocBalance(e, debitNotes),
       }));
 
     return [...billRows, ...expenseRows].sort((a, b) => {
@@ -131,7 +137,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       if (da !== dbb) return da < dbb ? 1 : -1;
       return Number(b.id) - Number(a.id);
     });
-  }, [bills, expenses, formData.vendorId]);
+  }, [bills, expenses, debitNotes, formData.vendorId]);
 
   const computed = useMemo(() => {
     const payAmountRaw = Number(formData.amount ?? 0);
@@ -239,11 +245,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         notify.error('One of the selected documents was not found. Please refresh and try again.');
         return;
       }
-      if (!canPayDoc(doc)) {
+      if (!canPayDoc(doc, debitNotes)) {
         notify.error(`Cannot record against ${line.voucherType} ${doc.number || ''} (Draft/No balance).`);
         return;
       }
-      const balance = getDocBalance(doc);
+      const balance = getDocBalance(doc, debitNotes);
       if (Number(line.amount) > balance + 0.0001) {
         notify.error(`Allocation exceeds outstanding for ${line.voucherType} ${doc.number || ''}.`);
         return;

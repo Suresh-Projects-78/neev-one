@@ -60,11 +60,37 @@ export function documentOutstanding(doc, notes) {
       .filter((a) => String(a?.docId ?? '') === String(doc?.id ?? ''))
       .reduce((t, a) => t + num(a.amount), 0)
   );
+  /**
+   * A note raised directly against this document reduces it too.
+   *
+   * Only allocations were counted, and a note raised against one specific
+   * document carries none — it links by originalBillId or originalInvoiceId
+   * and leaves allocations empty. So a purchase return knocked the vendor's
+   * ledger down correctly while the bill itself still read as fully
+   * outstanding, and the payment screen offered to pay the whole original
+   * amount: paying the vendor again for goods that had gone back.
+   *
+   * Notes that do carry allocations are already counted above, so they are
+   * excluded here rather than counted twice.
+   */
+  const linked = round2(
+    (Array.isArray(notes) ? notes : [])
+      .filter((n) => isLive(n))
+      .filter((n) => !(Array.isArray(n?.allocations) && n.allocations.length))
+      .filter((n) => String(n?.settlementMode || 'DOCUMENT') !== 'ON_ACCOUNT')
+      .filter((n) => {
+        const ref = n?.originalBillId ?? n?.originalInvoiceId ?? '';
+        return String(ref) !== '' && String(ref) === String(doc?.id ?? '');
+      })
+      .reduce((t, n) => t + num(n.total), 0)
+  );
+
   return {
     total,
     paid,
     knocked,
-    outstanding: round2(Math.max(0, total - paid - knocked)),
+    linked,
+    outstanding: round2(Math.max(0, total - paid - knocked - linked)),
   };
 }
 
