@@ -773,7 +773,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
                   : []
               }
               placeholder={isIndiaBilling ? 'Select state' : 'Select / type state'}
-              allowCustom
+              // See CustomerPicker: a typed Indian state breaks the tax split.
+              allowCustom={!isIndiaBilling}
             />
           </div>
         </div>

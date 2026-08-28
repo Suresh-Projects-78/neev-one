@@ -695,7 +695,11 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   : []
               }
               placeholder={isIndiaBilling ? 'Select state' : 'Select / type state'}
-              allowCustom
+              // Typed values only where there is no list to pick from. An
+              // Indian state decides CGST + SGST against IGST by string match,
+              // so "Karntaka" silently charges the wrong tax; outside India
+              // there are no options at all and typing is the only way in.
+              allowCustom={!isIndiaBilling}
             />
           </div>
         </div>
@@ -839,7 +843,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                       : []
                   }
                   placeholder={isIndiaShipping ? 'Select state' : 'Select / type state'}
-                  allowCustom
+                  allowCustom={!isIndiaShipping}
                 />
               </div>
               <div>
