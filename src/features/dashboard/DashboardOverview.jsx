@@ -417,6 +417,26 @@ export default function DashboardOverview({
   }, [invoicesProp, db, currentCompany]);
 
   /**
+   * The same rule the money-out stream already applies: a draft is an
+   * intention, not a liability.
+   *
+   * It was applied on one side only. A draft invoice counted towards Billed,
+   * Outstanding, Average invoice, the aging buckets and "where the money is
+   * owed" — and, if its due date had passed, was reported as *overdue* and put
+   * on the chase list, on a document nobody had ever sent. The worklist card
+   * directly above those numbers says "Nothing is owed until they go out",
+   * so the dashboard was contradicting itself within one screen.
+   *
+   * `allInvoices` stays whole: the draft worklist needs the drafts, and the
+   * "no invoices yet" empty state should not claim an empty book when a draft
+   * is sitting there.
+   */
+  const postedInvoices = useMemo(
+    () => allInvoices.filter((i) => String(i.status || '').toLowerCase() !== 'draft'),
+    [allInvoices]
+  );
+
+  /**
    * Money out: purchase bills and expense vouchers, folded into one stream.
    *
    * The dashboard used to ingest only the sales side, which answers "what did
@@ -442,13 +462,13 @@ export default function DashboardOverview({
 
   /** Invoices inside the chosen window, and the window immediately before it. */
   const { current, previous } = useMemo(() => {
-    if (!range.days) return { current: allInvoices, previous: [] };
+    if (!range.days) return { current: postedInvoices, previous: [] };
     const from = now - range.days * DAY;
     const prevFrom = from - range.days * DAY;
 
     const cur = [];
     const prev = [];
-    for (const inv of allInvoices) {
+    for (const inv of postedInvoices) {
       const d = toDate(inv.date);
       if (!d) continue;
       const t = d.getTime();
@@ -456,7 +476,7 @@ export default function DashboardOverview({
       else if (t >= prevFrom) prev.push(inv);
     }
     return { current: cur, previous: prev };
-  }, [allInvoices, range, now]);
+  }, [postedInvoices, range, now]);
 
   /** The same window, applied to the money-out stream. */
   const { currentOut, previousOut } = useMemo(() => {
@@ -701,7 +721,7 @@ export default function DashboardOverview({
     const rows = [];
 
     // Overdue: past the due date with money still on it.
-    const overdue = allInvoices.filter(
+    const overdue = postedInvoices.filter(
       (i) => balanceOf(i) > 0 && String(i.dueDate || '') && String(i.dueDate) < todayStr
     );
     if (overdue.length) {
@@ -769,7 +789,7 @@ export default function DashboardOverview({
     }
 
     return rows;
-  }, [allInvoices, db, currentCompany, now, onOpenInvoices, onOpenPurchases]);
+  }, [allInvoices, postedInvoices, db, currentCompany, now, onOpenInvoices, onOpenPurchases]);
 
   /**
    * The period, and the one before it, side by side.
@@ -780,7 +800,7 @@ export default function DashboardOverview({
    * percentage does not say whether the change was a trend or one lumpy week.
    */
   const comparisonRows = useMemo(() => {
-    const overdueValue = allInvoices
+    const overdueValue = postedInvoices
       .filter((i) => {
         const bal = Math.max(0, num(i.total) - num(i.paidAmount));
         const due = String(i.dueDate || '');
@@ -805,7 +825,7 @@ export default function DashboardOverview({
       { key: 'avg', label: 'Average invoice', now: avg, then: prevAvg },
     ];
   }, [
-    allInvoices, now, billed, prevBilled, collected, prevCollected, collectedPct,
+    postedInvoices, now, billed, prevBilled, collected, prevCollected, collectedPct,
     outstanding, prevOutstanding, spent, prevSpent, current.length, previous.length, buckets,
   ]);
 
