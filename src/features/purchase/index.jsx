@@ -2416,7 +2416,18 @@ export const DebitNoteForm = ({
       igstTotal: computed.igstTotal,
       gstTotal: computed.gstTotal,
       total: computed.total,
-      status: 'Draft',
+      /**
+       * Open, matching what was just sent to the server.
+       *
+       * The write-through a few lines up posts this same note with
+       * status: 'Open', while the local record was stamped Draft. The two
+       * copies of one document therefore disagreed from the moment it was
+       * created — and since every report is computed from the local book,
+       * which skips drafts, a purchase return reversed nothing: the vendor
+       * was still owed the full amount and the input GST was never given
+       * back, with no action anywhere to take the note out of draft.
+       */
+      status: 'Open',
       createdAt: new Date().toISOString(),
     };
 
