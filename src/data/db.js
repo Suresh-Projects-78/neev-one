@@ -1,4 +1,5 @@
 // Centralized DB initialization + migrations
+import { computeInventorySummaryByItemId, getItemOpeningQty, isStockItem } from '../utils/inventory.js';
 
 export const getDefaultDocSettings = () => ({
   numbering: {
@@ -1473,6 +1474,42 @@ export const normalizeDB = (db) => {
           groupId: findGroupIdByName(companyId, 'cash-in-hand'),
         });
 
+        /**
+         * The ledger stock is carried in.
+         *
+         * "Stock-in-Hand" existed only as a *group*; a company could have no
+         * account under it, and then there was nowhere for inventory to post
+         * even once something wanted to post there.
+         */
+        ensureControlAccount(companyId, {
+          code: '1400',
+          name: 'Stock-in-Hand',
+          type: 'Asset',
+          subType: 'Current Assets',
+          main: 'Balance Sheet',
+          groupId: findGroupIdByName(companyId, 'stock-in-hand'),
+        });
+
+        /**
+         * Where opening stock comes from.
+         *
+         * Opening stock is entered as a quantity on the item and has never had
+         * an accounting entry behind it, so the goods a company already owned
+         * on day one existed in the stock report and nowhere in the books.
+         * Capitalising them needs somewhere to credit — they were not bought
+         * through a bill, so crediting Purchases would invent a negative
+         * expense. This is that account, and it is what every accounting
+         * package uses for the same job.
+         */
+        ensureControlAccount(companyId, {
+          code: '3000',
+          name: 'Opening Balance Equity',
+          type: 'Equity',
+          subType: 'Capital & Equity',
+          main: 'Balance Sheet',
+          groupId: findGroupIdByName(companyId, 'capital accounts'),
+        });
+
         const validAccountIds = new Set(
           safeArray(next.chartOfAccounts)
             .filter((a) => Number(a?.companyId) === companyId)
@@ -1541,6 +1578,35 @@ export const normalizeDB = (db) => {
       const salesRevenueId = findAccountIdByName('sales revenue') || String(accounts.find((a) => lower(a.type) === 'income')?.id || '');
       const purchaseAccountsId =
         findAccountIdByName('purchase accounts') || String(accounts.find((a) => lower(a.name).includes('purchase'))?.id || '');
+      const stockInHandId = findAccountIdByName('stock-in-hand') || findAccountIdByName('stock in hand');
+      const openingEquityId = findAccountIdByName('opening balance equity');
+
+      // Opening and closing stock value, valued exactly as the Inventory
+      // screen values it — quantity at purchase price — so the balance sheet
+      // and that screen can never disagree.
+      let openingStockValue = 0;
+      let closingStockValue = 0;
+      try {
+        const summary = computeInventorySummaryByItemId({ db: next, companyId });
+        for (const item of safeArray(next.items)) {
+          if (Number(item?.companyId) !== companyId) continue;
+          if (!isStockItem(item)) continue;
+          const rate = Number(item?.purchasePrice ?? 0);
+          if (!Number.isFinite(rate)) continue;
+          const row = summary.get(String(item.id));
+          const closingQty = Number(row?.closingQty ?? 0);
+          const openingQty = Number(getItemOpeningQty(item) ?? 0);
+          if (Number.isFinite(closingQty)) closingStockValue += closingQty * rate;
+          if (Number.isFinite(openingQty)) openingStockValue += openingQty * rate;
+        }
+      } catch {
+        // A stock helper that throws must not take the ledger with it; the
+        // books simply carry no stock entry that pass.
+        openingStockValue = 0;
+        closingStockValue = 0;
+      }
+      openingStockValue = r2(openingStockValue);
+      closingStockValue = r2(closingStockValue);
       const operatingExpensesId =
         findAccountIdByName('operating expenses') || String(accounts.find((a) => lower(a.type) === 'expense')?.id || '');
       const suspenseAccountId =
@@ -1812,6 +1878,46 @@ export const normalizeDB = (db) => {
           post(counterId, amt, 0);
           post(cashBankId, 0, amt);
         }
+      }
+
+      /**
+       * Stock, without which neither statement is true.
+       *
+       * Purchases are expensed straight to Purchase Accounts — a periodic
+       * inventory system — and the entry that makes a periodic system correct,
+       * carrying unsold stock out of cost and onto the balance sheet, was
+       * never made. Nothing had ever posted to Stock-in-Hand: the ledger was
+       * created at setup and sat at zero for the life of the company.
+       *
+       * So a business that had bought 150 units and sold one showed an
+       * ₹87,500 loss and a balance sheet with no inventory on it, while the
+       * Inventory screen correctly reported ₹2.68L of stock. Both headline
+       * statements were wrong for anyone holding stock.
+       *
+       *   Dr Stock-in-Hand          closing value
+       *     Cr Opening Balance Equity   opening value
+       *     Cr Purchase Accounts        closing - opening
+       *
+       * Two credits because the two halves have different origins. Opening
+       * stock was never bought through this ledger, so crediting it to
+       * Purchases would drive that expense negative and invent profit — which
+       * is exactly what a first, simpler version of this did. Only the
+       * movement since day one belongs against Purchases, and what is left
+       * there is then the cost of what actually sold.
+       *
+       * Worked through on the books this was found in: opening 100 units and
+       * 50 bought at ₹1,800, one sold. Stock 268,200. Purchases 90,000 -
+       * 88,200 = 1,800, the cost of the single unit sold. Profit 2,500 - 1,800
+       * = ₹700, which is the truth.
+       *
+       * Derived here rather than stored, like everything else in this ledger:
+       * a saved closing-stock voucher goes stale the moment a back-dated bill
+       * arrives.
+       */
+      if (stockInHandId && (closingStockValue || openingStockValue)) {
+        post(stockInHandId, closingStockValue, 0);
+        if (openingEquityId) post(openingEquityId, 0, openingStockValue);
+        if (purchaseAccountsId) post(purchaseAccountsId, 0, r2(closingStockValue - openingStockValue));
       }
 
       // Compute final balances for this company
