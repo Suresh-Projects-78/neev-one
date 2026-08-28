@@ -11395,6 +11395,21 @@ const AppShell = () => {
 
   const [active, setActive] = useState('dashboard');
 
+  /**
+   * A new screen starts at the top of itself.
+   *
+   * The window keeps its scroll offset across a view change, so opening a
+   * screen from halfway down a long list dropped you into the middle of the
+   * next one — past its heading, its filters and its primary action, with no
+   * indication anything was above. It reads as a half-loaded page.
+   *
+   * Not smooth: this is not the user scrolling, it is a different screen, and
+   * animating it would imply the two are one continuous surface.
+   */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [active]);
+
   const [ledgerNav, setLedgerNav] = useState({ ledgerId: null, returnTo: 'trialBalance' });
   const openLedger = useCallback(
     (ledgerId) => {
