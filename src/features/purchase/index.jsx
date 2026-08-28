@@ -133,6 +133,16 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   };
 
   const updateItem = (index, field, value, pickedItem = null) => {
+    // Same fix the invoice form already carries. Every other field clears its
+    // error the moment it is answered; the line grid did not, so "Every line
+    // needs an item" stayed on screen after the line had one — and the count
+    // beside Create Bill still said a field needed attention on a bill that
+    // saved perfectly well.
+    //
+    // Outside the updater on purpose: this is a side effect, not part of
+    // computing the next form state.
+    if (field === 'itemId') fieldErrors.clearField('items');
+
     setFormData((prev) => {
       const nextItems = [...prev.items];
       const next = { ...nextItems[index], [field]: value };
