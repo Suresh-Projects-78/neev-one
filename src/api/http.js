@@ -80,6 +80,34 @@ function getWarehouseId() {
   return String(localStorage.getItem('activeWarehouseId') || '').trim();
 }
 
+/**
+ * What to tell someone when the reply is not JSON.
+ *
+ * A failure that never reaches the server comes back as somebody else's error
+ * page — Cloudflare's, a proxy's — and the first 300 characters of it used to
+ * be handed to the user as the message. Trying to save a purchase order and
+ * being shown `<!doctype html> <!--[if lt IE 7]>` says nothing about the order
+ * and nothing about what to do next.
+ *
+ * The page body is still logged for whoever is debugging; it is just not the
+ * thing on screen.
+ */
+function describeHttpFailure(status, text) {
+  const raw = String(text || '').trim();
+  const isHtml = /^\s*<(!doctype|html|head|body)/i.test(raw);
+
+  if (isHtml || !raw) {
+    if (raw) console.error(`Non-JSON ${status} response from the API:`, raw.slice(0, 500));
+    if (status === 502 || status === 503 || status === 504) {
+      return `The server could not be reached (${status}). It may be restarting — try again in a moment.`;
+    }
+    if (status >= 500) return `The server could not complete that (${status}). Nothing was saved.`;
+    return `Request failed (${status}).`;
+  }
+
+  return raw.slice(0, 300);
+}
+
 export async function apiFetch(
   path,
   {
@@ -138,12 +166,7 @@ export async function apiFetch(
   }
 
   if (!res.ok) {
-    const raw = String(text || '').trim();
-    const msg =
-      data?.error ||
-      (raw ? raw.slice(0, 300) : '') ||
-      `Request failed (${res.status})`;
-    const err = new Error(msg);
+    const err = new Error(data?.error || describeHttpFailure(res.status, text));
     err.status = res.status;
     err.data = data;
     throw err;
