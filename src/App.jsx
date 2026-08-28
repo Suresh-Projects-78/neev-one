@@ -191,6 +191,7 @@ import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
 import { resendVerification } from './api/email';
 import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
+import { nextItemCode, bumpItemCodeSeries } from './utils/itemCode';
 import { useTheme } from './components/ui/useTheme';
 import { useDensity } from './components/ui/useDensity';
 import { useFieldErrors } from './components/ui/useFieldErrors';
@@ -2351,6 +2352,10 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
 const NEW_CATEGORY_OPTION = '__new_item_category__';
 
 const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = null, onClose }) => {
+  const { isEnabled: itemFeatureEnabled } = useFeatures();
+  // Batch and expiry are only offered when the company has switched the
+  // capability on; nothing downstream asks for a batch otherwise.
+  const batchCapable = itemFeatureEnabled('batchExpiry') || itemFeatureEnabled('batchSerial');
   const itemErrors = useFieldErrors('item');
   const isEdit = Boolean(initialData);
 
@@ -2381,7 +2386,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
     }
 
     return {
-      code: `ITM${Date.now()}`,
+      code: nextItemCode(db, currentCompany, 'Goods'),
       name: '',
       description: '',
       category: '',
@@ -2571,7 +2576,13 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
       stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
     };
 
-    setDb({ ...db, items: [...db.items, newItem] });
+    setDb({
+      ...db,
+      items: [...db.items, newItem],
+      // Advance the series so the next item of this type does not offer the
+      // number this one just took.
+      companies: bumpItemCodeSeries(db, currentCompany, newItem.type, newItem.code),
+    });
     onClose?.();
     notify.success('Item created!');
   };
@@ -2579,6 +2590,37 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
+        {/*
+          Type first: it decides which code series the item is numbered from
+          and whether batch and expiry apply, so asking it last meant the code
+          was already minted from the wrong series.
+        */}
+        <div className="col-span-2">
+          <label className="block text-sm font-medium mb-1">Type</label>
+          <select
+            value={formData.type}
+            onChange={(e) => {
+              const type = e.target.value;
+              setFormData((p) => ({
+                ...p,
+                type,
+                // Only renumber a new item; an existing code is the one on the
+                // shelf label and is not ours to change.
+                code: initialData ? p.code : nextItemCode(db, currentCompany, type),
+                trackingType: type === 'Service' ? 'NONE' : p.trackingType,
+              }));
+            }}
+            className="ui-select w-full px-3 py-2"
+          >
+            <option>Goods</option>
+            <option>Service</option>
+          </select>
+          <p className="ui-caption mt-1">
+            {String(formData.type || '').toLowerCase() === 'service'
+              ? 'A service is not stocked, so it has no opening quantity, batch or expiry.'
+              : 'Goods are stocked, and can be tracked by batch and expiry.'}
+          </p>
+        </div>
         <div>
           <label className="block text-sm font-medium mb-1">Code</label>
           <input
@@ -2673,17 +2715,6 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
               </div>
             </div>
           ) : null}
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">Type</label>
-          <select
-            value={formData.type}
-            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            className="ui-select w-full px-3 py-2"
-          >
-            <option>Goods</option>
-            <option>Service</option>
-          </select>
         </div>
 
         {String(formData.type || '').toLowerCase() === 'goods' ? (
@@ -2848,7 +2879,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
             placeholder="Alert when stock falls to this"
           />
         </div>
-        {String(formData.type || '').toLowerCase() === 'goods' ? (
+        {batchCapable && String(formData.type || '').toLowerCase() === 'goods' ? (
           <div className="col-span-2 rounded-lg border p-3 space-y-2">
             <div className="text-sm font-medium">Batch &amp; expiry</div>
             <label className="flex items-start gap-2 text-sm cursor-pointer">
@@ -7752,6 +7783,105 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
+      </div>
+
+      {/*
+        Item codes, which are not a voucher series but belong with the others:
+        this is the screen somebody opens when they want to decide how things
+        are numbered. Goods and services get their own series because a
+        business that sells both usually wants to tell them apart at a glance.
+      */}
+      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="ui-t-label">Item codes</div>
+            <p className="ui-caption mt-1">
+              Off by default, and new items get a timestamp. Switch it on to number goods and services in their own
+              series.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-sm shrink-0">
+            <input
+              type="checkbox"
+              checked={Boolean(docSettings?.numbering?.itemCode?.enabled)}
+              onChange={(e) =>
+                setDocSettings((prev) => ({
+                  ...prev,
+                  numbering: {
+                    ...prev.numbering,
+                    itemCode: { ...(prev.numbering?.itemCode || {}), enabled: e.target.checked },
+                  },
+                }))
+              }
+            />
+            Use item code series
+          </label>
+        </div>
+
+        {docSettings?.numbering?.itemCode?.enabled ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {[
+              { key: 'goods', label: 'Goods', fallbackPrefix: 'GD-' },
+              { key: 'service', label: 'Services', fallbackPrefix: 'SV-' },
+            ].map((row) => {
+              const cfg = docSettings?.numbering?.itemCode?.[row.key] || {};
+              const prefix = String(cfg.prefix ?? row.fallbackPrefix);
+              const digits = Number(cfg.digits ?? 4) || 4;
+              const nextNumber = Number(cfg.nextNumber ?? 1) || 1;
+              const patch = (p) =>
+                setDocSettings((prev) => ({
+                  ...prev,
+                  numbering: {
+                    ...prev.numbering,
+                    itemCode: {
+                      ...(prev.numbering?.itemCode || {}),
+                      [row.key]: { ...(prev.numbering?.itemCode?.[row.key] || {}), ...p },
+                    },
+                  },
+                }));
+              return (
+                <div key={row.key} className="ui-sunken rounded-xl p-4 space-y-3">
+                  <div className="ui-t-label">{row.label}</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
+                      <input
+                        type="text"
+                        value={prefix}
+                        onChange={(e) => patch({ prefix: e.target.value })}
+                        className="ui-input w-full px-2 py-1.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        value={digits}
+                        onChange={(e) => patch({ digits: Math.max(1, Math.min(12, Number(e.target.value) || 1)) })}
+                        className="ui-input w-full px-2 py-1.5"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Next</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={nextNumber}
+                        onChange={(e) => patch({ nextNumber: Math.max(1, Number(e.target.value) || 1) })}
+                        className="ui-input w-full px-2 py-1.5"
+                      />
+                    </div>
+                  </div>
+                  <p className="ui-caption">
+                    Next code: <span className="fig">{`${prefix}${String(nextNumber).padStart(digits, '0')}`}</span>
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">

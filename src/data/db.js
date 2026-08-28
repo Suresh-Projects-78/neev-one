@@ -11,6 +11,23 @@ export const getDefaultDocSettings = () => ({
     creditNote: { mode: 'auto', prefix: 'CN-', suffix: '', nextNumber: 1, allowManualOverride: true },
     debitNote: { mode: 'auto', prefix: 'DN-', suffix: '', nextNumber: 1, allowManualOverride: true },
     journalEntry: { mode: 'auto', prefix: 'JE-', suffix: '', nextNumber: 1, allowManualOverride: true },
+    /**
+     * Item codes, kept per item type.
+     *
+     * Codes were `ITM${Date.now()}` — a thirteen-digit timestamp, unique but
+     * unreadable and identical in shape for a bag of cement and an hour of
+     * labour. A business that wants its goods and its services numbered
+     * apart could not have it.
+     *
+     * Off by default: switching it on is a decision about how a company
+     * names its things, and until it is made the old timestamp is what
+     * existing books already contain.
+     */
+    itemCode: {
+      enabled: false,
+      goods: { prefix: 'GD-', digits: 4, nextNumber: 1 },
+      service: { prefix: 'SV-', digits: 4, nextNumber: 1 },
+    },
   },
   templates: {
     invoice: { templateId: 'classic', accentId: 'blue' },

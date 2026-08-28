@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useFeatures } from '../../permissions/useFeatures';
+import { nextItemCode, bumpItemCodeSeries } from '../../utils/itemCode';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createItem, listItems } from '../../api/masters';
@@ -89,10 +91,19 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   );
   const gstRateValues = useMemo(() => gstRates.map((r) => String(Number(r.rate))), [gstRates]);
 
+  const { isEnabled } = useFeatures();
+  /**
+   * Batch and expiry only exist if the company switched the capability on, and
+   * only ever apply to goods — an hour of labour has no batch and does not go
+   * off.
+   */
+  const batchCapable = isEnabled('batchExpiry') || isEnabled('batchSerial');
+
   const [newItem, setNewItem] = useState(() => ({
-    code: `ITM${Date.now()}`,
+    code: nextItemCode(db, currentCompany, 'Goods'),
     name: '',
     type: 'Goods',
+    trackingType: 'NONE',
     unit: 'Pcs',
     description: '',
     hsnSac: '',
@@ -104,9 +115,10 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
 
   const resetNewItem = () => {
     setNewItem({
-      code: `ITM${Date.now()}`,
+      code: nextItemCode(db, currentCompany, 'Goods'),
       name: '',
       type: 'Goods',
+      trackingType: 'NONE',
       unit: 'Pcs',
       description: '',
       hsnSac: '',
@@ -225,11 +237,19 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     openingQty: parseFloat(newItem.openingQty) || 0,
                     openingWarehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
                     stock: parseFloat(newItem.openingQty) || 0,
+                    // Services are never tracked, whatever the form last held.
+                    trackingType: newItem.type === 'Service' ? 'NONE' : String(newItem.trackingType || 'NONE'),
                   };
 
                   setDb((prev) => {
                     const prevItems = Array.isArray(prev.items) ? prev.items : [];
-                    return { ...prev, items: [...prevItems, created] };
+                    return {
+                      ...prev,
+                      items: [...prevItems, created],
+                      // Move the series on, so the next item of this type does
+                      // not offer the number this one just took.
+                      companies: bumpItemCodeSeries(prev, currentCompany, newItem.type, created.code),
+                    };
                   });
 
                   // Write through to the server so the item exists for every
@@ -268,6 +288,39 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                 className="space-y-3"
               >
                 <div className="grid grid-cols-2 gap-3">
+                  {/*
+                    Type comes first because everything under it depends on the
+                    answer: which code series the item is numbered from, and
+                    whether batch and expiry apply at all. Asked last, as it
+                    used to be, the code was already minted from the wrong
+                    series by the time you said what the thing was.
+                  */}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium mb-1">Type</label>
+                    <select
+                      value={newItem.type}
+                      onChange={(e) => {
+                        const type = e.target.value;
+                        setNewItem((p) => ({
+                          ...p,
+                          type,
+                          code: nextItemCode(db, currentCompany, type),
+                          // A service cannot carry a batch or an expiry date.
+                          trackingType: type === 'Service' ? 'NONE' : p.trackingType,
+                        }));
+                      }}
+                      className="ui-select w-full px-3 py-2"
+                      data-autofocus="true"
+                    >
+                      <option>Goods</option>
+                      <option>Service</option>
+                    </select>
+                    <p className="ui-caption mt-1">
+                      {newItem.type === 'Service'
+                        ? 'A service is not stocked, so it has no opening quantity, batch or expiry.'
+                        : 'Goods are stocked, and can be tracked by batch and expiry.'}
+                    </p>
+                  </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Code</label>
                     <input
@@ -299,17 +352,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       placeholder="What this item is — copied onto document lines"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Type</label>
-                    <select
-                      value={newItem.type}
-                      onChange={(e) => setNewItem((p) => ({ ...p, type: e.target.value }))}
-                      className="ui-select w-full px-3 py-2"
-                    >
-                      <option>Goods</option>
-                      <option>Service</option>
-                    </select>
-                  </div>
+
                   <div>
                     <label className="block text-sm font-medium mb-1">Unit</label>
                     <select
@@ -433,6 +476,35 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       />
                       <p className="ui-caption mt-1">
                         What is on the shelf now. Leave at zero and this item cannot be sold until a purchase records some.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {/*
+                    Only when the company has switched batch tracking on, and
+                    only for goods. Offering it otherwise asks a question the
+                    rest of the product cannot answer: nothing downstream
+                    prompts for a batch unless the capability is enabled, and a
+                    service has nothing to batch.
+                  */}
+                  {batchCapable && newItem.type === 'Goods' ? (
+                    <div className="col-span-2">
+                      <label className="block text-sm font-medium mb-1">Batch &amp; expiry</label>
+                      <select
+                        value={newItem.trackingType || 'NONE'}
+                        onChange={(e) => setNewItem((p) => ({ ...p, trackingType: e.target.value }))}
+                        className="ui-select w-full px-3 py-2"
+                      >
+                        <option value="NONE">Not tracked</option>
+                        <option value="BATCH">Track batch</option>
+                        <option value="BATCH_EXPIRY">Track batch and expiry</option>
+                      </select>
+                      <p className="ui-caption mt-1">
+                        {newItem.trackingType === 'BATCH_EXPIRY'
+                          ? 'Every receipt and sale of this item will ask which batch, and when it expires.'
+                          : newItem.trackingType === 'BATCH'
+                            ? 'Every receipt and sale of this item will ask which batch.'
+                            : 'Stock is counted as one pool, with no batch on receipts or sales.'}
                       </p>
                     </div>
                   ) : null}
