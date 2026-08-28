@@ -102,9 +102,22 @@ const Popover = ({ anchorRef, onClose, children, minWidth = 260, maxWidth = 420,
   useEffect(() => {
     if (!pos || claimedFocusRef.current) return;
     claimedFocusRef.current = true;
-    if (!panelRef.current?.contains(document.activeElement)) {
-      panelRef.current?.focus({ preventScroll: true });
+    if (panelRef.current?.contains(document.activeElement)) return;
+    // Whoever wants the caret says so with data-autofocus, and gets it here —
+    // once the panel is placed and its contents can actually take focus.
+    //
+    // Asking to be focused from inside the panel does not work on its own: that
+    // runs while the panel is still unpositioned and hidden, focus() on a
+    // hidden element does nothing, and then this effect finds nothing focused
+    // and claims the panel. The state picker lost every keystroke that way —
+    // it opens a searchable list of thirty-eight states, and typing went
+    // nowhere until you clicked the box first.
+    const wants = panelRef.current?.querySelector('[data-autofocus]');
+    if (wants && typeof wants.focus === 'function') {
+      wants.focus({ preventScroll: true });
+      return;
     }
+    panelRef.current?.focus({ preventScroll: true });
   }, [pos]);
 
   return createPortal(

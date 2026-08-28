@@ -155,6 +155,9 @@ const PopupSelect = ({
             <div className="p-2 border-b">
               <input
                 ref={searchRef}
+                // Claimed by Popover once the panel is placed; focusing from
+                // the effect below alone is too early to stick.
+                data-autofocus="true"
                 type="text"
                 value={query}
                 onChange={(e) => {
