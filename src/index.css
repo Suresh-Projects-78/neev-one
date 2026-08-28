@@ -557,6 +557,16 @@
     vertical-align: middle;
   }
 
+  /* A sortable column header renders its label inside a <button>, and
+     Tailwind's preflight resets text-transform on buttons. So a filterable
+     header came out title case while a plain <th> next to it inherited the
+     uppercase above — "Ref No" sitting beside "REF DATE" and "ACTIONS" in the
+     same header row. Put the inheritance back. */
+  .ui-th button {
+    text-transform: inherit;
+    letter-spacing: inherit;
+  }
+
   .ui-num {
     text-align: right;
     font-variant-numeric: tabular-nums;
