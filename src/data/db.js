@@ -2743,6 +2743,65 @@ export const normalizeDB = (db) => {
           groupId: depositsGroupId,
         });
 
+        /**
+         * The P&L side of the chart, which a real company never got.
+         *
+         * These four are looked up by exact name when a document is posted —
+         * `findAccountIdByName('sales revenue')`, `'purchase accounts'`,
+         * `'operating expenses'`, `'cash'`. A signed-up company had none of
+         * them: only the GST accounts, the two control accounts and Suspense
+         * were ever created, and the Income and Expense sides of its chart
+         * were empty. So every posting to them resolved to an empty id, was
+         * dropped, and the residual landed in Suspense — an *asset*.
+         *
+         * On a ₹2,950 invoice that meant Dr customer 2,950 / Cr Output CGST
+         * 225 / Cr Output SGST 225 / Cr Suspense 2,500. The trial balance
+         * still footed, which is precisely why it went unnoticed: the ₹2,500
+         * of revenue never reached the P&L, and the balance sheet carried it
+         * as an asset instead.
+         *
+         * They exist in DEFAULT_DB, so the guest book was correct and only
+         * real tenants were wrong. The groups are already created by
+         * TEMPLATE_GROUPS; only the ledgers under them were missing.
+         */
+        ensureControlAccount(companyId, {
+          code: '4000',
+          name: 'Sales Revenue',
+          type: 'Income',
+          subType: 'Income',
+          main: 'P&L',
+          groupId: findGroupIdByName(companyId, 'sales accounts'),
+        });
+
+        ensureControlAccount(companyId, {
+          code: '5000',
+          name: 'Purchase Accounts',
+          type: 'Expense',
+          subType: 'Expenses',
+          main: 'P&L',
+          groupId: findGroupIdByName(companyId, 'purchase accounts'),
+        });
+
+        ensureControlAccount(companyId, {
+          code: '5100',
+          name: 'Operating Expenses',
+          type: 'Expense',
+          subType: 'Expenses',
+          main: 'P&L',
+          groupId: findGroupIdByName(companyId, 'indirect expenses'),
+        });
+
+        // Named exactly "Cash" because that is the name receipts and payments
+        // look for; the group it sits in is Cash-in-Hand.
+        ensureControlAccount(companyId, {
+          code: '1000',
+          name: 'Cash',
+          type: 'Asset',
+          subType: 'Current Assets',
+          main: 'Balance Sheet',
+          groupId: findGroupIdByName(companyId, 'cash-in-hand'),
+        });
+
         const validAccountIds = new Set(
           safeArray(next.chartOfAccounts)
             .filter((a) => Number(a?.companyId) === companyId)
