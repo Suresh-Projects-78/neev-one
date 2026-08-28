@@ -347,7 +347,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
     onSaved?.(receiptRecord);
 
-    notify.error(computed.advance > 0 ? 'Receipt recorded (with advance)!' : 'Receipt recorded!');
+    notify.success(computed.advance > 0 ? 'Receipt recorded (with advance)!' : 'Receipt recorded!');
     onClose?.();
   };
 

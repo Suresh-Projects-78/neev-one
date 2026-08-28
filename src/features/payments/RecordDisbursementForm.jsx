@@ -387,7 +387,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
     onSaved?.(paymentRecord);
 
-    notify.error(computed.advance > 0 ? 'Payment recorded (with advance)!' : 'Payment recorded!');
+    notify.success(computed.advance > 0 ? 'Payment recorded (with advance)!' : 'Payment recorded!');
     onClose?.();
   };
 

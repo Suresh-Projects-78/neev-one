@@ -81,7 +81,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
       payments: [...(Array.isArray(db.payments) ? db.payments : []), paymentRecord],
     });
 
-    notify.error(isInvoice ? 'Receipt recorded!' : 'Payment recorded!');
+    notify.success(isInvoice ? 'Receipt recorded!' : 'Payment recorded!');
     onClose?.();
   };
 
