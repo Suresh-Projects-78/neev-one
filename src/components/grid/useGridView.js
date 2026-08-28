@@ -82,6 +82,39 @@ export function useGridView({ storageKey, columns, getFilterSnapshot, applyFilte
     return true;
   };
 
+  /**
+   * Create or rename-and-update one view, with an explicit column set.
+   *
+   * saveView captures whatever the grid currently shows, which is right when
+   * you are saving what is on screen. Editing a view is a different act: you
+   * are changing a stored arrangement, possibly without it being applied, so
+   * the columns come from the editor rather than from the live grid.
+   *
+   * Filters are re-captured for a new view and preserved for an existing one.
+   * Editing a view's columns should not silently rebind it to whatever
+   * happens to be filtered on screen at the time.
+   */
+  const upsertView = ({ name, originalName = '', hidden: hiddenCols }) => {
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return false;
+    const cols = Array.isArray(hiddenCols) ? [...hiddenCols] : [...hidden];
+    const prevName = String(originalName || '').trim();
+
+    setViews((prev) => {
+      const existing = prev.find((v) => v.name === (prevName || trimmed));
+      const kept = prev.filter((v) => v.name !== trimmed && (!prevName || v.name !== prevName));
+      return [
+        ...kept,
+        { name: trimmed, hidden: cols, filters: existing?.filters ?? getFilterSnapshot() },
+      ];
+    });
+
+    // A view you just edited is the one you are looking at.
+    setHidden(cols);
+    setActiveView(trimmed);
+    return true;
+  };
+
   const applyView = (name) => {
     const view = views.find((v) => v.name === name);
     if (!view) return;
@@ -95,5 +128,5 @@ export function useGridView({ storageKey, columns, getFilterSnapshot, applyFilte
     if (activeView === name) setActiveView('');
   };
 
-  return { columns, isVisible, toggleColumn, resetColumns, hidden, views, activeView, saveView, applyView, deleteView };
+  return { columns, isVisible, toggleColumn, resetColumns, hidden, views, activeView, saveView, upsertView, applyView, deleteView };
 }
