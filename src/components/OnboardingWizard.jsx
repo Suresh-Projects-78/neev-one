@@ -50,6 +50,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
   const [gstin, setGstin] = useState(currentCompany?.gstin || '');
   const [state, setState] = useState(currentCompany?.state || '');
   const [customerName, setCustomerName] = useState('');
+  const [customerState, setCustomerState] = useState(currentCompany?.state || '');
 
   const finish = () => {
     try {
@@ -86,6 +87,10 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
           : c
       ),
     }));
+    // Carry the company's state into the first customer as the default. It
+    // cannot be set from the initialiser: this component mounts before step
+    // one is filled in, so at mount the company has no state yet.
+    setCustomerState((prev) => prev || state.trim());
     setStep(1);
   };
 
@@ -102,7 +107,27 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
         ...prev,
         customers: [
           ...customers,
-          { id: nextId, companyId: currentCompany.id, name, gstRegistration: 'Unregistered', createdAt: new Date().toISOString() },
+          {
+            id: nextId,
+            companyId: currentCompany.id,
+            name,
+            gstRegistration: 'Unregistered',
+            /**
+             * A customer needs a state, even the first one.
+             *
+             * This step used to store a name and nothing else, and the invoice
+             * built from it in the very next step came out with no place of
+             * supply — which a GST invoice is required to carry — while the
+             * tax split quietly fell back to intra-state, because a missing
+             * party state is treated as "same state" rather than "unknown".
+             *
+             * Defaulted to the company's own state: the first customer of a
+             * new business is overwhelmingly a local one, and it is on screen
+             * and changeable rather than assumed silently.
+             */
+            billingAddress: { state: customerState },
+            createdAt: new Date().toISOString(),
+          },
         ],
       };
     });
@@ -202,17 +227,37 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
             <h2 id="onboard-title" className="ui-title text-lg flex items-center gap-2">
               <UserPlus size={18} style={{ color: 'rgb(var(--brand))' }} aria-hidden="true" /> Who do you bill first?
             </h2>
-            <p className="ui-muted mt-1 text-sm">One customer is enough to raise the first invoice. Details can come later.</p>
-            <div className="mt-4">
-              <label className="ui-label">Customer name</label>
-              <input
-                type="text"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                className="ui-input"
-                placeholder="Acme Traders"
-                autoFocus
-              />
+            <p className="ui-muted mt-1 text-sm">A name and a state is enough to raise the first invoice. The rest can come later.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="ui-label">Customer name</label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  className="ui-input"
+                  placeholder="Acme Traders"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="ui-label">State</label>
+                <select value={customerState} onChange={(e) => setCustomerState(e.target.value)} className="ui-select ui-surface">
+                  <option value="">Select a state</option>
+                  {STATE_NAMES.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+                <p className="ui-caption mt-1">
+                  {customerState && customerState === (currentCompany?.state || '')
+                    ? 'Same state as you — this sale is CGST + SGST.'
+                    : customerState
+                    ? 'A different state — this sale is IGST.'
+                    : 'Sets the place of supply, which every GST invoice must carry.'}
+                </p>
+              </div>
             </div>
             <div className="mt-5 flex justify-between">
               <button type="button" onClick={() => setStep(2)} className="ui-btn ui-btn-ghost">
