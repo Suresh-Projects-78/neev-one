@@ -10987,16 +10987,77 @@ const AppShell = () => {
     return `accountingDB:${accountId}:${orgId}`;
   };
 
+  /**
+   * True when the stored book could not be read. While set, nothing is written
+   * back — see the persist effect below.
+   */
+  const dbLoadFailedRef = useRef(false);
+
+  /**
+   * Reading the book must never be able to destroy it.
+   *
+   * This used to be a try/catch whose catch returned a normalised *empty*
+   * book. So any throw inside normalizeDB — a bad migration, one malformed
+   * record, a bug introduced in a release — silently replaced the company's
+   * books with nothing, and the effect below immediately wrote that nothing
+   * over the only copy. The failure that should have been "we cannot read
+   * this" became "this no longer exists", with no warning and nothing to
+   * recover from.
+   *
+   * It is not hypothetical: a scoping mistake of mine threw here and wiped a
+   * test company's customers, items and receipts in exactly this way.
+   *
+   * Now a failure keeps the data instead. The raw text is copied aside, the
+   * un-normalised book is handed back so the user can still see and export
+   * what they have, and persistence is switched off so the damaged read
+   * cannot overwrite the good record.
+   */
   const loadDbFromStorage = useCallback(() => {
     const storageKey = getDbStorageKey();
     const token = String(localStorage.getItem('token') || '').trim();
     const authed = Boolean(token);
+
+    let raw = null;
     try {
-      const raw = localStorage.getItem(storageKey);
-      const parsed = raw ? JSON.parse(raw) : null;
-      return normalizeDB(parsed || (authed ? initEmptyDB() : initDB()));
+      raw = localStorage.getItem(storageKey);
     } catch {
-      return normalizeDB(authed ? initEmptyDB() : initDB());
+      raw = null;
+    }
+
+    let parsed = null;
+    try {
+      parsed = raw ? JSON.parse(raw) : null;
+    } catch {
+      parsed = null;
+    }
+
+    try {
+      const loaded = normalizeDB(parsed || (authed ? initEmptyDB() : initDB()));
+      dbLoadFailedRef.current = false;
+      return loaded;
+    } catch (err) {
+      // Nothing stored yet: starting empty is correct, not data loss.
+      if (!parsed) {
+        dbLoadFailedRef.current = false;
+        try {
+          return normalizeDB(authed ? initEmptyDB() : initDB());
+        } catch {
+          return authed ? initEmptyDB() : initDB();
+        }
+      }
+
+      // There is a real book and we could not process it. Preserve it.
+      dbLoadFailedRef.current = true;
+      try {
+        if (raw && !localStorage.getItem(`${storageKey}:recovery`)) {
+          localStorage.setItem(`${storageKey}:recovery`, raw);
+        }
+      } catch {
+        /* storage may be full; the original is still untouched */
+      }
+      console.error('normalizeDB failed; keeping the stored book and disabling saves.', err);
+      notify.error('Your books could not be fully loaded, so saving is switched off to protect them. Reload, and tell support if this repeats.');
+      return parsed;
     }
   }, []);
 
@@ -11020,6 +11081,9 @@ const AppShell = () => {
   }, []);
 
   useEffect(() => {
+    // Refuse to write a book we could not read. Overwriting here is what turns
+    // a read failure into permanent data loss.
+    if (dbLoadFailedRef.current) return;
     const nextKey = getDbStorageKey();
     setDbStorageKey(nextKey);
     localStorage.setItem(nextKey, JSON.stringify(db));
