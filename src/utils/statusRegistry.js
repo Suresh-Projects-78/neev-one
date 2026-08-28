@@ -65,6 +65,12 @@ const REGISTRY = [
    */
   { key: 'open', label: 'Open', tone: 'neutral', aliases: ['open'] },
   { key: 'closed', label: 'Closed', tone: 'pos', aliases: ['closed', 'completed', 'fulfilled'] },
+  // Both are derived by the sales-order list from ordered/delivered/billed
+  // counts, and neither had ever been declared — so a fully delivered order
+  // came out flagged as an unknown status, which is the registry working but
+  // is not a thing to leave in front of a user.
+  { key: 'delivered', label: 'Delivered', tone: 'pos', aliases: ['delivered'] },
+  { key: 'billed', label: 'Billed', tone: 'pos', aliases: ['billed'] },
   { key: 'posted', label: 'Posted', tone: 'pos', aliases: ['posted'] },
   { key: 'active', label: 'Active', tone: 'pos', aliases: ['active'] },
   { key: 'sent', label: 'Sent', tone: 'neutral', aliases: ['sent'] },
