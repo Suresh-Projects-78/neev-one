@@ -12844,7 +12844,28 @@ const AppShell = () => {
                   refNo: po.number,
                   refDate: po.date,
                   sourcePurchaseOrderId: po.id,
-                  items: po.items,
+                  /**
+                   * Put the tax rate back on each line.
+                   *
+                   * A purchase order stores itemId, description, quantity,
+                   * rate and amount — and no gstRate, because the PO form
+                   * never asks for tax. Handing those lines to the bill
+                   * unchanged produced a bill with CGST and SGST of zero on
+                   * goods that carry 18%, so the input credit simply vanished:
+                   * ₹6,480 on a ₹36,000 order, silently, unless somebody
+                   * noticed and re-picked the item by hand.
+                   *
+                   * The item master knows the rate, which is where the bill
+                   * form gets it when a line is entered directly.
+                   */
+                  items: (po.items || []).map((line) => {
+                    const master = (db.items || []).find((i) => String(i.id) === String(line.itemId));
+                    return {
+                      ...line,
+                      gstRate: Number(line.gstRate ?? master?.gstRate ?? 0),
+                      hsnSac: line.hsnSac || master?.hsnSac || '',
+                    };
+                  }),
                 },
               });
               setActive('bills');
