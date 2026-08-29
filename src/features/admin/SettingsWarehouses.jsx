@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
 import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog } from '../../components/ui/notify';
 import { listBranches, listWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
+import Popover from '../../components/ui/Popover';
 
 export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
   const [warehouses, setWarehouses] = useState([]);
@@ -15,6 +16,8 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openMenuForWarehouseId, setOpenMenuForWarehouseId] = useState(null);
+  /** The trigger the open menu hangs from; only one row's menu is open. */
+  const menuAnchorRef = useRef(null);
   const [viewWarehouseId, setViewWarehouseId] = useState(null);
   const [editingWarehouseId, setEditingWarehouseId] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -86,17 +89,6 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
       setError(err.message || 'Failed to load branches');
     }
   };
-
-  // Close row menu on outside click
-  useEffect(() => {
-    const onDocClick = (e) => {
-      const el = e?.target;
-      if (el?.closest?.('[data-warehouse-actions]')) return;
-      setOpenMenuForWarehouseId(null);
-    };
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, []);
 
   const loadWarehouses = async () => {
     if (!orgId) return;
@@ -666,6 +658,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                     <div className="relative inline-block text-left" data-warehouse-actions>
                       <button
                         type="button"
+                        ref={openMenuForWarehouseId === w.id ? menuAnchorRef : null}
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuForWarehouseId((prev) => (prev === w.id ? null : w.id));
@@ -677,7 +670,12 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                       </button>
 
                       {openMenuForWarehouseId === w.id ? (
-                        <div className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border ui-surface shadow-sm z-50">
+                        <Popover
+                          anchorRef={menuAnchorRef}
+                          onClose={() => setOpenMenuForWarehouseId(null)}
+                          minWidth={176}
+                          maxWidth={240}
+                        >
                           <button type="button" onClick={() => openView(w.id)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
                             View
                           </button>
@@ -687,7 +685,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                           <button type="button" onClick={() => removeWarehouse(w.id)} className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]">
                             Delete
                           </button>
-                        </div>
+                        </Popover>
                       ) : null}
                     </div>
                   </td>

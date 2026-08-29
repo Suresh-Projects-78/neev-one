@@ -1,10 +1,11 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
 import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog, notify } from '../../components/ui/notify';
 import { listBranches, createBranch, updateBranch, deleteBranch } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
+import Popover from '../../components/ui/Popover';
 
 export function SettingsBranches({ orgId, onBranchesChanged }) {
   const [branches, setBranches] = useState([]);
@@ -14,6 +15,8 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openMenuForBranchId, setOpenMenuForBranchId] = useState(null);
+  /** The trigger the open menu hangs from; only one row's menu is open. */
+  const menuAnchorRef = useRef(null);
   const [viewBranchId, setViewBranchId] = useState(null);
   const [editingBranchId, setEditingBranchId] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -71,17 +74,6 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
   useEffect(() => {
     loadBranches();
   }, [orgId]);
-
-  // Close row menu on outside click
-  useEffect(() => {
-    const onDocClick = (e) => {
-      const el = e?.target;
-      if (el?.closest?.('[data-branch-actions]')) return;
-      setOpenMenuForBranchId(null);
-    };
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, []);
 
   const onChange = (k) => (e) => {
     const next = e.target.value;
@@ -552,6 +544,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
                     <div className="relative inline-block text-left" data-branch-actions>
                       <button
                         type="button"
+                        ref={openMenuForBranchId === b.id ? menuAnchorRef : null}
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuForBranchId((prev) => (prev === b.id ? null : b.id));
@@ -563,7 +556,12 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
                       </button>
 
                       {openMenuForBranchId === b.id ? (
-                        <div className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border ui-surface shadow-sm z-50">
+                        <Popover
+                          anchorRef={menuAnchorRef}
+                          onClose={() => setOpenMenuForBranchId(null)}
+                          minWidth={176}
+                          maxWidth={240}
+                        >
                           <button type="button" onClick={() => openView(b.id)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
                             View
                           </button>
@@ -573,7 +571,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
                           <button type="button" onClick={() => removeBranch(b.id)} className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]">
                             Delete
                           </button>
-                        </div>
+                        </Popover>
                       ) : null}
                     </div>
                   </td>

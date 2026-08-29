@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
 import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog, notify } from '../../components/ui/notify';
@@ -14,6 +14,7 @@ import { listUsers,
   assignUserBranches,
   getUserBranches, createRole } from '../../api/admin';
 import Modal from '../../components/ui/Modal';
+import Popover from '../../components/ui/Popover';
 
 const normalizeId = (v) => String(v ?? '').trim();
 
@@ -36,6 +37,8 @@ export function SettingsUsers({ orgId }) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [openMenuForUserId, setOpenMenuForUserId] = useState(null);
+  /** The trigger the open menu hangs from; only one row's menu is open. */
+  const menuAnchorRef = useRef(null);
   const [viewUserId, setViewUserId] = useState(null);
   const [editingUserId, setEditingUserId] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
@@ -111,17 +114,6 @@ export function SettingsUsers({ orgId }) {
   useEffect(() => {
     loadData();
   }, [orgId]);
-
-  // Close row menu on outside click
-  useEffect(() => {
-    const onDocClick = (e) => {
-      const el = e?.target;
-      if (el?.closest?.('[data-user-actions]')) return;
-      setOpenMenuForUserId(null);
-    };
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, []);
 
   const openCreate = () => {
     // default selection for branch mode
@@ -724,7 +716,7 @@ export function SettingsUsers({ orgId }) {
         </form>
       ) : null}
 
-      <div className="ui-surface border rounded-xl overflow-visible">
+      <div className="ui-surface border rounded-xl overflow-hidden">
         {loading ? (
           <TableSkeleton rows={6} cols={5} />
         ) : users.length === 0 ? (
@@ -761,6 +753,7 @@ export function SettingsUsers({ orgId }) {
                     <div className="relative inline-block text-left" data-user-actions>
                       <button
                         type="button"
+                        ref={openMenuForUserId === u.id ? menuAnchorRef : null}
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuForUserId((prev) => (prev === u.id ? null : u.id));
@@ -772,7 +765,12 @@ export function SettingsUsers({ orgId }) {
                       </button>
 
                       {openMenuForUserId === u.id ? (
-                        <div className="absolute right-0 mt-2 w-44 origin-top-right rounded-md border ui-surface shadow-sm z-50">
+                        <Popover
+                          anchorRef={menuAnchorRef}
+                          onClose={() => setOpenMenuForUserId(null)}
+                          minWidth={200}
+                          maxWidth={260}
+                        >
                           <button
                             type="button"
                             onClick={() => openView(u.id)}
@@ -808,7 +806,7 @@ export function SettingsUsers({ orgId }) {
                           >
                             Delete
                           </button>
-                        </div>
+                        </Popover>
                       ) : null}
                     </div>
                   </td>

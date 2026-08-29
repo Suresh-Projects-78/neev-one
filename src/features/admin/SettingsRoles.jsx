@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { StatusPill, TableSkeleton } from '../../components/ui/Primitives';
 import { exportRows } from '../../components/ListToolbar';
 import { confirmDialog } from '../../components/ui/notify';
 import { listRoles, createRole, updateRole, deleteRole } from '../../api/admin';
+import Popover from '../../components/ui/Popover';
 
 // Matrix permissions UI inspired by the provided example.
 // Backend actions supported: VIEW, CREATE, EDIT, DELETE, APPROVE, EXPORT.
@@ -190,6 +191,8 @@ export function SettingsRoles({ orgId }) {
   const [form, setForm] = useState({ name: '', permissions: new Set() });
   const [search, setSearch] = useState('');
   const [openMenuForRoleId, setOpenMenuForRoleId] = useState(null);
+  /** The trigger the open menu hangs from; only one row's menu is open. */
+  const menuAnchorRef = useRef(null);
   const [viewRoleId, setViewRoleId] = useState(null);
 
   const loadRoles = async () => {
@@ -217,13 +220,6 @@ export function SettingsRoles({ orgId }) {
   useEffect(() => {
     loadRoles();
   }, [orgId]);
-
-  useEffect(() => {
-    if (!openMenuForRoleId) return;
-    const onDocClick = () => setOpenMenuForRoleId(null);
-    document.addEventListener('click', onDocClick);
-    return () => document.removeEventListener('click', onDocClick);
-  }, [openMenuForRoleId]);
 
   const openCreate = () => {
     setEditRole(null);
@@ -638,6 +634,7 @@ export function SettingsRoles({ orgId }) {
                     <div className="relative inline-block text-left">
                       <button
                         type="button"
+                        ref={openMenuForRoleId === r.id ? menuAnchorRef : null}
                         onClick={(e) => {
                           e.stopPropagation();
                           setOpenMenuForRoleId((prev) => (prev === r.id ? null : r.id));
@@ -649,9 +646,11 @@ export function SettingsRoles({ orgId }) {
                       </button>
 
                       {openMenuForRoleId === r.id && (
-                        <div
-                          className="absolute right-0 mt-2 w-32 rounded-md border ui-surface shadow-sm z-10"
-                          onClick={(e) => e.stopPropagation()}
+                        <Popover
+                          anchorRef={menuAnchorRef}
+                          onClose={() => setOpenMenuForRoleId(null)}
+                          minWidth={160}
+                          maxWidth={220}
                         >
                           <button
                             type="button"
@@ -683,7 +682,7 @@ export function SettingsRoles({ orgId }) {
                           >
                             Delete
                           </button>
-                        </div>
+                        </Popover>
                       )}
                     </div>
                   </td>
