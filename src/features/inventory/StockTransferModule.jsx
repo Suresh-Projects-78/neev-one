@@ -223,6 +223,21 @@ export const StockTransferEditor = ({
     return destinationWarehouseOptionsForBranch.get(bid) || [];
   }, [form.sourceBranchId, form.targetBranchId, mode, destinationWarehouseOptionsForBranch]);
 
+  /**
+   * The warehouses the stock can leave from.
+   *
+   * A branch transfer takes its source warehouse from the header selector,
+   * but the header has an "All warehouses" setting, and on that setting there
+   * was no source at all: the form still read "From (active branch) Head
+   * Office", offered no way to name a warehouse, and then refused to save with
+   * "From Warehouse is required". The field it asked for now exists.
+   */
+  const sourceWarehouseOptions = useMemo(() => {
+    const bid = normalizeId(form.sourceBranchId);
+    if (!bid) return [];
+    return destinationWarehouseOptionsForBranch.get(bid) || [];
+  }, [form.sourceBranchId, destinationWarehouseOptionsForBranch]);
+
   useEffect(() => {
     // Derive branchIds from selected warehouses
     const sw = warehouseById.get(normalizeId(form.sourceWarehouseId)) || null;
@@ -466,6 +481,16 @@ export const StockTransferEditor = ({
 
   const readOnly = canonicalStatus(form.status) !== TRANSFER_STATUS.DRAFT;
 
+  // One warehouse in the branch is not a choice worth making anybody make.
+  // Declared after readOnly on purpose: it reads it.
+  useEffect(() => {
+    if (readOnly || isEdit) return;
+    if (normalizeId(form.sourceWarehouseId)) return;
+    if (sourceWarehouseOptions.length !== 1) return;
+    const only = normalizeId(sourceWarehouseOptions[0]?.value);
+    if (only) setForm((p) => ({ ...p, sourceWarehouseId: only }));
+  }, [readOnly, isEdit, form.sourceWarehouseId, sourceWarehouseOptions]);
+
   const numberingBranchId = normalizeId(form.sourceBranchId) || null;
   const transferDocSettings = getDocSettings(db, currentCompany, { branchId: numberingBranchId });
   const transferNumbering = transferDocSettings?.numbering?.[voucherKey];
@@ -567,6 +592,35 @@ export const StockTransferEditor = ({
           </div>
           <div className="mt-1 text-xs ui-muted">Switch it from the header selector above.</div>
         </div>
+
+        {mode === 'branch' ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">From Warehouse *</label>
+            <select
+              value={normalizeId(form.sourceWarehouseId)}
+              onChange={(e) => {
+                const nextId = String(e.target.value || '').trim();
+                setForm((p) => ({
+                  ...p,
+                  sourceWarehouseId: nextId,
+                  targetWarehouseId:
+                    normalizeId(p.targetWarehouseId) === normalizeId(nextId) ? '' : p.targetWarehouseId,
+                }));
+              }}
+              className="ui-select w-full px-3 py-2 ui-surface"
+              required
+              disabled={readOnly}
+            >
+              <option value="">{sourceWarehouseOptions.length ? 'Select Warehouse' : 'No warehouse in this branch'}</option>
+              {sourceWarehouseOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <div className="mt-1 text-xs ui-muted">Stock leaves from here.</div>
+          </div>
+        ) : null}
 
         {mode === 'branch' ? (
           <div>
