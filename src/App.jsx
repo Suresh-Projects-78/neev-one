@@ -7925,7 +7925,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   <div className="ui-caption truncate" title={formatVoucherNumberPreview(cfg)}>{formatVoucherNumberPreview(cfg)}</div>
                 </div>
 
-                <div className="grid grid-cols-6 gap-2 flex-1">
+                <div className="grid grid-cols-7 gap-2 flex-1">
                   <div className="col-span-1">
                     <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Mode</label>
                     <select
@@ -7956,6 +7956,23 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       onChange={(e) => updateNumberingSetting(v.key, { suffix: e.target.value })}
                       className="ui-input w-full !h-8 !min-h-0 px-2 text-sm"
                     />
+                  </div>
+
+                  <div className="col-span-1">
+                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
+                    <select
+                      value={String(cfg?.digits || 0)}
+                      onChange={(e) => updateNumberingSetting(v.key, { digits: Number(e.target.value) })}
+                      className="ui-select w-full !h-8 !min-h-0 px-2 text-sm"
+                      disabled={isManual}
+                    >
+                      <option value="0">None</option>
+                      {[2, 3, 4, 5, 6, 8].map((d) => (
+                        <option key={d} value={String(d)}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="col-span-1">

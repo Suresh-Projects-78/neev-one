@@ -74,6 +74,16 @@ export const getDocSettings = (db, company, { branchId = null } = {}) => {
           ? Number(existing.nextNumber)
           : (Number(fallbackNextNumber || 0) > 0 ? Number(fallbackNextNumber) : count + 1),
       allowManualOverride: existing.allowManualOverride !== undefined ? Boolean(existing.allowManualOverride) : true,
+      /**
+       * How wide the counter is written: 4 turns 1 into 0001.
+       *
+       * Zero means no padding, and it is the default on purpose. A book that
+       * has already issued INV-1 and INV-2 must not have its next document
+       * come out as INV-0003 — the run would read as two different series.
+       * Widening is a choice somebody makes, usually before the first
+       * document, not something applied to their existing numbers.
+       */
+      digits: clampDigits(existing.digits),
     };
   };
 
@@ -120,13 +130,25 @@ export const getDocSettings = (db, company, { branchId = null } = {}) => {
   };
 };
 
+/** 0 = write the counter as-is; 1..10 = pad it to that many digits. */
+export const clampDigits = (value) => {
+  const n = Math.trunc(Number(value));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(10, n);
+};
+
 export const formatVoucherNumberPreview = (numbering, offset = 0) => {
   if (!numbering) return '';
   if (String(numbering.mode || '').toLowerCase() === 'manual') return '(manual)';
   const prefix = String(numbering.prefix || '');
   const suffix = String(numbering.suffix || '');
-  const n = Number(numbering.nextNumber || 1) + (Number(offset) || 0);
-  return `${prefix}${Number.isFinite(n) ? n : 1}${suffix}`;
+  const raw = Number(numbering.nextNumber || 1) + (Number(offset) || 0);
+  const n = Number.isFinite(raw) ? raw : 1;
+  const digits = clampDigits(numbering.digits);
+  // A counter that has outgrown its width keeps every digit. Trimming 10000
+  // down to 0000 to fit would hand two documents the same number.
+  const body = digits ? String(n).padStart(digits, '0') : String(n);
+  return `${prefix}${body}${suffix}`;
 };
 
 /** `offset` numbers a run of documents created in one go (e.g. an import). */
