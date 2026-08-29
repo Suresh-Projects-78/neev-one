@@ -356,7 +356,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   } catch (e: any) {
     const msg = String(e?.message || '');
     if (msg.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'Invoice number already exists for this branch' });
+      return res.status(409).json({ error: 'That invoice number is already used. Numbers are unique across every branch.' });
     }
     throw e;
   }
@@ -505,7 +505,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   } catch (e: any) {
     const msg = String(e?.message || '');
     if (msg.includes('UNIQUE constraint failed')) {
-      return res.status(409).json({ error: 'Invoice number already exists for this branch' });
+      return res.status(409).json({ error: 'That invoice number is already used. Numbers are unique across every branch.' });
     }
     throw e;
   }

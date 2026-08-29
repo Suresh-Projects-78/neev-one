@@ -496,7 +496,11 @@ model Invoice {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
 }
@@ -551,7 +555,11 @@ model Bill {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
 }
@@ -584,7 +592,11 @@ model Estimate {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@index([accountId, orgId, branchId, date])
 }
 
@@ -617,7 +629,11 @@ model PurchaseOrderDoc {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@index([accountId, orgId, branchId, date])
 }
 
@@ -652,7 +668,11 @@ model SalesOrderDoc {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@index([accountId, orgId, branchId, date])
 }
 
@@ -708,7 +728,11 @@ model Expense {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
 }
@@ -762,7 +786,11 @@ model CreditNote {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
 }
@@ -816,7 +844,11 @@ model DebitNote {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
 }
@@ -1811,7 +1843,11 @@ model Payment {
 
   allocations PaymentAllocation[]
 
-  @@unique([orgId, branchId, number])
+  // Document numbers are unique across the whole organisation, not within a
+  // branch. Scoped per branch, two branches could each issue INV-1 — two
+  // different documents wearing one number, which is not a numbering series a
+  // business can file, quote in a return, or hand an auditor.
+  @@unique([orgId, number])
   @@index([accountId, orgId, branchId, date])
   @@index([accountId, orgId, reconciled])
 }
