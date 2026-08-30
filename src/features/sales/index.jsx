@@ -46,6 +46,7 @@ import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { blockIfClosed } from '../../utils/bookClose';
 
 
 /**
@@ -2323,11 +2324,11 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     );
     if (fieldErrors.failed()) return;
 
-    // Year-end lock: nothing back-dates into closed books.
+    // Closed books: nothing back-dates into a period already reported.
     {
-      const lock = (db.fyLocks || []).find((l) => l.companyId === currentCompany.id);
-      if (lock && String(formData.date || '').slice(0, 10) <= lock.upTo) {
-        notify.error(`Books are locked up to ${lock.upTo} (Year-End Close). Pick a later date or unlock the year.`);
+      const closed = blockIfClosed(db, currentCompany.id, formData.date, 'This invoice');
+      if (closed) {
+        notify.error(closed);
         return;
       }
     }

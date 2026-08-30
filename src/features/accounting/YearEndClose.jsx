@@ -53,6 +53,9 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
   }, [db, companyId, fy]);
 
   const [netOverride, setNetOverride] = useState('');
+  // On by default: a year that carries on from the last one's count is the
+  // unusual choice, not the normal one.
+  const [restartNumbering, setRestartNumbering] = useState(true);
   const net = netOverride === '' ? Math.round((totals.income - totals.expense) * 100) / 100 : Number(netOverride) || 0;
 
   const lock = (db.fyLocks || []).find((l) => l.companyId === companyId) || null;
@@ -97,11 +100,98 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
       confirmLabel: 'Lock the year',
     });
     if (!ok) return;
+    setDb((prev) => {
+      const next = {
+        ...prev,
+        fyLocks: [
+          ...(prev.fyLocks || []).filter((l) => l.companyId !== companyId),
+          { companyId, upTo: fy.to, lockedAt: new Date().toISOString() },
+        ],
+      };
+
+      if (!restartNumbering) return next;
+
+      /**
+       * A new year starts its documents at one again.
+       *
+       * Every series keeps the prefix, suffix and width it was already using —
+       * the shape of a company's invoice number is its own decision and a year
+       * end is no reason to change it — and only the counter goes back to 1.
+       * Nothing is renumbered: documents already raised keep the numbers they
+       * went out with.
+       */
+      next.companies = (prev.companies || []).map((c) => {
+        if (c.id !== companyId) return c;
+        const doc = c?.docSettings && typeof c.docSettings === 'object' ? c.docSettings : {};
+        const numbering = doc?.numbering && typeof doc.numbering === 'object' ? doc.numbering : {};
+        const restarted = {};
+        for (const [key, cfg] of Object.entries(numbering)) {
+          restarted[key] = { ...(cfg || {}), nextNumber: 1 };
+        }
+
+        // Branch series restart with them, or a branch would carry on from
+        // last year's count while head office started again.
+        const byBranch = doc?.numberingByBranch && typeof doc.numberingByBranch === 'object' ? doc.numberingByBranch : {};
+        const restartedByBranch = {};
+        for (const [branchId, cfgs] of Object.entries(byBranch)) {
+          const out = {};
+          for (const [key, cfg] of Object.entries(cfgs || {})) {
+            out[key] = { ...(cfg || {}), nextNumber: 1 };
+          }
+          restartedByBranch[branchId] = out;
+        }
+
+        return {
+          ...c,
+          docSettings: { ...doc, numbering: restarted, numberingByBranch: restartedByBranch },
+        };
+      });
+
+      return next;
+    });
+    notify.success(
+      restartNumbering
+        ? `Books locked up to ${fy.to}. Numbering restarts at 1 for the new year.`
+        : `Books locked up to ${fy.to}.`
+    );
+  };
+
+  /**
+   * Closing a period, which is the same act on a shorter stretch.
+   *
+   * Reports for August go out on the fifth of September, and from that moment
+   * August has to stop moving. Only the year end could be closed before, so
+   * the month somebody had just reported stayed open for another seven months.
+   * One date shuts everything on or before it, whether that date is the end of
+   * a month or the end of a year.
+   */
+  const [closeUpto, setCloseUpto] = useState(() => {
+    const d = new Date();
+    // The end of last month — what closing on the fifth actually means.
+    const end = new Date(d.getFullYear(), d.getMonth(), 0);
+    return end.toISOString().slice(0, 10);
+  });
+
+  const closePeriod = async () => {
+    const upTo = String(closeUpto || '').slice(0, 10);
+    if (!upTo) {
+      notify.error('Pick the last date to close.');
+      return;
+    }
+    const ok = await confirmDialog({
+      title: `Close books up to ${upTo}`,
+      message: `Everything dated on or before ${upTo} is frozen for every user. Documents dated inside it cannot be created, edited or removed until the period is reopened.`,
+      confirmLabel: 'Close the books',
+    });
+    if (!ok) return;
     setDb((prev) => ({
       ...prev,
-      fyLocks: [...(prev.fyLocks || []).filter((l) => l.companyId !== companyId), { companyId, upTo: fy.to, lockedAt: new Date().toISOString() }],
+      fyLocks: [
+        ...(prev.fyLocks || []).filter((l) => l.companyId !== companyId),
+        { companyId, upTo, lockedAt: new Date().toISOString() },
+      ],
     }));
-    notify.success(`Books locked up to ${fy.to}.`);
+    notify.success(`Books closed up to ${upTo}.`);
   };
 
   const unlockYear = async () => {
@@ -113,7 +203,43 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Year-End Close" description="Transfer the year's result to capital, then lock the period so nothing back-dates into closed books." />
+      <PageHeader title="Financial Year" description="Close a month once it has been reported, or a whole year once its result has been transferred to capital. Nothing back-dates into closed books." />
+
+      <div className="ui-card space-y-3 p-4">
+        <div>
+          <div className="text-sm font-semibold">Close a period</div>
+          <div className="ui-caption">
+            For sharing last month's reports: close it, and nothing dated inside it can move again until you reopen it.
+          </div>
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="ui-label" htmlFor="close-upto">Close everything up to</label>
+            <input
+              id="close-upto"
+              type="date"
+              value={closeUpto}
+              onChange={(e) => setCloseUpto(e.target.value)}
+              className="ui-input px-3 py-2"
+            />
+          </div>
+          {lock ? (
+            <>
+              <button type="button" onClick={closePeriod} className="ui-btn ui-btn-secondary">
+                <Lock size={14} aria-hidden="true" /> Move the close date
+              </button>
+              <button type="button" onClick={unlockYear} className="ui-btn ui-btn-secondary">
+                <Unlock size={14} aria-hidden="true" /> Reopen the books
+              </button>
+              <span className="ui-badge-warn rounded-full px-2 py-1 text-xs">Closed up to {lock.upTo}</span>
+            </>
+          ) : (
+            <button type="button" onClick={closePeriod} className="ui-btn ui-btn-primary">
+              <Lock size={14} aria-hidden="true" /> Close the books
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="ui-card flex flex-wrap items-end gap-3 p-4">
         <div>
@@ -176,6 +302,16 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
               </button>
             )}
             <span className="ui-muted ml-2">New documents dated inside a locked period are refused.</span>
+            {lock ? null : (
+              <label className="mt-2 flex items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={restartNumbering}
+                  onChange={(e) => setRestartNumbering(e.target.checked)}
+                />
+                Restart every numbering series at 1 for the new year, keeping each prefix and width
+              </label>
+            )}
           </li>
         </ol>
       </div>
