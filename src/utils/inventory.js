@@ -152,6 +152,46 @@ export const buildStockMovements = ({ db, companyId, warehouseId = '' }) => {
   pushFromDoc({ voucherType: 'debitNote', list: db?.debitNotes, direction: 'OUT' });
   pushFromDoc({ voucherType: 'creditNote', list: db?.creditNotes, direction: 'IN' });
 
+  /**
+   * Stock adjustments — what a count found that the books did not.
+   *
+   * They are movements like any other, which is the whole point: closing
+   * quantity changes, so the stock on the balance sheet changes with it, and
+   * the closing-stock figure that credits Purchase Accounts moves the same
+   * amount through the P&L. Writing 12 units off in an audit lands as an
+   * expense without anyone posting a journal by hand.
+   *
+   * A positive qtyDelta is stock found, a negative one is stock gone.
+   */
+  for (const a of safeArray(db?.stockAdjustments)) {
+    if (Number(a?.companyId) !== Number(companyId)) continue;
+    const itemId = a?.itemId !== undefined && a?.itemId !== null && a?.itemId !== '' ? String(a.itemId) : '';
+    if (!itemId) continue;
+    const item = itemsById.get(itemId);
+    if (!item || !isStockItem(item)) continue;
+
+    const adjWarehouseId = String(a?.warehouseId || '').trim();
+    if (whFilter && adjWarehouseId !== whFilter) continue;
+
+    const delta = round2(safeNum(a?.qtyDelta ?? 0));
+    if (delta === 0) continue;
+
+    movements.push(
+      normalizeMovement({
+        companyId,
+        date: String(a?.date || '').trim(),
+        voucherType: 'stockAdjustment',
+        voucherId: a?.id,
+        voucherNumber: a?.number || '',
+        warehouseId: adjWarehouseId,
+        itemId,
+        qtyIn: delta > 0 ? delta : 0,
+        qtyOut: delta < 0 ? Math.abs(delta) : 0,
+        voucherNote: String(a?.reason || '').trim(),
+      })
+    );
+  }
+
   // Stock Transfers (inter-warehouse / inter-branch).
   //
   // The two legs move at different moments: goods leave the source when the
@@ -313,6 +353,7 @@ export const computeInventorySummaryByItemId = ({ db, companyId, fromDate = '', 
       salesQty: 0,
       debitNoteQty: 0,
       creditNoteQty: 0,
+      adjustmentQty: 0,
       closingQty: 0,
     });
   }
@@ -354,6 +395,9 @@ export const computeInventorySummaryByItemId = ({ db, companyId, fromDate = '', 
       if (m.voucherType === 'invoice') row.salesQty = round2(row.salesQty + m.qtyOut);
       if (m.voucherType === 'debitNote') row.debitNoteQty = round2(row.debitNoteQty + m.qtyOut);
       if (m.voucherType === 'creditNote') row.creditNoteQty = round2(row.creditNoteQty + m.qtyIn);
+      if (m.voucherType === 'stockAdjustment') {
+        row.adjustmentQty = round2(row.adjustmentQty + m.qtyIn - m.qtyOut);
+      }
     }
 
     // Closing is opening-as-of-from plus all movements up to toDate

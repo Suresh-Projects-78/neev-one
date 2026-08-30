@@ -1,4 +1,5 @@
 import InventoryModule from './features/inventory/InventoryModule';
+import StockAdjustments from './features/inventory/StockAdjustments';
 import { notify, confirmDialog } from './components/ui/notify';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
@@ -11855,6 +11856,7 @@ const AppShell = () => {
           { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
           { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', feature: 'stockTransfers' },
           { key: 'batchSerial', label: 'Batches & Serials', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchSerial' },
+          { key: 'stockAdjustments', label: 'Stock Adjustments', icon: ClipboardList, perm: 'INVENTORY::Stock Adjustment::VIEW' },
           { key: 'batchStock', label: 'Batch Stock & Expiry', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchExpiry' },
           { key: 'reorderAlerts', label: 'Reorder Alerts', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'reorderAlerts' },
         ],
@@ -13237,6 +13239,17 @@ const AppShell = () => {
         return <ImportCenter />;
       case 'batchSerial':
         return <BatchSerialManager />;
+      case 'stockAdjustments':
+        return (
+          <StockAdjustments
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            warehouses={warehousesForUser}
+            branches={branchesForUser}
+            activeWarehouseId={activeWarehouseId}
+          />
+        );
       case 'batchStock':
         return <BatchStock db={dbForUser} currentCompany={currentCompany} />;
       case 'reorderAlerts':

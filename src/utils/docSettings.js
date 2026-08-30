@@ -21,6 +21,7 @@ export const NUMBERING_VOUCHER_DEFS = [
   { key: 'deliveryChallan', label: 'Delivery Challan', listKey: 'deliveryChallans' },
   { key: 'receipt', label: 'Receipt', listKey: null },
   { key: 'payment', label: 'Payment', listKey: null },
+  { key: 'stockAdjustment', label: 'Stock Adjustment', listKey: 'stockAdjustments' },
 ];
 
 export const TEMPLATE_OPTIONS = [
@@ -116,6 +117,7 @@ export const getDocSettings = (db, company, { branchId = null } = {}) => {
       deliveryChallan: ensureNumbering('deliveryChallan', 'DC-', { fallbackNextNumber: 1 }),
       receipt: ensureNumbering('receipt', 'RCPT-', { fallbackNextNumber: 1 }),
       payment: ensureNumbering('payment', 'PAY-', { fallbackNextNumber: 1 }),
+      stockAdjustment: ensureNumbering('stockAdjustment', 'ADJ-', { fallbackNextNumber: 1 }),
     },
     templates: {
       invoice: ensureTemplate('invoice', 'classic', 'blue'),
