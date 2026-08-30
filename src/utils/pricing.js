@@ -88,3 +88,18 @@ export function resolvePurchaseRate({ db, companyId, vendorId, itemId, item }) {
   }
   return { rate: Number(item?.purchasePrice ?? 0) || 0, source: 'item master' };
 }
+
+/**
+ * What the business last paid for this item, from anyone.
+ *
+ * A stock transfer has no vendor, so the by-vendor lookup above has nothing to
+ * match on. An inter-state movement still has to be valued, and the honest
+ * figure is the most recent price actually paid — falling back to the item
+ * master only when the item has never been bought.
+ */
+export function latestPurchaseRate({ db, companyId, itemId, item }) {
+  const bills = (db?.bills || []).filter((b) => b.companyId === companyId);
+  const last = lastRateFor({ docs: bills, partyField: 'vendorId', partyId: null, itemId });
+  if (last) return { rate: last.rate, source: `last bought @ ${last.docNumber}` };
+  return { rate: Number(item?.purchasePrice ?? 0) || 0, source: 'item master' };
+}

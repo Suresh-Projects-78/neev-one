@@ -10,6 +10,8 @@ import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '..
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { exportRows } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
+import { latestPurchaseRate } from '../../utils/pricing';
+import { formatMoney } from '../../utils/money';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -282,8 +284,21 @@ export const StockTransferEditor = ({
             if (!String(next.description || '').trim()) {
               next.description = String(master?.name || '').trim();
             }
+            /**
+             * An inter-state movement has to be valued, and the honest figure
+             * is what the business last paid for the item — the item master
+             * only when it has never been bought. Carried on the line so the
+             * document keeps the number it was raised with.
+             */
+            const priced = latestPurchaseRate({ db, companyId: currentCompany?.id, itemId, item: master });
+            next.rate = priced.rate;
+            next.rateSource = priced.source;
+            next.gstRate = toNum(master?.gstRate ?? 0);
           } else if (!itemId) {
             next.description = '';
+            next.rate = '';
+            next.rateSource = '';
+            next.gstRate = 0;
           }
           // A batch belongs to one item — changing the item invalidates it.
           next.batchId = '';
@@ -536,6 +551,27 @@ export const StockTransferEditor = ({
   const targetState = String(selectedTargetWarehouse?.state || '').trim();
   const sameState = Boolean(sourceState && targetState && sourceState.toLowerCase() === targetState.toLowerCase());
 
+  /**
+   * Stock crossing a state line is a supply.
+   *
+   * Within one state a transfer is a movement and carries no tax. Between two
+   * states the registrations differ, so it is billed and IGST applies — the
+   * form said "no GST is applied in transfer entry" in both cases, which was
+   * true of the software and not of the movement.
+   */
+  const interState = Boolean(sourceState && targetState && !sameState);
+
+  const lineTaxable = (l) => round2(toNum(l?.qty || 0) * toNum(l?.rate || 0));
+  const lineIgst = (l) => (interState ? round2((lineTaxable(l) * toNum(l?.gstRate || 0)) / 100) : 0);
+
+  const transferTotals = useMemo(() => {
+    const lines = safeArray(form.lines);
+    const taxable = round2(lines.reduce((sum, l) => sum + lineTaxable(l), 0));
+    const igst = round2(lines.reduce((sum, l) => sum + lineIgst(l), 0));
+    return { taxable, igst, total: round2(taxable + igst) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.lines, interState]);
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
       <div className="flex items-start justify-between gap-3">
@@ -682,26 +718,6 @@ export const StockTransferEditor = ({
           </div>
         </div>
 
-        <div className="lg:col-span-2">
-          <label className="block text-sm font-medium mb-1">Reason / Notes</label>
-          <input
-            type="text"
-            value={form.reason}
-            onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-            className="ui-input w-full px-3 py-2"
-            placeholder="Optional"
-            disabled={readOnly}
-          />
-        </div>
-      </div>
-
-      <div className="ui-surface border rounded-lg p-3 text-sm">
-        <div className="font-semibold mb-1">GST</div>
-        <div className="ui-muted">
-          {sameState
-            ? 'No GST for transfers within same state (stock movement only).'
-            : 'No GST is applied in transfer entry (stock movement only).'}
-        </div>
       </div>
 
       <div>
@@ -721,9 +737,15 @@ export const StockTransferEditor = ({
           <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
+                <th className="px-3 py-2 text-left text-xs font-medium w-1/2">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
+                {interState ? (
+                  <>
+                    <th className="px-3 py-2 text-right text-xs font-medium">Rate</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium">Taxable</th>
+                    <th className="px-3 py-2 text-right text-xs font-medium">IGST</th>
+                  </>
+                ) : null}
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -731,7 +753,10 @@ export const StockTransferEditor = ({
               {safeArray(form.lines).map((l, idx) => (
                 <React.Fragment key={idx}>
                 <tr className="border-t">
-                  <td className="ui-col-meta px-3 py-2">
+                  {/* Half the row. Picking the item is the work here; the
+                      free-text description was a second name for something
+                      that already has one. */}
+                  <td className="ui-col-entity px-3 py-2 w-1/2">
                     <ItemPicker
                       db={db}
                       setDb={setDb}
@@ -739,15 +764,6 @@ export const StockTransferEditor = ({
                       value={l.itemId}
                       onChange={(val, picked) => updateLine(idx, { itemId: val }, picked)}
                       label={null}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      value={String(l.description || '')}
-                      onChange={(e) => updateLine(idx, { description: e.target.value })}
-                      className="ui-input w-full px-2 py-1"
-                      disabled={readOnly}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -761,6 +777,27 @@ export const StockTransferEditor = ({
                       disabled={readOnly}
                     />
                   </td>
+                  {interState ? (
+                    <>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          value={l.rate ?? ''}
+                          onChange={(e) => updateLine(idx, { rate: e.target.value })}
+                          className="ui-input w-24 px-2 py-1 text-right"
+                          min="0"
+                          step="0.01"
+                          disabled={readOnly}
+                          title={l.rateSource ? `Picked from ${l.rateSource}` : undefined}
+                        />
+                      </td>
+                      <td className="ui-col-meta px-3 py-2 text-right">{formatMoney(lineTaxable(l), currentCompany)}</td>
+                      <td className="ui-col-meta px-3 py-2 text-right">
+                        {formatMoney(lineIgst(l), currentCompany)}
+                        <div className="text-xs ui-muted">{toNum(l.gstRate || 0)}%</div>
+                      </td>
+                    </>
+                  ) : null}
                   <td className="px-3 py-2">
                     <button
                       type="button"
@@ -779,7 +816,7 @@ export const StockTransferEditor = ({
                   const available = batchesForItem(db, currentCompany?.id, normalizeId(l.itemId));
                   return (
                     <tr key={`batch-${idx}`} className="border-t-0">
-                      <td colSpan={4} className="px-3 pb-2 pt-0">
+                      <td colSpan={interState ? 6 : 3} className="px-3 pb-2 pt-0">
                         <div className="flex flex-wrap items-center gap-2 text-xs">
                           <span className="ui-muted font-medium">Batch:</span>
                           <select
@@ -820,6 +857,46 @@ export const StockTransferEditor = ({
               ))}
             </tbody>
           </table>
+        </div>
+
+        {interState ? (
+          <div className="mt-2 flex justify-end">
+            <div className="text-sm space-y-0.5 min-w-56">
+              <div className="flex justify-between gap-6">
+                <span className="ui-muted">Taxable</span>
+                <span className="ui-num">{formatMoney(transferTotals.taxable, currentCompany)}</span>
+              </div>
+              <div className="flex justify-between gap-6">
+                <span className="ui-muted">IGST</span>
+                <span className="ui-num">{formatMoney(transferTotals.igst, currentCompany)}</span>
+              </div>
+              <div className="flex justify-between gap-6 font-semibold border-t pt-0.5">
+                <span>Total</span>
+                <span className="ui-num">{formatMoney(transferTotals.total, currentCompany)}</span>
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Reason and the tax note, under the items and kept small — they are
+          footnotes to the movement, not the first thing to fill in. */}
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-2 text-xs">
+        <label className="flex items-center gap-2 grow min-w-64">
+          <span className="ui-muted shrink-0">Reason / Notes</span>
+          <input
+            type="text"
+            value={form.reason}
+            onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
+            className="ui-input !h-8 !min-h-0 w-full px-2 text-xs"
+            placeholder="Optional"
+            disabled={readOnly}
+          />
+        </label>
+        <div className="ui-muted shrink-0 pt-1.5">
+          {interState
+            ? `Inter-state movement — IGST applies, valued at the last purchase price.`
+            : 'Within one state — a stock movement, no GST.'}
         </div>
       </div>
 
@@ -939,7 +1016,7 @@ const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel
   );
 };
 
-const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompany, onAction }) => {
+const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompany, onAction, atSource = true, atTarget = true }) => {
   const branchById = useMemo(() => new Map(safeArray(branches).map((b) => [normalizeId(b?.id), b])), [branches]);
   const warehouseById = useMemo(() => new Map(safeArray(warehouses).map((w) => [normalizeId(w?.id), w])), [warehouses]);
 
@@ -970,11 +1047,6 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
     };
   });
 
-  const canSubmit = status === TRANSFER_STATUS.DRAFT;
-  const canReceive = status === TRANSFER_STATUS.OUT;
-  const canReject = status === TRANSFER_STATUS.OUT;
-  const canResolve = status === TRANSFER_STATUS.SHORT;
-  const canCancel = status === TRANSFER_STATUS.DRAFT;
   const gaps = mismatchLines(transfer);
 
   return (
@@ -1070,74 +1142,101 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
         </table>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        {canSubmit ? (
-          <button
-            type="button"
-            onClick={() => onAction?.('submit')}
-            className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
-          >
-            <Check size={16} /> Submit — Transfer Out
-          </button>
-        ) : null}
+      <StockTransferDetailsActions
+        transfer={transfer}
+        onAction={onAction}
+        atSource={atSource}
+        atTarget={atTarget}
+      />
+    </div>
+  );
+};
 
-        {canReceive ? (
-          <PermissionButton
-            permission="INVENTORY::Stock Transfer::APPROVE"
-            onClick={() => onAction?.('receive')}
-            className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
-          >
-            <Check size={16} /> Approve — Transfer In
-          </PermissionButton>
-        ) : null}
+/**
+ * What can be done to a transfer, from where it is being looked at.
+ *
+ * Shared by the row menu and the document view so the two can never offer
+ * different actions for the same transfer. Rendered only when a handler is
+ * supplied: the printable document passes none, and so has none.
+ */
+const StockTransferDetailsActions = ({ transfer, onAction, atSource = true, atTarget = true }) => {
+  if (typeof onAction !== 'function') return null;
 
-        {canResolve ? (
-          <>
+  const status = canonicalStatus(transfer);
+  const canSubmit = status === TRANSFER_STATUS.DRAFT && atSource;
+  const canReceive = status === TRANSFER_STATUS.OUT && atTarget;
+  const canReject = status === TRANSFER_STATUS.OUT && atTarget;
+  const canResolve = status === TRANSFER_STATUS.SHORT && atTarget;
+  const canCancel = status === TRANSFER_STATUS.DRAFT && atSource;
+
+  return (
+    <div className="flex gap-2 flex-wrap">
+          {canSubmit ? (
             <button
               type="button"
-              onClick={() => onAction?.('resolveLoss')}
-              className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary"
+              onClick={() => onAction?.('submit')}
+              className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
             >
-              Write off shortfall as loss
+              <Check size={16} /> Submit — Transfer Out
             </button>
-            <button
-              type="button"
-              onClick={() => onAction?.('resolveReturn')}
-              className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
+          ) : null}
+
+          {canReceive ? (
+            <PermissionButton
+              permission="INVENTORY::Stock Transfer::APPROVE"
+              onClick={() => onAction?.('receive')}
+              className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary flex items-center gap-2"
             >
-              Return shortfall to source
-            </button>
-          </>
-        ) : null}
+              <Check size={16} /> Approve — Transfer In
+            </PermissionButton>
+          ) : null}
 
-        <button
-          type="button"
-          onClick={() => onAction?.('print')}
-          className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
-        >
-          Print / Download
-        </button>
+          {canResolve ? (
+            <>
+              <button
+                type="button"
+                onClick={() => onAction?.('resolveLoss')}
+                className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary"
+              >
+                Write off shortfall as loss
+              </button>
+              <button
+                type="button"
+                onClick={() => onAction?.('resolveReturn')}
+                className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
+              >
+                Return shortfall to source
+              </button>
+            </>
+          ) : null}
 
-        {canReject ? (
           <button
             type="button"
-            onClick={() => onAction?.('reject')}
-            className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c flex items-center gap-2"
-          >
-            <X size={16} /> Reject
-          </button>
-        ) : null}
-
-        {canCancel ? (
-          <button
-            type="button"
-            onClick={() => onAction?.('cancel')}
+            onClick={() => onAction?.('print')}
             className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
           >
-            Cancel
+            Print / Download
           </button>
-        ) : null}
-      </div>
+
+          {canReject ? (
+            <button
+              type="button"
+              onClick={() => onAction?.('reject')}
+              className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c flex items-center gap-2"
+            >
+              <X size={16} /> Reject
+            </button>
+          ) : null}
+
+          {canCancel ? (
+            <button
+              type="button"
+              onClick={() => onAction?.('cancel')}
+              className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c"
+            >
+              Cancel
+            </button>
+          ) : null}
     </div>
   );
 };
@@ -1146,7 +1245,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
  * The transfer as a document: what the row click opens. Print goes through the
  * module's own print window; Download renders the same markup to a PDF.
  */
-const TransferDocumentView = ({ transfer, branches, warehouses, db, currentCompany, onPrint }) => {
+const TransferDocumentView = ({ transfer, branches, warehouses, db, currentCompany, onPrint, onAction, atSource = true, atTarget = true }) => {
   const docRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const no = String(transfer?.number || '').trim();
@@ -1195,6 +1294,12 @@ const TransferDocumentView = ({ transfer, branches, warehouses, db, currentCompa
         </button>
       </div>
       <div ref={docRef}>
+        {/*
+          No onAction inside the captured element on purpose. The buttons used
+          to render here and do nothing at all — the handler was never passed
+          down, so Submit swallowed every click — and they would have been
+          printed onto the document besides.
+        */}
         <StockTransferDetails
           transfer={transfer}
           branches={branches}
@@ -1203,6 +1308,14 @@ const TransferDocumentView = ({ transfer, branches, warehouses, db, currentCompa
           currentCompany={currentCompany}
         />
       </div>
+
+      {/* The live actions, outside the paper. */}
+      <StockTransferDetailsActions
+        transfer={transfer}
+        onAction={onAction}
+        atSource={atSource}
+        atTarget={atTarget}
+      />
     </div>
   );
 };
@@ -1435,6 +1548,29 @@ export const StockTransfersList = ({
     notify.success(asLoss ? 'Shortfall written off as a loss.' : 'Shortfall returned to the source warehouse.');
   };
 
+  /**
+   * Reject and cancel, named once.
+   *
+   * They lived inline in the row menu, which is why the document view could
+   * not offer them: there was nothing to call.
+   */
+  const rejectTransfer = async (t) => {
+    const ok = await confirmDialog({
+      title: 'Reject this transfer?',
+      message: `The consignment goes back to ${locationLabel(t, 'source')} — the stock stays on their books and never lands here.`,
+      confirmLabel: 'Yes, reject',
+    });
+    if (!ok) return;
+    updateStatus(t, TRANSFER_STATUS.REJECTED);
+    notify.info(`Transfer ${t?.number || ''} rejected — the stock returns to ${locationLabel(t, 'source')}.`);
+  };
+
+  const cancelTransfer = async (t) => {
+    const ok = await confirmDialog({ title: 'Please confirm', message: 'Cancel this transfer?', confirmLabel: 'Yes, continue' });
+    if (!ok) return;
+    updateStatus(t, TRANSFER_STATUS.CANCELLED);
+  };
+
   /** Opens the transfer as a document, with Print and Download beside it. */
   const openDocument = (transfer) => {
     if (typeof openModal !== 'function') return;
@@ -1446,6 +1582,18 @@ export const StockTransfersList = ({
         db={db}
         currentCompany={currentCompany}
         onPrint={() => printTransfer(transfer)}
+        atSource={isAtSource(transfer)}
+        atTarget={isAtTarget(transfer)}
+        onAction={(action) => {
+          if (action === 'submit') return submitTransferOut(transfer);
+          if (action === 'receive') return openReceive(transfer);
+          if (action === 'reject') return rejectTransfer(transfer);
+          if (action === 'cancel') return cancelTransfer(transfer);
+          if (action === 'resolveLoss') return resolveMismatch(transfer, 'LOSS');
+          if (action === 'resolveReturn') return resolveMismatch(transfer, 'RETURN');
+          if (action === 'print') return printTransfer(transfer);
+          return undefined;
+        }}
       />,
       { title: `${transfer?.number || 'Transfer'}`, maxWidthClass: 'max-w-3xl' }
     );
@@ -1756,10 +1904,10 @@ export const StockTransfersList = ({
               const atSource = isAtSource(t);
               const atTarget = isAtTarget(t);
               const editable = status === TRANSFER_STATUS.DRAFT && atSource;
-              const canSubmit = status === TRANSFER_STATUS.DRAFT;
-              const canReceive = status === TRANSFER_STATUS.OUT;
+              const canSubmit = status === TRANSFER_STATUS.DRAFT && atSource;
+              const canReceive = status === TRANSFER_STATUS.OUT && atTarget;
               const canResolve = status === TRANSFER_STATUS.SHORT && atTarget;
-              const canReject = status === TRANSFER_STATUS.OUT;
+              const canReject = status === TRANSFER_STATUS.OUT && atTarget;
               const canCancel = status === TRANSFER_STATUS.DRAFT && atSource;
 
               return (
@@ -1866,17 +2014,10 @@ export const StockTransfersList = ({
                   {canReject ? (
                     <button
                       type="button"
-                      onClick={async () => {
+                      onClick={() => {
                         if (!atTarget) return;
                         setOpenMenu(null);
-                        const ok = await confirmDialog({
-                          title: 'Reject this transfer?',
-                          message: `The consignment goes back to ${locationLabel(t, 'source')} — the stock stays on their books and never lands here.`,
-                          confirmLabel: 'Yes, reject',
-                        });
-                        if (!ok) return;
-                        updateStatus(t, TRANSFER_STATUS.REJECTED);
-                        notify.info(`Transfer ${t?.number || ''} rejected — the stock returns to ${locationLabel(t, 'source')}.`);
+                        rejectTransfer(t);
                       }}
                       disabled={!atTarget}
                       title={atTarget ? undefined : `Only ${locationLabel(t, 'target')} can reject this transfer.`}
@@ -1892,11 +2033,9 @@ export const StockTransfersList = ({
                   {canCancel ? (
                     <button
                       type="button"
-                      onClick={async () => {
+                      onClick={() => {
                         setOpenMenu(null);
-                        const ok = await confirmDialog({ title: 'Please confirm', message: 'Cancel this transfer?', confirmLabel: 'Yes, continue' });
-                        if (!ok) return;
-                        updateStatus(t, TRANSFER_STATUS.CANCELLED);
+                        cancelTransfer(t);
                       }}
                       className="w-full px-4 py-2 text-left text-sm ui-hover-sunken"
                     >
