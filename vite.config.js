@@ -1,5 +1,21 @@
+import os from 'node:os'
+
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+
+/**
+ * This machine's addresses on the local network.
+ *
+ * Read at startup rather than written down, so the allow-list follows the
+ * machine when DHCP hands it a different address instead of locking everyone
+ * out until someone edits this file.
+ */
+const lanHosts = Object.values(os.networkInterfaces())
+  .flat()
+  .filter((n) => n && n.family === 'IPv4' && !n.internal)
+  .map((n) => n.address)
+
+const knownHosts = ['localhost', '127.0.0.1', '.trycloudflare.com', ...lanHosts]
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -8,7 +24,7 @@ export default defineConfig({
     // Quick tunnels get a fresh random hostname each time they start, so the
     // host cannot be listed literally. Vite rejects unknown Host headers by
     // default (CVE-2025-31486), which shows up as a bare 403 from the tunnel.
-    allowedHosts: ['.trycloudflare.com', 'localhost', '127.0.0.1'],
+    allowedHosts: knownHosts,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:4001',
@@ -30,7 +46,10 @@ export default defineConfig({
    * applies to `vite dev` only.
    */
   preview: {
-    allowedHosts: ['.trycloudflare.com', 'localhost', '127.0.0.1'],
+    // Reachable from other devices on this network, not just this machine —
+    // that address is the one that does not change.
+    host: true,
+    allowedHosts: knownHosts,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:4001',
