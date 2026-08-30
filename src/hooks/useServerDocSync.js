@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { hasApiSession, listDocsApi } from '../api/purchaseDocs';
 import { listInvoicesApi } from '../api/invoices';
+import { listCustomers, listItems, listVendors } from '../api/masters';
 
 /**
  * Pull-hydration: documents saved to the server come BACK on a fresh browser.
@@ -45,6 +46,75 @@ const mapCommon = (d, companyId, idKey) => ({
   createdAt: d.createdAt,
   hydratedFromServer: true,
 });
+
+const GST_REGISTRATION = {
+  REGULAR: 'Registered',
+  COMPOSITION: 'Composition',
+  UNREGISTERED: 'Unregistered',
+  SEZ: 'SEZ',
+};
+
+/** A server party as the browser's books store one. */
+const mapParty = (p, companyId) => ({
+  companyId,
+  backendPartyId: p.id,
+  name: p.name || '',
+  displayName: p.legalName || p.name || '',
+  gstin: p.gstin || '',
+  gstRegistration: GST_REGISTRATION[String(p.gstRegistrationType || '').toUpperCase()] || 'Unregistered',
+  email: p.email || '',
+  phone: p.phone || '',
+  contactPerson: p.contactPerson || '',
+  billingAddress: {
+    line1: p.billingLine1 || '',
+    line2: p.billingLine2 || '',
+    city: p.billingCity || '',
+    state: p.billingState || p.placeOfSupplyState || '',
+    pincode: p.billingPincode || '',
+    country: p.billingCountry || 'India',
+  },
+  openingBalance: num(p.openingBalance),
+  openingBalanceType: p.openingBalanceType === 'CR' ? 'Cr' : 'Dr',
+  balance: 0,
+  hydratedFromServer: true,
+});
+
+const mapItem = (it, companyId) => ({
+  companyId,
+  backendItemId: it.id,
+  code: it.code || '',
+  name: it.name || '',
+  description: it.description || '',
+  type: String(it.itemType || '').toUpperCase() === 'SERVICE' ? 'Service' : 'Goods',
+  unit: it.unit || 'Pcs',
+  hsnSac: it.hsnSac || '',
+  gstRate: num(it.gstRate),
+  salePrice: num(it.salePrice),
+  purchasePrice: num(it.purchasePrice),
+  openingQty: num(it.openingQty),
+  stock: num(it.openingQty),
+  reorderLevel: num(it.reorderLevel),
+  trackingType: String(it.trackBy || 'NONE').toUpperCase(),
+  hydratedFromServer: true,
+});
+
+/**
+ * Masters, fetched the same way documents are.
+ *
+ * Without these a browser that had never seen this company — a new machine, a
+ * cleared site, a different URL for the same server — opened onto documents
+ * with no customers, no vendors and no items behind them: the invoice list
+ * showed a customer name because the invoice carries one, while the customer
+ * list was empty and no new invoice could be raised against them.
+ *
+ * The chart of accounts does not have to be built here. normalizeDB gives any
+ * party without a ledger one, and it runs on every write.
+ */
+const MASTER_KINDS = [
+  ['customers', 'backendPartyId', listCustomers, (r) => r?.customers, mapParty],
+  ['vendors', 'backendPartyId', listVendors, (r) => r?.vendors, mapParty],
+  ['items', 'backendItemId', listItems, (r) => r?.items, mapItem],
+];
 
 /** kind → [db collection, backend id field, party field, extra mapper] */
 const KINDS = [
@@ -101,6 +171,15 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
         }
       }
 
+      for (const [collection, , fetcher, pick, mapper] of MASTER_KINDS) {
+        try {
+          const rows = pick(await fetcher()) || [];
+          collected[collection] = rows.map((r) => mapper(r, currentCompanyId));
+        } catch {
+          // Same rule as the documents: what does not arrive hydrates nothing.
+        }
+      }
+
       try {
         const invoices = await listInvoicesApi();
         collected.invoices = invoices.map((d) => ({
@@ -116,6 +195,31 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
 
       setDb((prev) => {
         const next = { ...prev };
+
+        for (const [collection, idKey] of MASTER_KINDS) {
+          const incoming = collected[collection];
+          if (!incoming || !incoming.length) continue;
+          const existing = Array.isArray(prev[collection]) ? prev[collection] : [];
+          const knownIds = new Set(existing.map((x) => String(x?.[idKey] || '')).filter(Boolean));
+          // Masters have no document number, so the second test is the name —
+          // a customer the browser already knows must not arrive twice under
+          // two ids and split their ledger in half.
+          const knownNames = new Set(
+            existing
+              .filter((x) => x.companyId === currentCompanyId)
+              .map((x) => String(x?.name || '').trim().toLowerCase())
+              .filter(Boolean)
+          );
+          let nextId = existing.reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0);
+          const fresh = incoming
+            .filter(
+              (d) =>
+                !knownIds.has(String(d[idKey])) && !knownNames.has(String(d.name || '').trim().toLowerCase())
+            )
+            .map((d) => ({ ...d, id: ++nextId }));
+          if (fresh.length) next[collection] = [...existing, ...fresh];
+        }
+
         for (const [, collection, idKey] of [...KINDS, ['invoice', 'invoices', 'backendInvoiceId']]) {
           const incoming = collected[collection];
           if (!incoming || !incoming.length) continue;
