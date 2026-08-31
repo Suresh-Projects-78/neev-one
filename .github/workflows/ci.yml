@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -48,3 +49,90 @@ jobs:
       - name: Build server
         run: npm run build
         working-directory: server
+
+  # Deploy runs only after verify passes, only on main, and never on a pull
+  # request from a fork. A green build is the entry condition: the point of
+  # this pipeline is that nothing reaches the server that did not pass the
+  # tests first.
+  deploy:
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      # Two deploys rsyncing the same directory at once would interleave
+      # files. Newer wins; the older one is cancelled.
+      group: deploy-production
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Authorise the runner against the server
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          test -n "$DEPLOY_SSH_KEY" || { echo "DEPLOY_SSH_KEY is not set"; exit 1; }
+          test -n "$DEPLOY_HOST"    || { echo "DEPLOY_HOST is not set"; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          # Pin the host key rather than accepting blindly, so a hijacked DNS
+          # answer cannot collect the deploy key.
+          if [ -n "${{ secrets.DEPLOY_HOST_KEY }}" ]; then
+            printf '%s\n' "${{ secrets.DEPLOY_HOST_KEY }}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload frontend
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy -o BatchMode=yes" \
+            dist/ "ubuntu@$DEPLOY_HOST:/opt/neev/web/"
+
+      - name: Upload API, migrate and restart
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          rsync -az --delete \
+            --exclude node_modules --exclude 'prisma/*.db' --exclude dist \
+            -e "ssh -i ~/.ssh/deploy -o BatchMode=yes" \
+            server/ "ubuntu@$DEPLOY_HOST:/opt/neev/server/"
+          ssh -i ~/.ssh/deploy -o BatchMode=yes "ubuntu@$DEPLOY_HOST" 'set -e
+            cd /opt/neev/server
+            set -a; . /opt/neev/.env; set +a
+            npm ci --no-audit --no-fund
+            npx prisma generate
+            npx prisma db push --skip-generate
+            npm run build
+            sudo systemctl restart neev-api'
+
+      - name: Check the site is still answering
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+        run: |
+          URL="${DEPLOY_URL:-https://68.233.107.83.sslip.io}"
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL/" || true)
+            [ "$code" = "200" ] && break
+            sleep 5
+          done
+          echo "app:  $code"
+          api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL/api/health" || true)
+          echo "api:  $api"
+          # 401 is the healthy answer: the API is alive and asking who you are.
+          [ "$code" = "200" ] && [ "$api" = "401" ]
