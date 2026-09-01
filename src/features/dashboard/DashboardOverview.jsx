@@ -39,6 +39,14 @@ const ChartFallback = ({ height = 220 }) => (
   <div className="ui-skel w-full" style={{ height, borderRadius: 'var(--radius)' }} aria-hidden="true" />
 );
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import {
+  cashPosition,
+  receivables as receivablesAsOf,
+  payables as payablesAsOf,
+  gstPosition,
+  setupGaps,
+  AGEING_BUCKETS,
+} from '../../utils/cashPosition';
 import { useCountUp } from '../../components/ui/useCountUp';
 
 /**
@@ -191,6 +199,88 @@ function DeltaChip({ value, invert = false }) {
  * amount itself is good or bad; only the movement can carry that, so only the
  * trend chip is tinted.
  */
+/**
+ * A balance card: what is true right now.
+ *
+ * Distinct from MetricCard, which reports a flow over the selected period.
+ * The distinction is on the card itself — "as of today" — because the period
+ * control sits directly above these and would otherwise appear to govern them.
+ */
+function BalanceCard({ label, value, company, tone = '', hint, note, accent, actionLabel, onAction, children }) {
+  const rail = { neg: 'var(--neg)', warn: 'var(--warn)', pos: 'var(--pos)', brand: 'var(--brand)' }[accent];
+  return (
+    <div className="ui-card p-4 flex flex-col gap-1 relative overflow-hidden">
+      {rail ? (
+        <span aria-hidden="true" className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: `rgb(${rail})` }} />
+      ) : null}
+      <div className={`flex items-baseline justify-between gap-2 ${rail ? 'pl-1' : ''}`}>
+        <span className="ui-card-label">{label}</span>
+        <span className="ui-subtle text-[11px]">as of today</span>
+      </div>
+      <div
+        className={`ui-mono text-[1.55rem] font-semibold leading-9 ${rail ? 'pl-1' : ''}`}
+        style={tone ? { color: `rgb(var(--${tone}))` } : undefined}
+      >
+        {value === null ? <span className="ui-subtle font-normal">—</span> : formatMoney(value, company)}
+      </div>
+      {hint ? <div className={`ui-subtle text-xs ${rail ? 'pl-1' : ''}`}>{hint}</div> : null}
+      {note ? (
+        <div className={`text-xs font-medium ${rail ? 'pl-1' : ''}`} style={{ color: `rgb(var(--${tone || 'fg-muted'}))` }}>
+          {note}
+        </div>
+      ) : null}
+      {children ? <div className={rail ? 'pl-1' : ''}>{children}</div> : null}
+      {actionLabel && onAction ? (
+        <button
+          type="button"
+          onClick={onAction}
+          className={`ui-btn ui-btn-ghost ui-btn-sm self-start mt-auto pt-2 !px-0 ${rail ? 'ml-1' : ''}`}
+          style={{ color: 'rgb(var(--brand-ink))' }}
+        >
+          {actionLabel} <ArrowRight size={13} aria-hidden="true" />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** The ageing bar. A stacked bar, never a pie: proportion off a bar is read, off a pie it is guessed. */
+function AgeingBar({ buckets, total, company, onPick }) {
+  const tones = { pos: 'var(--pos)', warn: 'var(--warn)', accent: 'var(--brand)', accent2: '234 88 12', neg: 'var(--neg)' };
+  if (total <= 0) return null;
+  return (
+    <div className="mt-2">
+      <div className="flex h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
+        {AGEING_BUCKETS.map((b) => {
+          const amt = buckets[b.key] || 0;
+          if (amt <= 0) return null;
+          return (
+            <span
+              key={b.key}
+              style={{ width: `${(amt / total) * 100}%`, backgroundColor: `rgb(${tones[b.tone]})` }}
+              title={`${b.label} — ${formatMoney(amt, company)}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+        {AGEING_BUCKETS.filter((b) => (buckets[b.key] || 0) > 0).map((b) => (
+          <button
+            key={b.key}
+            type="button"
+            onClick={onPick ? () => onPick(b) : undefined}
+            className="inline-flex items-center gap-1.5 text-[11.5px]"
+            style={{ color: 'rgb(var(--fg-muted))', background: 'none', border: 0, padding: 0, cursor: onPick ? 'pointer' : 'default' }}
+          >
+            <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: `rgb(${tones[b.tone]})` }} aria-hidden="true" />
+            {b.label} <b className="ui-mono" style={{ color: 'rgb(var(--fg))' }}>{formatMoney(buckets[b.key], company)}</b>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MetricCard({ label, value, company, deltaValue, invertDelta, hint, series = [], actionLabel, onAction }) {
   const counted = useCountUp(value);
   // Three degrees, no more: the figure lifts 18px above the card so the
@@ -456,6 +546,21 @@ export default function DashboardOverview({
     return [...pick(db?.bills, 'Unnamed vendor'), ...pick(db?.expenses, 'Expense')];
   }, [db, currentCompany]);
 
+  /**
+   * The four figures at the top are two balances and two flows, and they are
+   * not the same kind of thing.
+   *
+   * Cash, receivables, payables and the GST position are true *now*. The
+   * period control below governs what happened over a window; applying it to a
+   * balance would produce "cash available in the last 30 days", which is not a
+   * quantity. So these are computed as of today and labelled that way.
+   */
+  const cash = useMemo(() => cashPosition(db, currentCompany?.id), [db, currentCompany]);
+  const recv = useMemo(() => receivablesAsOf(db, currentCompany?.id), [db, currentCompany]);
+  const pay = useMemo(() => payablesAsOf(db, currentCompany?.id), [db, currentCompany]);
+  const gst = useMemo(() => gstPosition(db, currentCompany?.id), [db, currentCompany]);
+  const setup = useMemo(() => setupGaps(db, currentCompany?.id), [db, currentCompany]);
+
   // Pinned once per mount rather than read during render: "now" moving between
   // renders makes the bucketing impure, and every memo below depends on it.
   const [now] = useState(() => Date.now());
@@ -572,11 +677,23 @@ export default function DashboardOverview({
       .slice(0, 5);
   }, [current]);
 
-  const agingRows = useMemo(
-    () => aging.filter((b) => b.amount > 0).map((b) => ({ name: b.label, value: b.amount, color: b.color })),
-    [aging]
-  );
-  const agingTotal = useMemo(() => aging.reduce((sum, b) => sum + b.amount, 0), [aging]);
+  /**
+   * Ageing is a balance, so it is taken as of today across every open invoice.
+   *
+   * It used to be built from `aging`, which read only the invoices raised
+   * inside the selected window. On a 90-day view a five-month-old unpaid
+   * invoice was therefore missing from the 90+ bucket — the one invoice the
+   * bucket exists to surface was the one the filter removed.
+   */
+  const agingRows = useMemo(() => {
+    const tones = { pos: 'pos', warn: 'warn', accent: 'accent', accent2: 'accent', neg: 'neg' };
+    return AGEING_BUCKETS.filter((b) => (recv.buckets[b.key] || 0) > 0).map((b) => ({
+      name: b.label,
+      value: recv.buckets[b.key],
+      color: chartTheme[tones[b.tone]] || chartTheme.accent,
+    }));
+  }, [recv, chartTheme]);
+  const agingTotal = recv.total;
 
   /**
    * How long the average unpaid invoice has been sitting, per customer.
@@ -879,11 +996,117 @@ export default function DashboardOverview({
         }
       />
 
+      {/*
+        The four figures the business opens on: what it has, what it is owed,
+        what it owes, and what the tax office is owed. These render whether or
+        not a single invoice exists — cash and payables are true from the first
+        purchase, and a company that has spent money should not be told its
+        dashboard is empty.
+      */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Financial position">
+        <BalanceCard
+          label="Cash available"
+          value={cash.total}
+          company={currentCompany}
+          accent="pos"
+          hint={
+            cash.accountCount
+              ? `${cash.accountCount} ledger${cash.accountCount === 1 ? '' : 's'} · per your books`
+              : 'No cash or bank ledger yet'
+          }
+        />
+
+        <BalanceCard
+          label="Owed to you"
+          value={recv.count ? recv.total : null}
+          company={currentCompany}
+          accent="brand"
+          hint={recv.count ? `across ${recv.count} invoice${recv.count === 1 ? '' : 's'}` : 'Nothing billed yet'}
+          note={recv.overdue > 0 ? `${formatMoney(recv.overdue, currentCompany)} overdue · oldest ${recv.oldestDays} days` : null}
+          tone={recv.overdue > 0 ? 'neg' : ''}
+          actionLabel={recv.count ? 'View invoices' : null}
+          onAction={onOpenInvoices}
+        >
+          <AgeingBar buckets={recv.buckets} total={recv.total} company={currentCompany} />
+        </BalanceCard>
+
+        <BalanceCard
+          label="You owe"
+          value={pay.count ? pay.total : null}
+          company={currentCompany}
+          accent="neg"
+          tone={pay.total > 0 ? 'neg' : ''}
+          hint={pay.count ? `${pay.count} bill${pay.count === 1 ? '' : 's'} open` : 'Nothing owed to vendors'}
+          note={pay.dueThisWeek > 0 ? `${formatMoney(pay.dueThisWeek, currentCompany)} falls due this week` : null}
+          actionLabel={pay.count ? 'Plan payments' : null}
+          onAction={onOpenPurchases}
+        />
+
+        <BalanceCard
+          label={gst.creditCarried > 0 ? 'GST credit' : 'GST payable'}
+          value={gst.output || gst.input ? (gst.creditCarried > 0 ? gst.creditCarried : gst.payable) : null}
+          company={currentCompany}
+          accent="warn"
+          tone={gst.creditCarried > 0 ? 'pos' : 'warn'}
+          hint={
+            gst.output || gst.input
+              ? `${gst.monthLabel} · output ${formatMoney(gst.output, currentCompany)} less ITC ${formatMoney(gst.input, currentCompany)}`
+              : 'Nothing to file for this period yet'
+          }
+          note={
+            gst.daysToGstr1 >= 0
+              ? `GSTR-1 closes in ${gst.daysToGstr1} day${gst.daysToGstr1 === 1 ? '' : 's'}${
+                  gst.draftsInMonth ? ` · ${gst.draftsInMonth} draft${gst.draftsInMonth === 1 ? '' : 's'} would be left out` : ''
+                }`
+              : null
+          }
+        />
+      </section>
+
+      {/*
+        Only the gaps that are real in this book, and only until they are
+        closed. A finished checklist should leave the screen rather than sit
+        there at 100% as a monument to itself.
+      */}
+      {!setup.complete ? (
+        <section className="ui-card p-4" aria-label="Setup">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>
+              {setup.total - setup.done} thing{setup.total - setup.done === 1 ? '' : 's'} left before your books work
+            </h3>
+            <span className="ui-subtle text-xs">
+              {setup.done} of {setup.total} done
+            </span>
+          </div>
+          <div className="h-1.5 rounded-full mt-2.5 overflow-hidden" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
+            <span
+              className="block h-full rounded-full"
+              style={{ width: `${(setup.done / setup.total) * 100}%`, backgroundColor: 'rgb(var(--brand))' }}
+            />
+          </div>
+          <ul className="mt-3 space-y-1.5">
+            {setup.steps.filter((st) => !st.done).map((st) => (
+              <li key={st.key} className="flex items-center gap-2.5 text-sm">
+                <span
+                  className="w-4 h-4 rounded-full border shrink-0"
+                  style={{ borderColor: 'rgb(var(--border-strong))' }}
+                  aria-hidden="true"
+                />
+                <span className="min-w-0">
+                  <span className="font-medium">{st.label}</span>
+                  <span className="ui-subtle text-xs block">{st.hint}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {allInvoices.length === 0 ? (
         <div className="ui-card">
           <EmptyState
             title="No invoices yet"
-            description="Raise your first invoice and this dashboard fills in — billed, collected, and who still owes you."
+            description="The figures above are already real — what you hold and what you owe. Billing, collection and the trend appear here once invoices exist."
             action={
               onNewInvoice ? (
                 <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-primary">
