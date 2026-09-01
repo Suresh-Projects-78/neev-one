@@ -24,6 +24,7 @@ import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 import Popover from '../../components/ui/Popover';
+import InvoiceFieldSettings from '../settings/InvoiceFieldSettings';
 
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getInvoicePrefs, isInvoicePrefOn, getVisibleCustomFields } from '../../utils/invoicePrefs';
@@ -2079,10 +2080,49 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     onClose?.();
   };
 
-  const goToSettings = (screen) => {
+  const [prefsOpen, setPrefsOpen] = useState(false);
+
+  /**
+   * Preferences opens inside the form rather than navigating to Settings.
+   *
+   * Navigating meant closing the form, which threw away whatever had been
+   * typed — and there was no way back. Somebody switching a field on is in the
+   * middle of raising an invoice; that invoice has to survive the detour.
+   */
+  const openPreferences = (focusCustomFields = false) => {
     setMoreOpen(false);
-    if (typeof onOpenInvoiceSettings === 'function') onOpenInvoiceSettings(screen);
-    else notify.error('Open Settings → Invoice Fields to change this.');
+    setPreviewOpen(false);
+    setPrefsOpen(true);
+    if (focusCustomFields) {
+      // After the panel paints, not before.
+      window.requestAnimationFrame(() => {
+        document.getElementById('invoice-custom-fields')?.scrollIntoView({ block: 'center' });
+      });
+    }
+  };
+
+  /**
+   * The template picker is a screen of its own, so this one does leave — but
+   * only after saying so, and never silently on a form with typing in it.
+   */
+  const goToSettings = async (screen) => {
+    setMoreOpen(false);
+    if (typeof onOpenInvoiceSettings !== 'function') {
+      notify.error('Open Settings → Invoice Templates to change this.');
+      return;
+    }
+    const typing =
+      String(formData.customerId || '') ||
+      (formData.items || []).some((l) => l.itemId || Number(l.quantity) > 1 || Number(l.rate) > 0);
+    if (typing && !isEdit) {
+      const ok = await confirmDialog({
+        title: 'Leave this invoice?',
+        message: 'The template picker is a separate screen. Anything typed here is not saved yet and will be lost.',
+        confirmLabel: 'Leave and pick a template',
+      });
+      if (!ok) return;
+    }
+    onOpenInvoiceSettings(screen);
   };
 
   const setCustomField = (key, value) =>
@@ -2295,21 +2335,14 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const [focusRowIndex, setFocusRowIndex] = useState(-1);
 
   const addItem = () => {
-    setFormData((prev) => {
-      const next = [...prev.items, { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }];
-      setFocusRowIndex(next.length - 1);
-      return { ...prev, items: next };
-    });
-  };
-
-  // Tab out of the last cell of the last row starts the next line, the way a
-  // Tally operator expects.
-  const handleRowKeyDown = (e, idx) => {
-    const isLastRow = idx === formData.items.length - 1;
-    if (e.key === 'Tab' && !e.shiftKey && isLastRow) {
-      e.preventDefault();
-      addItem();
-    }
+    // The focus index is set outside the updater. Setting state from inside
+    // one runs during React's render phase, where the second invocation under
+    // StrictMode makes it a side effect React is entitled to drop.
+    setFocusRowIndex(formData.items.length);
+    setFormData((prev) => ({
+      ...prev,
+      items: [...prev.items, { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
+    }));
   };
 
   /**
@@ -2928,6 +2961,31 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       formRef.current?.requestSubmit();
       return;
     }
+    /**
+     * Tab out of the *last* control of the *last* line starts the next one,
+     * the way a Tally operator expects.
+     *
+     * This used to hang off the row's own onKeyDown and fired on any cell in
+     * the last row, so tabbing from the item to the quantity opened a line
+     * nobody asked for — when it fired at all. Enter has always been handled
+     * here at the form, which is the level a keystroke from inside the table
+     * reliably reaches, so Tab is handled here too.
+     */
+    if (e.key === 'Tab' && !e.shiftKey && !mod) {
+      const el = e.target;
+      if (!(el instanceof HTMLElement)) return;
+      const row = el.closest('[data-line-row]');
+      if (!row) return;
+      if (Number(row.dataset.lineRow) !== formData.items.length - 1) return;
+      const focusable = row.querySelectorAll(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable[focusable.length - 1] !== el) return;
+      e.preventDefault();
+      addItem();
+      return;
+    }
+
     if (e.key !== 'Enter' || e.shiftKey || mod) return;
     // Enter inside a line opens the next one. Anywhere else it would submit
     // the form early, which is the classic way to book a half-typed invoice.
@@ -3016,7 +3074,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => goToSettings('settingsInvoiceFields')}
+                onClick={() => openPreferences(false)}
                 className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
               >
                 <SlidersHorizontal size={15} aria-hidden="true" /> Preferences
@@ -3024,7 +3082,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <button
                 type="button"
                 role="menuitem"
-                onClick={() => goToSettings('settingsInvoiceFields')}
+                onClick={() => openPreferences(true)}
                 className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
               >
                 <Plus size={15} aria-hidden="true" /> Custom Field
@@ -3056,7 +3114,25 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
       </div>
 
-      {previewOpen ? (
+      {prefsOpen ? (
+        <div className="space-y-3">
+          <InvoiceFieldSettings
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            embedded
+            onBack={() => setPrefsOpen(false)}
+          />
+          <div style={{ borderTop: '1px solid rgb(var(--border))' }} className="pt-3">
+            <button type="button" onClick={() => setPrefsOpen(false)} className="ui-btn ui-btn-primary">
+              Back to the invoice
+            </button>
+            <span className="ui-caption ml-3">Nothing typed above was lost — the invoice is exactly as you left it.</span>
+          </div>
+        </div>
+      ) : null}
+
+      {previewOpen && !prefsOpen ? (
         <div className="ui-card p-4">
           <div className="flex items-center justify-between mb-3">
             <span className="ui-t-label">Preview — what the customer receives</span>
@@ -3502,7 +3578,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 const lineBatches = lineTracked ? batchesForItem(db, currentCompany.id, item.itemId) : [];
                 return (
                 <React.Fragment key={idx}>
-                <tr className="border-t" onKeyDown={(e) => handleRowKeyDown(e, idx)}>
+                <tr className="border-t" data-line-row={idx}>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}

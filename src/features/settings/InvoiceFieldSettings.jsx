@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Lock, Plus, Trash2, EyeOff, Eye } from 'lucide-react';
+import { ArrowLeft, Lock, Plus, Trash2, EyeOff, Eye } from 'lucide-react';
 
 import { PageHeader } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
@@ -35,7 +35,7 @@ import {
  * confirm — a company that has tuned thirty switches and idly changes the
  * dropdown should not lose that silently.
  */
-export const InvoiceFieldSettings = ({ db, setDb, currentCompany }) => {
+export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = false, onBack = null }) => {
   const bankAccounts = useMemo(() => listBankAccounts(db, currentCompany.id), [db, currentCompany.id]);
   const payment = useMemo(() => getInvoicePaymentDetails(currentCompany), [currentCompany]);
   const prefs = useMemo(() => getInvoicePrefs(currentCompany), [currentCompany]);
@@ -124,8 +124,33 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany }) => {
     return INVOICE_PREFS.filter((p) => !p.locked && Boolean(next[p.key]) !== isInvoicePrefOn(prefs, p.key)).length;
   }, [pendingIndustry, prefs]);
 
+  const header = embedded ? (
+    <div className="flex items-center justify-between gap-3 flex-wrap">
+      <button type="button" onClick={onBack} className="ui-btn ui-btn-ghost ui-btn-sm">
+        <ArrowLeft size={14} aria-hidden="true" /> Back to the invoice
+      </button>
+      <div className="flex items-center gap-2">
+        <span className="ui-pill ui-pill-neutral">
+          {onCount} of {INVOICE_PREFS.length} on
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            write({ resetToIndustryDefault: true });
+            notify.success(`Reset to the ${industryLabel} defaults.`);
+          }}
+          className="ui-btn ui-btn-secondary ui-btn-sm"
+        >
+          Reset to industry default
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="space-y-4">
+      {header}
+      {embedded ? null : (
       <PageHeader
         title="Invoice Fields"
         description="What an invoice contains. A field switched off leaves the form and the printed document — it is never greyed out."
@@ -147,8 +172,9 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany }) => {
           </>
         }
       />
+      )}
 
-      <section className="ui-card p-4">
+      <section className={embedded ? 'p-4' : 'ui-card p-4'}>
         <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
           <div>
             <label htmlFor="invoice-industry" className="block text-xs ui-muted mb-1">
@@ -191,8 +217,8 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany }) => {
         const list = INVOICE_PREFS.filter((p) => p.group === group.key);
         const { on, total } = countPrefsOn(prefs, group.key);
         return (
-          <section key={group.key} className="ui-card overflow-hidden">
-            <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+          <section key={group.key} className={embedded ? 'overflow-hidden' : 'ui-card overflow-hidden'}>
+            <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))', borderTop: embedded ? '1px solid rgb(var(--border))' : undefined }}>
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className="ui-title text-sm">{group.label}</span>
                 <span className="ui-subtle text-xs">
@@ -243,8 +269,8 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany }) => {
       })}
 
       {isInvoicePrefOn(prefs, 'bankQr') ? (
-        <section className="ui-card overflow-hidden">
-          <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+        <section className={embedded ? 'overflow-hidden' : 'ui-card overflow-hidden'}>
+          <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))', borderTop: embedded ? '1px solid rgb(var(--border))' : undefined }}>
             <div className="ui-title text-sm">Payment details on the invoice</div>
             <div className="ui-subtle text-xs mt-0.5">
               Printed under the line items so the customer does not have to ask where to send the money. The account is
@@ -330,9 +356,9 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany }) => {
         </section>
       ) : null}
 
-      <section className="ui-card overflow-hidden">
-        <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
-          <div className="flex items-baseline gap-2 flex-wrap">
+      <section className={embedded ? 'overflow-hidden' : 'ui-card overflow-hidden'}>
+        <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))', borderTop: embedded ? '1px solid rgb(var(--border))' : undefined }}>
+          <div className="flex items-baseline gap-2 flex-wrap" id="invoice-custom-fields">
             <span className="ui-title text-sm">Custom fields</span>
             <span className="ui-subtle text-xs">
               {customFields.length ? `${customFields.length} defined` : 'none yet'}
