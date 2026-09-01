@@ -4,6 +4,14 @@ import QRCode from 'qrcode';
 import { ACCENT_OPTIONS, getDocSettings } from '../../utils/docSettings';
 import { formatMoney } from '../../utils/money';
 import { GST_STATE_BY_CODE } from '../../utils/gst';
+import {
+  getInvoicePrefs,
+  isInvoicePrefOn,
+  getCustomFields,
+  getInvoicePaymentDetails,
+  listBankAccounts,
+  buildUpiPaymentUri,
+} from '../../utils/invoicePrefs';
 
 const InfoRow = ({ label, value, right = false }) => {
   if (!value) return null;
@@ -13,6 +21,40 @@ const InfoRow = ({ label, value, right = false }) => {
       <div className="font-medium text-gray-900">{value}</div>
     </div>
   );
+};
+
+/**
+ * Indian numbering, because "One Lakh Twenty One Thousand" is what a customer
+ * here reads back to check the figure — "One Hundred Twenty One Thousand" is
+ * the same number written for somebody else.
+ */
+const WORD_ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven',
+  'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const WORD_TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+const wordsUnder100 = (n) => (n < 20 ? WORD_ONES[n] : `${WORD_TENS[Math.floor(n / 10)]}${n % 10 ? ` ${WORD_ONES[n % 10]}` : ''}`);
+const wordsUnder1000 = (n) =>
+  `${n > 99 ? `${WORD_ONES[Math.floor(n / 100)]} Hundred${n % 100 ? ' ' : ''}` : ''}${wordsUnder100(n % 100)}`;
+
+export const amountInWordsInr = (value) => {
+  const total = Number(value);
+  if (!Number.isFinite(total)) return '';
+  const negative = total < 0;
+  let rupees = Math.floor(Math.abs(total));
+  const paise = Math.round((Math.abs(total) - rupees) * 100);
+
+  const parts = [];
+  [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']].forEach(([size, name]) => {
+    if (rupees >= size) {
+      parts.push(`${wordsUnder1000(Math.floor(rupees / size))} ${name}`);
+      rupees %= size;
+    }
+  });
+  if (rupees) parts.push(wordsUnder1000(rupees));
+
+  const body = parts.join(' ').replace(/\s+/g, ' ').trim() || 'Zero';
+  const paiseText = paise ? ` and ${wordsUnder100(paise)} Paise` : '';
+  return `${negative ? 'Minus ' : ''}Rupees ${body}${paiseText} Only`;
 };
 
 const batchNote = (l) =>
@@ -42,6 +84,134 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
       cancelled = true;
     };
   }, [invoice?.irnSignedQr]);
+  /**
+   * The same preferences the form obeys.
+   *
+   * A field switched off has to leave the paper as well as the screen — a
+   * printed invoice that carries a field the form no longer offers is a field
+   * nobody can correct.
+   */
+  const prefs = useMemo(() => getInvoicePrefs(currentCompany), [currentCompany]);
+  const prefOn = (key) => isInvoicePrefOn(prefs, key);
+  const customFields = useMemo(() => getCustomFields(currentCompany), [currentCompany]);
+  const payment = useMemo(() => getInvoicePaymentDetails(currentCompany), [currentCompany]);
+  const bankAccount = useMemo(() => {
+    if (!prefOn('bankQr') || !payment.bankAccountId) return null;
+    return listBankAccounts(db, currentCompany?.id).find((a) => a.id === String(payment.bankAccountId)) || null;
+    // prefOn is derived from prefs; listing is cheap and only runs on a change.
+  }, [db, currentCompany?.id, payment.bankAccountId, prefs]);
+
+  /**
+   * The UPI QR carries the amount, so it only appears on a finalised invoice.
+   * A draft's total can still change, and a code that pays the wrong amount is
+   * worse than no code at all.
+   */
+  const upiUri = useMemo(() => {
+    if (!prefOn('bankQr') || !payment.showQr) return '';
+    if (String(invoice?.status || '').trim() === 'Draft') return '';
+    return buildUpiPaymentUri({
+      upiId: payment.upiId,
+      payeeName: payment.payeeName || currentCompany?.name,
+      amount: Number(invoice?.total ?? 0),
+      invoiceNumber: invoice?.number,
+    });
+  }, [prefs, payment, invoice?.status, invoice?.total, invoice?.number, currentCompany?.name]);
+
+  const [upiQrDataUrl, setUpiQrDataUrl] = useState('');
+  useEffect(() => {
+    let cancelled = false;
+    const apply = (v) => {
+      if (!cancelled) setUpiQrDataUrl(v);
+    };
+    if (!upiUri) {
+      Promise.resolve().then(() => apply(''));
+    } else {
+      QRCode.toDataURL(upiUri, { margin: 1, width: 192 }).then(apply).catch(() => apply(''));
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [upiUri]);
+
+  const printedCustomFields = (where) =>
+    customFields
+      .filter((f) => f.printPlacement === where)
+      .map((f) => ({ ...f, value: (invoice?.customFields || {})[f.key] }))
+      .filter((f) => f.value !== undefined && f.value !== '' && f.value !== null)
+      .map((f) => ({ ...f, value: f.value === true ? 'Yes' : f.value === false ? 'No' : String(f.value) }));
+
+  /**
+   * The reference and statutory numbers, as `InfoRow`s. Shared so every
+   * template shows the same set — a field the company switched on should not
+   * depend on which paper design they picked.
+   */
+  const referenceLines = () => {
+    const rows = [];
+    const push = (label, value) => {
+      const v = String(value ?? '').trim();
+      if (v) rows.push({ label, value: v });
+    };
+    if (prefOn('customerRef')) {
+      push('Ref No.', invoice?.refNo);
+      push('Ref Date', invoice?.refDate);
+    }
+    if (prefOn('lut')) push('LUT', invoice?.lutNumber || company?.lutNumber);
+    if (prefOn('iec')) push('IEC', invoice?.iecNumber || company?.iecNumber);
+    if (prefOn('ewayBill')) push('E-way bill', invoice?.ewbNo);
+    if (prefOn('transporter')) {
+      push('Transporter', invoice?.transporterName);
+      push('Vehicle no.', invoice?.vehicleNo);
+    }
+    if (prefOn('drugLicence')) push('Drug licence', company?.drugLicenceNo);
+    if (prefOn('salesman')) push('Salesperson', invoice?.salesmanName);
+    printedCustomFields('header').forEach((f) => push(f.label, f.value));
+    return rows;
+  };
+
+  const referenceRows = () => (
+    <>
+      {prefOn('customerRef') ? <InfoRow label="Ref No." value={invoice?.refNo || ''} right /> : null}
+      {prefOn('customerRef') ? <InfoRow label="Ref Date" value={invoice?.refDate || ''} right /> : null}
+      {prefOn('lut') ? <InfoRow label="LUT" value={invoice?.lutNumber || company?.lutNumber || ''} right /> : null}
+      {prefOn('iec') ? <InfoRow label="IEC" value={invoice?.iecNumber || company?.iecNumber || ''} right /> : null}
+      {prefOn('ewayBill') ? <InfoRow label="E-way bill" value={invoice?.ewbNo || ''} right /> : null}
+      {prefOn('transporter') ? <InfoRow label="Transporter" value={invoice?.transporterName || ''} right /> : null}
+      {prefOn('transporter') ? <InfoRow label="Vehicle no." value={invoice?.vehicleNo || ''} right /> : null}
+      {prefOn('drugLicence') ? <InfoRow label="Drug licence" value={company?.drugLicenceNo || ''} right /> : null}
+      {prefOn('salesman') ? <InfoRow label="Salesperson" value={invoice?.salesmanName || ''} right /> : null}
+      {printedCustomFields('header').map((f) => (
+        <InfoRow key={f.key} label={f.label} value={f.value} right />
+      ))}
+    </>
+  );
+
+  /** Where to send the money. Nothing renders when there is nothing to say. */
+  const paymentBlock = () => {
+    if (!bankAccount && !upiQrDataUrl) return null;
+    return (
+      <div className="flex items-start justify-between gap-3 border rounded-lg p-3">
+        <div className="min-w-0 text-xs text-gray-700">
+          <div className="font-semibold uppercase text-gray-700">Payment</div>
+          {bankAccount ? (
+            <>
+              <div className="font-medium text-gray-900">{bankAccount.bankName || bankAccount.name}</div>
+              <div>A/c {bankAccount.accountNumber}</div>
+              {bankAccount.ifsc ? <div>IFSC {bankAccount.ifsc}</div> : null}
+              {bankAccount.branch ? <div>{bankAccount.branch}</div> : null}
+            </>
+          ) : null}
+          {payment.upiId ? <div>UPI {payment.upiId}</div> : null}
+        </div>
+        {upiQrDataUrl ? (
+          <div className="flex-shrink-0 text-center">
+            <img src={upiQrDataUrl} alt="UPI payment QR" className="h-24 w-24" />
+            <div className="text-[10px] text-gray-500 mt-0.5">Scan to pay</div>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
   const templateId = String(docSettings?.templates?.invoice?.templateId || 'classic');
   const accentId = String(docSettings?.templates?.invoice?.accentId || 'blue');
   const accent = ACCENT_OPTIONS.find((a) => a.id === accentId) || ACCENT_OPTIONS[0];
@@ -126,8 +296,13 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
           <InfoRow label="Place of Supply" value={invoice?.placeOfSupplyState || ''} right />
           <InfoRow label="Tax Type" value={invoice?.taxType ? String(invoice.taxType).replace('_', ' / ') : ''} right />
           <InfoRow label="Status" value={invoice?.status || ''} right />
+          {referenceRows()}
         </div>
       </div>
+
+      {prefOn('reverseCharge') && invoice?.reverseCharge ? (
+        <div className="text-xs font-semibold text-gray-700">Tax payable on reverse charge</div>
+      ) : null}
 
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full">
@@ -155,7 +330,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                 const total = Number(l?.lineTotal ?? l?.amount ?? 0);
                 return (
                   <tr key={idx}>
-                    <td className="px-3 py-2 text-sm text-gray-900">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
+                    <td className="px-3 py-2 text-sm text-gray-900">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
                     <td className="px-3 py-2 text-sm text-right">{Number.isFinite(qty) ? qty : '-'}</td>
                     <td className="px-3 py-2 text-sm text-right">{formatMoney(Number.isFinite(rate) ? rate : 0, currentCompany)}</td>
                     <td className="px-3 py-2 text-sm text-right font-medium">{formatMoney(Number.isFinite(total) ? total : 0, currentCompany)}</td>
@@ -177,12 +352,29 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
             <span className="text-gray-600">GST</span>
             <span className="font-medium">{formatMoney(Number(invoice?.gstTotal ?? 0), currentCompany)}</span>
           </div>
+          {prefOn('invoiceDiscount') && Number(invoice?.invoiceDiscountApplied ?? 0) > 0 ? (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Invoice discount</span>
+              <span className="font-medium">− {formatMoney(Number(invoice.invoiceDiscountApplied), currentCompany)}</span>
+            </div>
+          ) : null}
+          {prefOn('otherCharges') && Number(invoice?.otherChargesTotal ?? 0) > 0 ? (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Other charges</span>
+              <span className="font-medium">{formatMoney(Number(invoice.otherChargesTotal), currentCompany)}</span>
+            </div>
+          ) : null}
           <div className="flex justify-between border-t pt-2 mt-2 font-bold">
             <span>Total</span>
             <span>{formatMoney(Number(invoice?.total ?? 0), currentCompany)}</span>
           </div>
+          {prefOn('amountInWords') ? (
+            <div className="border-t pt-2 mt-2 text-xs text-gray-600">{amountInWordsInr(Number(invoice?.total ?? 0))}</div>
+          ) : null}
         </div>
       </div>
+
+      {paymentBlock()}
 
       {invoice?.irn ? (
         <div className="flex items-start justify-between gap-3 border rounded-lg p-3">
@@ -195,7 +387,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
           {irnQrDataUrl ? <img src={irnQrDataUrl} alt="Signed e-invoice QR" className="h-24 w-24 flex-shrink-0" /> : null}
         </div>
       ) : null}
-      {invoice?.shipToAddress ? (
+      {prefOn('shipTo') && invoice?.shipToAddress ? (
         <div className="border rounded-lg p-3 text-xs text-gray-700">
           <span className="font-semibold uppercase">Ship to ({invoice.shipToAddress.code}):</span>{' '}
           {[invoice.shipToAddress.label, invoice.shipToAddress.line1, invoice.shipToAddress.city, invoice.shipToAddress.state, invoice.shipToAddress.pincode]
@@ -203,10 +395,24 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
             .join(', ')}
         </div>
       ) : null}
-      {String(docSettings?.templates?.invoice?.termsText || '').trim() ? (
+      {prefOn('terms') && String(docSettings?.templates?.invoice?.termsText || '').trim() ? (
         <div className="border rounded-lg p-3 text-xs text-gray-600 whitespace-pre-line">
           <div className="font-semibold uppercase text-gray-700 mb-1">Terms &amp; Conditions</div>
           {docSettings.templates.invoice.termsText}
+        </div>
+      ) : null}
+      {printedCustomFields('terms').length ? (
+        <div className="border rounded-lg p-3 text-xs text-gray-600">
+          {printedCustomFields('terms').map((f) => (
+            <div key={f.key}>
+              <span className="font-semibold text-gray-700">{f.label}:</span> {f.value}
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {prefOn('declaration') && String(docSettings?.templates?.invoice?.declarationText || '').trim() ? (
+        <div className="border rounded-lg p-3 text-xs text-gray-600 whitespace-pre-line">
+          {docSettings.templates.invoice.declarationText}
         </div>
       ) : null}
     </div>
@@ -286,6 +492,11 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                 {customerAddress ? <div className="text-xs text-gray-600">{customerAddress}</div> : null}
                 {invoice?.customerGstin ? <div className="text-xs text-gray-600">GSTIN: {invoice.customerGstin}</div> : null}
                 {placeDisplay ? <div className="text-xs text-gray-600">Place of Supply: {placeDisplay}</div> : null}
+                {referenceLines().map((r) => (
+                  <div key={r.label} className="text-xs text-gray-600">
+                    {r.label}: {r.value}
+                  </div>
+                ))}
               </div>
 
               <div className="border rounded-lg p-4">
@@ -349,7 +560,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-3 py-2">{idx + 1}</td>
-                          <td className="px-3 py-2">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
+                          <td className="px-3 py-2">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
                           <td className="px-3 py-2">{hsn || '-'}</td>
                           <td className="px-3 py-2 text-right">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                           <td className="px-3 py-2 text-right">{formatMoney(Number.isFinite(rate) ? rate : 0, currentCompany)}</td>
@@ -365,15 +576,32 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
               </table>
             </div>
 
+            {prefOn('amountInWords') ? (
+              <div className="text-xs text-gray-700">{amountInWordsInr(Number(invoice?.total ?? 0))}</div>
+            ) : null}
+
+            {paymentBlock()}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="border rounded-lg p-4">
                 <div className="text-xs font-semibold text-gray-700 uppercase">Terms</div>
-                <div className="text-xs text-gray-600 mt-2">This is a computer generated invoice. Signature not required.</div>
+                <div className="text-xs text-gray-600 mt-2 whitespace-pre-line">
+                  {prefOn('terms') && String(docSettings?.templates?.invoice?.termsText || '').trim()
+                    ? docSettings.templates.invoice.termsText
+                    : 'This is a computer generated invoice. Signature not required.'}
+                </div>
+                {printedCustomFields('terms').map((f) => (
+                  <div key={f.key} className="text-xs text-gray-600 mt-1">
+                    <span className="font-semibold text-gray-700">{f.label}:</span> {f.value}
+                  </div>
+                ))}
               </div>
-              <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">For {company?.name || 'Company'}</div>
-                <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
-              </div>
+              {prefOn('signature') ? (
+                <div className="border rounded-lg p-4">
+                  <div className="text-xs font-semibold text-gray-700 uppercase">For {company?.name || 'Company'}</div>
+                  <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -489,7 +717,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-2 py-2 border-r-2 border-gray-900">{idx + 1}</td>
-                          <td className="px-2 py-2 border-r-2 border-gray-900">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-600">{batchNote(l)}</div> : null}</td>
+                          <td className="px-2 py-2 border-r-2 border-gray-900">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-600">{batchNote(l)}</div> : null}</td>
                           <td className="px-2 py-2 border-r-2 border-gray-900">{hsn || '-'}</td>
                           <td className="px-2 py-2 text-right border-r-2 border-gray-900">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                           <td className="px-2 py-2 text-right border-r-2 border-gray-900">{formatMoney(rate, currentCompany)}</td>
@@ -512,15 +740,32 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
               </table>
             </div>
 
+            {prefOn('amountInWords') ? (
+              <div className="text-xs mt-4">{amountInWordsInr(Number(invoice?.total ?? 0))}</div>
+            ) : null}
+
+            <div className="mt-4">{paymentBlock()}</div>
+
             <div className="grid grid-cols-2 gap-4 mt-6">
               <div className="border-2 border-gray-900 p-4">
                 <div className="text-xs font-semibold uppercase">Terms</div>
-                <div className="text-xs text-gray-600 mt-2">Subject to jurisdiction.</div>
+                <div className="text-xs text-gray-600 mt-2 whitespace-pre-line">
+                  {prefOn('terms') && String(docSettings?.templates?.invoice?.termsText || '').trim()
+                    ? docSettings.templates.invoice.termsText
+                    : 'Subject to jurisdiction.'}
+                </div>
+                {printedCustomFields('terms').map((f) => (
+                  <div key={f.key} className="text-xs text-gray-600 mt-1">
+                    <span className="font-semibold">{f.label}:</span> {f.value}
+                  </div>
+                ))}
               </div>
-              <div className="border-2 border-gray-900 p-4">
-                <div className="text-xs font-semibold uppercase">For {company?.name || 'Company'}</div>
-                <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
-              </div>
+              {prefOn('signature') ? (
+                <div className="border-2 border-gray-900 p-4">
+                  <div className="text-xs font-semibold uppercase">For {company?.name || 'Company'}</div>
+                  <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -559,6 +804,11 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                 {customerAddress ? <div className="text-xs text-gray-600">{customerAddress}</div> : null}
                 {invoice?.customerGstin ? <div className="text-xs text-gray-600">GSTIN: {invoice.customerGstin}</div> : null}
                 {placeDisplay ? <div className="text-xs text-gray-600">Place of Supply: {placeDisplay}</div> : null}
+                {referenceLines().map((r) => (
+                  <div key={r.label} className="text-xs text-gray-600">
+                    {r.label}: {r.value}
+                  </div>
+                ))}
               </div>
               <div className="border rounded-lg p-4">
                 <div className="text-xs font-semibold text-gray-700 uppercase">Totals</div>
@@ -616,7 +866,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-3 py-2">{idx + 1}</td>
-                          <td className="px-3 py-2">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
+                          <td className="px-3 py-2">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
                           <td className="px-3 py-2 text-right">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                           <td className="px-3 py-2 text-right">{formatMoney(Number.isFinite(taxable) ? taxable : 0, currentCompany)}</td>
                           <td className="px-3 py-2 text-right">{Number.isFinite(gstRate) ? gstRate : 0}</td>
@@ -629,17 +879,32 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
               </table>
             </div>
 
+            {prefOn('amountInWords') ? (
+              <div className="text-xs text-gray-700">{amountInWordsInr(Number(invoice?.total ?? 0))}</div>
+            ) : null}
+
+            {paymentBlock()}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="border rounded-lg p-4">
                 <div className="text-xs font-semibold text-gray-700 uppercase">Notes</div>
                 <div className="text-xs text-gray-600 mt-2" style={{ whiteSpace: 'pre-wrap' }}>
-                  This is a computer generated invoice. Signature not required.
+                  {prefOn('terms') && String(docSettings?.templates?.invoice?.termsText || '').trim()
+                    ? docSettings.templates.invoice.termsText
+                    : 'This is a computer generated invoice. Signature not required.'}
                 </div>
+                {printedCustomFields('terms').map((f) => (
+                  <div key={f.key} className="text-xs text-gray-600 mt-1">
+                    <span className="font-semibold text-gray-700">{f.label}:</span> {f.value}
+                  </div>
+                ))}
               </div>
-              <div className="border rounded-lg p-4">
-                <div className="text-xs font-semibold text-gray-700 uppercase">For {company?.name || 'Company'}</div>
-                <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
-              </div>
+              {prefOn('signature') ? (
+                <div className="border rounded-lg p-4">
+                  <div className="text-xs font-semibold text-gray-700 uppercase">For {company?.name || 'Company'}</div>
+                  <div className="mt-10 text-xs text-gray-600">(Authorized Signatory)</div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -767,7 +1032,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                     return (
                       <tr key={idx} className="border-b border-gray-200 last:border-b-0">
                         <td className="p-1 border-r border-gray-900 text-center">{idx + 1}</td>
-                        <td className="p-1 border-r border-gray-900">{name || '-'}{batchNote(l) ? <div className="text-[9px] text-gray-600">{batchNote(l)}</div> : null}</td>
+                        <td className="p-1 border-r border-gray-900">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[9px] text-gray-600">{batchNote(l)}</div> : null}</td>
                         {!isCompact && <td className="p-1 border-r border-gray-900 text-center">{hsn || '-'}</td>}
                         <td className="p-1 border-r border-gray-900 text-center">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                         {!isCompact && <td className="p-1 border-r border-gray-900 text-right">{formatMoney(Number.isFinite(rate) ? rate : 0, currentCompany)}</td>}
@@ -787,8 +1052,12 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
 
           <div className={`grid ${isCompact ? 'grid-cols-2' : 'grid-cols-3'} ${isBoxed ? 'border-t-2 border-gray-900' : 'border-t border-gray-900'}`}>
             <div className={`${pCell} ${isCompact ? '' : 'col-span-2'} ${isBoxed ? 'border-r-2 border-gray-900' : 'border-r border-gray-900'}`}>
-              <div className="font-semibold">Total in words</div>
-              <div className="text-[10px] text-gray-700">(in words not configured)</div>
+              {prefOn('amountInWords') ? (
+                <>
+                  <div className="font-semibold">Total in words</div>
+                  <div className="text-[10px] text-gray-700">{amountInWordsInr(Number(invoice?.total ?? 0))}</div>
+                </>
+              ) : null}
 
               {!isClean && (
                 <>
@@ -814,8 +1083,12 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                   <span>{formatMoney(Number(invoice?.total ?? 0), currentCompany)}</span>
                 </div>
 
+                {paymentBlock() ? <div className="mt-3">{paymentBlock()}</div> : null}
+
                 <div className="mt-6 text-[10px] text-gray-700">
-                  This is a computer generated invoice. Signature not required.
+                  {prefOn('terms') && String(docSettings?.templates?.invoice?.termsText || '').trim()
+                    ? docSettings.templates.invoice.termsText
+                    : 'This is a computer generated invoice. Signature not required.'}
                 </div>
               </div>
             </div>
