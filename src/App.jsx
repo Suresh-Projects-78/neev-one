@@ -14244,7 +14244,23 @@ const AppShell = () => {
         <main
           id="main-content"
           key={active}
-          className="min-w-0 flex-1 ui-in-fade ui-content overflow-y-auto overflow-x-hidden min-h-0 pr-1"
+          className="min-w-0 flex-1 ui-in-fade ui-content overflow-y-auto overflow-x-hidden min-h-0 pe-4"
+          /*
+           * Two fixes, because the two families of scrollbar break this
+           * differently.
+           *
+           * Overlay scrollbars — macOS, and most touch devices — take no
+           * layout width at all and are painted *over* the content, so the
+           * primary action in the top right ended up half under the bar. Only
+           * padding clears that, and it has to survive the bar widening on
+           * hover, which is why it is 16px rather than 4.
+           *
+           * Classic scrollbars — Windows, most Linux — do take width, and
+           * without a reserved gutter the whole page jolts sideways the moment
+           * content grows past one viewport. scrollbar-gutter holds the track
+           * open whether or not the bar is showing.
+           */
+          style={{ scrollbarGutter: 'stable' }}
         >
           {/*
             A failed warehouse load used to be silent: the dropdown was simply
