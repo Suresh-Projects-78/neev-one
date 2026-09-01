@@ -308,3 +308,128 @@ export const setupGaps = (db, companyId) => {
 
   return { steps, done: steps.filter((s) => s.done).length, total: steps.length, complete: steps.every((s) => s.done) };
 };
+
+/**
+ * Where cash lands over the next N days, from documents already committed.
+ *
+ * **Finalised documents only.** A draft is an intention, and one draft can be
+ * larger than the whole cash balance — a projection that swallows drafts is a
+ * projection that swings on a document nobody has sent. Excluding them means
+ * the line understates rather than flatters, which is the right direction for a
+ * number somebody may pay a vendor on.
+ *
+ * Money already overdue is treated as arriving today rather than in the past:
+ * it is still expected, and dropping it would flatter the opening point.
+ */
+export const cashForecast = (db, companyId, { days = 30, asOf = todayIso() } = {}) => {
+  const start = cashPosition(db, companyId).total;
+
+  const events = [];
+  for (const inv of arr(db?.invoices).filter((i) => i.companyId === companyId && isLive(i))) {
+    const bal = Math.max(0, num(inv.total) - num(inv.paidAmount));
+    if (bal > 0.004) events.push({ day: Math.max(0, daysBetween(asOf, ymd(inv.dueDate || inv.date))), amount: bal });
+  }
+  for (const b of [...arr(db?.bills), ...arr(db?.expenses)].filter((r) => r.companyId === companyId && isLive(r))) {
+    const bal = Math.max(0, num(b.total) - num(b.paidAmount));
+    if (bal > 0.004) events.push({ day: Math.max(0, daysBetween(asOf, ymd(b.dueDate || b.date))), amount: -bal });
+  }
+
+  const points = [];
+  let running = start;
+  let lowest = { day: 0, value: start };
+  for (let d = 0; d <= days; d += 1) {
+    running += events.filter((e) => e.day === d).reduce((t, e) => t + e.amount, 0);
+    points.push({ day: d, value: running });
+    if (running < lowest.value) lowest = { day: d, value: running };
+  }
+
+  const expectedIn = events.filter((e) => e.amount > 0 && e.day <= days).reduce((t, e) => t + e.amount, 0);
+  const expectedOut = -events.filter((e) => e.amount < 0 && e.day <= days).reduce((t, e) => t + e.amount, 0);
+
+  return { start, points, end: running, lowest, expectedIn, expectedOut, days, hasEvents: events.length > 0 };
+};
+
+/**
+ * Income against expenses, on either basis.
+ *
+ * The two answer different questions and must never be mixed on one screen:
+ * accrual says what the business earned, cash says what reached the account.
+ * A company can be profitable on accrual and unable to pay a vendor on cash,
+ * which is precisely the situation the switch exists to reveal.
+ */
+export const incomeVsExpenses = (db, companyId, { basis = 'accrual', days = 90, buckets = 6, asOf = todayIso() } = {}) => {
+  const end = new Date(`${asOf}T00:00:00Z`).getTime();
+  const span = Math.max(1, Math.round(days / buckets));
+
+  const sales =
+    basis === 'cash'
+      ? arr(db?.payments).filter((p) => p.companyId === companyId && String(p.direction || '').toUpperCase() === 'IN')
+          .map((p) => ({ date: p.date, amount: num(p.amount) }))
+      : arr(db?.invoices).filter((i) => i.companyId === companyId && isLive(i))
+          .map((i) => ({ date: i.date, amount: num(i.subtotal) || num(i.total) }));
+
+  const costs =
+    basis === 'cash'
+      ? arr(db?.payments).filter((p) => p.companyId === companyId && String(p.direction || '').toUpperCase() === 'OUT')
+          .map((p) => ({ date: p.date, amount: num(p.amount) }))
+      : [...arr(db?.bills), ...arr(db?.expenses)].filter((r) => r.companyId === companyId && isLive(r))
+          .map((r) => ({ date: r.date, amount: num(r.subtotal) || num(r.total) }));
+
+  const sum = (rows, from, to) =>
+    rows.reduce((t, r) => {
+      const d = new Date(`${ymd(r.date)}T00:00:00Z`).getTime();
+      return Number.isFinite(d) && d > from && d <= to ? t + r.amount : t;
+    }, 0);
+
+  const out = [];
+  for (let i = buckets - 1; i >= 0; i -= 1) {
+    const to = end - i * span * 86_400_000;
+    const from = to - span * 86_400_000;
+    out.push({ to: todayIso(new Date(to)), income: sum(sales, from, to), expense: sum(costs, from, to) });
+  }
+  return { basis, series: out, income: out.reduce((t, b) => t + b.income, 0), expense: out.reduce((t, b) => t + b.expense, 0) };
+};
+
+/**
+ * What has happened lately, newest first.
+ *
+ * Derived from the documents themselves rather than from an audit log: the
+ * `AuditLog` table has no read route yet, and a timeline that quietly showed
+ * only invoices — the one entity that currently writes to it — would read as a
+ * complete history while being a quarter of one.
+ */
+export const recentActivity = (db, companyId, limit = 8) => {
+  const rows = [];
+  const push = (list, kind, fmt) =>
+    arr(list).filter((r) => r.companyId === companyId).forEach((r) => rows.push({ kind, date: ymd(r.date), ...fmt(r) }));
+
+  push(db?.invoices, 'invoice', (r) => ({
+    title: `Invoice ${r.number || ''}`.trim(),
+    who: String(r.customerName || '').trim(),
+    amount: num(r.total),
+    tone: isDraft(r) ? 'muted' : 'brand',
+    note: isDraft(r) ? 'saved as draft' : 'raised',
+  }));
+  push(db?.bills, 'bill', (r) => ({
+    title: `Bill ${r.number || ''}`.trim(),
+    who: String(r.vendorName || '').trim(),
+    amount: -num(r.total),
+    tone: 'muted',
+    note: 'recorded',
+  }));
+  push(db?.payments, 'payment', (r) => {
+    const isIn = String(r.direction || '').toUpperCase() === 'IN';
+    return {
+      title: isIn ? `Receipt ${r.receiptNo || ''}`.trim() : `Payment ${r.paymentNo || ''}`.trim(),
+      who: String(r.customerName || r.vendorName || '').trim(),
+      amount: isIn ? num(r.amount) : -num(r.amount),
+      tone: isIn ? 'pos' : 'neg',
+      note: String(r.mode || '').trim() || (isIn ? 'received' : 'paid'),
+    };
+  });
+
+  return rows
+    .filter((r) => r.date)
+    .sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? 1 : -1))
+    .slice(0, limit);
+};

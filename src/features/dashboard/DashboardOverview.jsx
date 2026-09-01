@@ -45,8 +45,12 @@ import {
   payables as payablesAsOf,
   gstPosition,
   setupGaps,
+  cashForecast,
+  incomeVsExpenses,
+  recentActivity,
   AGEING_BUCKETS,
 } from '../../utils/cashPosition';
+import { computeInventorySummaryByItemId } from '../../utils/inventory';
 import { useCountUp } from '../../components/ui/useCountUp';
 
 /**
@@ -492,7 +496,17 @@ export default function DashboardOverview({
   branchFilterLabel = 'All',
   invoices: invoicesProp = null,
   onOpenPurchases,
+  activeWarehouseId = '',
 }) {
+  /**
+   * Cash and accrual answer different questions and must never be mixed on one
+   * screen: accrual says what the business earned, cash says what reached the
+   * account. A company can be profitable on one and unable to pay a vendor on
+   * the other, which is the whole reason the switch exists. It is global here
+   * rather than per-card so two panels can never sit side by side on different
+   * bases.
+   */
+  const [basis, setBasis] = useState('accrual');
   const [rangeKey, setRangeKey] = useState('90');
   const range = RANGES.find((r) => r.key === rangeKey) || RANGES[1];
   // Chart slice colours resolved to concrete rgb() strings: ECharts writes
@@ -560,6 +574,45 @@ export default function DashboardOverview({
   const pay = useMemo(() => payablesAsOf(db, currentCompany?.id), [db, currentCompany]);
   const gst = useMemo(() => gstPosition(db, currentCompany?.id), [db, currentCompany]);
   const setup = useMemo(() => setupGaps(db, currentCompany?.id), [db, currentCompany]);
+  const forecast = useMemo(() => cashForecast(db, currentCompany?.id, { days: 30 }), [db, currentCompany]);
+  const basisSeries = useMemo(
+    () => incomeVsExpenses(db, currentCompany?.id, { basis, days: 90 }),
+    [db, currentCompany, basis]
+  );
+  const activity = useMemo(() => recentActivity(db, currentCompany?.id, 6), [db, currentCompany]);
+
+  /**
+   * Stock for the warehouse in the header, not for the whole company.
+   *
+   * The selector sits above this page and governed nothing on it, which is the
+   * kind of control that teaches people the filters do not work.
+   */
+  const stock = useMemo(() => {
+    try {
+      const summary = computeInventorySummaryByItemId({
+        db,
+        companyId: currentCompany?.id,
+        warehouseId: String(activeWarehouseId || ''),
+      });
+      const items = (Array.isArray(db?.items) ? db.items : []).filter((i) => i.companyId === currentCompany?.id);
+      let value = 0;
+      const low = [];
+      let out = 0;
+      for (const item of items) {
+        const row = summary.get(String(item.id));
+        const qty = Number(row?.closingQty ?? 0);
+        const rate = Number(item.purchasePrice ?? 0);
+        if (Number.isFinite(qty) && Number.isFinite(rate)) value += qty * rate;
+        const reorder = Number(item.reorderLevel ?? 0);
+        if (qty <= 0) out += 1;
+        else if (reorder > 0 && qty <= reorder) low.push({ name: item.name, qty, unit: item.unit });
+      }
+      return { value, low: low.slice(0, 3), lowCount: low.length, out, itemCount: items.length };
+    } catch {
+      // A stock summary that throws must not take the dashboard with it.
+      return null;
+    }
+  }, [db, currentCompany, activeWarehouseId]);
 
   // Pinned once per mount rather than read during render: "now" moving between
   // renders makes the bucketing impure, and every memo below depends on it.
@@ -1064,6 +1117,113 @@ export default function DashboardOverview({
       </section>
 
       {/*
+        Where cash lands over the next month, from documents already committed.
+        The dip matters more than the endpoint: a business that ends the month
+        comfortably can still be unable to pay a vendor on the 8th.
+      */}
+      <section className="grid gap-3 lg:grid-cols-3" aria-label="Cash and trade">
+        <div className="ui-card p-4 lg:col-span-2 flex flex-col">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Cash over the next 30 days</h3>
+            <span className="ui-subtle text-xs">Finalised documents only — drafts excluded</span>
+          </div>
+
+          {forecast.hasEvents ? (
+            <>
+              <div className="flex items-baseline gap-4 flex-wrap mt-2">
+                <span>
+                  <span className="ui-subtle text-[11px] block">Today</span>
+                  <b className="ui-mono text-lg">{formatMoney(forecast.start, currentCompany)}</b>
+                </span>
+                <ArrowRight size={14} aria-hidden="true" style={{ color: 'rgb(var(--fg-subtle))' }} />
+                <span>
+                  <span className="ui-subtle text-[11px] block">In 30 days</span>
+                  <b
+                    className="ui-mono text-lg"
+                    style={{ color: `rgb(var(--${forecast.end < forecast.start ? 'neg' : 'pos'}))` }}
+                  >
+                    {formatMoney(forecast.end, currentCompany)}
+                  </b>
+                </span>
+                <span className="ms-auto text-xs" style={{ color: 'rgb(var(--fg-muted))' }}>
+                  expecting <b className="ui-mono" style={{ color: 'rgb(var(--pos))' }}>{formatMoney(forecast.expectedIn, currentCompany)}</b> in
+                  {' · '}
+                  <b className="ui-mono" style={{ color: 'rgb(var(--neg))' }}>{formatMoney(forecast.expectedOut, currentCompany)}</b> out
+                </span>
+              </div>
+
+              <svg viewBox="0 0 300 70" preserveAspectRatio="none" className="w-full h-24 mt-3" role="img"
+                aria-label={`Projected cash, lowest ${formatMoney(forecast.lowest.value, currentCompany)} on day ${forecast.lowest.day}`}>
+                {(() => {
+                  const vals = forecast.points.map((p) => p.value);
+                  const min = Math.min(...vals, 0);
+                  const max = Math.max(...vals, 1);
+                  const y = (v) => 66 - ((v - min) / (max - min || 1)) * 60;
+                  const x = (i) => (i / (vals.length - 1)) * 300;
+                  const d = vals.map((v, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
+                  return (
+                    <>
+                      {min < 0 ? (
+                        <line x1="0" x2="300" y1={y(0)} y2={y(0)} stroke="rgb(var(--neg))" strokeWidth="1" strokeDasharray="3 3" />
+                      ) : null}
+                      <path d={`${d} L 300 70 L 0 70 Z`} fill="rgb(var(--brand) / 0.10)" />
+                      <path d={d} fill="none" stroke="rgb(var(--brand))" strokeWidth="2" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+                      <circle cx={x(forecast.lowest.day)} cy={y(forecast.lowest.value)} r="3" fill="rgb(var(--warn))" />
+                    </>
+                  );
+                })()}
+              </svg>
+
+              <p className="ui-subtle text-xs mt-1">
+                Lowest point <b className="ui-mono" style={{ color: 'rgb(var(--warn))' }}>{formatMoney(forecast.lowest.value, currentCompany)}</b>
+                {' '}on day {forecast.lowest.day}. Projection, not a promise — it assumes everyone pays on the due date.
+              </p>
+            </>
+          ) : (
+            <p className="ui-subtle text-sm mt-2">
+              Nothing is scheduled in or out. A projection appears once there are unpaid invoices or bills with due dates.
+            </p>
+          )}
+        </div>
+
+        <div className="ui-card p-4 flex flex-col">
+          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>
+              Stock on hand
+            </h3>
+            <span className="ui-subtle text-[11px]">{activeWarehouseId ? 'this warehouse' : 'all warehouses'}</span>
+          </div>
+          {stock ? (
+            <>
+              <div className="ui-mono text-[1.4rem] font-semibold leading-9">{formatMoney(stock.value, currentCompany)}</div>
+              <div className="ui-subtle text-xs">at purchase cost · {stock.itemCount} item{stock.itemCount === 1 ? '' : 's'}</div>
+              {stock.lowCount || stock.out ? (
+                <div className="mt-2 space-y-1">
+                  {stock.out ? (
+                    <div className="text-xs font-medium" style={{ color: 'rgb(var(--neg))' }}>
+                      {stock.out} item{stock.out === 1 ? '' : 's'} out of stock
+                    </div>
+                  ) : null}
+                  {stock.low.map((l) => (
+                    <div key={l.name} className="flex justify-between gap-2 text-xs">
+                      <span className="truncate">{l.name}</span>
+                      <b className="ui-mono" style={{ color: 'rgb(var(--warn))' }}>
+                        {l.qty}{l.unit ? ` ${l.unit}` : ''} left
+                      </b>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="ui-subtle text-xs mt-2">Nothing below its reorder level.</div>
+              )}
+            </>
+          ) : (
+            <div className="ui-subtle text-sm mt-2">Stock could not be read for this warehouse.</div>
+          )}
+        </div>
+      </section>
+
+      {/*
         Only the gaps that are real in this book, and only until they are
         closed. A finished checklist should leave the screen rather than sit
         there at 100% as a monument to itself.
@@ -1101,6 +1261,106 @@ export default function DashboardOverview({
           </ul>
         </section>
       ) : null}
+
+      {/* Income against expenses, on one basis at a time, plus what happened lately. */}
+      <section className="grid gap-3 lg:grid-cols-3" aria-label="Income, expenses and activity">
+        <div className="ui-card p-4 lg:col-span-2">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Income against expenses</h3>
+            <div className="flex items-center rounded-lg p-0.5" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
+              role="group" aria-label="Accounting basis">
+              {[
+                { key: 'accrual', label: 'Accrual' },
+                { key: 'cash', label: 'Cash' },
+              ].map((b2) => (
+                <button
+                  key={b2.key}
+                  type="button"
+                  onClick={() => setBasis(b2.key)}
+                  aria-pressed={basis === b2.key}
+                  className="px-2.5 h-7 rounded-md text-xs font-medium"
+                  style={
+                    basis === b2.key
+                      ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }
+                      : { color: 'rgb(var(--fg-muted))' }
+                  }
+                >
+                  {b2.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="ui-subtle text-xs mt-1">
+            {basis === 'accrual'
+              ? 'What was earned and incurred — invoices and bills by their own date.'
+              : 'What actually moved — receipts and payments only.'}
+          </p>
+
+          {basisSeries.income || basisSeries.expense ? (
+            <>
+              <div className="flex items-end gap-2 h-28 mt-3">
+                {basisSeries.series.map((b3) => {
+                  const peak = Math.max(...basisSeries.series.flatMap((x) => [x.income, x.expense]), 1);
+                  return (
+                    <div key={b3.to} className="flex-1 flex items-end gap-1 h-full" title={b3.to}>
+                      <span className="flex-1 rounded-t" style={{ height: `${(b3.income / peak) * 100}%`, backgroundColor: 'rgb(var(--pos))', minHeight: b3.income ? 2 : 0 }} />
+                      <span className="flex-1 rounded-t" style={{ height: `${(b3.expense / peak) * 100}%`, backgroundColor: 'rgb(var(--neg) / 0.75)', minHeight: b3.expense ? 2 : 0 }} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex gap-4 mt-2 text-xs" style={{ color: 'rgb(var(--fg-muted))' }}>
+                <span className="inline-flex items-center gap-1.5">
+                  <i className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: 'rgb(var(--pos))' }} aria-hidden="true" />
+                  {basis === 'cash' ? 'Received' : 'Billed'} <b className="ui-mono" style={{ color: 'rgb(var(--fg))' }}>{formatMoney(basisSeries.income, currentCompany)}</b>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <i className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: 'rgb(var(--neg))' }} aria-hidden="true" />
+                  {basis === 'cash' ? 'Paid' : 'Incurred'} <b className="ui-mono" style={{ color: 'rgb(var(--fg))' }}>{formatMoney(basisSeries.expense, currentCompany)}</b>
+                </span>
+                <span className="ms-auto">
+                  Net <b className="ui-mono" style={{ color: `rgb(var(--${basisSeries.income - basisSeries.expense >= 0 ? 'pos' : 'neg'}))` }}>
+                    {formatMoney(basisSeries.income - basisSeries.expense, currentCompany)}
+                  </b>
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className="ui-subtle text-sm mt-3">
+              {basis === 'cash'
+                ? 'No receipts or payments recorded yet.'
+                : 'No invoices or bills in this window yet.'}
+            </p>
+          )}
+        </div>
+
+        <div className="ui-card p-4">
+          <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Recent activity</h3>
+          {activity.length ? (
+            <ul className="mt-2 space-y-2">
+              {activity.map((a2, i) => (
+                <li key={`${a2.kind}-${i}`} className="flex items-start gap-2.5 text-xs">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                    style={{ backgroundColor: `rgb(var(--${a2.tone === 'muted' ? 'border-strong' : a2.tone}))` }}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">{a2.title}</span>
+                    {a2.who ? <span style={{ color: 'rgb(var(--fg-muted))' }}> · {a2.who}</span> : null}
+                    <span className="ui-subtle block">{a2.date} · {a2.note}</span>
+                  </span>
+                  <b className="ui-mono" style={{ color: `rgb(var(--${a2.amount < 0 ? 'neg' : 'pos'}))` }}>
+                    {a2.amount < 0 ? '−' : '+'}{formatMoneyCompact(Math.abs(a2.amount), currentCompany)}
+                  </b>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="ui-subtle text-sm mt-2">Nothing recorded yet.</p>
+          )}
+        </div>
+      </section>
 
       {allInvoices.length === 0 ? (
         <div className="ui-card">

@@ -12567,6 +12567,10 @@ const AppShell = () => {
             onOpenReceipts={() => setActive('receipts')}
             onOpenCustomers={() => setActive('customers')}
             onOpenPurchases={() => setActive('purchaseOverview')}
+            // The warehouse selector in the header governed nothing on this
+            // page, which is the kind of control that teaches people the
+            // filters do not work.
+            activeWarehouseId={activeWarehouseId}
           />
         );
       case 'sales':
