@@ -12553,6 +12553,13 @@ const AppShell = () => {
                   warehouses={warehousesForUser}
                   defaultWarehouseId={activeWarehouseId}
                   onClose={() => setInvoiceEditor({ open: false, initial: null })}
+                  onOpenInvoiceSettings={(screen) => {
+                    // Configuring the document is not part of raising it, so
+                    // the form closes rather than leaving a half-typed invoice
+                    // behind a settings screen.
+                    setInvoiceEditor({ open: false, initial: null });
+                    setActive(screen);
+                  }}
                 />
               </div>
             </div>

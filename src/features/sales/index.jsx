@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, ClipboardList, Copy, CreditCard, Download, FileText, MoreVertical, Plus, Printer, Receipt, Trash2, Tag, RefreshCw } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Settings2, SlidersHorizontal, Trash2, Tag, RefreshCw, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -23,8 +23,10 @@ import { isTracked, fefoPick, batchesForItem } from '../../utils/batches';
 import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
+import Popover from '../../components/ui/Popover';
 
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import { getInvoicePrefs, isInvoicePrefOn, getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { getNextNumericId } from '../../utils/ids';
 import { formatMoney, round2 } from '../../utils/money';
@@ -1996,8 +1998,90 @@ export const CreditNotesList = ({
   );
 };
 
-export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onClose, warehouses = [], defaultWarehouseId = '' }) => {
+export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onClose, warehouses = [], defaultWarehouseId = '', onOpenInvoiceSettings = null }) => {
   const isEdit = Boolean(initialData && (initialData.id !== undefined && initialData.id !== null));
+
+  /**
+   * Which fields this company's invoice carries — see utils/invoicePrefs.
+   *
+   * A preference that is off removes the field rather than disabling it. The
+   * one exception, applied at the two money fields below, is a value this
+   * invoice already carries: hiding a discount that still moves the total
+   * would be worse than showing a field the company switched off.
+   */
+  const invoicePrefs = useMemo(() => getInvoicePrefs(currentCompany), [currentCompany]);
+  const prefOn = (key) => isInvoicePrefOn(invoicePrefs, key);
+  const customFields = useMemo(() => getVisibleCustomFields(currentCompany), [currentCompany]);
+
+  const moreButtonRef = useRef(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  /**
+   * Three of the four entries in this menu configure every invoice, not this
+   * one, so they leave the form rather than opening something inside it. The
+   * parent decides how — the form has no business knowing about navigation.
+   */
+  const goToSettings = (screen) => {
+    setMoreOpen(false);
+    if (typeof onOpenInvoiceSettings === 'function') onOpenInvoiceSettings(screen);
+    else notify.error('Open Settings → Invoice Fields to change this.');
+  };
+
+  const setCustomField = (key, value) =>
+    setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
+
+  /** One company-defined field. `where` matches the placement it was given. */
+  const renderCustomFields = (where) =>
+    customFields
+      .filter((f) => f.formPlacement === where)
+      .map((f) => {
+        const value = (formData.customFields || {})[f.key] ?? '';
+        const id = `cf-${f.key}`;
+        return (
+          <div key={f.key}>
+            <label htmlFor={id} className="block text-sm font-medium mb-1">
+              {f.label}
+              {f.required ? <span className="ml-1 text-[rgb(var(--neg-ink))]">*</span> : null}
+            </label>
+            {f.type === 'Yes/No' ? (
+              <label className="inline-flex items-center gap-2 text-sm cursor-pointer h-[38px]">
+                <input
+                  id={id}
+                  type="checkbox"
+                  className="ui-checkbox"
+                  checked={value === true || value === 'true'}
+                  onChange={(e) => setCustomField(f.key, e.target.checked)}
+                />
+                {value === true || value === 'true' ? 'Yes' : 'No'}
+              </label>
+            ) : f.type === 'List' && f.options.length ? (
+              <select
+                id={id}
+                value={value}
+                onChange={(e) => setCustomField(f.key, e.target.value)}
+                className="ui-select w-full px-3 py-2"
+              >
+                <option value="">— none —</option>
+                {f.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={id}
+                type={f.type === 'Number' ? 'number' : f.type === 'Date' ? 'date' : 'text'}
+                value={value}
+                required={f.required}
+                onChange={(e) => setCustomField(f.key, e.target.value)}
+                className="ui-input"
+              />
+            )}
+          </div>
+        );
+      });
 
   /**
    * Whether this invoice is still a draft — a new one, or one saved as a draft
@@ -2079,6 +2163,11 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       reverseCharge: !!initialData?.reverseCharge,
       shipToCode: initialData?.shipToCode || '',
       shipToAddress: initialData?.shipToAddress || null,
+      // Values for the fields this company invented. Keyed, not positional, so
+      // reordering or renaming a field in settings never rewrites what an
+      // existing invoice already says.
+      customFields:
+        initialData?.customFields && typeof initialData.customFields === 'object' ? { ...initialData.customFields } : {},
     };
   });
 
@@ -2282,6 +2371,36 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         : null,
     otherCharges: formData.otherCharges,
   });
+
+  /**
+   * The invoice as it stands right now, shaped like a saved one.
+   *
+   * The preview uses the same renderer that prints and emails, so it has to be
+   * fed the same shape. Building it from `computed` rather than from the raw
+   * form is the point — a preview that totals differently from the saved
+   * document is worse than no preview.
+   */
+  const previewInvoice = useMemo(
+    () => ({
+      ...formData,
+      number: formData.number || generatedInvoiceNumber || '',
+      customerName: getCustomerDisplayName(customer),
+      customerGstin,
+      placeOfSupplyState: customerState,
+      taxType: isIntra ? 'CGST_SGST' : 'IGST',
+      items: computed.lines,
+      subtotal: computed.subtotal,
+      invoiceDiscountApplied: computed.invoiceDiscount,
+      otherCharges: computed.otherCharges,
+      otherChargesTotal: computed.otherChargesTotal,
+      cgstTotal: computed.cgstTotal,
+      sgstTotal: computed.sgstTotal,
+      igstTotal: computed.igstTotal,
+      gstTotal: computed.gstTotal,
+      total: computed.total,
+    }),
+    [formData, generatedInvoiceNumber, customer, customerGstin, customerState, isIntra, computed]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2706,6 +2825,83 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
+      <div className="flex items-center justify-end gap-2 -mb-2">
+        <button
+          type="button"
+          ref={moreButtonRef}
+          onClick={() => setMoreOpen((v) => !v)}
+          className="ui-btn ui-btn-ghost !px-1.5"
+          aria-label="More options"
+          aria-haspopup="menu"
+          aria-expanded={moreOpen}
+        >
+          <MoreVertical size={18} aria-hidden="true" />
+        </button>
+        {moreOpen ? (
+          <Popover anchorRef={moreButtonRef} onClose={() => setMoreOpen(false)} minWidth={230}>
+            <div className="py-1" role="menu">
+              <div className="ui-caption px-3 pt-1 pb-1.5">This invoice</div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMoreOpen(false);
+                  setPreviewOpen(true);
+                }}
+                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+              >
+                <Eye size={15} aria-hidden="true" /> Preview Invoice
+              </button>
+
+              <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
+              <div className="ui-caption px-3 pb-1.5">Configure — every invoice</div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => goToSettings('settingsInvoiceFields')}
+                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+              >
+                <SlidersHorizontal size={15} aria-hidden="true" /> Preferences
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => goToSettings('settingsInvoiceFields')}
+                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+              >
+                <Plus size={15} aria-hidden="true" /> Custom Field
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => goToSettings('invoiceTemplates')}
+                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+              >
+                <Settings2 size={15} aria-hidden="true" /> Invoice Template
+              </button>
+            </div>
+          </Popover>
+        ) : null}
+      </div>
+
+      {previewOpen ? (
+        <div className="ui-card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="ui-t-label">Preview — what the customer receives</span>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              className="ui-btn ui-btn-ghost ui-btn-sm"
+            >
+              <X size={14} aria-hidden="true" /> Close preview
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <InvoicePreview db={db} currentCompany={currentCompany} invoice={previewInvoice} />
+          </div>
+        </div>
+      ) : null}
+
       <DocHeaderStrip
         numberLabel="Invoice No."
         number={formData.number}
@@ -2777,7 +2973,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           {selectedCustomer ? (
             <p className="mt-1 text-xs ui-muted">Terms: {termsLabel(selectedCustomer)}</p>
           ) : null}
-          {selectedCustomer && Array.isArray(selectedCustomer.shipToAddresses) && selectedCustomer.shipToAddresses.length > 0 ? (
+          {prefOn('shipTo') && selectedCustomer && Array.isArray(selectedCustomer.shipToAddresses) && selectedCustomer.shipToAddresses.length > 0 ? (
             <div className="mt-2">
               <label className="block text-xs ui-muted mb-1">Deliver to</label>
               <select
@@ -2800,40 +2996,46 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           ) : null}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Ref Date</label>
-          <input
-            type="date"
-            value={formData.refDate}
-            onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="ui-input"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Ref No</label>
-          <input
-            type="text"
-            value={formData.refNo}
-            onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
-            className="ui-input"
-            placeholder="Estimate / Quotation / Sales Order"
-          />
-        </div>
-
-        <div className="flex items-end pb-2">
-          <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
+        {prefOn('customerRef') ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Ref Date</label>
             <input
-              type="checkbox"
-              checked={!!formData.reverseCharge}
-              onChange={(e) => setFormData({ ...formData, reverseCharge: e.target.checked })}
-              className="ui-checkbox"
+              type="date"
+              value={formData.refDate}
+              onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+              className="ui-input"
             />
-            Reverse charge (RCM)
-          </label>
-        </div>
+          </div>
+        ) : null}
 
-        {(db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
+        {prefOn('customerRef') ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Ref No</label>
+            <input
+              type="text"
+              value={formData.refNo}
+              onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+              className="ui-input"
+              placeholder="Estimate / Quotation / Sales Order"
+            />
+          </div>
+        ) : null}
+
+        {prefOn('reverseCharge') ? (
+          <div className="flex items-end pb-2">
+            <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!formData.reverseCharge}
+                onChange={(e) => setFormData({ ...formData, reverseCharge: e.target.checked })}
+                className="ui-checkbox"
+              />
+              Reverse charge (RCM)
+            </label>
+          </div>
+        ) : null}
+
+        {prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
           <div>
             <label className="block text-sm font-medium mb-1">Cost Center</label>
             <select
@@ -2851,7 +3053,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           </div>
         ) : null}
 
-        {(db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
+        {prefOn('salesman') && (db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
           <div>
             <label className="block text-sm font-medium mb-1">Salesman</label>
             <select
@@ -2868,6 +3070,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             </select>
           </div>
         ) : null}
+
+        {renderCustomFields('header')}
+        {renderCustomFields('reference')}
       </div>
 
       <div>
@@ -3017,6 +3222,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="space-y-3">
+            {prefOn('invoiceDiscount') || Number(formData.invoiceDiscountValue) > 0 ? (
             <div>
               <label className="block text-xs ui-muted mb-1">Invoice discount</label>
               <div className="flex items-center gap-2">
@@ -3042,6 +3248,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 ) : null}
               </div>
             </div>
+            ) : null}
+            {prefOn('otherCharges') || (formData.otherCharges || []).length > 0 ? (
             <div>
               <label className="block text-xs ui-muted mb-1">Other charges (transport, reimbursement…)</label>
               {(formData.otherCharges || []).map((c, ci) => (
@@ -3104,6 +3312,11 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 + Add charge
               </button>
             </div>
+            ) : null}
+
+            {customFields.some((f) => f.formPlacement === 'notes') ? (
+              <div className="grid gap-3 sm:grid-cols-2">{renderCustomFields('notes')}</div>
+            ) : null}
           </div>
           <div className="flex justify-end">
             <div className="w-64 space-y-2">
