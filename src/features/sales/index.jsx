@@ -2168,6 +2168,28 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       // existing invoice already says.
       customFields:
         initialData?.customFields && typeof initialData.customFields === 'object' ? { ...initialData.customFields } : {},
+      // Fields the preferences can switch on. Each is inert until its
+      // preference is on: nothing here changes a total, so an invoice that
+      // carries a value for a field the company later switches off simply
+      // stops printing it rather than changing what is owed.
+      lutNumber: initialData?.lutNumber || '',
+      iecNumber: initialData?.iecNumber || '',
+      shippingBillNo: initialData?.shippingBillNo || '',
+      shippingBillDate: initialData?.shippingBillDate || '',
+      portCode: initialData?.portCode || '',
+      invoiceCurrency: initialData?.invoiceCurrency || '',
+      exchangeRate: initialData?.exchangeRate || '',
+      transporterName: initialData?.transporterName || '',
+      vehicleNo: initialData?.vehicleNo || '',
+      lrNumber: initialData?.lrNumber || '',
+      lrDate: initialData?.lrDate || '',
+      packageDetails: initialData?.packageDetails || '',
+      servicePeriodFrom: initialData?.servicePeriodFrom || '',
+      servicePeriodTo: initialData?.servicePeriodTo || '',
+      projectName: initialData?.projectName || '',
+      workOrderNo: initialData?.workOrderNo || '',
+      raBillNo: initialData?.raBillNo || '',
+      timesheetRef: initialData?.timesheetRef || '',
     };
   });
 
@@ -3074,6 +3096,236 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         {renderCustomFields('header')}
         {renderCustomFields('reference')}
       </div>
+
+      {[
+        prefOn('lut'),
+        prefOn('iec'),
+        prefOn('shippingBill'),
+        prefOn('foreignCurrency'),
+        prefOn('transporter'),
+        prefOn('lrNumber'),
+        prefOn('packages'),
+        prefOn('servicePeriod'),
+        prefOn('project'),
+        prefOn('workOrder'),
+        prefOn('timesheetRef'),
+      ].some(Boolean) ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {prefOn('lut') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">LUT number</label>
+              <input
+                type="text"
+                value={formData.lutNumber}
+                onChange={(e) => setFormData((p) => ({ ...p, lutNumber: e.target.value }))}
+                className="ui-input"
+                placeholder="AD2908260012345"
+              />
+              <p className="mt-1 text-xs ui-muted">Zero-rated export without payment of IGST.</p>
+            </div>
+          ) : null}
+
+          {prefOn('iec') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">IEC</label>
+              <input
+                type="text"
+                value={formData.iecNumber}
+                onChange={(e) => setFormData((p) => ({ ...p, iecNumber: e.target.value }))}
+                className="ui-input"
+                placeholder="0416002345"
+              />
+            </div>
+          ) : null}
+
+          {prefOn('shippingBill') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Shipping bill</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.shippingBillNo}
+                  onChange={(e) => setFormData((p) => ({ ...p, shippingBillNo: e.target.value }))}
+                  className="ui-input flex-1"
+                  placeholder="Number"
+                />
+                <input
+                  type="date"
+                  value={formData.shippingBillDate}
+                  onChange={(e) => setFormData((p) => ({ ...p, shippingBillDate: e.target.value }))}
+                  className="ui-input w-40"
+                  aria-label="Shipping bill date"
+                />
+              </div>
+              <input
+                type="text"
+                value={formData.portCode}
+                onChange={(e) => setFormData((p) => ({ ...p, portCode: e.target.value }))}
+                className="ui-input mt-2"
+                placeholder="Port code — INMAA1"
+                aria-label="Port code"
+              />
+            </div>
+          ) : null}
+
+          {prefOn('foreignCurrency') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Currency &amp; exchange rate</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.invoiceCurrency}
+                  onChange={(e) => setFormData((p) => ({ ...p, invoiceCurrency: e.target.value.toUpperCase() }))}
+                  className="ui-input w-24"
+                  placeholder="USD"
+                  aria-label="Invoice currency"
+                />
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  value={formData.exchangeRate}
+                  onChange={(e) => setFormData((p) => ({ ...p, exchangeRate: e.target.value }))}
+                  className="ui-input flex-1"
+                  placeholder="Rate to INR"
+                  aria-label="Exchange rate"
+                />
+              </div>
+              <p className="mt-1 text-xs ui-muted">Recorded on the document. Totals are still kept in INR.</p>
+            </div>
+          ) : null}
+
+          {prefOn('transporter') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Transporter &amp; vehicle</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.transporterName}
+                  onChange={(e) => setFormData((p) => ({ ...p, transporterName: e.target.value }))}
+                  className="ui-input flex-1"
+                  placeholder="Transporter"
+                />
+                <input
+                  type="text"
+                  value={formData.vehicleNo}
+                  onChange={(e) => setFormData((p) => ({ ...p, vehicleNo: e.target.value.toUpperCase() }))}
+                  className="ui-input w-36"
+                  placeholder="KA-01-AB-1234"
+                  aria-label="Vehicle number"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {prefOn('lrNumber') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">LR / GR no.</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.lrNumber}
+                  onChange={(e) => setFormData((p) => ({ ...p, lrNumber: e.target.value }))}
+                  className="ui-input flex-1"
+                  placeholder="Consignment note"
+                />
+                <input
+                  type="date"
+                  value={formData.lrDate}
+                  onChange={(e) => setFormData((p) => ({ ...p, lrDate: e.target.value }))}
+                  className="ui-input w-40"
+                  aria-label="LR date"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {prefOn('packages') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Packages &amp; weight</label>
+              <input
+                type="text"
+                value={formData.packageDetails}
+                onChange={(e) => setFormData((p) => ({ ...p, packageDetails: e.target.value }))}
+                className="ui-input"
+                placeholder="12 packages · 840 kg gross"
+              />
+            </div>
+          ) : null}
+
+          {prefOn('servicePeriod') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Service period</label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={formData.servicePeriodFrom}
+                  onChange={(e) => setFormData((p) => ({ ...p, servicePeriodFrom: e.target.value }))}
+                  className="ui-input flex-1"
+                  aria-label="Service period from"
+                />
+                <input
+                  type="date"
+                  value={formData.servicePeriodTo}
+                  onChange={(e) => setFormData((p) => ({ ...p, servicePeriodTo: e.target.value }))}
+                  className="ui-input flex-1"
+                  aria-label="Service period to"
+                />
+              </div>
+              <p className="mt-1 text-xs ui-muted">What this fee covers.</p>
+            </div>
+          ) : null}
+
+          {prefOn('project') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Project / site</label>
+              <input
+                type="text"
+                value={formData.projectName}
+                onChange={(e) => setFormData((p) => ({ ...p, projectName: e.target.value }))}
+                className="ui-input"
+                placeholder="Peenya shed"
+              />
+            </div>
+          ) : null}
+
+          {prefOn('workOrder') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Work order &amp; RA bill</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.workOrderNo}
+                  onChange={(e) => setFormData((p) => ({ ...p, workOrderNo: e.target.value }))}
+                  className="ui-input flex-1"
+                  placeholder="WO-1182"
+                />
+                <input
+                  type="text"
+                  value={formData.raBillNo}
+                  onChange={(e) => setFormData((p) => ({ ...p, raBillNo: e.target.value }))}
+                  className="ui-input w-32"
+                  placeholder="RA-03"
+                  aria-label="RA bill number"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          {prefOn('timesheetRef') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Timesheet reference</label>
+              <input
+                type="text"
+                value={formData.timesheetRef}
+                onChange={(e) => setFormData((p) => ({ ...p, timesheetRef: e.target.value }))}
+                className="ui-input"
+                placeholder="TS-2608"
+              />
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div>
         <div className="mb-2">

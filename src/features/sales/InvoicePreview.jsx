@@ -157,30 +157,37 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
     }
     if (prefOn('lut')) push('LUT', invoice?.lutNumber || company?.lutNumber);
     if (prefOn('iec')) push('IEC', invoice?.iecNumber || company?.iecNumber);
+    if (prefOn('shippingBill')) {
+      push('Shipping bill', [invoice?.shippingBillNo, invoice?.shippingBillDate].filter(Boolean).join(' · '));
+      push('Port code', invoice?.portCode);
+    }
+    if (prefOn('foreignCurrency') && invoice?.invoiceCurrency) {
+      push('Currency', `${invoice.invoiceCurrency}${invoice?.exchangeRate ? ` @ ${invoice.exchangeRate}` : ''}`);
+    }
     if (prefOn('ewayBill')) push('E-way bill', invoice?.ewbNo);
     if (prefOn('transporter')) {
       push('Transporter', invoice?.transporterName);
       push('Vehicle no.', invoice?.vehicleNo);
     }
+    if (prefOn('lrNumber')) push('LR / GR no.', [invoice?.lrNumber, invoice?.lrDate].filter(Boolean).join(' · '));
+    if (prefOn('packages')) push('Packages', invoice?.packageDetails);
+    if (prefOn('servicePeriod') && (invoice?.servicePeriodFrom || invoice?.servicePeriodTo)) {
+      push('Service period', [invoice?.servicePeriodFrom, invoice?.servicePeriodTo].filter(Boolean).join(' to '));
+    }
+    if (prefOn('project')) push('Project / site', invoice?.projectName);
+    if (prefOn('workOrder')) push('Work order', [invoice?.workOrderNo, invoice?.raBillNo].filter(Boolean).join(' · '));
+    if (prefOn('timesheetRef')) push('Timesheet', invoice?.timesheetRef);
     if (prefOn('drugLicence')) push('Drug licence', company?.drugLicenceNo);
     if (prefOn('salesman')) push('Salesperson', invoice?.salesmanName);
     printedCustomFields('header').forEach((f) => push(f.label, f.value));
     return rows;
   };
 
+  /** The same list as `referenceLines`, laid out for the InfoRow grid. */
   const referenceRows = () => (
     <>
-      {prefOn('customerRef') ? <InfoRow label="Ref No." value={invoice?.refNo || ''} right /> : null}
-      {prefOn('customerRef') ? <InfoRow label="Ref Date" value={invoice?.refDate || ''} right /> : null}
-      {prefOn('lut') ? <InfoRow label="LUT" value={invoice?.lutNumber || company?.lutNumber || ''} right /> : null}
-      {prefOn('iec') ? <InfoRow label="IEC" value={invoice?.iecNumber || company?.iecNumber || ''} right /> : null}
-      {prefOn('ewayBill') ? <InfoRow label="E-way bill" value={invoice?.ewbNo || ''} right /> : null}
-      {prefOn('transporter') ? <InfoRow label="Transporter" value={invoice?.transporterName || ''} right /> : null}
-      {prefOn('transporter') ? <InfoRow label="Vehicle no." value={invoice?.vehicleNo || ''} right /> : null}
-      {prefOn('drugLicence') ? <InfoRow label="Drug licence" value={company?.drugLicenceNo || ''} right /> : null}
-      {prefOn('salesman') ? <InfoRow label="Salesperson" value={invoice?.salesmanName || ''} right /> : null}
-      {printedCustomFields('header').map((f) => (
-        <InfoRow key={f.key} label={f.label} value={f.value} right />
+      {referenceLines().map((r) => (
+        <InfoRow key={r.label} label={r.label} value={r.value} right />
       ))}
     </>
   );
