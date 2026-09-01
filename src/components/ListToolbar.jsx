@@ -1,10 +1,14 @@
-import React, { useMemo, useState } from 'react';
-import { Download, Search } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Download, FileText, Search, Table2 } from 'lucide-react';
 
 import { downloadCsv } from '../utils/csv';
 import { consumeSearchSeed } from '../utils/searchSeed';
 import { notify } from './ui/notify';
 import { singularise } from './ui/Primitives';
+import Popover from './ui/Popover';
+import { LIST_PERIODS, describeView } from '../utils/listPeriod';
+import { exportListPdf } from '../utils/listPdf';
+import { exportListXlsx } from '../utils/listXlsx';
 
 /**
  * The three things every list page owes the user: search across the row, a
@@ -24,7 +28,28 @@ export function ListToolbar({
   countLabel = 'rows',
   children,
   className = '',
+  // Period presets. Supplied by lists that have a date to filter on; a list
+  // without one simply does not pass them and the control does not appear.
+  period = null,
+  onPeriodChange = null,
+  dateFrom = '',
+  dateTo = '',
+  onDateFromChange = null,
+  onDateToChange = null,
+  // When a column set and rows are given, Export offers PDF, Excel and CSV
+  // rather than only writing a CSV. `onExport` remains for the screens that
+  // build something bespoke.
+  exportColumns = null,
+  exportRows = null,
+  exportTitle = '',
+  exportFileName = '',
+  exportSheetName = '',
 }) {
+  const exportBtnRef = useRef(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const richExport = Array.isArray(exportColumns) && exportColumns.length && Array.isArray(exportRows);
+  const subtitle = describeView({ period: period || 'all', dateFrom, dateTo, search });
+
   return (
     <div className={`ui-card p-3 flex flex-wrap items-center gap-3 ${className}`}>
       <div className="relative flex-1 min-w-[220px]">
@@ -39,6 +64,42 @@ export function ListToolbar({
         />
       </div>
 
+      {onPeriodChange ? (
+        <select
+          value={period || 'all'}
+          onChange={(e) => onPeriodChange(e.target.value)}
+          className="ui-select !h-10 w-40"
+          aria-label="Period"
+        >
+          {LIST_PERIODS.map((p) => (
+            <option key={p.key} value={p.key}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      ) : null}
+
+      {/* The date boxes exist only for a custom range: beside a preset they
+          invite editing one and wondering why the dropdown disagrees. */}
+      {onPeriodChange && period === 'custom' ? (
+        <>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => onDateFromChange?.(e.target.value)}
+            className="ui-input !h-10 w-36"
+            aria-label="From date"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => onDateToChange?.(e.target.value)}
+            className="ui-input !h-10 w-36"
+            aria-label="To date"
+          />
+        </>
+      ) : null}
+
       {children}
 
       {Number.isFinite(count) ? (
@@ -47,7 +108,76 @@ export function ListToolbar({
         </div>
       ) : null}
 
-      {onExport ? (
+      {richExport ? (
+        <div className="relative">
+          <button
+            type="button"
+            ref={exportBtnRef}
+            onClick={() => setExportOpen((v) => !v)}
+            className="ui-btn ui-btn-secondary !h-10 whitespace-nowrap"
+            aria-haspopup="menu"
+            aria-expanded={exportOpen}
+          >
+            <Download size={15} aria-hidden="true" /> {exportLabel}
+          </button>
+          {exportOpen ? (
+            <Popover anchorRef={exportBtnRef} onClose={() => setExportOpen(false)} minWidth={220}>
+              <div className="py-1" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setExportOpen(false);
+                    exportListPdf({
+                      title: exportTitle || exportLabel,
+                      subtitle,
+                      fileName: exportFileName || 'export',
+                      columns: exportColumns,
+                      rows: exportRows,
+                      footNote: `${exportRows.length} row(s) · exported from Neev One`,
+                    });
+                  }}
+                  className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                >
+                  <FileText size={15} aria-hidden="true" /> PDF
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setExportOpen(false);
+                    exportListXlsx({
+                      subtitle,
+                      fileName: exportFileName || 'export',
+                      sheetName: exportSheetName || exportTitle || 'Export',
+                      columns: exportColumns,
+                      rows: exportRows,
+                    });
+                  }}
+                  className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                >
+                  <Table2 size={15} aria-hidden="true" /> Excel
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setExportOpen(false);
+                    if (onExport) onExport();
+                    else exportRows({ fileName: exportFileName || 'export', columns: exportColumns, rows: exportRows });
+                  }}
+                  className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                >
+                  <Download size={15} aria-hidden="true" /> CSV
+                </button>
+                <p className="ui-caption px-3 pt-1 pb-2">
+                  Exports what you are looking at — this period, this search, these columns.
+                </p>
+              </div>
+            </Popover>
+          ) : null}
+        </div>
+      ) : onExport ? (
         <button type="button" onClick={onExport} className="ui-btn ui-btn-secondary !h-10 whitespace-nowrap">
           <Download size={15} aria-hidden="true" /> {exportLabel}
         </button>

@@ -49,7 +49,7 @@ import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
-import ListControls, { periodRange } from '../../components/ListControls';
+import ListControls, { periodRange, usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 import { blockIfClosed } from '../../utils/bookClose';
 
@@ -1317,6 +1317,7 @@ export const EstimatesList = ({
   }, [warehouses]);
 
   const estFilters = useColumnFilters();
+  const estPeriod = usePeriodFilter();
   const estSearch = useListSearch(
     db.estimates.filter((e) => e.companyId === currentCompany.id),
     ['number', 'customerName', 'refNo', 'date'],
@@ -1338,6 +1339,7 @@ export const EstimatesList = ({
   }, [estSearch, estFilters]);
   const estimates = estFilters.applyFilters(
     estSearch.filtered
+      .filter((r) => estPeriod.inRange(r?.date))
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -1609,7 +1611,28 @@ export const EstimatesList = ({
                     if (el?.closest?.('[data-estimate-menu]')) return;
                     openEditEstimate(est);
                   }}
-                >
+          
+        period={estPeriod.period}
+        onPeriodChange={estPeriod.setPeriod}
+        dateFrom={estPeriod.dateFrom}
+        dateTo={estPeriod.dateTo}
+        onDateFromChange={estPeriod.setDateFrom}
+        onDateToChange={estPeriod.setDateTo}
+        exportTitle="Estimates — {currentCompany?.name || 'Company'}"
+        exportFileName={`Estimates_${currentCompany?.name || 'company'}`}
+        exportSheetName="Estimates"
+        exportColumns={[
+              { key: 'number', label: 'Estimate #' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'date', label: 'Date' },
+              { key: 'dueDate', label: 'Due' },
+              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={estimates}
+      >
                   <td className="ui-col-id px-4 py-2.5 font-medium">{est.number}</td>
                   <td className="ui-col-entity px-4 py-2.5">{est.customerName || '-'}</td>
                   <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
@@ -1812,6 +1835,7 @@ export const CreditNotesList = ({
   };
 
   const cnFilters = useColumnFilters();
+  const cnPeriod = usePeriodFilter();
   const cnSearch = useListSearch(
     db.creditNotes.filter((c) => c.companyId === currentCompany.id),
     ['number', 'customerName', 'originalInvoiceNumber', 'date'],
@@ -1833,6 +1857,7 @@ export const CreditNotesList = ({
   }, [cnSearch, cnFilters]);
   const creditNotes = cnFilters.applyFilters(
     cnSearch.filtered
+      .filter((r) => cnPeriod.inRange(r?.date))
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -1976,7 +2001,25 @@ export const CreditNotesList = ({
                             onClick={() => openKnockOff(cn)}
                             className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                             title="Knock this off against the customer's open invoices"
-                          >
+                    
+        period={cnPeriod.period}
+        onPeriodChange={cnPeriod.setPeriod}
+        dateFrom={cnPeriod.dateFrom}
+        dateTo={cnPeriod.dateTo}
+        onDateFromChange={cnPeriod.setDateFrom}
+        onDateToChange={cnPeriod.setDateTo}
+        exportTitle="Credit Notes — {currentCompany?.name || 'Company'}"
+        exportFileName={`CreditNotes_${currentCompany?.name || 'company'}`}
+        exportSheetName="Credit Notes"
+        exportColumns={[
+              { key: 'number', label: 'Credit #' },
+              { key: 'originalInvoiceNumber', label: 'Original Invoice' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+        ]}
+        exportRows={creditNotes}
+      >
                             Knock off {formatMoney(noteBalance(cn).unsettled, currentCompany)}
                           </button>
                         ) : (

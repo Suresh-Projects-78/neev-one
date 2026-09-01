@@ -6,6 +6,7 @@ import { formatMoney, round2 } from '../../utils/money';
 import { TableTotals } from '../../components/ui/Primitives';
 import { downloadCsv } from '../../utils/csv';
 import { ListToolbar, useListSearch } from '../../components/ListToolbar';
+import { usePeriodFilter } from '../../components/ListControls';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
 
@@ -320,9 +321,10 @@ const TransactionView = ({ title, payload }) => {
 };
 
 const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }) => {
+  const period = usePeriodFilter();
   const search = useListSearch(rows, ['documentNumber', 'partyName', 'mode', 'reference', 'typeLabel', 'date']);
   const colFilters = useColumnFilters();
-  const shown = colFilters.applyFilters(search.filtered, {
+  const shown = colFilters.applyFilters(search.filtered.filter((r) => period.inRange(r?.date)), {
     date: (r) => r.date,
     typeLabel: (r) => r.typeLabel,
     documentNumber: (r) => r.documentNumber,
@@ -371,6 +373,25 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         placeholder={`Search ${title.toLowerCase()} (document, party, mode, reference)`}
         count={shown.length}
         countLabel={title.toLowerCase()}
+        period={period.period}
+        onPeriodChange={period.setPeriod}
+        dateFrom={period.dateFrom}
+        dateTo={period.dateTo}
+        onDateFromChange={period.setDateFrom}
+        onDateToChange={period.setDateTo}
+        exportTitle={`${title} — ${currentCompany?.name || 'Company'}`}
+        exportFileName={`${title.replace(/\s+/g, '')}_${currentCompany?.name || 'company'}`}
+        exportSheetName={title}
+        exportColumns={[
+          { key: 'date', label: 'Date' },
+          { key: 'typeLabel', label: 'Type' },
+          { key: 'documentNumber', label: 'Document No.' },
+          { key: 'partyName', label: 'Party' },
+          { key: 'mode', label: 'Mode' },
+          { key: 'reference', label: 'Reference' },
+          { key: 'amount', label: 'Amount', align: 'right', value: (r) => Number(r.amount || 0) },
+        ]}
+        exportRows={shown}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">

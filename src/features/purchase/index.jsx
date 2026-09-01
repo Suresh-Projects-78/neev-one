@@ -36,6 +36,7 @@ import {
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { usePeriodFilter } from '../../components/ListControls';
 import { blockIfClosed } from '../../utils/bookClose';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
@@ -751,6 +752,7 @@ export const PurchaseOrdersList = ({
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
 
+  const poPeriod = usePeriodFilter();
   const poSearch = useListSearch(
     db.purchaseOrders.filter((po) => po.companyId === currentCompany.id),
     ['number', 'vendorName', 'date', 'status'],
@@ -772,6 +774,7 @@ export const PurchaseOrdersList = ({
   }, [poSearch, poFilters]);
   const purchaseOrders = poFilters.applyFilters(
     poSearch.filtered
+      .filter((r) => poPeriod.inRange(r?.date))
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -907,7 +910,25 @@ export const PurchaseOrdersList = ({
                         className="p-2 rounded-lg ui-hover-sunken"
                         aria-haspopup="menu"
                         aria-label={`Actions for ${po.number}`}
-                      >
+                
+        period={poPeriod.period}
+        onPeriodChange={poPeriod.setPeriod}
+        dateFrom={poPeriod.dateFrom}
+        dateTo={poPeriod.dateTo}
+        onDateFromChange={poPeriod.setDateFrom}
+        onDateToChange={poPeriod.setDateTo}
+        exportTitle="Purchase Orders — {currentCompany?.name || 'Company'}"
+        exportFileName={`PurchaseOrders_${currentCompany?.name || 'company'}`}
+        exportSheetName="Purchase Orders"
+        exportColumns={[
+              { key: 'number', label: 'PO #' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={purchaseOrders}
+      >
                         <MoreVertical size={18} />
                       </button>
 
@@ -1358,6 +1379,7 @@ export const BillsList = ({
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
+  const billPeriod = usePeriodFilter();
   const billSearch = useListSearch(
     db.bills.filter((b) => b.companyId === currentCompany.id),
     ['number', 'vendorName', 'refNo', 'date'],
@@ -1506,6 +1528,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
         if (statusFilter === 'All') return true;
         return derived === statusFilter;
       })
+      .filter((b) => billPeriod.inRange(b?.date))
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -1750,7 +1773,29 @@ const billStatusReason = (doc, status, company, nowMs) => {
             onClick={() => setStatusFilter(s)}
             className={`px-3 py-1 rounded-full text-sm border ${ statusFilter === s ? 'ui-sunken ui-border-c ui-fg' : 'ui-surface ui-border-c ui-fg'
             }`}
-          >
+    
+        period={billPeriod.period}
+        onPeriodChange={billPeriod.setPeriod}
+        dateFrom={billPeriod.dateFrom}
+        dateTo={billPeriod.dateTo}
+        onDateFromChange={billPeriod.setDateFrom}
+        onDateToChange={billPeriod.setDateTo}
+        exportTitle="Bills — {currentCompany?.name || 'Company'}"
+        exportFileName={`Bills_${currentCompany?.name || 'company'}`}
+        exportSheetName="Bills"
+        exportColumns={[
+              { key: 'number', label: 'Bill #' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'refNo', label: 'Ref No' },
+              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+              { key: 'paidAmount', label: 'Paid', value: (r) => Number(r.paidAmount || 0) },
+              { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
+        ]}
+        exportRows={filteredBills}
+      >
             {s}
           </button>
         ))}
@@ -2726,6 +2771,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   };
 
   const dnFilters = useColumnFilters();
+  const dnPeriod = usePeriodFilter();
   const dnSearch = useListSearch(
     db.debitNotes.filter((dn) => dn.companyId === currentCompany.id),
     ['number', 'vendorName', 'originalBillNumber', 'date'],
@@ -2747,6 +2793,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   }, [dnSearch, dnFilters]);
   const debitNotes = dnFilters.applyFilters(
     dnSearch.filtered
+      .filter((r) => dnPeriod.inRange(r?.date))
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -2883,7 +2930,26 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                             onClick={() => openKnockOff(dn)}
                             className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                             title="Knock this off against the vendor's open bills"
-                          >
+                    
+        period={dnPeriod.period}
+        onPeriodChange={dnPeriod.setPeriod}
+        dateFrom={dnPeriod.dateFrom}
+        dateTo={dnPeriod.dateTo}
+        onDateFromChange={dnPeriod.setDateFrom}
+        onDateToChange={dnPeriod.setDateTo}
+        exportTitle="Debit Notes — {currentCompany?.name || 'Company'}"
+        exportFileName={`DebitNotes_${currentCompany?.name || 'company'}`}
+        exportSheetName="Debit Notes"
+        exportColumns={[
+              { key: 'number', label: 'Debit Note #' },
+              { key: 'originalBillNumber', label: 'Original Bill' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={debitNotes}
+      >
                             Knock off {formatMoney(noteBalance(dn).unsettled, currentCompany)}
                           </button>
                         ) : (
