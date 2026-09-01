@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Settings2, SlidersHorizontal, Trash2, Tag, RefreshCw, X } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Settings2, SlidersHorizontal, Table2, Trash2, Tag, RefreshCw, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -50,6 +50,7 @@ import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { exportListPdf } from '../../utils/listPdf';
+import { exportListXlsx } from '../../utils/listXlsx';
 import { blockIfClosed } from '../../utils/bookClose';
 
 
@@ -414,6 +415,17 @@ const statusReason = (doc, status, company, nowMs) => {
     if (statusFilter) parts.push(statusFilter);
     if (searchText.trim()) parts.push(`matching “${searchText.trim()}”`);
     return parts.join(' · ');
+  };
+
+  const exportInvoicesXlsx = () => {
+    setExportOpen(false);
+    exportListXlsx({
+      subtitle: viewDescription(),
+      fileName: `Invoices_${currentCompany?.name || 'company'}`,
+      sheetName: 'Invoices',
+      columns: exportColumns,
+      rows: filteredInvoices,
+    });
   };
 
   const exportInvoicesPdf = () => {
@@ -919,13 +931,21 @@ const statusReason = (doc, status, company, nowMs) => {
                     <button
                       type="button"
                       role="menuitem"
+                      onClick={exportInvoicesXlsx}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <Table2 size={15} aria-hidden="true" /> Excel
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
                       onClick={() => {
                         setExportOpen(false);
                         exportInvoices();
                       }}
                       className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                     >
-                      <Download size={15} aria-hidden="true" /> Excel (CSV)
+                      <Download size={15} aria-hidden="true" /> CSV
                     </button>
                     <p className="ui-caption px-3 pt-1 pb-2">
                       Exports what you are looking at — this period, this search, these columns.
