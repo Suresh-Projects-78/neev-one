@@ -85,12 +85,6 @@ const RANGES = [
   { key: 'all', label: 'All time', days: null },
 ];
 
-/** Percentage change, guarding the divide-by-zero that a first period always is. */
-const delta = (current, previous) => {
-  if (!previous) return current > 0 ? null : 0; // null = "no basis to compare"
-  return ((current - previous) / previous) * 100;
-};
-
 /** Direction chip. Colour never carries the meaning alone — the arrow does too. */
 /**
  * The shape of a number, at table scale.
@@ -351,77 +345,6 @@ function MetricCard({ label, value, company, deltaValue, invertDelta, hint, seri
 }
 
 /** Billed vs collected over time, as two stacked areas. */
-function RevenueChart({ buckets, company }) {
-  const max = Math.max(...buckets.map((b) => b.billed), 1);
-  const w = 100;
-  const h = 40;
-
-  const line = (key) => {
-    if (buckets.length < 2) return '';
-    const step = w / (buckets.length - 1);
-    return buckets
-      .map((b, i) => `${i === 0 ? 'M' : 'L'} ${(i * step).toFixed(2)} ${(h - (b[key] / max) * (h - 4)).toFixed(2)}`)
-      .join(' ');
-  };
-
-  const area = (key) => {
-    const l = line(key);
-    return l ? `${l} L ${w} ${h} L 0 ${h} Z` : '';
-  };
-
-  // Chart only — ChartCard supplies the surface, the title and the footer.
-  // Keeping a card in here as well produced a tile inside a tile with the
-  // heading printed twice.
-  return (
-    <div>
-      <header className="flex flex-wrap items-center justify-end gap-3">
-        <div className="flex items-center gap-4 text-xs">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'rgb(var(--brand))' }} />
-            Billed
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'rgb(var(--pos))' }} />
-            Collected
-          </span>
-        </div>
-      </header>
-
-      {buckets.length < 2 ? (
-        <EmptyState
-          title="Not enough history yet"
-          description="Once there are invoices across more than one period, the trend appears here."
-        />
-      ) : (
-        <>
-          <svg
-            className="mt-5 w-full"
-            height="180"
-            viewBox={`0 0 ${w} ${h}`}
-            preserveAspectRatio="none"
-            role="img"
-            aria-label={`Billed against collected across ${buckets.length} periods. Highest billed ${formatMoney(max, company)}.`}
-          >
-            <path d={area('billed')} fill="rgb(var(--brand) / 0.14)" />
-            <path d={line('billed')} fill="none" stroke="rgb(var(--brand))" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-            <path d={area('collected')} fill="rgb(var(--pos) / 0.12)" />
-            <path d={line('collected')} fill="none" stroke="rgb(var(--pos))" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-          </svg>
-
-          {/* A chart is not readable by a screen reader; the same figures are
-              available as text underneath it. */}
-          <ul className="mt-3 flex justify-between text-[0.6875rem] ui-subtle">
-            {buckets.map((b) => (
-              <li key={b.label}>{b.label}</li>
-            ))}
-          </ul>
-        </>
-      )}
-    </div>
-  );
-}
-
-/** Receivables by how overdue they are — the question behind "who owes us". */
 function AgingPanel({ buckets, total, company }) {
   const rows = buckets.filter((b) => b.amount > 0).map((b) => ({ name: b.label, value: b.amount, color: b.color }));
 
@@ -490,8 +413,6 @@ export default function DashboardOverview({
   branches = [],
   onNewInvoice,
   onOpenInvoices,
-  onOpenReceipts,
-  onOpenCustomers,
   onOpenBranches,
   branchFilterLabel = 'All',
   invoices: invoicesProp = null,
@@ -657,44 +578,14 @@ export default function DashboardOverview({
 
   const billed = sum(current, (i) => num(i.total));
   const collected = sum(current, (i) => num(i.paidAmount));
-  const outstanding = Math.max(0, billed - collected);
 
   const prevBilled = sum(previous, (i) => num(i.total));
   const prevCollected = sum(previous, (i) => num(i.paidAmount));
-  const prevOutstanding = Math.max(0, prevBilled - prevCollected);
 
   const spent = sum(currentOut, (r) => r.total);
   const prevSpent = sum(previousOut, (r) => r.total);
 
   /** Six buckets across the window, so the shape is visible without noise. */
-  const buckets = useMemo(() => {
-    if (!current.length) return [];
-    const days = range.days || 365;
-    const slots = 6;
-    const width = (days * DAY) / slots;
-    const start = now - days * DAY;
-
-    const out = Array.from({ length: slots }, (_, i) => ({
-      // Day and month: at 15-day buckets a month-only label repeats ("Jun
-      // Jun"), which reads as a rendering fault rather than two periods.
-      label: new Date(start + i * width).toLocaleDateString(undefined, {
-        day: 'numeric',
-        month: 'short',
-      }),
-      billed: 0,
-      collected: 0,
-    }));
-
-    for (const inv of current) {
-      const d = toDate(inv.date);
-      if (!d) continue;
-      const idx = Math.min(slots - 1, Math.max(0, Math.floor((d.getTime() - start) / width)));
-      out[idx].billed += num(inv.total);
-      out[idx].collected += num(inv.paidAmount);
-    }
-    return out;
-  }, [current, range, now]);
-
   const aging = useMemo(() => {
     const b = [
       { label: 'Not yet due', amount: 0, color: chartTheme.pos },
@@ -738,16 +629,6 @@ export default function DashboardOverview({
    * invoice was therefore missing from the 90+ bucket — the one invoice the
    * bucket exists to surface was the one the filter removed.
    */
-  const agingRows = useMemo(() => {
-    const tones = { pos: 'pos', warn: 'warn', accent: 'accent', accent2: 'accent', neg: 'neg' };
-    return AGEING_BUCKETS.filter((b) => (recv.buckets[b.key] || 0) > 0).map((b) => ({
-      name: b.label,
-      value: recv.buckets[b.key],
-      color: chartTheme[tones[b.tone]] || chartTheme.accent,
-    }));
-  }, [recv, chartTheme]);
-  const agingTotal = recv.total;
-
   /**
    * How long the average unpaid invoice has been sitting, per customer.
    *
@@ -774,25 +655,6 @@ export default function DashboardOverview({
   }, [current, now]);
 
   /** Spend, in the same six slots the income chart uses, so the two compare. */
-  const spendBuckets = useMemo(() => {
-    if (!currentOut.length) return [];
-    const days = range.days || 365;
-    const slots = 6;
-    const width = (days * DAY) / slots;
-    const start = now - days * DAY;
-    const out = Array.from({ length: slots }, (_, i) => ({
-      label: new Date(start + i * width).toLocaleDateString(undefined, { day: 'numeric', month: 'short' }),
-      value: 0,
-    }));
-    for (const row of currentOut) {
-      const d = toDate(row.date);
-      if (!d) continue;
-      const idx = Math.min(slots - 1, Math.max(0, Math.floor((d.getTime() - start) / width)));
-      out[idx].value += row.total;
-    }
-    return out;
-  }, [currentOut, range, now]);
-
   const topVendors = useMemo(() => {
     const byName = new Map();
     for (const row of currentOut) {
@@ -871,12 +733,10 @@ export default function DashboardOverview({
     return out;
   }, [topCustomers, prevBilled, billed, prevCollected, collectedPct, collected, prevSpent, spent, aging, currentCompany]);
 
-  const sparkOf = (key) => buckets.map((b) => b[key]);
-
   /**
    * What needs a person today.
    *
-   * The nine charts below describe a quarter that has already happened. This
+   * The panels below describe a quarter that has already happened. This
    * describes the morning. Every row is derived from data the dashboard
    * already holds — nothing new is fetched, and nothing here is a prediction.
    *
@@ -960,44 +820,6 @@ export default function DashboardOverview({
 
     return rows;
   }, [allInvoices, postedInvoices, db, currentCompany, now, onOpenInvoices, onOpenPurchases]);
-
-  /**
-   * The period, and the one before it, side by side.
-   *
-   * Four tiles could hold four figures. A ruled grid holds eight, with last
-   * period beside each, in less height — and an accountant reads a column of
-   * figures faster than four boxes anyway. The sparkline stays, because a
-   * percentage does not say whether the change was a trend or one lumpy week.
-   */
-  const comparisonRows = useMemo(() => {
-    const overdueValue = postedInvoices
-      .filter((i) => {
-        const bal = Math.max(0, num(i.total) - num(i.paidAmount));
-        const due = String(i.dueDate || '');
-        return bal > 0 && due && due < new Date(now).toISOString().slice(0, 10);
-      })
-      .reduce((t, i) => t + Math.max(0, num(i.total) - num(i.paidAmount)), 0);
-
-    const prevRate = prevBilled > 0 ? (prevCollected / prevBilled) * 100 : 0;
-    const avg = current.length ? billed / current.length : 0;
-    const prevAvg = previous.length ? prevBilled / previous.length : 0;
-
-    return [
-      { key: 'billed', label: 'Billed', now: billed, then: prevBilled, series: sparkOf('billed') },
-      { key: 'collected', label: 'Collected', now: collected, then: prevCollected, series: sparkOf('collected') },
-      { key: 'rate', label: 'Collection rate', now: collectedPct, then: Math.round(prevRate), unit: '%', invert: false },
-      { key: 'outstanding', label: 'Outstanding', now: outstanding, then: prevOutstanding, invert: true },
-      { key: 'overdue', label: '— of which overdue', now: overdueValue, then: null, invert: true, indent: true },
-      { key: 'spent', label: 'Spent', now: spent, then: prevSpent, invert: true },
-      // Not inverted: unlike outstanding or spend, a net movement that rises
-      // is the welcome direction.
-      { key: 'net', label: 'Net movement', now: collected - spent, then: prevCollected - prevSpent, mode: 'diff' },
-      { key: 'avg', label: 'Average invoice', now: avg, then: prevAvg },
-    ];
-  }, [
-    postedInvoices, now, billed, prevBilled, collected, prevCollected, collectedPct,
-    outstanding, prevOutstanding, spent, prevSpent, current.length, previous.length, buckets,
-  ]);
 
   return (
     <div className="space-y-5">
@@ -1427,76 +1249,13 @@ export default function DashboardOverview({
               tiles stood, in less height, with the shape of each kept as a
               sparkline — a percentage alone cannot say whether the change was a
               trend or one lumpy week. */}
-          <section className="ui-card p-0 overflow-hidden ui-in" aria-label="This period against last">
-            <table className="ui-table w-full">
-              <thead>
-                <tr>
-                  <th className="ui-th">Measure</th>
-                  <th className="ui-th ui-num">This period</th>
-                  <th className="ui-th ui-num">Last period</th>
-                  <th className="ui-th ui-num">Change</th>
-                  <th className="ui-th w-24">Shape</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {comparisonRows.map((row) => {
-                  const showChange = row.then !== null && row.then !== undefined;
-                  const pct = showChange ? delta(row.now, row.then) : null;
-                  const fmtCell = (v) =>
-                    row.unit === '%' ? `${Math.round(v)}%` : formatMoney(v, currentCompany);
-                  return (
-                    <tr key={row.key}>
-                      <td className={`ui-cell ${row.indent ? 'pl-6 ui-muted' : ''}`}>{row.label}</td>
-                      <td className="ui-cell ui-num ui-money">{fmtCell(row.now)}</td>
-                      <td className="ui-cell ui-num ui-money ui-muted">{showChange ? fmtCell(row.then) : '—'}</td>
-                      <td className="ui-cell ui-num">
-                        {!showChange ? (
-                          <span className="ui-subtle">—</span>
-                        ) : row.mode === 'diff' ? (
-                          // A percentage change across zero is nonsense: net
-                          // moving from −7.6L to −26.9L computes as +254%, and
-                          // dividing by a negative paints that green. Show the
-                          // movement itself.
-                          <DiffChip value={row.now - row.then} company={currentCompany} invert={row.invert} />
-                        ) : row.unit === '%' ? (
-                          // A rate that moves from 56% to 43% has not fallen
-                          // 23%. It has fallen 13 points, and saying otherwise
-                          // is the oldest misleading statistic there is.
-                          <PointsChip value={Math.round(row.now) - Math.round(row.then)} invert={row.invert} />
-                        ) : (
-                          <DeltaChip value={pct} invert={row.invert} />
-                        )}
-                      </td>
-                      <td className="ui-cell">
-                        {row.series && row.series.length > 1 ? (
-                          <MiniSpark series={row.series} />
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {/* The four tiles each carried one jump. Losing the tiles should not
-                lose the jumps. */}
-            <div className="flex flex-wrap gap-2 border-t px-4 py-2.5">
-              {onOpenInvoices ? (
-                <button type="button" onClick={onOpenInvoices} className="ui-btn ui-btn-ghost ui-btn-sm">
-                  View invoices
-                </button>
-              ) : null}
-              {onOpenReceipts ? (
-                <button type="button" onClick={onOpenReceipts} className="ui-btn ui-btn-ghost ui-btn-sm">
-                  View receipts
-                </button>
-              ) : null}
-              {onOpenPurchases ? (
-                <button type="button" onClick={onOpenPurchases} className="ui-btn ui-btn-ghost ui-btn-sm">
-                  View purchases
-                </button>
-              ) : null}
-            </div>
-          </section>
+          {/*
+            The measures comparison table has moved to Reports.
+
+            Nine rows of This period / Last period / Change is a report — it
+            answers a question you already had. A dashboard says which question
+            to ask, and on a new company every cell of that table read ₹0.00.
+          */}
 
           {isEnabled('insights') && insights.length > 0 ? (
             <section className="ui-card p-5 ui-in" aria-label="Insights from your books">
@@ -1523,86 +1282,19 @@ export default function DashboardOverview({
               dashboard's job is comparison and comparison breaks the moment
               two tiles are built differently. Collapses to two columns on a
               tablet and one on a phone. */}
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ChartCard
-              title="Outstanding by age"
-              subtitle="Where the receivable book is sitting"
-              actionLabel="View invoices"
-              onAction={onOpenInvoices}
-            >
-              {agingTotal <= 0 ? (
-                <EmptyState icon={CircleSlash} title="Nothing outstanding" description="Every invoice in view is settled." />
-              ) : (
-                <>
-                  <Suspense fallback={<ChartFallback height={200} />}>
-                    <DonutChart
-                      data={agingRows}
-                      centerLabel="Outstanding"
-                      centerValue={formatMoneyCompact(agingTotal, currentCompany)}
-                      height={200}
-                    />
-                  </Suspense>
-                  <Suspense fallback={<ChartFallback height={80} />}>
-                    <ChartLegend
-                      rows={agingRows}
-                      total={agingTotal}
-                      formatter={(v) => formatMoneyCompact(v, currentCompany)}
-                    />
-                  </Suspense>
-                </>
-              )}
-            </ChartCard>
+          {/*
+            Two cards, not nine.
 
-            <ChartCard title="Billed by period" subtitle={`Last ${range.label.toLowerCase()}`}>
-              <Suspense fallback={<ChartFallback height={240} />}>
-                <PeriodBars
-                  data={buckets.map((b) => ({ label: b.label, value: b.billed }))}
-                  height={240}
-                  formatter={(v) => formatMoneyCompact(v, currentCompany)}
-                />
-              </Suspense>
-            </ChartCard>
+            Outstanding by age, Billed by period, Billed and collected, Spent by
+            period, In against out and Where the money is owed all reported
+            figures the panels above now carry, and the collection-rate gauge
+            was a caption drawn as a graphic. Reading the same number twice does
+            not make it truer; it costs a screen.
 
-            <ChartCard
-              title="Where the money is owed"
-              subtitle="Share of outstanding, by customer"
-              actionLabel="View customers"
-              onAction={onOpenCustomers}
-            >
-              {topCustomers.length === 0 ? (
-                <EmptyState icon={Wallet} title="Nobody owes you" description="Balances appear here as invoices go unpaid." />
-              ) : (
-                <Suspense fallback={<ChartFallback height={300} />}>
-                  <CompositionPie
-                    data={topCustomers.map((r) => ({ name: r.name, value: r.outstanding }))}
-                    height={200}
-                    formatter={(v) => formatMoneyCompact(v, currentCompany)}
-                  />
-                </Suspense>
-              )}
-            </ChartCard>
-
-            <ChartCard title="Collection rate" subtitle="Of everything billed this period">
-              <Suspense fallback={<ChartFallback height={200} />}>
-                <RadialGauge
-                  value={collectedPct}
-                  label="Collection rate"
-                  tone={collectedPct >= 70 ? 'pos' : collectedPct >= 40 ? undefined : 'neg'}
-                  height={200}
-                />
-              </Suspense>
-              <p className="text-center ui-caption -mt-3">
-                <span style={{ color: 'rgb(var(--fg))' }} className="font-medium">
-                  {formatMoneyCompact(collected, currentCompany)}
-                </span>{' '}
-                of {formatMoneyCompact(billed, currentCompany)}
-              </p>
-            </ChartCard>
-
-            <ChartCard title="Billed and collected" subtitle="Per period, in INR">
-              <RevenueChart buckets={buckets} company={currentCompany} />
-            </ChartCard>
-
+            What survives says something nothing else does: who has been owing
+            longest, and what the money went on.
+          */}
+          <div className="grid gap-4 md:grid-cols-2">
             <ChartCard
               title="Longest outstanding"
               subtitle="Average age of unpaid invoices, by customer"
@@ -1617,33 +1309,6 @@ export default function DashboardOverview({
                     data={daysOutstanding}
                     height={240}
                     formatter={(v) => `${Math.round(v)}d`}
-                  />
-                </Suspense>
-              )}
-            </ChartCard>
-
-            {/* --- money out ---
-                Bills and expense vouchers, in the same window and the same
-                six buckets as the income charts, so the rows compare. */}
-            <ChartCard
-              title="Spent by period"
-              subtitle={
-                prevSpent > 0
-                  ? `${formatMoneyCompact(spent, currentCompany)} this period, ${formatMoneyCompact(prevSpent, currentCompany)} last`
-                  : `Bills and expenses, last ${range.label.toLowerCase()}`
-              }
-              actionLabel="View purchases"
-              onAction={onOpenPurchases}
-            >
-              {spendBuckets.every((b) => b.value <= 0) ? (
-                <EmptyState icon={Receipt} title="Nothing spent" description="Bills and expenses land here as you record them." />
-              ) : (
-                <Suspense fallback={<ChartFallback height={240} />}>
-                  <PeriodBars
-                    data={spendBuckets}
-                    height={240}
-                    tone="deep"
-                    formatter={(v) => formatMoneyCompact(v, currentCompany)}
                   />
                 </Suspense>
               )}
@@ -1665,35 +1330,6 @@ export default function DashboardOverview({
                     formatter={(v) => formatMoneyCompact(v, currentCompany)}
                   />
                 </Suspense>
-              )}
-            </ChartCard>
-
-            <ChartCard title="In against out" subtitle="Collected vs spent this period">
-              {collected <= 0 && spent <= 0 ? (
-                <EmptyState icon={Wallet} title="No movement" description="Collections and spend compare here." />
-              ) : (
-                <>
-                  <Suspense fallback={<ChartFallback height={200} />}>
-                    <DonutChart
-                      data={[
-                        { name: 'Collected', value: collected, color: chartTheme.pos },
-                        { name: 'Spent', value: spent, color: chartTheme.brandDeep },
-                      ]}
-                      centerLabel={collected - spent >= 0 ? 'Net in' : 'Net out'}
-                      centerValue={formatMoneyCompact(Math.abs(collected - spent), currentCompany)}
-                      height={200}
-                    />
-                  </Suspense>
-                  <Suspense fallback={<ChartFallback height={64} />}>
-                    <ChartLegend
-                      rows={[
-                        { name: 'Collected', value: collected, color: chartTheme.pos },
-                        { name: 'Spent', value: spent, color: chartTheme.brandDeep },
-                      ]}
-                      formatter={(v) => formatMoneyCompact(v, currentCompany)}
-                    />
-                  </Suspense>
-                </>
               )}
             </ChartCard>
           </div>
