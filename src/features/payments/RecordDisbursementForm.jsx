@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -403,6 +404,13 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      <DocFormActions
+        primaryLabel={saving ? 'Recording…' : 'Record Payment'}
+        disabled={saving}
+        secondaryLabel="Cancel"
+        onSecondary={onClose}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Payment Date</label>
@@ -593,16 +601,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
       <div className="flex justify-end items-center gap-2">
         <FieldErrorSummary errors={fieldErrors.errors} />
-        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-4 py-2 ui-btn ui-btn-primary rounded-lg disabled:opacity-50"
-        >
-          Record Payment
-        </button>
       </div>
     </form>
   );

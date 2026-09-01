@@ -145,6 +145,7 @@ import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
+import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
@@ -1577,6 +1578,16 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   const formRef = useRef(null);
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
 
+  /*
+   * Named, not inline: a ref read inside a prop passed to a component reads to
+   * the hooks lint as a render-phase access, because it cannot tell an event
+   * handler from any other callback.
+   */
+  const submitExpenseAsDraft = () => {
+    setSubmitAsDraft(true);
+    formRef.current?.requestSubmit();
+  };
+
   const [formData, setFormData] = useState(() => ({
     number: initialData?.number || generatedExpenseNumber || '',
     date: initialData?.date || new Date().toISOString().split('T')[0],
@@ -1860,6 +1871,12 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
+      <DocFormActions
+        primaryLabel="Submit Expense"
+        secondaryLabel="Save Draft"
+        onSecondary={submitExpenseAsDraft}
+      />
+
       {/* Voucher number and date sit to the right of the heading so the body
           of the form keeps the full width for entry. */}
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -2143,21 +2160,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setSubmitAsDraft(true);
-            formRef.current?.requestSubmit();
-          }}
-          className="ui-btn ui-btn-secondary"
-        >
-          Save Draft
-        </button>
-        <button type="submit" className="ui-btn ui-btn-primary">
-          Submit Expense
-        </button>
-      </div>
+      <DocFormFootnote />
     </form>
   );
 };
@@ -4559,6 +4562,11 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <DocFormActions
+        primaryLabel={isEdit ? 'Update Entry' : 'Create Entry'}
+        disabled={!isBalanced}
+      />
+
       <DocHeaderStrip
         numberLabel="Journal No."
         number={formData.number}
@@ -4686,19 +4694,14 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
         </div>
       </div>
 
-      <div className="flex justify-end items-center gap-3">
-        {!isBalanced ? (
-          <span className="ui-subtle text-xs">Debits and credits must match before this can be saved</span>
-        ) : null}
-        <button
-          type="submit"
-          className="ui-btn ui-btn-primary"
-          disabled={!isBalanced}
-          title={isBalanced ? undefined : 'Journal entry must balance'}
-        >
-          {isEdit ? 'Update Entry' : 'Create Entry'}
-        </button>
-      </div>
+      {/* The reason the button at the top is disabled, kept where the figures
+          that caused it are — not beside a button on another part of the
+          screen. */}
+      {!isBalanced ? (
+        <p className="ui-subtle text-xs text-right">Debits and credits must match before this can be saved</p>
+      ) : null}
+
+      <DocFormFootnote />
     </form>
   );
 };

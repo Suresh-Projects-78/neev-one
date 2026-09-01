@@ -4288,6 +4288,8 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <DocFormActions primaryLabel={isEdit ? 'Update Estimate' : 'Create Estimate'} />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Estimate Number</label>
@@ -4451,11 +4453,12 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
-          {isEdit ? 'Update Estimate' : 'Create Estimate'}
-        </button>
-      </div>
+      <AmountInWordsBand
+        words={amountInWordsInr(computed.total)}
+        amount={formatMoney(computed.total, currentCompany)}
+      />
+
+      <DocFormFootnote />
     </form>
   );
 };
@@ -4848,6 +4851,8 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <DocFormActions primaryLabel="Create Credit Note" />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Credit Note Number</label>
@@ -5069,11 +5074,12 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
-          Create Credit Note
-        </button>
-      </div>
+      <AmountInWordsBand
+        words={amountInWordsInr(computed.total)}
+        amount={formatMoney(computed.total, currentCompany)}
+      />
+
+      <DocFormFootnote />
     </form>
   );
 };

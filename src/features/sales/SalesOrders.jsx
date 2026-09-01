@@ -3,6 +3,7 @@ import { Plus, ClipboardList } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
+import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
@@ -256,6 +257,13 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
 
       {open ? (
         <div className="ui-card space-y-4 p-5">
+          <DocFormActions
+            primaryLabel="Create SO"
+            primaryType="button"
+            onPrimary={save}
+            secondaryLabel="Cancel"
+            onSecondary={() => setOpen(false)}
+          />
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
               <label className="ui-label">Date</label>
@@ -323,10 +331,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             <div className="text-sm font-semibold">Total: {formatMoney(computed.total, currentCompany)}</div>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="ui-btn ui-btn-secondary">Cancel</button>
-            <button type="button" onClick={save} className="ui-btn ui-btn-primary">Create SO</button>
-          </div>
+          <DocFormFootnote />
         </div>
       ) : null}
 

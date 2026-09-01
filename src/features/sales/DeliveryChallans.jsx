@@ -13,6 +13,7 @@ import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { nextFreeVoucherNumber } from '../../utils/docSettings';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
+import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -189,6 +190,13 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
 
       {open ? (
         <div className="ui-card p-5 space-y-4">
+          <DocFormActions
+            primaryLabel="Create Challan"
+            primaryType="button"
+            onPrimary={save}
+            secondaryLabel="Cancel"
+            onSecondary={() => setOpen(false)}
+          />
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
               <label className="ui-label">Date</label>
@@ -241,10 +249,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             + Add line
           </button>
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="ui-btn ui-btn-secondary">Cancel</button>
-            <button type="button" onClick={save} className="ui-btn ui-btn-primary">Create Challan</button>
-          </div>
+          <DocFormFootnote />
         </div>
       ) : null}
 

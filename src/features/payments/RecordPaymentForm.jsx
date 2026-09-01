@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { getNextNumericId } from '../../utils/ids';
 import { round2, formatMoney } from '../../utils/money';
@@ -87,6 +88,8 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <DocFormActions primaryLabel={title} secondaryLabel="Cancel" onSecondary={onClose} />
+
       <div>
         <div className="text-sm ui-muted">Document</div>
         <div className="font-semibold">{voucher?.number || '-'}</div>
@@ -169,14 +172,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
         />
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
-          Cancel
-        </button>
-        <button type="submit" className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
-          {title}
-        </button>
-      </div>
+
     </form>
   );
 };

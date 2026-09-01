@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
@@ -358,6 +359,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      <DocFormActions
+        primaryLabel={saving ? 'Recording…' : 'Record Receipt'}
+        disabled={saving}
+        secondaryLabel="Cancel"
+        onSecondary={onClose}
+      />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Receipt Date</label>
@@ -552,16 +560,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
       <div className="flex justify-end items-center gap-2">
         <FieldErrorSummary errors={fieldErrors.errors} />
-        <button type="button" onClick={onClose} className="px-4 py-2 border rounded-lg ui-hover-sunken">
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-4 py-2 ui-btn ui-btn-primary rounded-lg disabled:opacity-50"
-        >
-          {saving ? 'Recording…' : 'Record Receipt'}
-        </button>
       </div>
     </form>
   );

@@ -8,7 +8,8 @@ import { computeInventorySummaryByItemId, isStockItem } from '../../utils/invent
 import { isTracked, needsExpiry, batchesForItem } from '../../utils/batches';
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import ItemPicker from '../../components/pickers/ItemPicker';
-import { exportRows } from '../../components/ListToolbar';
+import { ListToolbar, exportRows } from '../../components/ListToolbar';
+import { usePeriodFilter } from '../../components/ListControls';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { latestPurchaseRate } from '../../utils/pricing';
 import { formatMoney } from '../../utils/money';
@@ -1335,6 +1336,7 @@ export const StockTransfersList = ({
 }) => {
   const companyId = currentCompany?.id;
 
+  const transferPeriod = usePeriodFilter();
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [openMenu, setOpenMenu] = useState(null);
@@ -1414,6 +1416,7 @@ export const StockTransfersList = ({
     return transferColFilters.applyFilters(
       transfers
         .filter((t) => matchesSearch(t))
+        .filter((t) => transferPeriod.inRange(t?.date))
         .filter((t) => {
           if (!wantStatus) return true;
           return canonicalStatus(t) === wantStatus;
@@ -1426,8 +1429,9 @@ export const StockTransfersList = ({
         status: (t) => statusForViewer(t, { atTarget: isAtTarget(t) }),
       }
     );
+    // The two dates rather than the hook object, which is new every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchText, statusFilter, transfers, transferColFilters.applyFilters, activeWarehouseId, activeBranchId]);
+  }, [searchText, statusFilter, transfers, transferColFilters.applyFilters, activeWarehouseId, activeBranchId, transferPeriod.dateFrom, transferPeriod.dateTo]);
 
   useEffect(() => {
     if (!openMenu?.id) return;
@@ -1772,31 +1776,46 @@ export const StockTransfersList = ({
           </div>
         ) : null}
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-medium">Search:</div>
-            <input
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="ui-input px-3 py-2 text-sm"
-              placeholder="Transfer #, branch, warehouse"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="text-sm font-medium">Status:</div>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="ui-select px-3 py-2 text-sm">
-              <option value="">All</option>
-              <option value={TRANSFER_STATUS.DRAFT}>Draft</option>
-              <option value={TRANSFER_STATUS.OUT}>Transferred Out / Pending approval</option>
-              <option value={TRANSFER_STATUS.IN}>Transfer In</option>
-              <option value={TRANSFER_STATUS.SHORT}>Short Received</option>
-              <option value={TRANSFER_STATUS.CLOSED}>Closed</option>
-              <option value={TRANSFER_STATUS.REJECTED}>Rejected</option>
-              <option value={TRANSFER_STATUS.CANCELLED}>Cancelled</option>
-            </select>
-          </div>
-        </div>
+        <ListToolbar
+          search={searchText}
+          onSearch={setSearchText}
+          placeholder="Search transfers (number, branch, warehouse)"
+          count={filteredTransfers.length}
+          countLabel="transfers"
+          period={transferPeriod.period}
+          onPeriodChange={transferPeriod.setPeriod}
+          dateFrom={transferPeriod.dateFrom}
+          dateTo={transferPeriod.dateTo}
+          onDateFromChange={transferPeriod.setDateFrom}
+          onDateToChange={transferPeriod.setDateTo}
+          exportTitle={`${mode === 'branch' ? 'Branch' : 'Warehouse'} Transfers`}
+          exportFileName={`Transfers_${currentCompany?.name || 'company'}`}
+          exportSheetName="Transfers"
+          exportColumns={[
+            { key: 'number', label: 'Transfer No.' },
+            { key: 'date', label: 'Date' },
+            { key: 'from', label: 'From', value: (r) => locationLabel(r, 'source') },
+            { key: 'to', label: 'To', value: (r) => locationLabel(r, 'target') },
+            { key: 'status', label: 'Status' },
+          ]}
+          exportRows={filteredTransfers}
+        >
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="ui-select !h-10 w-56"
+            aria-label="Status"
+          >
+            <option value="">All statuses</option>
+            <option value={TRANSFER_STATUS.DRAFT}>Draft</option>
+            <option value={TRANSFER_STATUS.OUT}>Transferred Out / Pending approval</option>
+            <option value={TRANSFER_STATUS.IN}>Transfer In</option>
+            <option value={TRANSFER_STATUS.SHORT}>Short Received</option>
+            <option value={TRANSFER_STATUS.CLOSED}>Closed</option>
+            <option value={TRANSFER_STATUS.REJECTED}>Rejected</option>
+            <option value={TRANSFER_STATUS.CANCELLED}>Cancelled</option>
+          </select>
+        </ListToolbar>
 
         <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
           <table className="ui-table w-full">
