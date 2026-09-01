@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, ClipboardList } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { usePeriodFilter } from '../../components/ListControls';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
@@ -222,6 +223,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     .map((o) => ({ order: o, prog: progressOf(o) }))
     .filter(({ prog }) => prog.billed < prog.ordered);
 
+  const soPeriod = usePeriodFilter();
   const soSearch = useListSearch(showPending ? pendingRows.map((r) => r.order) : orders, [
     'number',
     'customerName',
@@ -230,7 +232,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     'notes',
   ]);
   const soFilters = useColumnFilters();
-  const shown = soFilters.applyFilters(soSearch.filtered, {
+  const shown = soFilters.applyFilters(soSearch.filtered.filter((r) => soPeriod.inRange(r?.date)), {
     number: (r) => r.number,
     date: (r) => r.date,
     customer: (r) => r.customerName,
@@ -351,6 +353,26 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             rows: shown,
           })
         }
+        period={soPeriod.period}
+        onPeriodChange={soPeriod.setPeriod}
+        dateFrom={soPeriod.dateFrom}
+        dateTo={soPeriod.dateTo}
+        onDateFromChange={soPeriod.setDateFrom}
+        onDateToChange={soPeriod.setDateTo}
+        exportTitle="Sales Orders — {currentCompany?.name || 'Company'}"
+        exportFileName={`SalesOrders_${currentCompany?.name || 'company'}`}
+        exportSheetName="Sales Orders"
+        exportColumns={[
+              { key: 'number', label: 'SO #' },
+              { key: 'date', label: 'Date' },
+              { key: 'expectedDate', label: 'Expected' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+              { key: 'notes', label: 'Notes' },
+        ]}
+        exportRows={shown}
       />
 
       {shown.length === 0 ? (

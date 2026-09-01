@@ -12,6 +12,7 @@ import { buildEwayBillPayload } from '../../utils/einvoice';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { nextFreeVoucherNumber } from '../../utils/docSettings';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { usePeriodFilter } from '../../components/ListControls';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -22,6 +23,7 @@ import { ListToolbar, exportRows, useListSearch } from '../../components/ListToo
 export default function DeliveryChallans({ db, setDb, currentCompany, onConvert }) {
   const companyId = currentCompany.id;
   const dcFilters = useColumnFilters();
+  const dcPeriod = usePeriodFilter();
   const dcSearch = useListSearch(
     (Array.isArray(db.deliveryChallans) ? db.deliveryChallans : []).filter((c) => c.companyId === companyId),
     ['number', 'customerName', 'purpose', 'date', 'status', 'vehicleNo']
@@ -30,6 +32,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
     () =>
       dcFilters.applyFilters(
         dcSearch.filtered
+          .filter((r) => dcPeriod.inRange(r?.date))
           .slice()
           .sort((a, b) => String(b.date).localeCompare(String(a.date))),
         {
@@ -41,7 +44,11 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           status: (r) => r.status,
         }
       ),
-    [dcSearch.filtered, dcFilters.applyFilters]
+    // The two period dates are dependencies, not the hook object: the object is
+    // new on every render, and memoising on it would defeat the memo entirely.
+    // Without them the list simply would not recompute when the period changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dcSearch.filtered, dcFilters.applyFilters, dcPeriod.dateFrom, dcPeriod.dateTo]
   );
 
   const [open, setOpen] = useState(false);
@@ -263,6 +270,25 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             rows: challans,
           })
         }
+        period={dcPeriod.period}
+        onPeriodChange={dcPeriod.setPeriod}
+        dateFrom={dcPeriod.dateFrom}
+        dateTo={dcPeriod.dateTo}
+        onDateFromChange={dcPeriod.setDateFrom}
+        onDateToChange={dcPeriod.setDateTo}
+        exportTitle="Delivery Challans — {currentCompany?.name || 'Company'}"
+        exportFileName={`DeliveryChallans_${currentCompany?.name || 'company'}`}
+        exportSheetName="Delivery Challans"
+        exportColumns={[
+              { key: 'number', label: 'DC #' },
+              { key: 'date', label: 'Date' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'purpose', label: 'Purpose' },
+              { key: 'vehicleNo', label: 'Vehicle' },
+              { key: 'value', label: 'Value', value: (r) => Number(r.value || 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={challans}
       />
 
       {challans.length === 0 ? (
