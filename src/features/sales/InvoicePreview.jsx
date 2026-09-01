@@ -40,8 +40,11 @@ export const amountInWordsInr = (value) => {
   const total = Number(value);
   if (!Number.isFinite(total)) return '';
   const negative = total < 0;
-  let rupees = Math.floor(Math.abs(total));
-  const paise = Math.round((Math.abs(total) - rupees) * 100);
+  // Work in paise from the start. Deriving them by subtracting the rupees
+  // loses a half-paisa to floating point — 1.005 came out as "One Only".
+  const paiseTotal = Math.round(Math.abs(total) * 100);
+  let rupees = Math.floor(paiseTotal / 100);
+  const paise = paiseTotal % 100;
 
   const parts = [];
   [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']].forEach(([size, name]) => {

@@ -12553,6 +12553,31 @@ const AppShell = () => {
                   warehouses={warehousesForUser}
                   defaultWarehouseId={activeWarehouseId}
                   onClose={() => setInvoiceEditor({ open: false, initial: null })}
+                  onDuplicateInvoice={(inv) => {
+                    // A copy, not the original: no id, no number, today's
+                    // date. Sharing the number would collide the moment it
+                    // saved, and a GST series must not repeat.
+                    const copy = { ...(inv || {}) };
+                    [
+                      'id',
+                      'number',
+                      'status',
+                      'paidAmount',
+                      'backendInvoiceId',
+                      'irn',
+                      'irnSignedQr',
+                      'irnAckNo',
+                      'irnAckDate',
+                      'irnStatus',
+                      'ewbNo',
+                      'ewbDate',
+                      'ewbValidTill',
+                      'cancelledAt',
+                    ].forEach((k) => delete copy[k]);
+                    copy.date = new Date().toISOString().slice(0, 10);
+                    copy.customFields = { ...(inv?.customFields || {}) };
+                    setInvoiceEditor({ open: true, initial: copy });
+                  }}
                   onOpenInvoiceSettings={(screen) => {
                     // Configuring the document is not part of raising it, so
                     // the form closes rather than leaving a half-typed invoice

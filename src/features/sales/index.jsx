@@ -1998,7 +1998,7 @@ export const CreditNotesList = ({
   );
 };
 
-export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onClose, warehouses = [], defaultWarehouseId = '', onOpenInvoiceSettings = null }) => {
+export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onClose, warehouses = [], defaultWarehouseId = '', onOpenInvoiceSettings = null, onDuplicateInvoice = null }) => {
   const isEdit = Boolean(initialData && (initialData.id !== undefined && initialData.id !== null));
 
   /**
@@ -2018,10 +2018,67 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const [previewOpen, setPreviewOpen] = useState(false);
 
   /**
+   * Save & New keeps the form open with a fresh invoice instead of closing it.
+   *
+   * A ref rather than state: the submit handler that reads it runs in the same
+   * tick as the click that set it, and a state update would not have landed
+   * yet. Reset after every save so an ordinary Save the next time does not
+   * inherit it.
+   */
+  const saveAndNewRef = useRef(false);
+
+  /**
+   * The saved invoice this form is editing, at component scope.
+   *
+   * The submit handler has its own local `existingInvoice`; the menu needs the
+   * same record outside that function to know whether Duplicate and Cancel
+   * apply at all.
+   */
+  const existingInvoiceRecord = isEdit
+    ? (db.invoices || []).find((i) => i.id === Number(initialData.id)) || null
+    : null;
+
+  /**
    * Three of the four entries in this menu configure every invoice, not this
    * one, so they leave the form rather than opening something inside it. The
    * parent decides how — the form has no business knowing about navigation.
    */
+  /**
+   * Cancelling is not deleting.
+   *
+   * A GST invoice number cannot be reused, so cancelling keeps the number and
+   * the row and marks it cancelled; deleting would leave a hole in the series
+   * that an officer will ask about. Anything already settled against it has to
+   * come off first — a cancelled invoice with a receipt attached leaves money
+   * allocated to a document that no longer exists.
+   */
+  const cancelInvoice = async () => {
+    setMoreOpen(false);
+    const settled = Number(existingInvoiceRecord?.paidAmount ?? 0);
+    if (settled > 0) {
+      notify.error(
+        `${formatMoney(settled, currentCompany)} is already received against this invoice. Unlink the receipt before cancelling it.`
+      );
+      return;
+    }
+    const ok = await confirmDialog({
+      title: `Cancel invoice ${existingInvoiceRecord?.number || ''}?`.trim(),
+      message:
+        'The invoice keeps its number and stays in the list, marked cancelled, and its ledger entries are reversed. ' +
+        'That is deliberate: a GST number cannot be reused, so the series must not gain a hole.',
+      confirmLabel: 'Cancel invoice',
+    });
+    if (!ok) return;
+    setDb((prev) => ({
+      ...prev,
+      invoices: (prev.invoices || []).map((inv) =>
+        inv.id === existingInvoiceRecord.id ? { ...inv, status: 'Cancelled', cancelledAt: todayIso() } : inv
+      ),
+    }));
+    notify.success(`Invoice ${existingInvoiceRecord?.number || ''} cancelled. The number stays used.`.trim());
+    onClose?.();
+  };
+
   const goToSettings = (screen) => {
     setMoreOpen(false);
     if (typeof onOpenInvoiceSettings === 'function') onOpenInvoiceSettings(screen);
@@ -2402,6 +2459,13 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * form is the point — a preview that totals differently from the saved
    * document is worse than no preview.
    */
+  /**
+   * A cancelled invoice is a record, not a document you still work on. Its
+   * number is spent and its ledger entries are reversed; editing it would put
+   * a live figure back behind a status that says there isn't one.
+   */
+  const isCancelled = String(existingInvoiceRecord?.status || '') === 'Cancelled';
+
   const previewInvoice = useMemo(
     () => ({
       ...formData,
@@ -2426,6 +2490,11 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isCancelled) {
+      notify.error('This invoice is cancelled. Its number is spent — raise a new invoice instead.');
+      return;
+    }
 
     const wantsDraft = !isEdit && submitAsDraft;
     if (wantsDraft) {
@@ -2784,9 +2853,34 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       }),
     });
 
-    onClose?.();
+    const keepGoing = saveAndNewRef.current;
+    saveAndNewRef.current = false;
+
+    if (keepGoing) {
+      // Same customer, same warehouse, everything else blank — the next
+      // invoice in a run is usually for a different line of goods, not a
+      // different buyer, and retyping the customer every time is the thing
+      // that makes bulk entry slow.
+      setFormData((p) => ({
+        ...p,
+        number: '',
+        items: [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
+        invoiceDiscountValue: '',
+        otherCharges: [],
+        refNo: '',
+        refDate: '',
+        customFields: {},
+        sourceEstimateId: null,
+        sourceChallanId: null,
+        sourceSalesOrderId: null,
+      }));
+      setPreviewOpen(false);
+    } else {
+      onClose?.();
+    }
 
     if (sourceEstimateId) notify.success('Invoice created and estimate converted successfully!');
+    else if (keepGoing) notify.success(`Invoice ${invoiceNumber} saved. Next one is ready.`);
     else notify.success('Invoice created successfully!');
 
     // Auto-register on the IRP when the org opted in (fire-and-forget: the
@@ -2847,6 +2941,20 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
+      {isCancelled ? (
+        <div
+          className="flex items-start gap-2 rounded-lg p-3 text-sm"
+          style={{ background: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn-ink))' }}
+          role="status"
+        >
+          <Ban size={16} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
+          <span>
+            This invoice was cancelled{existingInvoiceRecord?.cancelledAt ? ` on ${existingInvoiceRecord.cancelledAt}` : ''}. It
+            keeps its number so the series has no hole, and it cannot be edited. Raise a new invoice instead.
+          </span>
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-end gap-2 -mb-2">
         <button
           type="button"
@@ -2875,6 +2983,34 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 <Eye size={15} aria-hidden="true" /> Preview Invoice
               </button>
 
+              {!isEdit ? (
+                <button
+                  type="submit"
+                  role="menuitem"
+                  onClick={() => {
+                    saveAndNewRef.current = true;
+                    setMoreOpen(false);
+                  }}
+                  className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                >
+                  <Plus size={15} aria-hidden="true" /> Save &amp; New
+                </button>
+              ) : null}
+
+              {isEdit && typeof onDuplicateInvoice === 'function' ? (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    onDuplicateInvoice(existingInvoiceRecord || initialData);
+                  }}
+                  className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                >
+                  <Copy size={15} aria-hidden="true" /> Duplicate
+                </button>
+              ) : null}
+
               <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
               <div className="ui-caption px-3 pb-1.5">Configure — every invoice</div>
               <button
@@ -2901,6 +3037,20 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               >
                 <Settings2 size={15} aria-hidden="true" /> Invoice Template
               </button>
+
+              {isEdit && String(existingInvoiceRecord?.status || '') !== 'Cancelled' ? (
+                <>
+                  <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={cancelInvoice}
+                    className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--neg-ink))] hover:bg-[rgb(var(--surface-sunken))]"
+                  >
+                    <Ban size={15} aria-hidden="true" /> Cancel invoice
+                  </button>
+                </>
+              ) : null}
             </div>
           </Popover>
         ) : null}
