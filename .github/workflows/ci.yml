@@ -115,7 +115,10 @@ jobs:
           ssh -i ~/.ssh/deploy -o BatchMode=yes "ubuntu@$DEPLOY_HOST" 'set -e
             cd /opt/neev/server
             set -a; . /opt/neev/.env; set +a
-            npm ci --no-audit --no-fund
+            # --include=dev explicitly: /opt/neev/.env sets NODE_ENV=production,
+            # which makes npm skip devDependencies — and tsc lives there, so the
+            # build fails with "tsc: not found".
+            npm ci --include=dev --no-audit --no-fund
             npx prisma generate
             npx prisma db push --skip-generate
             npm run build

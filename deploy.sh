@@ -47,7 +47,9 @@ if [ "${1:-}" = "--api" ]; then
   "${SSH[@]}" 'set -e
     cd /opt/neev/server
     set -a; . /opt/neev/.env; set +a
-    npm ci --no-audit --no-fund >/dev/null 2>&1
+    # --include=dev explicitly: the .env sourced above sets NODE_ENV=production,
+    # which makes npm skip devDependencies, and tsc is one of them.
+    npm ci --include=dev --no-audit --no-fund >/dev/null 2>&1
     npx prisma generate >/dev/null 2>&1
     npx prisma db push --skip-generate >/dev/null 2>&1
     npm run build >/dev/null 2>&1
