@@ -2096,7 +2096,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     if (focusCustomFields) {
       // After the panel paints, not before.
       window.requestAnimationFrame(() => {
-        document.getElementById('invoice-custom-fields')?.scrollIntoView({ block: 'center' });
+        document.getElementById('invoice-custom-fields')?.scrollIntoView({ block: 'nearest' });
       });
     }
   };
@@ -2979,10 +2979,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       const row = el.closest('[data-line-row]');
       if (!row) return;
       if (Number(row.dataset.lineRow) !== formData.items.length - 1) return;
-      const focusable = row.querySelectorAll(
-        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      // The last thing you *type into*, not the last thing you can focus.
+      // The row ends with a delete button, so counting that as the last field
+      // meant Tab from the final rate or discount did nothing, and the new
+      // line only opened from the bin icon — which is not where anybody's
+      // hands are.
+      const entry = row.querySelectorAll(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
       );
-      if (focusable[focusable.length - 1] !== el) return;
+      if (!entry.length || entry[entry.length - 1] !== el) return;
       e.preventDefault();
       addItem();
       return;
@@ -3802,7 +3807,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
             <Plus size={15} aria-hidden="true" /> Add Item
           </button>
-          <span className="ui-subtle text-xs">or press Tab on the last row</span>
+          <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
         </div>
 

@@ -43,7 +43,10 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   // autoFocus on a <button> is not honoured consistently across browsers, so a
   // newly added line focuses its item field explicitly.
   useEffect(() => {
-    if (autoFocus) triggerRef.current?.focus();
+    // preventScroll: a new line is added at the bottom of a long form, and
+    // letting the browser scroll it into view yanks the whole page — nav and
+    // all — out from under whoever is typing.
+    if (autoFocus) triggerRef.current?.focus({ preventScroll: true });
   }, [autoFocus]);
   const [itemSearch, setItemSearch] = useState('');
   const [newUnitDraft, setNewUnitDraft] = useState(null); // null = closed, '' = typing
