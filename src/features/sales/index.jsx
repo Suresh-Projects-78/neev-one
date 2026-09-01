@@ -7,7 +7,7 @@ import { notify, confirmDialog } from '../../components/ui/notify';
 import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Settings2, SlidersHorizontal, Trash2, Tag, RefreshCw, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
-import { dueDateFor, termsLabel } from '../../utils/paymentTerms';
+import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
 import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi } from '../../api/invoices';
@@ -33,7 +33,7 @@ import { getNextNumericId } from '../../utils/ids';
 import { formatMoney, round2 } from '../../utils/money';
 import { consumeSearchSeed } from '../../utils/searchSeed';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
-import InvoicePreview from './InvoicePreview';
+import InvoicePreview, { amountInWordsInr } from './InvoicePreview';
 import {
   canDetermineSupplyType,
   computeGstForLine,
@@ -2287,6 +2287,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       workOrderNo: initialData?.workOrderNo || '',
       raBillNo: initialData?.raBillNo || '',
       timesheetRef: initialData?.timesheetRef || '',
+      paymentTermDays: initialData?.paymentTermDays ?? '',
+      notesText: initialData?.notesText || '',
     };
   });
 
@@ -3014,6 +3016,21 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       ) : null}
 
       <div className="flex items-center justify-end gap-2 -mb-2">
+        {isDraftInvoice ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSubmitAsDraft(true);
+              formRef.current?.requestSubmit();
+            }}
+            className="ui-btn ui-btn-secondary"
+          >
+            Save Draft
+          </button>
+        ) : null}
+        <button type="submit" onClick={() => setSubmitAsDraft(false)} className="ui-btn ui-btn-primary">
+          {isDraftInvoice ? (isEdit ? 'Finalize Invoice' : 'Create Invoice') : 'Update Invoice'}
+        </button>
         <button
           type="button"
           ref={moreButtonRef}
@@ -3150,29 +3167,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
       ) : null}
 
-      <DocHeaderStrip
-        numberLabel="Invoice No."
-        number={formData.number}
-        onNumberChange={(v) => setFormData((p) => ({ ...p, number: v }))}
-        numberLocked={lockInvoiceNumberOnCreate}
-        numberHint={lockInvoiceNumberOnCreate ? 'Numbered automatically from the series' : ''}
-        numberError={fieldErrors.error('number')}
-        dateError={fieldErrors.error('date')}
-        date={formData.date}
-        onDateChange={(v) =>
-          setFormData((p) => ({
-            ...p,
-            date: v,
-            // Terms are counted from the document date, so moving the date
-            // moves the due date with it.
-            dueDate: selectedCustomer ? dueDateFor(v, selectedCustomer) || p.dueDate : p.dueDate,
-          }))
-        }
-        dueDate={formData.dueDate}
-        onDueDateChange={(v) => setFormData((p) => ({ ...p, dueDate: v }))}
-      />
+      {/*
+        Warehouse, number and the two dates on one line.
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        The number and dates used to sit in a tinted strip above the form,
+        which read as a separate object rather than the top of the invoice —
+        and it pushed the warehouse, the field that decides which stock moves,
+        down the page.
+      */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
           ref={(el) => fieldErrors.register('warehouseId', el)}
           data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
@@ -3191,6 +3194,66 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
         </div>
 
+        <div>
+          <label htmlFor="invoice-number" className="block text-sm font-medium mb-1">
+            Invoice No.
+          </label>
+          <input
+            id="invoice-number"
+            type="text"
+            value={formData.number ?? ''}
+            onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
+            disabled={lockInvoiceNumberOnCreate}
+            required
+            aria-invalid={fieldErrors.error('number') ? true : undefined}
+            className="ui-input ui-mono"
+          />
+          <p className="mt-1 text-xs ui-muted">
+            {lockInvoiceNumberOnCreate ? 'Numbered automatically from the series' : 'Auto from Settings; type over it when needed.'}
+          </p>
+          <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
+        </div>
+
+        <div>
+          <label htmlFor="invoice-date" className="block text-sm font-medium mb-1">
+            Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+          </label>
+          <input
+            id="invoice-date"
+            type="date"
+            value={formData.date}
+            required
+            onChange={(e) =>
+              setFormData((p) => ({
+                ...p,
+                date: e.target.value,
+                // Terms are counted from the document date, so moving the date
+                // moves the due date with it.
+                dueDate: selectedCustomer ? dueDateFor(e.target.value, selectedCustomer) || p.dueDate : p.dueDate,
+              }))
+            }
+            className="ui-input"
+          />
+          <FieldError error={fieldErrors.error('date')} id={fieldErrors.errorId('date')} />
+        </div>
+
+        <div>
+          <label htmlFor="invoice-due" className="block text-sm font-medium mb-1">
+            Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+          </label>
+          <input
+            id="invoice-due"
+            type="date"
+            value={formData.dueDate}
+            required
+            onChange={(e) => setFormData((p) => ({ ...p, dueDate: e.target.value }))}
+            className="ui-input"
+          />
+          {prefOn('dueDateFromTerms') ? <p className="mt-1 text-xs ui-muted">Follows the payment terms.</p> : null}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
           className="lg:col-span-2"
           ref={(el) => fieldErrors.register('customerId', el)}
@@ -3246,18 +3309,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
         {prefOn('customerRef') ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Ref Date</label>
-            <input
-              type="date"
-              value={formData.refDate}
-              onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-              className="ui-input"
-            />
-          </div>
-        ) : null}
-
-        {prefOn('customerRef') ? (
-          <div>
             <label className="block text-sm font-medium mb-1">Ref No</label>
             <input
               type="text"
@@ -3265,6 +3316,18 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
               className="ui-input"
               placeholder="Estimate / Quotation / Sales Order"
+            />
+          </div>
+        ) : null}
+
+        {prefOn('customerRef') ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Ref Date</label>
+            <input
+              type="date"
+              value={formData.refDate}
+              onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+              className="ui-input"
             />
           </div>
         ) : null}
@@ -3564,10 +3627,16 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
                 <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">
+                  Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Unit</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">
+                  Rate (₹) <span className="text-[rgb(var(--neg-ink))]">*</span>
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium">Disc %</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
+                <th className="px-3 py-2 text-left text-xs font-medium">Tax %</th>
+                <th className="px-3 py-2 text-right text-xs font-medium">Amount (₹)</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -3629,6 +3698,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                     />
                   </td>
                   <td className="px-3 py-2">
+                    {/* The unit belongs to the item, so it is shown rather than
+                        asked for. Typing it per line is how two lines of the
+                        same item end up billed in different units. */}
+                    <span className="text-sm ui-muted">{String(lineMaster?.unit || '').trim() || '—'}</span>
+                  </td>
+                  <td className="px-3 py-2">
                     <input
                       type="number"
                       value={item.rate}
@@ -3650,6 +3725,27 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       placeholder="0"
                     />
                   </td>
+                  <td className="px-3 py-2">
+                    {prefOn('lineTaxEditable') ? (
+                      <select
+                        value={String(item.gstRate ?? 0)}
+                        onChange={(e) => updateItem(idx, 'gstRate', e.target.value)}
+                        className="ui-select w-20 px-2 py-1"
+                        aria-label={`GST rate for line ${idx + 1}`}
+                      >
+                        {[0, 0.1, 0.25, 1, 1.5, 3, 5, 6, 7.5, 12, 18, 28].map((r) => (
+                          <option key={r} value={r}>
+                            {r}%
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      // A value, not a disabled control: the rate comes from the
+                      // item master, and a greyed-out box invites a fight with a
+                      // field that will not move.
+                      <span className="text-sm">{Number(item.gstRate ?? 0)}%</span>
+                    )}
+                  </td>
                   <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
@@ -3659,7 +3755,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 </tr>
                 {lineTracked ? (
                   <tr className="border-t-0">
-                    <td colSpan={7} className="px-3 pb-2 pt-0">
+                    <td colSpan={9} className="px-3 pb-2 pt-0">
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span className="ui-muted font-medium">Batch:</span>
                         <select
@@ -3693,8 +3789,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
             <Plus size={15} aria-hidden="true" /> Add Item
-            <span className="ui-subtle text-[11px] ml-1">or press Tab on the last row</span>
           </button>
+          <span className="ui-subtle text-xs">or press Tab on the last row</span>
           <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
         </div>
 
@@ -3792,6 +3888,60 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             </div>
             ) : null}
 
+            {prefOn('paymentTerms') ? (
+              <div>
+                <label htmlFor="invoice-terms" className="block text-xs ui-muted mb-1">
+                  Payment Terms
+                </label>
+                <select
+                  id="invoice-terms"
+                  value={String(formData.paymentTermDays ?? '')}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    setFormData((prev) => {
+                      const days = raw === '' ? '' : Number(raw);
+                      // The terms are what the date follows, so changing them
+                      // moves the due date — otherwise the two disagree on
+                      // screen and the server's answer arrives as a surprise.
+                      const nextDue =
+                        raw !== '' && prefOn('dueDateFromTerms')
+                          ? addDays(prev.date, days) || prev.dueDate
+                          : prev.dueDate;
+                      return { ...prev, paymentTermDays: days, dueDate: nextDue };
+                    });
+                  }}
+                  className="ui-select w-full px-3 py-2"
+                >
+                  <option value="">
+                    {selectedCustomer ? `From the customer — ${termsLabel(selectedCustomer)}` : 'From the customer'}
+                  </option>
+                  <option value="0">Due on receipt</option>
+                  <option value="7">Net 7</option>
+                  <option value="15">Net 15</option>
+                  <option value="30">Net 30</option>
+                  <option value="45">Net 45</option>
+                  <option value="60">Net 60</option>
+                  <option value="90">Net 90</option>
+                </select>
+              </div>
+            ) : null}
+
+            {prefOn('notes') ? (
+              <div>
+                <label htmlFor="invoice-notes" className="block text-xs ui-muted mb-1">
+                  Notes
+                </label>
+                <textarea
+                  id="invoice-notes"
+                  value={formData.notesText}
+                  onChange={(e) => setFormData((p) => ({ ...p, notesText: e.target.value }))}
+                  rows={3}
+                  className="ui-input w-full px-3 py-2"
+                  placeholder="Enter notes here…"
+                />
+              </div>
+            ) : null}
+
             {customFields.some((f) => f.formPlacement === 'notes') ? (
               <div className="grid gap-3 sm:grid-cols-2">{renderCustomFields('notes')}</div>
             ) : null}
@@ -3802,6 +3952,18 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <span>Subtotal:</span>
               <span>{formatMoney(computed.subtotal, currentCompany)}</span>
             </div>
+            {computed.invoiceDiscount > 0 ? (
+              <div className="flex justify-between">
+                <span>Discount:</span>
+                <span className="text-[rgb(var(--neg-ink))]">− {formatMoney(computed.invoiceDiscount, currentCompany)}</span>
+              </div>
+            ) : null}
+            {computed.invoiceDiscount > 0 || computed.otherChargesTotal > 0 ? (
+              <div className="flex justify-between">
+                <span>Taxable Amount:</span>
+                <span>{formatMoney(computed.subtotal - computed.invoiceDiscount + computed.otherChargesTotal, currentCompany)}</span>
+              </div>
+            ) : null}
             {computed.otherChargesTotal > 0 ? (
               <div className="flex justify-between">
                 <span>Other charges:</span>
@@ -3834,6 +3996,37 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
       </div>
 
+      {prefOn('amountInWords') ? (
+        <div
+          className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap"
+          style={{ background: 'rgb(var(--accent-soft))' }}
+        >
+          <div>
+            <div className="ui-caption">Amount in words</div>
+            <div className="text-sm font-medium">{amountInWordsInr(computed.total)}</div>
+          </div>
+          <div className="text-right">
+            <div className="ui-caption">Total payable</div>
+            <div className="fig text-2xl font-semibold" style={{ color: 'rgb(var(--brand-ink))' }}>
+              {formatMoney(computed.total, currentCompany)}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+        <p className="text-xs" style={{ color: 'rgb(var(--neg-ink))' }}>
+          * Indicates mandatory fields
+        </p>
+        {prefOn('declaration') ? (
+          <p className="text-xs ui-muted flex-1 min-w-[16rem]">
+            <span className="font-medium">Declaration:</span>{' '}
+            {String(invoiceDocSettings?.templates?.invoice?.declarationText || '').trim() ||
+              'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.'}
+          </p>
+        ) : null}
+      </div>
+
       {/* The figure and the one action, kept on screen while the lines are
           typed. What the customer already owes sits here too, because the
           moment to see it is before more credit is extended, not after. */}
@@ -3851,36 +4044,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           </span>
         ) : null}
         <FieldErrorSummary errors={fieldErrors.errors} />
-        {/*
-          Two ways to leave this screen, side by side.
-
-          Saving a draft used to be a quiet secondary button at the top of the
-          form, and it disappeared entirely once the invoice existed — so
-          editing a draft and pressing the only available button finalised it,
-          with nothing on screen saying that was about to happen. A draft owes
-          nobody anything; finalising is what puts it on the customer's account.
-        */}
-        <div className="ml-auto flex items-center gap-2">
-          {isDraftInvoice ? (
-            <button
-              type="button"
-              onClick={() => {
-                setSubmitAsDraft(true);
-                formRef.current?.requestSubmit();
-              }}
-              className="ui-btn ui-btn-secondary"
-            >
-              Save as Draft
-            </button>
-          ) : null}
-          <button
-            type="submit"
-            onClick={() => setSubmitAsDraft(false)}
-            className="ui-btn ui-btn-primary"
-          >
-            {isDraftInvoice ? 'Finalize Invoice' : 'Update Invoice'}
-          </button>
-        </div>
       </div>
     </form>
   );
