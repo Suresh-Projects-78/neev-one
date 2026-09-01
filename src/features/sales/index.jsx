@@ -49,8 +49,7 @@ import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
-import { exportListPdf } from '../../utils/listPdf';
-import { exportListXlsx } from '../../utils/listXlsx';
+import ListControls, { periodRange } from '../../components/ListControls';
 import { blockIfClosed } from '../../utils/bookClose';
 
 
@@ -123,8 +122,6 @@ export const InvoicesList = ({
    * export to a spreadsheet instead.
    */
   const [period, setPeriod] = useState('all');
-  const exportBtnRef = useRef(null);
-  const [exportOpen, setExportOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -367,36 +364,18 @@ const statusReason = (doc, status, company, nowMs) => {
    */
   const applyPeriod = (key) => {
     setPeriod(key);
-    const today = new Date();
-    const iso = (d) => d.toISOString().slice(0, 10);
-    if (key === 'all') {
-      setDateFrom('');
-      setDateTo('');
-      return;
-    }
-    if (key === 'custom') return;
-    const to = new Date(today);
-    let from = new Date(today);
-    if (key === 'last30') from.setDate(from.getDate() - 29);
-    if (key === 'thisMonth') from = new Date(today.getFullYear(), today.getMonth(), 1);
-    if (key === 'thisYear') {
-      // The Indian financial year, not the calendar one: April to March is the
-      // year every figure in this product is reported against.
-      const fyStart = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
-      from = new Date(fyStart, 3, 1);
-    }
-    setDateFrom(iso(from));
-    setDateTo(iso(to));
+    const range = periodRange(key);
+    // A custom range keeps whatever dates are already typed.
+    if (!range) return;
+    setDateFrom(range.from);
+    setDateTo(range.to);
   };
 
-  const PERIODS = [
-    { key: 'all', label: 'All time' },
-    { key: 'last30', label: 'Last 30 days' },
-    { key: 'thisMonth', label: 'This month' },
-    { key: 'thisYear', label: 'This year (FY)' },
-    { key: 'custom', label: 'Custom range' },
-  ];
-
+  /**
+   * The columns an export carries: the document's own figures, not the
+   * screen's optional ones. The list can hide Warehouse; a sheet of invoices
+   * without the customer or the tax on it is not useful to anybody.
+   */
   const exportColumns = [
     { key: 'number', label: 'Invoice No.' },
     { key: 'date', label: 'Date' },
@@ -404,61 +383,11 @@ const statusReason = (doc, status, company, nowMs) => {
     { key: 'subtotal', label: 'Amount', align: 'right', value: (r) => Number(r.subtotal || 0) },
     { key: 'gstTotal', label: 'GST Amount', align: 'right', value: (r) => Number(r.gstTotal || 0) },
     { key: 'total', label: 'Total Amount', align: 'right', value: (r) => Number(r.total || 0) },
+    { key: 'paidAmount', label: 'Paid', align: 'right', value: (r) => Number(r.paidAmount || 0) },
     { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
   ];
 
-  /** What is filtering the view, in words, so the export says so on its face. */
-  const viewDescription = () => {
-    const parts = [];
-    parts.push(PERIODS.find((p) => p.key === period)?.label || 'All time');
-    if (dateFrom || dateTo) parts.push(`${dateFrom || 'start'} to ${dateTo || 'today'}`);
-    if (statusFilter) parts.push(statusFilter);
-    if (searchText.trim()) parts.push(`matching “${searchText.trim()}”`);
-    return parts.join(' · ');
-  };
-
-  const exportInvoicesXlsx = () => {
-    setExportOpen(false);
-    exportListXlsx({
-      subtitle: viewDescription(),
-      fileName: `Invoices_${currentCompany?.name || 'company'}`,
-      sheetName: 'Invoices',
-      columns: exportColumns,
-      rows: filteredInvoices,
-    });
-  };
-
-  const exportInvoicesPdf = () => {
-    setExportOpen(false);
-    exportListPdf({
-      title: `Invoices — ${currentCompany?.name || 'Company'}`,
-      subtitle: viewDescription(),
-      fileName: `Invoices_${currentCompany?.name || 'company'}`,
-      columns: exportColumns,
-      rows: filteredInvoices,
-      footNote: `${filteredInvoices.length} invoice(s) · exported from Neev One`,
-    });
-  };
-
-  const exportInvoices = () =>
-    exportRows({
-      fileName: `Invoices_${currentCompany?.name || 'company'}`,
-      label: 'invoice(s)',
-      columns: [
-        { key: 'number', label: 'Invoice #' },
-        { key: 'date', label: 'Date' },
-        { key: 'dueDate', label: 'Due Date' },
-        { key: 'customerName', label: 'Customer' },
-        { key: 'warehouse', label: 'Warehouse', value: (r) => warehouseById.get(String(r?.warehouseId || ''))?.name || '' },
-        { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-        { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
-        { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-        { key: 'paidAmount', label: 'Paid', value: (r) => Number(r.paidAmount || 0) },
-        { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
-      ],
-      rows: filteredInvoices,
-    });
-
+  // Kept for the bulk bar, which exports the selection rather than the view.
   const openNewInvoice = () => {
     if (typeof onNewInvoice === 'function') {
       onNewInvoice();
@@ -750,29 +679,21 @@ const statusReason = (doc, status, company, nowMs) => {
     setSelectedIds(new Set());
   };
 
+  /**
+   * The selection, exported through the same columns as the view.
+   *
+   * This used to build its own CSV by hand with a different, shorter column
+   * set — so a selection and a full export of the same invoices disagreed
+   * about what an invoice contains.
+   */
   const bulkExportCsv = () => {
     const rows = filteredInvoices.filter((i) => selectedIds.has(i.id));
-    if (!rows.length) return;
-    const esc = (v) => {
-      const t = String(v ?? '');
-      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
-    };
-    const head = ['Invoice #', 'Customer', 'Date', 'Due date', 'Total', 'Paid', 'Status'];
-    const lines = rows.map((i) =>
-      [i.number, i.customerName || '', i.date || '', i.dueDate || '', Number(i.total || 0).toFixed(2), Number(i.paidAmount || 0).toFixed(2), getDerivedStatus(i)]
-        .map(esc)
-        .join(',')
-    );
-    const csv = '\ufeff' + [head.map(esc).join(','), ...lines].join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'invoices.csv';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    exportRows({
+      fileName: `Invoices_${currentCompany?.name || 'company'}_selection`,
+      label: 'invoice(s)',
+      columns: exportColumns,
+      rows,
+    });
   };
 
   const openInvoiceMenu = (invoiceId, anchorEl) => {
@@ -817,146 +738,43 @@ const statusReason = (doc, status, company, nowMs) => {
       {/* One card, not two: the filters belong to the table they filter, and a
           separate floating box above it reads as an unrelated control panel. */}
       <div className="ui-card overflow-hidden">
-        <div className="ui-toolbar grid-cols-1 md:grid-cols-12 items-end">
-          <div className="md:col-span-3">
-            <label className="ui-label" htmlFor="inv-scope">
-              Show
-            </label>
-            <select
-              id="inv-scope"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="ui-select"
-            >
-              <option value="">All Invoices</option>
-              <option value="Paid">Paid</option>
-              <option value="Unpaid">Unpaid</option>
-              <option value="Partial">Partially paid</option>
-              <option value="Over due">Overdue</option>
-              <option value="Draft">Pending — draft</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div className="md:col-span-4">
-            <label className="ui-label">Search</label>
-            <input
-              type="text"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              placeholder="Search by invoice #, customer, ref no"
-              className="ui-input"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="ui-label" htmlFor="inv-period">
-              Period
-            </label>
-            <select
-              id="inv-period"
-              value={period}
-              onChange={(e) => applyPeriod(e.target.value)}
-              className="ui-select"
-            >
-              {PERIODS.map((p) => (
-                <option key={p.key} value={p.key}>
-                  {p.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* The two date boxes only appear for a custom range. Leaving them
-              on screen beside a preset invites editing one of them and
-              wondering why the preset above still claims This month. */}
-          {period === 'custom' ? (
-            <>
-              <div className="md:col-span-2">
-                <label className="ui-label">From</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="ui-input"
-                />
-              </div>
-              <div className="md:col-span-1">
-                <label className="ui-label">To</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="ui-input"
-                />
-              </div>
-            </>
-          ) : null}
-
-          <div className="md:col-span-12 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setSearchText('');
-                setStatusFilter('');
-                setPeriod('all');
-                setDateFrom('');
-                setDateTo('');
-                colFilters.clearAll();
-              }}
-              className="ui-btn ui-btn-ghost"
-            >
-              Clear filters
-            </button>
-            <div className="relative">
-              <button
-                type="button"
-                ref={exportBtnRef}
-                onClick={() => setExportOpen((v) => !v)}
-                className="ui-btn ui-btn-secondary"
-                aria-haspopup="menu"
-                aria-expanded={exportOpen}
-              >
-                <Download size={15} aria-hidden="true" /> Export
-              </button>
-              {exportOpen ? (
-                <Popover anchorRef={exportBtnRef} onClose={() => setExportOpen(false)} minWidth={220}>
-                  <div className="py-1" role="menu">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={exportInvoicesPdf}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                    >
-                      <FileText size={15} aria-hidden="true" /> PDF
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={exportInvoicesXlsx}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                    >
-                      <Table2 size={15} aria-hidden="true" /> Excel
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setExportOpen(false);
-                        exportInvoices();
-                      }}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                    >
-                      <Download size={15} aria-hidden="true" /> CSV
-                    </button>
-                    <p className="ui-caption px-3 pt-1 pb-2">
-                      Exports what you are looking at — this period, this search, these columns.
-                    </p>
-                  </div>
-                </Popover>
-              ) : null}
-            </div>
-            {gridEnabled ? <GridControls grid={grid} /> : null}
-          </div>
-        </div>
+        <ListControls
+          idPrefix="inv"
+          statusLabel="Show"
+          allLabel="All Invoices"
+          statusValue={statusFilter}
+          onStatusChange={setStatusFilter}
+          statusOptions={[
+            { value: 'Paid', label: 'Paid' },
+            { value: 'Unpaid', label: 'Unpaid' },
+            { value: 'Partial', label: 'Partially paid' },
+            { value: 'Over due', label: 'Overdue' },
+            { value: 'Draft', label: 'Pending — draft' },
+            { value: 'Cancelled', label: 'Cancelled' },
+          ]}
+          searchValue={searchText}
+          onSearchChange={setSearchText}
+          searchPlaceholder="Search by invoice #, customer, ref no"
+          period={period}
+          onPeriodChange={applyPeriod}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onDateFromChange={setDateFrom}
+          onDateToChange={setDateTo}
+          onClear={() => {
+            setSearchText('');
+            setStatusFilter('');
+            applyPeriod('all');
+            colFilters.clearAll();
+          }}
+          exportTitle={`Invoices — ${currentCompany?.name || 'Company'}`}
+          exportFileName={`Invoices_${currentCompany?.name || 'company'}`}
+          exportSheetName="Invoices"
+          exportColumns={exportColumns}
+          exportRows={filteredInvoices}
+        >
+          {gridEnabled ? <GridControls grid={grid} /> : null}
+        </ListControls>
 
         {gridEnabled ? (
           <BulkBar count={selectedIds.size} onClear={() => setSelectedIds(new Set())}>

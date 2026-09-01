@@ -13545,7 +13545,19 @@ const AppShell = () => {
   const userInitials = userEmail.slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-dvh" style={{ backgroundColor: 'rgb(var(--app-bg))' }}>
+    /*
+     * The shell is exactly one viewport tall and does not scroll. The header
+     * and the navigation rail are therefore fixed by construction, and the
+     * content column is the only thing that moves.
+     *
+     * Sticky was not enough: a sticky rail still travels with the page until
+     * it reaches its offset, so it visibly slid up on every scroll. Owning the
+     * viewport removes the travel rather than compensating for it.
+     */
+    <div
+      className="h-dvh flex flex-col overflow-hidden"
+      style={{ backgroundColor: 'rgb(var(--app-bg))' }}
+    >
       {/* Ambient brand light for the whole shell: fixed so it stays put while
           content scrolls, quiet so tables stay tables. The background colour
           itself is untouched — this paints over --app-bg, never replaces it. */}
@@ -13570,7 +13582,7 @@ const AppShell = () => {
       </a>
 
       <header
-        className="sticky top-0 z-40 backdrop-blur"
+        className="shrink-0 z-40 backdrop-blur"
         style={{
           backgroundColor: 'rgb(var(--surface) / 0.85)',
           borderBottom: '1px solid rgb(var(--border))',
@@ -13825,7 +13837,7 @@ const AppShell = () => {
         </div>
       ) : null}
 
-      <div className="w-full px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5">
+      <div className="w-full flex-1 min-h-0 px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5 overflow-hidden">
         {mobileNavOpen ? (
           <div
             className="fixed inset-0 z-[110] md:hidden"
@@ -13846,7 +13858,7 @@ const AppShell = () => {
             /* Height, not max-height: the account block is pinned to the foot
                of the rail, and a content-sized rail leaves it floating in the
                middle of the screen with nothing under it. */
-            className="ui-panel p-2 md:sticky md:top-[4.5rem] md:h-[calc(100vh-5.25rem)] flex flex-col"
+            className="ui-panel p-2 md:h-full flex flex-col min-h-0"
           >
             {/* Collapse control: desktop only — on a phone the rail already
                 stacks above the content and hiding labels saves nothing. */}
@@ -14149,7 +14161,11 @@ const AppShell = () => {
         />
         ) : null}
 
-        <main id="main-content" key={active} className="min-w-0 flex-1 ui-in-fade ui-content">
+        <main
+          id="main-content"
+          key={active}
+          className="min-w-0 flex-1 ui-in-fade ui-content overflow-y-auto overflow-x-hidden min-h-0 pr-1"
+        >
           {/*
             A failed warehouse load used to be silent: the dropdown was simply
             empty, which reads as "no warehouses configured" when the truth may
