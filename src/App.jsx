@@ -144,6 +144,7 @@ import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import TermsSettings from './features/settings/TermsSettings';
+import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
@@ -11918,6 +11919,7 @@ const AppShell = () => {
           { key: 'settingsAccounting', label: 'Accounting', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsPaymentsReceipts', label: 'Payments & Receipts', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsDocuments', label: 'Documents', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsInvoiceFields', label: 'Invoice Fields', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
 
           { type: 'subgroup', label: 'Tax & Compliance' },
@@ -13212,6 +13214,8 @@ const AppShell = () => {
         return <RolePermissionManager />;
       case 'settingsTerms':
         return <TermsSettings db={db} setDb={setDb} currentCompany={currentCompany} />;
+      case 'settingsInvoiceFields':
+        return <InvoiceFieldSettings db={db} setDb={setDb} currentCompany={currentCompany} />;
       case 'settingsFeatures':
         return <FeatureSettings />;
       // The Business panes are the same screen filtered to one part of the
