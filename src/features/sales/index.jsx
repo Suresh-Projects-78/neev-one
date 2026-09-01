@@ -3307,28 +3307,34 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           ) : null}
         </div>
 
-        {prefOn('customerRef') ? (
+        {prefOn('iec') ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Ref No</label>
+            <label className="block text-sm font-medium mb-1">
+              IEC <span className="ui-subtle font-normal">(if applicable)</span>
+            </label>
             <input
               type="text"
-              value={formData.refNo}
-              onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+              value={formData.iecNumber}
+              onChange={(e) => setFormData((p) => ({ ...p, iecNumber: e.target.value }))}
               className="ui-input"
-              placeholder="Estimate / Quotation / Sales Order"
+              placeholder="Enter IEC"
             />
           </div>
         ) : null}
 
-        {prefOn('customerRef') ? (
+        {prefOn('lut') ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Ref Date</label>
+            <label className="block text-sm font-medium mb-1">
+              LUT <span className="ui-subtle font-normal">(if applicable)</span>
+            </label>
             <input
-              type="date"
-              value={formData.refDate}
-              onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+              type="text"
+              value={formData.lutNumber}
+              onChange={(e) => setFormData((p) => ({ ...p, lutNumber: e.target.value }))}
               className="ui-input"
+              placeholder="Select LUT"
             />
+            <p className="mt-1 text-xs ui-muted">Zero-rated export without payment of IGST.</p>
           </div>
         ) : null}
 
@@ -3383,8 +3389,41 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
 
         {renderCustomFields('header')}
-        {renderCustomFields('reference')}
       </div>
+
+      {prefOn('customerRef') || customFields.some((f) => f.formPlacement === 'reference') ? (
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4"
+          style={{ borderTop: '1px solid rgb(var(--border))' }}
+        >
+          {prefOn('customerRef') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Ref No.</label>
+              <input
+                type="text"
+                value={formData.refNo}
+                onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+                className="ui-input"
+                placeholder="Estimate / Quotation / Sales Order"
+              />
+            </div>
+          ) : null}
+
+          {prefOn('customerRef') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Ref Date</label>
+              <input
+                type="date"
+                value={formData.refDate}
+                onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+                className="ui-input"
+              />
+            </div>
+          ) : null}
+
+          {renderCustomFields('reference')}
+        </div>
+      ) : null}
 
       {[
         prefOn('lut'),
@@ -3400,33 +3439,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         prefOn('timesheetRef'),
       ].some(Boolean) ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {prefOn('lut') ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">LUT number</label>
-              <input
-                type="text"
-                value={formData.lutNumber}
-                onChange={(e) => setFormData((p) => ({ ...p, lutNumber: e.target.value }))}
-                className="ui-input"
-                placeholder="AD2908260012345"
-              />
-              <p className="mt-1 text-xs ui-muted">Zero-rated export without payment of IGST.</p>
-            </div>
-          ) : null}
-
-          {prefOn('iec') ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">IEC</label>
-              <input
-                type="text"
-                value={formData.iecNumber}
-                onChange={(e) => setFormData((p) => ({ ...p, iecNumber: e.target.value }))}
-                className="ui-input"
-                placeholder="0416002345"
-              />
-            </div>
-          ) : null}
-
           {prefOn('shippingBill') ? (
             <div>
               <label className="block text-sm font-medium mb-1">Shipping bill</label>
