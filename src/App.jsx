@@ -11108,23 +11108,18 @@ const AppShell = () => {
    * address is confirmed. So it is measured, and re-measured when the window
    * resizes or the banner comes and goes.
    */
-  const navRef = useRef(null);
-  const [navHeight, setNavHeight] = useState(null);
-  useEffect(() => {
-    const measure = () => {
-      const el = navRef.current;
-      if (!el) return;
-      const top = el.getBoundingClientRect().top;
-      setNavHeight(Math.max(240, Math.round(window.innerHeight - top - 12)));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    const t = setInterval(measure, 800);
-    return () => {
-      window.removeEventListener('resize', measure);
-      clearInterval(t);
-    };
-  }, []);
+  /*
+   * The rail's height is CSS, not measurement.
+   *
+   * It used to read its own getBoundingClientRect().top every 800ms and set
+   * its height from that. The rail is position: sticky, so its top moves as
+   * the page scrolls — which changed the height, which moved the top, four
+   * times a second, forever. The rail crept up the screen on its own with
+   * nobody touching anything.
+   *
+   * The sticky offset is a constant (4.5rem) and so is the gap under it, so
+   * the height is a constant too: one calc, no polling, no feedback loop.
+   */
   const profileMenuRef = useRef(null);
   const getDbStorageKey = () => {
     const token = String(localStorage.getItem('token') || '').trim();
@@ -13851,9 +13846,7 @@ const AppShell = () => {
             /* Height, not max-height: the account block is pinned to the foot
                of the rail, and a content-sized rail leaves it floating in the
                middle of the screen with nothing under it. */
-            ref={navRef}
-            style={navHeight ? { height: navHeight } : undefined}
-            className="ui-panel p-2 md:sticky md:top-[4.5rem] flex flex-col"
+            className="ui-panel p-2 md:sticky md:top-[4.5rem] md:h-[calc(100vh-5.25rem)] flex flex-col"
           >
             {/* Collapse control: desktop only — on a phone the rail already
                 stacks above the content and hiding labels saves nothing. */}

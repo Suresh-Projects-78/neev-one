@@ -49,6 +49,7 @@ import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { exportListPdf } from '../../utils/listPdf';
 import { blockIfClosed } from '../../utils/bookClose';
 
 
@@ -67,14 +68,26 @@ const isOverdue = (doc) => {
 };
 
 /** Columns the invoices grid can show or hide. Identity and actions stay. */
+/**
+ * Column order follows the document, not the record: the number, when it was
+ * raised, who it went to, then what it is worth broken into the three figures
+ * that matter — the taxable value, the tax on it, and what the customer owes.
+ *
+ * Amount and GST Amount are separate columns because they answer different
+ * questions. The taxable value is what the sale was worth; the GST is what is
+ * being collected on somebody else's behalf and paid over. A single Total
+ * column hides both.
+ */
 const GRID_COLUMNS = [
-  { key: 'number', label: 'Invoice #', always: true },
-  { key: 'customer', label: 'Customer' },
-  { key: 'warehouse', label: 'Warehouse' },
+  { key: 'number', label: 'Invoice No.', always: true },
   { key: 'date', label: 'Date' },
-  { key: 'due', label: 'Due' },
-  { key: 'total', label: 'Total', always: true },
+  { key: 'customer', label: 'Customer' },
+  { key: 'amount', label: 'Amount' },
+  { key: 'gst', label: 'GST Amount' },
+  { key: 'total', label: 'Total Amount', always: true },
   { key: 'status', label: 'Status' },
+  { key: 'due', label: 'Due' },
+  { key: 'warehouse', label: 'Warehouse' },
 ];
 
 export const InvoicesList = ({
@@ -102,6 +115,15 @@ export const InvoicesList = ({
   const [searchText, setSearchText] = useState(() => consumeSearchSeed('invoices'));
   const colFilters = useColumnFilters();
   const [statusFilter, setStatusFilter] = useState('');
+  /**
+   * A period is chosen far more often than it is typed. "This month" and "last
+   * 30 days" are the two questions actually being asked of a sales ledger, and
+   * making somebody pick two calendar dates to ask them is the reason people
+   * export to a spreadsheet instead.
+   */
+  const [period, setPeriod] = useState('all');
+  const exportBtnRef = useRef(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
@@ -336,6 +358,75 @@ const statusReason = (doc, status, company, nowMs) => {
     ];
   }, [filteredInvoices, currentCompany]);
 
+
+  /**
+   * A preset writes the two dates rather than filtering separately. One code
+   * path decides what is in view, so the chips, the totals, the table and both
+   * exports can never disagree about the period.
+   */
+  const applyPeriod = (key) => {
+    setPeriod(key);
+    const today = new Date();
+    const iso = (d) => d.toISOString().slice(0, 10);
+    if (key === 'all') {
+      setDateFrom('');
+      setDateTo('');
+      return;
+    }
+    if (key === 'custom') return;
+    const to = new Date(today);
+    let from = new Date(today);
+    if (key === 'last30') from.setDate(from.getDate() - 29);
+    if (key === 'thisMonth') from = new Date(today.getFullYear(), today.getMonth(), 1);
+    if (key === 'thisYear') {
+      // The Indian financial year, not the calendar one: April to March is the
+      // year every figure in this product is reported against.
+      const fyStart = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+      from = new Date(fyStart, 3, 1);
+    }
+    setDateFrom(iso(from));
+    setDateTo(iso(to));
+  };
+
+  const PERIODS = [
+    { key: 'all', label: 'All time' },
+    { key: 'last30', label: 'Last 30 days' },
+    { key: 'thisMonth', label: 'This month' },
+    { key: 'thisYear', label: 'This year (FY)' },
+    { key: 'custom', label: 'Custom range' },
+  ];
+
+  const exportColumns = [
+    { key: 'number', label: 'Invoice No.' },
+    { key: 'date', label: 'Date' },
+    { key: 'customerName', label: 'Customer' },
+    { key: 'subtotal', label: 'Amount', align: 'right', value: (r) => Number(r.subtotal || 0) },
+    { key: 'gstTotal', label: 'GST Amount', align: 'right', value: (r) => Number(r.gstTotal || 0) },
+    { key: 'total', label: 'Total Amount', align: 'right', value: (r) => Number(r.total || 0) },
+    { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
+  ];
+
+  /** What is filtering the view, in words, so the export says so on its face. */
+  const viewDescription = () => {
+    const parts = [];
+    parts.push(PERIODS.find((p) => p.key === period)?.label || 'All time');
+    if (dateFrom || dateTo) parts.push(`${dateFrom || 'start'} to ${dateTo || 'today'}`);
+    if (statusFilter) parts.push(statusFilter);
+    if (searchText.trim()) parts.push(`matching “${searchText.trim()}”`);
+    return parts.join(' · ');
+  };
+
+  const exportInvoicesPdf = () => {
+    setExportOpen(false);
+    exportListPdf({
+      title: `Invoices — ${currentCompany?.name || 'Company'}`,
+      subtitle: viewDescription(),
+      fileName: `Invoices_${currentCompany?.name || 'company'}`,
+      columns: exportColumns,
+      rows: filteredInvoices,
+      footNote: `${filteredInvoices.length} invoice(s) · exported from Neev One`,
+    });
+  };
 
   const exportInvoices = () =>
     exportRows({
@@ -715,7 +806,26 @@ const statusReason = (doc, status, company, nowMs) => {
           separate floating box above it reads as an unrelated control panel. */}
       <div className="ui-card overflow-hidden">
         <div className="ui-toolbar grid-cols-1 md:grid-cols-12 items-end">
-          <div className="md:col-span-5">
+          <div className="md:col-span-3">
+            <label className="ui-label" htmlFor="inv-scope">
+              Show
+            </label>
+            <select
+              id="inv-scope"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="ui-select"
+            >
+              <option value="">All Invoices</option>
+              <option value="Paid">Paid</option>
+              <option value="Unpaid">Unpaid</option>
+              <option value="Partial">Partially paid</option>
+              <option value="Over due">Overdue</option>
+              <option value="Draft">Pending — draft</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="md:col-span-4">
             <label className="ui-label">Search</label>
             <input
               type="text"
@@ -725,40 +835,49 @@ const statusReason = (doc, status, company, nowMs) => {
               className="ui-input"
             />
           </div>
-          <div className="md:col-span-3">
-            <label className="ui-label">Status</label>
+          <div className="md:col-span-2">
+            <label className="ui-label" htmlFor="inv-period">
+              Period
+            </label>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              id="inv-period"
+              value={period}
+              onChange={(e) => applyPeriod(e.target.value)}
               className="ui-select"
             >
-              <option value="">All</option>
-              <option value="Draft">Draft</option>
-              <option value="Unpaid">Unpaid</option>
-              <option value="Partial">Partial</option>
-              <option value="Over due">Over due</option>
-              <option value="Paid">Paid</option>
-              <option value="Cancelled">Cancelled</option>
+              {PERIODS.map((p) => (
+                <option key={p.key} value={p.key}>
+                  {p.label}
+                </option>
+              ))}
             </select>
           </div>
-          <div className="md:col-span-2">
-            <label className="ui-label">From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="ui-input"
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="ui-label">To</label>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="ui-input"
-            />
-          </div>
+
+          {/* The two date boxes only appear for a custom range. Leaving them
+              on screen beside a preset invites editing one of them and
+              wondering why the preset above still claims This month. */}
+          {period === 'custom' ? (
+            <>
+              <div className="md:col-span-2">
+                <label className="ui-label">From</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="ui-input"
+                />
+              </div>
+              <div className="md:col-span-1">
+                <label className="ui-label">To</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="ui-input"
+                />
+              </div>
+            </>
+          ) : null}
 
           <div className="md:col-span-12 flex items-center justify-end gap-2">
             <button
@@ -766,6 +885,7 @@ const statusReason = (doc, status, company, nowMs) => {
               onClick={() => {
                 setSearchText('');
                 setStatusFilter('');
+                setPeriod('all');
                 setDateFrom('');
                 setDateTo('');
                 colFilters.clearAll();
@@ -774,9 +894,46 @@ const statusReason = (doc, status, company, nowMs) => {
             >
               Clear filters
             </button>
-            <button type="button" onClick={exportInvoices} className="ui-btn ui-btn-secondary">
-              <Download size={15} aria-hidden="true" /> Export
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                ref={exportBtnRef}
+                onClick={() => setExportOpen((v) => !v)}
+                className="ui-btn ui-btn-secondary"
+                aria-haspopup="menu"
+                aria-expanded={exportOpen}
+              >
+                <Download size={15} aria-hidden="true" /> Export
+              </button>
+              {exportOpen ? (
+                <Popover anchorRef={exportBtnRef} onClose={() => setExportOpen(false)} minWidth={220}>
+                  <div className="py-1" role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={exportInvoicesPdf}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <FileText size={15} aria-hidden="true" /> PDF
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setExportOpen(false);
+                        exportInvoices();
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <Download size={15} aria-hidden="true" /> Excel (CSV)
+                    </button>
+                    <p className="ui-caption px-3 pt-1 pb-2">
+                      Exports what you are looking at — this period, this search, these columns.
+                    </p>
+                  </div>
+                </Popover>
+              ) : null}
+            </div>
             {gridEnabled ? <GridControls grid={grid} /> : null}
           </div>
         </div>
@@ -809,13 +966,15 @@ const statusReason = (doc, status, company, nowMs) => {
                   />
                 </th>
               ) : null}
-              <ColumnHeader label="Invoice #" col="number" state={colFilters} />
-              {col('customer') ? <ColumnHeader label="Customer" col="customer" state={colFilters} /> : null}
-              {col('warehouse') ? <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} /> : null}
+              <ColumnHeader label="Invoice No." col="number" state={colFilters} />
               {col('date') ? <ColumnHeader label="Date" col="date" state={colFilters} /> : null}
-              {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} /> : null}
-              <ColumnHeader label="Total" col="total" state={colFilters} className="ui-num" align="right" />
+              {col('customer') ? <ColumnHeader label="Customer" col="customer" state={colFilters} /> : null}
+              {col('amount') ? <ColumnHeader label="Amount" col="amount" state={colFilters} className="ui-num" align="right" /> : null}
+              {col('gst') ? <ColumnHeader label="GST Amount" col="gst" state={colFilters} className="ui-num" align="right" /> : null}
+              <ColumnHeader label="Total Amount" col="total" state={colFilters} className="ui-num" align="right" />
               {col('status') ? <ColumnHeader label="Status" col="status" state={colFilters} /> : null}
+              {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} /> : null}
+              {col('warehouse') ? <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} /> : null}
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
@@ -883,14 +1042,13 @@ const statusReason = (doc, status, company, nowMs) => {
                       </td>
                     ) : null}
                     <td className="ui-col-id">{inv.number}</td>
-                    {col('customer') ? <td className="ui-col-entity">{inv.customerName || '-'}</td> : null}
-                    {col('warehouse') ? <td className="ui-col-meta">{whLabel}</td> : null}
                     {col('date') ? <td className="ui-col-date">{inv.date || '-'}</td> : null}
-                    {/* The only date that earns colour: past due, still owed. */}
-                    {col('due') ? (
-                      <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>
-                        {inv.dueDate || '-'}
-                      </td>
+                    {col('customer') ? <td className="ui-col-entity">{inv.customerName || '-'}</td> : null}
+                    {col('amount') ? (
+                      <td className="ui-col-amount">{formatMoney(Number(inv.subtotal || 0), currentCompany)}</td>
+                    ) : null}
+                    {col('gst') ? (
+                      <td className="ui-col-amount">{formatMoney(Number(inv.gstTotal || 0), currentCompany)}</td>
                     ) : null}
                     <td className="ui-col-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
                     {col('status') ? (
@@ -909,6 +1067,13 @@ const statusReason = (doc, status, company, nowMs) => {
                       })()}
                     </td>
                     ) : null}
+                    {/* The only date that earns colour: past due, still owed. */}
+                    {col('due') ? (
+                      <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>
+                        {inv.dueDate || '-'}
+                      </td>
+                    ) : null}
+                    {col('warehouse') ? <td className="ui-col-meta">{whLabel}</td> : null}
                     <td
                       className="relative w-10"
                       onMouseDown={(e) => e.stopPropagation()}
