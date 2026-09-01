@@ -1,0 +1,177 @@
+import React, { useRef, useState } from 'react';
+import { MoreVertical } from 'lucide-react';
+
+import Popover from './ui/Popover';
+
+/**
+ * The chrome every document form shares.
+ *
+ * Invoices, bills, purchase orders, estimates, credit notes and the rest are
+ * the same shape of screen: a few header fields, a grid of lines, a totals
+ * block, and one place to save. They had drifted into different shapes —
+ * actions at the bottom on one, the top on another, a ⋮ on one and nothing on
+ * the next — so learning one taught you nothing about the others.
+ *
+ * These are the pieces, not a template. A bill is not an invoice and should
+ * not be forced through one component; what it should share is where the
+ * primary action sits, how a field row breathes, and what the foot of a
+ * document looks like.
+ */
+
+/**
+ * The action row: secondary, primary, then the ⋮.
+ *
+ * Top right, per the design system — and only ever one primary. `menu` is a
+ * list of `{ key, label, icon, onSelect, danger, group }`; entries sharing a
+ * `group` are kept together under its heading, because "preview this document"
+ * and "change every document of this type" are different kinds of act and
+ * mixing them is how somebody edits a template mid-invoice.
+ */
+export const DocFormActions = ({
+  primaryLabel,
+  onPrimary = null,
+  primaryType = 'submit',
+  secondaryLabel = '',
+  onSecondary = null,
+  menu = [],
+  disabled = false,
+  children = null,
+}) => {
+  const menuBtnRef = useRef(null);
+  const [open, setOpen] = useState(false);
+
+  const groups = [];
+  menu.filter(Boolean).forEach((item) => {
+    const name = item.group || '';
+    const last = groups[groups.length - 1];
+    if (last && last.name === name) last.items.push(item);
+    else groups.push({ name, items: [item] });
+  });
+
+  return (
+    <div className="flex items-center justify-end gap-2 -mb-2">
+      {children}
+      {secondaryLabel ? (
+        <button type="button" onClick={onSecondary} className="ui-btn ui-btn-secondary" disabled={disabled}>
+          {secondaryLabel}
+        </button>
+      ) : null}
+      <button type={primaryType} onClick={onPrimary} className="ui-btn ui-btn-primary" disabled={disabled}>
+        {primaryLabel}
+      </button>
+
+      {menu.length ? (
+        <>
+          <button
+            type="button"
+            ref={menuBtnRef}
+            onClick={() => setOpen((v) => !v)}
+            className="ui-btn ui-btn-ghost !px-1.5"
+            aria-label="More options"
+            aria-haspopup="menu"
+            aria-expanded={open}
+          >
+            <MoreVertical size={18} aria-hidden="true" />
+          </button>
+          {open ? (
+            <Popover anchorRef={menuBtnRef} onClose={() => setOpen(false)} minWidth={230}>
+              <div className="py-1" role="menu">
+                {groups.map((group, gi) => (
+                  <React.Fragment key={group.name || `g${gi}`}>
+                    {gi ? <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} /> : null}
+                    {group.name ? <div className="ui-caption px-3 pt-1 pb-1.5">{group.name}</div> : null}
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={item.key}
+                          type={item.submit ? 'submit' : 'button'}
+                          role="menuitem"
+                          onClick={() => {
+                            setOpen(false);
+                            item.onSelect?.();
+                          }}
+                          className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))] ${
+                            item.danger ? 'text-[rgb(var(--neg-ink))]' : ''
+                          }`}
+                        >
+                          {Icon ? <Icon size={15} aria-hidden="true" /> : null}
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </React.Fragment>
+                ))}
+              </div>
+            </Popover>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+};
+
+/** A row of header fields. Four across on a desktop, one on a phone. */
+export const FormRow = ({ children, className = '', divided = false }) => (
+  <div
+    className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${divided ? 'pt-4' : ''} ${className}`}
+    style={divided ? { borderTop: '1px solid rgb(var(--border))' } : undefined}
+  >
+    {children}
+  </div>
+);
+
+/** One labelled field. `required` prints the marker the footer explains. */
+export const Field = ({ label, htmlFor, required = false, hint = '', children, className = '', span = 1 }) => (
+  <div className={`${span > 1 ? `lg:col-span-${span}` : ''} ${className}`}>
+    <label htmlFor={htmlFor} className="block text-sm font-medium mb-1">
+      {label}
+      {required ? <span className="ml-1 text-[rgb(var(--neg-ink))]">*</span> : null}
+    </label>
+    {children}
+    {hint ? <p className="mt-1 text-xs ui-muted">{hint}</p> : null}
+  </div>
+);
+
+/**
+ * The foot of a document: the amount in words on the left, what is payable on
+ * the right. Only rendered when the document type asks for it.
+ */
+export const AmountInWordsBand = ({ words, amount }) => (
+  <div
+    className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap"
+    style={{ background: 'rgb(var(--accent-soft))' }}
+  >
+    <div>
+      <div className="ui-caption">Amount in words</div>
+      <div className="text-sm font-medium">{words}</div>
+    </div>
+    <div className="text-right">
+      <div className="ui-caption">Total payable</div>
+      <div className="fig text-2xl font-semibold" style={{ color: 'rgb(var(--brand-ink))' }}>
+        {amount}
+      </div>
+    </div>
+  </div>
+);
+
+/**
+ * The line under a document: what the asterisks meant, and the declaration.
+ *
+ * Both belong at the foot rather than the head — a required-field note read
+ * before any field has been seen tells nobody anything.
+ */
+export const DocFormFootnote = ({ declaration = '' }) => (
+  <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
+    <p className="text-xs" style={{ color: 'rgb(var(--neg-ink))' }}>
+      * Indicates mandatory fields
+    </p>
+    {declaration ? (
+      <p className="text-xs ui-muted flex-1 min-w-[16rem]">
+        <span className="font-medium">Declaration:</span> {declaration}
+      </p>
+    ) : null}
+  </div>
+);
+
+export default DocFormActions;

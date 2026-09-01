@@ -50,6 +50,7 @@ import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import ListControls, { periodRange } from '../../components/ListControls';
+import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 import { blockIfClosed } from '../../utils/bookClose';
 
 
@@ -2017,8 +2018,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const prefOn = (key) => isInvoicePrefOn(invoicePrefs, key);
   const customFields = useMemo(() => getVisibleCustomFields(currentCompany), [currentCompany]);
 
-  const moreButtonRef = useRef(null);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
   /**
@@ -2030,6 +2029,19 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * inherit it.
    */
   const saveAndNewRef = useRef(false);
+  const markSaveAndNew = () => {
+    saveAndNewRef.current = true;
+  };
+
+  /*
+   * Named rather than inline: a ref read inside a prop passed to a component
+   * looks like a render-phase read to the hooks lint, because it cannot tell
+   * an event handler from any other callback prop.
+   */
+  const submitAsDraftNow = () => {
+    setSubmitAsDraft(true);
+    formRef.current?.requestSubmit();
+  };
 
   /**
    * The saved invoice this form is editing, at component scope.
@@ -2057,7 +2069,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * allocated to a document that no longer exists.
    */
   const cancelInvoice = async () => {
-    setMoreOpen(false);
     const settled = Number(existingInvoiceRecord?.paidAmount ?? 0);
     if (settled > 0) {
       notify.error(
@@ -2093,7 +2104,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * middle of raising an invoice; that invoice has to survive the detour.
    */
   const openPreferences = (focusCustomFields = false) => {
-    setMoreOpen(false);
     setPreviewOpen(false);
     setPrefsOpen(true);
     if (focusCustomFields) {
@@ -2109,7 +2119,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * only after saying so, and never silently on a form with typing in it.
    */
   const goToSettings = async (screen) => {
-    setMoreOpen(false);
     if (typeof onOpenInvoiceSettings !== 'function') {
       notify.error('Open Settings → Invoice Templates to change this.');
       return;
@@ -3023,121 +3032,64 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
       ) : null}
 
-      <div className="flex items-center justify-end gap-2 -mb-2">
-        {isDraftInvoice ? (
-          <button
-            type="button"
-            onClick={() => {
-              setSubmitAsDraft(true);
-              formRef.current?.requestSubmit();
-            }}
-            className="ui-btn ui-btn-secondary"
-          >
-            Save Draft
-          </button>
-        ) : null}
-        <button type="submit" onClick={() => setSubmitAsDraft(false)} className="ui-btn ui-btn-primary">
-          {isDraftInvoice ? (isEdit ? 'Finalize Invoice' : 'Create Invoice') : 'Update Invoice'}
-        </button>
-        <button
-          type="button"
-          ref={moreButtonRef}
-          onClick={() => setMoreOpen((v) => !v)}
-          className="ui-btn ui-btn-ghost !px-1.5"
-          aria-label="More options"
-          aria-haspopup="menu"
-          aria-expanded={moreOpen}
-        >
-          <MoreVertical size={18} aria-hidden="true" />
-        </button>
-        {moreOpen ? (
-          <Popover anchorRef={moreButtonRef} onClose={() => setMoreOpen(false)} minWidth={230}>
-            <div className="py-1" role="menu">
-              <div className="ui-caption px-3 pt-1 pb-1.5">This invoice</div>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMoreOpen(false);
-                  setPreviewOpen(true);
-                }}
-                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-              >
-                <Eye size={15} aria-hidden="true" /> Preview Invoice
-              </button>
-
-              {!isEdit ? (
-                <button
-                  type="submit"
-                  role="menuitem"
-                  onClick={() => {
-                    saveAndNewRef.current = true;
-                    setMoreOpen(false);
-                  }}
-                  className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                >
-                  <Plus size={15} aria-hidden="true" /> Save &amp; New
-                </button>
-              ) : null}
-
-              {isEdit && typeof onDuplicateInvoice === 'function' ? (
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setMoreOpen(false);
-                    onDuplicateInvoice(existingInvoiceRecord || initialData);
-                  }}
-                  className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                >
-                  <Copy size={15} aria-hidden="true" /> Duplicate
-                </button>
-              ) : null}
-
-              <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
-              <div className="ui-caption px-3 pb-1.5">Configure — every invoice</div>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => openPreferences(false)}
-                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-              >
-                <SlidersHorizontal size={15} aria-hidden="true" /> Preferences
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => openPreferences(true)}
-                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-              >
-                <Plus size={15} aria-hidden="true" /> Custom Field
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => goToSettings('invoiceTemplates')}
-                className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-              >
-                <Settings2 size={15} aria-hidden="true" /> Invoice Template
-              </button>
-
-              {isEdit && String(existingInvoiceRecord?.status || '') !== 'Cancelled' ? (
-                <>
-                  <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={cancelInvoice}
-                    className="ui-menu-item w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-[rgb(var(--neg-ink))] hover:bg-[rgb(var(--surface-sunken))]"
-                  >
-                    <Ban size={15} aria-hidden="true" /> Cancel invoice
-                  </button>
-                </>
-              ) : null}
-            </div>
-          </Popover>
-        ) : null}
-      </div>
+      <DocFormActions
+        primaryLabel={isDraftInvoice ? (isEdit ? 'Finalize Invoice' : 'Create Invoice') : 'Update Invoice'}
+        onPrimary={() => setSubmitAsDraft(false)}
+        secondaryLabel={isDraftInvoice ? 'Save Draft' : ''}
+        onSecondary={submitAsDraftNow}
+        /*
+         * react-hooks/refs cannot tell a callback prop from a render-time
+         * read, so a menu entry whose handler touches a ref reads to it as a
+         * ref access during render. Every onSelect below runs on click.
+         */
+        // eslint-disable-next-line react-hooks/refs
+        menu={[
+          { key: 'preview', group: 'This invoice', label: 'Preview Invoice', icon: Eye, onSelect: () => setPreviewOpen(true) },
+          !isEdit
+            ? {
+                key: 'saveNew',
+                group: 'This invoice',
+                label: 'Save & New',
+                icon: Plus,
+                submit: true,
+                onSelect: markSaveAndNew,
+              }
+            : null,
+          isEdit && typeof onDuplicateInvoice === 'function'
+            ? {
+                key: 'duplicate',
+                group: 'This invoice',
+                label: 'Duplicate',
+                icon: Copy,
+                onSelect: () => onDuplicateInvoice(existingInvoiceRecord || initialData),
+              }
+            : null,
+          {
+            key: 'prefs',
+            group: 'Configure — every invoice',
+            label: 'Preferences',
+            icon: SlidersHorizontal,
+            onSelect: () => openPreferences(false),
+          },
+          {
+            key: 'custom',
+            group: 'Configure — every invoice',
+            label: 'Custom Field',
+            icon: Plus,
+            onSelect: () => openPreferences(true),
+          },
+          {
+            key: 'template',
+            group: 'Configure — every invoice',
+            label: 'Invoice Template',
+            icon: Settings2,
+            onSelect: () => goToSettings('invoiceTemplates'),
+          },
+          isEdit && String(existingInvoiceRecord?.status || '') !== 'Cancelled'
+            ? { key: 'cancel', group: 'danger', label: 'Cancel invoice', icon: Ban, danger: true, onSelect: cancelInvoice }
+            : null,
+        ].filter(Boolean)}
+      />
 
       {prefsOpen ? (
         <div className="space-y-3">
@@ -4017,35 +3969,20 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       </div>
 
       {prefOn('amountInWords') ? (
-        <div
-          className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap"
-          style={{ background: 'rgb(var(--accent-soft))' }}
-        >
-          <div>
-            <div className="ui-caption">Amount in words</div>
-            <div className="text-sm font-medium">{amountInWordsInr(computed.total)}</div>
-          </div>
-          <div className="text-right">
-            <div className="ui-caption">Total payable</div>
-            <div className="fig text-2xl font-semibold" style={{ color: 'rgb(var(--brand-ink))' }}>
-              {formatMoney(computed.total, currentCompany)}
-            </div>
-          </div>
-        </div>
+        <AmountInWordsBand
+          words={amountInWordsInr(computed.total)}
+          amount={formatMoney(computed.total, currentCompany)}
+        />
       ) : null}
 
-      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-        <p className="text-xs" style={{ color: 'rgb(var(--neg-ink))' }}>
-          * Indicates mandatory fields
-        </p>
-        {prefOn('declaration') ? (
-          <p className="text-xs ui-muted flex-1 min-w-[16rem]">
-            <span className="font-medium">Declaration:</span>{' '}
-            {String(invoiceDocSettings?.templates?.invoice?.declarationText || '').trim() ||
-              'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.'}
-          </p>
-        ) : null}
-      </div>
+      <DocFormFootnote
+        declaration={
+          prefOn('declaration')
+            ? String(invoiceDocSettings?.templates?.invoice?.declarationText || '').trim() ||
+              'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.'
+            : ''
+        }
+      />
 
       {/* The figure and the one action, kept on screen while the lines are
           typed. What the customer already owes sits here too, because the

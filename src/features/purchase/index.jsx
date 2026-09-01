@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
+import { amountInWordsInr } from '../sales/InvoicePreview';
 import { createPortal } from 'react-dom';
 import { returnableLines, returnStatusLabel } from '../../utils/returns';
 import BillPreview from './BillPreview';
@@ -349,6 +351,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
+      <DocFormActions primaryLabel={initialData?.id ? 'Update Bill' : 'Create Bill'} />
+
       <div className="flex justify-end">
         <button
           type="button"
@@ -618,11 +622,15 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
       </div>
 
+      <AmountInWordsBand
+        words={amountInWordsInr(computed.total)}
+        amount={formatMoney(computed.total, currentCompany)}
+      />
+
+      <DocFormFootnote />
+
       <div className="flex justify-end items-center gap-3">
         <FieldErrorSummary errors={fieldErrors.errors} />
-        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
-          Create Bill
-        </button>
       </div>
     </form>
   );
@@ -1202,6 +1210,8 @@ export const PurchaseOrderForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <DocFormActions primaryLabel={isEditPo ? 'Update PO' : 'Create PO'} />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">PO Number</label>
@@ -1328,11 +1338,7 @@ export const PurchaseOrderForm = ({
         <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full px-3 py-2" rows={3} />
       </div>
 
-      <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
-          Create PO
-        </button>
-      </div>
+      <DocFormFootnote />
     </form>
   );
 };
@@ -2450,6 +2456,8 @@ export const DebitNoteForm = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <DocFormActions primaryLabel={initialData?.id ? 'Update Debit Note' : 'Create Debit Note'} />
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">Debit Note Number</label>
@@ -2654,11 +2662,12 @@ export const DebitNoteForm = ({
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <button type="submit" className="px-6 py-2 ui-btn ui-btn-primary rounded-lg ">
-          Create Debit Note
-        </button>
-      </div>
+      <AmountInWordsBand
+        words={amountInWordsInr(computed.total)}
+        amount={formatMoney(computed.total, currentCompany)}
+      />
+
+      <DocFormFootnote />
     </form>
   );
 };
