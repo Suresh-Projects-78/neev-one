@@ -13864,37 +13864,15 @@ const AppShell = () => {
         </div>
       </header>
 
-      {isAuthenticated && authCtx.data && !emailVerified && isEnabled('emailVerification') ? (
-        <div
-          className="w-full px-4 lg:px-6 py-2 text-sm flex flex-wrap items-center gap-x-3 gap-y-1"
-          role="status"
-          style={{ backgroundColor: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn-ink))' }}
-        >
-          <span>Confirm your email address to secure this account.</span>
-          {verifyNotice ? (
-            <span className="ui-title text-xs">{verifyNotice}</span>
-          ) : (
-            <button
-              type="button"
-              className="ui-btn ui-btn-ghost !min-h-0 !py-0.5 !px-2 text-xs"
-              disabled={verifySending}
-              onClick={async () => {
-                setVerifySending(true);
-                try {
-                  await resendVerification();
-                  setVerifyNotice('Sent — check your inbox.');
-                } catch (e) {
-                  setVerifyNotice(String(e?.message || e));
-                } finally {
-                  setVerifySending(false);
-                }
-              }}
-            >
-              {verifySending ? 'Sending…' : 'Resend the link'}
-            </button>
-          )}
-        </div>
-      ) : null}
+      {/*
+        The verify-email strip used to sit here, above every screen, for as
+        long as the address stayed unconfirmed. A permanent banner is not a
+        prompt — it becomes part of the furniture within a day and then costs
+        every screen a row of height forever.
+
+        `resendVerification` is still wired; the prompt belongs in the account
+        menu, where it can be acted on once rather than ignored daily.
+      */}
 
       <div className="w-full flex-1 min-h-0 px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5 overflow-hidden">
         {mobileNavOpen ? (
@@ -14112,6 +14090,45 @@ const AppShell = () => {
                       org {String(localStorage.getItem('activeOrgId') || '-')}
                     </div>
                   </div>
+
+                  {/*
+                    Verification lives here rather than in a strip across every
+                    screen. It is a one-time act, and it is about this account —
+                    which is exactly what this menu is for.
+                  */}
+                  {!emailVerified && isEnabled('emailVerification') ? (
+                    <div
+                      className="px-3 py-2.5 text-xs"
+                      style={{ borderBottom: '1px solid rgb(var(--border))', backgroundColor: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn-ink))' }}
+                    >
+                      <div className="font-medium">Email not confirmed</div>
+                      <div className="mt-0.5" style={{ opacity: 0.85 }}>
+                        Password reset needs a confirmed address.
+                      </div>
+                      {verifyNotice ? (
+                        <div className="mt-1 font-medium">{verifyNotice}</div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={verifySending}
+                          onClick={async () => {
+                            setVerifySending(true);
+                            try {
+                              await resendVerification();
+                              setVerifyNotice('Sent — check your inbox.');
+                            } catch (e) {
+                              setVerifyNotice(String(e?.message || e));
+                            } finally {
+                              setVerifySending(false);
+                            }
+                          }}
+                          className="ui-btn ui-btn-secondary ui-btn-sm !min-h-0 !py-0.5 !px-2 mt-1.5 text-[11px]"
+                        >
+                          {verifySending ? 'Sending…' : 'Send the link'}
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     role="menuitem"
