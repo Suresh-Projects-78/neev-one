@@ -152,6 +152,18 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
             rows: raSearchRows,
           })
         }
+        exportTitle="Reorder Alerts"
+        exportFileName={`ReorderAlerts_${currentCompany?.name || 'company'}`}
+        exportSheetName="Reorder Alerts"
+        exportColumns={[
+              { key: 'name', label: 'Item' },
+              { key: 'inStock', label: 'In stock', value: (r) => Number(r.inStock ?? r.stock ?? 0) },
+              { key: 'reorderLevel', label: 'Reorder level', value: (r) => Number(r.reorderLevel || 0) },
+              { key: 'suggestedQty', label: 'Suggested qty', value: (r) => Number(r.suggestedQty || 0) },
+              { key: 'lastVendorName', label: 'Last vendor' },
+              { key: 'lastRate', label: 'Last rate', value: (r) => Number(r.lastRate || 0) },
+        ]}
+        exportRows={raSearchRows}
       />
 
       {rows.length === 0 ? (

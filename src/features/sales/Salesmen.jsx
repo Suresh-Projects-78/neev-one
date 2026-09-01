@@ -124,6 +124,18 @@ export default function Salesmen({ db, setDb, currentCompany }) {
             rows: shownPerf,
           })
         }
+        exportTitle="Salespeople"
+        exportFileName={`Salesmen_${currentCompany?.name || 'company'}`}
+        exportSheetName="Salespeople"
+        exportColumns={[
+              { key: 'name', label: 'Salesman', value: (r) => r.salesman?.name || '' },
+              { key: 'phone', label: 'Phone', value: (r) => r.salesman?.phone || '' },
+              { key: 'commissionPct', label: 'Commission %', value: (r) => Number(r.salesman?.commissionPct || 0) },
+              { key: 'invoices', label: 'Invoices', value: (r) => r.invoices },
+              { key: 'sales', label: 'Sales (pre-GST)', value: (r) => Number(r.sales || 0) },
+              { key: 'commission', label: 'Commission due', value: (r) => Number(r.commission || 0) },
+        ]}
+        exportRows={shownPerf}
       />
 
       {salesmen.length === 0 ? (

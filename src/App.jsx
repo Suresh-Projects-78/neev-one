@@ -146,6 +146,7 @@ import FeatureSettings from './features/settings/FeatureSettings';
 import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
+import { usePeriodFilter } from './components/ListControls';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
@@ -693,6 +694,17 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
             rows: shownVendors,
           })
         }
+        exportTitle="Vendors — {currentCompany?.name || 'Company'}"
+        exportFileName={`Vendors_${currentCompany?.name || 'company'}`}
+        exportSheetName="Vendors"
+        exportColumns={[
+              { key: 'name', label: 'Name', value: (r) => getVendorDisplayName(r) },
+              { key: 'phone', label: 'Phone', value: (r) => r.mobile || r.phone || '' },
+              { key: 'email', label: 'Email' },
+              { key: 'gstRegistration', label: 'GST Reg.' },
+              { key: 'gstin', label: 'GSTIN' },
+        ]}
+        exportRows={shownVendors}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
@@ -932,6 +944,17 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
             rows: shownCustomers,
           })
         }
+        exportTitle="Customers — {currentCompany?.name || 'Company'}"
+        exportFileName={`Customers_${currentCompany?.name || 'company'}`}
+        exportSheetName="Customers"
+        exportColumns={[
+              { key: 'name', label: 'Name', value: (r) => getCustomerDisplayName(r) },
+              { key: 'phone', label: 'Phone', value: (r) => r.mobile || r.phone || '' },
+              { key: 'email', label: 'Email' },
+              { key: 'gstRegistration', label: 'GST Reg.' },
+              { key: 'gstin', label: 'GSTIN' },
+        ]}
+        exportRows={shownCustomers}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
@@ -2284,6 +2307,20 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
             rows: shownItems,
           })
         }
+        exportTitle="Items — {currentCompany?.name || 'Company'}"
+        exportFileName={`Items_${currentCompany?.name || 'company'}`}
+        exportSheetName="Items"
+        exportColumns={[
+              { key: 'code', label: 'Code' },
+              { key: 'name', label: 'Name' },
+              { key: 'type', label: 'Type' },
+              { key: 'category', label: 'Category' },
+              { key: 'hsnSac', label: 'HSN/SAC' },
+              { key: 'gstRate', label: 'GST %', value: (r) => Number(r.gstRate || 0) },
+              { key: 'salePrice', label: 'Sale Price', value: (r) => Number(r.salePrice || 0) },
+              { key: 'purchasePrice', label: 'Purchase Price', value: (r) => Number(r.purchasePrice || 0) },
+        ]}
+        exportRows={shownItems}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
@@ -4223,12 +4260,13 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
 };
 
 const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJournal }) => {
+  const jvPeriod = usePeriodFilter();
   const jvSearch = useListSearch(
     db.journalEntries.filter((j) => j.companyId === currentCompany.id),
     ['number', 'narration', 'date', 'status']
   );
   const jvFilters = useColumnFilters();
-  const journalEntries = jvFilters.applyFilters(jvSearch.filtered, {
+  const journalEntries = jvFilters.applyFilters(jvSearch.filtered.filter((r) => jvPeriod.inRange(r?.date)), {
     number: (r) => r.number,
     date: (r) => r.date,
     narration: (r) => r.narration,
@@ -4279,6 +4317,24 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
             rows: journalEntries,
           })
         }
+        period={jvPeriod.period}
+        onPeriodChange={jvPeriod.setPeriod}
+        dateFrom={jvPeriod.dateFrom}
+        dateTo={jvPeriod.dateTo}
+        onDateFromChange={jvPeriod.setDateFrom}
+        onDateToChange={jvPeriod.setDateTo}
+        exportTitle="Journal Entries — {currentCompany?.name || 'Company'}"
+        exportFileName={`JournalEntries_${currentCompany?.name || 'company'}`}
+        exportSheetName="Journal Entries"
+        exportColumns={[
+              { key: 'number', label: 'JV #' },
+              { key: 'date', label: 'Date' },
+              { key: 'narration', label: 'Narration' },
+              { key: 'debit', label: 'Debit', value: (r) => Number(r.totalDebit ?? r.debit ?? 0) },
+              { key: 'credit', label: 'Credit', value: (r) => Number(r.totalCredit ?? r.credit ?? 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={journalEntries}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">

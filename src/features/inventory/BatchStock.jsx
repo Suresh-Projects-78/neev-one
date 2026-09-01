@@ -91,6 +91,19 @@ export default function BatchStock({ db, currentCompany }) {
             rows: bsSearchRows,
           })
         }
+        exportTitle="Batch Stock"
+        exportFileName={`BatchStock_${currentCompany?.name || 'company'}`}
+        exportSheetName="Batch Stock"
+        exportColumns={[
+              { key: 'itemName', label: 'Item' },
+              { key: 'batchNo', label: 'Batch' },
+              { key: 'mfgDate', label: 'Mfg' },
+              { key: 'expiryDate', label: 'Expiry' },
+              { key: 'inQty', label: 'In', value: (r) => Number(r.inQty || 0) },
+              { key: 'outQty', label: 'Out', value: (r) => Number(r.outQty || 0) },
+              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance ?? r.remaining ?? 0) },
+        ]}
+        exportRows={bsSearchRows}
       />
 
       {shown.length === 0 ? (

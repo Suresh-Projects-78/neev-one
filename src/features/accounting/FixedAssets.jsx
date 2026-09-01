@@ -195,6 +195,20 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
             rows: faSearchRows,
           })
         }
+        exportTitle="Fixed Assets"
+        exportFileName={`FixedAssets_${currentCompany?.name || 'company'}`}
+        exportSheetName="Fixed Assets"
+        exportColumns={[
+              { key: 'name', label: 'Asset' },
+              { key: 'block', label: 'Block' },
+              { key: 'purchaseDate', label: 'Purchased' },
+              { key: 'cost', label: 'Cost', value: (r) => Number(r.cost || 0) },
+              { key: 'openingWdv', label: 'Opening WDV', value: (r) => Number(r.openingWdv || 0) },
+              { key: 'rate', label: 'Rate %', value: (r) => Number(r.rate || 0) },
+              { key: 'depreciation', label: 'Depreciation', value: (r) => Number(r.depreciation || 0) },
+              { key: 'closingWdv', label: 'Closing WDV', value: (r) => Number(r.closingWdv || 0) },
+        ]}
+        exportRows={faSearchRows}
       />
 
       {rows.length === 0 ? (

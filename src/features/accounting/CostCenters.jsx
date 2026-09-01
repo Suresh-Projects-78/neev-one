@@ -103,6 +103,16 @@ export default function CostCenters({ db, setDb, currentCompany }) {
             rows: ccSearchRows,
           })
         }
+        exportTitle="Cost Centres"
+        exportFileName={`CostCenters_${currentCompany?.name || 'company'}`}
+        exportSheetName="Cost Centres"
+        exportColumns={[
+              { key: 'name', label: 'Cost center', value: (r) => r.center?.name || '' },
+              { key: 'income', label: 'Income', value: (r) => Number(r.income || 0) },
+              { key: 'expense', label: 'Expense', value: (r) => Number(r.expense || 0) },
+              { key: 'net', label: 'Net', value: (r) => Number(r.net || 0) },
+        ]}
+        exportRows={ccSearchRows}
       />
 
       {rows.length === 0 ? (

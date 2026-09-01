@@ -114,6 +114,15 @@ export default function PriceLists({ db, setDb, currentCompany }) {
             rows: shownLists,
           })
         }
+        exportTitle="Price Lists"
+        exportFileName={`PriceLists_${currentCompany?.name || 'company'}`}
+        exportSheetName="Price Lists"
+        exportColumns={[
+              { key: 'name', label: 'Price list' },
+              { key: 'description', label: 'Description' },
+              { key: 'items', label: 'Items priced', value: (r) => (Array.isArray(r.rates) ? r.rates.length : 0) },
+        ]}
+        exportRows={shownLists}
       />
 
       <div className="flex flex-wrap items-center gap-2">
