@@ -1887,42 +1887,6 @@ const billStatusReason = (doc, status, company, nowMs) => {
       </StatusTabs>
 
 
-      <div className="flex items-center gap-2 flex-wrap">
-        {['All', 'Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'].map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1 rounded-full text-sm border ${ statusFilter === s ? 'ui-sunken ui-border-c ui-fg' : 'ui-surface ui-border-c ui-fg'
-            }`}
-    
-        period={billPeriod.period}
-        onPeriodChange={billPeriod.setPeriod}
-        dateFrom={billPeriod.dateFrom}
-        dateTo={billPeriod.dateTo}
-        onDateFromChange={billPeriod.setDateFrom}
-        onDateToChange={billPeriod.setDateTo}
-        exportTitle="Bills — {currentCompany?.name || 'Company'}"
-        exportFileName={`Bills_${currentCompany?.name || 'company'}`}
-        exportSheetName="Bills"
-        exportColumns={[
-              { key: 'number', label: 'Bill #' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'refNo', label: 'Ref No' },
-              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-              { key: 'paidAmount', label: 'Paid', value: (r) => Number(r.paidAmount || 0) },
-              { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
-        ]}
-        exportRows={filteredBills}
-      >
-            {s}
-          </button>
-        ))}
-      </div>
-
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <div className="ui-table-scroll">
         <table className="ui-table w-full ui-table-sticky">
