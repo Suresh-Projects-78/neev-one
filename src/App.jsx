@@ -13766,12 +13766,21 @@ const AppShell = () => {
               </select>
             ) : null}
 
-            {/* Quick create: the two-click path to any new document. */}
+            {/*
+              Quick create: the two-click path to any new document.
+
+              Secondary, not primary. It was filled brand orange, and so is the
+              one action every page puts in its own top right — so on the
+              dashboard "New" and "New invoice" sat twelve pixels apart, both
+              shouting, and neither reading as the thing to do. This one repeats
+              on all fifty-nine screens; the page's own action is the one
+              DESIGN.md reserves the accent for.
+            */}
             <div className="relative" ref={quickRef}>
               <button
                 type="button"
                 onClick={() => setQuickOpen((v) => !v)}
-                className="ui-btn ui-btn-primary !h-9 !px-2.5"
+                className="ui-btn ui-btn-secondary !h-9 !px-2.5"
                 aria-haspopup="menu"
                 aria-expanded={quickOpen}
                 aria-label="Quick create"
