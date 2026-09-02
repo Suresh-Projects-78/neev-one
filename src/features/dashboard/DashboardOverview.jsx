@@ -461,20 +461,31 @@ function initialsFor(name, email, company) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-function DashboardHero({ name, initials, insights, onCommand, actions }) {
+function DashboardHero({ name, initials, avatarUrl, insights, onCommand, actions }) {
   const [idx, setIdx] = useState(0);
   const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
 
   return (
     <section className="pt-8 pb-2 text-center" aria-label="Overview">
-      <span
-        className="mx-auto mb-5 grid h-12 w-12 place-items-center rounded-full text-sm font-bold"
-        style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}
-        aria-hidden="true"
-      >
-        {initials}
-      </span>
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt=""
+          width={48}
+          height={48}
+          className="mx-auto mb-5 h-12 w-12 rounded-full object-cover"
+          style={{ border: '1px solid rgb(var(--border))' }}
+        />
+      ) : (
+        <span
+          className="mx-auto mb-5 grid h-12 w-12 place-items-center rounded-full text-sm font-bold"
+          style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}
+          aria-hidden="true"
+        >
+          {initials}
+        </span>
+      )}
 
       <h1 className="ui-t-page" style={{ fontSize: '2rem', lineHeight: '2.5rem' }}>
         {greetingFor(new Date().getHours())}
@@ -619,6 +630,9 @@ export default function DashboardOverview({
   onRecordReceipt = null,
   onOpenCustomers = null,
   onOpenReports = null,
+  userName = '',
+  userAvatarUrl = '',
+  userInitials = '',
 }) {
   /**
    * Cash and accrual answer different questions and must never be mixed on one
@@ -1159,8 +1173,14 @@ export default function DashboardOverview({
       return '';
     }
   })();
-  const heroName = nameFromEmail(userEmail);
-  const heroInitials = initialsFor(heroName, userEmail, currentCompany?.name);
+  /**
+   * The shell has already resolved who this is from /auth/me, so prefer that.
+   * Parsing the email is the fallback for the first paint, before the profile
+   * lands — it is why the greeting said "Test" for an address like
+   * test@… even after a real first name had been saved.
+   */
+  const heroName = String(userName || '').trim().split(/\s+/)[0] || nameFromEmail(userEmail);
+  const heroInitials = userInitials || initialsFor(heroName, userEmail, currentCompany?.name);
 
   const quickActions = [
     onNewInvoice ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice } : null,
@@ -1183,6 +1203,7 @@ export default function DashboardOverview({
       <DashboardHero
         name={heroName}
         initials={heroInitials}
+        avatarUrl={userAvatarUrl}
         insights={heroInsights}
         onCommand={onOpenCommand}
         actions={quickActions}

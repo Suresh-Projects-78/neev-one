@@ -11526,6 +11526,31 @@ const AppShell = () => {
     };
   }, [isAuthenticated, activeOrgId]);
 
+  /*
+   * Identity for the chrome. `/auth/me` is already fetched once per session
+   * for permissions, so the name and picture come from there rather than a
+   * second request — and they update the moment the profile page saves,
+   * because that response is written back into the same context.
+   *
+   * localStorage is the fallback for the first paint, before /auth/me lands.
+   *
+   * Declared here rather than beside the header that renders it: the `screen`
+   * memo hands these to the dashboard, and a const read above its declaration
+   * is not a warning, it is a blank page.
+   */
+  const meUser = authCtx?.data?.user || {};
+  const userEmail = String(meUser.email || localStorage.getItem('userEmail') || '').trim() || 'User';
+  const userDisplayName =
+    [meUser.firstName, meUser.lastName].filter(Boolean).join(' ').trim() || String(meUser.fullName || '').trim();
+  const userAvatarUrl = meUser.avatarUrl || '';
+  const userInitials = (() => {
+    const src = userDisplayName || userEmail;
+    const parts = String(src).trim().split(/[\s._@-]+/).filter(Boolean);
+    if (!parts.length) return '—';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  })();
+
   const isOrgAdmin = Boolean(authCtx?.data?.isOrgAdmin);
   const emailVerified = Boolean(authCtx?.data?.user?.emailVerifiedAt);
   const [verifyNotice, setVerifyNotice] = useState('');
@@ -12605,6 +12630,12 @@ const AppShell = () => {
             // shell already owns, not a second search that would have to be
             // built and kept in step with it.
             onOpenCommand={() => setPaletteOpen(true)}
+            // Identity comes from /auth/me, the same place the header takes it
+            // from, so the picture and the name cannot disagree between the
+            // corner and the middle of the page.
+            userName={userDisplayName}
+            userAvatarUrl={userAvatarUrl}
+            userInitials={userInitials}
             onNewBill={() => {
               setActive('bills');
               setBillEditor({ open: true, initial: null });
@@ -13650,27 +13681,6 @@ const AppShell = () => {
     );
   }
 
-  /*
-   * Identity for the chrome. `/auth/me` is already fetched once per session
-   * for permissions, so the name and picture come from there rather than a
-   * second request — and they update the moment the profile page saves,
-   * because that response is written back into the same context.
-   *
-   * localStorage is the fallback for the first paint, before /auth/me lands.
-   */
-  const meUser = authCtx?.data?.user || {};
-  const userEmail = String(meUser.email || localStorage.getItem('userEmail') || '').trim() || 'User';
-  const userDisplayName =
-    [meUser.firstName, meUser.lastName].filter(Boolean).join(' ').trim() || String(meUser.fullName || '').trim();
-  const userAvatarUrl = meUser.avatarUrl || '';
-  const userInitials = (() => {
-    const src = userDisplayName || userEmail;
-    const parts = String(src).trim().split(/[\s._@-]+/).filter(Boolean);
-    if (!parts.length) return '—';
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  })();
-
   return (
     /*
      * The shell is exactly one viewport tall and does not scroll. The header
@@ -13929,11 +13939,11 @@ const AppShell = () => {
               same room is not duplication when the room is the one people ask
               for by two different names.
             */}
-            <div className="relative" ref={accountMenuRef}>
+            <div className="relative shrink-0" ref={accountMenuRef}>
               <button
                 type="button"
                 onClick={() => setAccountMenuOpen((v) => !v)}
-                className="rounded-full"
+                className="block h-8 w-8 shrink-0 rounded-full overflow-hidden"
                 aria-haspopup="menu"
                 aria-expanded={accountMenuOpen}
                 aria-label="Your profile"
@@ -13943,12 +13953,14 @@ const AppShell = () => {
                   <img
                     src={userAvatarUrl}
                     alt=""
+                    width={32}
+                    height={32}
                     className="h-8 w-8 rounded-full object-cover"
                     style={{ border: '1px solid rgb(var(--border))' }}
                   />
                 ) : (
                   <span
-                    className="h-8 w-8 rounded-full inline-flex items-center justify-center text-xs font-bold"
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold"
                     style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
                     aria-hidden="true"
                   >
@@ -13965,7 +13977,13 @@ const AppShell = () => {
                 >
                   <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
                     {userAvatarUrl ? (
-                      <img src={userAvatarUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0" />
+                      <img
+                        src={userAvatarUrl}
+                        alt=""
+                        width={36}
+                        height={36}
+                        className="h-9 w-9 rounded-full object-cover shrink-0"
+                      />
                     ) : (
                       <span
                         className="h-9 w-9 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0"
