@@ -26,7 +26,12 @@
 
 :root {
   /* Surfaces */
-  --app-bg: 250 250 250;        /* #FAFAFA */
+  /* A whisper of pine in the ground. At #FAFAFA the accent read cold and
+     stranded — a near-black green needs the neutrals biased toward it or it
+     looks like ink somebody spilled on a grey page. This is 1% saturation:
+     invisible as a colour, and the difference between the accent looking
+     placed and looking pasted on. */
+  --app-bg: 249 251 250;        /* #F9FBFA */
   --surface: 255 255 255;       /* #FFFFFF */
   --surface-raised: 255 255 255;
   --surface-sunken: 250 250 250;
@@ -1633,5 +1638,90 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+
+/* ------------------------------------------------------------------ *
+ * The dashboard hero's ground.
+ *
+ * Two very soft pine fields drifting behind the greeting. They are the page's
+ * only decoration and they earn it by solving a real problem: a near-black
+ * green on a flat white page has nothing to sit on, so the avatar and the
+ * primary button read as stuck to the screen rather than placed in it.
+ *
+ * Every dimension is a percentage of the section and every field carries its
+ * own radial mask, so the wash fades to nothing before it reaches any edge.
+ * The first attempt used negative insets and got clipped by the scroll
+ * container, which turned atmosphere into a grey rectangle with two hard
+ * vertical lines down it.
+ *
+ * Deliberately not blobs: masked and overlapping, no circle ever resolves.
+ * That is the difference between atmosphere and the floating bubbles every
+ * AI layout reaches for.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .ui-hero-ground {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .ui-hero-ground::before,
+  .ui-hero-ground::after {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    pointer-events: none;
+    will-change: transform;
+    /* The mask is what guarantees a soft edge whatever clips the element. */
+    -webkit-mask-image: radial-gradient(closest-side, #000 25%, transparent 100%);
+    mask-image: radial-gradient(closest-side, #000 25%, transparent 100%);
+  }
+
+  .ui-hero-ground::before {
+    left: 2%;
+    right: 46%;
+    top: -10%;
+    bottom: 22%;
+    background: radial-gradient(closest-side, rgb(var(--brand) / 0.13), transparent 100%);
+    animation: ui-hero-drift-a 38s ease-in-out infinite alternate;
+  }
+
+  .ui-hero-ground::after {
+    left: 44%;
+    right: 4%;
+    top: 4%;
+    bottom: 10%;
+    background: radial-gradient(closest-side, rgb(var(--brand) / 0.09), transparent 100%);
+    animation: ui-hero-drift-b 46s ease-in-out infinite alternate;
+  }
+
+  /* Dark mode needs less: the accent already separates from the ground, so
+     the fields drop to a trace that only stops the header being a flat plane. */
+  :root[data-theme='dark'] .ui-hero-ground::before {
+    background: radial-gradient(closest-side, rgb(var(--brand) / 0.06), transparent 100%);
+  }
+  :root[data-theme='dark'] .ui-hero-ground::after {
+    background: radial-gradient(closest-side, rgb(var(--brand) / 0.04), transparent 100%);
+  }
+}
+
+/* Slow enough that nobody watching sees movement — they see the page having
+   settled differently since they last looked. */
+@keyframes ui-hero-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(3%, 4%, 0) scale(1.12); }
+}
+
+@keyframes ui-hero-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.1); }
+  to   { transform: translate3d(-4%, -3%, 0) scale(1); }
+}
+
+/* Off, not slowed. The wash is the point; the drift never carried anything. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-hero-ground::before,
+  .ui-hero-ground::after {
+    animation: none;
   }
 }

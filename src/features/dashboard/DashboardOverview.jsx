@@ -16,8 +16,6 @@ import {
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import ChartCard from '../../components/charts/ChartCard';
-import { useChartTheme } from '../../components/charts/useChartTheme';
-import { useFeatures } from '../../permissions/useFeatures';
 import { useTilt } from '../../components/ui/useTilt';
 /**
  * ECharts is ~2 MB unminified and belongs nowhere near first paint. Loading the
@@ -45,10 +43,6 @@ import {
   receivables as receivablesAsOf,
   payables as payablesAsOf,
   gstPosition,
-  setupGaps,
-  cashForecast,
-  incomeVsExpenses,
-  recentActivity,
   AGEING_BUCKETS,
 } from '../../utils/cashPosition';
 import { computeInventorySummaryByItemId } from '../../utils/inventory';
@@ -69,22 +63,12 @@ import { useCountUp } from '../../components/ui/useCountUp';
 
 const DAY = 86_400_000;
 
-const toDate = (v) => {
-  const d = new Date(`${String(v || '').slice(0, 10)}T00:00:00Z`);
-  return Number.isNaN(d.getTime()) ? null : d;
-};
 
 const num = (v) => {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
 };
 
-const RANGES = [
-  { key: '30', label: '30 days', days: 30 },
-  { key: '90', label: '90 days', days: 90 },
-  { key: '365', label: '12 months', days: 365 },
-  { key: 'all', label: 'All time', days: null },
-];
 
 /** Direction chip. Colour never carries the meaning alone — the arrow does too. */
 /**
@@ -617,13 +601,9 @@ function QuietTiles({ tiles, company }) {
 export default function DashboardOverview({
   db,
   currentCompany,
-  branches = [],
   onNewInvoice,
   onOpenInvoices,
-  onOpenBranches,
-  branchFilterLabel = 'All',
   invoices: invoicesProp = null,
-  onOpenPurchases,
   activeWarehouseId = '',
   onOpenCommand = null,
   onNewBill = null,
@@ -642,14 +622,6 @@ export default function DashboardOverview({
    * rather than per-card so two panels can never sit side by side on different
    * bases.
    */
-  const [basis, setBasis] = useState('accrual');
-  const [rangeKey, setRangeKey] = useState('90');
-  const range = RANGES.find((r) => r.key === rangeKey) || RANGES[1];
-  // Chart slice colours resolved to concrete rgb() strings: ECharts writes
-  // them into SVG *attributes*, where a var() reference is not reliably
-  // resolved across browsers. The hook also re-resolves on theme switch.
-  const chartTheme = useChartTheme();
-  const { isEnabled } = useFeatures();
 
   const allInvoices = useMemo(() => {
     if (Array.isArray(invoicesProp)) return invoicesProp;
@@ -676,25 +648,6 @@ export default function DashboardOverview({
     [allInvoices]
   );
 
-  /**
-   * Money out: purchase bills and expense vouchers, folded into one stream.
-   *
-   * The dashboard used to ingest only the sales side, which answers "what did
-   * we bill" but not "what did it cost" — half of the proprietor's question.
-   * Drafts are excluded: a draft is an intention, not a liability.
-   */
-  const allOutflows = useMemo(() => {
-    const pick = (rows, fallbackName) =>
-      (Array.isArray(rows) ? rows : [])
-        .filter((r) => r.companyId === currentCompany?.id)
-        .filter((r) => String(r.status || '').toLowerCase() !== 'draft')
-        .map((r) => ({
-          date: r.date,
-          total: num(r.total),
-          vendorName: String(r.vendorName || '').trim() || fallbackName,
-        }));
-    return [...pick(db?.bills, 'Unnamed vendor'), ...pick(db?.expenses, 'Expense')];
-  }, [db, currentCompany]);
 
   /**
    * The four figures at the top are two balances and two flows, and they are
@@ -709,13 +662,6 @@ export default function DashboardOverview({
   const recv = useMemo(() => receivablesAsOf(db, currentCompany?.id), [db, currentCompany]);
   const pay = useMemo(() => payablesAsOf(db, currentCompany?.id), [db, currentCompany]);
   const gst = useMemo(() => gstPosition(db, currentCompany?.id), [db, currentCompany]);
-  const setup = useMemo(() => setupGaps(db, currentCompany?.id), [db, currentCompany]);
-  const forecast = useMemo(() => cashForecast(db, currentCompany?.id, { days: 30 }), [db, currentCompany]);
-  const basisSeries = useMemo(
-    () => incomeVsExpenses(db, currentCompany?.id, { basis, days: 90 }),
-    [db, currentCompany, basis]
-  );
-  const activity = useMemo(() => recentActivity(db, currentCompany?.id, 6), [db, currentCompany]);
 
   /**
    * Stock for the warehouse in the header, not for the whole company.
@@ -754,287 +700,23 @@ export default function DashboardOverview({
   // renders makes the bucketing impure, and every memo below depends on it.
   const [now] = useState(() => Date.now());
 
-  /** Invoices inside the chosen window, and the window immediately before it. */
-  const { current, previous } = useMemo(() => {
-    if (!range.days) return { current: postedInvoices, previous: [] };
-    const from = now - range.days * DAY;
-    const prevFrom = from - range.days * DAY;
 
-    const cur = [];
-    const prev = [];
-    for (const inv of postedInvoices) {
-      const d = toDate(inv.date);
-      if (!d) continue;
-      const t = d.getTime();
-      if (t >= from) cur.push(inv);
-      else if (t >= prevFrom) prev.push(inv);
-    }
-    return { current: cur, previous: prev };
-  }, [postedInvoices, range, now]);
 
-  /** The same window, applied to the money-out stream. */
-  const { currentOut, previousOut } = useMemo(() => {
-    if (!range.days) return { currentOut: allOutflows, previousOut: [] };
-    const from = now - range.days * DAY;
-    const prevFrom = from - range.days * DAY;
-    const cur = [];
-    const prev = [];
-    for (const row of allOutflows) {
-      const d = toDate(row.date);
-      if (!d) continue;
-      const t = d.getTime();
-      if (t >= from) cur.push(row);
-      else if (t >= prevFrom) prev.push(row);
-    }
-    return { currentOut: cur, previousOut: prev };
-  }, [allOutflows, range, now]);
 
-  const sum = (rows, fn) => rows.reduce((s, r) => s + fn(r), 0);
 
-  const billed = sum(current, (i) => num(i.total));
-  const collected = sum(current, (i) => num(i.paidAmount));
 
-  const prevBilled = sum(previous, (i) => num(i.total));
-  const prevCollected = sum(previous, (i) => num(i.paidAmount));
 
-  const spent = sum(currentOut, (r) => r.total);
-  const prevSpent = sum(previousOut, (r) => r.total);
 
-  /** Six buckets across the window, so the shape is visible without noise. */
-  const aging = useMemo(() => {
-    const b = [
-      { label: 'Not yet due', amount: 0, color: chartTheme.pos },
-      { label: '1–30 days', amount: 0, color: chartTheme.warn },
-      { label: '31–60 days', amount: 0, color: chartTheme.accent },
-      { label: 'Over 60 days', amount: 0, color: chartTheme.neg },
-    ];
 
-    for (const inv of current) {
-      const due = Math.max(0, num(inv.total) - num(inv.paidAmount));
-      if (due <= 0) continue;
-      const d = toDate(inv.dueDate || inv.date);
-      const overdueDays = d ? Math.floor((now - d.getTime()) / DAY) : 0;
-      if (overdueDays <= 0) b[0].amount += due;
-      else if (overdueDays <= 30) b[1].amount += due;
-      else if (overdueDays <= 60) b[2].amount += due;
-      else b[3].amount += due;
-    }
-    return b;
-  }, [current, now, chartTheme]);
 
-  const topCustomers = useMemo(() => {
-    const byName = new Map();
-    for (const inv of current) {
-      const due = Math.max(0, num(inv.total) - num(inv.paidAmount));
-      if (due <= 0) continue;
-      const name = String(inv.customerName || 'Unnamed customer').trim() || 'Unnamed customer';
-      byName.set(name, (byName.get(name) || 0) + due);
-    }
-    return [...byName.entries()]
-      .map(([name, outstandingAmt]) => ({ name, outstanding: outstandingAmt }))
-      .sort((a, b) => b.outstanding - a.outstanding)
-      .slice(0, 5);
-  }, [current]);
 
-  /**
-   * Ageing is a balance, so it is taken as of today across every open invoice.
-   *
-   * It used to be built from `aging`, which read only the invoices raised
-   * inside the selected window. On a 90-day view a five-month-old unpaid
-   * invoice was therefore missing from the 90+ bucket — the one invoice the
-   * bucket exists to surface was the one the filter removed.
-   */
-  /**
-   * How long the average unpaid invoice has been sitting, per customer.
-   *
-   * Age of the debt rather than size of it: a customer owing a little for 90
-   * days is a different problem from one owing a lot since yesterday, and the
-   * size question is already answered by the tile beside this one.
-   */
-  const daysOutstanding = useMemo(() => {
-    const byName = new Map();
-    for (const inv of current) {
-      const due = Math.max(0, num(inv.total) - num(inv.paidAmount));
-      if (due <= 0) continue;
-      const d = toDate(inv.date);
-      if (!d) continue;
-      const age = Math.max(0, Math.floor((now - d.getTime()) / DAY));
-      const name = String(inv.customerName || 'Unnamed').trim() || 'Unnamed';
-      const prev = byName.get(name) || { total: 0, count: 0 };
-      byName.set(name, { total: prev.total + age, count: prev.count + 1 });
-    }
-    return [...byName.entries()]
-      .map(([label, v]) => ({ label, value: v.total / v.count }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-  }, [current, now]);
-
-  /** Spend, in the same six slots the income chart uses, so the two compare. */
-  const topVendors = useMemo(() => {
-    const byName = new Map();
-    for (const row of currentOut) {
-      if (row.total <= 0) continue;
-      byName.set(row.vendorName, (byName.get(row.vendorName) || 0) + row.total);
-    }
-    return [...byName.entries()]
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-  }, [currentOut]);
-
-  const collectedPct = billed > 0 ? Math.round((collected / billed) * 100) : 0;
 
   /**
    * Insights: observations computed from the figures already on this page.
    * Every line cites its numbers; nothing is predicted and nothing is
    * invented. An empty list renders nothing rather than filler.
    */
-  const insights = useMemo(() => {
-    const out = [];
-    const fmt = (v) => formatMoneyCompact(v, currentCompany);
 
-    // Receivable concentration: one customer holding too much of the book.
-    const totalOut = topCustomers.reduce((s, c) => s + c.outstanding, 0);
-    if (topCustomers.length > 1 && totalOut > 0) {
-      const top = topCustomers[0];
-      const share = top.outstanding / totalOut;
-      if (share >= 0.4) {
-        out.push({
-          id: 'concentration',
-          tone: 'warn',
-          text: `${top.name} holds ${Math.round(share * 100)}% of outstanding (${fmt(top.outstanding)}). A single delay there moves the whole book.`,
-        });
-      }
-    }
-
-    // Collection rate movement against the previous period.
-    if (prevBilled > 0 && billed > 0) {
-      const prevPct = Math.round((prevCollected / prevBilled) * 100);
-      if (prevPct - collectedPct >= 10) {
-        out.push({
-          id: 'collection-drop',
-          tone: 'neg',
-          text: `Collection rate fell to ${collectedPct}% from ${prevPct}% last period. ${fmt(billed - collected)} is uncollected.`,
-        });
-      } else if (collectedPct - prevPct >= 10) {
-        out.push({
-          id: 'collection-rise',
-          tone: 'pos',
-          text: `Collection rate rose to ${collectedPct}% from ${prevPct}% last period.`,
-        });
-      }
-    }
-
-    // Spend spike against the previous period.
-    if (prevSpent > 0 && spent > prevSpent * 1.5) {
-      out.push({
-        id: 'spend-spike',
-        tone: 'warn',
-        text: `Spend is ${fmt(spent)} this period against ${fmt(prevSpent)} last — up ${Math.round(((spent - prevSpent) / prevSpent) * 100)}%.`,
-      });
-    }
-
-    // Old receivables: the over-60 bucket carrying real weight.
-    const over60 = aging[3]?.amount || 0;
-    const agingSum = aging.reduce((s, b) => s + b.amount, 0);
-    if (agingSum > 0 && over60 / agingSum >= 0.25) {
-      out.push({
-        id: 'aging-tail',
-        tone: 'neg',
-        text: `${Math.round((over60 / agingSum) * 100)}% of outstanding (${fmt(over60)}) is older than 60 days.`,
-      });
-    }
-
-    return out;
-  }, [topCustomers, prevBilled, billed, prevCollected, collectedPct, collected, prevSpent, spent, aging, currentCompany]);
-
-  /**
-   * What needs a person today.
-   *
-   * The panels below describe a quarter that has already happened. This
-   * describes the morning. Every row is derived from data the dashboard
-   * already holds — nothing new is fetched, and nothing here is a prediction.
-   *
-   * Ordered by how much it costs to ignore, not by size: money already late
-   * outranks money about to leave, which outranks paperwork.
-   */
-  const worklist = useMemo(() => {
-    const today = new Date(now);
-    const todayStr = today.toISOString().slice(0, 10);
-    const weekOut = new Date(now + 7 * DAY).toISOString().slice(0, 10);
-    const balanceOf = (d) => Math.max(0, num(d?.total) - num(d?.paidAmount));
-    const rows = [];
-
-    // Overdue: past the due date with money still on it.
-    const overdue = postedInvoices.filter(
-      (i) => balanceOf(i) > 0 && String(i.dueDate || '') && String(i.dueDate) < todayStr
-    );
-    if (overdue.length) {
-      const value = overdue.reduce((t, i) => t + balanceOf(i), 0);
-      const oldest = overdue.slice().sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))[0];
-      const daysLate = Math.max(
-        0,
-        Math.round((now - new Date(`${oldest.dueDate}T00:00:00`).getTime()) / DAY)
-      );
-      rows.push({
-        id: 'overdue',
-        tone: 'neg',
-        title: `${overdue.length} invoice${overdue.length === 1 ? '' : 's'} overdue · ${formatMoney(value, currentCompany)}`,
-        detail: `Oldest ${oldest.number || 'invoice'}, ${daysLate} day${daysLate === 1 ? '' : 's'} past due`,
-        actionLabel: 'Review',
-        onAction: onOpenInvoices,
-      });
-    }
-
-    // Bills falling due inside a week: money about to leave, still stoppable.
-    const billsDue = (Array.isArray(db?.bills) ? db.bills : [])
-      .filter((b) => b.companyId === currentCompany?.id)
-      .filter((b) => String(b.status || '').toLowerCase() !== 'draft')
-      .filter((b) => balanceOf(b) > 0)
-      .filter((b) => String(b.dueDate || '') >= todayStr && String(b.dueDate || '') <= weekOut);
-    if (billsDue.length) {
-      const value = billsDue.reduce((t, b) => t + balanceOf(b), 0);
-      const soonest = billsDue.slice().sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))[0];
-      rows.push({
-        id: 'bills-due',
-        tone: 'warn',
-        title: `${billsDue.length} bill${billsDue.length === 1 ? '' : 's'} due within 7 days · ${formatMoney(value, currentCompany)}`,
-        detail: `Soonest ${soonest.number || 'bill'}${soonest.vendorName ? ` · ${soonest.vendorName}` : ''} · due ${soonest.dueDate}`,
-        actionLabel: 'Review',
-        onAction: onOpenPurchases,
-      });
-    }
-
-    // A draft owes you nothing. Until it goes out, nobody is late paying it.
-    const drafts = allInvoices.filter((i) => String(i.status || '').toLowerCase() === 'draft');
-    if (drafts.length) {
-      rows.push({
-        id: 'drafts',
-        tone: 'warn',
-        title: `${drafts.length} invoice${drafts.length === 1 ? '' : 's'} still in draft`,
-        detail: 'Nothing is owed until they go out',
-        actionLabel: 'Open',
-        onAction: onOpenInvoices,
-      });
-    }
-
-    // GSTR-1 for last month closes on the 11th of this one.
-    const filingDue = new Date(today.getFullYear(), today.getMonth(), 11);
-    if (filingDue.getTime() >= now) {
-      const daysLeft = Math.ceil((filingDue.getTime() - now) / DAY);
-      rows.push({
-        id: 'gstr1',
-        tone: daysLeft <= 3 ? 'neg' : 'info',
-        title: `GSTR-1 closes in ${daysLeft} day${daysLeft === 1 ? '' : 's'}`,
-        detail: drafts.length
-          ? `${drafts.length} draft${drafts.length === 1 ? '' : 's'} would be excluded from the return`
-          : 'Every invoice in the period is out of draft',
-        actionLabel: null,
-      });
-    }
-
-    return rows;
-  }, [allInvoices, postedInvoices, db, currentCompany, now, onOpenInvoices, onOpenPurchases]);
 
   /**
    * The sentence under the greeting.
@@ -1191,7 +873,7 @@ export default function DashboardOverview({
   ].filter(Boolean);
 
   return (
-    <div className="space-y-5">
+    <div className="ui-hero-ground space-y-5">
       {/*
         The opening composition, in place of a page header and four cards.
 
@@ -1375,445 +1057,21 @@ export default function DashboardOverview({
       </section>
 
       {/*
-        Everything below is the detail, and it keeps the period control that
-        governs it. The balances above are "as of today" and never moved with
-        that control; putting it here is what finally makes that legible.
+        The period-governed detail used to live here: the thirty-day cash
+        projection, stock on hand, the setup checklist, income against
+        expenses, recent activity, the worklist and two ranked charts.
+
+        Removed on request. The dashboard is now the greeting, the six figures
+        and the three things worth a look every morning — everything on it is
+        as-of-today, which is why the period control went with them.
+
+        Where each one went, so nothing is quietly lost:
+          · Cash projection and income vs expenses — Reports › Cash Flow and P&L
+          · Recent activity — the module lists, each with its own dates
+          · Setup checklist and worklist — no other home. If a new company
+            needs the nudge back, this is the block to restore; the components
+            are still in this file and cost nothing while unused.
       */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
-        <h2 className="ui-t-section">
-          {current.length} invoice{current.length === 1 ? '' : 's'} in the last {range.label.toLowerCase()}
-        </h2>
-        <div className="flex items-center gap-2">
-          <div
-            className="hidden sm:flex items-center rounded-lg p-0.5"
-            style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
-            role="group"
-            aria-label="Reporting period"
-          >
-            {RANGES.map((r) => (
-              <button
-                key={r.key}
-                type="button"
-                onClick={() => setRangeKey(r.key)}
-                aria-pressed={r.key === rangeKey}
-                className="px-2.5 h-7 rounded-md text-xs font-medium transition-colors"
-                style={
-                  r.key === rangeKey
-                    ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }
-                    : { color: 'rgb(var(--fg-muted))' }
-                }
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-
-          {branches.length > 1 && onOpenBranches ? (
-            <button type="button" onClick={onOpenBranches} className="ui-btn ui-btn-secondary">
-              <Building2 size={15} aria-hidden="true" />
-              {branchFilterLabel}
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      {/*
-        Where cash lands over the next month, from documents already committed.
-        The dip matters more than the endpoint: a business that ends the month
-        comfortably can still be unable to pay a vendor on the 8th.
-      */}
-      <section className="grid gap-3 lg:grid-cols-3" aria-label="Cash and trade">
-        <div className="ui-card p-4 lg:col-span-2 flex flex-col">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Cash over the next 30 days</h3>
-            <span className="ui-subtle text-xs">Finalised documents only — drafts excluded</span>
-          </div>
-
-          {forecast.hasEvents ? (
-            <>
-              <div className="flex items-baseline gap-4 flex-wrap mt-2">
-                <span>
-                  <span className="ui-subtle text-xs block">Today</span>
-                  <b className="ui-mono text-lg">{formatMoney(forecast.start, currentCompany)}</b>
-                </span>
-                <ArrowRight size={14} aria-hidden="true" style={{ color: 'rgb(var(--fg-subtle))' }} />
-                <span>
-                  <span className="ui-subtle text-xs block">In 30 days</span>
-                  <b
-                    className="ui-mono text-lg"
-                    style={{ color: `rgb(var(--${forecast.end < forecast.start ? 'neg' : 'pos'}))` }}
-                  >
-                    {formatMoney(forecast.end, currentCompany)}
-                  </b>
-                </span>
-                <span className="ms-auto text-xs" style={{ color: 'rgb(var(--fg-muted))' }}>
-                  expecting <b className="ui-mono" style={{ color: 'rgb(var(--pos))' }}>{formatMoney(forecast.expectedIn, currentCompany)}</b> in
-                  {' · '}
-                  <b className="ui-mono" style={{ color: 'rgb(var(--neg))' }}>{formatMoney(forecast.expectedOut, currentCompany)}</b> out
-                </span>
-              </div>
-
-              <svg viewBox="0 0 300 70" preserveAspectRatio="none" className="w-full h-24 mt-3" role="img"
-                aria-label={`Projected cash, lowest ${formatMoney(forecast.lowest.value, currentCompany)} on day ${forecast.lowest.day}`}>
-                {(() => {
-                  const vals = forecast.points.map((p) => p.value);
-                  const min = Math.min(...vals, 0);
-                  const max = Math.max(...vals, 1);
-                  const y = (v) => 66 - ((v - min) / (max - min || 1)) * 60;
-                  const x = (i) => (i / (vals.length - 1)) * 300;
-                  const d = vals.map((v, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(' ');
-                  return (
-                    <>
-                      {min < 0 ? (
-                        <line x1="0" x2="300" y1={y(0)} y2={y(0)} stroke="rgb(var(--neg))" strokeWidth="1" strokeDasharray="3 3" />
-                      ) : null}
-                      <path d={`${d} L 300 70 L 0 70 Z`} fill="rgb(var(--brand) / 0.10)" />
-                      <path d={d} fill="none" stroke="rgb(var(--brand))" strokeWidth="2" strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
-                      <circle cx={x(forecast.lowest.day)} cy={y(forecast.lowest.value)} r="3" fill="rgb(var(--warn))" />
-                    </>
-                  );
-                })()}
-              </svg>
-
-              <p className="ui-subtle text-xs mt-1">
-                Lowest point <b className="ui-mono" style={{ color: 'rgb(var(--warn))' }}>{formatMoney(forecast.lowest.value, currentCompany)}</b>
-                {' '}on day {forecast.lowest.day}. Projection, not a promise — it assumes everyone pays on the due date.
-              </p>
-            </>
-          ) : (
-            <p className="ui-subtle text-sm mt-2">
-              Nothing is scheduled in or out. A projection appears once there are unpaid invoices or bills with due dates.
-            </p>
-          )}
-        </div>
-
-        <div className="ui-card p-4 flex flex-col">
-          <div className="flex items-baseline justify-between gap-2 flex-wrap">
-            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>
-              Stock on hand
-            </h3>
-            <span className="ui-subtle text-xs">{activeWarehouseId ? 'this warehouse' : 'all warehouses'}</span>
-          </div>
-          {stock ? (
-            <>
-              <div className="ui-mono text-[1.4rem] font-semibold leading-9">{formatMoney(stock.value, currentCompany)}</div>
-              <div className="ui-subtle text-xs">at purchase cost · {stock.itemCount} item{stock.itemCount === 1 ? '' : 's'}</div>
-              {stock.lowCount || stock.out ? (
-                <div className="mt-2 space-y-1">
-                  {stock.out ? (
-                    <div className="text-xs font-medium" style={{ color: 'rgb(var(--neg))' }}>
-                      {stock.out} item{stock.out === 1 ? '' : 's'} out of stock
-                    </div>
-                  ) : null}
-                  {stock.low.map((l) => (
-                    <div key={l.name} className="flex justify-between gap-2 text-xs">
-                      <span className="truncate">{l.name}</span>
-                      <b className="ui-mono" style={{ color: 'rgb(var(--warn))' }}>
-                        {l.qty}{l.unit ? ` ${l.unit}` : ''} left
-                      </b>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="ui-subtle text-xs mt-2">Nothing below its reorder level.</div>
-              )}
-            </>
-          ) : (
-            <div className="ui-subtle text-sm mt-2">Stock could not be read for this warehouse.</div>
-          )}
-        </div>
-      </section>
-
-      {/*
-        Only the gaps that are real in this book, and only until they are
-        closed. A finished checklist should leave the screen rather than sit
-        there at 100% as a monument to itself.
-      */}
-      {!setup.complete ? (
-        <section className="ui-card p-4" aria-label="Setup">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>
-              {setup.total - setup.done} thing{setup.total - setup.done === 1 ? '' : 's'} left before your books work
-            </h3>
-            <span className="ui-subtle text-xs">
-              {setup.done} of {setup.total} done
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full mt-2.5 overflow-hidden" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
-            <span
-              className="block h-full rounded-full"
-              style={{ width: `${(setup.done / setup.total) * 100}%`, backgroundColor: 'rgb(var(--brand))' }}
-            />
-          </div>
-          <ul className="mt-3 space-y-1.5">
-            {setup.steps.filter((st) => !st.done).map((st) => (
-              <li key={st.key} className="flex items-center gap-2.5 text-sm">
-                <span
-                  className="w-4 h-4 rounded-full border shrink-0"
-                  style={{ borderColor: 'rgb(var(--border-strong))' }}
-                  aria-hidden="true"
-                />
-                <span className="min-w-0">
-                  <span className="font-medium">{st.label}</span>
-                  <span className="ui-subtle text-xs block">{st.hint}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {/* Income against expenses, on one basis at a time, plus what happened lately. */}
-      <section className="grid gap-3 lg:grid-cols-3" aria-label="Income, expenses and activity">
-        <div className="ui-card p-4 lg:col-span-2">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap">
-            <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Income against expenses</h3>
-            <div className="flex items-center rounded-lg p-0.5" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
-              role="group" aria-label="Accounting basis">
-              {[
-                { key: 'accrual', label: 'Accrual' },
-                { key: 'cash', label: 'Cash' },
-              ].map((b2) => (
-                <button
-                  key={b2.key}
-                  type="button"
-                  onClick={() => setBasis(b2.key)}
-                  aria-pressed={basis === b2.key}
-                  className="px-2.5 h-7 rounded-md text-xs font-medium"
-                  style={
-                    basis === b2.key
-                      ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }
-                      : { color: 'rgb(var(--fg-muted))' }
-                  }
-                >
-                  {b2.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <p className="ui-subtle text-xs mt-1">
-            {basis === 'accrual'
-              ? 'What was earned and incurred — invoices and bills by their own date.'
-              : 'What actually moved — receipts and payments only.'}
-          </p>
-
-          {basisSeries.income || basisSeries.expense ? (
-            <>
-              <div className="flex items-end gap-2 h-28 mt-3">
-                {basisSeries.series.map((b3) => {
-                  const peak = Math.max(...basisSeries.series.flatMap((x) => [x.income, x.expense]), 1);
-                  return (
-                    <div key={b3.to} className="flex-1 flex items-end gap-1 h-full" title={b3.to}>
-                      <span className="flex-1 rounded-t" style={{ height: `${(b3.income / peak) * 100}%`, backgroundColor: 'rgb(var(--pos))', minHeight: b3.income ? 2 : 0 }} />
-                      <span className="flex-1 rounded-t" style={{ height: `${(b3.expense / peak) * 100}%`, backgroundColor: 'rgb(var(--neg) / 0.75)', minHeight: b3.expense ? 2 : 0 }} />
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="flex gap-4 mt-2 text-xs" style={{ color: 'rgb(var(--fg-muted))' }}>
-                <span className="inline-flex items-center gap-1.5">
-                  <i className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: 'rgb(var(--pos))' }} aria-hidden="true" />
-                  {basis === 'cash' ? 'Received' : 'Billed'} <b className="ui-mono" style={{ color: 'rgb(var(--fg))' }}>{formatMoney(basisSeries.income, currentCompany)}</b>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <i className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: 'rgb(var(--neg))' }} aria-hidden="true" />
-                  {basis === 'cash' ? 'Paid' : 'Incurred'} <b className="ui-mono" style={{ color: 'rgb(var(--fg))' }}>{formatMoney(basisSeries.expense, currentCompany)}</b>
-                </span>
-                <span className="ms-auto">
-                  Net <b className="ui-mono" style={{ color: `rgb(var(--${basisSeries.income - basisSeries.expense >= 0 ? 'pos' : 'neg'}))` }}>
-                    {formatMoney(basisSeries.income - basisSeries.expense, currentCompany)}
-                  </b>
-                </span>
-              </div>
-            </>
-          ) : (
-            <p className="ui-subtle text-sm mt-3">
-              {basis === 'cash'
-                ? 'No receipts or payments recorded yet.'
-                : 'No invoices or bills in this window yet.'}
-            </p>
-          )}
-        </div>
-
-        <div className="ui-card p-4">
-          <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Recent activity</h3>
-          {activity.length ? (
-            <ul className="mt-2 space-y-2">
-              {activity.map((a2, i) => (
-                <li key={`${a2.kind}-${i}`} className="flex items-start gap-2.5 text-xs">
-                  <span
-                    className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-                    style={{ backgroundColor: `rgb(var(--${a2.tone === 'muted' ? 'border-strong' : a2.tone}))` }}
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="font-medium">{a2.title}</span>
-                    {a2.who ? <span style={{ color: 'rgb(var(--fg-muted))' }}> · {a2.who}</span> : null}
-                    <span className="ui-subtle block">{a2.date} · {a2.note}</span>
-                  </span>
-                  <b className="ui-mono" style={{ color: `rgb(var(--${a2.amount < 0 ? 'neg' : 'pos'}))` }}>
-                    {a2.amount < 0 ? '−' : '+'}{formatMoneyCompact(Math.abs(a2.amount), currentCompany)}
-                  </b>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="ui-subtle text-sm mt-2">Nothing recorded yet.</p>
-          )}
-        </div>
-      </section>
-
-      {allInvoices.length === 0 ? (
-        <div className="ui-card">
-          <EmptyState
-            title="No invoices yet"
-            description="The figures above are already real — what you hold and what you owe. Billing, collection and the trend appear here once invoices exist."
-            action={
-              onNewInvoice ? (
-                <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-primary">
-                  <Plus size={15} aria-hidden="true" />
-                  New invoice
-                </button>
-              ) : null
-            }
-          />
-        </div>
-      ) : (
-        <>
-          {/* What needs a person today. The charts below say how the quarter
-              went; this says where to start. An empty queue is a result, not a
-              blank panel — so it says so. */}
-          <section className="ui-card p-0 overflow-hidden ui-in" aria-label="What needs you today">
-            <div className="flex items-baseline gap-3 px-4 pt-3.5 pb-2">
-              <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>
-                What needs you
-              </h3>
-              <span className="ui-caption">
-                {worklist.length ? `${worklist.length} item${worklist.length === 1 ? '' : 's'}` : 'Nothing outstanding'}
-              </span>
-            </div>
-            {worklist.length === 0 ? (
-              <p className="px-4 pb-4 text-sm ui-muted">
-                Nothing is overdue, no bill falls due this week, and no invoice is sitting in draft. The quarter is below.
-              </p>
-            ) : (
-              <ul className="divide-y">
-                {worklist.map((row) => (
-                  <li key={row.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span
-                      className="h-8 w-1 flex-shrink-0 rounded-full"
-                      style={{ backgroundColor: `rgb(var(--${row.tone}))` }}
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium">{row.title}</span>
-                      <span className="block ui-caption">{row.detail}</span>
-                    </span>
-                    {row.actionLabel && row.onAction ? (
-                      <button
-                        type="button"
-                        onClick={row.onAction}
-                        className="ui-btn ui-btn-secondary ui-btn-sm ml-auto flex-shrink-0"
-                      >
-                        {row.actionLabel}
-                      </button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {/* This period against the one before it. Eight figures where four
-              tiles stood, in less height, with the shape of each kept as a
-              sparkline — a percentage alone cannot say whether the change was a
-              trend or one lumpy week. */}
-          {/*
-            The measures comparison table has moved to Reports.
-
-            Nine rows of This period / Last period / Change is a report — it
-            answers a question you already had. A dashboard says which question
-            to ask, and on a new company every cell of that table read ₹0.00.
-          */}
-
-          {isEnabled('insights') && insights.length > 0 ? (
-            <section className="ui-card p-5 ui-in" aria-label="Insights from your books">
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Worth a look</h3>
-                <span className="ui-caption">Computed from your books — not a prediction</span>
-              </div>
-              <ul className="space-y-2.5">
-                {insights.map((n) => (
-                  <li key={n.id} className="flex items-start gap-2.5 text-sm">
-                    <span
-                      className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-                      style={{ backgroundColor: `rgb(var(--${n.tone}))` }}
-                      aria-hidden="true"
-                    />
-                    <span>{n.text}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-
-          {/* Three-column grid of equal tiles. One shape repeated, because a
-              dashboard's job is comparison and comparison breaks the moment
-              two tiles are built differently. Collapses to two columns on a
-              tablet and one on a phone. */}
-          {/*
-            Two cards, not nine.
-
-            Outstanding by age, Billed by period, Billed and collected, Spent by
-            period, In against out and Where the money is owed all reported
-            figures the panels above now carry, and the collection-rate gauge
-            was a caption drawn as a graphic. Reading the same number twice does
-            not make it truer; it costs a screen.
-
-            What survives says something nothing else does: who has been owing
-            longest, and what the money went on.
-          */}
-          <div className="grid gap-4 md:grid-cols-2">
-            <ChartCard
-              title="Longest outstanding"
-              subtitle="Average age of unpaid invoices, by customer"
-              actionLabel="Chase payment"
-              onAction={onOpenInvoices}
-            >
-              {daysOutstanding.length === 0 ? (
-                <EmptyState icon={CircleSlash} title="Nothing overdue" description="No unpaid invoices in this period." />
-              ) : (
-                <Suspense fallback={<ChartFallback height={240} />}>
-                  <RankedBars
-                    data={daysOutstanding}
-                    height={240}
-                    formatter={(v) => `${Math.round(v)}d`}
-                  />
-                </Suspense>
-              )}
-            </ChartCard>
-
-            <ChartCard
-              title="Where the money goes"
-              subtitle="Share of spend, by vendor"
-              actionLabel="View purchases"
-              onAction={onOpenPurchases}
-            >
-              {topVendors.length === 0 ? (
-                <EmptyState icon={Receipt} title="No spend yet" description="Vendor share appears once bills are recorded." />
-              ) : (
-                <Suspense fallback={<ChartFallback height={300} />}>
-                  <CompositionPie
-                    data={topVendors}
-                    height={200}
-                    formatter={(v) => formatMoneyCompact(v, currentCompany)}
-                  />
-                </Suspense>
-              )}
-            </ChartCard>
-          </div>
-        </>
-      )}
     </div>
   );
 }

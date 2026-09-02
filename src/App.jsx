@@ -10,7 +10,6 @@ import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import {
   BadgePercent,
   BarChart3,
@@ -193,7 +192,6 @@ import { useCommandPalette } from './components/ui/useCommandPalette';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
-import { resendVerification } from './api/email';
 import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
 import { nextItemCode, bumpItemCodeSeries } from './utils/itemCode';
@@ -11098,7 +11096,6 @@ const AppShell = () => {
   const { theme, toggle: toggleTheme } = useTheme();
   const { density, set: setDensity } = useDensity();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
   /**
@@ -11112,50 +11109,7 @@ const AppShell = () => {
    * Rendered to <body> at fixed coordinates measured off the trigger, opening
    * upward because downward from the foot of the rail is off the screen.
    */
-  const [profileMenuPos, setProfileMenuPos] = useState(null);
-  const profileBtnRef = useRef(null);
 
-  /**
-   * Measured while open, not snapshotted on click.
-   *
-   * Taking the rectangle once at click time went stale the moment anything
-   * moved — an expanded nav group re-lays the rail out under the button, and
-   * the menu was left drawing itself off the top of the window from a position
-   * that had been true a frame earlier. Clamped both ways so it can never
-   * leave the viewport whatever the rail does.
-   */
-  useEffect(() => {
-    if (!profileMenuOpen) return undefined;
-    const place = () => {
-      const el = profileBtnRef.current;
-      if (!el) return;
-      const r = el.getBoundingClientRect();
-      const gap = 8;
-      // A zero rect means layout has not settled — measuring it would anchor
-      // the menu to the top-left corner of nowhere. Anchor to the foot of the
-      // rail, which is where the trigger is going to be, and try again next
-      // frame.
-      if (r.height === 0) {
-        setProfileMenuPos({ left: gap, bottom: gap });
-        requestAnimationFrame(place);
-        return;
-      }
-      const MENU_H = 300;
-      const desired = window.innerHeight - r.top + gap;
-      const highest = Math.max(gap, window.innerHeight - MENU_H - gap);
-      setProfileMenuPos({
-        left: Math.max(gap, Math.min(r.left, window.innerWidth - 248)),
-        bottom: Math.max(gap, Math.min(desired, highest)),
-      });
-    };
-    place();
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
-    return () => {
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
-    };
-  }, [profileMenuOpen]);
 
   /**
    * How tall the rail can be.
@@ -11182,7 +11136,6 @@ const AppShell = () => {
    * The sticky offset is a constant (4.5rem) and so is the gap under it, so
    * the height is a constant too: one calc, no polling, no feedback loop.
    */
-  const profileMenuRef = useRef(null);
   const getDbStorageKey = () => {
     const token = String(localStorage.getItem('token') || '').trim();
     const authed = Boolean(token);
@@ -11354,13 +11307,6 @@ const AppShell = () => {
     });
   }, [isAuthenticated, dbStorageKey, setDb]);
 
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.key === 'Escape') setProfileMenuOpen(false);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
 
   useEffect(() => {
     if (!accountMenuOpen) return undefined;
@@ -11378,20 +11324,6 @@ const AppShell = () => {
     };
   }, [accountMenuOpen]);
 
-  useEffect(() => {
-    if (!profileMenuOpen) return;
-    const onMouseDown = (e) => {
-      if (!profileMenuRef.current) return;
-      if (profileMenuRef.current.contains(e.target)) return;
-      // The menu is portalled to <body>, so it is not inside the trigger's
-      // ref. Without this, every click on a menu item counted as a click
-      // outside and shut the menu before the item could act.
-      if (e.target instanceof Element && e.target.closest('[data-account-menu]')) return;
-      setProfileMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [profileMenuOpen]);
 
   // A 401 from any API call means the session is over; drop back to sign-in
   // instead of rendering a shell with no permissions.
@@ -11552,8 +11484,6 @@ const AppShell = () => {
   })();
 
   const isOrgAdmin = Boolean(authCtx?.data?.isOrgAdmin);
-  const emailVerified = Boolean(authCtx?.data?.user?.emailVerifiedAt);
-  const [verifyNotice, setVerifyNotice] = useState('');
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef(null);
 
@@ -11600,7 +11530,6 @@ const AppShell = () => {
     }
     window.location.reload();
   }, []);
-  const [verifySending, setVerifySending] = useState(false);
   const allowedBranchIds = useMemo(() => {
     const ids = authCtx?.data?.allowedBranchIds;
     return Array.isArray(ids) ? ids.map((x) => String(x)) : [];
@@ -14023,6 +13952,39 @@ const AppShell = () => {
                   >
                     <Settings size={15} aria-hidden="true" /> Settings
                   </button>
+
+                  {/* Row density had no other home once the rail menu went. */}
+                  <div className="px-3 py-2" style={{ borderTop: '1px solid rgb(var(--border))' }}>
+                    <span className="ui-t-label block mb-1.5" style={{ color: 'rgb(var(--fg-subtle))' }}>
+                      Row density
+                    </span>
+                    <div
+                      className="flex items-center rounded-lg p-0.5"
+                      style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
+                      role="group"
+                      aria-label="Row density"
+                    >
+                      {[
+                        { key: 'comfortable', label: 'Comfortable' },
+                        { key: 'compact', label: 'Compact' },
+                      ].map((d) => (
+                        <button
+                          key={d.key}
+                          type="button"
+                          onClick={() => setDensity(d.key)}
+                          aria-pressed={density === d.key}
+                          className="flex-1 h-7 rounded-md text-xs font-medium transition-colors"
+                          style={
+                            density === d.key
+                              ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }
+                              : { color: 'rgb(var(--fg-muted))' }
+                          }
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <button
                     type="button"
                     role="menuitem"
@@ -14220,179 +14182,12 @@ const AppShell = () => {
               })}
             </div>
 
-            {/* Account, pinned to the bottom of the rail like Linear or Slack:
-                identity travels with navigation, and the header keeps to search
-                and workspace. The menu opens upward, because downward from here
-                is off the bottom of the screen. */}
-            <div
-              className="relative mt-2 pt-2 shrink-0"
-              style={{ borderTop: '1px solid rgb(var(--border))' }}
-              ref={profileMenuRef}
-            >
-              <button
-                type="button"
-                ref={profileBtnRef}
-                onClick={() => setProfileMenuOpen((v) => !v)}
-                className="ui-nav-item w-full"
-                aria-haspopup="menu"
-                aria-expanded={profileMenuOpen}
-                aria-label="Account menu"
-              >
-                <span
-                  className="h-6 w-6 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0"
-                  style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
-                  aria-hidden="true"
-                >
-                  {userInitials}
-                </span>
-                <span className={`min-w-0 flex-1 truncate text-left ${navCollapsed ? 'md:hidden' : ''}`}>{userEmail}</span>
-                <ChevronDown size={14} aria-hidden="true" className={`rotate-180 ${navCollapsed ? 'md:hidden' : ''}`} />
-              </button>
-
-              {profileMenuOpen && profileMenuPos
-                ? createPortal(
-                <div
-                  role="menu"
-                  data-account-menu
-                  className="fixed w-60 rounded-lg overflow-hidden z-[130] ui-card ui-in-pop"
-                  style={{
-                    left: profileMenuPos.left,
-                    bottom: profileMenuPos.bottom,
-                    boxShadow: 'var(--shadow-pop)',
-                    '--pop-origin': 'bottom left',
-                  }}
-                >
-                  <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
-                    <div className="text-sm font-semibold ui-title truncate">{userEmail}</div>
-                    <div className="ui-subtle text-xs mt-0.5 ui-mono truncate">
-                      org {String(localStorage.getItem('activeOrgId') || '-')}
-                    </div>
-                  </div>
-
-                  {/*
-                    Verification lives here rather than in a strip across every
-                    screen. It is a one-time act, and it is about this account —
-                    which is exactly what this menu is for.
-                  */}
-                  {!emailVerified && isEnabled('emailVerification') ? (
-                    <div
-                      className="px-3 py-2.5 text-xs"
-                      style={{ borderBottom: '1px solid rgb(var(--border))', backgroundColor: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn-ink))' }}
-                    >
-                      <div className="font-medium">Email not confirmed</div>
-                      <div className="mt-0.5" style={{ opacity: 0.85 }}>
-                        Password reset needs a confirmed address.
-                      </div>
-                      {verifyNotice ? (
-                        <div className="mt-1 font-medium">{verifyNotice}</div>
-                      ) : (
-                        <button
-                          type="button"
-                          disabled={verifySending}
-                          onClick={async () => {
-                            setVerifySending(true);
-                            try {
-                              await resendVerification();
-                              setVerifyNotice('Sent — check your inbox.');
-                            } catch (e) {
-                              setVerifyNotice(String(e?.message || e));
-                            } finally {
-                              setVerifySending(false);
-                            }
-                          }}
-                          className="ui-btn ui-btn-secondary ui-btn-sm !min-h-0 !py-0.5 !px-2 mt-1.5 text-xs"
-                        >
-                          {verifySending ? 'Sending…' : 'Send the link'}
-                        </button>
-                      )}
-                    </div>
-                  ) : null}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setActive('settingsProfile');
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--surface-sunken))]"
-                  >
-                    My profile
-                  </button>
-
-                  {/* Personal preferences, not the company's. Appearance and
-                      density belong to the person sitting here — they follow
-                      them between machines and have nothing to do with the
-                      org's tax profile, so they do not belong in Settings. */}
-                  <div style={{ borderTop: '1px solid rgb(var(--border))' }} className="px-3 pt-2.5 pb-1">
-                    <span className="ui-t-label">Appearance</span>
-                  </div>
-                  <div className="px-3 pb-2 flex gap-1.5">
-                    {[
-                      { key: 'light', label: 'Light' },
-                      { key: 'dark', label: 'Dark' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={theme === opt.key}
-                        onClick={() => {
-                          if (theme !== opt.key) toggleTheme();
-                        }}
-                        className="ui-btn ui-btn-sm flex-1"
-                        style={
-                          theme === opt.key
-                            ? { backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }
-                            : { color: 'rgb(var(--fg-muted))' }
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="px-3 pt-1 pb-1">
-                    <span className="ui-t-label">Row density</span>
-                  </div>
-                  <div className="px-3 pb-2.5 flex gap-1.5">
-                    {[
-                      { key: 'comfortable', label: 'Comfortable' },
-                      { key: 'compact', label: 'Compact' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.key}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={density === opt.key}
-                        onClick={() => setDensity(opt.key)}
-                        className="ui-btn ui-btn-sm flex-1"
-                        style={
-                          density === opt.key
-                            ? { backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }
-                            : { color: 'rgb(var(--fg-muted))' }
-                        }
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      logout();
-                      setProfileMenuOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[rgb(var(--neg-soft))]"
-                    style={{ color: 'rgb(var(--neg))', borderTop: '1px solid rgb(var(--border))' }}
-                  >
-                    Sign out
-                  </button>
-                </div>,
-                    document.body
-                  )
-                : null}
-            </div>
+            {/*
+              The rail used to carry an account menu here, pinned to the bottom.
+              It moved to the avatar in the top right — one identity control,
+              where the sketch put it. Two doors to the same room turned out to
+              be two things to keep in step for no gain.
+            */}
           </nav>
         </aside>
 
