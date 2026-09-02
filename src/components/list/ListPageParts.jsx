@@ -22,29 +22,40 @@ import { exportListXlsx } from '../../utils/listXlsx';
  * things sit and how they behave, not what they contain.
  */
 
-/** The row of figures across the top. Balances, so they say "as of" nothing. */
+/**
+ * The row of figures across the top. Balances, so they say "as of" nothing.
+ *
+ * The icon sits in the corner rather than in front of the figure. In a row it
+ * took 52px of the card, and a lakh-scale rupee amount needs about 155px at
+ * this size — so on a five-across grid the value had 96px and every card on
+ * every one of these pages rendered "₹41,01,992." with the rest clipped off.
+ * A truncated amount on an accounting screen does not read as a layout bug, it
+ * reads as the wrong number. Only the label clears the icon; the figure gets
+ * the full width of the card and drops a step in size, which fits a crore at
+ * the narrowest column the five-across grid produces.
+ */
 export function StatCards({ cards, company }) {
   return (
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Summary">
       {cards.filter(Boolean).map((c) => (
-        <div key={c.label} className="ui-card p-4 flex items-start gap-3">
+        <div key={c.label} className="ui-card p-4 relative">
           <span
-            className="h-10 w-10 rounded-full grid place-items-center shrink-0"
+            className="h-8 w-8 rounded-full grid place-items-center absolute top-3 end-3"
             style={{ backgroundColor: `rgb(var(--${c.tone}) / 0.12)`, color: `rgb(var(--${c.tone}))` }}
             aria-hidden="true"
           >
-            <c.Icon size={18} />
+            <c.Icon size={16} />
           </span>
-          <span className="min-w-0">
-            <span className="ui-card-label block">{c.label}</span>
+          <span className="block">
+            <span className="ui-card-label block pe-9">{c.label}</span>
             <span
-              className={`block font-semibold leading-8 ${c.count ? 'text-2xl' : 'ui-mono text-xl'}`}
+              className={`block font-semibold leading-8 ${c.count ? 'text-2xl' : 'ui-mono text-lg'}`}
               style={c.tone === 'neg' || c.tone === 'warn' ? { color: `rgb(var(--${c.tone}))` } : undefined}
             >
               {c.count ? String(c.value) : formatMoney(c.value, company)}
             </span>
-            <span className="ui-subtle text-[11px]">{c.hint || 'This financial year'}</span>
           </span>
+          <span className="ui-subtle text-xs block">{c.hint || 'This financial year'}</span>
         </div>
       ))}
     </section>
