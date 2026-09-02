@@ -445,63 +445,13 @@ function initialsFor(name, email, company) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-/**
- * The entries posted in the gutters.
- *
- * Each pair is one transaction: a debit ranged toward the centre on the left
- * and its credit answering on the right, half a beat later. Widths and offsets
- * are fixed rather than random so the two sides line up on the same rules —
- * a ledger where the columns do not agree is the one thing this cannot look
- * like.
- *
- * The rules are 34px apart, so every `top` is a multiple of that.
- */
-const LEDGER_ENTRIES = [
-  { top: 68, width: 54, delay: 0 },
-  { top: 170, width: 38, delay: 3.5 },
-  { top: 272, width: 66, delay: 7 },
-  { top: 374, width: 44, delay: 10.5 },
-  { top: 476, width: 58, delay: 14 },
-  { top: 578, width: 34, delay: 17.5 },
-];
-
-/**
- * Ruled paper and posted entries, one side of the greeting.
- *
- * The class name is written out rather than interpolated. Tailwind tree-shakes
- * `@layer components` rules whose selector never appears literally in the
- * source, so `ui-ledger-gutter-${side}` meant both side rules were dropped from
- * the build and the two gutters stacked on top of each other at the left edge.
- */
-const GUTTER_CLASS = {
-  l: 'ui-ledger-gutter ui-ledger-gutter-l',
-  r: 'ui-ledger-gutter ui-ledger-gutter-r',
-};
-
-function LedgerGutter({ side }) {
-  return (
-    <div className={GUTTER_CLASS[side]} aria-hidden="true">
-      <span className="ui-ledger-rules" />
-      {LEDGER_ENTRIES.map((e) => (
-        <span
-          key={`${side}-${e.top}`}
-          className="ui-ledger-mark"
-          style={{ top: e.top, width: e.width, animationDelay: `${e.delay}s` }}
-        />
-      ))}
-    </div>
-  );
-}
-
 function DashboardHero({ name, initials, avatarUrl, insights, onCommand, actions }) {
   const [idx, setIdx] = useState(0);
   const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
 
   return (
-    <section className="relative pt-8 pb-2 text-center" aria-label="Overview">
-      <LedgerGutter side="l" />
-      <LedgerGutter side="r" />
+    <section className="pt-8 pb-2 text-center" aria-label="Overview">
       {avatarUrl ? (
         <img
           src={avatarUrl}
