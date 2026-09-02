@@ -85,7 +85,15 @@ export function DonutChart({ data = [], centerLabel, centerValue, height = 230, 
  * A gauge answers "how far along" better than a bar because the arc has a
  * visible end — you can see the remaining distance, not just the fill.
  */
-export function RadialGauge({ value = 0, label, height = 230, tone }) {
+/**
+ * `centerText` replaces the percentage in the middle.
+ *
+ * A percentage is the right centre when the ratio is the point — share of
+ * capacity, share of target. It is the wrong one for a countdown: "18%" tells
+ * a filer nothing, "9d left" tells them whether to open the return today. The
+ * arc still carries the ratio; only the words in the hole change.
+ */
+export function RadialGauge({ value = 0, label, height = 230, tone, centerText = null }) {
   const t = useChartTheme();
   const pct = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
   const color = tone === 'pos' ? t.pos : tone === 'neg' ? t.neg : t.brand;
@@ -112,11 +120,11 @@ export function RadialGauge({ value = 0, label, height = 230, tone }) {
           detail: {
             valueAnimation: !prefersReducedMotion(),
             offsetCenter: [0, '4%'],
-            fontSize: 34,
+            fontSize: centerText ? 26 : 34,
             fontWeight: 700,
             fontFamily: 'Inter, sans-serif',
             color: t.fg,
-            formatter: '{value}%',
+            formatter: () => centerText || `${pct}%`,
           },
           // No in-arc title: a money string long enough to be useful always
           // collides with the value. Callers render the detail below instead.
@@ -125,11 +133,11 @@ export function RadialGauge({ value = 0, label, height = 230, tone }) {
         },
       ],
     }),
-    [t, pct, color]
+    [t, pct, color, centerText]
   );
 
   return (
-    <div className="w-full" style={{ height }} role="img" aria-label={`${label}: ${pct} percent`}>
+    <div className="w-full" style={{ height }} role="img" aria-label={centerText ? `${label}: ${centerText}` : `${label}: ${pct} percent`}>
       <ReactECharts
         option={option}
         style={{ height: '100%', width: '100%' }}

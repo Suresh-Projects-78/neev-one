@@ -245,7 +245,21 @@ function BalanceCard({ label, value, company, tone = '', hint, note, accent, act
 
 /** The ageing bar. A stacked bar, never a pie: proportion off a bar is read, off a pie it is guessed. */
 function AgeingBar({ buckets, total, company, onPick }) {
-  const tones = { pos: 'var(--pos)', warn: 'var(--warn)', accent: 'var(--brand)', accent2: '234 88 12', neg: 'var(--neg)' };
+  /**
+   * Cool to warm as the debt ages, in five distinguishable steps: pine, pale
+   * amber, amber, pale red, red. Two of them used to be the brand and a
+   * hardcoded `234 88 12` — orange-600, a literal left behind when the brand
+   * stopped being orange, and the only colour in this file outside the tokens.
+   * The pale steps are the same token at reduced alpha rather than new hues,
+   * so the ramp cannot drift from the semantics it sits beside.
+   */
+  const tones = {
+    pos: 'rgb(var(--brand))',
+    warn: 'rgb(var(--warn) / 0.55)',
+    warn2: 'rgb(var(--warn))',
+    neg2: 'rgb(var(--neg) / 0.6)',
+    neg: 'rgb(var(--neg))',
+  };
   if (total <= 0) return null;
   return (
     <div className="mt-2">
@@ -256,7 +270,7 @@ function AgeingBar({ buckets, total, company, onPick }) {
           return (
             <span
               key={b.key}
-              style={{ width: `${(amt / total) * 100}%`, backgroundColor: `rgb(${tones[b.tone]})` }}
+              style={{ width: `${(amt / total) * 100}%`, backgroundColor: tones[b.tone] }}
               title={`${b.label} — ${formatMoney(amt, company)}`}
             />
           );
@@ -271,7 +285,7 @@ function AgeingBar({ buckets, total, company, onPick }) {
             className="inline-flex items-center gap-1.5 text-xs"
             style={{ color: 'rgb(var(--fg-muted))', background: 'none', border: 0, padding: 0, cursor: onPick ? 'pointer' : 'default' }}
           >
-            <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: `rgb(${tones[b.tone]})` }} aria-hidden="true" />
+            <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: tones[b.tone] }} aria-hidden="true" />
             {b.label} <b className="ui-mono" style={{ color: 'rgb(var(--fg))' }}>{formatMoney(buckets[b.key], company)}</b>
           </button>
         ))}
@@ -1118,6 +1132,26 @@ export default function DashboardOverview({
     return out;
   }, [recv, gst, pay, draftCount, overdueCount, stock, currentCompany]);
 
+  /** Five is enough to act on; a ranking longer than that is a report. */
+  const topDebtors = useMemo(
+    () => (Array.isArray(recv?.byCustomer) ? recv.byCustomer : []).filter((c) => c.amount > 0).slice(0, 5),
+    [recv]
+  );
+
+  /**
+   * How far through the filing window we are, as a percentage.
+   *
+   * The window is the eleven days from the start of the month to the 11th,
+   * which is when GSTR-1 is due for a monthly filer. The dial fills as the
+   * time runs out, so a full dial means "file today", not "all done".
+   */
+  const gstWindowPct = useMemo(() => {
+    const left = Number(gst?.daysToGstr1);
+    if (!Number.isFinite(left)) return 0;
+    if (left < 0) return 100;
+    return Math.max(0, Math.min(100, Math.round(((11 - left) / 11) * 100)));
+  }, [gst]);
+
   const userEmail = (() => {
     try {
       return localStorage.getItem('userEmail') || '';
@@ -1200,6 +1234,124 @@ export default function DashboardOverview({
           },
         ]}
       />
+
+      {/*
+        The three things worth a look every morning, and the reason each one is
+        a different shape.
+
+        Ageing is a proportion, so it is a bar you read left to right. Debtors
+        are a ranking, so they are bars you read top to bottom. The filing
+        window is a countdown against a fixed date, so it is a dial. Giving all
+        three the same card would have made them look like the same kind of
+        fact, and they are not.
+
+        All three are "as of today" and none of them moves with the period
+        control below — which is exactly why they sit above it.
+      */}
+      <section className="grid gap-3 lg:grid-cols-3 pt-2" aria-label="Today">
+        {/* Proportion — where the receivable book is sitting. */}
+        <div className="ui-card p-4 flex flex-col">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="ui-t-section">Outstanding by age</h2>
+            {recv.count ? (
+              <button type="button" onClick={onOpenInvoices} className="ui-t-body" style={{ color: 'rgb(var(--brand-ink))', fontWeight: 600 }}>
+                All invoices
+              </button>
+            ) : null}
+          </div>
+          <p className="ui-subtle ui-t-body mt-0.5">
+            {recv.count
+              ? `${formatMoney(recv.total, currentCompany)} across ${recv.count} invoice${recv.count === 1 ? '' : 's'}`
+              : 'Nothing outstanding'}
+          </p>
+
+          {recv.total > 0 ? (
+            <>
+              <AgeingBar buckets={recv.buckets} total={recv.total} company={currentCompany} onPick={onOpenInvoices ? () => onOpenInvoices() : undefined} />
+              {recv.oldestDays > 0 ? (
+                <p className="ui-subtle ui-t-body mt-auto pt-3">
+                  Oldest is <b style={{ color: 'rgb(var(--neg))' }}>{recv.oldestDays} days</b> past due.
+                </p>
+              ) : null}
+            </>
+          ) : (
+            <p className="ui-subtle ui-t-body mt-3">Every invoice in the book is settled.</p>
+          )}
+        </div>
+
+        {/* Ranking — who to call first. */}
+        <div className="ui-card p-4">
+          <h2 className="ui-t-section">Who owes you most</h2>
+          <p className="ui-subtle ui-t-body mt-0.5">
+            {topDebtors.length ? 'By balance, with how late the oldest is' : 'Nobody owes you anything'}
+          </p>
+          {topDebtors.length ? (
+            <div className="mt-3 space-y-2.5">
+              {topDebtors.map((c) => {
+                const share = recv.total > 0 ? Math.max(4, Math.round((c.amount / recv.total) * 100)) : 0;
+                return (
+                  <div key={c.name}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="ui-t-body truncate" style={{ color: 'rgb(var(--col-party))', fontWeight: 600 }}>{c.name}</span>
+                      <span className="ui-mono ui-t-body" style={{ fontWeight: 600 }}>{formatMoney(c.amount, currentCompany)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="h-1.5 flex-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
+                        <span
+                          className="block h-full rounded-full"
+                          style={{ width: `${share}%`, backgroundColor: c.oldest > 0 ? 'rgb(var(--neg))' : 'rgb(var(--brand))' }}
+                        />
+                      </span>
+                      <span className="ui-subtle" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                        {c.oldest > 0 ? `${c.oldest}d late` : 'not due'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Countdown — a fixed date the tax office set, not one you chose. */}
+        <div className="ui-card p-4 flex flex-col">
+          <h2 className="ui-t-section">GSTR-1 filing</h2>
+          <p className="ui-subtle ui-t-body mt-0.5">{gst.monthLabel}</p>
+
+          {Number.isFinite(gst.daysToGstr1) ? (
+            <div className="mt-2 flex-1">
+              <Suspense fallback={<ChartFallback height={150} />}>
+                <RadialGauge
+                  value={gstWindowPct}
+                  label="Filing window"
+                  centerText={
+                    gst.daysToGstr1 < 0
+                      ? 'Overdue'
+                      : `${gst.daysToGstr1}d left`
+                  }
+                  height={150}
+                  tone={gst.daysToGstr1 < 0 ? 'neg' : gst.daysToGstr1 <= 5 ? 'neg' : gst.daysToGstr1 <= 10 ? '' : 'pos'}
+                />
+              </Suspense>
+              <div className="flex items-baseline justify-between gap-3 mt-1">
+                <span className="ui-subtle ui-t-body">
+                  {gst.creditCarried > 0 ? 'Credit carried' : 'Payable'}
+                </span>
+                <span className="ui-mono ui-t-body" style={{ fontWeight: 600 }}>
+                  {formatMoney(gst.creditCarried > 0 ? gst.creditCarried : gst.payable, currentCompany)}
+                </span>
+              </div>
+              {gst.draftsInMonth > 0 ? (
+                <p className="ui-t-body mt-2" style={{ color: 'rgb(var(--warn))' }}>
+                  {gst.draftsInMonth} draft invoice{gst.draftsInMonth === 1 ? '' : 's'} would be left out of this return.
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="ui-subtle ui-t-body mt-3">Nothing to file for this period yet.</p>
+          )}
+        </div>
+      </section>
 
       {/*
         Everything below is the detail, and it keeps the period control that

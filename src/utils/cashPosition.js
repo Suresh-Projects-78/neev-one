@@ -95,8 +95,8 @@ export const cashPosition = (db, companyId) => {
 export const AGEING_BUCKETS = [
   { key: 'notDue', label: 'Not due', tone: 'pos' },
   { key: 'd30', label: '1–30 days', tone: 'warn' },
-  { key: 'd60', label: '31–60 days', tone: 'accent' },
-  { key: 'd90', label: '61–90 days', tone: 'accent2' },
+  { key: 'd60', label: '31–60 days', tone: 'warn2' },
+  { key: 'd90', label: '61–90 days', tone: 'neg2' },
   { key: 'd90plus', label: '90+ days', tone: 'neg' },
 ];
 
