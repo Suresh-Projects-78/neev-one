@@ -445,13 +445,41 @@ function initialsFor(name, email, company) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
+/**
+ * Five bars each side of the greeting, breathing out of step.
+ *
+ * Decoration, and deliberately unreadable as data: they never stop moving, so
+ * no bar holds a height long enough to be taken for a measurement. No axis, no
+ * label, no hit area, and hidden from assistive tech.
+ *
+ * Class names written out rather than interpolated — Tailwind tree-shakes
+ * `@layer components` rules whose selector never appears literally in the
+ * source.
+ */
+const BARS_CLASS = {
+  l: 'ui-hero-bars ui-hero-bars-l',
+  r: 'ui-hero-bars ui-hero-bars-r',
+};
+
+function HeroBars({ side }) {
+  return (
+    <div className={BARS_CLASS[side]} aria-hidden="true">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span key={i} className="ui-hero-bar" />
+      ))}
+    </div>
+  );
+}
+
 function DashboardHero({ name, initials, avatarUrl, insights, onCommand, actions }) {
   const [idx, setIdx] = useState(0);
   const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
 
   return (
-    <section className="pt-8 pb-2 text-center" aria-label="Overview">
+    <section className="relative pt-8 pb-2 text-center" aria-label="Overview">
+      <HeroBars side="l" />
+      <HeroBars side="r" />
       {avatarUrl ? (
         <img
           src={avatarUrl}

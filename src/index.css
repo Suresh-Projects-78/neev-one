@@ -1725,3 +1725,93 @@
     animation: none;
   }
 }
+
+
+/* ------------------------------------------------------------------ *
+ * The gutters beside the greeting: breathing bars.
+ *
+ * Five bars each side, rising and settling out of step. The obvious risk with
+ * bars next to a dashboard is that they read as a figure somebody should be
+ * able to click, so the defence is built in rather than bolted on: every bar
+ * is always moving. Nothing holds a height long enough to be read as a
+ * measurement, none of them carries an axis, a label or a hit area, and the
+ * whole thing is aria-hidden.
+ *
+ * Fades toward the centre so it frames the greeting rather than crowding it,
+ * and it is gone below 1280px where the space does not exist.
+ *
+ * Class names are written out in the JSX, never interpolated: Tailwind
+ * tree-shakes `@layer components` rules whose selector never appears literally
+ * in the source, which silently dropped one whole side of an earlier attempt.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .ui-hero-bars {
+    position: absolute;
+    top: 50%;
+    width: 152px;
+    height: 176px;
+    margin-top: -88px;
+    z-index: -1;
+    display: none;
+    align-items: flex-end;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  .ui-hero-bars-l {
+    left: 4%;
+    -webkit-mask-image: linear-gradient(to right, #000 15%, transparent);
+    mask-image: linear-gradient(to right, #000 15%, transparent);
+  }
+
+  .ui-hero-bars-r {
+    right: 4%;
+    flex-direction: row-reverse;
+    -webkit-mask-image: linear-gradient(to left, #000 15%, transparent);
+    mask-image: linear-gradient(to left, #000 15%, transparent);
+  }
+
+  @media (min-width: 1280px) {
+    .ui-hero-bars {
+      display: flex;
+    }
+  }
+
+  .ui-hero-bar {
+    flex: 1;
+    border-radius: 5px 5px 0 0;
+    transform-origin: bottom;
+    /* Enough pine at the foot that it reads as tinted rather than as grey
+       bars somebody forgot to colour, and thin enough at the top that they
+       dissolve instead of ending on a hard cap. */
+    background: linear-gradient(to top, rgb(var(--brand) / 0.4), rgb(var(--brand) / 0.08));
+    animation: ui-hero-breathe 9s ease-in-out infinite alternate;
+  }
+
+  /* Heights and delays are fixed rather than random so the two sides are the
+     same object mirrored, not two different ones. */
+  .ui-hero-bar:nth-child(1) { height: 38%; animation-delay: 0s; }
+  .ui-hero-bar:nth-child(2) { height: 66%; animation-delay: 0.8s; }
+  .ui-hero-bar:nth-child(3) { height: 47%; animation-delay: 1.6s; }
+  .ui-hero-bar:nth-child(4) { height: 84%; animation-delay: 2.4s; }
+  .ui-hero-bar:nth-child(5) { height: 57%; animation-delay: 3.2s; }
+
+  :root[data-theme='dark'] .ui-hero-bar {
+    background: linear-gradient(to top, rgb(var(--brand) / 0.5), rgb(var(--brand) / 0.14));
+  }
+}
+
+@keyframes ui-hero-breathe {
+  from { transform: scaleY(0.7); opacity: 0.55; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+
+/* Reduced motion parks them mid-breath. Still not a figure — no axis, no
+   label, no scale — just a shape that has stopped. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-hero-bar {
+    animation: none;
+    transform: scaleY(0.85);
+    opacity: 0.8;
+  }
+}
