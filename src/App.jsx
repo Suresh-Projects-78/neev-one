@@ -12658,6 +12658,7 @@ const AppShell = () => {
             defaultWarehouseId={activeWarehouseId}
             onNewInvoice={() => setInvoiceEditor({ open: true, initial: null })}
             onEditInvoice={(inv) => setInvoiceEditor({ open: true, initial: inv })}
+            onOpenRecurring={() => setActive('recurringInvoices')}
             onRaiseCreditNote={(inv) => {
               setActive('creditNotes');
               setCreditNoteEditor({ open: true, initialOriginalInvoiceId: inv?.id ?? null });

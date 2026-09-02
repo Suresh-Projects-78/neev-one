@@ -99,6 +99,7 @@ export const InvoicesList = ({
   onNewInvoice,
   onEditInvoice,
   onRaiseCreditNote,
+  onOpenRecurring = null,
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
@@ -116,6 +117,16 @@ export const InvoicesList = ({
   const [searchText, setSearchText] = useState(() => consumeSearchSeed('invoices'));
   const colFilters = useColumnFilters();
   const [statusFilter, setStatusFilter] = useState('');
+  /**
+   * Paging, because the reference pages and because a book with a year of
+   * invoices in it renders every row otherwise — a thousand rows of DOM for
+   * the ten somebody is looking at.
+   */
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [tipDismissed, setTipDismissed] = useState(
+    () => localStorage.getItem('neev:tip:recurringInvoices') === 'dismissed'
+  );
   /**
    * A period is chosen far more often than it is typed. "This month" and "last
    * 30 days" are the two questions actually being asked of a sales ledger, and
@@ -328,6 +339,59 @@ const statusReason = (doc, status, company, nowMs) => {
   // Summed over the filtered set, not over the rows the browser happens to have
   // drawn — the day this list gets a page window, the figure must not quietly
   // become the total of one page.
+  /**
+   * The five figures across the top, and the count beside every status tab.
+   *
+   * Computed from the same `invoices` the table draws from — not from a
+   * separate query — so a tab that says 17 and a table that shows 17 can never
+   * disagree. Drafts are excluded from the money figures on the same rule the
+   * dashboard uses: a draft is an intention, not a receivable.
+   */
+  const headline = useMemo(() => {
+    const live = invoices.filter((i) => String(i.status || '').toLowerCase() !== 'draft');
+    const sum = (rows, f) => rows.reduce((t, r) => t + Number(f(r) || 0), 0);
+    const balOf = (i) => Math.max(0, Number(i.total || 0) - Number(i.paidAmount || 0));
+    const overdue = live.filter((i) => getDerivedStatus(i) === 'Over due');
+    return {
+      count: invoices.length,
+      billed: sum(live, (i) => i.total),
+      paid: sum(live, (i) => i.paidAmount),
+      outstanding: sum(live, balOf),
+      overdue: sum(overdue, balOf),
+    };
+  }, [invoices]);
+
+  /** One pass for every tab count, so the tabs cost nothing per render. */
+  const statusCounts = useMemo(() => {
+    const c = { '': invoices.length, Draft: 0, Unpaid: 0, Partial: 0, Paid: 0, 'Over due': 0, Cancelled: 0 };
+    for (const inv of invoices) {
+      const d = getDerivedStatus(inv);
+      if (c[d] !== undefined) c[d] += 1;
+    }
+    return c;
+  }, [invoices]);
+
+  const STATUS_TABS = [
+    { value: '', label: 'All' },
+    { value: 'Draft', label: 'Draft' },
+    { value: 'Unpaid', label: 'Sent' },
+    { value: 'Partial', label: 'Partially paid' },
+    { value: 'Paid', label: 'Paid' },
+    { value: 'Over due', label: 'Overdue' },
+    { value: 'Cancelled', label: 'Cancelled' },
+  ];
+
+  /**
+   * The rows this page shows.
+   *
+   * Clamped rather than trusted: filtering down to three rows while sitting on
+   * page five would otherwise show an empty table with pagination underneath
+   * insisting there are results.
+   */
+  const pageCount = Math.max(1, Math.ceil(filteredInvoices.length / perPage));
+  const safePage = Math.min(page, pageCount);
+  const pagedInvoices = filteredInvoices.slice((safePage - 1) * perPage, safePage * perPage);
+
   const invoiceTotals = useMemo(() => {
     let billed = 0;
     let outstandingSum = 0;
@@ -723,8 +787,8 @@ const statusReason = (doc, status, company, nowMs) => {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="Invoices"
-        description="Sales invoices for the active branch"
+        title="Sales Invoices"
+        description="Create, view and manage all your sales invoices"
         actions={
           <PermissionButton
             permission="SALES::Invoices::CREATE"
@@ -736,28 +800,114 @@ const statusReason = (doc, status, company, nowMs) => {
         }
       />
 
+      {/*
+        Five figures across the top, each answering a different question about
+        the same book: how many, how much, how much of it has arrived, how much
+        has not, and how much of that is late.
+
+        Drafts are out of every money figure — a draft is an intention, not a
+        receivable — but they stay in the count, because they exist.
+      */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="This financial year">
+        {[
+          { k: 'Total invoices', v: String(headline.count), money: false, tone: 'info', Icon: FileText },
+          { k: 'Total invoice amount', v: headline.billed, tone: 'party', Icon: Receipt },
+          { k: 'Paid amount', v: headline.paid, tone: 'pos', Icon: CreditCard },
+          { k: 'Outstanding amount', v: headline.outstanding, tone: 'warn', Icon: ClipboardList },
+          { k: 'Overdue amount', v: headline.overdue, tone: 'neg', Icon: Ban },
+        ].map((c) => (
+          <div key={c.k} className="ui-card p-4 flex items-start gap-3">
+            <span
+              className="h-10 w-10 rounded-full grid place-items-center shrink-0"
+              style={{ backgroundColor: `rgb(var(--${c.tone}) / 0.12)`, color: `rgb(var(--${c.tone}))` }}
+              aria-hidden="true"
+            >
+              <c.Icon size={18} />
+            </span>
+            <span className="min-w-0">
+              <span className="ui-card-label block">{c.k}</span>
+              <span
+                className={`block font-semibold leading-8 ${c.money === false ? 'text-2xl' : 'ui-mono text-xl'}`}
+                style={c.tone === 'neg' || c.tone === 'warn' ? { color: `rgb(var(--${c.tone}))` } : undefined}
+              >
+                {c.money === false ? c.v : formatMoney(c.v, currentCompany)}
+              </span>
+              <span className="ui-subtle text-[11px]">This financial year</span>
+            </span>
+          </div>
+        ))}
+      </section>
+
+      {/*
+        Status as tabs with their counts, not a dropdown.
+
+        The counts are the point: "Overdue 17" tells you there is something to
+        do before you have clicked anything, which a select that reads "All
+        Invoices" cannot. Cancelled shows 0 rather than hiding — a tab that
+        appears and disappears is a tab people stop trusting.
+      */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap" role="tablist" aria-label="Invoice status">
+          {STATUS_TABS.map((t) => {
+            const on = statusFilter === t.value;
+            const n = statusCounts[t.value] ?? 0;
+            return (
+              <button
+                key={t.value || 'all'}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => {
+                  setStatusFilter(t.value);
+                  setPage(1);
+                }}
+                className="ui-btn ui-btn-sm"
+                style={
+                  on
+                    ? { borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand-ink))', backgroundColor: 'rgb(var(--accent-soft))' }
+                    : { borderColor: 'rgb(var(--border))', color: 'rgb(var(--fg-muted))' }
+                }
+              >
+                {t.label}
+                <span
+                  className="ui-mono text-[11px] rounded-full px-1.5"
+                  style={{
+                    backgroundColor: on ? 'rgb(var(--brand) / 0.18)' : 'rgb(var(--surface-sunken))',
+                    color: on ? 'rgb(var(--brand-ink))' : 'rgb(var(--fg-subtle))',
+                  }}
+                >
+                  {n}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="ms-auto flex items-center gap-2">{gridEnabled ? <GridControls grid={grid} /> : null}</div>
+      </div>
+
       {/* One card, not two: the filters belong to the table they filter, and a
           separate floating box above it reads as an unrelated control panel. */}
       <div className="ui-card overflow-hidden">
+        {/*
+          No status select here: the tabs above already choose status, and with
+          counts on them. Two controls for one filter is how they end up
+          disagreeing — and the one nobody used is the one that keeps its stale
+          value.
+        */}
         <ListControls
           idPrefix="inv"
-          statusLabel="Show"
-          allLabel="All Invoices"
           statusValue={statusFilter}
-          onStatusChange={setStatusFilter}
-          statusOptions={[
-            { value: 'Paid', label: 'Paid' },
-            { value: 'Unpaid', label: 'Unpaid' },
-            { value: 'Partial', label: 'Partially paid' },
-            { value: 'Over due', label: 'Overdue' },
-            { value: 'Draft', label: 'Pending — draft' },
-            { value: 'Cancelled', label: 'Cancelled' },
-          ]}
           searchValue={searchText}
-          onSearchChange={setSearchText}
+          onSearchChange={(v) => {
+            setSearchText(v);
+            setPage(1);
+          }}
           searchPlaceholder="Search by invoice #, customer, ref no"
           period={period}
-          onPeriodChange={applyPeriod}
+          onPeriodChange={(k) => {
+            applyPeriod(k);
+            setPage(1);
+          }}
           dateFrom={dateFrom}
           dateTo={dateTo}
           onDateFromChange={setDateFrom}
@@ -767,6 +917,7 @@ const statusReason = (doc, status, company, nowMs) => {
             setStatusFilter('');
             applyPeriod('all');
             colFilters.clearAll();
+            setPage(1);
           }}
           exportTitle={`Invoices — ${currentCompany?.name || 'Company'}`}
           exportFileName={`Invoices_${currentCompany?.name || 'company'}`}
@@ -798,9 +949,9 @@ const statusReason = (doc, status, company, nowMs) => {
                     type="checkbox"
                     className="ui-checkbox"
                     aria-label="Select all invoices in view"
-                    checked={filteredInvoices.length > 0 && filteredInvoices.every((i) => selectedIds.has(i.id))}
+                    checked={pagedInvoices.length > 0 && pagedInvoices.every((i) => selectedIds.has(i.id))}
                     onChange={(e) =>
-                      setSelectedIds(e.target.checked ? new Set(filteredInvoices.map((i) => i.id)) : new Set())
+                      setSelectedIds(e.target.checked ? new Set(pagedInvoices.map((i) => i.id)) : new Set())
                     }
                   />
                 </th>
@@ -812,6 +963,10 @@ const statusReason = (doc, status, company, nowMs) => {
               {col('gst') ? <ColumnHeader label="GST Amount" col="gst" state={colFilters} className="ui-num" align="right" /> : null}
               <ColumnHeader label="Total Amount" col="total" state={colFilters} className="ui-num" align="right" />
               {col('status') ? <ColumnHeader label="Status" col="status" state={colFilters} /> : null}
+              {/* Balance, not paid: what is still owed is the figure somebody
+                  chases. Paid is derivable from it and total, and only one of
+                  the three earns a column. */}
+              <ColumnHeader label="Balance" col="balance" state={colFilters} className="ui-num" align="right" />
               {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} /> : null}
               {col('warehouse') ? <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} /> : null}
               <th scope="col"><span className="sr-only">Actions</span></th>
@@ -852,7 +1007,7 @@ const statusReason = (doc, status, company, nowMs) => {
                 </td>
               </tr>
             ) : (
-              filteredInvoices.map((inv) => {
+              pagedInvoices.map((inv) => {
                 const whId = String(inv?.warehouseId || '').trim();
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
@@ -907,6 +1062,16 @@ const statusReason = (doc, status, company, nowMs) => {
                     </td>
                     ) : null}
                     {/* The only date that earns colour: past due, still owed. */}
+                    <td className="ui-col-amount">
+                      {(() => {
+                        const bal = Math.max(0, Number(inv.total || 0) - Number(inv.paidAmount || 0));
+                        return (
+                          <span style={bal > 0 ? { color: 'rgb(var(--fg))' } : { color: 'rgb(var(--fg-subtle))' }}>
+                            {formatMoney(bal, currentCompany)}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     {col('due') ? (
                       <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>
                         {inv.dueDate || '-'}
@@ -956,7 +1121,107 @@ const statusReason = (doc, status, company, nowMs) => {
           noun="invoices"
           figures={invoiceTotals}
         />
+
+        {/* Paging. Hidden entirely when everything already fits — controls that
+            can only do nothing are noise. */}
+        {filteredInvoices.length > perPage || perPage !== 10 ? (
+          <div
+            className="flex items-center justify-between gap-3 flex-wrap px-4 py-3"
+            style={{ borderTop: '1px solid rgb(var(--border))' }}
+          >
+            <span className="ui-subtle text-xs">
+              Showing {filteredInvoices.length === 0 ? 0 : (safePage - 1) * perPage + 1} to{' '}
+              {Math.min(safePage * perPage, filteredInvoices.length)} of {filteredInvoices.length} invoices
+            </span>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button type="button" className="ui-btn ui-btn-sm" disabled={safePage === 1} onClick={() => setPage(1)} aria-label="First page">«</button>
+              <button type="button" className="ui-btn ui-btn-sm" disabled={safePage === 1} onClick={() => setPage(safePage - 1)} aria-label="Previous page">‹</button>
+              {Array.from({ length: Math.min(5, pageCount) }, (_, i) => {
+                // A window around the current page, so page 40 of 60 does not
+                // render sixty buttons.
+                const first = Math.max(1, Math.min(safePage - 2, pageCount - 4));
+                return first + i;
+              })
+                .filter((n) => n >= 1 && n <= pageCount)
+                .map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setPage(n)}
+                    aria-current={n === safePage ? 'page' : undefined}
+                    className="ui-btn ui-btn-sm ui-mono"
+                    style={
+                      n === safePage
+                        ? { borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand-ink))', backgroundColor: 'rgb(var(--accent-soft))' }
+                        : undefined
+                    }
+                  >
+                    {n}
+                  </button>
+                ))}
+              <button type="button" className="ui-btn ui-btn-sm" disabled={safePage === pageCount} onClick={() => setPage(safePage + 1)} aria-label="Next page">›</button>
+              <button type="button" className="ui-btn ui-btn-sm" disabled={safePage === pageCount} onClick={() => setPage(pageCount)} aria-label="Last page">»</button>
+
+              <select
+                value={perPage}
+                onChange={(e) => {
+                  setPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="ui-select ui-btn-sm !h-8 w-24 px-2 text-xs"
+                aria-label="Rows per page"
+              >
+                {[10, 25, 50, 100].map((n) => (
+                  <option key={n} value={n}>{n} / page</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        ) : null}
       </div>
+
+      {/*
+        One tip, dismissible for good.
+
+        It sits under the table rather than above it, because it is an offer and
+        the invoices are the reason somebody came. Dismissal is remembered — a
+        hint that returns after every reload is an advertisement.
+      */}
+      {!tipDismissed && isEnabled('recurringInvoices') ? (
+        <div
+          className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
+          style={{ backgroundColor: 'rgb(var(--info-soft))', color: 'rgb(var(--info))' }}
+          role="note"
+        >
+          <ClipboardList size={16} aria-hidden="true" className="shrink-0" />
+          <span className="min-w-0">
+            Invoices that repeat every month — rent, AMC, retainers — can raise themselves.
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof onOpenRecurring === 'function') onOpenRecurring();
+            }}
+            className="ui-btn ui-btn-sm"
+            style={{ borderColor: 'currentColor', color: 'inherit', backgroundColor: 'transparent' }}
+          >
+            Set one up
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.setItem('neev:tip:recurringInvoices', 'dismissed');
+              setTipDismissed(true);
+            }}
+            className="ui-btn ui-btn-ghost ui-btn-sm ms-auto"
+            style={{ color: 'inherit' }}
+            aria-label="Dismiss this tip"
+          >
+            ×
+          </button>
+        </div>
+      ) : null}
 
       {openMenu?.id ? (
         <div
