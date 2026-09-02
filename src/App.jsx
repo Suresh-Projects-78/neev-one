@@ -12659,6 +12659,7 @@ const AppShell = () => {
             onNewInvoice={() => setInvoiceEditor({ open: true, initial: null })}
             onEditInvoice={(inv) => setInvoiceEditor({ open: true, initial: inv })}
             onOpenRecurring={() => setActive('recurringInvoices')}
+            onNavigate={(screen) => setActive(screen)}
             onRaiseCreditNote={(inv) => {
               setActive('creditNotes');
               setCreditNoteEditor({ open: true, initialOriginalInvoiceId: inv?.id ?? null });

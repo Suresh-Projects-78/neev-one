@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Search, Settings2, SlidersHorizontal, Table2, Trash2, Tag, RefreshCw, X } from 'lucide-react';
+import { Ban, ChevronDown, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Search, Settings2, SlidersHorizontal, Table2, Trash2, Tag, RefreshCw, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -106,6 +106,11 @@ export const InvoicesList = ({
   onEditInvoice,
   onRaiseCreditNote,
   onOpenRecurring = null,
+  /**
+   * One callback rather than a prop per destination: the More menu will grow,
+   * and a new entry should not need a new prop threaded through the parent.
+   */
+  onNavigate = null,
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
@@ -132,6 +137,10 @@ export const InvoicesList = ({
   const [perPage, setPerPage] = useState(10);
   const filterBtnRef = useRef(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const moreBtnRef = useRef(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const newBtnRef = useRef(null);
+  const [newOpen, setNewOpen] = useState(false);
   const exportBtnRef = useRef(null);
   const [exportOpen, setExportOpen] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
@@ -902,13 +911,115 @@ const statusReason = (doc, status, company, nowMs) => {
               ) : null}
             </div>
 
-            <PermissionButton
-              permission="SALES::Invoices::CREATE"
-              onClick={openNewInvoice}
-              className="ui-btn ui-btn-primary"
-            >
-              <Plus size={16} aria-hidden="true" /> New Invoice
-            </PermissionButton>
+            {/*
+              Page-level actions, kept apart from the row menu.
+
+              These configure or feed the whole list; the ⋮ on a row acts on one
+              invoice. Mixing the two is how somebody changes a template while
+              meaning to print a document.
+            */}
+            <div className="relative">
+              <button
+                type="button"
+                ref={moreBtnRef}
+                onClick={() => setMoreOpen((v) => !v)}
+                className="ui-btn ui-btn-secondary"
+                aria-haspopup="menu"
+                aria-expanded={moreOpen}
+              >
+                <MoreVertical size={15} aria-hidden="true" /> More
+              </button>
+              {moreOpen ? (
+                <Popover anchorRef={moreBtnRef} onClose={() => setMoreOpen(false)} minWidth={228}>
+                  <div className="py-1" role="menu">
+                    {[
+                      { k: 'dataImport', label: 'Import invoices', Icon: Download },
+                      { k: 'recurringInvoices', label: 'Recurring invoices', Icon: RefreshCw },
+                      { sep: true },
+                      { k: 'settingsInvoiceFields', label: 'Invoice fields', Icon: SlidersHorizontal, group: 'Configure — every invoice' },
+                      { k: 'invoiceTemplates', label: 'Invoice template', Icon: Settings2 },
+                    ].map((o, i) =>
+                      o.sep ? (
+                        <div key={`s${i}`} className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
+                      ) : (
+                        <React.Fragment key={o.k}>
+                          {o.group ? <div className="ui-caption px-3 pb-1.5">{o.group}</div> : null}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              if (typeof onNavigate === 'function') onNavigate(o.k);
+                            }}
+                            className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                          >
+                            <o.Icon size={15} aria-hidden="true" /> {o.label}
+                          </button>
+                        </React.Fragment>
+                      )
+                    )}
+                  </div>
+                </Popover>
+              ) : null}
+            </div>
+
+            {/*
+              Split button: the face does the common thing, the caret offers the
+              two documents an invoice is usually raised from. One click for the
+              case that happens most, one more for the cases that do not.
+            */}
+            <span className="inline-flex">
+              <PermissionButton
+                permission="SALES::Invoices::CREATE"
+                onClick={openNewInvoice}
+                className="ui-btn ui-btn-primary !rounded-e-none"
+              >
+                <Plus size={16} aria-hidden="true" /> New Invoice
+              </PermissionButton>
+              <button
+                type="button"
+                ref={newBtnRef}
+                onClick={() => setNewOpen((v) => !v)}
+                className="ui-btn ui-btn-primary !rounded-s-none !px-2"
+                style={{ borderInlineStart: '1px solid rgb(255 255 255 / 0.28)' }}
+                aria-haspopup="menu"
+                aria-expanded={newOpen}
+                aria-label="More ways to create an invoice"
+              >
+                <ChevronDown size={15} aria-hidden="true" />
+              </button>
+              {newOpen ? (
+                <Popover anchorRef={newBtnRef} onClose={() => setNewOpen(false)} minWidth={236}>
+                  <div className="py-1" role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setNewOpen(false);
+                        if (typeof onNavigate === 'function') onNavigate('estimates');
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <FileText size={15} aria-hidden="true" /> From an estimate
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setNewOpen(false);
+                        if (typeof onNavigate === 'function') onNavigate('deliveryChallans');
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <ClipboardList size={15} aria-hidden="true" /> From a delivery challan
+                    </button>
+                    <p className="ui-caption px-3 pt-1 pb-2">
+                      Both open their list, where you pick the document to convert.
+                    </p>
+                  </div>
+                </Popover>
+              ) : null}
+            </span>
           </>
         }
       />
