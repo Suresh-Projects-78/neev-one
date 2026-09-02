@@ -1071,10 +1071,10 @@ const statusReason = (doc, status, company, nowMs) => {
               >
                 {t.label}
                 <span
-                  className="ui-mono text-[11px] rounded-full px-1.5"
+                  className="ui-mono text-xs rounded-full px-1.5"
                   style={{
-                    backgroundColor: on ? 'rgb(var(--brand) / 0.18)' : 'rgb(var(--surface-sunken))',
-                    color: on ? 'rgb(var(--brand-ink))' : 'rgb(var(--fg-subtle))',
+                    backgroundColor: on ? 'rgb(var(--brand) / 0.10)' : 'rgb(var(--surface-sunken))',
+                    color: on ? 'rgb(var(--brand-ink))' : 'rgb(var(--fg))',
                   }}
                 >
                   {n}
@@ -1407,10 +1407,10 @@ const statusReason = (doc, status, company, nowMs) => {
       {!tipDismissed && isEnabled('recurringInvoices') ? (
         <div
           className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
-          style={{ backgroundColor: 'rgb(var(--info-soft))', color: 'rgb(var(--info))' }}
+          style={{ backgroundColor: 'rgb(var(--info-soft))', color: 'rgb(var(--fg))' }}
           role="note"
         >
-          <ClipboardList size={16} aria-hidden="true" className="shrink-0" />
+          <ClipboardList size={16} aria-hidden="true" className="shrink-0" style={{ color: 'rgb(var(--info))' }} />
           <span className="min-w-0">
             Invoices that repeat every month — rent, AMC, retainers — can raise themselves.
           </span>

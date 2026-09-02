@@ -92,10 +92,10 @@ export function StatusTabs({ tabs, value, counts, onChange, children }) {
             >
               {t.label}
               <span
-                className="ui-mono text-[11px] rounded-full px-1.5"
+                className="ui-mono text-xs rounded-full px-1.5"
                 style={{
-                  backgroundColor: on ? 'rgb(var(--brand) / 0.18)' : 'rgb(var(--surface-sunken))',
-                  color: on ? 'rgb(var(--brand-ink))' : 'rgb(var(--fg-subtle))',
+                  backgroundColor: on ? 'rgb(var(--brand) / 0.10)' : 'rgb(var(--surface-sunken))',
+                  color: on ? 'rgb(var(--brand-ink))' : 'rgb(var(--fg))',
                 }}
               >
                 {counts[t.value] ?? 0}
@@ -407,10 +407,12 @@ export function ListTip({ storageKey, text, actionLabel, onAction, Icon }) {
   return (
     <div
       className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm"
-      style={{ backgroundColor: 'rgb(var(--info-soft))', color: 'rgb(var(--info))' }}
+      style={{ backgroundColor: 'rgb(var(--info-soft))', color: 'rgb(var(--fg))' }}
       role="note"
     >
-      {Icon ? <Icon size={16} aria-hidden="true" className="shrink-0" /> : null}
+      {Icon ? (
+        <Icon size={16} aria-hidden="true" className="shrink-0" style={{ color: 'rgb(var(--info))' }} />
+      ) : null}
       <span className="min-w-0">{text}</span>
       {actionLabel && onAction ? (
         <button

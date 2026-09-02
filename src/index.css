@@ -89,9 +89,9 @@
   /* Money semantics */
   --pos: 21 128 61;             /* #15803D — 4.9:1 on white; #16A34A was 3.3:1, washy as a figure colour */
   --pos-soft: 240 253 244;
-  --neg: 220 38 38;             /* #DC2626 */
+  --neg: 185 28 28;             /* #B91C1C — 5.9:1 on white; #DC2626 was 4.0:1, under AA for a 13px amount */
   --neg-soft: 254 242 242;
-  --warn: 245 158 11;           /* #F59E0B */
+  --warn: 161 98 7;             /* #A16207 — 4.9:1 on white; #F59E0B was 2.15:1 and unreadable as a figure */
   --warn-ink: 180 83 9;         /* amber-700 — 4.84:1 on warn-soft; --warn itself is 2.07:1 there */
   --warn-soft: 255 251 235;
 
