@@ -303,7 +303,19 @@ authRouter.get('/me', async (req: Request, res: Response) => {
 
   const user = await prisma.user.findFirst({
     where: { id: auth.userId, accountId: auth.accountId, isActive: true },
-    select: { id: true, email: true, fullName: true, accountId: true, emailVerifiedAt: true },
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      fullName: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      avatarUrl: true,
+      accountId: true,
+      emailVerifiedAt: true,
+      lastLoginAt: true,
+    },
   });
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -662,12 +674,90 @@ authRouter.patch('/me', async (req: Request, res: Response) => {
     return res.status(401).json({ error: String(e?.message || 'Unauthorized') });
   }
 
-  const body = z.object({ fullName: z.string().min(1).max(120) }).parse(req.body);
+  /**
+   * Everything here is optional, so a caller that only sends one field does not
+   * blank the others. `fullName` stays the display source: when first or last
+   * name is sent it is recomposed from them, because two writers for one
+   * displayed string is how they end up disagreeing.
+   *
+   * The avatar is a data URL the client has already resized. The cap is on the
+   * encoded string rather than the decoded image: it is the thing actually
+   * being stored, and a row is cheap to read only while it stays small.
+   */
+  const AVATAR_MAX = 96 * 1024;
+
+  const body = z
+    .object({
+      fullName: z.string().min(1).max(120).optional(),
+      firstName: z.string().max(60).optional(),
+      lastName: z.string().max(60).optional(),
+      username: z.string().min(3).max(40).regex(/^[a-zA-Z0-9._-]+$/).optional().or(z.literal('')),
+      phone: z.string().max(20).optional().or(z.literal('')),
+      avatarUrl: z
+        .string()
+        .max(AVATAR_MAX, 'That image is too large. Pick one under about 70 KB.')
+        .refine((v) => v === '' || /^data:image\/(png|jpeg|webp);base64,/.test(v), 'Unsupported image format.')
+        .optional(),
+    })
+    .parse(req.body);
+
+  const data: Record<string, string | null> = {};
+
+  if (body.firstName !== undefined) data.firstName = body.firstName.trim() || null;
+  if (body.lastName !== undefined) data.lastName = body.lastName.trim() || null;
+  if (body.phone !== undefined) data.phone = body.phone.trim() || null;
+  if (body.avatarUrl !== undefined) data.avatarUrl = body.avatarUrl || null;
+
+  if (body.username !== undefined) {
+    const next = body.username.trim();
+    if (next) {
+      // Usernames are a login credential, so a collision has to be refused
+      // rather than left for the unique index to turn into a 500.
+      const taken = await prisma.user.findFirst({
+        where: { username: next, NOT: { id: auth.userId } },
+        select: { id: true },
+      });
+      if (taken) return res.status(409).json({ error: 'That username is already taken.' });
+      data.username = next;
+    } else {
+      data.username = null;
+    }
+  }
+
+  const composed = [
+    body.firstName !== undefined ? body.firstName.trim() : undefined,
+    body.lastName !== undefined ? body.lastName.trim() : undefined,
+  ];
+  if (composed.some((v) => v !== undefined)) {
+    const existing = await prisma.user.findUnique({
+      where: { id: auth.userId },
+      select: { firstName: true, lastName: true, fullName: true },
+    });
+    const first = composed[0] !== undefined ? composed[0] : existing?.firstName || '';
+    const last = composed[1] !== undefined ? composed[1] : existing?.lastName || '';
+    const joined = [first, last].filter(Boolean).join(' ').trim();
+    if (joined) data.fullName = joined;
+  }
+  if (body.fullName !== undefined) data.fullName = body.fullName.trim();
+
+  if (!Object.keys(data).length) return res.status(400).json({ error: 'Nothing to update.' });
 
   const user = await prisma.user.update({
     where: { id: auth.userId },
-    data: { fullName: body.fullName.trim() },
-    select: { id: true, email: true, fullName: true, accountId: true, emailVerifiedAt: true, lastLoginAt: true },
+    data,
+    select: {
+      id: true,
+      email: true,
+      username: true,
+      fullName: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      avatarUrl: true,
+      accountId: true,
+      emailVerifiedAt: true,
+      lastLoginAt: true,
+    },
   });
 
   return res.json({ user });

@@ -140,6 +140,19 @@ model User {
   passwordHash String
   isActive     Boolean @default(true)
 
+  // Profile. `fullName` stays the single source for display so every existing
+  // reader keeps working; first and last are what the user actually edits and
+  // fullName is recomposed from them on save.
+  firstName String?
+  lastName  String?
+  phone     String?
+
+  // A square image the user picked, resized client-side and stored as a data
+  // URL. Capped well under a megabyte by the route. This avoids standing up
+  // object storage for something that is a few kilobytes per user, and it
+  // keeps working on an install with no network egress.
+  avatarUrl String?
+
   // Lockout state. Cleared on a successful sign-in.
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
