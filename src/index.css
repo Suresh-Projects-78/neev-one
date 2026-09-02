@@ -1725,3 +1725,116 @@
     animation: none;
   }
 }
+
+
+/* ------------------------------------------------------------------ *
+ * The gutters beside the greeting: stacked sheets, in perspective.
+ *
+ * Real 3D — a perspective container and planes pushed apart on Z, not a
+ * drawing of depth. Each object is six sheets a few pixels apart, turning
+ * about fourteen degrees each way over half a minute, so the stack opens and
+ * closes and you see it as a solid rather than as lines.
+ *
+ * Sheets, because that is what the product is full of. An abstract prism or a
+ * wireframe globe would have been easier and would have belonged to any SaaS
+ * on earth.
+ *
+ * Every class name here is written out in the JSX rather than interpolated:
+ * Tailwind tree-shakes `@layer components` rules whose selector never appears
+ * literally in the source, which silently dropped a whole side of the last
+ * attempt.
+ * ------------------------------------------------------------------ */
+@layer components {
+  .ui-stack3d {
+    position: absolute;
+    top: 50%;
+    width: 168px;
+    height: 168px;
+    margin-top: -84px;
+    z-index: -1;
+    pointer-events: none;
+    display: none;
+    perspective: 900px;
+    /* Fades before it can reach the centre column or the page edge. */
+    -webkit-mask-image: radial-gradient(closest-side, #000 35%, transparent 100%);
+    mask-image: radial-gradient(closest-side, #000 35%, transparent 100%);
+  }
+
+  .ui-stack3d-l {
+    left: 3%;
+  }
+
+  .ui-stack3d-r {
+    right: 3%;
+  }
+
+  @media (min-width: 1280px) {
+    .ui-stack3d {
+      display: block;
+    }
+  }
+
+  .ui-stack3d-inner {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    animation: ui-stack3d-turn 34s ease-in-out infinite alternate;
+  }
+
+  .ui-stack3d-r .ui-stack3d-inner {
+    animation-name: ui-stack3d-turn-r;
+  }
+
+  .ui-stack3d-sheet {
+    position: absolute;
+    inset: 18%;
+    border-radius: 10px;
+    /* Enough pine in the edge that the stack reads as tinted rather than as
+       grey glass, which is the difference between this and the floating cards
+       every template ships with. */
+    border: 1px solid rgb(var(--brand) / 0.28);
+    background: rgb(var(--brand) / 0.045);
+    transform-style: preserve-3d;
+  }
+
+  /* Six sheets, pushed apart on Z. The nearest carries a touch more edge so
+     the stack has a front rather than reading as a flat grid. */
+  .ui-stack3d-sheet:nth-child(1) { transform: translateZ(-42px) scale(0.9); }
+  .ui-stack3d-sheet:nth-child(2) { transform: translateZ(-26px) scale(0.94); }
+  .ui-stack3d-sheet:nth-child(3) { transform: translateZ(-10px) scale(0.97); }
+  .ui-stack3d-sheet:nth-child(4) { transform: translateZ(6px); }
+  .ui-stack3d-sheet:nth-child(5) { transform: translateZ(22px) scale(1.03); }
+  .ui-stack3d-sheet:nth-child(6) {
+    transform: translateZ(38px) scale(1.06);
+    border-color: rgb(var(--brand) / 0.42);
+    background: rgb(var(--brand) / 0.07);
+  }
+
+  :root[data-theme='dark'] .ui-stack3d-sheet {
+    border-color: rgb(var(--brand) / 0.2);
+    background: rgb(var(--brand) / 0.05);
+  }
+  :root[data-theme='dark'] .ui-stack3d-sheet:nth-child(6) {
+    border-color: rgb(var(--brand) / 0.32);
+  }
+}
+
+@keyframes ui-stack3d-turn {
+  from { transform: rotateX(12deg) rotateY(-16deg) rotateZ(-2deg); }
+  to   { transform: rotateX(6deg) rotateY(14deg) rotateZ(2deg); }
+}
+
+@keyframes ui-stack3d-turn-r {
+  from { transform: rotateX(8deg) rotateY(16deg) rotateZ(2deg); }
+  to   { transform: rotateX(14deg) rotateY(-12deg) rotateZ(-2deg); }
+}
+
+/* Reduced motion keeps the object and stops it turning: the depth is the
+   point, the rotation only revealed it. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-stack3d-inner,
+  .ui-stack3d-r .ui-stack3d-inner {
+    animation: none;
+    transform: rotateX(10deg) rotateY(-14deg);
+  }
+}
