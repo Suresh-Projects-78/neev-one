@@ -7,6 +7,9 @@ import { TableTotals } from '../../components/ui/Primitives';
 import { downloadCsv } from '../../utils/csv';
 import { ListToolbar, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
+import { StatCards, ListSearch, FiltersButton, MoreButton, ExportButton, Pagination, usePaged } from '../../components/list/ListPageParts';
+import { PageHeader } from '../../components/ui/Primitives';
+import { CreditCard, FileText, Landmark, Receipt, Undo2 } from 'lucide-react';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
 
@@ -322,6 +325,8 @@ const TransactionView = ({ title, payload }) => {
 
 const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }) => {
   const period = usePeriodFilter();
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const search = useListSearch(rows, ['documentNumber', 'partyName', 'mode', 'reference', 'typeLabel', 'date']);
   const colFilters = useColumnFilters();
   const shown = colFilters.applyFilters(search.filtered.filter((r) => period.inRange(r?.date)), {
@@ -355,44 +360,90 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
     notify.success(`${shown.length} ${title.toLowerCase()} exported.`);
   };
 
+  const { pageCount, safePage, pageRows } = usePaged(shown, perPage, page);
+
+  /**
+   * Five figures, and every one of them countable from the rows themselves.
+   *
+   * The reference proposed "Employee payments" and "Refunds"; neither is
+   * modelled — a payment has a party and a mode, not an employee flag — and a
+   * card that can only ever read zero teaches people the row above it is
+   * guesswork too. These are the splits the data actually supports.
+   */
+  const headline = useMemo(() => {
+    const sum = (rs) => rs.reduce((t, r) => t + Number(r.amount || 0), 0);
+    const month = new Date().toISOString().slice(0, 7);
+    const byMode = new Map();
+    for (const r of rows) byMode.set(r.mode || '—', (byMode.get(r.mode || '—') || 0) + Number(r.amount || 0));
+    const top = [...byMode.entries()].sort((a2, b2) => b2[1] - a2[1])[0];
+    return {
+      count: rows.length,
+      total: sum(rows),
+      thisMonth: sum(rows.filter((r) => String(r.date || '').slice(0, 7) === month)),
+      allocated: sum(rows.filter((r) => (r.allocations || []).length > 0)),
+      unallocated: sum(rows.filter((r) => Number(r.advanceAmount || 0) > 0)),
+      topMode: top ? { name: top[0], value: top[1] } : null,
+    };
+  }, [rows]);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="ui-title text-lg">{title}</h3>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={exportRows} className="ui-btn ui-btn-secondary">
-            <Download size={15} aria-hidden="true" /> Export
-          </button>
-          {rightActions ? <div>{rightActions}</div> : null}
-        </div>
-      </div>
-
-      <ListToolbar
-        search={search.query}
-        onSearch={search.setQuery}
-        placeholder={`Search ${title.toLowerCase()} (document, party, mode, reference)`}
-        count={shown.length}
-        countLabel={title.toLowerCase()}
-        period={period.period}
-        onPeriodChange={period.setPeriod}
-        dateFrom={period.dateFrom}
-        dateTo={period.dateTo}
-        onDateFromChange={period.setDateFrom}
-        onDateToChange={period.setDateTo}
-        exportTitle={`${title} — ${currentCompany?.name || 'Company'}`}
-        exportFileName={`${title.replace(/\s+/g, '')}_${currentCompany?.name || 'company'}`}
-        exportSheetName={title}
-        exportColumns={[
-          { key: 'date', label: 'Date' },
-          { key: 'typeLabel', label: 'Type' },
-          { key: 'documentNumber', label: 'Document No.' },
-          { key: 'partyName', label: 'Party' },
-          { key: 'mode', label: 'Mode' },
-          { key: 'reference', label: 'Reference' },
-          { key: 'amount', label: 'Amount', align: 'right', value: (r) => Number(r.amount || 0) },
-        ]}
-        exportRows={shown}
+      <PageHeader
+        title={title}
+        description={`View and manage all ${title.toLowerCase()}`}
+        actions={
+          <>
+            <ListSearch
+              value={search.query}
+              onChange={(v) => {
+                search.setQuery(v);
+                setPage(1);
+              }}
+              placeholder={`Search ${title.toLowerCase()}…`}
+              label={`Search ${title.toLowerCase()}`}
+            />
+            <FiltersButton
+              period={period.period}
+              onPeriodChange={(k) => {
+                period.setPeriod(k);
+                setPage(1);
+              }}
+              dateFrom={period.dateFrom}
+              dateTo={period.dateTo}
+              onDateFromChange={period.setDateFrom}
+              onDateToChange={period.setDateTo}
+              onClear={() => {
+                search.setQuery('');
+                period.clear();
+                colFilters.clearAll();
+                setPage(1);
+              }}
+              activeCount={(search.query.trim() ? 1 : 0) + (period.period !== 'all' ? 1 : 0) + Object.keys(colFilters.filters || {}).length}
+            />
+            <MoreButton
+              items={[{ key: 'export', label: 'Export as CSV', Icon: Download }]}
+              onSelect={(k) => {
+                if (k === 'export') exportRows();
+              }}
+            />
+            {rightActions ? <>{rightActions}</> : null}
+          </>
+        }
       />
+
+      <StatCards
+        company={currentCompany}
+        cards={[
+          { label: `Total ${title.toLowerCase()}`, value: headline.count, count: true, tone: 'info', Icon: FileText },
+          { label: 'Total value', value: headline.total, tone: 'party', Icon: Receipt },
+          { label: 'This month', value: headline.thisMonth, tone: 'pos', Icon: CreditCard },
+          { label: 'Against documents', value: headline.allocated, tone: 'info', Icon: Landmark, hint: 'Allocated to invoices or bills' },
+          headline.topMode
+            ? { label: `Most used — ${headline.topMode.name}`, value: headline.topMode.value, tone: 'warn', Icon: Undo2, hint: 'By value' }
+            : null,
+        ]}
+      />
+
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full ui-table-sticky">
@@ -415,7 +466,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
                 </td>
               </tr>
             ) : (
-              shown.map((r) => (
+              pageRows.map((r) => (
                 <tr
                   key={r.id}
                   className={onView ? 'ui-hover-sunken cursor-pointer' : 'ui-hover-sunken'}
@@ -440,6 +491,19 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
           totalCount={(rows || []).length}
           noun="transactions"
           figures={[{ label: 'Value', value: formatMoney(shown.reduce((t, r) => t + Number(r.amount || 0), 0), currentCompany) }]}
+        />
+
+        <Pagination
+          total={shown.length}
+          page={safePage}
+          perPage={perPage}
+          pageCount={pageCount}
+          onPage={setPage}
+          onPerPage={(n) => {
+            setPerPage(n);
+            setPage(1);
+          }}
+          noun={title.toLowerCase()}
         />
       </div>
     </div>

@@ -13169,6 +13169,7 @@ const AppShell = () => {
             warehouses={warehousesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewBill={() => setBillEditor({ open: true, initial: null })}
+            onNavigate={(screen) => setActive(screen)}
             onDuplicateBill={(initial) => setBillEditor({ open: true, initial })}
             onEditBill={(bill) => setBillEditor({ open: true, initial: bill })}
             onRaiseDebitNote={(bill) => {

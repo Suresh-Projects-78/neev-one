@@ -14,7 +14,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { ClipboardList, Copy, CreditCard, Eye, FileStack, MoreVertical, NotebookPen, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Receipt, RefreshCw, Trash2, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -37,6 +37,18 @@ import { computeInventorySummaryByItemId, isStockItem } from '../../utils/invent
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
+import {
+  StatCards,
+  StatusTabs,
+  ListSearch,
+  FiltersButton,
+  MoreButton,
+  ExportButton,
+  Pagination,
+  ListTip,
+  usePaged,
+} from '../../components/list/ListPageParts';
+import { PageHeader } from '../../components/ui/Primitives';
 import { blockIfClosed } from '../../utils/bookClose';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
@@ -1370,6 +1382,7 @@ export const BillsList = ({
   openModal,
   currentCompany,
   onNewBill,
+  onNavigate = null,
   onRaiseDebitNote,
   // Optional override for duplicating a bill. The code below already checked
   // for it but it was never a prop, so the branch was unreachable and a parent
@@ -1387,6 +1400,8 @@ export const BillsList = ({
   );
   const bills = billSearch.filtered;
   const [statusFilter, setStatusFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
   const colFilters = useColumnFilters();
 
   // Pinned once per mount: a clock read during render makes every derived
@@ -1521,6 +1536,44 @@ const billStatusReason = (doc, status, company, nowMs) => {
     return 'Unpaid';
   };
 
+  /**
+   * The five figures, and the count on every tab. Drafts stay out of the money
+   * — a draft bill is an intention, not a liability — but stay in the count.
+   */
+  const billExportColumns = [
+    { key: 'number', label: 'Bill No.' },
+    { key: 'vendorName', label: 'Vendor' },
+    { key: 'date', label: 'Bill Date' },
+    { key: 'dueDate', label: 'Due Date' },
+    { key: 'total', label: 'Amount', align: 'right', value: (r) => Number(r.total || 0) },
+    { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
+    { key: 'balance', label: 'Balance', align: 'right', value: (r) => Math.max(0, Number(r.total || 0) - Number(r.paidAmount || 0)) },
+  ];
+
+  const billHeadline = useMemo(() => {
+    const live = bills.filter((b) => String(b.status || '').toLowerCase() !== 'draft');
+    const bal = (b) => Math.max(0, Number(b.total || 0) - Number(b.paidAmount || 0));
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      count: bills.length,
+      billed: live.reduce((t, b) => t + Number(b.total || 0), 0),
+      paid: live.reduce((t, b) => t + Number(b.paidAmount || 0), 0),
+      unpaid: live.reduce((t, b) => t + bal(b), 0),
+      overdue: live
+        .filter((b) => bal(b) > 0 && String(b.dueDate || '').slice(0, 10) && String(b.dueDate).slice(0, 10) < today)
+        .reduce((t, b) => t + bal(b), 0),
+    };
+  }, [bills]);
+
+  const billStatusCounts = useMemo(() => {
+    const c = { '': bills.length };
+    for (const b of bills) {
+      const d = getDerivedStatus(b);
+      c[d] = (c[d] || 0) + 1;
+    }
+    return c;
+  }, [bills]);
+
   const filteredBills = colFilters.applyFilters(
     bills
       .filter((b) => {
@@ -1549,6 +1602,8 @@ const billStatusReason = (doc, status, company, nowMs) => {
   );
 
   // Over the filtered set, so the figure always describes what is on screen.
+  const { pageCount: billPageCount, safePage: safeBillPage, pageRows: pagedBills } = usePaged(filteredBills, perPage, page);
+
   const billTotals = useMemo(() => {
     let booked = 0;
     let owed = 0;
@@ -1713,11 +1768,57 @@ const billStatusReason = (doc, status, company, nowMs) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Bills</h3>
-        <PermissionButton
-          permission="PURCHASE::Bills::CREATE"
-          onClick={() => {
+      <PageHeader
+        title="Purchase Invoices"
+        description="Create, view and manage all your vendor bills"
+        actions={
+          <>
+            <ListSearch
+              value={billSearch.query}
+              onChange={(v) => {
+                billSearch.setQuery(v);
+                setPage(1);
+              }}
+              placeholder="Search bills…"
+              label="Search bills"
+            />
+            <FiltersButton
+              period={billPeriod.period}
+              onPeriodChange={(k) => {
+                billPeriod.setPeriod(k);
+                setPage(1);
+              }}
+              dateFrom={billPeriod.dateFrom}
+              dateTo={billPeriod.dateTo}
+              onDateFromChange={billPeriod.setDateFrom}
+              onDateToChange={billPeriod.setDateTo}
+              onClear={() => {
+                billSearch.setQuery('');
+                setStatusFilter('All');
+                billPeriod.clear();
+                colFilters.clearAll();
+                setPage(1);
+              }}
+              activeCount={
+                (billSearch.query.trim() ? 1 : 0) +
+                (statusFilter !== 'All' ? 1 : 0) +
+                (billPeriod.period !== 'all' ? 1 : 0) +
+                Object.keys(colFilters.filters || {}).length
+              }
+            />
+            <MoreButton
+              items={[
+                { key: 'dataImport', label: 'Import bills' },
+                { key: 'purchaseOrders', label: 'Purchase orders' },
+                { key: 'debitNotes', label: 'Debit notes' },
+              ]}
+              onSelect={(k) => {
+                if (typeof onNavigate === 'function') onNavigate(k);
+              }}
+            />
+            <PermissionButton
+              permission="PURCHASE::Bills::CREATE"
+              onClick={() => {
             if (typeof onNewBill === 'function') {
               onNewBill();
               return;
@@ -1733,37 +1834,58 @@ const billStatusReason = (doc, status, company, nowMs) => {
               />
             );
           }}
-          className="ui-btn ui-btn-primary "
-        >
-          <Plus size={20} /> New Bill
-        </PermissionButton>
-      </div>
-
-      <ListToolbar
-        search={billSearch.query}
-        onSearch={billSearch.setQuery}
-        placeholder="Search bills (number, vendor, ref no)"
-        count={filteredBills.length}
-        countLabel="bills"
-        onExport={() =>
-          exportRows({
-            fileName: `Bills_${currentCompany?.name || 'company'}`,
-            label: 'bill(s)',
-            columns: [
-              { key: 'number', label: 'Bill #' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'refNo', label: 'Ref No' },
-              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-              { key: 'paidAmount', label: 'Paid', value: (r) => Number(r.paidAmount || 0) },
-              { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
-            ],
-            rows: filteredBills,
-          })
+              className="ui-btn ui-btn-primary"
+            >
+              <Plus size={16} aria-hidden="true" /> New Bill
+            </PermissionButton>
+          </>
         }
       />
+
+      <StatCards
+        company={currentCompany}
+        cards={[
+          { label: 'Total bills', value: billHeadline.count, count: true, tone: 'info', Icon: FileText },
+          { label: 'Total bill amount', value: billHeadline.billed, tone: 'party', Icon: Receipt },
+          { label: 'Paid amount', value: billHeadline.paid, tone: 'pos', Icon: CreditCard },
+          { label: 'Unpaid amount', value: billHeadline.unpaid, tone: 'warn', Icon: ClipboardList },
+          { label: 'Overdue bills', value: billHeadline.overdue, tone: 'neg', Icon: Ban },
+        ]}
+      />
+
+      <StatusTabs
+        value={statusFilter}
+        counts={{ ...billStatusCounts, All: bills.length }}
+        onChange={(v) => {
+          setStatusFilter(v);
+          setPage(1);
+        }}
+        tabs={[
+          { value: 'All', label: 'All' },
+          { value: 'Draft', label: 'Draft' },
+          { value: 'Unpaid', label: 'Received' },
+          { value: 'Partial', label: 'Partially paid' },
+          { value: 'Paid', label: 'Paid' },
+          { value: 'Over due', label: 'Overdue' },
+          { value: 'Cancelled', label: 'Cancelled' },
+        ]}
+      >
+        <ExportButton
+          title={`Purchase invoices — ${currentCompany?.name || 'Company'}`}
+          fileName={`Bills_${currentCompany?.name || 'company'}`}
+          sheetName="Bills"
+          columns={billExportColumns}
+          rows={filteredBills}
+          subtitleParts={{
+            period: billPeriod.period,
+            dateFrom: billPeriod.dateFrom,
+            dateTo: billPeriod.dateTo,
+            status: statusFilter === 'All' ? '' : statusFilter,
+            search: billSearch.query,
+          }}
+        />
+      </StatusTabs>
+
 
       <div className="flex items-center gap-2 flex-wrap">
         {['All', 'Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'].map((s) => (
@@ -1845,7 +1967,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                 </td>
               </tr>
             ) : (
-              filteredBills.map((b) => {
+              pagedBills.map((b) => {
                 const whId = String(b?.warehouseId || '').trim();
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
@@ -1921,7 +2043,30 @@ const billStatusReason = (doc, status, company, nowMs) => {
           noun="bills"
           figures={billTotals}
         />
+
+        <Pagination
+          total={filteredBills.length}
+          page={safeBillPage}
+          perPage={perPage}
+          pageCount={billPageCount}
+          onPage={setPage}
+          onPerPage={(n) => {
+            setPerPage(n);
+            setPage(1);
+          }}
+          noun="bills"
+        />
       </div>
+
+      <ListTip
+        storageKey="neev:tip:recurringBills"
+        Icon={RefreshCw}
+        text="Bills that repeat every month — rent, AMC, subscriptions — can be scheduled rather than retyped."
+        actionLabel="Set one up"
+        onAction={() => {
+          if (typeof onNavigate === 'function') onNavigate('recurringInvoices');
+        }}
+      />
 
       {openMenu?.id ? (
         <div
