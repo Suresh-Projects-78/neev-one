@@ -12571,6 +12571,19 @@ const AppShell = () => {
             // page, which is the kind of control that teaches people the
             // filters do not work.
             activeWarehouseId={activeWarehouseId}
+            // The search field on the dashboard is the command palette the
+            // shell already owns, not a second search that would have to be
+            // built and kept in step with it.
+            onOpenCommand={() => setPaletteOpen(true)}
+            onNewBill={() => {
+              setActive('bills');
+              setBillEditor({ open: true, initial: null });
+            }}
+            onRecordReceipt={() => {
+              setActive('receipts');
+              setReceiptEditor({ open: true, initial: null });
+            }}
+            onOpenReports={() => setActive('reports')}
           />
         );
       case 'sales':

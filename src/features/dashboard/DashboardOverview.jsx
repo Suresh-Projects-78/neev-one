@@ -9,6 +9,7 @@ import {
   Minus,
   Plus,
   Receipt,
+  Search,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
@@ -407,6 +408,187 @@ function TopCustomers({ rows, company }) {
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * The opening composition.
+ *
+ * Avatar, greeting, and one sentence that had to be earned. The sentence
+ * rotates through whatever the book actually has to say — overdue money, a
+ * filing window, drafts sitting outside receivables — and when there is
+ * nothing to say it says nothing rather than inventing a metric. A greeting
+ * that finds a crisis every morning stops being read inside a week.
+ * ------------------------------------------------------------------ */
+
+const GREETINGS = [
+  [5, 'Good morning'],
+  [12, 'Good afternoon'],
+  [17, 'Good evening'],
+];
+
+function greetingFor(hour) {
+  let out = 'Good evening';
+  for (const [from, label] of GREETINGS) if (hour >= from) out = label;
+  if (hour < 5) out = 'Good evening';
+  return out;
+}
+
+/** First name from the signed-in address; blank rather than a guess. */
+function nameFromEmail(email) {
+  const local = String(email || '').split('@')[0] || '';
+  const first = local.split(/[._-]/)[0] || '';
+  if (!first || /^\d+$/.test(first)) return '';
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+function initialsFor(name, email, company) {
+  const src = name || String(email || '').split('@')[0] || company || '';
+  const parts = String(src).trim().split(/[\s._-]+/).filter(Boolean);
+  if (!parts.length) return '—';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+function DashboardHero({ name, initials, insights, onCommand, actions }) {
+  const [idx, setIdx] = useState(0);
+  const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
+  const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
+
+  return (
+    <section className="pt-8 pb-2 text-center" aria-label="Overview">
+      <span
+        className="mx-auto mb-5 grid h-12 w-12 place-items-center rounded-full text-sm font-bold"
+        style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}
+        aria-hidden="true"
+      >
+        {initials}
+      </span>
+
+      <h1 className="ui-t-page" style={{ fontSize: '2rem', lineHeight: '2.5rem' }}>
+        {greetingFor(new Date().getHours())}
+        {name ? (
+          <>
+            ,{' '}
+            <span style={{ fontWeight: 300, color: 'rgb(var(--fg-subtle))' }}>{name}</span>
+          </>
+        ) : null}
+      </h1>
+
+      {active ? (
+        <p className="ui-t-body mt-2.5" style={{ color: 'rgb(var(--fg-muted))' }} aria-live="polite">
+          {active.text}
+        </p>
+      ) : (
+        <p className="ui-t-body mt-2.5" style={{ color: 'rgb(var(--fg-subtle))' }}>
+          Nothing needs you right now.
+        </p>
+      )}
+
+      {list.length > 1 ? (
+        <div className="mt-4 flex justify-center gap-1.5" role="tablist" aria-label="Insights">
+          {list.map((it, i) => (
+            <button
+              key={it.key}
+              type="button"
+              role="tab"
+              aria-selected={i === idx}
+              aria-label={it.label || `Insight ${i + 1}`}
+              onClick={() => setIdx(i)}
+              className="h-0.5 rounded-full transition-all"
+              style={{
+                width: i === idx ? 22 : 16,
+                backgroundColor: i === idx ? 'rgb(var(--brand))' : 'rgb(var(--border))',
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {onCommand ? (
+        <>
+          <button
+            type="button"
+            onClick={onCommand}
+            className="mx-auto mt-7 flex w-full max-w-xl items-center gap-3 rounded-xl border ps-4 pe-2 text-start"
+            style={{
+              height: 50,
+              borderColor: 'rgb(var(--border))',
+              backgroundColor: 'rgb(var(--surface-sunken))',
+              color: 'rgb(var(--fg-subtle))',
+            }}
+          >
+            <Search size={16} aria-hidden="true" />
+            <span className="ui-t-body truncate">Search invoices, customers, items…</span>
+            <span
+              className="ms-auto grid h-9 w-9 place-items-center rounded-lg text-xs font-semibold"
+              style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}
+              aria-hidden="true"
+            >
+              ⌘K
+            </span>
+          </button>
+          <p className="ui-t-body mt-2" style={{ color: 'rgb(var(--fg-subtle))' }}>
+            Jump to any document, or start one
+          </p>
+        </>
+      ) : null}
+
+      {actions?.length ? (
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {actions.map((a) => (
+            <button key={a.label} type="button" onClick={a.onClick} className="ui-btn ui-btn-secondary">
+              <a.Icon size={15} aria-hidden="true" />
+              {a.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+/**
+ * The figures, as a hairline grid rather than six floating cards.
+ *
+ * One rule holds the composition together: a tile is a label, a figure and a
+ * note, and nothing else. No icon, no sparkline, no chrome — the reason this
+ * reads as calm is that every cell is the same shape.
+ */
+function QuietTiles({ tiles, company }) {
+  return (
+    <section
+      className="mx-auto mt-11 grid max-w-4xl border-s border-t sm:grid-cols-2 lg:grid-cols-3"
+      style={{ borderColor: 'rgb(var(--border))' }}
+      aria-label="Position"
+    >
+      {tiles.filter(Boolean).map((t) => (
+        <div key={t.label} className="border-e border-b px-5 py-4 text-start" style={{ borderColor: 'rgb(var(--border))' }}>
+          <div className="ui-t-body" style={{ color: 'rgb(var(--fg-subtle))' }}>
+            {t.label}
+          </div>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+            <span
+              className="ui-mono"
+              style={{
+                fontSize: '1.3125rem',
+                lineHeight: '1.75rem',
+                fontWeight: 600,
+                letterSpacing: '-.01em',
+                color: t.value == null ? 'rgb(var(--fg-subtle))' : t.tone ? `rgb(var(--${t.tone}))` : 'rgb(var(--fg))',
+              }}
+            >
+              {t.value == null ? '—' : t.count ? String(t.value) : formatMoney(t.value, company)}
+            </span>
+            {t.note ? (
+              <span className="ui-t-body" style={{ color: 'rgb(var(--fg-subtle))' }}>
+                {t.note}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export default function DashboardOverview({
   db,
   currentCompany,
@@ -418,6 +600,11 @@ export default function DashboardOverview({
   invoices: invoicesProp = null,
   onOpenPurchases,
   activeWarehouseId = '',
+  onOpenCommand = null,
+  onNewBill = null,
+  onRecordReceipt = null,
+  onOpenCustomers = null,
+  onOpenReports = null,
 }) {
   /**
    * Cash and accrual answer different questions and must never be mixed on one
@@ -821,122 +1008,241 @@ export default function DashboardOverview({
     return rows;
   }, [allInvoices, postedInvoices, db, currentCompany, now, onOpenInvoices, onOpenPurchases]);
 
+  /**
+   * The sentence under the greeting.
+   *
+   * Every one of these is a fact from the book with something to do about it.
+   * Order is by how much it costs to ignore: money already late, then a
+   * statutory window, then money going out, then work left unfinished. An
+   * empty list renders as "nothing needs you right now", which is a true
+   * thing to say and the reason the line stays credible.
+   */
+  const draftCount = useMemo(
+    () => allInvoices.filter((i) => String(i.status || '').toLowerCase() === 'draft').length,
+    [allInvoices]
+  );
+
+  /**
+   * How many invoices the overdue money is spread across — the same test the
+   * worklist below uses, so the two cannot disagree. `receivables()` returns
+   * the overdue amount but not its count.
+   */
+  const overdueCount = useMemo(() => {
+    const todayStr = new Date(now).toISOString().slice(0, 10);
+    return postedInvoices.filter(
+      (i) =>
+        Math.max(0, num(i?.total) - num(i?.paidAmount)) > 0 &&
+        String(i.dueDate || '') &&
+        String(i.dueDate) < todayStr
+    ).length;
+  }, [postedInvoices, now]);
+
+  const heroInsights = useMemo(() => {
+    const out = [];
+
+    if (recv.overdue > 0) {
+      out.push({
+        key: 'overdue',
+        label: `${formatMoney(recv.overdue, currentCompany)} overdue across ${overdueCount} invoice${overdueCount === 1 ? '' : 's'}${recv.oldestDays ? `, oldest ${recv.oldestDays} days` : ''}`,
+        text: (
+          <>
+            There&rsquo;s <b className="ui-mono" style={{ color: 'rgb(var(--neg))', fontWeight: 600 }}>{formatMoney(recv.overdue, currentCompany)}</b>{' '}
+            overdue across {overdueCount} invoice{overdueCount === 1 ? '' : 's'}
+            {recv.oldestDays ? <> — the oldest by <b style={{ color: 'rgb(var(--fg))' }}>{recv.oldestDays} days</b></> : null}.
+          </>
+        ),
+      });
+    }
+
+    if (Number.isFinite(gst.daysToGstr1) && gst.daysToGstr1 >= 0 && gst.daysToGstr1 <= 15) {
+      out.push({
+        key: 'gst',
+        label: `GSTR-1 closes in ${gst.daysToGstr1} day${gst.daysToGstr1 === 1 ? '' : 's'}${gst.draftsInMonth > 0 ? `, ${gst.draftsInMonth} draft invoice${gst.draftsInMonth === 1 ? '' : 's'} would be left out` : ''}`,
+        text: (
+          <>
+            <b style={{ color: 'rgb(var(--fg))' }}>GSTR-1</b> closes in{' '}
+            <b style={{ color: 'rgb(var(--warn))' }}>
+              {gst.daysToGstr1} day{gst.daysToGstr1 === 1 ? '' : 's'}
+            </b>
+            {gst.draftsInMonth > 0 ? (
+              <>
+                {' '}
+                — {gst.draftsInMonth} draft invoice{gst.draftsInMonth === 1 ? '' : 's'} would be left out.
+              </>
+            ) : (
+              '.'
+            )}
+          </>
+        ),
+      });
+    }
+
+    if (pay.dueThisWeek > 0) {
+      out.push({
+        key: 'due',
+        label: `${formatMoney(pay.dueThisWeek, currentCompany)} of bills falls due this week`,
+        text: (
+          <>
+            <b className="ui-mono" style={{ color: 'rgb(var(--fg))', fontWeight: 600 }}>{formatMoney(pay.dueThisWeek, currentCompany)}</b>{' '}
+            of bills falls due this week.
+          </>
+        ),
+      });
+    }
+
+    if (draftCount > 0) {
+      out.push({
+        key: 'drafts',
+        label: `${draftCount} invoice${draftCount === 1 ? '' : 's'} still in draft, not counted in what you are owed`,
+        text: (
+          <>
+            <b style={{ color: 'rgb(var(--fg))' }}>{draftCount} invoice{draftCount === 1 ? '' : 's'}</b>{' '}
+            {draftCount === 1 ? 'is' : 'are'} still a draft, so {draftCount === 1 ? 'it is' : 'they are'} not counted in what you are owed.
+          </>
+        ),
+      });
+    }
+
+    if (stock?.out > 0) {
+      out.push({
+        key: 'stock',
+        label: `${stock.out} item${stock.out === 1 ? '' : 's'} out of stock`,
+        text: (
+          <>
+            <b style={{ color: 'rgb(var(--fg))' }}>{stock.out} item{stock.out === 1 ? '' : 's'}</b> {stock.out === 1 ? 'is' : 'are'} out of stock.
+          </>
+        ),
+      });
+    }
+
+    return out;
+  }, [recv, gst, pay, draftCount, overdueCount, stock, currentCompany]);
+
+  const userEmail = (() => {
+    try {
+      return localStorage.getItem('userEmail') || '';
+    } catch {
+      return '';
+    }
+  })();
+  const heroName = nameFromEmail(userEmail);
+  const heroInitials = initialsFor(heroName, userEmail, currentCompany?.name);
+
+  const quickActions = [
+    onNewInvoice ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice } : null,
+    onRecordReceipt ? { label: 'Record receipt', Icon: Receipt, onClick: onRecordReceipt } : null,
+    onNewBill ? { label: 'New bill', Icon: Wallet, onClick: onNewBill } : null,
+    onOpenCustomers ? { label: 'Add customer', Icon: Plus, onClick: onOpenCustomers } : null,
+    onOpenReports ? { label: 'Reports', Icon: TrendingUp, onClick: onOpenReports } : null,
+  ].filter(Boolean);
+
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Dashboard"
-        description={`${current.length} invoice${current.length === 1 ? '' : 's'} in the last ${range.label.toLowerCase()}`}
-        actions={
-          <>
-            {/* Segmented period control. One row, current option marked by fill
-                and by aria-pressed, not by colour alone. */}
-            <div
-              className="hidden sm:flex items-center rounded-lg p-0.5"
-              style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
-              role="group"
-              aria-label="Reporting period"
-            >
-              {RANGES.map((r) => (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => setRangeKey(r.key)}
-                  aria-pressed={r.key === rangeKey}
-                  className="px-2.5 h-7 rounded-md text-xs font-medium transition-colors"
-                  style={
-                    r.key === rangeKey
-                      ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }
-                      : { color: 'rgb(var(--fg-muted))' }
-                  }
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
+      {/*
+        The opening composition, in place of a page header and four cards.
 
-            {branches.length > 1 && onOpenBranches ? (
-              <button type="button" onClick={onOpenBranches} className="ui-btn ui-btn-secondary">
-                <Building2 size={15} aria-hidden="true" />
-                {branchFilterLabel}
-              </button>
-            ) : null}
+        A dashboard is the one screen with no task on it, so it does not need a
+        title telling you where you are — you can see that in the rail. What it
+        needs is to say the one thing worth knowing before you decide what to
+        do, which is what the line under the greeting is for.
+      */}
+      <DashboardHero
+        name={heroName}
+        initials={heroInitials}
+        insights={heroInsights}
+        onCommand={onOpenCommand}
+        actions={quickActions}
+      />
 
-            {onNewInvoice ? (
-              <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-primary">
-                <Plus size={15} aria-hidden="true" />
-                New invoice
-              </button>
-            ) : null}
-          </>
-        }
+      <QuietTiles
+        company={currentCompany}
+        tiles={[
+          {
+            label: 'Cash available',
+            value: cash.total,
+            note: cash.accountCount
+              ? `${cash.accountCount} ledger${cash.accountCount === 1 ? '' : 's'}`
+              : 'no ledger yet',
+          },
+          {
+            label: 'Owed to you',
+            value: recv.count ? recv.total : null,
+            tone: recv.overdue > 0 ? 'warn' : '',
+            note: recv.count ? `${recv.count} invoice${recv.count === 1 ? '' : 's'}` : 'nothing billed',
+          },
+          {
+            label: 'You owe',
+            value: pay.count ? pay.total : null,
+            tone: pay.total > 0 ? 'neg' : '',
+            note: pay.count ? `${pay.count} bill${pay.count === 1 ? '' : 's'}` : 'nothing owed',
+          },
+          {
+            label: gst.creditCarried > 0 ? 'GST credit' : 'GST payable',
+            value: gst.output || gst.input ? (gst.creditCarried > 0 ? gst.creditCarried : gst.payable) : null,
+            tone: gst.creditCarried > 0 ? 'pos' : '',
+            note:
+              Number.isFinite(gst.daysToGstr1) && gst.daysToGstr1 >= 0
+                ? `GSTR-1 in ${gst.daysToGstr1}d`
+                : gst.monthLabel,
+          },
+          stock
+            ? {
+                label: 'Stock on hand',
+                value: stock.value,
+                note: `${stock.itemCount} item${stock.itemCount === 1 ? '' : 's'}${stock.out ? ` · ${stock.out} out` : ''}`,
+              }
+            : null,
+          {
+            label: 'Drafts',
+            value: draftCount,
+            count: true,
+            note: draftCount ? 'not in what you are owed' : 'none open',
+          },
+        ]}
       />
 
       {/*
-        The four figures the business opens on: what it has, what it is owed,
-        what it owes, and what the tax office is owed. These render whether or
-        not a single invoice exists — cash and payables are true from the first
-        purchase, and a company that has spent money should not be told its
-        dashboard is empty.
+        Everything below is the detail, and it keeps the period control that
+        governs it. The balances above are "as of today" and never moved with
+        that control; putting it here is what finally makes that legible.
       */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Financial position">
-        <BalanceCard
-          label="Cash available"
-          value={cash.total}
-          company={currentCompany}
-          accent="pos"
-          hint={
-            cash.accountCount
-              ? `${cash.accountCount} ledger${cash.accountCount === 1 ? '' : 's'} · per your books`
-              : 'No cash or bank ledger yet'
-          }
-        />
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-6">
+        <h2 className="ui-t-section">
+          {current.length} invoice{current.length === 1 ? '' : 's'} in the last {range.label.toLowerCase()}
+        </h2>
+        <div className="flex items-center gap-2">
+          <div
+            className="hidden sm:flex items-center rounded-lg p-0.5"
+            style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
+            role="group"
+            aria-label="Reporting period"
+          >
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                type="button"
+                onClick={() => setRangeKey(r.key)}
+                aria-pressed={r.key === rangeKey}
+                className="px-2.5 h-7 rounded-md text-xs font-medium transition-colors"
+                style={
+                  r.key === rangeKey
+                    ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }
+                    : { color: 'rgb(var(--fg-muted))' }
+                }
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
 
-        <BalanceCard
-          label="Owed to you"
-          value={recv.count ? recv.total : null}
-          company={currentCompany}
-          accent="brand"
-          hint={recv.count ? `across ${recv.count} invoice${recv.count === 1 ? '' : 's'}` : 'Nothing billed yet'}
-          note={recv.overdue > 0 ? `${formatMoney(recv.overdue, currentCompany)} overdue · oldest ${recv.oldestDays} days` : null}
-          tone={recv.overdue > 0 ? 'neg' : ''}
-          actionLabel={recv.count ? 'View invoices' : null}
-          onAction={onOpenInvoices}
-        >
-          <AgeingBar buckets={recv.buckets} total={recv.total} company={currentCompany} />
-        </BalanceCard>
-
-        <BalanceCard
-          label="You owe"
-          value={pay.count ? pay.total : null}
-          company={currentCompany}
-          accent="neg"
-          tone={pay.total > 0 ? 'neg' : ''}
-          hint={pay.count ? `${pay.count} bill${pay.count === 1 ? '' : 's'} open` : 'Nothing owed to vendors'}
-          note={pay.dueThisWeek > 0 ? `${formatMoney(pay.dueThisWeek, currentCompany)} falls due this week` : null}
-          actionLabel={pay.count ? 'Plan payments' : null}
-          onAction={onOpenPurchases}
-        />
-
-        <BalanceCard
-          label={gst.creditCarried > 0 ? 'GST credit' : 'GST payable'}
-          value={gst.output || gst.input ? (gst.creditCarried > 0 ? gst.creditCarried : gst.payable) : null}
-          company={currentCompany}
-          accent="warn"
-          tone={gst.creditCarried > 0 ? 'pos' : 'warn'}
-          hint={
-            gst.output || gst.input
-              ? `${gst.monthLabel} · output ${formatMoney(gst.output, currentCompany)} less ITC ${formatMoney(gst.input, currentCompany)}`
-              : 'Nothing to file for this period yet'
-          }
-          note={
-            gst.daysToGstr1 >= 0
-              ? `GSTR-1 closes in ${gst.daysToGstr1} day${gst.daysToGstr1 === 1 ? '' : 's'}${
-                  gst.draftsInMonth ? ` · ${gst.draftsInMonth} draft${gst.draftsInMonth === 1 ? '' : 's'} would be left out` : ''
-                }`
-              : null
-          }
-        />
-      </section>
+          {branches.length > 1 && onOpenBranches ? (
+            <button type="button" onClick={onOpenBranches} className="ui-btn ui-btn-secondary">
+              <Building2 size={15} aria-hidden="true" />
+              {branchFilterLabel}
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       {/*
         Where cash lands over the next month, from documents already committed.
