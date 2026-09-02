@@ -1962,7 +1962,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                       <StatusPill status={derived} reason={billStatusReason(b, derived, currentCompany, nowMs)} />
                       {returnMark ? (
                         <span
-                          className="ml-1 px-2 py-1 rounded-full text-[11px] font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
+                          className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
                           title={`Debit notes of ${formatMoney(debitValue, currentCompany)} raised against this bill`}
                         >
                           Debit Note {formatMoney(debitValue, currentCompany)}

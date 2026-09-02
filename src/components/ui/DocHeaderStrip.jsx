@@ -43,7 +43,7 @@ export const DocHeaderStrip = ({
       style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
     >
       <div className="min-w-[9rem]">
-        <label className="ui-label !mb-0.5 !text-[11px]" htmlFor="doc-number">
+        <label className="ui-label !mb-0.5 !text-xs" htmlFor="doc-number">
           {numberLabel}
         </label>
         <input
@@ -67,7 +67,7 @@ export const DocHeaderStrip = ({
       </div>
 
       <div>
-        <label className="ui-label !mb-0.5 !text-[11px]" htmlFor="doc-date">
+        <label className="ui-label !mb-0.5 !text-xs" htmlFor="doc-date">
           Date
         </label>
         <input
@@ -86,7 +86,7 @@ export const DocHeaderStrip = ({
 
       {onDueDateChange ? (
         <div>
-          <label className="ui-label !mb-0.5 !text-[11px]" htmlFor="doc-due">
+          <label className="ui-label !mb-0.5 !text-xs" htmlFor="doc-due">
             {dueDateLabel}
           </label>
           <input
@@ -101,7 +101,7 @@ export const DocHeaderStrip = ({
 
       {extra}
 
-      {numberHint ? <div className="ui-subtle text-[11px] pb-1 ml-auto">{numberHint}</div> : null}
+      {numberHint ? <div className="ui-subtle text-xs pb-1 ml-auto">{numberHint}</div> : null}
     </div>
   );
 };

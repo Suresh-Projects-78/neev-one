@@ -149,7 +149,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
                 style={{ color: i <= step ? 'rgb(var(--brand))' : 'rgb(var(--fg-subtle))' }}
               >
                 <span
-                  className="grid h-5 w-5 place-items-center rounded-full text-[10px] font-bold"
+                  className="grid h-5 w-5 place-items-center rounded-full text-xs font-bold"
                   style={
                     i < step
                       ? { backgroundColor: 'rgb(var(--pos))', color: '#fff' }

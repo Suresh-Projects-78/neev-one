@@ -424,7 +424,7 @@
     gap: 0.3rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.4;
     white-space: nowrap;
@@ -493,7 +493,7 @@
      "1 of 12" under a schedule. */
   .ui-cell-sub {
     display: block;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     line-height: 1rem;
     color: rgb(var(--fg-subtle));
     margin-top: 0.0625rem;
@@ -504,7 +504,7 @@
     z-index: 1;
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg-muted));
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -546,10 +546,15 @@
   }
 
   .ui-th {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.6875rem;          /* 11px */
+    /* 12px is the floor DESIGN.md sets and the tier a column header belongs to.
+       The extra pixel over the old 11px costs width, so the tracking comes back
+       from .04em to .02em and the horizontal padding from 12px to 8px:
+       uppercase still reads as a label, and "Invoice No." still fits its column
+       instead of truncating to "Invoice N…". */
+    padding: 0.5rem 0.5rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
     color: rgb(var(--fg-subtle));
     text-align: left;
@@ -1182,7 +1187,7 @@
     align-self: flex-start;
     padding: 0.125rem 0.375rem;
     border-radius: var(--radius-sm);
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     background-color: rgb(var(--surface-sunken));
@@ -1601,7 +1606,7 @@
   /* Column headings: quiet, uppercase, wide-tracked — a label for the column,
      not a competitor to the data under it. */
   .ui-table thead th {
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;

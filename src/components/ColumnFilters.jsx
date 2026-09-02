@@ -368,7 +368,7 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
       >
         <span className="truncate">{label}</span>
         <span className="flex items-center gap-0.5 shrink-0">
-          {sorted ? <span aria-hidden="true" className="text-[10px]">{state.sort.dir === 'asc' ? '\u25b2' : '\u25bc'}</span> : null}
+          {sorted ? <span aria-hidden="true" className="text-xs">{state.sort.dir === 'asc' ? '\u25b2' : '\u25bc'}</span> : null}
           <ChevronDown
             size={13}
             aria-hidden="true"

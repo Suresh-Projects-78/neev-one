@@ -850,7 +850,7 @@ const statusReason = (doc, status, company, nowMs) => {
                 <SlidersHorizontal size={15} aria-hidden="true" /> Filters
                 {activeFilterCount ? (
                   <span
-                    className="ui-mono text-[11px] rounded-full px-1.5"
+                    className="ui-mono text-xs rounded-full px-1.5"
                     style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-accent, 255 255 255))' }}
                   >
                     {activeFilterCount}
@@ -1174,10 +1174,10 @@ const statusReason = (doc, status, company, nowMs) => {
                   />
                 </th>
               ) : null}
-              <ColumnHeader label="Invoice No." col="number" state={colFilters} />
+              <ColumnHeader label="Invoice #" col="number" state={colFilters} />
               {col('customer') ? <ColumnHeader label="Customer" col="customer" state={colFilters} /> : null}
-              {col('date') ? <ColumnHeader label="Invoice Date" col="date" state={colFilters} /> : null}
-              {col('due') ? <ColumnHeader label="Due Date" col="due" state={colFilters} /> : null}
+              {col('date') ? <ColumnHeader label="Date" col="date" state={colFilters} /> : null}
+              {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} /> : null}
               <ColumnHeader label="Amount" col="total" state={colFilters} className="ui-num" align="right" />
               {col('status') ? <ColumnHeader label="Status" col="status" state={colFilters} /> : null}
               {/* Balance, not paid: what is still owed is the figure somebody
@@ -1267,7 +1267,7 @@ const statusReason = (doc, status, company, nowMs) => {
                         const returnMark = returnStatusLabel(inv, db.creditNotes || [], 'originalInvoiceId');
                         return returnMark ? (
                           <span
-                            className="ml-1 px-2 py-1 rounded-full text-[11px] font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
+                            className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
                             title={`${returnMark} against this invoice`}
                           >
                             {returnMark}

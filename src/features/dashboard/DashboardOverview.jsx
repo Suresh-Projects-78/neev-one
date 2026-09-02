@@ -213,7 +213,7 @@ function BalanceCard({ label, value, company, tone = '', hint, note, accent, act
       ) : null}
       <div className={`flex items-baseline justify-between gap-2 ${rail ? 'pl-1' : ''}`}>
         <span className="ui-card-label">{label}</span>
-        <span className="ui-subtle text-[11px]">as of today</span>
+        <span className="ui-subtle text-xs">as of today</span>
       </div>
       <div
         className={`ui-mono text-[1.55rem] font-semibold leading-9 ${rail ? 'pl-1' : ''}`}
@@ -267,7 +267,7 @@ function AgeingBar({ buckets, total, company, onPick }) {
             key={b.key}
             type="button"
             onClick={onPick ? () => onPick(b) : undefined}
-            className="inline-flex items-center gap-1.5 text-[11.5px]"
+            className="inline-flex items-center gap-1.5 text-xs"
             style={{ color: 'rgb(var(--fg-muted))', background: 'none', border: 0, padding: 0, cursor: onPick ? 'pointer' : 'default' }}
           >
             <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: `rgb(${tones[b.tone]})` }} aria-hidden="true" />
@@ -954,12 +954,12 @@ export default function DashboardOverview({
             <>
               <div className="flex items-baseline gap-4 flex-wrap mt-2">
                 <span>
-                  <span className="ui-subtle text-[11px] block">Today</span>
+                  <span className="ui-subtle text-xs block">Today</span>
                   <b className="ui-mono text-lg">{formatMoney(forecast.start, currentCompany)}</b>
                 </span>
                 <ArrowRight size={14} aria-hidden="true" style={{ color: 'rgb(var(--fg-subtle))' }} />
                 <span>
-                  <span className="ui-subtle text-[11px] block">In 30 days</span>
+                  <span className="ui-subtle text-xs block">In 30 days</span>
                   <b
                     className="ui-mono text-lg"
                     style={{ color: `rgb(var(--${forecast.end < forecast.start ? 'neg' : 'pos'}))` }}
@@ -1013,7 +1013,7 @@ export default function DashboardOverview({
             <h3 className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>
               Stock on hand
             </h3>
-            <span className="ui-subtle text-[11px]">{activeWarehouseId ? 'this warehouse' : 'all warehouses'}</span>
+            <span className="ui-subtle text-xs">{activeWarehouseId ? 'this warehouse' : 'all warehouses'}</span>
           </div>
           {stock ? (
             <>

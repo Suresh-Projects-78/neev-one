@@ -7905,7 +7905,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   <div className="ui-t-label">{row.label}</div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
+                      <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
                       <input
                         type="text"
                         value={prefix}
@@ -7914,7 +7914,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
+                      <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
                       <input
                         type="number"
                         min="1"
@@ -7925,7 +7925,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Next</label>
+                      <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Next</label>
                       <input
                         type="number"
                         min="1"
@@ -7948,7 +7948,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-1">
-            <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Apply To</label>
+            <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Apply To</label>
             <select
               value={scopeBranchId}
               onChange={(e) => setScopeBranchId(String(e.target.value || '').trim())}
@@ -7988,7 +7988,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
 
                 <div className="grid grid-cols-7 gap-2 flex-1">
                   <div className="col-span-1">
-                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Mode</label>
+                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Mode</label>
                     <select
                       value={cfg?.mode || 'auto'}
                       onChange={(e) => updateNumberingSetting(v.key, { mode: e.target.value })}
@@ -8000,7 +8000,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
+                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
                     <input
                       type="text"
                       value={cfg?.prefix || ''}
@@ -8010,7 +8010,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Suffix</label>
+                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Suffix</label>
                     <input
                       type="text"
                       value={cfg?.suffix || ''}
@@ -8020,7 +8020,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
+                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
                     <select
                       value={String(cfg?.digits || 0)}
                       onChange={(e) => updateNumberingSetting(v.key, { digits: Number(e.target.value) })}
@@ -8037,7 +8037,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-[10px] uppercase tracking-wide ui-subtle mb-0.5">Next No</label>
+                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Next No</label>
                     <input
                       type="number"
                       value={cfg?.nextNumber ?? 1}
@@ -13687,7 +13687,7 @@ const AppShell = () => {
                     className="absolute left-0 mt-2 w-72 rounded-lg overflow-hidden z-50 ui-card ui-in-pop"
                     style={{ boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top left' }}
                   >
-                    <div className="px-3 py-2 ui-subtle text-[11px] uppercase tracking-wide">Switch company</div>
+                    <div className="px-3 py-2 ui-subtle text-xs uppercase tracking-wide">Switch company</div>
                     {availableOrgs.map((o) => {
                       const isActive = String(o.orgId) === String(activeOrgId);
                       return (
@@ -14046,7 +14046,7 @@ const AppShell = () => {
                               />
                               <span className="min-w-0 truncate">{item.label}</span>
                               {state ? (
-                                <span className="ml-auto shrink-0 text-[11px] ui-subtle tabular-nums">{state}</span>
+                                <span className="ml-auto shrink-0 text-xs ui-subtle tabular-nums">{state}</span>
                               ) : null}
                             </button>
                           );
@@ -14077,7 +14077,7 @@ const AppShell = () => {
                 aria-label="Account menu"
               >
                 <span
-                  className="h-6 w-6 rounded-full inline-flex items-center justify-center text-[10px] font-bold shrink-0"
+                  className="h-6 w-6 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0"
                   style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
                   aria-hidden="true"
                 >
@@ -14102,7 +14102,7 @@ const AppShell = () => {
                 >
                   <div className="px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
                     <div className="text-sm font-semibold ui-title truncate">{userEmail}</div>
-                    <div className="ui-subtle text-[11px] mt-0.5 ui-mono truncate">
+                    <div className="ui-subtle text-xs mt-0.5 ui-mono truncate">
                       org {String(localStorage.getItem('activeOrgId') || '-')}
                     </div>
                   </div>
@@ -14138,7 +14138,7 @@ const AppShell = () => {
                               setVerifySending(false);
                             }
                           }}
-                          className="ui-btn ui-btn-secondary ui-btn-sm !min-h-0 !py-0.5 !px-2 mt-1.5 text-[11px]"
+                          className="ui-btn ui-btn-secondary ui-btn-sm !min-h-0 !py-0.5 !px-2 mt-1.5 text-xs"
                         >
                           {verifySending ? 'Sending…' : 'Send the link'}
                         </button>

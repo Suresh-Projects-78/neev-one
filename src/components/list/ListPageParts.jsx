@@ -153,7 +153,7 @@ export function FiltersButton({ period, onPeriodChange, dateFrom, dateTo, onDate
       >
         <SlidersHorizontal size={15} aria-hidden="true" /> Filters
         {activeCount ? (
-          <span className="ui-mono text-[11px] rounded-full px-1.5" style={{ backgroundColor: 'rgb(var(--brand))', color: '#fff' }}>
+          <span className="ui-mono text-xs rounded-full px-1.5" style={{ backgroundColor: 'rgb(var(--brand))', color: '#fff' }}>
             {activeCount}
           </span>
         ) : null}
