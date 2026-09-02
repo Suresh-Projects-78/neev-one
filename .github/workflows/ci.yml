@@ -129,13 +129,27 @@ jobs:
           DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
         run: |
           URL="${DEPLOY_URL:-https://68.233.107.83.sslip.io}"
+
+          # The API is the thing that was just restarted, so it is the one that
+          # needs time — and it was the only one without a retry. Caddy answers
+          # 502 for the second or two before node is listening again, which
+          # failed the check on a deploy that had in fact worked.
+          #
+          # 401 is the healthy answer: the API is alive and asking who you are.
+          # A 200 there would mean an unauthenticated endpoint.
+          for i in $(seq 1 20); do
+            api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL/api/health" || true)
+            [ "$api" = "401" ] && break
+            echo "api:  $api (attempt $i, waiting for the service to come back)"
+            sleep 5
+          done
+
           for i in $(seq 1 10); do
             code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL/" || true)
             [ "$code" = "200" ] && break
             sleep 5
           done
+
           echo "app:  $code"
-          api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$URL/api/health" || true)
           echo "api:  $api"
-          # 401 is the healthy answer: the API is alive and asking who you are.
           [ "$code" = "200" ] && [ "$api" = "401" ]
