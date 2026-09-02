@@ -47,7 +47,7 @@ export function StatCards({ cards, company }) {
             <c.Icon size={16} />
           </span>
           <span className="block">
-            <span className="ui-card-label block pe-9">{c.label}</span>
+            <span className="ui-card-label block pe-9 min-h-8">{c.label}</span>
             <span
               className={`block font-semibold leading-8 ${c.count ? 'text-2xl' : 'ui-mono text-lg'}`}
               style={c.tone === 'neg' || c.tone === 'warn' ? { color: `rgb(var(--${c.tone}))` } : undefined}
@@ -110,9 +110,20 @@ export function StatusTabs({ tabs, value, counts, onChange, children }) {
 }
 
 /** Search, in the header rather than a band of its own. */
+/**
+ * Search is the control these pages exist for, so it is never the one that
+ * gets dropped.
+ *
+ * It used to be `hidden md:block`. Below 768px the table is 960px wide inside
+ * its own scroller and every column but the first is off-screen — which is
+ * exactly where finding a document by name matters most, and exactly where the
+ * search box disappeared. On a phone the only way to reach an invoice was to
+ * scroll. It stays at every width now and takes the full row on small screens,
+ * where there is nothing beside it to share with.
+ */
 export function ListSearch({ value, onChange, placeholder = 'Search…', label = 'Search' }) {
   return (
-    <div className="relative hidden md:block">
+    <div className="relative order-first w-full md:order-none md:w-auto">
       <Search size={14} aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 ui-muted" />
       <input
         type="text"
@@ -120,7 +131,7 @@ export function ListSearch({ value, onChange, placeholder = 'Search…', label =
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        className="ui-input !h-9 w-56 lg:w-64 ps-8 pe-2 text-sm"
+        className="ui-input !h-9 w-full md:w-56 lg:w-64 ps-8 pe-2 text-sm"
       />
     </div>
   );

@@ -44,6 +44,7 @@ import {
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { PageHeader, StatusPill, EmptyState, TableTotals, FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
+import { ListSearch, StatCards } from '../../components/list/ListPageParts';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
@@ -827,20 +828,15 @@ const statusReason = (doc, status, company, nowMs) => {
               A filter panel spanning the page reads as a second toolbar and
               costs eighty pixels above the rows somebody came to read.
             */}
-            <div className="relative hidden md:block">
-              <Search size={14} aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 ui-muted" />
-              <input
-                type="text"
-                value={searchText}
-                onChange={(e) => {
-                  setSearchText(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search invoices…"
-                aria-label="Search invoices"
-                className="ui-input !h-9 w-56 lg:w-64 ps-8 pe-2 text-sm"
-              />
-            </div>
+            <ListSearch
+              value={searchText}
+              onChange={(v) => {
+                setSearchText(v);
+                setPage(1);
+              }}
+              placeholder="Search invoices…"
+              label="Search invoices"
+            />
 
             <div className="relative">
               <button
@@ -1032,35 +1028,16 @@ const statusReason = (doc, status, company, nowMs) => {
         Drafts are out of every money figure — a draft is an intention, not a
         receivable — but they stay in the count, because they exist.
       */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="This financial year">
-        {[
-          { k: 'Total invoices', v: String(headline.count), money: false, tone: 'info', Icon: FileText },
-          { k: 'Total invoice amount', v: headline.billed, tone: 'party', Icon: Receipt },
-          { k: 'Paid amount', v: headline.paid, tone: 'pos', Icon: CreditCard },
-          { k: 'Outstanding amount', v: headline.outstanding, tone: 'warn', Icon: ClipboardList },
-          { k: 'Overdue amount', v: headline.overdue, tone: 'neg', Icon: Ban },
-        ].map((c) => (
-          <div key={c.k} className="ui-card p-4 flex items-start gap-3">
-            <span
-              className="h-10 w-10 rounded-full grid place-items-center shrink-0"
-              style={{ backgroundColor: `rgb(var(--${c.tone}) / 0.12)`, color: `rgb(var(--${c.tone}))` }}
-              aria-hidden="true"
-            >
-              <c.Icon size={18} />
-            </span>
-            <span className="min-w-0">
-              <span className="ui-card-label block">{c.k}</span>
-              <span
-                className={`block font-semibold leading-8 ${c.money === false ? 'text-2xl' : 'ui-mono text-xl'}`}
-                style={c.tone === 'neg' || c.tone === 'warn' ? { color: `rgb(var(--${c.tone}))` } : undefined}
-              >
-                {c.money === false ? c.v : formatMoney(c.v, currentCompany)}
-              </span>
-              <span className="ui-subtle text-[11px]">This financial year</span>
-            </span>
-          </div>
-        ))}
-      </section>
+      <StatCards
+        company={currentCompany}
+        cards={[
+          { label: 'Total invoices', value: headline.count, count: true, tone: 'info', Icon: FileText },
+          { label: 'Total invoice amount', value: headline.billed, tone: 'party', Icon: Receipt },
+          { label: 'Paid amount', value: headline.paid, tone: 'pos', Icon: CreditCard },
+          { label: 'Outstanding amount', value: headline.outstanding, tone: 'warn', Icon: ClipboardList },
+          { label: 'Overdue amount', value: headline.overdue, tone: 'neg', Icon: Ban },
+        ]}
+      />
 
       {/*
         Status as tabs with their counts, not a dropdown.

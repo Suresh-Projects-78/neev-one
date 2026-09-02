@@ -9,14 +9,25 @@ import { resolveStatus } from '../../utils/statusRegistry';
  * components never carry raw hex values and both themes stay in sync.
  */
 
-/** Page header: title, optional description, right-aligned actions. */
+/**
+ * Page header: title, optional description, right-aligned actions.
+ *
+ * The action row wraps rather than holding its width. It was `shrink-0`, so on
+ * a 375px screen a search box, two buttons and a split primary measured 363px
+ * and ended 4px past the viewport — with the page itself not scrolling
+ * sideways, which meant the caret half of "New Invoice" could not be reached at
+ * all and its menu was unopenable on a phone. Wrapping costs a row of height;
+ * `shrink-0` cost the control.
+ */
 export const PageHeader = ({ title, description, actions = null }) => (
   <div className="ui-in-fade flex flex-wrap items-start justify-between gap-3 mb-4">
     <div className="min-w-0">
       <h1 className="ui-t-page">{title}</h1>
       {description ? <p className="ui-muted ui-t-body mt-1">{description}</p> : null}
     </div>
-    {actions ? <div className="flex items-center gap-2 shrink-0">{actions}</div> : null}
+    {actions ? (
+      <div className="flex flex-wrap items-center justify-end gap-2 min-w-0 max-w-full">{actions}</div>
+    ) : null}
   </div>
 );
 
