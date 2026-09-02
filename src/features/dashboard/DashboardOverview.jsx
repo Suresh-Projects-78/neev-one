@@ -445,39 +445,13 @@ function initialsFor(name, email, company) {
   return (parts[0][0] + parts[1][0]).toUpperCase();
 }
 
-/**
- * A stack of sheets turning in perspective, one either side of the greeting.
- *
- * Class names are written out, not interpolated. Tailwind tree-shakes
- * `@layer components` rules whose selector never appears literally in the
- * source, which is how the previous attempt lost one side entirely.
- */
-const STACK_CLASS = {
-  l: 'ui-stack3d ui-stack3d-l',
-  r: 'ui-stack3d ui-stack3d-r',
-};
-
-function SheetStack({ side }) {
-  return (
-    <div className={STACK_CLASS[side]} aria-hidden="true">
-      <div className="ui-stack3d-inner">
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <span key={i} className="ui-stack3d-sheet" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function DashboardHero({ name, initials, avatarUrl, insights, onCommand, actions }) {
   const [idx, setIdx] = useState(0);
   const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
 
   return (
-    <section className="relative pt-8 pb-2 text-center" aria-label="Overview">
-      <SheetStack side="l" />
-      <SheetStack side="r" />
+    <section className="pt-8 pb-2 text-center" aria-label="Overview">
       {avatarUrl ? (
         <img
           src={avatarUrl}
