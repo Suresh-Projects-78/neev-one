@@ -1748,27 +1748,27 @@
   .ui-hero-bars {
     position: absolute;
     top: 50%;
-    width: 152px;
-    height: 176px;
-    margin-top: -88px;
+    width: 150px;
+    height: 190px;
+    margin-top: -95px;
     z-index: -1;
     display: none;
     align-items: flex-end;
-    gap: 10px;
+    gap: 9px;
     pointer-events: none;
   }
 
   .ui-hero-bars-l {
-    left: 4%;
-    -webkit-mask-image: linear-gradient(to right, #000 15%, transparent);
-    mask-image: linear-gradient(to right, #000 15%, transparent);
+    left: 5%;
+    -webkit-mask-image: linear-gradient(to right, #000 20%, transparent);
+    mask-image: linear-gradient(to right, #000 20%, transparent);
   }
 
   .ui-hero-bars-r {
-    right: 4%;
+    right: 5%;
     flex-direction: row-reverse;
-    -webkit-mask-image: linear-gradient(to left, #000 15%, transparent);
-    mask-image: linear-gradient(to left, #000 15%, transparent);
+    -webkit-mask-image: linear-gradient(to left, #000 20%, transparent);
+    mask-image: linear-gradient(to left, #000 20%, transparent);
   }
 
   @media (min-width: 1280px) {
@@ -1779,30 +1779,33 @@
 
   .ui-hero-bar {
     flex: 1;
-    border-radius: 5px 5px 0 0;
+    border-radius: 4px 4px 0 0;
     transform-origin: bottom;
-    /* Enough pine at the foot that it reads as tinted rather than as grey
-       bars somebody forgot to colour, and thin enough at the top that they
-       dissolve instead of ending on a hard cap. */
-    background: linear-gradient(to top, rgb(var(--brand) / 0.4), rgb(var(--brand) / 0.08));
+    /* Flat, not a vertical gradient.
+       Porting this in I "improved" it into a gradient fading to 0.08 at the
+       top, on the theory that dissolving beat a hard cap. On the real page it
+       just made the bars look washed out and half-rendered — the sample that
+       was actually approved is a solid fill, and solid is what gives them
+       enough body to read as an object rather than a smudge. */
+    background: rgb(var(--brand) / 0.22);
     animation: ui-hero-breathe 9s ease-in-out infinite alternate;
   }
 
   /* Heights and delays are fixed rather than random so the two sides are the
      same object mirrored, not two different ones. */
   .ui-hero-bar:nth-child(1) { height: 38%; animation-delay: 0s; }
-  .ui-hero-bar:nth-child(2) { height: 66%; animation-delay: 0.8s; }
-  .ui-hero-bar:nth-child(3) { height: 47%; animation-delay: 1.6s; }
-  .ui-hero-bar:nth-child(4) { height: 84%; animation-delay: 2.4s; }
-  .ui-hero-bar:nth-child(5) { height: 57%; animation-delay: 3.2s; }
+  .ui-hero-bar:nth-child(2) { height: 64%; animation-delay: 0.7s; }
+  .ui-hero-bar:nth-child(3) { height: 46%; animation-delay: 1.4s; }
+  .ui-hero-bar:nth-child(4) { height: 82%; animation-delay: 2.1s; }
+  .ui-hero-bar:nth-child(5) { height: 56%; animation-delay: 2.8s; }
 
   :root[data-theme='dark'] .ui-hero-bar {
-    background: linear-gradient(to top, rgb(var(--brand) / 0.5), rgb(var(--brand) / 0.14));
+    background: rgb(var(--brand) / 0.3);
   }
 }
 
 @keyframes ui-hero-breathe {
-  from { transform: scaleY(0.7); opacity: 0.55; }
+  from { transform: scaleY(0.72); opacity: 0.6; }
   to   { transform: scaleY(1); opacity: 1; }
 }
 
