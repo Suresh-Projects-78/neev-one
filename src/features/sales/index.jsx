@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Settings2, SlidersHorizontal, Table2, Trash2, Tag, RefreshCw, X } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Search, Settings2, SlidersHorizontal, Table2, Trash2, Tag, RefreshCw, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -49,7 +49,9 @@ import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
-import ListControls, { periodRange, usePeriodFilter } from '../../components/ListControls';
+import { periodRange, usePeriodFilter, LIST_PERIODS, describeView } from '../../components/ListControls';
+import { exportListPdf } from '../../utils/listPdf';
+import { exportListXlsx } from '../../utils/listXlsx';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 import { blockIfClosed } from '../../utils/bookClose';
 
@@ -83,12 +85,16 @@ const GRID_COLUMNS = [
   { key: 'number', label: 'Invoice No.', always: true },
   { key: 'date', label: 'Date' },
   { key: 'customer', label: 'Customer' },
-  { key: 'amount', label: 'Amount' },
-  { key: 'gst', label: 'GST Amount' },
+  // Taxable and GST are off by default. The reference shows Amount, Status and
+  // Balance — the three figures a collections conversation uses — and the tax
+  // split belongs to the document, not to a list somebody scans.
+  { key: 'amount', label: 'Taxable', off: true },
+  { key: 'gst', label: 'GST', off: true },
   { key: 'total', label: 'Total Amount', always: true },
   { key: 'status', label: 'Status' },
   { key: 'due', label: 'Due' },
-  { key: 'warehouse', label: 'Warehouse' },
+  // Off by default too: the header already says which warehouse is active.
+  { key: 'warehouse', label: 'Warehouse', off: true },
 ];
 
 export const InvoicesList = ({
@@ -124,6 +130,10 @@ export const InvoicesList = ({
    */
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
+  const filterBtnRef = useRef(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const exportBtnRef = useRef(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem('neev:tip:recurringInvoices') === 'dismissed'
   );
@@ -141,7 +151,7 @@ export const InvoicesList = ({
   const { isEnabled } = useFeatures();
   const gridEnabled = isEnabled('gridTools');
   const grid = useGridView({
-    storageKey: `grid:${currentCompany?.id || 'x'}:invoices`,
+    storageKey: `grid:${currentCompany?.id || 'x'}:invoices:v2`,
     columns: GRID_COLUMNS,
     getFilterSnapshot: () => ({ searchText, statusFilter, dateFrom, dateTo }),
     applyFilterSnapshot: (f) => {
@@ -427,6 +437,18 @@ const statusReason = (doc, status, company, nowMs) => {
    * path decides what is in view, so the chips, the totals, the table and both
    * exports can never disagree about the period.
    */
+  /**
+   * How many filters are actually narrowing the list, for the badge on the
+   * Filters button. Declared after the state it reads — a const in the same
+   * scope is in its temporal dead zone until then, and the component threw
+   * rather than rendering when this sat above `period`.
+   */
+  const activeFilterCount =
+    (searchText.trim() ? 1 : 0) +
+    (statusFilter ? 1 : 0) +
+    (period !== 'all' ? 1 : 0) +
+    Object.keys(colFilters.filters || {}).length;
+
   const applyPeriod = (key) => {
     setPeriod(key);
     const range = periodRange(key);
@@ -790,13 +812,104 @@ const statusReason = (doc, status, company, nowMs) => {
         title="Sales Invoices"
         description="Create, view and manage all your sales invoices"
         actions={
-          <PermissionButton
-            permission="SALES::Invoices::CREATE"
-            onClick={openNewInvoice}
-            className="ui-btn ui-btn-primary"
-          >
-            <Plus size={16} aria-hidden="true" /> New Invoice
-          </PermissionButton>
+          <>
+            {/*
+              Search sits in the header rather than in a band of its own.
+              A filter panel spanning the page reads as a second toolbar and
+              costs eighty pixels above the rows somebody came to read.
+            */}
+            <div className="relative hidden md:block">
+              <Search size={14} aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 ui-muted" />
+              <input
+                type="text"
+                value={searchText}
+                onChange={(e) => {
+                  setSearchText(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search invoices…"
+                aria-label="Search invoices"
+                className="ui-input !h-9 w-56 lg:w-64 ps-8 pe-2 text-sm"
+              />
+            </div>
+
+            <div className="relative">
+              <button
+                type="button"
+                ref={filterBtnRef}
+                onClick={() => setFiltersOpen((v) => !v)}
+                className="ui-btn ui-btn-secondary"
+                aria-haspopup="dialog"
+                aria-expanded={filtersOpen}
+              >
+                <SlidersHorizontal size={15} aria-hidden="true" /> Filters
+                {activeFilterCount ? (
+                  <span
+                    className="ui-mono text-[11px] rounded-full px-1.5"
+                    style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-accent, 255 255 255))' }}
+                  >
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </button>
+              {filtersOpen ? (
+                <Popover anchorRef={filterBtnRef} onClose={() => setFiltersOpen(false)} minWidth={264}>
+                  <div className="p-3 space-y-3">
+                    <div>
+                      <label className="ui-label" htmlFor="inv-period">Period</label>
+                      <select
+                        id="inv-period"
+                        value={period}
+                        onChange={(e) => {
+                          applyPeriod(e.target.value);
+                          setPage(1);
+                        }}
+                        className="ui-select w-full px-3 py-2"
+                      >
+                        {LIST_PERIODS.map((p2) => (
+                          <option key={p2.key} value={p2.key}>{p2.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {period === 'custom' ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="ui-label">From</label>
+                          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
+                        </div>
+                        <div>
+                          <label className="ui-label">To</label>
+                          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
+                        </div>
+                      </div>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchText('');
+                        setStatusFilter('');
+                        applyPeriod('all');
+                        colFilters.clearAll();
+                        setPage(1);
+                        setFiltersOpen(false);
+                      }}
+                      className="ui-btn ui-btn-ghost ui-btn-sm w-full"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                </Popover>
+              ) : null}
+            </div>
+
+            <PermissionButton
+              permission="SALES::Invoices::CREATE"
+              onClick={openNewInvoice}
+              className="ui-btn ui-btn-primary"
+            >
+              <Plus size={16} aria-hidden="true" /> New Invoice
+            </PermissionButton>
+          </>
         }
       />
 
@@ -882,51 +995,68 @@ const statusReason = (doc, status, company, nowMs) => {
             );
           })}
         </div>
-        <div className="ms-auto flex items-center gap-2">{gridEnabled ? <GridControls grid={grid} /> : null}</div>
+        <div className="ms-auto flex items-center gap-2">
+          {gridEnabled ? <GridControls grid={grid} /> : null}
+          <div className="relative">
+            <button
+              type="button"
+              ref={exportBtnRef}
+              onClick={() => setExportOpen((v) => !v)}
+              className="ui-btn ui-btn-secondary ui-btn-sm"
+              aria-haspopup="menu"
+              aria-expanded={exportOpen}
+              aria-label="Export"
+              title="Export"
+            >
+              <Download size={15} aria-hidden="true" />
+            </button>
+            {exportOpen ? (
+              <Popover anchorRef={exportBtnRef} onClose={() => setExportOpen(false)} minWidth={216}>
+                <div className="py-1" role="menu">
+                  {[
+                    { k: 'pdf', label: 'PDF', Icon: FileText },
+                    { k: 'xlsx', label: 'Excel', Icon: Table2 },
+                    { k: 'csv', label: 'CSV', Icon: Download },
+                  ].map((o) => (
+                    <button
+                      key={o.k}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setExportOpen(false);
+                        const common = {
+                          fileName: `Invoices_${currentCompany?.name || 'company'}`,
+                          columns: exportColumns,
+                          rows: filteredInvoices,
+                        };
+                        const subtitle = describeView({ period, dateFrom, dateTo, status: statusFilter, search: searchText });
+                        if (o.k === 'pdf') {
+                          exportListPdf({ ...common, title: `Invoices — ${currentCompany?.name || 'Company'}`, subtitle,
+                            footNote: `${filteredInvoices.length} invoice(s) · exported from Neev One` });
+                        } else if (o.k === 'xlsx') {
+                          exportListXlsx({ ...common, subtitle, sheetName: 'Invoices' });
+                        } else {
+                          exportRows({ ...common, label: 'invoice(s)' });
+                        }
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <o.Icon size={15} aria-hidden="true" /> {o.label}
+                    </button>
+                  ))}
+                  <p className="ui-caption px-3 pt-1 pb-2">
+                    Exports what you are looking at — this tab, this search, this period.
+                  </p>
+                </div>
+              </Popover>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       {/* One card, not two: the filters belong to the table they filter, and a
           separate floating box above it reads as an unrelated control panel. */}
       <div className="ui-card overflow-hidden">
-        {/*
-          No status select here: the tabs above already choose status, and with
-          counts on them. Two controls for one filter is how they end up
-          disagreeing — and the one nobody used is the one that keeps its stale
-          value.
-        */}
-        <ListControls
-          idPrefix="inv"
-          statusValue={statusFilter}
-          searchValue={searchText}
-          onSearchChange={(v) => {
-            setSearchText(v);
-            setPage(1);
-          }}
-          searchPlaceholder="Search by invoice #, customer, ref no"
-          period={period}
-          onPeriodChange={(k) => {
-            applyPeriod(k);
-            setPage(1);
-          }}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
-          onDateFromChange={setDateFrom}
-          onDateToChange={setDateTo}
-          onClear={() => {
-            setSearchText('');
-            setStatusFilter('');
-            applyPeriod('all');
-            colFilters.clearAll();
-            setPage(1);
-          }}
-          exportTitle={`Invoices — ${currentCompany?.name || 'Company'}`}
-          exportFileName={`Invoices_${currentCompany?.name || 'company'}`}
-          exportSheetName="Invoices"
-          exportColumns={exportColumns}
-          exportRows={filteredInvoices}
-        >
-          {gridEnabled ? <GridControls grid={grid} /> : null}
-        </ListControls>
 
         {gridEnabled ? (
           <BulkBar count={selectedIds.size} onClear={() => setSelectedIds(new Set())}>
@@ -957,17 +1087,17 @@ const statusReason = (doc, status, company, nowMs) => {
                 </th>
               ) : null}
               <ColumnHeader label="Invoice No." col="number" state={colFilters} />
-              {col('date') ? <ColumnHeader label="Date" col="date" state={colFilters} /> : null}
               {col('customer') ? <ColumnHeader label="Customer" col="customer" state={colFilters} /> : null}
-              {col('amount') ? <ColumnHeader label="Amount" col="amount" state={colFilters} className="ui-num" align="right" /> : null}
-              {col('gst') ? <ColumnHeader label="GST Amount" col="gst" state={colFilters} className="ui-num" align="right" /> : null}
-              <ColumnHeader label="Total Amount" col="total" state={colFilters} className="ui-num" align="right" />
+              {col('date') ? <ColumnHeader label="Invoice Date" col="date" state={colFilters} /> : null}
+              {col('due') ? <ColumnHeader label="Due Date" col="due" state={colFilters} /> : null}
+              <ColumnHeader label="Amount" col="total" state={colFilters} className="ui-num" align="right" />
               {col('status') ? <ColumnHeader label="Status" col="status" state={colFilters} /> : null}
               {/* Balance, not paid: what is still owed is the figure somebody
                   chases. Paid is derivable from it and total, and only one of
                   the three earns a column. */}
               <ColumnHeader label="Balance" col="balance" state={colFilters} className="ui-num" align="right" />
-              {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} /> : null}
+              {col('amount') ? <ColumnHeader label="Taxable" col="amount" state={colFilters} className="ui-num" align="right" /> : null}
+              {col('gst') ? <ColumnHeader label="GST" col="gst" state={colFilters} className="ui-num" align="right" /> : null}
               {col('warehouse') ? <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} /> : null}
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
@@ -1036,13 +1166,10 @@ const statusReason = (doc, status, company, nowMs) => {
                       </td>
                     ) : null}
                     <td className="ui-col-id">{inv.number}</td>
-                    {col('date') ? <td className="ui-col-date">{inv.date || '-'}</td> : null}
                     {col('customer') ? <td className="ui-col-entity">{inv.customerName || '-'}</td> : null}
-                    {col('amount') ? (
-                      <td className="ui-col-amount">{formatMoney(Number(inv.subtotal || 0), currentCompany)}</td>
-                    ) : null}
-                    {col('gst') ? (
-                      <td className="ui-col-amount">{formatMoney(Number(inv.gstTotal || 0), currentCompany)}</td>
+                    {col('date') ? <td className="ui-col-date">{inv.date || '-'}</td> : null}
+                    {col('due') ? (
+                      <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>{inv.dueDate || '-'}</td>
                     ) : null}
                     <td className="ui-col-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
                     {col('status') ? (
@@ -1072,10 +1199,11 @@ const statusReason = (doc, status, company, nowMs) => {
                         );
                       })()}
                     </td>
-                    {col('due') ? (
-                      <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>
-                        {inv.dueDate || '-'}
-                      </td>
+                    {col('amount') ? (
+                      <td className="ui-col-amount">{formatMoney(Number(inv.subtotal || 0), currentCompany)}</td>
+                    ) : null}
+                    {col('gst') ? (
+                      <td className="ui-col-amount">{formatMoney(Number(inv.gstTotal || 0), currentCompany)}</td>
                     ) : null}
                     {col('warehouse') ? <td className="ui-col-meta">{whLabel}</td> : null}
                     <td

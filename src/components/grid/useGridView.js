@@ -30,8 +30,17 @@ export function useGridView({ storageKey, columns, getFilterSnapshot, applyFilte
   const viewsKey = `${storageKey}:views`;
 
   const [hidden, setHidden] = useState(() => {
-    const v = load(hiddenKey, []);
-    return Array.isArray(v) ? v.filter((k) => typeof k === 'string') : [];
+    const v = load(hiddenKey, null);
+    if (Array.isArray(v)) return v.filter((k) => typeof k === 'string');
+    /*
+     * First visit on this grid: start from the columns marked `off`.
+     *
+     * A default has to be a default, not a stored choice — writing it into
+     * storage on load would freeze today's default for a user forever, and a
+     * column added later would arrive hidden for everybody who had ever
+     * opened the screen.
+     */
+    return (columns || []).filter((c) => c.off && !c.always).map((c) => c.key);
   });
   const [views, setViews] = useState(() => {
     const v = load(viewsKey, []);
