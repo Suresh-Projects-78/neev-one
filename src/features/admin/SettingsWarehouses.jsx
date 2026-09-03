@@ -663,7 +663,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                           e.stopPropagation();
                           setOpenMenuForWarehouseId((prev) => (prev === w.id ? null : w.id));
                         }}
-                        className="px-2 py-1 rounded-md border ui-surface ui-hover-sunken"
+                        className="px-2 py-1 rounded-lg border ui-surface ui-hover-sunken"
                         aria-label="Warehouse actions"
                       >
                         ⋯

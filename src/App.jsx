@@ -5648,7 +5648,7 @@ const LedgerView = ({
           <button
             type="button"
             onClick={openColumnSettings}
-            className="inline-flex items-center gap-2 px-2 py-1 rounded border ui-surface ui-hover-sunken ui-border-c text-xs"
+            className="inline-flex items-center gap-2 px-2 py-1 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-xs"
             title="Configure columns"
           >
             <Settings size={14} /> Columns
@@ -5800,7 +5800,7 @@ const LedgerView = ({
                           const party = g.meta?.partyName ? `${g.meta.partyName} • ${g.particulars || ''}` : g.particulars || '';
                           content = (
                             <div className="flex items-center gap-2">
-                              <span className="text-xs px-2 py-1 rounded border ui-surface ui-muted" aria-hidden>
+                              <span className="text-xs px-2 py-1 rounded-lg border ui-surface ui-muted" aria-hidden>
                                 {isExpanded ? '▾' : '▸'}
                               </span>
                               <div className="truncate">{party}</div>
@@ -9936,7 +9936,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                             if (!key) return null;
                             const checked = newRole.permissions.includes(key);
                             return (
-                              <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
+                              <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded-lg">
                                 <input
                                   type="checkbox"
                                   checked={checked}
@@ -10035,7 +10035,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                               if (!key) return null;
                               const checked = roleEdit.permissions.includes(key);
                               return (
-                                <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
+                                <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded-lg">
                                   <input
                                     type="checkbox"
                                     checked={checked}
@@ -10123,7 +10123,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                           if (!key) return null;
                           const checked = newRole.permissions.includes(key);
                           return (
-                            <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
+                            <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded-lg">
                               <input type="checkbox" checked={checked} onChange={() => {
                                 const next = new Set(newRole.permissions);
                                 if (next.has(key)) next.delete(key); else next.add(key);
@@ -10199,7 +10199,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       if (!key) return null;
                       const checked = roleEdit.permissions.includes(key);
                       return (
-                        <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded">
+                        <label key={key} className="flex items-start gap-2 text-sm ui-fg px-2 py-1 ui-hover-sunken rounded-lg">
                           <input type="checkbox" checked={checked} onChange={() => {
                             const next = new Set(roleEdit.permissions);
                             if (next.has(key)) next.delete(key); else next.add(key);
@@ -13959,7 +13959,7 @@ const AppShell = () => {
                           type="button"
                           onClick={() => setDensity(d.key)}
                           aria-pressed={density === d.key}
-                          className="flex-1 h-7 rounded-md text-xs font-medium transition-colors"
+                          className="flex-1 h-7 rounded-lg text-xs font-medium transition-colors"
                           style={
                             density === d.key
                               ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }

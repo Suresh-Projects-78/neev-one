@@ -639,7 +639,7 @@ export function SettingsRoles({ orgId }) {
                           e.stopPropagation();
                           setOpenMenuForRoleId((prev) => (prev === r.id ? null : r.id));
                         }}
-                        className="px-2 py-1 rounded-md ui-hover-sunken"
+                        className="px-2 py-1 rounded-lg ui-hover-sunken"
                         aria-label="Actions"
                       >
                         ...

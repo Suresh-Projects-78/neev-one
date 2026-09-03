@@ -361,7 +361,7 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
           if (shared) state.setOpenKey(open ? null : col);
           else setLocalOpen(!open);
         }}
-        className={`w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} rounded px-1 -mx-1 ui-hover-sunken`}
+        className={`w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} rounded-lg px-1 -mx-1 ui-hover-sunken`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={`Sort and filter ${typeof label === 'string' ? label : col}`}

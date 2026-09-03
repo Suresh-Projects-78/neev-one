@@ -144,7 +144,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
                 type="button"
                 onClick={() => setRangeKey(r.key)}
                 aria-pressed={r.key === rangeKey}
-                className="px-2.5 h-7 rounded-md text-xs font-medium transition-colors"
+                className="px-2.5 h-7 rounded-lg text-xs font-medium transition-colors"
                 style={
                   r.key === rangeKey
                     ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }

@@ -535,7 +535,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[b.city, b.state].filter(Boolean).join(', ') || '—'}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{b.addressLine1 || '—'}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${b.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
+                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${b.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
                       {b.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -549,7 +549,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
                           e.stopPropagation();
                           setOpenMenuForBranchId((prev) => (prev === b.id ? null : b.id));
                         }}
-                        className="px-2 py-1 rounded-md border ui-surface ui-hover-sunken"
+                        className="px-2 py-1 rounded-lg border ui-surface ui-hover-sunken"
                         aria-label="Branch actions"
                       >
                         ⋯

@@ -74,11 +74,17 @@
   --info: 107 114 128;
   --info-soft: 245 245 245;
 
-  /* Column hues — requested explicitly: document numbers and party names get
-     their own colours so a row reads as fields, not prose. Both are AA on
-     white (orange-700 4.8:1, teal-700 4.9:1) and deliberately distinct from
-     the money greens/reds so status colour keeps its meaning. */
-  --col-doc: 194 65 12;
+  /* Column hues — document numbers and party names get their own treatment so
+     a row reads as fields, not prose.
+
+     The document number no longer gets a hue. It was orange-700, inherited
+     from when the brand was orange, and once the brand became pine it was the
+     only orange left in the product — sitting 17 degrees from the amber that
+     means "needs attention", so an invoice number could read as a flag. A
+     monospace face at 500 weight already says "identifier"; it does not need
+     colour, and in this system colour is supposed to carry meaning. The party
+     name keeps teal: it is the one column people scan for. */
+  --col-doc: 68 64 60;
   --col-party: 15 118 110;
 
   /* The eleven module tints that used to live here are gone.
@@ -184,7 +190,7 @@
   --info: 161 161 170;
   --info-soft: 39 39 42;
 
-  --col-doc: 253 186 116;   /* orange-300 on the dark card ~9:1 */
+  --col-doc: 214 211 209;   /* stone-300 — an identifier, not a flag */
   --col-party: 94 234 212;  /* teal-300 ~11:1 */
 
 

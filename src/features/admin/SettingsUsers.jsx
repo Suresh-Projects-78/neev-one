@@ -745,7 +745,7 @@ export function SettingsUsers({ orgId }) {
                   <td className="ui-col-entity px-4 py-3 text-sm ui-fg">{u.email}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{getRoleName(u.roleId)}</td>
                   <td className="ui-col-meta px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${u.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
+                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${u.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
                       {u.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -758,7 +758,7 @@ export function SettingsUsers({ orgId }) {
                           e.stopPropagation();
                           setOpenMenuForUserId((prev) => (prev === u.id ? null : u.id));
                         }}
-                        className="px-2 py-1 rounded-md border ui-surface ui-hover-sunken"
+                        className="px-2 py-1 rounded-lg border ui-surface ui-hover-sunken"
                         aria-label="User actions"
                       >
                         ⋯

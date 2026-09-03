@@ -437,7 +437,7 @@ const AuthGate = ({ onAuth }) => {
                 ].map(([title, body]) => (
                   <li key={title} className="flex items-start gap-3.5">
                     <span
-                      className="mt-0.5 w-6 h-6 rounded-md grid place-items-center ui-surface/10 ring-1 ring-white/15 flex-shrink-0"
+                      className="mt-0.5 w-6 h-6 rounded-lg grid place-items-center ui-surface/10 ring-1 ring-white/15 flex-shrink-0"
                       aria-hidden="true"
                     >
                       <CheckIcon className="w-3.5 h-3.5" />

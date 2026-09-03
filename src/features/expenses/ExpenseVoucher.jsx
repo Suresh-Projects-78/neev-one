@@ -140,7 +140,7 @@ const ExpenseVoucherDoc = ({ expense, currentCompany, terms = '' }) => {
       </div>
 
       {terms ? (
-        <div className="mt-6 border rounded p-3 text-xs text-gray-600 whitespace-pre-line">
+        <div className="mt-6 border rounded-lg p-3 text-xs text-gray-600 whitespace-pre-line">
           <div className="font-semibold uppercase text-gray-700 mb-1">Terms &amp; Conditions</div>
           {terms}
         </div>
