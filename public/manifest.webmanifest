@@ -4,8 +4,8 @@
   "description": "Double-entry GST accounting. Books that balance themselves.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FAFAFA",
-  "theme_color": "#F97316",
+  "background_color": "#F9FBFA",
+  "theme_color": "#1C3B35",
   "icons": [
     {
       "src": "/icon.svg",
