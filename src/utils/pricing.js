@@ -19,7 +19,34 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
-export function priceListRate({ db, companyId, customer, itemId }) {
+/**
+ * Is this list in force on the given date?
+ *
+ * A price list carries a status and an optional validity window, and both have
+ * to be honoured here or they are decoration. A festive rate card that ran
+ * 01–31 October and is still quietly discounting invoices in March is the
+ * exact failure this guards: the list looks retired on the screen that lists
+ * it, and is not retired anywhere it matters.
+ *
+ * Both bounds are optional and inclusive. A list with neither is open-ended,
+ * which is what every list created before these fields existed will be — so
+ * nothing that works today stops working.
+ */
+export function isPriceListInForce(list, onDate) {
+  if (!list) return false;
+  if (String(list.status || 'active').toLowerCase() === 'inactive') return false;
+
+  const day = String(onDate || '').slice(0, 10);
+  if (!day) return true;
+
+  const from = String(list.validFrom || '').slice(0, 10);
+  const to = String(list.validTo || '').slice(0, 10);
+  if (from && day < from) return false;
+  if (to && day > to) return false;
+  return true;
+}
+
+export function priceListRate({ db, companyId, customer, itemId, onDate }) {
   const lists = Array.isArray(db?.priceLists) ? db.priceLists.filter((p) => p.companyId === companyId) : [];
   if (!lists.length || !customer) return null;
 
@@ -32,6 +59,7 @@ export function priceListRate({ db, companyId, customer, itemId }) {
 
   for (const listId of listIds) {
     const list = lists.find((p) => Number(p.id) === Number(listId));
+    if (!isPriceListInForce(list, onDate)) continue;
     const rate = num(list?.rates?.[String(itemId)]);
     if (rate != null && rate > 0) return rate;
   }
@@ -58,8 +86,8 @@ export function lastRateFor({ docs, partyField, partyId, itemId }) {
 }
 
 /** Sales-side rate: price list → last invoice price → item sale price. */
-export function resolveSaleRate({ db, companyId, customer, itemId, item }) {
-  const fromList = priceListRate({ db, companyId, customer, itemId });
+export function resolveSaleRate({ db, companyId, customer, itemId, item, onDate }) {
+  const fromList = priceListRate({ db, companyId, customer, itemId, onDate });
   if (fromList != null) return { rate: fromList, source: 'price list' };
 
   if (customer) {

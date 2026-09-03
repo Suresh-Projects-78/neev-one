@@ -63,7 +63,9 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       if (field === 'itemId') {
         const item = picked || itemsMaster.find((i) => i.id === parseInt(value));
         if (item) {
-          const resolved = resolveSaleRate({ db, companyId, customer: selectedCustomer, itemId: item.id, item });
+          // onDate is the order's own date, so a price list that had expired
+          // by then does not price it.
+          const resolved = resolveSaleRate({ db, companyId, customer: selectedCustomer, itemId: item.id, item, onDate: form.date });
           items[idx] = {
             ...items[idx],
             itemId: value,

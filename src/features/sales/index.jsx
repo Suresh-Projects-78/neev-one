@@ -2923,6 +2923,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           customer: selectedCustomer,
           itemId: item.id,
           item,
+          // The document's own date, so a list that had expired by the time
+          // this invoice was raised does not price it.
+          onDate: formData.date,
         });
         newItems[index] = {
           ...newItems[index],
