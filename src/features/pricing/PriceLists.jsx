@@ -528,7 +528,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="ui-card p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="ui-t-section">Item rates</h3>
+            <h3 className="ui-t-sec">Item rates</h3>
             <button type="button" onClick={() => removeList(editing)} className="ui-icon-btn ui-btn-sm !w-8" aria-label="Delete list">
               <Trash2 size={14} />
             </button>
@@ -575,7 +575,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
         </div>
 
         <div className="ui-card p-4">
-          <h3 className="ui-t-section mb-3">Customer assignment</h3>
+          <h3 className="ui-t-sec mb-3">Customer assignment</h3>
           <div className="max-h-[28rem] overflow-y-auto">
             <table className="ui-table w-full">
               <thead>

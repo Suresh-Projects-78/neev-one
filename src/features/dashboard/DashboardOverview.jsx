@@ -983,7 +983,7 @@ export default function DashboardOverview({
         {/* Proportion — where the receivable book is sitting. */}
         <div className="ui-card p-4 flex flex-col">
           <div className="flex items-baseline justify-between gap-3">
-            <h2 className="ui-t-section">Outstanding by age</h2>
+            <h2 className="ui-t-sec">Outstanding by age</h2>
             {recv.count ? (
               <button type="button" onClick={onOpenInvoices} className="ui-t-body" style={{ color: 'rgb(var(--brand-ink))', fontWeight: 600 }}>
                 All invoices
@@ -991,9 +991,14 @@ export default function DashboardOverview({
             ) : null}
           </div>
           <p className="ui-subtle ui-t-body mt-0.5">
-            {recv.count
-              ? `${formatMoney(recv.total, currentCompany)} across ${recv.count} invoice${recv.count === 1 ? '' : 's'}`
-              : 'Nothing outstanding'}
+            {recv.count ? (
+              <>
+                <span className="ui-mono">{formatMoney(recv.total, currentCompany)}</span> across {recv.count} invoice
+                {recv.count === 1 ? '' : 's'}
+              </>
+            ) : (
+              'Nothing outstanding'
+            )}
           </p>
 
           {recv.total > 0 ? (
@@ -1012,7 +1017,7 @@ export default function DashboardOverview({
 
         {/* Ranking — who to call first. */}
         <div className="ui-card p-4">
-          <h2 className="ui-t-section">Who owes you most</h2>
+          <h2 className="ui-t-sec">Who owes you most</h2>
           <p className="ui-subtle ui-t-body mt-0.5">
             {topDebtors.length ? 'By balance, with how late the oldest is' : 'Nobody owes you anything'}
           </p>
@@ -1046,7 +1051,7 @@ export default function DashboardOverview({
 
         {/* Countdown — a fixed date the tax office set, not one you chose. */}
         <div className="ui-card p-4 flex flex-col">
-          <h2 className="ui-t-section">GSTR-1 filing</h2>
+          <h2 className="ui-t-sec">GSTR-1 filing</h2>
           <p className="ui-subtle ui-t-body mt-0.5">{gst.monthLabel}</p>
 
           {Number.isFinite(gst.daysToGstr1) ? (

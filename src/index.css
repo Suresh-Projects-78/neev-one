@@ -1,12 +1,12 @@
 /* Fraunces carries the brand voice: a variable serif with real optical sizing,
    so headings look drawn rather than defaulted. Inter Tight does the working
-   text — narrow enough for dense tables without feeling condensed. JetBrains
+   text — narrow enough for dense tables without feeling condensed. Geist Mono
    Mono is kept for document numbers and codes only.
    display=swap so text is never invisible while fonts load. */
 /* Inter is the brief's choice and the right one for dense financial UI: it has
    tabular figures, a large x-height and a wide weight range. JetBrains Mono is
    kept for document numbers and codes. */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -290,7 +290,11 @@
     color: rgb(var(--fg-subtle));
   }
   .ui-mono {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* Geist Mono, not JetBrains. Two monospace faces were being downloaded and
+       used side by side — `.ui-mono` was JetBrains while `.ui-money` and the
+       type ramp were Geist Mono, so an invoice number and the amount beside it
+       were set in different typefaces. DESIGN.md names Geist Mono. */
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-feature-settings: 'calt' 0; /* no ligatures in IDs and codes */
   }
   .ui-amount {
@@ -1559,7 +1563,7 @@
   /* The scan anchor. Mono so digits align down the column and the eye can run
      it like a list of codes rather than prose. */
   .ui-col-id.ui-col-id {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-feature-settings: 'calt' 0;
     font-size: 0.8125rem;
     font-weight: 500;
@@ -1604,6 +1608,11 @@
   /* Money: tabular and right-aligned so magnitudes line up by digit, heavier
      than its neighbours because it is the third thing every reader checks. */
   .ui-col-amount.ui-col-amount {
+    /* DESIGN.md rule 4: every displayed amount is monospace. This rule set
+       tabular-nums, weight and alignment but never the family, so every rupee
+       figure in every table rendered in the sans face — the one place the rule
+       matters most, and the only place it was not applied. */
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
     color: rgb(var(--fg));

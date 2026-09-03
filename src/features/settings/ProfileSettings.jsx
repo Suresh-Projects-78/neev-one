@@ -441,7 +441,7 @@ export const ProfileSettings = () => {
         a form, in edit mode as much as out of it.
       */}
       <section className="ui-card p-5">
-        <h2 className="ui-t-section">Access</h2>
+        <h2 className="ui-t-sec">Access</h2>
         <p className="ui-t-body mt-0.5 mb-4" style={{ color: 'rgb(var(--fg-subtle))' }}>
           Granted by an administrator. Ask them if something here is wrong.
         </p>
