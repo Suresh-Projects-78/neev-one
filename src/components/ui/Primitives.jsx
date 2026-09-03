@@ -1,5 +1,7 @@
 import React from 'react';
 import { Check, Moon, Sun } from 'lucide-react';
+
+import Illustration from './Illustration';
 import { useCountUp } from './useCountUp';
 import { resolveStatus } from '../../utils/statusRegistry';
 
@@ -198,14 +200,24 @@ export const EmptyState = ({
 
   return (
     <div className="ui-in flex flex-col items-center justify-center text-center py-12 px-6">
-      {Icon ? (
-        <div
-          className="h-11 w-11 rounded-full flex items-center justify-center mb-3"
-          style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
-        >
-          <Icon size={20} className="ui-subtle" aria-hidden="true" />
-        </div>
-      ) : null}
+      {/*
+        An illustration rather than an icon in a grey circle.
+
+        Blank screens are the whole first hour of a new company, and until now
+        they were a 20px glyph and two lines of text — the least considered
+        surface in the product, on the day a user decides what they think of it.
+
+        The art is keyed off `kind`, which every call site already passes, so
+        all fifty-two of them gained this without being edited.
+
+        The `icon` prop is deliberately ignored here now. My first pass let an
+        icon win when one was given, and then measurement showed every single
+        one of the fifty-two call sites passes an icon — so the illustration
+        would have rendered nowhere and shipped dead. The icons were module
+        glyphs standing in for art that did not exist; the art exists now.
+        The prop stays in the signature so no caller breaks.
+      */}
+      <Illustration kind={kind} size={104} className="mb-4 opacity-90" />
 
       <div className="ui-t-sec">{headline}</div>
       {body ? <div className="ui-muted ui-t-body mt-1 max-w-md">{body}</div> : null}
