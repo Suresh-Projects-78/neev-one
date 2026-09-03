@@ -162,7 +162,6 @@ export default function PurchaseOverview({ db, currentCompany }) {
         <div className="ui-card">
           <EmptyState
             icon={Receipt}
-              tint="purchases"
             title="No purchases yet"
             description="Record a bill or an expense and this overview fills in — spend, dues and vendor share."
           />

@@ -35,7 +35,7 @@ export const PageHeader = ({ title, description, actions = null }) => (
  * Metric tile. `tone` colours the value for financial meaning only
  * (pos = money in, neg = money owed), never for decoration.
  */
-export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = null, amount = null, format = null, title = null, tint = null }) => {
+export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = null, amount = null, format = null, title = null }) => {
   const toneClass = tone === 'pos' ? 'ui-amount-pos' : tone === 'neg' ? 'ui-amount-neg' : '';
   // When a raw amount and formatter are supplied the figure counts up on
   // change; otherwise the pre-formatted value renders as-is.
@@ -52,8 +52,7 @@ export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = nu
         {Icon ? (
           <Icon
             size={15}
-            className={tint ? undefined : 'ui-subtle'}
-            style={tint ? { color: `rgb(var(--mod-${tint}))` } : undefined}
+            className="ui-subtle"
             aria-hidden="true"
           />
         ) : null}

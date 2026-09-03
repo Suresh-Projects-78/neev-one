@@ -328,7 +328,6 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           title={formatMoney(totalSales, currentCompany)}
           hint={`Across ${invoices.length} invoices`}
           icon={BarChart3}
-          tint="sales"
         />
         <StatTile
           label="Collected"
@@ -338,7 +337,6 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           hint={`${collectedPct}% of billed value`}
           tone="pos"
           icon={Receipt}
-          tint="sales"
         />
         <StatTile
           label="Outstanding"
@@ -348,7 +346,6 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           hint={`${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} awaiting payment`}
           tone="neg"
           icon={FileText}
-          tint="sales"
         />
         <StatTile
           label="Average invoice"
@@ -357,7 +354,6 @@ const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], bra
           title={formatMoney(invoices.length ? totalSales / invoices.length : 0, currentCompany)}
           hint="Billed value per invoice"
           icon={ClipboardList}
-          tint="sales"
         />
       </div>
 
@@ -1382,7 +1378,6 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             title={formatMoney(expenseFlow.total, currentCompany)}
             hint={`Across ${expenseFlow.count} voucher${expenseFlow.count === 1 ? '' : 's'}`}
             icon={Receipt}
-            tint="expenses"
           />
           <StatTile
             label="Paid"
@@ -1392,7 +1387,6 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             hint={expenseFlow.total > 0 ? `${Math.round((expenseFlow.paid / expenseFlow.total) * 100)}% of spend` : 'Nothing yet'}
             tone="pos"
             icon={Check}
-            tint="expenses"
           />
           <StatTile
             label="Unpaid"
@@ -1402,7 +1396,6 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             tone={expenseFlow.unpaid > 0 ? 'neg' : 'neutral'}
             hint="Awaiting payment"
             icon={FileText}
-            tint="expenses"
           />
           <StatTile
             label="Average voucher"
@@ -1411,7 +1404,6 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             title={formatMoney(expenseFlow.count ? expenseFlow.total / expenseFlow.count : 0, currentCompany)}
             hint="Spend per voucher"
             icon={ClipboardList}
-            tint="expenses"
           />
         </div>
       ) : null}
@@ -6377,7 +6369,7 @@ const ReportsOverview = ({ sections, onNavigate }) => {
                 >
                   <span
                     className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl"
-                    style={{ backgroundColor: 'rgb(var(--mod-reports) / 0.12)', color: 'rgb(var(--mod-reports))' }}
+                    style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
                     aria-hidden="true"
                   >
                     <Icon size={18} />
@@ -11806,14 +11798,13 @@ const AppShell = () => {
 
   const navModel = useMemo(
     () => [
-      { type: 'item', key: 'dashboard', label: 'Dashboard', icon: PhDashboard, ph: true, tint: 'dashboard' },
+      { type: 'item', key: 'dashboard', label: 'Dashboard', icon: PhDashboard, ph: true },
       {
         type: 'group',
         key: 'salesMenu',
         label: 'Sales',
         icon: PhSales,
         ph: true,
-        tint: 'sales',
         items: [
           { key: 'sales', label: 'Overview', icon: BarChart3, perm: 'SALES::Invoices::VIEW' },
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
@@ -11833,7 +11824,6 @@ const AppShell = () => {
         key: 'crmMenu',
         label: 'CRM',
         icon: Users,
-        tint: 'sales',
         /*
          * The people, not just the chasing.
          *
@@ -11859,7 +11849,6 @@ const AppShell = () => {
         label: 'Purchases',
         icon: PhPurchases,
         ph: true,
-        tint: 'purchases',
         items: [
           { key: 'purchaseOverview', label: 'Overview', icon: BarChart3, perm: 'PURCHASE::Bills::VIEW' },
           { key: 'bills', label: 'Bills', icon: FileStack, perm: 'PURCHASE::Bills::VIEW' },
@@ -11868,17 +11857,16 @@ const AppShell = () => {
           { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW', feature: 'debitNotes' },
         ],
       },
-      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, tint: 'cash', perm: 'CASHBANK::Cash & Bank::VIEW' },
+      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, perm: 'CASHBANK::Cash & Bank::VIEW' },
       // A group of one is a menu that opens onto itself. With the duplicate
       // Payments entry gone, Expenses is a destination, not a section.
-      { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, tint: 'expenses', perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
+      { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
       {
         type: 'group',
         key: 'inventoryMenu',
         label: 'Inventory',
         icon: PhInventory,
         ph: true,
-        tint: 'inventory',
         items: [
           { key: 'inventory', label: 'Inventory', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'inventory' },
           { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
@@ -11889,16 +11877,15 @@ const AppShell = () => {
           { key: 'reorderAlerts', label: 'Reorder Alerts', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'reorderAlerts' },
         ],
       },
-      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tint: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
-      { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, tint: 'approvals', feature: 'approvals' },
-      { type: 'item', key: 'reports', label: 'Reports', icon: PhReports, ph: true, tint: 'reports', permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
+      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, perm: 'ACCOUNTING::Journal Entries::VIEW' },
+      { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, feature: 'approvals' },
+      { type: 'item', key: 'reports', label: 'Reports', icon: PhReports, ph: true, permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
       {
         type: 'group',
         key: 'mdmMenu',
         label: 'Master Data',
         icon: PhMaster,
         ph: true,
-        tint: 'master',
         items: [
           { key: 'companies', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
           { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
@@ -11918,7 +11905,6 @@ const AppShell = () => {
         label: 'Settings',
         icon: PhSettings,
         ph: true,
-        tint: 'settings',
         /*
          * Structured to the settings map, so the order and the section names
          * are the ones the business asked for rather than the order these
@@ -14081,7 +14067,7 @@ const AppShell = () => {
                         size={16}
                         aria-hidden="true"
                         {...(entry.ph ? { weight: 'duotone' } : {})}
-                        style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                        
                       />
                       <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
                     </button>
@@ -14121,7 +14107,7 @@ const AppShell = () => {
                           size={16}
                           aria-hidden="true"
                           {...(entry.ph ? { weight: 'duotone' } : {})}
-                          style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                          
                         />
                         <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
                       </span>
@@ -14166,7 +14152,7 @@ const AppShell = () => {
                               <Icon
                                 size={15}
                                 aria-hidden="true"
-                                style={entry.tint ? { color: `rgb(var(--mod-${entry.tint}))` } : undefined}
+                                
                               />
                               <span className="min-w-0 truncate">{item.label}</span>
                               {state ? (

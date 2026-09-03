@@ -1909,7 +1909,6 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             hint={selectedAccount ? selectedAccount.name : 'All accounts'}
             tone="pos"
             icon={ArrowDownLeft}
-            tint="cash"
           />
           <StatTile
             label="Money out"
@@ -1919,7 +1918,6 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             hint={`${allTxns.length} transaction${allTxns.length === 1 ? '' : 's'}`}
             tone="neg"
             icon={ArrowUpRight}
-            tint="cash"
           />
           <StatTile
             label="Net movement"
@@ -1928,14 +1926,12 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             title={formatMoney(flow.net, currentCompany)}
             hint="In less out, this account"
             icon={Landmark}
-            tint="cash"
           />
           <StatTile
             label="To categorise"
             value={String(uncategorisedCount)}
             hint={uncategorisedCount ? 'Lines awaiting a ledger' : 'Everything categorised'}
             icon={ListTodo}
-            tint="cash"
           />
         </div>
       ) : null}
