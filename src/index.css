@@ -1747,10 +1747,14 @@
 @layer components {
   .ui-hero-bars {
     position: absolute;
-    top: 50%;
+    /* Anchored to the composition rather than centred on the section: the
+       bars run from just under the avatar down to the foot of the search
+       field, so they flank the whole block instead of only the greeting.
+       Percentages, so they keep that relationship as the hero grows and
+       shrinks with the length of the insight line. */
+    top: 5%;
+    bottom: 27%;
     width: 150px;
-    height: 190px;
-    margin-top: -95px;
     z-index: -1;
     display: none;
     align-items: flex-end;
