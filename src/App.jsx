@@ -13187,7 +13187,7 @@ const AppShell = () => {
           />
         );
       case 'recurringInvoices':
-        return <RecurringInvoices db={dbForUser} setDb={setDb} currentCompany={currentCompany} onNavigate={setActive} />;
+        return <RecurringInvoices db={dbForUser} setDb={setDb} currentCompany={currentCompany} onNavigate={setActive} branches={branchesForUser} warehouses={warehousesForUser} />;
       case 'salesmen':
         return <Salesmen db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'pos':

@@ -19,8 +19,9 @@ import { computeGstForLines } from '../../utils/gst';
  */
 
 const FREQ_LABEL = { WEEKLY: 'Weekly', MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', YEARLY: 'Yearly' };
+const INTERVAL_UNIT = { WEEKLY: 'week(s)', MONTHLY: 'month(s)', QUARTERLY: 'quarter(s)', YEARLY: 'year(s)' };
 
-export default function RecurringInvoices({ db, setDb, currentCompany, onNavigate = null }) {
+export default function RecurringInvoices({ db, setDb, currentCompany, onNavigate = null, branches = [], warehouses = [] }) {
   const companyId = currentCompany.id;
   const templates = useMemo(
     () => (Array.isArray(db.recurringTemplates) ? db.recurringTemplates.filter((t) => t.companyId === companyId) : []),
@@ -45,6 +46,22 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
    * and the ⋮ menu acted on whichever one you guessed.
    */
   const [scheduleName, setScheduleName] = useState('');
+  /*
+   * The rest of what a schedule needs to raise a usable invoice.
+   *
+   * `interval` is how many periods to skip — every second month. `endMode`
+   * chooses between running forever and stopping after a count, which is a
+   * different instruction from an end date: "bill twelve times" needs nobody
+   * to work out which month that lands in. `dueDays` finally gives the raised
+   * draft a due date; without one every generated invoice sat outside the
+   * ageing report until somebody opened it and typed one.
+   */
+  const [interval, setInterval_] = useState(1);
+  const [endMode, setEndMode] = useState('NONE');
+  const [maxOccurrences, setMaxOccurrences] = useState('');
+  const [dueDays, setDueDays] = useState(30);
+  const [scheduleBranchId, setScheduleBranchId] = useState('');
+  const [scheduleWarehouseId, setScheduleWarehouseId] = useState('');
   const [frequency, setFrequency] = useState('MONTHLY');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -147,6 +164,12 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             total: draftTotals.total,
             notes: draft.notes || '',
             name: scheduleName.trim(),
+            branchId: scheduleBranchId,
+            warehouseId: scheduleWarehouseId,
+            interval: Math.max(1, Number(interval) || 1),
+            maxOccurrences: endMode === 'COUNT' ? Math.max(1, Number(maxOccurrences) || 1) : null,
+            generatedCount: 0,
+            dueDays: Number(dueDays) >= 0 ? Number(dueDays) : 30,
             frequency,
             nextRunDate: startDate,
             endDate: endDate || null,
@@ -180,6 +203,12 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
           customerId: src.customerId,
           customerName: src.customerName,
           name: scheduleName.trim(),
+          branchId: scheduleBranchId,
+          warehouseId: scheduleWarehouseId,
+          interval: Math.max(1, Number(interval) || 1),
+          maxOccurrences: endMode === 'COUNT' ? Math.max(1, Number(maxOccurrences) || 1) : null,
+          generatedCount: 0,
+          dueDays: Number(dueDays) >= 0 ? Number(dueDays) : 30,
           items: src.items || [],
           subtotal: src.subtotal,
           cgstTotal: src.cgstTotal,
@@ -265,6 +294,28 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     if (!ok) return;
     setDb((prev) => ({ ...prev, recurringTemplates: (prev.recurringTemplates || []).filter((x) => x.id !== t.id) }));
   };
+
+  /**
+   * The schedule read back as a sentence, before it is created.
+   *
+   * A cadence assembled from five controls is easy to get wrong and hard to
+   * check by looking at the controls themselves — this is the same settings
+   * stated the way somebody would say them out loud.
+   */
+  const schedulePreview = useMemo(() => {
+    const n = Math.max(1, Number(interval) || 1);
+    const unit = (INTERVAL_UNIT[frequency] || 'month(s)').replace('(s)', n === 1 ? '' : 's');
+    const every = n === 1 ? `every ${unit}` : `every ${n} ${unit}`;
+    const from = startDate ? ` from ${startDate}` : '';
+    const stop =
+      endMode === 'COUNT' && Number(maxOccurrences) > 0
+        ? `, stopping after ${Number(maxOccurrences)} invoice${Number(maxOccurrences) === 1 ? '' : 's'}`
+        : endDate
+          ? `, ending ${endDate}`
+          : ', with no end';
+    const terms = Number(dueDays) > 0 ? ` Each invoice is due ${Number(dueDays)} days later.` : ' Each invoice is due on receipt.';
+    return `Raises a draft invoice ${every}${from}${stop}.${terms}`;
+  }, [interval, frequency, startDate, endDate, endMode, maxOccurrences, dueDays]);
 
   const exportSchedules = () =>
     exportRows({
@@ -556,14 +607,119 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               </select>
             </div>
             <div>
-              <label className="ui-label">First run (e.g. every 1st)</label>
+              {/* Every period, or every second, or every third. "Quarterly" and
+                  "every 3 months" are the same to a calendar and not to the
+                  person setting it up. */}
+              <label className="ui-label" htmlFor="rec-interval">Repeat every</label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="rec-interval"
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={interval}
+                  onChange={(e) => setInterval_(e.target.value)}
+                  className="ui-input ui-mono w-20 px-3 py-2"
+                />
+                <span className="ui-muted text-sm">{INTERVAL_UNIT[frequency] || 'month(s)'}</span>
+              </div>
+            </div>
+            <div>
+              <label className="ui-label">Start date</label>
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="ui-input w-full px-3 py-2" />
             </div>
             <div>
               <label className="ui-label">End date (optional)</label>
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="ui-input w-full px-3 py-2" />
             </div>
+            <div className="sm:col-span-2">
+              {/* An end date and a count are two different instructions.
+                  "Bill twelve times" needs nobody to work out which month
+                  that lands in. */}
+              <span className="ui-label block mb-1">Number of invoices</span>
+              <div className="flex items-center gap-4 flex-wrap">
+                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="rec-end-mode"
+                    checked={endMode === 'NONE'}
+                    onChange={() => setEndMode('NONE')}
+                  />
+                  No limit
+                </label>
+                <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="rec-end-mode"
+                    checked={endMode === 'COUNT'}
+                    onChange={() => setEndMode('COUNT')}
+                  />
+                  End after
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  aria-label="Number of invoices"
+                  disabled={endMode !== 'COUNT'}
+                  value={maxOccurrences}
+                  onChange={(e) => setMaxOccurrences(e.target.value)}
+                  className="ui-input ui-mono w-24 px-3 py-2"
+                />
+                <span className="ui-muted text-sm">invoices</span>
+              </div>
+            </div>
+            <div>
+              {/* Every draft this raised had an empty due date, so none of them
+                  could ever be overdue and none appeared in the ageing report
+                  until a person opened it and typed one. */}
+              <label className="ui-label" htmlFor="rec-due">Payment terms on each invoice</label>
+              <select
+                id="rec-due"
+                value={String(dueDays)}
+                onChange={(e) => setDueDays(e.target.value)}
+                className="ui-select w-full px-3 py-2"
+              >
+                <option value="0">Due on receipt</option>
+                <option value="7">Net 7 days</option>
+                <option value="15">Net 15 days</option>
+                <option value="30">Net 30 days</option>
+                <option value="45">Net 45 days</option>
+                <option value="60">Net 60 days</option>
+              </select>
+            </div>
+            <div>
+              <label className="ui-label" htmlFor="rec-branch">Branch</label>
+              <select
+                id="rec-branch"
+                value={scheduleBranchId}
+                onChange={(e) => setScheduleBranchId(e.target.value)}
+                className="ui-select w-full px-3 py-2"
+              >
+                <option value="">All branches</option>
+                {(Array.isArray(branches) ? branches : []).map((b) => (
+                  <option key={String(b.id)} value={String(b.id)}>{b.name || `Branch ${b.id}`}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="ui-label" htmlFor="rec-warehouse">Warehouse</label>
+              <select
+                id="rec-warehouse"
+                value={scheduleWarehouseId}
+                onChange={(e) => setScheduleWarehouseId(e.target.value)}
+                className="ui-select w-full px-3 py-2"
+              >
+                <option value="">Not set</option>
+                {(Array.isArray(warehouses) ? warehouses : []).map((w) => (
+                  <option key={String(w.id)} value={String(w.id)}>{w.name || `Warehouse ${w.id}`}</option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {/* What this will actually do, in a sentence, before it is created. */}
+          <p className="ui-caption">{schedulePreview}</p>
+
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setCreatorOpen(false)} className="ui-btn ui-btn-secondary">Cancel</button>
             <button type="button" onClick={createSchedule} className="ui-btn ui-btn-primary">Create Schedule</button>
