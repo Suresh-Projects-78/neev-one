@@ -471,7 +471,7 @@ export function SettingsRoles({ orgId }) {
         <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="ui-t-sec">{editRole ? 'Edit Role' : 'New Role'}</div>
           <div>
-            <label className="block text-sm font-medium mb-1">Role Name *</label>
+            <label className="ui-label">Role Name *</label>
             <input className="ui-input w-full px-3 py-2" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
           </div>
           <div>

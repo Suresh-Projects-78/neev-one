@@ -401,7 +401,7 @@ const StockAdjustments = ({
         <form onSubmit={saveForm} className="ui-card p-4 space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="adj-date">Date</label>
+              <label className="ui-label" htmlFor="adj-date">Date</label>
               <input
                 id="adj-date"
                 type="date"
@@ -413,7 +413,7 @@ const StockAdjustments = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="adj-warehouse">
+              <label className="ui-label" htmlFor="adj-warehouse">
                 Warehouse <span className="text-[rgb(var(--neg))]">*</span>
               </label>
               <select
@@ -436,7 +436,7 @@ const StockAdjustments = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="adj-reason">
+              <label className="ui-label" htmlFor="adj-reason">
                 Reason <span className="text-[rgb(var(--neg))]">*</span>
               </label>
               <input

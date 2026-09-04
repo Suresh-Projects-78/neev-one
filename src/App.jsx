@@ -1621,7 +1621,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-44">
-            <label className="block text-sm font-medium mb-1">Voucher No.</label>
+            <label className="ui-label">Voucher No.</label>
             <input
               type="text"
               value={formData.number}
@@ -1637,7 +1637,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
             <FieldError error={expenseErrors.error('number')} id={expenseErrors.errorId('number')} />
           </div>
           <div className="w-44">
-            <label className="block text-sm font-medium mb-1">Date</label>
+            <label className="ui-label">Date</label>
             <input
               type="date"
               value={formData.date}
@@ -1676,7 +1676,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Vendor Inv No.</label>
+          <label className="ui-label">Vendor Inv No.</label>
           <input
             type="text"
             value={formData.refNo}
@@ -1687,7 +1687,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Vendor Inv Date</label>
+          <label className="ui-label">Vendor Inv Date</label>
           <input
             type="date"
             value={formData.refDate}
@@ -1697,7 +1697,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Due Date</label>
+          <label className="ui-label">Due Date</label>
           <input
             type="date"
             value={formData.dueDate}
@@ -1719,7 +1719,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
         {costCenters.length ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Cost Center</label>
+            <label className="ui-label">Cost Center</label>
             <select
               value={formData.costCenterId || ''}
               onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
@@ -1736,7 +1736,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Expense Ledgers (Direct / Indirect Expenses)</label>
+          <label className="ui-label">Expense Ledgers (Direct / Indirect Expenses)</label>
           <span className="flex items-center gap-3">
             <FieldError error={expenseErrors.error('lines')} id={expenseErrors.errorId('lines')} />
             <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
@@ -1848,7 +1848,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
       {/* Narration reads as a summary of the lines, so it comes after them. */}
       <div>
-        <label className="block text-sm font-medium mb-1">Narration</label>
+        <label className="ui-label">Narration</label>
         <input
           type="text"
           value={formData.description}
@@ -2350,7 +2350,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           was already minted from the wrong series.
         */}
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Type</label>
+          <label className="ui-label">Type</label>
           <select
             value={formData.type}
             onChange={(e) => {
@@ -2376,7 +2376,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           </p>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Code</label>
+          <label className="ui-label">Code</label>
           <input
             type="text"
             value={formData.code}
@@ -2391,7 +2391,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           <FieldError error={itemErrors.error('code')} id={itemErrors.errorId('code')} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Name</label>
+          <label className="ui-label">Name</label>
           <input
             type="text"
             value={formData.name}
@@ -2406,7 +2406,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           <FieldError error={itemErrors.error('name')} id={itemErrors.errorId('name')} />
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Description</label>
+          <label className="ui-label">Description</label>
           <textarea
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -2416,7 +2416,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           />
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">Category</label>
+          <label className="ui-label">Category</label>
           <select
             value={categoryNames.includes(formData.category) ? formData.category : formData.category ? formData.category : ''}
             onChange={(e) => {
@@ -2443,7 +2443,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
 
           {newCategoryOpen ? (
             <div className="mt-2 rounded-lg border p-3 ui-sunken space-y-2">
-              <label className="block text-sm font-medium">New category</label>
+              <label className="ui-label">New category</label>
               <input
                 type="text"
                 value={newCategoryName}
@@ -2473,7 +2473,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
 
         {String(formData.type || '').toLowerCase() === 'goods' ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Opening Stock (Qty)</label>
+            <label className="ui-label">Opening Stock (Qty)</label>
             <input
               type="number"
               value={formData.openingQty}
@@ -2484,7 +2484,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
             />
             {/* Stock that does not say where it is cannot be sold from
                 anywhere: every availability check is per warehouse. */}
-            <label className="block text-sm font-medium mb-1 mt-3">Opening stock is held at</label>
+            <label className="ui-label mt-3">Opening stock is held at</label>
             <select
               value={formData.openingWarehouseId || ''}
               onChange={(e) => setFormData({ ...formData, openingWarehouseId: e.target.value })}
@@ -2502,7 +2502,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           <div />
         )}
         <div>
-          <label className="block text-sm font-medium mb-1">HSN/SAC</label>
+          <label className="ui-label">HSN/SAC</label>
           <input
             type="text"
             value={formData.hsnSac}
@@ -2511,7 +2511,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">GST %</label>
+          <label className="ui-label">GST %</label>
           <select
             value={gstRateValue}
             onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
@@ -2530,7 +2530,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Unit</label>
+          <label className="ui-label">Unit</label>
           <select
             value={unitValue}
             onChange={(e) => {
@@ -2578,7 +2578,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           ) : null}
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Sale Price</label>
+          <label className="ui-label">Sale Price</label>
           <input
             type="number"
             value={formData.salePrice}
@@ -2589,7 +2589,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Purchase Price</label>
+          <label className="ui-label">Purchase Price</label>
           <input
             type="number"
             value={formData.purchasePrice}
@@ -2600,7 +2600,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">MRP</label>
+          <label className="ui-label">MRP</label>
           <input
             type="number"
             value={formData.mrp}
@@ -2612,7 +2612,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Barcode</label>
+          <label className="ui-label">Barcode</label>
           <input
             type="text"
             value={formData.barcode}
@@ -2622,7 +2622,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Reorder level</label>
+          <label className="ui-label">Reorder level</label>
           <input
             type="number"
             value={formData.reorderLevel}
@@ -3719,7 +3719,7 @@ const ChartAccountForm = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Ledger Name</label>
+        <label className="ui-label">Ledger Name</label>
         <input
           type="text"
           value={formData.name}
@@ -3767,7 +3767,7 @@ const ChartAccountForm = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Opening Balance</label>
+        <label className="ui-label">Opening Balance</label>
         <input
           type="number"
           value={formData.openingBalance}
@@ -3779,7 +3779,7 @@ const ChartAccountForm = ({
 
       {isExpenseGroupSelected ? (
         <div>
-          <label className="block text-sm font-medium mb-1">Default GST rate</label>
+          <label className="ui-label">Default GST rate</label>
           <select
             value={String(formData.gstRate ?? '')}
             onChange={(e) => setFormData((p) => ({ ...p, gstRate: e.target.value }))}
@@ -3799,7 +3799,7 @@ const ChartAccountForm = ({
           <div className="font-semibold">Bank Details</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Bank Name</label>
+              <label className="ui-label">Bank Name</label>
               <input
                 type="text"
                 value={formData.bankName}
@@ -3810,7 +3810,7 @@ const ChartAccountForm = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Account Number</label>
+              <label className="ui-label">Account Number</label>
               <input
                 type="text"
                 value={formData.bankAccountNumber}
@@ -3821,7 +3821,7 @@ const ChartAccountForm = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Branch</label>
+              <label className="ui-label">Branch</label>
               <input
                 type="text"
                 value={formData.bankBranch}
@@ -3831,7 +3831,7 @@ const ChartAccountForm = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">IFSC</label>
+              <label className="ui-label">IFSC</label>
               <input
                 type="text"
                 value={formData.bankIfsc}
@@ -3935,7 +3935,7 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Group Name</label>
+        <label className="ui-label">Group Name</label>
         <input
           type="text"
           value={formData.name}
@@ -4357,7 +4357,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
       />
 
       <div>
-        <label className="block text-sm font-medium mb-1">Narration</label>
+        <label className="ui-label">Narration</label>
         <input
           type="text"
           value={formData.narration}
@@ -4369,7 +4369,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Lines</label>
+          <label className="ui-label">Lines</label>
           <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Line
           </button>
@@ -4887,19 +4887,19 @@ const LedgerView = ({
             {useForm ? (
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs ui-muted">Date</label>
+                  <label className="ui-label">Date</label>
                   <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Particulars</label>
+                  <label className="ui-label">Particulars</label>
                   <input value={form.particulars} onChange={(e) => setForm((p) => ({ ...p, particulars: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Debit</label>
+                  <label className="ui-label">Debit</label>
                   <input value={form.debit} onChange={(e) => setForm((p) => ({ ...p, debit: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Credit</label>
+                  <label className="ui-label">Credit</label>
                   <input value={form.credit} onChange={(e) => setForm((p) => ({ ...p, credit: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
               </div>
@@ -5046,15 +5046,15 @@ const LedgerView = ({
             {useForm ? (
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-xs ui-muted">Date</label>
+                  <label className="ui-label">Date</label>
                   <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Number</label>
+                  <label className="ui-label">Number</label>
                   <input value={form.number} onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Total</label>
+                  <label className="ui-label">Total</label>
                   <input value={form.total} onChange={(e) => setForm((p) => ({ ...p, total: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
               </div>
@@ -5321,11 +5321,11 @@ const LedgerView = ({
           <div className="text-sm ui-muted">Select period for ledger entries.</div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className="block text-xs ui-muted">From</label>
+              <label className="ui-label">From</label>
               <input type="date" value={draftFrom} onChange={(e) => setDraftFrom(e.target.value)} className="ui-input w-full px-3 py-2" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs ui-muted">To</label>
+              <label className="ui-label">To</label>
               <input type="date" value={draftTo} onChange={(e) => setDraftTo(e.target.value)} className="ui-input w-full px-3 py-2" />
             </div>
           </div>
@@ -6983,7 +6983,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-3 gap-3">
           <div className="col-span-2">
-            <label className="block text-sm font-medium mb-1">Add UoM</label>
+            <label className="ui-label">Add UoM</label>
             <input
               type="text"
               value={newUom}
@@ -7185,7 +7185,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Category name</label>
+            <label className="ui-label">Category name</label>
             <input
               type="text"
               value={newName}
@@ -7195,7 +7195,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
             />
           </div>
           <div className="md:col-span-3">
-            <label className="block text-sm font-medium mb-1">Description</label>
+            <label className="ui-label">Description</label>
             <input
               type="text"
               value={newDescription}
@@ -7408,7 +7408,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-4 gap-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Rate (%)</label>
+            <label className="ui-label">Rate (%)</label>
             <input
               type="number"
               value={newRate}
@@ -7426,7 +7426,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
             ) : null}
           </div>
           <div className="col-span-2">
-            <label className="block text-sm font-medium mb-1">Name (becomes a ledger)</label>
+            <label className="ui-label">Name (becomes a ledger)</label>
             <input
               type="text"
               value={newRateName}
@@ -7628,7 +7628,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   <div className="ui-t-label">{row.label}</div>
                   <div className="grid grid-cols-3 gap-2">
                     <div>
-                      <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
+                      <label className="ui-t-label">Prefix</label>
                       <input
                         type="text"
                         value={prefix}
@@ -7637,7 +7637,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
+                      <label className="ui-t-label">Digits</label>
                       <input
                         type="number"
                         min="1"
@@ -7648,7 +7648,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Next</label>
+                      <label className="ui-t-label">Next</label>
                       <input
                         type="number"
                         min="1"
@@ -7671,7 +7671,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-1">
-            <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Apply To</label>
+            <label className="ui-t-label">Apply To</label>
             <select
               value={scopeBranchId}
               onChange={(e) => setScopeBranchId(String(e.target.value || '').trim())}
@@ -7711,7 +7711,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
 
                 <div className="grid grid-cols-7 gap-2 flex-1">
                   <div className="col-span-1">
-                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Mode</label>
+                    <label className="ui-t-label">Mode</label>
                     <select
                       value={cfg?.mode || 'auto'}
                       onChange={(e) => updateNumberingSetting(v.key, { mode: e.target.value })}
@@ -7723,7 +7723,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Prefix</label>
+                    <label className="ui-t-label">Prefix</label>
                     <input
                       type="text"
                       value={cfg?.prefix || ''}
@@ -7733,7 +7733,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Suffix</label>
+                    <label className="ui-t-label">Suffix</label>
                     <input
                       type="text"
                       value={cfg?.suffix || ''}
@@ -7743,7 +7743,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Digits</label>
+                    <label className="ui-t-label">Digits</label>
                     <select
                       value={String(cfg?.digits || 0)}
                       onChange={(e) => updateNumberingSetting(v.key, { digits: Number(e.target.value) })}
@@ -7760,7 +7760,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                   </div>
 
                   <div className="col-span-1">
-                    <label className="block text-xs uppercase tracking-wide ui-subtle mb-0.5">Next No</label>
+                    <label className="ui-t-label">Next No</label>
                     <input
                       type="number"
                       value={cfg?.nextNumber ?? 1}
@@ -7873,7 +7873,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
 
                 <div className="grid grid-cols-3 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">Template</label>
+                    <label className="ui-label">Template</label>
                     <select
                       value={cfg?.templateId || 'classic'}
                       onChange={(e) => updateTemplateSetting(v.key, { templateId: e.target.value })}
@@ -7888,7 +7888,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium mb-1">Accent Color</label>
+                    <label className="ui-label">Accent Color</label>
                     <select
                       value={cfg?.accentId || 'blue'}
                       onChange={(e) => updateTemplateSetting(v.key, { accentId: e.target.value })}
@@ -7987,7 +7987,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
         <div className="max-w-xl space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-sm font-medium mb-1">Template</label>
+              <label className="ui-label">Template</label>
               <select
                 value={templateId}
                 onChange={(e) => updateInvoiceTemplate({ templateId: e.target.value })}
@@ -8001,7 +8001,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Accent colour</label>
+              <label className="ui-label">Accent colour</label>
               <select
                 value={cfg?.accentId || ACCENT_OPTIONS[0].id}
                 onChange={(e) => updateInvoiceTemplate({ accentId: e.target.value })}
@@ -8017,7 +8017,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Terms &amp; conditions (printed on every invoice)</label>
+            <label className="ui-label">Terms &amp; conditions (printed on every invoice)</label>
             <textarea
               value={cfg?.termsText || ''}
               onChange={(e) => updateInvoiceTemplate({ termsText: e.target.value })}
@@ -8166,7 +8166,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
       <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Company Name</label>
+            <label className="ui-label">Company Name</label>
             <input
               type="text"
               value={formData.name}
@@ -8176,7 +8176,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Currency</label>
+            <label className="ui-label">Currency</label>
             <input
               type="text"
               value={formData.currency}
@@ -8186,7 +8186,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">GST Registration</label>
+            <label className="ui-label">GST Registration</label>
             <select
               value={formData.gstRegistration}
               onChange={(e) => setFormData((p) => ({ ...p, gstRegistration: e.target.value }))}
@@ -8200,7 +8200,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">GSTIN</label>
+            <label className="ui-label">GSTIN</label>
             <input
               type="text"
               value={formData.gstin}
@@ -8219,7 +8219,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">State</label>
+            <label className="ui-label">State</label>
             <PopupSelect
               label={null}
               title="Select State"
@@ -8432,7 +8432,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-xs ui-muted">GST Registration Type</label>
+              <label className="ui-label">GST Registration Type</label>
               <select
                 value={gst.gstRegistration}
                 onChange={(e) => setGst((p) => ({ ...p, gstRegistration: e.target.value }))}
@@ -8446,7 +8446,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
             </div>
 
             <div>
-              <label className="block text-xs ui-muted">GST Number (GSTIN)</label>
+              <label className="ui-label">GST Number (GSTIN)</label>
               <input
                 value={gst.gstin}
                 onChange={(e) => {
@@ -8465,7 +8465,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
             </div>
 
             <div>
-              <label className="block text-xs ui-muted">State</label>
+              <label className="ui-label">State</label>
               <PopupSelect
                 label={null}
                 title="Select State"
@@ -8511,7 +8511,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-xs ui-muted">Registration Type</label>
+              <label className="ui-label">Registration Type</label>
               <select
                 value={tds.registrationType}
                 onChange={(e) => setTds((p) => ({ ...p, registrationType: e.target.value }))}
@@ -8522,7 +8522,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               </select>
             </div>
             <div>
-              <label className="block text-xs ui-muted">TDS Number (TAN)</label>
+              <label className="ui-label">TDS Number (TAN)</label>
               <input
                 value={tds.tan}
                 onChange={(e) => {
@@ -8535,7 +8535,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               />
             </div>
             <div>
-              <label className="block text-xs ui-muted">State</label>
+              <label className="ui-label">State</label>
               <PopupSelect
                 label={null}
                 title="Select State"
@@ -8573,7 +8573,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
             <div>
-              <label className="block text-xs ui-muted">Registration Type</label>
+              <label className="ui-label">Registration Type</label>
               <select
                 value={tcs.registrationType}
                 onChange={(e) => setTcs((p) => ({ ...p, registrationType: e.target.value }))}
@@ -8584,7 +8584,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               </select>
             </div>
             <div>
-              <label className="block text-xs ui-muted">TCS Number (TAN)</label>
+              <label className="ui-label">TCS Number (TAN)</label>
               <input
                 value={tcs.tan}
                 onChange={(e) => {
@@ -8597,7 +8597,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               />
             </div>
             <div>
-              <label className="block text-xs ui-muted">State</label>
+              <label className="ui-label">State</label>
               <PopupSelect
                 label={null}
                 title="Select State"
@@ -9401,7 +9401,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs ui-muted">Email</label>
+                    <label className="ui-label">Email</label>
                     <input
                       value={newUser.email}
                       onChange={(e) => setNewUser((p) => ({ ...p, email: e.target.value }))}
@@ -9410,7 +9410,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs ui-muted">Name</label>
+                    <label className="ui-label">Name</label>
                     <input
                       value={newUser.name}
                       onChange={(e) => setNewUser((p) => ({ ...p, name: e.target.value }))}
@@ -9419,7 +9419,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs ui-muted">Mobile</label>
+                    <label className="ui-label">Mobile</label>
                     <input
                       value={newUser.mobile}
                       onChange={(e) => setNewUser((p) => ({ ...p, mobile: e.target.value }))}
@@ -9428,7 +9428,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs ui-muted">Password (new user)</label>
+                    <label className="ui-label">Password (new user)</label>
                     <input
                       type="password"
                       value={newUser.password}
@@ -9438,7 +9438,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs ui-muted">Role</label>
+                    <label className="ui-label">Role</label>
                     <select
                       value={newUser.roleId}
                       onChange={(e) => setNewUser((p) => ({ ...p, roleId: e.target.value }))}
@@ -9509,11 +9509,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <div className="space-y-3 mt-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs ui-muted">Email</label>
+                        <label className="ui-label">Email</label>
                         <input value={selectedUser.email || ''} disabled className="ui-input w-full px-3 py-2 ui-sunken" />
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Role</label>
+                        <label className="ui-label">Role</label>
                         <select
                           value={userEdit.roleId}
                           onChange={(e) => setUserEdit((p) => ({ ...p, roleId: e.target.value }))}
@@ -9531,7 +9531,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Name</label>
+                        <label className="ui-label">Name</label>
                         <input
                           value={userEdit.name}
                           onChange={(e) => setUserEdit((p) => ({ ...p, name: e.target.value }))}
@@ -9539,7 +9539,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         />
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Mobile</label>
+                        <label className="ui-label">Mobile</label>
                         <input
                           value={userEdit.mobile}
                           onChange={(e) => setUserEdit((p) => ({ ...p, mobile: e.target.value }))}
@@ -9642,7 +9642,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 <div className="text-sm font-semibold">Create Role</div>
                 <div className="grid grid-cols-1 gap-3 mt-3">
                   <div>
-                    <label className="block text-xs ui-muted">Role Name</label>
+                    <label className="ui-label">Role Name</label>
                     <input
                       value={newRole.label}
                       onChange={(e) => setNewRole((p) => ({ ...p, label: e.target.value }))}
@@ -9651,7 +9651,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs ui-muted">Permissions</label>
+                    <label className="ui-label">Permissions</label>
                     <input
                       value={permSearch}
                       onChange={(e) => setPermSearch(e.target.value)}
@@ -9747,7 +9747,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                 ) : (
                   <div className="space-y-3 mt-3">
                     <div>
-                      <label className="block text-xs ui-muted">Role Name</label>
+                      <label className="ui-label">Role Name</label>
                       <input
                         value={roleEdit.label}
                         onChange={(e) => setRoleEdit((p) => ({ ...p, label: e.target.value }))}
@@ -9756,7 +9756,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
 
                     <div>
-                      <label className="block text-xs ui-muted">Permissions</label>
+                      <label className="ui-label">Permissions</label>
                       <div className="mt-2 max-h-56 overflow-auto border rounded-lg p-2 ui-surface">
                         {filteredPerms.length === 0 ? (
                           <div className="text-sm ui-muted px-2 py-2">No permissions match.</div>
@@ -9819,7 +9819,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="grid grid-cols-1 gap-3 mt-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs ui-muted">Role Name</label>
+                    <label className="ui-label">Role Name</label>
                     <input
                       value={newRole.label}
                       onChange={(e) => setNewRole((p) => ({ ...p, label: e.target.value }))}
@@ -9828,7 +9828,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     />
                   </div>
                   <div>
-                    <label className="block text-xs ui-muted">Description</label>
+                    <label className="ui-label">Description</label>
                     <input
                       value={newRole.description}
                       onChange={(e) => setNewRole((p) => ({ ...p, description: e.target.value }))}
@@ -9838,7 +9838,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Permissions</label>
+                  <label className="ui-label">Permissions</label>
                   <input
                     value={permSearch}
                     onChange={(e) => setPermSearch(e.target.value)}
@@ -9915,16 +9915,16 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="space-y-3 mt-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs ui-muted">Role Name</label>
+                    <label className="ui-label">Role Name</label>
                     <input value={roleEdit.label} onChange={(e) => setRoleEdit((p) => ({ ...p, label: e.target.value }))} className="ui-input w-full px-3 py-2" />
                   </div>
                   <div>
-                    <label className="block text-xs ui-muted">Description</label>
+                    <label className="ui-label">Description</label>
                     <input value={roleEdit.description} onChange={(e) => setRoleEdit((p) => ({ ...p, description: e.target.value }))} className="ui-input w-full px-3 py-2" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Permissions</label>
+                  <label className="ui-label">Permissions</label>
                   <div className="mt-2 max-h-48 overflow-auto border rounded-lg p-2 ui-surface">
                     {filteredPerms.map((p) => {
                       const key = String(p?.key || '').trim();
@@ -9968,15 +9968,15 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="text-sm font-semibold">Create Branch</div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs ui-muted">Branch Name *</label>
+                  <label className="ui-label">Branch Name *</label>
                   <input value={newBranch.name} onChange={(e) => setNewBranch((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="Main Branch" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Code</label>
+                  <label className="ui-label">Code</label>
                   <input value={newBranch.code} onChange={(e) => setNewBranch((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="MAIN" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Address</label>
+                  <label className="ui-label">Address</label>
                   <input value={newBranch.address} onChange={(e) => setNewBranch((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="123 Street..." />
                 </div>
               </div>
@@ -10023,19 +10023,19 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="text-sm font-semibold">Edit Branch: {selectedBranch.name}</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs ui-muted">Branch Name *</label>
+                  <label className="ui-label">Branch Name *</label>
                   <input value={branchEdit.name} onChange={(e) => setBranchEdit((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Code</label>
+                  <label className="ui-label">Code</label>
                   <input value={branchEdit.code} onChange={(e) => setBranchEdit((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Address</label>
+                  <label className="ui-label">Address</label>
                   <input value={branchEdit.address} onChange={(e) => setBranchEdit((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Status</label>
+                  <label className="ui-label">Status</label>
                   <select value={branchEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setBranchEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -10097,23 +10097,23 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="text-sm font-semibold">Create Warehouse</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs ui-muted">Warehouse Name *</label>
+                  <label className="ui-label">Warehouse Name *</label>
                   <input value={newWarehouse.name} onChange={(e) => setNewWarehouse((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="Main Warehouse" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Code</label>
+                  <label className="ui-label">Code</label>
                   <input value={newWarehouse.code} onChange={(e) => setNewWarehouse((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="WH-001" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Location</label>
+                  <label className="ui-label">Location</label>
                   <input value={newWarehouse.location} onChange={(e) => setNewWarehouse((p) => ({ ...p, location: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="City, Zone..." />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Address</label>
+                  <label className="ui-label">Address</label>
                   <input value={newWarehouse.address} onChange={(e) => setNewWarehouse((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="123 Street..." />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Branch (optional)</label>
+                  <label className="ui-label">Branch (optional)</label>
                   <select value={newWarehouse.branchId} onChange={(e) => setNewWarehouse((p) => ({ ...p, branchId: e.target.value }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="">No branch</option>
                     {branchOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -10165,30 +10165,30 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
               <div className="text-sm font-semibold">Edit Warehouse: {selectedWarehouse.name}</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                 <div>
-                  <label className="block text-xs ui-muted">Warehouse Name *</label>
+                  <label className="ui-label">Warehouse Name *</label>
                   <input value={warehouseEdit.name} onChange={(e) => setWarehouseEdit((p) => ({ ...p, name: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Code</label>
+                  <label className="ui-label">Code</label>
                   <input value={warehouseEdit.code} onChange={(e) => setWarehouseEdit((p) => ({ ...p, code: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Location</label>
+                  <label className="ui-label">Location</label>
                   <input value={warehouseEdit.location} onChange={(e) => setWarehouseEdit((p) => ({ ...p, location: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Address</label>
+                  <label className="ui-label">Address</label>
                   <input value={warehouseEdit.address} onChange={(e) => setWarehouseEdit((p) => ({ ...p, address: e.target.value }))} className="ui-input w-full px-3 py-2" />
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Branch</label>
+                  <label className="ui-label">Branch</label>
                   <select value={warehouseEdit.branchId} onChange={(e) => setWarehouseEdit((p) => ({ ...p, branchId: e.target.value }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="">No branch</option>
                     {branchOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs ui-muted">Status</label>
+                  <label className="ui-label">Status</label>
                   <select value={warehouseEdit.isActive ? 'active' : 'inactive'} onChange={(e) => setWarehouseEdit((p) => ({ ...p, isActive: e.target.value === 'active' }))} className="ui-select w-full px-3 py-2 ui-surface">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -10260,15 +10260,15 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs ui-muted">Legal Company Name</label>
+                      <label className="ui-label">Legal Company Name</label>
                       <input value={form.legalName} onChange={(e) => updateForm({ legalName: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div>
-                      <label className="block text-xs ui-muted">Display / Trade Name</label>
+                      <label className="ui-label">Display / Trade Name</label>
                       <input value={form.tradeName} onChange={(e) => updateForm({ tradeName: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div>
-                      <label className="block text-xs ui-muted">Business Type / Entity Type</label>
+                      <label className="ui-label">Business Type / Entity Type</label>
                       <select value={form.entityType} onChange={(e) => updateForm({ entityType: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                         {COMPANY_ENTITY_TYPES.map((x) => (
                           <option key={x} value={x}>{x}</option>
@@ -10276,7 +10276,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs ui-muted">Industry</label>
+                      <label className="ui-label">Industry</label>
                       <div className="mt-2 border rounded-lg p-3 ui-surface">
                         <div className="space-y-2">
                           {INDUSTRY_OPTIONS.map((x) => {
@@ -10304,21 +10304,21 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs ui-muted">Incorporation Date</label>
+                        <label className="ui-label">Incorporation Date</label>
                         <input type="date" value={form.incorporationDate} onChange={(e) => updateForm({ incorporationDate: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Financial Year Start</label>
+                        <label className="ui-label">Financial Year Start</label>
                         <input type="date" value={form.financialYearStart} onChange={(e) => updateForm({ financialYearStart: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs ui-muted">Books Begin Date</label>
+                        <label className="ui-label">Books Begin Date</label>
                         <input type="date" value={form.booksBeginDate} onChange={(e) => updateForm({ booksBeginDate: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Base Currency</label>
+                        <label className="ui-label">Base Currency</label>
                         <select value={form.baseCurrency} onChange={(e) => updateForm({ baseCurrency: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {CURRENCY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
@@ -10328,7 +10328,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs ui-muted">Country</label>
+                        <label className="ui-label">Country</label>
                         <select value={form.country} onChange={(e) => updateForm({ country: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {COUNTRY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
@@ -10336,7 +10336,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Time Zone</label>
+                        <label className="ui-label">Time Zone</label>
                         <select value={form.timeZone} onChange={(e) => updateForm({ timeZone: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {TZ_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>
@@ -10355,16 +10355,16 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs ui-muted">Official Email</label>
+                        <label className="ui-label">Official Email</label>
                         <input value={form.officialEmail} onChange={(e) => updateForm({ officialEmail: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Phone Number</label>
+                        <label className="ui-label">Phone Number</label>
                         <input value={form.phone} onChange={(e) => updateForm({ phone: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs ui-muted">Website</label>
+                      <label className="ui-label">Website</label>
                       <input value={form.website} onChange={(e) => updateForm({ website: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                   </div>
@@ -10377,20 +10377,20 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-xs ui-muted">Address Line 1</label>
+                      <label className="ui-label">Address Line 1</label>
                       <input value={form.regAddress1} onChange={(e) => updateForm({ regAddress1: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div>
-                      <label className="block text-xs ui-muted">Address Line 2</label>
+                      <label className="ui-label">Address Line 2</label>
                       <input value={form.regAddress2} onChange={(e) => updateForm({ regAddress2: e.target.value })} className="ui-input w-full px-3 py-2" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs ui-muted">City</label>
+                        <label className="ui-label">City</label>
                         <input value={form.regCity} onChange={(e) => updateForm({ regCity: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">State / UT</label>
+                        <label className="ui-label">State / UT</label>
                         <select value={form.regStateCode} onChange={(e) => updateForm({ regStateCode: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           <option value="">Select</option>
                           {Object.keys(GST_STATE_BY_CODE || {}).sort().map((code) => (
@@ -10401,11 +10401,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs ui-muted">Pincode</label>
+                        <label className="ui-label">Pincode</label>
                         <input value={form.regPincode} onChange={(e) => updateForm({ regPincode: e.target.value })} className="ui-input w-full px-3 py-2" />
                       </div>
                       <div>
-                        <label className="block text-xs ui-muted">Country</label>
+                        <label className="ui-label">Country</label>
                         <select value={form.regCountry} onChange={(e) => updateForm({ regCountry: e.target.value })} className="ui-select w-full px-3 py-2 ui-surface">
                           {COUNTRY_OPTIONS.map((x) => (
                             <option key={x} value={x}>{x}</option>

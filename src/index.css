@@ -510,11 +510,20 @@
   .ui-select:hover {
     border-color: rgb(var(--fg-subtle));
   }
+  /* The one field label.
+     There were five: 14px medium in 285 places, this at 12px semibold muted in
+     123, a 12px muted variant in 19, and two more — so the same question in the
+     same form was asked in two sizes and three colours depending on which file
+     it lived in. DESIGN.md's 12px "label" tier is the uppercase caption role
+     (table headers, card labels), which a field label is not; the ramp simply
+     had no entry for this. It does now, and it is the body size, because a
+     label above an input is read as prose, not as a column heading. */
   .ui-label {
     display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: rgb(var(--fg-muted));
+    font-size: 0.875rem;   /* 14px */
+    line-height: 1.25rem;
+    font-weight: 500;
+    color: rgb(var(--fg));
     margin-bottom: 0.25rem;
   }
 
@@ -609,13 +618,22 @@
   }
   .ui-nav-item[data-level='module'][data-active='true'],
   .ui-nav-item[data-active='true'][data-level='module'] {
-    color: rgb(var(--brand));
+    /* The ink, not the accent itself: raw brand on the accent wash is 2.64:1,
+       which is below the 4.5 a 14px label needs. The ink is the same hue at
+       8.83:1, so the active item still reads as the accent and is readable. */
+    color: rgb(var(--brand-ink));
     background-color: rgb(var(--accent-soft));
     font-weight: 700;
   }
+  /* A selected child is the accent too, at the same readable value. */
+  .ui-nav-item:not([data-level='module'])[data-active='true'] {
+    color: rgb(var(--brand-ink));
+    font-weight: 600;
+  }
   /* Where you are is the accent's job. The module hue steps aside for it so
-     two colours are never competing to mean "current". */
-  .ui-nav-item[data-active='true'][data-tone] svg { color: rgb(var(--brand)); opacity: 1; }
+     two colours are never competing to mean "current". The icon may keep the
+     brighter accent: as a glyph it needs 3:1, and it clears that. */
+  .ui-nav-item[data-active='true'][data-tone] svg { color: rgb(var(--brand-ink)); opacity: 1; }
   /* Active state is carried by an indicator bar as well as colour, so the
      current location is not signalled by colour alone. */
   .ui-nav-item[data-active='true']::before {
@@ -626,7 +644,9 @@
     bottom: 20%;
     width: 3px;
     border-radius: 0 3px 3px 0;
-    background-color: rgb(var(--accent));
+    /* The ink, matching the label and the icon: the accent at full strength is
+       2.64:1 on its own wash, under the 3:1 a non-text indicator needs. */
+    background-color: rgb(var(--brand-ink));
   }
 
   /* --- status pills --- */

@@ -97,7 +97,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
     <div className="space-y-4">
       {kind === 'payment' ? (
         <div>
-          <label className="block text-sm font-medium mb-1">Type</label>
+          <label className="ui-label">Type</label>
           <select
             value={voucherType}
             onChange={(e) => {
@@ -113,7 +113,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
       ) : null}
 
       <div>
-        <label className="block text-sm font-medium mb-1">{getVoucherLabel(voucherType)} #</label>
+        <label className="ui-label">{getVoucherLabel(voucherType)} #</label>
         <select
           value={voucherId}
           onChange={(e) => setVoucherId(e.target.value)}

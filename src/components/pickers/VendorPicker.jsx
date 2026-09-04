@@ -544,7 +544,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         <div className="font-semibold">Is this vendor GST registered?</div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">GST Registration</label>
+          <label className="ui-label">GST Registration</label>
           <select
             value={formData.gstRegistration}
             onChange={(e) => {
@@ -575,7 +575,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
         {gstRegistrationRequiresGstinUi ? (
           <div>
-            <label className="block text-sm font-medium mb-1">GSTIN *</label>
+            <label className="ui-label">GSTIN *</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -622,7 +622,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
             {formData.tradeName ? (
               <div className="mt-2">
-                <label className="block text-sm font-medium mb-1">Trade name (from the portal)</label>
+                <label className="ui-label">Trade name (from the portal)</label>
                 <input
                   type="text"
                   value={formData.tradeName}
@@ -636,7 +636,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Company Name</label>
+        <label className="ui-label">Company Name</label>
         <input
           type="text"
           value={formData.displayName}
@@ -666,7 +666,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium mb-1">Opening Balance</label>
+          <label className="ui-label">Opening Balance</label>
           <input
             type="number"
             min="0"
@@ -678,7 +678,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Dr / Cr</label>
+          <label className="ui-label">Dr / Cr</label>
           <select
             value={formData.openingBalanceType}
             onChange={(e) => setFormData((p) => ({ ...p, openingBalanceType: e.target.value }))}
@@ -692,7 +692,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Contact Person</label>
+          <label className="ui-label">Contact Person</label>
           <input
             type="text"
             value={formData.contactPerson}
@@ -701,7 +701,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Mobile</label>
+          <label className="ui-label">Mobile</label>
           <input
             type="tel"
             value={formData.mobile}
@@ -713,7 +713,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="ui-label">Email</label>
           <input
             type="email"
             value={formData.email}
@@ -722,7 +722,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Alternate Phone</label>
+          <label className="ui-label">Alternate Phone</label>
           <input
             type="tel"
             value={formData.alternatePhone}
@@ -737,7 +737,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">PAN</label>
+            <label className="ui-label">PAN</label>
             <input
               type="text"
               value={formData.pan}
@@ -747,7 +747,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Credit period (days)</label>
+            <label className="ui-label">Credit period (days)</label>
             <input
               type="number"
               min="0"
@@ -762,7 +762,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">State</label>
+            <label className="ui-label">State</label>
             <PopupSelect
               label={null}
               title="Select State"
@@ -790,7 +790,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Address Line 1</label>
+            <label className="ui-label">Address Line 1</label>
             <input
               type="text"
               value={formData.billingAddress.line1}
@@ -799,7 +799,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Address Line 2</label>
+            <label className="ui-label">Address Line 2</label>
             <input
               type="text"
               value={formData.billingAddress.line2}
@@ -811,7 +811,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">City</label>
+            <label className="ui-label">City</label>
             <input
               type="text"
               value={formData.billingAddress.city}
@@ -820,7 +820,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">District</label>
+            <label className="ui-label">District</label>
             <input
               type="text"
               value={formData.billingAddress.district}
@@ -829,7 +829,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Pincode</label>
+            <label className="ui-label">Pincode</label>
             <input
               type="text"
               value={formData.billingAddress.pincode}
@@ -840,7 +840,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Country</label>
+          <label className="ui-label">Country</label>
           <PopupSelect
             label={null}
             title="Select Country"
@@ -877,7 +877,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             className="space-y-4"
           >
             <div>
-              <label className="block text-sm font-medium mb-1">Group Name</label>
+              <label className="ui-label">Group Name</label>
               <input
                 type="text"
                 value={groupDraftName}
@@ -1046,7 +1046,7 @@ const VendorPicker = ({
 
   return (
     <>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      <label className="ui-label">{label}</label>
       <div className="flex items-center gap-2">
         <button
           ref={triggerRef}

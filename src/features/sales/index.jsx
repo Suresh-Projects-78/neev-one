@@ -18,6 +18,7 @@ import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from
 import { resolveSaleRate } from '../../utils/pricing';
 import { TDS_SECTIONS, tdsAmountOn, tdsDefaultRate, tdsShortLabel } from '../../utils/tds';
 import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
+import { branchLabel } from '../../utils/branchLabel';
 import EwbTransportForm from '../../components/EwbTransportForm';
 import EInvoiceWorkflow from './EInvoiceWorkflow';
 import { resolveDiscountForLine } from '../../utils/discounts';
@@ -2471,7 +2472,7 @@ const InvoiceNumberingPopover = ({ anchorRef, db, setDb, currentCompany, branchI
         <div className="ui-t-label">Invoice numbering</div>
 
         <div>
-          <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-mode">How numbers are issued</label>
+          <label className="ui-label" htmlFor="inv-num-mode">How numbers are issued</label>
           <select
             id="inv-num-mode"
             className="ui-select w-full px-3 py-2"
@@ -2485,17 +2486,17 @@ const InvoiceNumberingPopover = ({ anchorRef, db, setDb, currentCompany, branchI
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-prefix">Prefix</label>
+            <label className="ui-label" htmlFor="inv-num-prefix">Prefix</label>
             <input id="inv-num-prefix" className="ui-input ui-mono" value={draft.prefix} onChange={(e) => set({ prefix: e.target.value })} />
           </div>
           <div>
-            <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-suffix">Suffix</label>
+            <label className="ui-label" htmlFor="inv-num-suffix">Suffix</label>
             <input id="inv-num-suffix" className="ui-input ui-mono" value={draft.suffix} onChange={(e) => set({ suffix: e.target.value })} />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-next">Next number</label>
+          <label className="ui-label" htmlFor="inv-num-next">Next number</label>
           <input
             id="inv-num-next"
             type="number"
@@ -2711,7 +2712,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         const id = `cf-${f.key}`;
         return (
           <div key={f.key}>
-            <label htmlFor={id} className="block text-sm font-medium mb-1">
+            <label htmlFor={id} className="ui-label">
               {f.label}
               {f.required ? <span className="ml-1 text-[rgb(var(--neg-ink))]">*</span> : null}
             </label>
@@ -2921,7 +2922,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   const branchOptions = useMemo(() => {
     const list = Array.isArray(branches) ? branches : [];
-    return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+    return list.slice().sort((a, b) => branchLabel(a).localeCompare(branchLabel(b)));
   }, [branches]);
 
   const branchIdForNumbering = String(branchIdInList || '').trim() || resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
@@ -3877,7 +3878,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 onChange={onBranchChange}
                 options={[
                   { value: '', label: 'All branches' },
-                  ...branchOptions.map((b) => ({ value: String(b.id), label: b.name || `Branch ${b.id}` })),
+                  ...branchOptions.map((b) => ({ value: String(b.id), label: branchLabel(b) })),
                 ]}
                 placeholder="All branches"
                 showValueSubtext={false}
@@ -3936,7 +3937,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             ) : null}
             {prefOn('shipTo') && selectedCustomer && Array.isArray(selectedCustomer.shipToAddresses) && selectedCustomer.shipToAddresses.length > 0 ? (
               <div className="mt-2">
-                <label className="block text-xs ui-muted mb-1">Deliver to</label>
+                <label className="ui-label">Deliver to</label>
                 <select
                   value={formData.shipToCode || ''}
                   onChange={(e) => {
@@ -3969,7 +3970,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         >
           <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr] gap-3">
           <div className="min-w-0">
-            <label htmlFor="invoice-number" className="block text-sm font-medium mb-1">
+            <label htmlFor="invoice-number" className="ui-label">
               Invoice No.
             </label>
             {/* The gear sits on the field it governs. Changing a series is a
@@ -4018,7 +4019,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           </div>
 
             <div className="min-w-0">
-              <label htmlFor="invoice-date" className="block text-sm font-medium mb-1">
+              <label htmlFor="invoice-date" className="ui-label">
                 Date <span className="text-[rgb(var(--neg-ink))]">*</span>
               </label>
               <input
@@ -4041,7 +4042,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             </div>
 
             <div className="min-w-0">
-              <label htmlFor="invoice-due" className="block text-sm font-medium mb-1">
+              <label htmlFor="invoice-due" className="ui-label">
                 Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
               </label>
               <input
@@ -4059,7 +4060,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           {prefOn('customerRef') ? (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="invoice-ref-no" className="block text-sm font-medium mb-1">Ref No.</label>
+                <label htmlFor="invoice-ref-no" className="ui-label">Ref No.</label>
                 <input
                   id="invoice-ref-no"
                   type="text"
@@ -4070,7 +4071,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 />
               </div>
               <div>
-                <label htmlFor="invoice-ref-date" className="block text-sm font-medium mb-1">Ref Date</label>
+                <label htmlFor="invoice-ref-date" className="ui-label">Ref Date</label>
                 <input
                   id="invoice-ref-date"
                   type="date"
@@ -4116,7 +4117,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {prefOn('iec') ? (
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="ui-label">
               IEC <span className="ui-subtle font-normal">(if applicable)</span>
             </label>
             <input
@@ -4130,7 +4131,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
         {prefOn('lut') ? (
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="ui-label">
               LUT <span className="ui-subtle font-normal">(if applicable)</span>
             </label>
             <input
@@ -4158,7 +4159,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
         {prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Cost Center</label>
+            <label className="ui-label">Cost Center</label>
             <select
               value={formData.costCenterId || ''}
               onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
@@ -4175,7 +4176,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
         {prefOn('salesman') && (db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Salesman</label>
+            <label className="ui-label">Salesman</label>
             <select
               value={formData.salesmanId || ''}
               onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
@@ -4210,7 +4211,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {prefOn('shippingBill') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Shipping bill</label>
+              <label className="ui-label">Shipping bill</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -4240,7 +4241,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('foreignCurrency') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Currency &amp; exchange rate</label>
+              <label className="ui-label">Currency &amp; exchange rate</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -4267,7 +4268,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('transporter') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Transporter &amp; vehicle</label>
+              <label className="ui-label">Transporter &amp; vehicle</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -4290,7 +4291,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('lrNumber') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">LR / GR no.</label>
+              <label className="ui-label">LR / GR no.</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -4312,7 +4313,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('packages') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Packages &amp; weight</label>
+              <label className="ui-label">Packages &amp; weight</label>
               <input
                 type="text"
                 value={formData.packageDetails}
@@ -4325,7 +4326,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('servicePeriod') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Service period</label>
+              <label className="ui-label">Service period</label>
               <div className="flex gap-2">
                 <input
                   type="date"
@@ -4348,7 +4349,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('project') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Project / site</label>
+              <label className="ui-label">Project / site</label>
               <input
                 type="text"
                 value={formData.projectName}
@@ -4361,7 +4362,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('workOrder') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Work order &amp; RA bill</label>
+              <label className="ui-label">Work order &amp; RA bill</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -4384,7 +4385,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('timesheetRef') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Timesheet reference</label>
+              <label className="ui-label">Timesheet reference</label>
               <input
                 type="text"
                 value={formData.timesheetRef}
@@ -4399,7 +4400,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
       <div>
         <div className="mb-2">
-          <label className="block text-sm font-medium">Line Items</label>
+          <label className="ui-label">Line Items</label>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -4561,7 +4562,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <div className="space-y-3">
             {prefOn('invoiceDiscount') || Number(formData.invoiceDiscountValue) > 0 ? (
             <div>
-              <label className="block text-xs ui-muted mb-1">Invoice discount</label>
+              <label className="ui-label">Invoice discount</label>
               <div className="flex items-center gap-2">
                 <select
                   value={formData.invoiceDiscountType}
@@ -4588,7 +4589,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             ) : null}
             {prefOn('otherCharges') || (formData.otherCharges || []).length > 0 ? (
             <div>
-              <label className="block text-xs ui-muted mb-1">Other charges (transport, reimbursement…)</label>
+              <label className="ui-label">Other charges (transport, reimbursement…)</label>
               {(formData.otherCharges || []).map((c, ci) => (
                 <div key={ci} className="mb-1.5 flex items-center gap-2">
                   <input
@@ -4653,7 +4654,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
             {prefOn('paymentTerms') ? (
               <div>
-                <label htmlFor="invoice-terms" className="block text-xs ui-muted mb-1">
+                <label htmlFor="invoice-terms" className="ui-label">
                   Payment Terms
                 </label>
                 <select
@@ -4691,7 +4692,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
             {prefOn('notes') ? (
               <div>
-                <label htmlFor="invoice-notes" className="block text-xs ui-muted mb-1">
+                <label htmlFor="invoice-notes" className="ui-label">
                   Notes
                 </label>
                 <textarea
@@ -4719,7 +4720,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               override both.
             */}
             <div>
-              <label className="block text-sm font-medium mb-1" htmlFor="invoice-tds-section">
+              <label className="ui-label" htmlFor="invoice-tds-section">
                 TDS deduction <span className="ui-subtle font-normal">(if the customer deducts)</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-[1fr_6rem] gap-3">
@@ -5211,7 +5212,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Quotation Number</label>
+          <label className="ui-label">Quotation Number</label>
           <input
             type="text"
             value={formData.number}
@@ -5231,7 +5232,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Quotation Date</label>
+          <label className="ui-label">Quotation Date</label>
           <input
             type="date"
             value={formData.date}
@@ -5241,7 +5242,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Due Date</label>
+          <label className="ui-label">Due Date</label>
           <input
             type="date"
             value={formData.dueDate}
@@ -5252,7 +5253,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
         {(db.salesmen || []).some((sm) => sm.companyId === currentCompany.id) ? (
           <div>
-            <label className="block text-sm font-medium mb-1">Salesman</label>
+            <label className="ui-label">Salesman</label>
             <select
               value={formData.salesmanId || ''}
               onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
@@ -5271,7 +5272,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Line Items</label>
+          <label className="ui-label">Line Items</label>
           <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
@@ -5451,7 +5452,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       ? branchId
       : '';
   const branchOptions = useMemo(
-    () => (Array.isArray(branches) ? branches : []).slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''))),
+    () => (Array.isArray(branches) ? branches : []).slice().sort((a, b) => branchLabel(a).localeCompare(branchLabel(b))),
     [branches]
   );
 
@@ -5851,7 +5852,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           warehouse for two branches could not say which. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="cn-branch" className="block text-sm font-medium mb-1">Branch</label>
+          <label htmlFor="cn-branch" className="ui-label">Branch</label>
           <select
             id="cn-branch"
             className="ui-select w-full px-3 py-2"
@@ -5860,12 +5861,12 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           >
             <option value="">All branches</option>
             {branchOptions.map((b) => (
-              <option key={String(b.id)} value={String(b.id)}>{b.name || `Branch ${b.id}`}</option>
+              <option key={String(b.id)} value={String(b.id)}>{branchLabel(b)}</option>
             ))}
           </select>
         </div>
         <div>
-          <label htmlFor="cn-reason" className="block text-sm font-medium mb-1">
+          <label htmlFor="cn-reason" className="ui-label">
             Reason <span className="text-[rgb(var(--neg-ink))]">*</span>
           </label>
           <select
@@ -5884,7 +5885,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Credit Note Number</label>
+          <label className="ui-label">Credit Note Number</label>
           <input
             type="text"
             value={formData.number}
@@ -5896,7 +5897,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         </div>
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-sm font-medium">
+            <label className="ui-label">
               {onAccountMode ? 'Invoices this return covers' : 'Original Invoice #'}
             </label>
             <button
@@ -5994,7 +5995,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           )}
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Credit Note Date</label>
+          <label className="ui-label">Credit Note Date</label>
           <input
             type="date"
             value={formData.date}
@@ -6027,7 +6028,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Line Items</label>
+          <label className="ui-label">Line Items</label>
           <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>

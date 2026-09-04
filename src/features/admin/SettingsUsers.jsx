@@ -427,22 +427,22 @@ export function SettingsUsers({ orgId }) {
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Full Name *</label>
+                <label className="ui-label">Full Name *</label>
                 <input className="ui-input w-full px-3 py-2" value={form.fullName} onChange={onChange('fullName')} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Email *</label>
+                <label className="ui-label">Email *</label>
                 <input type="email" className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} required />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Temp Password *</label>
+                <label className="ui-label">Temp Password *</label>
                 <input type="password" className="ui-input w-full px-3 py-2" value={form.password} onChange={onChange('password')} required />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Role</label>
+                <label className="ui-label">Role</label>
                 <select
                   className="ui-select w-full px-3 py-2 ui-surface"
                   value={form.roleId}
@@ -653,7 +653,7 @@ export function SettingsUsers({ orgId }) {
           <div className="ui-t-sec">Edit User</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Full Name *</label>
+              <label className="ui-label">Full Name *</label>
               <input
                 className="ui-input w-full px-3 py-2"
                 value={editForm.fullName}
@@ -662,7 +662,7 @@ export function SettingsUsers({ orgId }) {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Email *</label>
+              <label className="ui-label">Email *</label>
               <input
                 type="email"
                 className="ui-input w-full px-3 py-2"
@@ -674,7 +674,7 @@ export function SettingsUsers({ orgId }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Role</label>
+              <label className="ui-label">Role</label>
               <select
                 className="ui-select w-full px-3 py-2 ui-surface"
                 value={editForm.roleId}
@@ -689,7 +689,7 @@ export function SettingsUsers({ orgId }) {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Status</label>
+              <label className="ui-label">Status</label>
               <select
                 className="ui-select w-full px-3 py-2 ui-surface"
                 value={editForm.isActive ? 'active' : 'inactive'}

@@ -126,21 +126,21 @@ export default function EInvoiceSettings() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div>
-          <label className="block text-xs ui-muted">Provider</label>
+          <label className="ui-label">Provider</label>
           <select value={form.provider} onChange={set('provider')} className="ui-select w-full px-3 py-2 ui-surface">
             <option value="GSP">GSP REST gateway (MasterGST / ClearTax style)</option>
             <option value="NIC">NIC direct API (einvoice1.gst.gov.in)</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs ui-muted">Mode</label>
+          <label className="ui-label">Mode</label>
           <select value={form.mode} onChange={set('mode')} className="ui-select w-full px-3 py-2 ui-surface">
             <option value="SANDBOX">Sandbox (testing)</option>
             <option value="PRODUCTION">Production (live IRN)</option>
           </select>
         </div>
         <div>
-          <label className="block text-xs ui-muted">{form.provider === 'NIC' ? 'NIC base URL' : 'Gateway base URL'}</label>
+          <label className="ui-label">{form.provider === 'NIC' ? 'NIC base URL' : 'Gateway base URL'}</label>
           <input
             value={form.baseUrl}
             onChange={set('baseUrl')}
@@ -149,15 +149,15 @@ export default function EInvoiceSettings() {
           />
         </div>
         <div>
-          <label className="block text-xs ui-muted">GSTIN used at the gateway</label>
+          <label className="ui-label">GSTIN used at the gateway</label>
           <input value={form.gstin} onChange={set('gstin')} className="ui-input w-full px-3 py-2" placeholder="29ABCDE1234F1Z5" />
         </div>
         <div>
-          <label className="block text-xs ui-muted">API username</label>
+          <label className="ui-label">API username</label>
           <input value={form.username} onChange={set('username')} className="ui-input w-full px-3 py-2" autoComplete="off" />
         </div>
         <div>
-          <label className="block text-xs ui-muted">API password</label>
+          <label className="ui-label">API password</label>
           <input
             type="password"
             value={form.password}
@@ -168,11 +168,11 @@ export default function EInvoiceSettings() {
           />
         </div>
         <div>
-          <label className="block text-xs ui-muted">Client ID</label>
+          <label className="ui-label">Client ID</label>
           <input value={form.clientId} onChange={set('clientId')} className="ui-input w-full px-3 py-2" autoComplete="off" />
         </div>
         <div>
-          <label className="block text-xs ui-muted">Client secret</label>
+          <label className="ui-label">Client secret</label>
           <input
             type="password"
             value={form.clientSecret}
@@ -183,7 +183,7 @@ export default function EInvoiceSettings() {
           />
         </div>
         <div>
-          <label className="block text-xs ui-muted">Extra headers (JSON, optional)</label>
+          <label className="ui-label">Extra headers (JSON, optional)</label>
           <input
             value={form.headersJson}
             onChange={set('headersJson')}
@@ -193,7 +193,7 @@ export default function EInvoiceSettings() {
         </div>
         {form.provider === 'NIC' ? (
           <div className="sm:col-span-2">
-            <label className="block text-xs ui-muted">NIC e-Invoice public key (PEM)</label>
+            <label className="ui-label">NIC e-Invoice public key (PEM)</label>
             <textarea
               value={form.publicKeyPem}
               onChange={set('publicKeyPem')}

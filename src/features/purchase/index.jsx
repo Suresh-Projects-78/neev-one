@@ -389,7 +389,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Bill Number</label>
+          <label className="ui-label">Bill Number</label>
           <input
             type="text"
             value={formData.number}
@@ -450,7 +450,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Bill Date</label>
+          <label className="ui-label">Bill Date</label>
           <input
             type="date"
             value={formData.date}
@@ -465,7 +465,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Due Date</label>
+          <label className="ui-label">Due Date</label>
           <input
             type="date"
             value={formData.dueDate}
@@ -476,7 +476,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Ref No</label>
+          <label className="ui-label">Ref No</label>
           <input
             type="text"
             value={formData.refNo}
@@ -487,7 +487,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Ref Date</label>
+          <label className="ui-label">Ref Date</label>
           <input
             type="date"
             value={formData.refDate}
@@ -499,7 +499,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Line Items</label>
+          <label className="ui-label">Line Items</label>
           <span className="flex items-center gap-3">
             <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
             <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
@@ -1266,7 +1266,7 @@ export const PurchaseOrderForm = ({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">PO Number</label>
+          <label className="ui-label">PO Number</label>
           <input
             type="text"
             value={formData.number}
@@ -1288,7 +1288,7 @@ export const PurchaseOrderForm = ({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
+          <label className="ui-label">Date</label>
           <input
             type="date"
             value={formData.date}
@@ -1311,7 +1311,7 @@ export const PurchaseOrderForm = ({
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Line Items</label>
+          <label className="ui-label">Line Items</label>
           <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>
@@ -1386,7 +1386,7 @@ export const PurchaseOrderForm = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Notes</label>
+        <label className="ui-label">Notes</label>
         <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full px-3 py-2" rows={3} />
       </div>
 
@@ -2659,7 +2659,7 @@ export const DebitNoteForm = ({
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Debit Note Number</label>
+          <label className="ui-label">Debit Note Number</label>
           <input
             type="text"
             value={formData.number}
@@ -2672,7 +2672,7 @@ export const DebitNoteForm = ({
 
         <div className="md:col-span-2">
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-sm font-medium">
+            <label className="ui-label">
               {onAccountMode ? 'Bills this return covers' : 'Original Bill # *'}
             </label>
             <button
@@ -2741,7 +2741,7 @@ export const DebitNoteForm = ({
         />
 
         <div>
-          <label className="block text-sm font-medium mb-1">Debit Note Date</label>
+          <label className="ui-label">Debit Note Date</label>
           <input
             type="date"
             value={formData.date}
@@ -2766,7 +2766,7 @@ export const DebitNoteForm = ({
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Line Items</label>
+          <label className="ui-label">Line Items</label>
           <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
             <Plus size={16} /> Add Item
           </button>

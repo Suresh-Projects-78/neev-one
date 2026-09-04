@@ -84,23 +84,23 @@ export function BranchCreateForm({ orgId, onCreated }) {
 
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 sm:col-span-4">
-          <label className="block text-sm font-medium mb-1">Branch Code</label>
+          <label className="ui-label">Branch Code</label>
           <input className="ui-input w-full max-w-40 px-3 py-2" value={form.branchCode} onChange={onChange('branchCode')} required />
         </div>
         <div className="col-span-12 sm:col-span-8">
-          <label className="block text-sm font-medium mb-1">Branch Name</label>
+          <label className="ui-label">Branch Name</label>
           <input className="ui-input w-full px-3 py-2" value={form.branchName} onChange={onChange('branchName')} required />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Address</label>
+        <label className="ui-label">Address</label>
         <input className="ui-input w-full px-3 py-2" value={form.addressLine1} onChange={onChange('addressLine1')} required />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">City</label>
+          <label className="ui-label">City</label>
           <input className="ui-input w-full px-3 py-2" value={form.city} onChange={onChange('city')} />
         </div>
         <div>
@@ -118,14 +118,14 @@ export function BranchCreateForm({ orgId, onCreated }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Country</label>
+          <label className="ui-label">Country</label>
           <input className="ui-input w-full px-3 py-2" value={form.country} onChange={onChange('country')} required />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">GST Registration</label>
+          <label className="ui-label">GST Registration</label>
           <select className="ui-select w-full px-3 py-2" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
             <option value="REGULAR">Regular</option>
             <option value="COMPOSITION">Composition</option>
@@ -133,22 +133,22 @@ export function BranchCreateForm({ orgId, onCreated }) {
           </select>
         </div>
         <div className="col-span-2">
-          <label className="block text-sm font-medium mb-1">GSTIN</label>
+          <label className="ui-label">GSTIN</label>
           <input className="ui-input w-full px-3 py-2" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Phone</label>
+          <label className="ui-label">Phone</label>
           <input className="ui-input w-full px-3 py-2" value={form.phone} onChange={onChange('phone')} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="ui-label">Email</label>
           <input className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Contact Person</label>
+          <label className="ui-label">Contact Person</label>
           <input className="ui-input w-full px-3 py-2" value={form.contactPerson} onChange={onChange('contactPerson')} />
         </div>
       </div>

@@ -590,7 +590,7 @@ export const StockTransferEditor = ({
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-44">
-            <label className="block text-sm font-medium mb-1">Voucher No.</label>
+            <label className="ui-label">Voucher No.</label>
             <input
               type="text"
               value={form.number}
@@ -601,7 +601,7 @@ export const StockTransferEditor = ({
             />
           </div>
           <div className="w-44">
-            <label className="block text-sm font-medium mb-1">Date</label>
+            <label className="ui-label">Date</label>
             <input
               type="date"
               value={form.date}
@@ -622,7 +622,7 @@ export const StockTransferEditor = ({
             the shift belongs on top of the software, not repeated in every
             form. Only the destination is chosen here. */}
         <div>
-          <label className="block text-sm font-medium mb-1">From (active {mode === 'branch' ? 'branch' : 'warehouse'})</label>
+          <label className="ui-label">From (active {mode === 'branch' ? 'branch' : 'warehouse'})</label>
           <div className="ui-input ui-sunken w-full px-3 py-2">
             {getBranchLabel(selectedSourceBranch) || '—'}
             {mode === 'warehouse' ? ` · ${getWarehouseLabel(selectedSourceWarehouse) || '—'}` : ''}
@@ -632,7 +632,7 @@ export const StockTransferEditor = ({
 
         {mode === 'branch' ? (
           <div>
-            <label className="block text-sm font-medium mb-1">From Warehouse *</label>
+            <label className="ui-label">From Warehouse *</label>
             <select
               value={normalizeId(form.sourceWarehouseId)}
               onChange={(e) => {
@@ -661,7 +661,7 @@ export const StockTransferEditor = ({
 
         {mode === 'branch' ? (
           <div>
-            <label className="block text-sm font-medium mb-1">To Branch *</label>
+            <label className="ui-label">To Branch *</label>
             <select
               value={form.targetBranchId}
               onChange={(e) => {
@@ -688,7 +688,7 @@ export const StockTransferEditor = ({
 
 
         <div>
-          <label className="block text-sm font-medium mb-1">Receiver Warehouse *</label>
+          <label className="ui-label">Receiver Warehouse *</label>
           <select
             value={form.targetWarehouseId}
             onChange={(e) => {
@@ -723,7 +723,7 @@ export const StockTransferEditor = ({
 
       <div>
         <div className="flex justify-between items-center mb-2">
-          <label className="block text-sm font-medium">Line Items</label>
+          <label className="ui-label">Line Items</label>
           <button
             type="button"
             onClick={addLine}

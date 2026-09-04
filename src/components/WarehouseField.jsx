@@ -47,7 +47,7 @@ const WarehouseField = ({
     const name = picked?.name || `Warehouse ${active}`;
     return (
       <div>
-        <label className="block text-sm font-medium mb-1">{label.replace(' *', '')}</label>
+        <label className="ui-label">{label.replace(' *', '')}</label>
         <div className="ui-input w-full px-3 py-2 flex items-center gap-2 ui-sunken" aria-readonly="true">
           <Lock size={14} className="ui-muted shrink-0" aria-hidden="true" />
           <span className="truncate">

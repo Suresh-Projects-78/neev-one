@@ -22,6 +22,7 @@ import Modal from '../../components/ui/Modal';
 import Illustration from '../../components/ui/Illustration';
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { getCustomerDisplayName } from '../../utils/contacts';
+import { branchLabel } from '../../utils/branchLabel';
 
 const LazySeriesBars = lazy(() =>
   import('../../components/charts/CircularCharts').then((m) => ({ default: m.SeriesBars }))
@@ -36,8 +37,7 @@ const ChartFallback = ({ height = 260 }) => (
 
 const normalizeId = (v) => String(v ?? '').trim();
 
-const getBranchLabel = (b) =>
-  String(b?.name || b?.label || b?.code || '').trim() || (b?.id ? `Branch ${b.id}` : '');
+const getBranchLabel = branchLabel;
 
 /*
  * Local calendar date, not UTC.

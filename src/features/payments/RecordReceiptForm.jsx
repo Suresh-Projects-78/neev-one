@@ -445,7 +445,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Receipt Date</label>
+          <label className="ui-label">Receipt Date</label>
           <input
             type="date"
             value={formData.date}
@@ -455,7 +455,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Amount Received</label>
+          <label className="ui-label">Amount Received</label>
           <input
             type="number"
             value={formData.amount}
@@ -493,7 +493,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               { k: 'otherCharges', label: 'Other charges' },
             ].map((f) => (
               <div key={f.k}>
-                <label className="block text-sm font-medium mb-1" htmlFor={`rcpt-${f.k}`}>
+                <label className="ui-label" htmlFor={`rcpt-${f.k}`}>
                   {f.label}
                 </label>
                 <input
@@ -538,7 +538,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
         {!hideMode ? (
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="ui-label">
               Received into <span className="text-[rgb(var(--neg))]">*</span>
             </label>
             <select
@@ -571,7 +571,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           </div>
         ) : null}
         <div>
-          <label className="block text-sm font-medium mb-1">Reference</label>
+          <label className="ui-label">Reference</label>
           <input
             type="text"
             value={formData.reference}
@@ -707,7 +707,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Notes</label>
+        <label className="ui-label">Notes</label>
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}

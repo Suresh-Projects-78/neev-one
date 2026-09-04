@@ -148,7 +148,7 @@ const PopupSelect = ({
 
   return (
     <>
-      {label ? <label className="block text-sm font-medium mb-1">{label}</label> : null}
+      {label ? <label className="ui-label">{label}</label> : null}
       <button
         ref={triggerRef}
         type="button"

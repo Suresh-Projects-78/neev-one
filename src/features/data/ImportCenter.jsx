@@ -154,7 +154,7 @@ export default function ImportCenter({ onBack = null }) {
       <div className="ui-card p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium mb-1">What are you importing?</label>
+            <label className="ui-label">What are you importing?</label>
             <select
               value={docType}
               onChange={(e) => {
@@ -200,7 +200,7 @@ export default function ImportCenter({ onBack = null }) {
         ) : null}
 
         <div>
-          <label className="block text-sm font-medium mb-1">
+          <label className="ui-label">
             CSV content {fileName ? <span className="ui-muted">({fileName})</span> : null}
           </label>
           <textarea

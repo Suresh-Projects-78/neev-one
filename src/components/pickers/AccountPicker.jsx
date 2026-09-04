@@ -236,7 +236,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Ledger Name</label>
+        <label className="ui-label">Ledger Name</label>
         <input
           type="text"
           value={formData.name}
@@ -293,7 +293,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Opening Balance</label>
+        <label className="ui-label">Opening Balance</label>
         <input
           type="number"
           value={formData.openingBalance}
@@ -458,7 +458,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
 
   return (
     <>
-      {label ? <label className="block text-sm font-medium mb-1">{label}</label> : null}
+      {label ? <label className="ui-label">{label}</label> : null}
       <button
         ref={triggerRef}
         type="button"

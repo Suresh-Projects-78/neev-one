@@ -117,7 +117,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Parent</label>
+        <label className="ui-label">Parent</label>
         <select
           value={formData.parent}
           onChange={(e) => setFormData((p) => ({ ...p, parent: e.target.value }))}
@@ -132,7 +132,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Group Name</label>
+        <label className="ui-label">Group Name</label>
         <input
           type="text"
           value={formData.name}
@@ -262,7 +262,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Group</label>
+          <label className="ui-label">Group</label>
           <select
             value={formData.typeId}
             onChange={(e) => setFormData((p) => ({ ...p, typeId: e.target.value, parentGroupId: '' }))}
@@ -277,7 +277,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Group Category</label>
+          <label className="ui-label">Group Category</label>
           <select
             value={formData.groupCategory}
             onChange={(e) => setFormData((p) => ({ ...p, groupCategory: e.target.value }))}
@@ -292,7 +292,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Group Name</label>
+        <label className="ui-label">Group Name</label>
         <input
           type="text"
           value={formData.name}

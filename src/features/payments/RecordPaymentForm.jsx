@@ -122,7 +122,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Date</label>
+          <label className="ui-label">Date</label>
           <input
             type="date"
             value={formData.date}
@@ -132,7 +132,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Amount</label>
+          <label className="ui-label">Amount</label>
           <input
             type="number"
             value={formData.amount}
@@ -147,7 +147,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Mode</label>
+          <label className="ui-label">Mode</label>
           <select
             value={formData.mode}
             onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
@@ -161,7 +161,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Reference</label>
+          <label className="ui-label">Reference</label>
           <input
             type="text"
             value={formData.reference}
@@ -173,7 +173,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Notes</label>
+        <label className="ui-label">Notes</label>
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}

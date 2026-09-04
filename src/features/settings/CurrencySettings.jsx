@@ -98,7 +98,7 @@ export default function CurrencySettings() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
-            <label className="block text-sm font-medium mb-1">Code *</label>
+            <label className="ui-label">Code *</label>
             <input
               value={draft.code}
               onChange={(e) => setDraft((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
@@ -109,7 +109,7 @@ export default function CurrencySettings() {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Name *</label>
+            <label className="ui-label">Name *</label>
             <input
               value={draft.name}
               onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
@@ -119,7 +119,7 @@ export default function CurrencySettings() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Symbol</label>
+            <label className="ui-label">Symbol</label>
             <input
               value={draft.symbol}
               onChange={(e) => setDraft((p) => ({ ...p, symbol: e.target.value }))}
@@ -149,7 +149,7 @@ export default function CurrencySettings() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
-                <label className="block text-sm font-medium mb-1">Currency *</label>
+                <label className="ui-label">Currency *</label>
                 <select
                   value={rateDraft.code}
                   onChange={(e) => setRateDraft((p) => ({ ...p, code: e.target.value }))}
@@ -165,7 +165,7 @@ export default function CurrencySettings() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Date *</label>
+                <label className="ui-label">Date *</label>
                 <input
                   type="date"
                   value={rateDraft.date}
@@ -175,7 +175,7 @@ export default function CurrencySettings() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">{baseCurrency} per unit *</label>
+                <label className="ui-label">{baseCurrency} per unit *</label>
                 <input
                   type="number"
                   min="0.000001"

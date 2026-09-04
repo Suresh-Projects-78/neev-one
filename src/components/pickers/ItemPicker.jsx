@@ -204,7 +204,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
 
   return (
     <>
-      {label ? <label className="block text-xs font-medium mb-1">{label}</label> : null}
+      {label ? <label className="ui-label">{label}</label> : null}
       <button
         type="button"
         ref={triggerRef}
@@ -398,7 +398,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     series by the time you said what the thing was.
                   */}
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-1">Type</label>
+                    <label className="ui-label">Type</label>
                     <select
                       value={newItem.type}
                       onChange={(e) => {
@@ -424,7 +424,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Code</label>
+                    <label className="ui-label">Code</label>
                     <input
                       type="text"
                       value={newItem.code}
@@ -434,7 +434,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Name</label>
+                    <label className="ui-label">Name</label>
                     <input
                       type="text"
                       value={newItem.name}
@@ -445,7 +445,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <label className="ui-label">Description</label>
                     <textarea
                       value={newItem.description || ''}
                       onChange={(e) => setNewItem((p) => ({ ...p, description: e.target.value }))}
@@ -456,7 +456,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">Unit</label>
+                    <label className="ui-label">Unit</label>
                     <select
                       value={String(newItem.unit ?? '').trim()}
                       onChange={(e) => {
@@ -514,7 +514,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     ) : null}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">HSN/SAC</label>
+                    <label className="ui-label">HSN/SAC</label>
                     <input
                       type="text"
                       value={newItem.hsnSac}
@@ -523,7 +523,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">GST %</label>
+                    <label className="ui-label">GST %</label>
                     <select
                       value={String(newItem.gstRate ?? 0)}
                       onChange={(e) => setNewItem((p) => ({ ...p, gstRate: e.target.value }))}
@@ -544,7 +544,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Sale Price</label>
+                    <label className="ui-label">Sale Price</label>
                     <input
                       type="number"
                       value={newItem.salePrice}
@@ -555,7 +555,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Purchase Price</label>
+                    <label className="ui-label">Purchase Price</label>
                     <input
                       type="number"
                       value={newItem.purchasePrice}
@@ -567,7 +567,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   </div>
                   {String(newItem.type || 'Goods') !== 'Service' ? (
                     <div>
-                      <label className="block text-sm font-medium mb-1">Opening Stock</label>
+                      <label className="ui-label">Opening Stock</label>
                       <input
                         type="number"
                         value={newItem.openingQty}
@@ -591,7 +591,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   */}
                   {batchCapable && newItem.type === 'Goods' ? (
                     <div className="col-span-2">
-                      <label className="block text-sm font-medium mb-1">Batch &amp; expiry</label>
+                      <label className="ui-label">Batch &amp; expiry</label>
                       <select
                         value={newItem.trackingType || 'NONE'}
                         onChange={(e) => setNewItem((p) => ({ ...p, trackingType: e.target.value }))}

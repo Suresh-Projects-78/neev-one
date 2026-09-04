@@ -423,7 +423,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Payment Date</label>
+          <label className="ui-label">Payment Date</label>
           <input
             type="date"
             value={formData.date}
@@ -433,7 +433,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Amount Paid</label>
+          <label className="ui-label">Amount Paid</label>
           <input
             type="number"
             value={formData.amount}
@@ -472,7 +472,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
         {!hideMode ? (
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="ui-label">
               Paid from <span className="text-[rgb(var(--neg))]">*</span>
             </label>
             <select
@@ -504,7 +504,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
           </div>
         ) : null}
         <div>
-          <label className="block text-sm font-medium mb-1">Reference</label>
+          <label className="ui-label">Reference</label>
           <input
             type="text"
             value={formData.reference}
@@ -600,7 +600,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1">Notes</label>
+        <label className="ui-label">Notes</label>
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}

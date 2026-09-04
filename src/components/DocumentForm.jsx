@@ -168,7 +168,7 @@ export const FormRow = ({ children, className = '', divided = false }) => (
 /** One labelled field. `required` prints the marker the footer explains. */
 export const Field = ({ label, htmlFor, required = false, hint = '', children, className = '', span = 1 }) => (
   <div className={`${span > 1 ? `lg:col-span-${span}` : ''} ${className}`}>
-    <label htmlFor={htmlFor} className="block text-sm font-medium mb-1">
+    <label htmlFor={htmlFor} className="ui-label">
       {label}
       {required ? <span className="ml-1 text-[rgb(var(--neg-ink))]">*</span> : null}
     </label>

@@ -1120,7 +1120,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           {!isCategoriseExisting ? (
             <div>
               <div className="flex items-center justify-between gap-2">
-                <label className="block text-sm font-medium mb-1">Cash / Bank Account</label>
+                <label className="ui-label">Cash / Bank Account</label>
                 {canCreateCashBank ? (
                   <button
                     type="button"
@@ -1169,7 +1169,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Date</label>
+              <label className="ui-label">Date</label>
               <input
                 type="date"
                 value={form.date}
@@ -1180,7 +1180,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             </div>
             {!isCategoriseExisting ? (
               <div>
-                <label className="block text-sm font-medium mb-1">Type</label>
+                <label className="ui-label">Type</label>
                 <select
                   value={form.direction}
                   onChange={(e) => setForm((p) => ({ ...p, direction: e.target.value }))}
@@ -1204,7 +1204,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
           <div>
             <div className="flex items-center justify-between gap-2">
-              <label className="block text-sm font-medium mb-1">Ledger</label>
+              <label className="ui-label">Ledger</label>
             </div>
 
             <button
@@ -1221,7 +1221,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Amount</label>
+              <label className="ui-label">Amount</label>
               <input
                 type="number"
                 value={form.amount}
@@ -1400,7 +1400,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           ) : null}
 
           <div>
-            <label className="block text-sm font-medium mb-1">Narration</label>
+            <label className="ui-label">Narration</label>
             <input
               type="text"
               value={form.narration}
@@ -1951,7 +1951,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       <div className="ui-surface border rounded-xl p-4 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium mb-1">Cash/Bank Account</label>
+            <label className="ui-label">Cash/Bank Account</label>
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
@@ -1967,7 +1967,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">View</label>
+            <label className="ui-label">View</label>
             <select value={view} onChange={(e) => setView(e.target.value)} className="ui-select w-full px-3 py-2">
               <option value="uncategorised">Uncategorised ({uncategorisedCount})</option>
               <option value="categorised">Categorised ({categorisedCount})</option>

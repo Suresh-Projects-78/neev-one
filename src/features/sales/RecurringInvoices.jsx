@@ -4,6 +4,7 @@ import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitiv
 import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
+import { branchLabel } from '../../utils/branchLabel';
 import { advanceRunDate } from '../../hooks/useRecurringInvoices';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import ItemPicker from '../../components/pickers/ItemPicker';
@@ -438,7 +439,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       {creatorOpen ? (
         <div className="ui-card space-y-4 p-5">
           <div>
-            <label htmlFor="rec-name" className="block text-sm font-medium mb-1">
+            <label htmlFor="rec-name" className="ui-label">
               Schedule name
             </label>
             <input
@@ -697,7 +698,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               >
                 <option value="">All branches</option>
                 {(Array.isArray(branches) ? branches : []).map((b) => (
-                  <option key={String(b.id)} value={String(b.id)}>{b.name || `Branch ${b.id}`}</option>
+                  <option key={String(b.id)} value={String(b.id)}>{branchLabel(b)}</option>
                 ))}
               </select>
             </div>

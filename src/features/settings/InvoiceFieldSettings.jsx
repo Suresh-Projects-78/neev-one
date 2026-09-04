@@ -177,7 +177,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
       <section className={embedded ? 'p-4' : 'ui-card p-4'}>
         <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
           <div>
-            <label htmlFor="invoice-industry" className="block text-xs ui-muted mb-1">
+            <label htmlFor="invoice-industry" className="ui-label">
               Industry
             </label>
             <select
@@ -280,7 +280,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
 
           <div className="p-4 grid gap-3 sm:grid-cols-3">
             <div>
-              <label htmlFor="pay-bank" className="block text-xs ui-muted mb-1">
+              <label htmlFor="pay-bank" className="ui-label">
                 Bank account to print
               </label>
               <select
@@ -304,7 +304,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
             </div>
 
             <div>
-              <label htmlFor="pay-upi" className="block text-xs ui-muted mb-1">
+              <label htmlFor="pay-upi" className="ui-label">
                 UPI id
               </label>
               <input
@@ -324,7 +324,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
             </div>
 
             <div>
-              <label htmlFor="pay-payee" className="block text-xs ui-muted mb-1">
+              <label htmlFor="pay-payee" className="ui-label">
                 Payee name on the QR
               </label>
               <input
@@ -373,7 +373,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
         <div className="p-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label htmlFor="cf-label" className="block text-xs ui-muted mb-1">
+              <label htmlFor="cf-label" className="ui-label">
                 Field label
               </label>
               <input
@@ -386,7 +386,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
               />
             </div>
             <div>
-              <label htmlFor="cf-type" className="block text-xs ui-muted mb-1">
+              <label htmlFor="cf-type" className="ui-label">
                 Type
               </label>
               <select
@@ -415,7 +415,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label htmlFor="cf-form" className="block text-xs ui-muted mb-1">
+              <label htmlFor="cf-form" className="ui-label">
                 Placement on the form
               </label>
               <select
@@ -432,7 +432,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
               </select>
             </div>
             <div>
-              <label htmlFor="cf-print" className="block text-xs ui-muted mb-1">
+              <label htmlFor="cf-print" className="ui-label">
                 Placement on the print
               </label>
               <select

@@ -49,22 +49,22 @@ export function UserCreateForm({ onCreated }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Email (User ID)</label>
+          <label className="ui-label">Email (User ID)</label>
           <input className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Username (optional)</label>
+          <label className="ui-label">Username (optional)</label>
           <input className="ui-input w-full px-3 py-2" value={form.username} onChange={onChange('username')} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Full Name</label>
+          <label className="ui-label">Full Name</label>
           <input className="ui-input w-full px-3 py-2" value={form.fullName} onChange={onChange('fullName')} required />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Password</label>
+          <label className="ui-label">Password</label>
           <input type="password" className="ui-input w-full px-3 py-2" value={form.password} onChange={onChange('password')} required />
         </div>
       </div>

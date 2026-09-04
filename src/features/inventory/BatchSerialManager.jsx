@@ -195,7 +195,7 @@ export default function BatchSerialManager() {
       ) : (
         <>
           <div className="ui-card p-4">
-            <label className="block text-sm font-medium mb-1">Item</label>
+            <label className="ui-label">Item</label>
             <select value={itemId} onChange={(e) => setItemId(e.target.value)} className="ui-select max-w-lg">
               <option value="">Select a tracked item</option>
               {items.map((i) => (
@@ -217,7 +217,7 @@ export default function BatchSerialManager() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Lot number *</label>
+                    <label className="ui-label">Lot number *</label>
                     <input
                       value={lot.batchNo}
                       onChange={(e) => setLot((p) => ({ ...p, batchNo: e.target.value }))}
@@ -226,7 +226,7 @@ export default function BatchSerialManager() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Quantity *</label>
+                    <label className="ui-label">Quantity *</label>
                     <input
                       type="number"
                       min="0.01"
@@ -238,7 +238,7 @@ export default function BatchSerialManager() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Manufactured</label>
+                    <label className="ui-label">Manufactured</label>
                     <input
                       type="date"
                       value={lot.mfgDate}
@@ -247,7 +247,7 @@ export default function BatchSerialManager() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Expires</label>
+                    <label className="ui-label">Expires</label>
                     <input
                       type="date"
                       value={lot.expiryDate}

@@ -496,7 +496,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Company Name</label>
+        <label className="ui-label">Company Name</label>
         <input
           type="text"
           value={formData.displayName}
@@ -526,7 +526,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium mb-1">Opening Balance</label>
+          <label className="ui-label">Opening Balance</label>
           <input
             type="number"
             min="0"
@@ -538,7 +538,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Dr / Cr</label>
+          <label className="ui-label">Dr / Cr</label>
           <select
             value={formData.openingBalanceType}
             onChange={(e) => setFormData((p) => ({ ...p, openingBalanceType: e.target.value }))}
@@ -552,7 +552,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Contact Person</label>
+          <label className="ui-label">Contact Person</label>
           <input
             type="text"
             value={formData.contactPerson}
@@ -561,7 +561,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Mobile</label>
+          <label className="ui-label">Mobile</label>
           <input
             type="tel"
             value={formData.mobile}
@@ -573,7 +573,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="ui-label">Email</label>
           <input
             type="email"
             value={formData.email}
@@ -582,7 +582,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Alternate Phone</label>
+          <label className="ui-label">Alternate Phone</label>
           <input
             type="tel"
             value={formData.alternatePhone}
@@ -596,7 +596,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         <div className="font-semibold">GST Details</div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">GST Registration</label>
+            <label className="ui-label">GST Registration</label>
             <select
               value={formData.gstRegistration}
               onChange={(e) => {
@@ -619,7 +619,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">GSTIN</label>
+            <label className="ui-label">GSTIN</label>
             <input
               type="text"
               value={gstRegistrationRequiresGstinUi ? formData.gstin : ''}
@@ -646,7 +646,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">PAN</label>
+            <label className="ui-label">PAN</label>
             <input
               type="text"
               value={formData.pan}
@@ -656,7 +656,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Credit period (days)</label>
+            <label className="ui-label">Credit period (days)</label>
             <input
               type="number"
               min="0"
@@ -671,7 +671,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Credit limit</label>
+            <label className="ui-label">Credit limit</label>
             <input
               type="number"
               min="0"
@@ -684,7 +684,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             <p className="mt-1 text-xs ui-muted">New invoices warn when outstanding would cross this.</p>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">State</label>
+            <label className="ui-label">State</label>
             <PopupSelect
               label={null}
               title="Select State"
@@ -715,7 +715,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Address Line 1</label>
+            <label className="ui-label">Address Line 1</label>
             <input
               type="text"
               value={formData.billingAddress.line1}
@@ -724,7 +724,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Address Line 2</label>
+            <label className="ui-label">Address Line 2</label>
             <input
               type="text"
               value={formData.billingAddress.line2}
@@ -736,7 +736,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">City</label>
+            <label className="ui-label">City</label>
             <input
               type="text"
               value={formData.billingAddress.city}
@@ -745,7 +745,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">District</label>
+            <label className="ui-label">District</label>
             <input
               type="text"
               value={formData.billingAddress.district}
@@ -754,7 +754,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Pincode</label>
+            <label className="ui-label">Pincode</label>
             <input
               type="text"
               value={formData.billingAddress.pincode}
@@ -765,7 +765,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Country</label>
+          <label className="ui-label">Country</label>
             <PopupSelect
               label={null}
               title="Select Country"
@@ -797,7 +797,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Address Line 1</label>
+                <label className="ui-label">Address Line 1</label>
                 <input
                   type="text"
                   value={formData.shippingAddress.line1}
@@ -806,7 +806,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Address Line 2</label>
+                <label className="ui-label">Address Line 2</label>
                 <input
                   type="text"
                   value={formData.shippingAddress.line2}
@@ -818,7 +818,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1">City</label>
+                <label className="ui-label">City</label>
                 <input
                   type="text"
                   value={formData.shippingAddress.city}
@@ -827,7 +827,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">District</label>
+                <label className="ui-label">District</label>
                 <input
                   type="text"
                   value={formData.shippingAddress.district}
@@ -836,7 +836,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">State</label>
+                <label className="ui-label">State</label>
                 <PopupSelect
                   label={null}
                   title="Select State"
@@ -852,7 +852,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Pincode</label>
+                <label className="ui-label">Pincode</label>
                 <input
                   type="text"
                   value={formData.shippingAddress.pincode}
@@ -863,7 +863,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Country</label>
+              <label className="ui-label">Country</label>
               <PopupSelect
                 label={null}
                 title="Select Country"
@@ -951,7 +951,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             className="space-y-4"
           >
             <div>
-              <label className="block text-sm font-medium mb-1">Group Name</label>
+              <label className="ui-label">Group Name</label>
               <input
                 type="text"
                 value={groupDraftName}
@@ -1128,7 +1128,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
 
   return (
     <>
-      <label className="block text-sm font-medium mb-1">{label}</label>
+      <label className="ui-label">{label}</label>
       <button
         ref={triggerRef}
         type="button"

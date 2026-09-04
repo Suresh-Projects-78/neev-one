@@ -45,7 +45,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Source Branch</label>
+          <label className="ui-label">Source Branch</label>
           <select className="ui-select w-full px-3 py-2" value={sourceBranchId} onChange={(e) => setSourceBranchId(e.target.value)} required>
             <option value="">Select</option>
             {branches.map((b) => (
@@ -56,7 +56,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Destination Branch</label>
+          <label className="ui-label">Destination Branch</label>
           <select className="ui-select w-full px-3 py-2" value={targetBranchId} onChange={(e) => setTargetBranchId(e.target.value)} required>
             <option value="">Select</option>
             {branches.map((b) => (
@@ -74,7 +74,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
           {lines.map((l, idx) => (
             <div key={idx} className="grid grid-cols-12 gap-3 items-end">
               <div className="col-span-8">
-                <label className="block text-xs ui-muted mb-1">Item</label>
+                <label className="ui-label">Item</label>
                 <select className="ui-select w-full px-3 py-2" value={l.itemId} onChange={(e) => updateLine(idx, { itemId: e.target.value })}>
                   <option value="">Select</option>
                   {items.map((it) => (
@@ -85,7 +85,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
                 </select>
               </div>
               <div className="col-span-3">
-                <label className="block text-xs ui-muted mb-1">Qty</label>
+                <label className="ui-label">Qty</label>
                 <input
                   type="number"
                   min="0"
