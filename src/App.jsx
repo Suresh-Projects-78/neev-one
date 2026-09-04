@@ -13500,9 +13500,15 @@ const AppShell = () => {
 
           <div className="flex items-center gap-2">
             {/* The location shift lives here, on top of the software: branch
-                first, then a warehouse within it. Each control appears only
-                when there is a choice to make. */}
-            {branchesForUser.length > 1 ? (
+                first, then a warehouse within it.
+
+                These used to render only with two or more to choose between,
+                on the reasoning that one is not a choice. But the control is
+                also the only place that says *where you are*, and a book with
+                one warehouse showed nothing at all — so a new org, which has
+                none, had no warehouse control and no route to make one. They
+                show from the first one now, and say so when there are none. */}
+            {branchesForUser.length >= 1 ? (
               <select
                 value={activeBranchId || ''}
                 onChange={(e) => setActiveBranch(e.target.value)}
@@ -13517,7 +13523,7 @@ const AppShell = () => {
               </select>
             ) : null}
 
-            {warehousesForActiveBranch.length > 1 ? (
+            {warehousesForActiveBranch.length >= 1 ? (
               <select
                 value={activeWarehouseId || ''}
                 onChange={(e) => setActiveWarehouse(e.target.value)}
@@ -13531,7 +13537,18 @@ const AppShell = () => {
                   </option>
                 ))}
               </select>
-            ) : null}
+            ) : warehousesLoading ? null : (
+              /* None yet. Stock, transfers and every document's warehouse field
+                 depend on there being one, so this says so and goes there. */
+              <button
+                type="button"
+                onClick={() => setActive('settingsWarehouses')}
+                className="ui-btn ui-btn-secondary hidden md:inline-flex !h-9 !min-h-0 text-sm"
+                title="No warehouse yet — stock and documents need one"
+              >
+                <Package size={15} aria-hidden="true" /> Add warehouse
+              </button>
+            )}
 
             {/*
               Quick create: the two-click path to any new document.

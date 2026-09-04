@@ -165,10 +165,12 @@ const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodW
 
       <div className="flex items-center gap-1.5 mt-1.5 text-xs min-w-0">
         {flat ? (
-          // One line. "No change on the previous period" wrapped to two on
-          // every card that had nothing to compare, which made four of the six
-          // tiles taller than the two that did.
-          <span className="ui-subtle truncate">{note || 'No change'}</span>
+          /* One line, and the muted value rather than the subtle one: on a
+             tinted card `--fg-subtle` measures 4.45:1, just under the 4.5 a
+             12px line needs. "No change on the previous period" also wrapped
+             to two lines on every card that had nothing to compare, which made
+             four of the six tiles taller than the two that did. */
+          <span className="ui-muted truncate">{note || 'No change'}</span>
         ) : (
           <>
             <span
