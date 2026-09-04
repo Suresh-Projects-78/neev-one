@@ -180,7 +180,9 @@ const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodW
               {up ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
               {Math.abs(Number(delta)).toFixed(1)}%
             </span>
-            <span className="ui-subtle">vs previous period</span>
+            {/* Muted, not subtle: on the deepened card tints `--fg-subtle`
+                measures 4.40:1, under the 4.5 a 12px line needs. */}
+            <span className="ui-muted">vs previous period</span>
           </>
         )}
       </div>
@@ -220,8 +222,8 @@ const Segmented = ({ options, value, onChange, ariaLabel }) => (
 );
 
 /** A panel with a heading, a subtitle and a control on the right. */
-const Panel = ({ title, subtitle, control, children, className = '' }) => (
-  <section className={`ui-card p-5 min-w-0 ${className}`}>
+const Panel = ({ title, subtitle, control, children, className = '', bodyClass = 'justify-center' }) => (
+  <section className={`ui-card p-5 min-w-0 flex flex-col ${className}`}>
     <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
       <div className="min-w-0">
         <h3 className="ui-t-sec">{title}</h3>
@@ -229,7 +231,11 @@ const Panel = ({ title, subtitle, control, children, className = '' }) => (
       </div>
       {control}
     </div>
-    {children}
+    {/* Fills the card, so two panels sharing a row end the same height. A
+        chart or an empty state centres in whatever space that leaves; a table
+        or a stack of buttons stays at the top, which is why the caller says
+        which it is. */}
+    <div className={`flex-1 min-h-0 flex flex-col ${bodyClass}`}>{children}</div>
   </section>
 );
 
@@ -844,7 +850,7 @@ const SalesOverview = ({
         />
       </div>
 
-      <div className="grid gap-4 items-start xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+      <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Panel
           title="Sales Performance"
           subtitle="Track your invoiced, received and outstanding amounts."
@@ -940,7 +946,7 @@ const SalesOverview = ({
               </ul>
             </div>
           ) : (
-            <EmptyPanel height={260} {...(emptyReason || { title: 'Nothing billed in this period' })} />
+            <EmptyPanel height={300} {...(emptyReason || { title: 'Nothing billed in this period' })} />
           )}
         </Panel>
       </div>
@@ -948,10 +954,11 @@ const SalesOverview = ({
       {/* The invoice table carries five columns to the credit-note table's four,
           so it gets the wider share rather than an equal one — an equal split
           left the status column scrolling off its own right edge. */}
-      <div className="grid gap-4 items-start xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_15.5rem]">
+      <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_15.5rem]">
         <Panel
           title="Recent Invoices"
           subtitle="Your latest sales invoices."
+          bodyClass="justify-start"
           control={<PanelLink onClick={() => go('invoices')}>View All</PanelLink>}
         >
           {recentInvoices.length ? (
@@ -1002,6 +1009,7 @@ const SalesOverview = ({
         <Panel
           title="Recent Credit Notes"
           subtitle="Your latest credit notes."
+          bodyClass="justify-start"
           control={<PanelLink onClick={() => go('creditNotes')}>View All</PanelLink>}
         >
           {recentCreditNotes.length ? (
@@ -1045,7 +1053,7 @@ const SalesOverview = ({
           )}
         </Panel>
 
-        <Panel title="Quick Actions" subtitle="Create and manage your sales transactions.">
+        <Panel title="Quick Actions" subtitle="Create and manage your sales transactions." bodyClass="justify-start">
           {/*
             Five stacked actions in a narrow column had 10px between them and a
             label that wrapped on the two longest, which is what made this read

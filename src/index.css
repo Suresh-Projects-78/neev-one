@@ -126,12 +126,19 @@
   --nav-masterdata-ink: 71 85 105;
   --nav-settings-ink: 63 63 70;
 
-  --ov-blue: 37 99 235;   --ov-blue-soft: 219 234 254;   --ov-blue-wash: 240 246 255;
-  --ov-green: 22 163 74;  --ov-green-soft: 220 252 231;  --ov-green-wash: 241 252 245;
-  --ov-amber: 217 119 6;  --ov-amber-soft: 254 243 199;  --ov-amber-wash: 255 251 240;
-  --ov-violet: 124 58 237;--ov-violet-soft: 237 233 254; --ov-violet-wash: 247 245 255;
-  --ov-red: 220 38 38;    --ov-red-soft: 254 226 226;    --ov-red-wash: 254 244 243;
-  --ov-orange: 234 88 12; --ov-orange-soft: 255 237 213; --ov-orange-wash: 255 248 241;
+  /* The wash was about a 2% tint — enough to be a different colour in a
+     spec and not enough to be one on a screen, so six cards read as six white
+     rectangles. Deepened roughly halfway to the soft tint: each card is now
+     visibly its own colour while body text still clears 15:1 and the muted
+     line 6.4:1 on every one of them.
+     Amber's solid moves a step darker as well; at 217 119 6 the icon sat at
+     2.86:1 on its own square, under the 3:1 a glyph needs. */
+  --ov-blue: 37 99 235;   --ov-blue-soft: 219 234 254;   --ov-blue-wash: 228 238 255;
+  --ov-green: 22 163 74;  --ov-green-soft: 220 252 231;  --ov-green-wash: 226 250 235;
+  --ov-amber: 180 83 9;   --ov-amber-soft: 254 243 199;  --ov-amber-wash: 255 246 214;
+  --ov-violet: 124 58 237;--ov-violet-soft: 237 233 254; --ov-violet-wash: 240 236 255;
+  --ov-red: 220 38 38;    --ov-red-soft: 254 226 226;    --ov-red-wash: 254 232 232;
+  --ov-orange: 234 88 12; --ov-orange-soft: 255 237 213; --ov-orange-wash: 255 240 222;
 
   /* Column hues — document numbers and party names get their own treatment so
      a row reads as fields, not prose.
