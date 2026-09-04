@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, RefreshCw, MoreVertical, Download, Settings, Play, Pause, Search } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { advanceRunDate } from '../../hooks/useRecurringInvoices';
@@ -20,7 +20,7 @@ import { computeGstForLines } from '../../utils/gst';
 
 const FREQ_LABEL = { WEEKLY: 'Weekly', MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', YEARLY: 'Yearly' };
 
-export default function RecurringInvoices({ db, setDb, currentCompany }) {
+export default function RecurringInvoices({ db, setDb, currentCompany, onNavigate = null }) {
   const companyId = currentCompany.id;
   const templates = useMemo(
     () => (Array.isArray(db.recurringTemplates) ? db.recurringTemplates.filter((t) => t.companyId === companyId) : []),
@@ -29,12 +29,22 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
   const invoices = useMemo(() => (db.invoices || []).filter((i) => i.companyId === companyId), [db.invoices, companyId]);
 
   const [creatorOpen, setCreatorOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [rowMenu, setRowMenu] = useState(null);
   // A schedule can copy an invoice that already exists, or be written from
   // scratch — a retainer that has never been billed once still needs to repeat.
   const [mode, setMode] = useState('NEW');
   const [sourceInvoiceId, setSourceInvoiceId] = useState('');
   const emptyLine = { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 };
   const [draft, setDraft] = useState({ customerId: '', notes: '', items: [{ ...emptyLine }] });
+  /*
+   * What this schedule is called.
+   *
+   * A customer can have three of them — rent, AMC, a retainer — and every row
+   * read "ABC Traders · Monthly" without it, so the list could not be scanned
+   * and the ⋮ menu acted on whichever one you guessed.
+   */
+  const [scheduleName, setScheduleName] = useState('');
   const [frequency, setFrequency] = useState('MONTHLY');
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -136,6 +146,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
             gstTotal: draftTotals.gstTotal,
             total: draftTotals.total,
             notes: draft.notes || '',
+            name: scheduleName.trim(),
             frequency,
             nextRunDate: startDate,
             endDate: endDate || null,
@@ -146,6 +157,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
       }));
       setCreatorOpen(false);
       setDraft({ customerId: '', notes: '', items: [{ ...emptyLine }] });
+      setScheduleName('');
       notify.success(`${customerName || 'This schedule'} will repeat ${FREQ_LABEL[frequency].toLowerCase()} from ${startDate}.`);
       return;
     }
@@ -167,6 +179,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
           sourceNumber: src.number,
           customerId: src.customerId,
           customerName: src.customerName,
+          name: scheduleName.trim(),
           items: src.items || [],
           subtotal: src.subtotal,
           cgstTotal: src.cgstTotal,
@@ -184,6 +197,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
     }));
     setCreatorOpen(false);
     setSourceInvoiceId('');
+    setScheduleName('');
     notify.success(`${src.customerName || 'Invoice'} will repeat ${FREQ_LABEL[frequency].toLowerCase()} from ${startDate}.`);
   };
 
@@ -252,22 +266,143 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
     setDb((prev) => ({ ...prev, recurringTemplates: (prev.recurringTemplates || []).filter((x) => x.id !== t.id) }));
   };
 
-  const recSearch = useListSearch(templates, ['customerName', 'frequency', 'status', 'nextRunDate']);
-  const shownTemplates = recSearch.filtered;
+  const exportSchedules = () =>
+    exportRows({
+      fileName: `RecurringInvoices_${currentCompany?.name || 'company'}`,
+      label: 'schedule(s)',
+      columns: [
+        { key: 'name', label: 'Schedule name' },
+        { key: 'customerName', label: 'Customer' },
+        { key: 'frequency', label: 'Frequency' },
+        { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+        { key: 'nextRunDate', label: 'Next invoice date' },
+        { key: 'status', label: 'Status', value: (r) => scheduleStatus(r) },
+      ],
+      rows: shownTemplates,
+    });
+
+  const recSearch = useListSearch(templates, ['name', 'customerName', 'frequency', 'status', 'nextRunDate', 'sourceNumber']);
+
+  const [customerFilter, setCustomerFilter] = useState('');
+  const [freqFilter, setFreqFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [page, setPage] = useState(1);
+  const perPage = 20;
+
+  /** Active, paused, or finished — one word per schedule, from its own state. */
+  const scheduleStatus = (t) => {
+    if (t.active === false) return 'Paused';
+    const end = String(t.endDate || '').slice(0, 10);
+    if (end && end < new Date().toISOString().slice(0, 10)) return 'Inactive';
+    return 'Active';
+  };
+
+  /*
+   * The four narrowings the list offers, in the order the eye reads them, and
+   * the date range applied to the next run — the column people are actually
+   * looking at when they ask "what is due this month".
+   */
+  const shownTemplates = useMemo(() => {
+    const from = String(fromDate || '').trim();
+    const to = String(toDate || '').trim();
+    return recSearch.filtered.filter((t) => {
+      if (customerFilter && String(t.customerId || '') !== customerFilter) return false;
+      if (freqFilter && String(t.frequency || '') !== freqFilter) return false;
+      if (statusFilter && scheduleStatus(t) !== statusFilter) return false;
+      const next = String(t.nextRunDate || '').slice(0, 10);
+      if (from && (!next || next < from)) return false;
+      if (to && (!next || next > to)) return false;
+      return true;
+    });
+    // scheduleStatus reads only the row it is given.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recSearch.filtered, customerFilter, freqFilter, statusFilter, fromDate, toDate]);
+
+  const pageCount = Math.max(1, Math.ceil(shownTemplates.length / perPage));
+  const safePage = Math.min(page, pageCount);
+  const pagedTemplates = shownTemplates.slice((safePage - 1) * perPage, safePage * perPage);
+
+  const scheduleCustomers = useMemo(() => {
+    const seen = new Map();
+    for (const t of templates) {
+      const id = String(t.customerId || '');
+      if (id && !seen.has(id)) seen.set(id, t.customerName || id);
+    }
+    return [...seen.entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+  }, [templates]);
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          title="Recurring Invoices"
-          description="Rent, AMC, subscriptions, retainers — schedules raise draft invoices on their own; you review and send."
-        />
-        <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
-          <Plus size={15} aria-hidden="true" /> New Schedule
-        </button>
-      </div>
+      <PageHeader
+        title="Recurring Invoices"
+        description="Create and manage automatic invoices for your customers. Invoices are raised on the schedule; you review and send."
+        actions={
+          <>
+            <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
+              <Plus size={15} aria-hidden="true" /> New Schedule
+            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((v) => !v)}
+                className="ui-btn ui-btn-secondary !px-2"
+                aria-haspopup="menu"
+                aria-expanded={moreOpen}
+                aria-label="More options"
+              >
+                <MoreVertical size={16} aria-hidden="true" />
+              </button>
+              {moreOpen ? (
+                <div className="absolute end-0 mt-1 z-30 ui-card p-1 min-w-[11rem]" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      exportSchedules();
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                  >
+                    <Download size={15} aria-hidden="true" /> Export
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      if (typeof onNavigate === 'function') onNavigate('settingsInvoiceFields');
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                  >
+                    <Settings size={15} aria-hidden="true" /> Settings
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </>
+        }
+      />
 
       {creatorOpen ? (
         <div className="ui-card space-y-4 p-5">
+          <div>
+            <label htmlFor="rec-name" className="block text-sm font-medium mb-1">
+              Schedule name
+            </label>
+            <input
+              id="rec-name"
+              type="text"
+              value={scheduleName}
+              onChange={(e) => setScheduleName(e.target.value)}
+              className="ui-input w-full px-3 py-2 sm:max-w-sm"
+              placeholder="Office rent, AMC, monthly retainer…"
+            />
+            <p className="mt-1 text-xs ui-muted">
+              What this one is for. A customer can have several, and the list is read by name.
+            </p>
+          </div>
+
           <div className="flex gap-2">
             {[
               { id: 'NEW', label: 'Write a new one' },
@@ -436,87 +571,201 @@ export default function RecurringInvoices({ db, setDb, currentCompany }) {
         </div>
       ) : null}
 
-      <ListToolbar
-        search={recSearch.query}
-        onSearch={recSearch.setQuery}
-        placeholder="Search schedules (customer, frequency, status)"
-        count={shownTemplates.length}
-        countLabel="schedules"
-        onExport={() =>
-          exportRows({
-            fileName: `RecurringInvoices_${currentCompany?.name || 'company'}`,
-            label: 'schedule(s)',
-            columns: [
-              { key: 'customerName', label: 'Customer' },
-              { key: 'amount', label: 'Amount', value: (r) => Number(r.amount || 0) },
-              { key: 'frequency', label: 'Frequency' },
-              { key: 'nextRunDate', label: 'Next run' },
-              { key: 'endDate', label: 'Ends' },
-              { key: 'status', label: 'Status' },
-            ],
-            rows: shownTemplates,
-          })
-        }
-      />
+      {/* Search first, then the four narrowings, then the window. Each one
+          answers a different question and none of them is behind a popover:
+          this list is short and read at a glance. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[16rem]">
+          <Search size={15} aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 ui-subtle" />
+          <input
+            type="search"
+            value={recSearch.query}
+            onChange={(e) => {
+              recSearch.setQuery(e.target.value);
+              setPage(1);
+            }}
+            className="ui-input w-full ps-9"
+            placeholder="Search by customer, schedule name, invoice no…"
+            aria-label="Search schedules"
+          />
+        </div>
+
+        <select
+          className="ui-select px-3 py-2 w-auto"
+          value={customerFilter}
+          onChange={(e) => { setCustomerFilter(e.target.value); setPage(1); }}
+          aria-label="Customer"
+        >
+          <option value="">All customers</option>
+          {scheduleCustomers.map(([id, name]) => (
+            <option key={id} value={id}>{name}</option>
+          ))}
+        </select>
+
+        <select
+          className="ui-select px-3 py-2 w-auto"
+          value={freqFilter}
+          onChange={(e) => { setFreqFilter(e.target.value); setPage(1); }}
+          aria-label="Frequency"
+        >
+          <option value="">All frequencies</option>
+          {Object.entries(FREQ_LABEL).map(([k, label]) => (
+            <option key={k} value={k}>{label}</option>
+          ))}
+        </select>
+
+        <select
+          className="ui-select px-3 py-2 w-auto"
+          value={statusFilter}
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          aria-label="Status"
+        >
+          <option value="">All status</option>
+          {['Active', 'Paused', 'Inactive'].map((st) => (
+            <option key={st} value={st}>{st}</option>
+          ))}
+        </select>
+
+        <div className="flex items-center gap-1">
+          <input
+            type="date"
+            className="ui-input w-auto"
+            value={fromDate}
+            onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+            aria-label="Next invoice date from"
+          />
+          <span className="ui-subtle">–</span>
+          <input
+            type="date"
+            className="ui-input w-auto"
+            value={toDate}
+            onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+            aria-label="Next invoice date to"
+          />
+        </div>
+      </div>
 
       {templates.length === 0 ? (
         <div className="ui-card">
           <EmptyState
-            icon={RefreshCw}
+            kind="new"
             title="No recurring schedules"
             description="Pick any invoice and set a cadence — ₹25,000 · Monthly · every 1st. Drafts appear on schedule; you review and send."
           />
         </div>
       ) : (
-        <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full">
-            <thead>
-              <tr>
-                <th className="ui-th">Customer</th>
-                <th className="ui-th ui-num">Amount</th>
-                <th className="ui-th">Frequency</th>
-                <th className="ui-th">Next run</th>
-                <th className="ui-th">Generated</th>
-                <th className="ui-th">Lifecycle</th>
-                <th className="ui-th">Schedule</th>
-                <th className="px-4 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {shownTemplates.map((t) => {
-                const { stage, count } = stageOf(t);
-  return (
-                  <tr key={t.id} className="border-t">
-                    <td className="ui-col-entity px-4 py-2.5 font-medium">{t.customerName || '—'}</td>
-                    <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(t.total || 0), currentCompany)}</td>
-                    <td className="px-4 py-2.5">{FREQ_LABEL[t.frequency] || 'Monthly'}</td>
-                    <td className="ui-col-date px-4 py-2.5">{t.active === false ? '—' : t.nextRunDate || '—'}</td>
-                    <td className="px-4 py-2.5">{count}</td>
-                    <td className="px-4 py-2.5">
-                      <span className="ui-caption">Scheduled → Generated → Sent → Paid</span>
-                      <div><StatusPill status={stage} /></div>
-                    </td>
-                    <td className="px-4 py-2.5"><StatusPill status={t.active === false ? 'Paused' : 'Active'} /></td>
-                    <td className="px-4 py-2.5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => runNow(t)} disabled={t.active === false} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-                          Run now
-                        </button>
-                        <button type="button" onClick={() => toggle(t)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-                          {t.active === false ? 'Resume' : 'Pause'}
-                        </button>
-                        <button type="button" onClick={() => remove(t)} className="ui-icon-btn ui-btn-sm !w-8" aria-label="Delete schedule">
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="ui-card">
+          <div className="overflow-x-auto">
+            <table className="ui-table w-full">
+              <thead>
+                <tr>
+                  <th className="ui-th w-10">#</th>
+                  <th className="ui-th">Schedule name</th>
+                  <th className="ui-th">Customer</th>
+                  <th className="ui-th">Frequency</th>
+                  <th className="ui-th ui-num">Amount</th>
+                  <th className="ui-th">Next invoice date</th>
+                  <th className="ui-th">Status</th>
+                  <th className="ui-th w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedTemplates.map((t, i) => {
+                  const { stage, count } = stageOf(t);
+                  const status = scheduleStatus(t);
+                  return (
+                    <tr key={t.id} className="border-t">
+                      <td className="ui-col-meta px-4 py-2.5 ui-mono ui-subtle">
+                        {(safePage - 1) * perPage + i + 1}
+                      </td>
+                      <td className="ui-col-entity px-4 py-2.5 font-medium">
+                        {t.name || t.sourceNumber || '—'}
+                        {/* Where the schedule has reached, kept under the name
+                            rather than in a column of its own: it is context
+                            for the row, not something the list is sorted by. */}
+                        <div className="ui-caption">
+                          {count ? `${count} raised · last ${String(stage).toLowerCase()}` : 'Nothing raised yet'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">{t.customerName || '—'}</td>
+                      <td className="px-4 py-2.5">{FREQ_LABEL[t.frequency] || 'Monthly'}</td>
+                      <td className="ui-col-amount px-4 py-2.5 text-right">
+                        {formatMoney(Number(t.total || 0), currentCompany)}
+                      </td>
+                      <td className="ui-col-date px-4 py-2.5">{status === 'Active' ? t.nextRunDate || '—' : '—'}</td>
+                      <td className="px-4 py-2.5"><StatusPill status={status} /></td>
+                      <td className="px-4 py-2.5 text-right">
+                        <div className="relative inline-block">
+                          <button
+                            type="button"
+                            onClick={() => setRowMenu(rowMenu === t.id ? null : t.id)}
+                            className="ui-icon-btn"
+                            aria-haspopup="menu"
+                            aria-expanded={rowMenu === t.id}
+                            aria-label={`Actions for ${t.name || t.customerName || 'schedule'}`}
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                          {rowMenu === t.id ? (
+                            <div className="absolute end-0 mt-1 z-30 ui-card p-1 min-w-[11rem]" role="menu">
+                              <button
+                                type="button"
+                                role="menuitem"
+                                disabled={t.active === false}
+                                onClick={() => { setRowMenu(null); runNow(t); }}
+                                className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2 disabled:opacity-50"
+                              >
+                                <RefreshCw size={15} aria-hidden="true" /> Run now
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => { setRowMenu(null); toggle(t); }}
+                                className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                              >
+                                {t.active === false ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
+                                {t.active === false ? 'Resume' : 'Pause'}
+                              </button>
+                              <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => { setRowMenu(null); remove(t); }}
+                                className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                                style={{ color: 'rgb(var(--neg-ink))' }}
+                              >
+                                <Trash2 size={15} aria-hidden="true" /> Delete
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            className="flex items-center justify-between gap-3 flex-wrap px-4 py-3"
+            style={{ borderTop: '1px solid rgb(var(--border))' }}
+          >
+            <span className="ui-subtle text-xs">
+              Showing {shownTemplates.length === 0 ? 0 : (safePage - 1) * perPage + 1} –{' '}
+              {Math.min(safePage * perPage, shownTemplates.length)} of {shownTemplates.length} schedules
+            </span>
+            {pageCount > 1 ? (
+              <div className="flex items-center gap-1.5">
+                <button type="button" className="ui-btn ui-btn-sm" disabled={safePage === 1} onClick={() => setPage(safePage - 1)} aria-label="Previous page">‹</button>
+                <span className="ui-mono text-xs px-2">{safePage} / {pageCount}</span>
+                <button type="button" className="ui-btn ui-btn-sm" disabled={safePage === pageCount} onClick={() => setPage(safePage + 1)} aria-label="Next page">›</button>
+              </div>
+            ) : null}
+          </div>
         </div>
       )}
+
     </div>
   );
 }
