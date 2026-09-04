@@ -11,6 +11,7 @@ import {
   Wallet,
   Calendar,
   ChevronDown,
+  ClipboardList,
   ArrowRight,
   ArrowUp,
   ArrowDown,
@@ -37,7 +38,16 @@ const normalizeId = (v) => String(v ?? '').trim();
 const getBranchLabel = (b) =>
   String(b?.name || b?.label || b?.code || '').trim() || (b?.id ? `Branch ${b.id}` : '');
 
-const iso = (d) => d.toISOString().slice(0, 10);
+/*
+ * Local calendar date, not UTC.
+ *
+ * `toISOString()` converts to UTC first, so in IST midnight on the 1st is
+ * 18:30 on the 31st and every period on this page came out shifted a day —
+ * "This Month" read 31 Aug to 29 Sep, and an invoice dated the 1st could fall
+ * outside the month it was raised in.
+ */
+const iso = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const parseIso = (v) => {
   const d = new Date(`${String(v || '').slice(0, 10)}T00:00:00`);
   return Number.isNaN(d.getTime()) ? null : d;
@@ -97,6 +107,21 @@ const prettyDate = (v) => {
   const d = parseIso(v);
   if (!d) return '';
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+/*
+ * The same date without the year, for the two narrow panels at the foot.
+ *
+ * Five columns in a third of the page do not fit a four-part date, and the
+ * table was squeezing the status column off its own right edge. The year is
+ * the least useful part of a date on a list called "recent" — every row is
+ * within weeks — so it is the part that goes. The full date stays in the
+ * title, and on the invoice itself.
+ */
+const shortDate = (v) => {
+  const d = parseIso(v);
+  if (!d) return '';
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
 };
 
 /**
@@ -190,7 +215,7 @@ const Segmented = ({ options, value, onChange, ariaLabel }) => (
 
 /** A panel with a heading, a subtitle and a control on the right. */
 const Panel = ({ title, subtitle, control, children, className = '' }) => (
-  <section className={`ui-card p-5 ${className}`}>
+  <section className={`ui-card p-5 min-w-0 ${className}`}>
     <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
       <div className="min-w-0">
         <h3 className="ui-t-sec">{title}</h3>
@@ -261,13 +286,38 @@ const SalesOverview = ({
   // Pinned once per mount: period bucketing must not shift between renders.
   const [nowTs] = useState(() => Date.now());
   const [periodKey, setPeriodKey] = useState('thisMonth');
-  const [grain, setGrain] = useState('monthly');
+
+  /*
+   * The grain follows the period unless somebody has said otherwise.
+   *
+   * Monthly over "This Month" is one bucket, which draws a single pair of bars
+   * marooned in an empty chart and reads as a broken chart rather than a short
+   * period. So the default is derived from how long the window actually is,
+   * and re-derived when the window changes — the same during-render sync the
+   * numbering settings use, rather than an effect that renders once with the
+   * old value first.
+   */
+  const [grainChoice, setGrainChoice] = useState({ period: 'thisMonth', value: '' });
   const [breakdownBy, setBreakdownBy] = useState('customer');
   const [periodOpen, setPeriodOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
 
   const periods = useMemo(() => buildPeriods(nowTs), [nowTs]);
   const period = periods.find((p) => p.key === periodKey) || periods[0];
+
+  /** Enough buckets to be a comparison, few enough to be readable. */
+  const defaultGrainFor = (p) => {
+    const days = Math.round((parseIso(p.to) - parseIso(p.from)) / 86400000) + 1;
+    if (days <= 45) return 'daily';
+    if (days <= 180) return 'weekly';
+    return 'monthly';
+  };
+
+  if (grainChoice.period !== periodKey) {
+    setGrainChoice({ period: periodKey, value: '' });
+  }
+  const grain = grainChoice.value || defaultGrainFor(period);
+  const setGrain = (v) => setGrainChoice({ period: periodKey, value: v });
 
   const [selectedBranchIds, setSelectedBranchIds] = useState(() => {
     try {
@@ -561,10 +611,11 @@ const SalesOverview = ({
   };
 
   const quickActions = [
-    { label: 'Create Invoice', primary: true, onClick: () => (onNewInvoice ? onNewInvoice() : go('invoices')) },
-    { label: 'Create Sales Order', onClick: () => go('salesOrders') },
-    { label: 'Record Payment', onClick: () => (onRecordReceipt ? onRecordReceipt() : go('receipts')) },
-    { label: 'Create Credit Note', onClick: () => (onNewCreditNote ? onNewCreditNote() : go('creditNotes')) },
+    { label: 'Create Invoice', icon: Plus, primary: true, onClick: () => (onNewInvoice ? onNewInvoice() : go('invoices')) },
+    { label: 'Create Sales Order', icon: ClipboardList, onClick: () => go('salesOrders') },
+    { label: 'Record Payment', icon: Wallet, onClick: () => (onRecordReceipt ? onRecordReceipt() : go('receipts')) },
+    { label: 'Create Credit Note', icon: FileText, onClick: () => (onNewCreditNote ? onNewCreditNote() : go('creditNotes')) },
+    { label: 'View All Invoices', icon: LayoutList, outlined: true, onClick: () => go('invoices') },
   ];
 
   return (
@@ -727,7 +778,7 @@ const SalesOverview = ({
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
+      <div className="grid gap-4 items-start xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Panel
           title="Sales Performance"
           subtitle="Track your invoiced, received and outstanding amounts."
@@ -791,7 +842,7 @@ const SalesOverview = ({
           }
         >
           {breakdown.length ? (
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,15rem)_1fr] items-center">
+            <div className="grid gap-4 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] items-center">
               <Suspense fallback={<ChartFallback height={230} />}>
                 <LazyDonutChart
                   data={breakdown}
@@ -828,7 +879,10 @@ const SalesOverview = ({
         </Panel>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_1.1fr_0.8fr]">
+      {/* The invoice table carries five columns to the credit-note table's four,
+          so it gets the wider share rather than an equal one — an equal split
+          left the status column scrolling off its own right edge. */}
+      <div className="grid gap-4 items-start xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_15.5rem]">
         <Panel
           title="Recent Invoices"
           subtitle="Your latest sales invoices."
@@ -849,7 +903,7 @@ const SalesOverview = ({
                 <tbody>
                   {recentInvoices.map((inv) => (
                     <tr key={inv.id} className="border-t">
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <button
                           type="button"
                           onClick={() => go('invoices')}
@@ -859,10 +913,14 @@ const SalesOverview = ({
                           {inv.number || '—'}
                         </button>
                       </td>
-                      <td className="px-3 py-2 truncate max-w-[12rem]">{customerNameFor(inv)}</td>
-                      <td className="px-3 py-2 ui-muted whitespace-nowrap">{prettyDate(inv.date)}</td>
-                      <td className="ui-col-amount px-3 py-2">{money(inv.total)}</td>
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2 truncate max-w-[7rem]" title={customerNameFor(inv)}>
+                        {customerNameFor(inv)}
+                      </td>
+                      <td className="px-2 py-2 ui-muted whitespace-nowrap" title={prettyDate(inv.date)}>
+                        {shortDate(inv.date)}
+                      </td>
+                      <td className="ui-col-amount px-2 py-2">{money(inv.total)}</td>
+                      <td className="px-2 py-2">
                         <StatusPill status={derivedStatus(inv)} />
                       </td>
                     </tr>
@@ -894,7 +952,7 @@ const SalesOverview = ({
                 <tbody>
                   {recentCreditNotes.map((cn) => (
                     <tr key={cn.id} className="border-t">
-                      <td className="px-3 py-2">
+                      <td className="px-2 py-2">
                         <button
                           type="button"
                           onClick={() => go('creditNotes')}
@@ -904,9 +962,13 @@ const SalesOverview = ({
                           {cn.number || '—'}
                         </button>
                       </td>
-                      <td className="px-3 py-2 truncate max-w-[12rem]">{customerNameFor(cn)}</td>
-                      <td className="px-3 py-2 ui-muted whitespace-nowrap">{prettyDate(cn.date)}</td>
-                      <td className="ui-col-amount px-3 py-2">{money(cn.total)}</td>
+                      <td className="px-2 py-2 truncate max-w-[7rem]" title={customerNameFor(cn)}>
+                        {customerNameFor(cn)}
+                      </td>
+                      <td className="px-2 py-2 ui-muted whitespace-nowrap" title={prettyDate(cn.date)}>
+                        {shortDate(cn.date)}
+                      </td>
+                      <td className="ui-col-amount px-2 py-2">{money(cn.total)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -918,33 +980,43 @@ const SalesOverview = ({
         </Panel>
 
         <Panel title="Quick Actions" subtitle="Create and manage your sales transactions.">
-          <div className="flex flex-col gap-2">
+          {/*
+            Five stacked actions in a narrow column had 10px between them and a
+            label that wrapped on the two longest, which is what made this read
+            as a cramped list rather than a set of choices. The column has a
+            fixed 17rem now — enough for "Create Sales Order" on one line — and
+            each row gets a real touch height, the icon in its own tinted square
+            so the label starts at the same x on every row, and a chevron on the
+            right so the row reads as somewhere to go.
+          */}
+          <div className="flex flex-col gap-2.5">
             {quickActions.map((a) => (
               <button
                 key={a.label}
                 type="button"
                 onClick={a.onClick}
-                className="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-left inline-flex items-center gap-2"
+                className="w-full rounded-lg ps-2 pe-3 py-2 text-sm font-semibold text-left flex items-center gap-2.5 min-h-[2.75rem]"
                 style={
                   a.primary
                     ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
-                    : { backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }
+                    : a.outlined
+                      ? { border: '1px solid rgb(var(--brand) / 0.4)', color: 'rgb(var(--brand-ink))' }
+                      : { backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }
                 }
               >
-                <Plus size={15} aria-hidden="true" /> {a.label}
+                <span
+                  className="h-7 w-7 rounded-md grid place-items-center flex-shrink-0"
+                  style={{
+                    backgroundColor: a.primary ? 'rgb(var(--on-brand) / 0.18)' : 'rgb(var(--brand) / 0.12)',
+                  }}
+                  aria-hidden="true"
+                >
+                  <a.icon size={15} />
+                </span>
+                <span className="flex-1 min-w-0 whitespace-nowrap">{a.label}</span>
+                <ArrowRight size={14} aria-hidden="true" className="flex-shrink-0 opacity-60" />
               </button>
             ))}
-            <button
-              type="button"
-              onClick={() => go('invoices')}
-              className="w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-left inline-flex items-center gap-2"
-              style={{
-                border: '1px solid rgb(var(--brand) / 0.4)',
-                color: 'rgb(var(--brand-ink))',
-              }}
-            >
-              <LayoutList size={15} aria-hidden="true" /> View All Invoices
-            </button>
           </div>
         </Panel>
       </div>
