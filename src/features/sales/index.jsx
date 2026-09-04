@@ -24,6 +24,7 @@ import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 import Popover from '../../components/ui/Popover';
+import Modal from '../../components/ui/Modal';
 import InvoiceFieldSettings from '../settings/InvoiceFieldSettings';
 
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
@@ -304,11 +305,17 @@ const statusReason = (doc, status, company, nowMs) => {
     colFilters.clearAll();
   };
 
-  const filteredInvoices = useMemo(() => {
+  /**
+   * Every filter the page offers EXCEPT the status tab.
+   *
+   * Split out because the tab counts have to be computed against this set, not
+   * against the fully filtered one: counting after the status filter would make
+   * every tab except the selected one read zero the moment you picked one.
+   */
+  const invoicesExStatus = useMemo(() => {
     const q = String(searchText || '').trim().toLowerCase();
     const from = String(dateFrom || '').trim();
     const to = String(dateTo || '').trim();
-    const wantStatus = String(statusFilter || '').trim();
 
     const matchesSearch = (inv) => {
       if (!q) return true;
@@ -329,10 +336,6 @@ const statusReason = (doc, status, company, nowMs) => {
 
     const base = (Array.isArray(invoices) ? invoices : [])
       .filter((inv) => matchesSearch(inv))
-      .filter((inv) => {
-        if (!wantStatus) return true;
-        return getDerivedStatus(inv) === wantStatus;
-      })
       .filter((inv) => inDateRange(inv))
       .slice()
       .sort((a, b) => {
@@ -354,42 +357,57 @@ const statusReason = (doc, status, company, nowMs) => {
       total: (r) => r.total,
       status: (r) => getDerivedStatus(r),
     });
-  }, [dateFrom, dateTo, invoices, searchText, statusFilter, colFilters.applyFilters, warehouseById]);
+  }, [dateFrom, dateTo, invoices, searchText, colFilters.applyFilters, warehouseById]);
+
+  /** The rows the table draws: the above, narrowed by the selected status tab. */
+  const filteredInvoices = useMemo(() => {
+    const wantStatus = String(statusFilter || '').trim();
+    if (!wantStatus) return invoicesExStatus;
+    return invoicesExStatus.filter((inv) => getDerivedStatus(inv) === wantStatus);
+  }, [invoicesExStatus, statusFilter]);
 
   // Summed over the filtered set, not over the rows the browser happens to have
   // drawn — the day this list gets a page window, the figure must not quietly
   // become the total of one page.
   /**
-   * The five figures across the top, and the count beside every status tab.
+   * The five figures across the top.
    *
-   * Computed from the same `invoices` the table draws from — not from a
-   * separate query — so a tab that says 17 and a table that shows 17 can never
-   * disagree. Drafts are excluded from the money figures on the same rule the
-   * dashboard uses: a draft is an intention, not a receivable.
+   * Computed from the rows actually on screen — `filteredInvoices` — so search
+   * for one customer and the figures describe that customer, not the whole
+   * year. Reading the unfiltered set here meant the cards and the table below
+   * them described different sets of data with nothing saying so.
+   *
+   * Drafts are excluded from the money figures on the same rule the dashboard
+   * uses: a draft is an intention, not a receivable.
    */
   const headline = useMemo(() => {
-    const live = invoices.filter((i) => String(i.status || '').toLowerCase() !== 'draft');
+    const live = filteredInvoices.filter((i) => String(i.status || '').toLowerCase() !== 'draft');
     const sum = (rows, f) => rows.reduce((t, r) => t + Number(f(r) || 0), 0);
     const balOf = (i) => Math.max(0, Number(i.total || 0) - Number(i.paidAmount || 0));
     const overdue = live.filter((i) => getDerivedStatus(i) === 'Over due');
     return {
-      count: invoices.length,
+      count: filteredInvoices.length,
       billed: sum(live, (i) => i.total),
       paid: sum(live, (i) => i.paidAmount),
       outstanding: sum(live, balOf),
       overdue: sum(overdue, balOf),
     };
-  }, [invoices]);
+  }, [filteredInvoices]);
 
-  /** One pass for every tab count, so the tabs cost nothing per render. */
+  /**
+   * One pass for every tab count, so the tabs cost nothing per render.
+   *
+   * Counted over everything the search and the date range left standing, so a
+   * tab that says 17 and a table that shows 17 can never disagree.
+   */
   const statusCounts = useMemo(() => {
-    const c = { '': invoices.length, Draft: 0, Unpaid: 0, Partial: 0, Paid: 0, 'Over due': 0, Cancelled: 0 };
-    for (const inv of invoices) {
+    const c = { '': invoicesExStatus.length, Draft: 0, Unpaid: 0, Partial: 0, Paid: 0, 'Over due': 0, Cancelled: 0 };
+    for (const inv of invoicesExStatus) {
       const d = getDerivedStatus(inv);
       if (c[d] !== undefined) c[d] += 1;
     }
     return c;
-  }, [invoices]);
+  }, [invoicesExStatus]);
 
   const STATUS_TABS = [
     { value: '', label: 'All' },
@@ -412,34 +430,6 @@ const statusReason = (doc, status, company, nowMs) => {
   const safePage = Math.min(page, pageCount);
   const pagedInvoices = filteredInvoices.slice((safePage - 1) * perPage, safePage * perPage);
 
-  const invoiceTotals = useMemo(() => {
-    let billed = 0;
-    let outstandingSum = 0;
-    let gst = 0;
-    let draft = 0;
-    for (const inv of filteredInvoices) {
-      const total = Number(inv.total || 0);
-      // A draft is an intention, not a liability — the same rule the dashboard
-      // and the money-out stream apply. Counting one here told the proprietor
-      // that ₹2,950 was billed and outstanding on a document nobody had sent,
-      // and put its tax into the GST figure before any tax was due.
-      if (String(inv.status || '').toLowerCase() === 'draft') {
-        draft += total;
-        continue;
-      }
-      billed += total;
-      outstandingSum += Math.max(0, total - Number(inv.paidAmount || 0));
-      gst += Number(inv.gstTotal || 0);
-    }
-    return [
-      { label: 'Billed', value: formatMoney(billed, currentCompany) },
-      { label: 'Outstanding', value: formatMoney(outstandingSum, currentCompany), tone: outstandingSum > 0 ? 'neg' : undefined },
-      { label: 'GST', value: formatMoney(gst, currentCompany) },
-      // Shown rather than dropped: the money is real, it just is not owed yet,
-      // and a footer that silently ignored these rows would be its own defect.
-      ...(draft > 0 ? [{ label: 'In draft', value: formatMoney(draft, currentCompany) }] : []),
-    ];
-  }, [filteredInvoices, currentCompany]);
 
 
   /**
@@ -499,7 +489,7 @@ const statusReason = (doc, status, company, nowMs) => {
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
-      { title: 'New Invoice', maxWidthClass: 'max-w-5xl' }
+      { title: 'New Invoice', maxWidthClass: 'max-w-7xl' }
     );
   };
 
@@ -518,7 +508,7 @@ const statusReason = (doc, status, company, nowMs) => {
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
-      { title: `Edit Invoice ${invoice?.number || ''}`.trim(), maxWidthClass: 'max-w-5xl' }
+      { title: `Edit Invoice ${invoice?.number || ''}`.trim(), maxWidthClass: 'max-w-7xl' }
     );
   };
 
@@ -1331,12 +1321,6 @@ const statusReason = (doc, status, company, nowMs) => {
         </table>
         </div>
 
-        <TableTotals
-          count={filteredInvoices.length}
-          totalCount={invoices.length}
-          noun="invoices"
-          figures={invoiceTotals}
-        />
 
         {/* Paging. Hidden entirely when everything already fits — controls that
             can only do nothing are noise. */}
@@ -1958,7 +1942,7 @@ export const EstimatesList = ({
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
-      { title: `New Invoice from ${estimate?.number || 'Estimate'}`.trim(), maxWidthClass: 'max-w-5xl' }
+      { title: `New Invoice from ${estimate?.number || 'Estimate'}`.trim(), maxWidthClass: 'max-w-7xl' }
     );
   };
 
@@ -2527,7 +2511,141 @@ export const CreditNotesList = ({
   );
 };
 
-export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onClose, warehouses = [], defaultWarehouseId = '', onOpenInvoiceSettings = null, onDuplicateInvoice = null }) => {
+/**
+ * Invoice numbering, over the invoice.
+ *
+ * Changing a series is a different act from raising a document, and the full
+ * numbering screen governs nine document types across every branch. Somebody
+ * halfway through an invoice wants one of them: this one. So the series in
+ * force here is editable here, and the rest of the screen stays one click away.
+ *
+ * Writes the same shape the numbering screen writes — branch-scoped when a
+ * branch is in play, company-wide otherwise — so the two can never disagree
+ * about what the next invoice is called.
+ */
+const InvoiceNumberingPopover = ({ anchorRef, db, setDb, currentCompany, branchId, settings, onClose, onOpenFullSettings }) => {
+  const current = settings && typeof settings === 'object' ? settings : {};
+  const [draft, setDraft] = useState(() => ({
+    mode: String(current.mode || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto',
+    prefix: String(current.prefix ?? ''),
+    suffix: String(current.suffix ?? ''),
+    nextNumber: Number(current.nextNumber ?? 1) || 1,
+    allowManualOverride: current.allowManualOverride !== false,
+  }));
+
+  const set = (patch) => setDraft((p) => ({ ...p, ...patch }));
+
+  const save = () => {
+    const scoped = String(branchId || '').trim();
+    setDb({
+      ...db,
+      companies: (db.companies || []).map((c) => {
+        if (c.id !== currentCompany.id) return c;
+        const baseDoc = c?.docSettings && typeof c.docSettings === 'object' ? c.docSettings : {};
+        const patch = {
+          mode: draft.mode,
+          prefix: draft.prefix,
+          suffix: draft.suffix,
+          nextNumber: Math.max(1, Number(draft.nextNumber) || 1),
+          allowManualOverride: Boolean(draft.allowManualOverride),
+        };
+        if (scoped) {
+          const prevByBranch = baseDoc?.numberingByBranch && typeof baseDoc.numberingByBranch === 'object' ? baseDoc.numberingByBranch : {};
+          const prevBranch = prevByBranch?.[scoped] && typeof prevByBranch[scoped] === 'object' ? prevByBranch[scoped] : {};
+          return {
+            ...c,
+            docSettings: {
+              ...baseDoc,
+              numberingByBranch: {
+                ...prevByBranch,
+                [scoped]: { ...prevBranch, invoice: { ...(prevBranch.invoice || {}), ...patch } },
+              },
+            },
+          };
+        }
+        const prevNum = baseDoc?.numbering && typeof baseDoc.numbering === 'object' ? baseDoc.numbering : {};
+        return {
+          ...c,
+          docSettings: { ...baseDoc, numbering: { ...prevNum, invoice: { ...(prevNum.invoice || {}), ...patch } } },
+        };
+      }),
+    });
+    onClose?.();
+  };
+
+  const sample = `${draft.prefix}${String(Math.max(1, Number(draft.nextNumber) || 1))}${draft.suffix}`;
+
+  return (
+    <Popover anchorRef={anchorRef} onClose={onClose} minWidth={310}>
+      <div className="p-3 space-y-3">
+        <div className="ui-t-label">Invoice numbering</div>
+
+        <div>
+          <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-mode">How numbers are issued</label>
+          <select
+            id="inv-num-mode"
+            className="ui-select w-full px-3 py-2"
+            value={draft.mode}
+            onChange={(e) => set({ mode: e.target.value })}
+          >
+            <option value="auto">Automatic from the series</option>
+            <option value="manual">Typed on each invoice</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-prefix">Prefix</label>
+            <input id="inv-num-prefix" className="ui-input ui-mono" value={draft.prefix} onChange={(e) => set({ prefix: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-suffix">Suffix</label>
+            <input id="inv-num-suffix" className="ui-input ui-mono" value={draft.suffix} onChange={(e) => set({ suffix: e.target.value })} />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs ui-muted mb-1" htmlFor="inv-num-next">Next number</label>
+          <input
+            id="inv-num-next"
+            type="number"
+            min="1"
+            className="ui-input ui-mono"
+            value={draft.nextNumber}
+            onChange={(e) => set({ nextNumber: e.target.value })}
+          />
+        </div>
+
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            className="ui-checkbox"
+            checked={draft.allowManualOverride}
+            onChange={(e) => set({ allowManualOverride: e.target.checked })}
+          />
+          Allow typing over the number
+        </label>
+
+        <div className="rounded-lg px-3 py-2" style={{ background: 'rgb(var(--surface-sunken))' }}>
+          <div className="ui-caption">Next invoice will be</div>
+          <div className="ui-mono text-sm font-semibold">{sample}</div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm" onClick={onOpenFullSettings}>
+            All numbering
+          </button>
+          <div className="flex items-center gap-2">
+            <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={onClose}>Cancel</button>
+            <button type="button" className="ui-btn ui-btn-primary ui-btn-sm" onClick={save}>Save</button>
+          </div>
+        </div>
+      </div>
+    </Popover>
+  );
+};
+
+export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onClose, warehouses = [], defaultWarehouseId = '', branches = [], onOpenInvoiceSettings = null, onDuplicateInvoice = null, screenTitle = '', screenSubtitle = '', onBack = null }) => {
   const isEdit = Boolean(initialData && (initialData.id !== undefined && initialData.id !== null));
 
   /**
@@ -2639,12 +2757,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   };
 
   /**
-   * The template picker is a screen of its own, so this one does leave — but
+   * Settings screens are screens of their own, so this one does leave — but
    * only after saying so, and never silently on a form with typing in it.
    */
   const goToSettings = async (screen) => {
     if (typeof onOpenInvoiceSettings !== 'function') {
-      notify.error('Open Settings → Invoice Templates to change this.');
+      notify.error('Open Settings to change this.');
       return;
     }
     const typing =
@@ -2653,8 +2771,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     if (typing && !isEdit) {
       const ok = await confirmDialog({
         title: 'Leave this invoice?',
-        message: 'The template picker is a separate screen. Anything typed here is not saved yet and will be lost.',
-        confirmLabel: 'Leave and pick a template',
+        message: 'That setting lives on a separate screen. Anything typed here is not saved yet and will be lost.',
+        confirmLabel: 'Leave and open settings',
       });
       if (!ok) return;
     }
@@ -2828,17 +2946,66 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     };
   });
 
-  const branchIdForNumbering = resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
+  /*
+   * Branch is asked for rather than inferred.
+   *
+   * It was previously read back out of whichever warehouse you picked, which
+   * works right up to the moment a company runs one warehouse for two branches
+   * — and it left the field that decides the number series invisible. Seeded
+   * from the document being edited, then from the header selection.
+   */
+  const [branchId, setBranchId] = useState(() => initBranchId || activeBranchId || '');
+
+  const numberingBtnRef = useRef(null);
+  const [numberingOpen, setNumberingOpen] = useState(false);
+
+  /*
+   * Which line, if any, is waiting on a batch.
+   *
+   * Batch and expiry used to live in a permanent sub-row under every tracked
+   * line, which put a second row of chrome under half the grid and still had
+   * to be hunted for. It is a question with one answer per line, so it is
+   * asked once, when the item is chosen, and then gets out of the way.
+   */
+  const [batchPrompt, setBatchPrompt] = useState(null);
+
+  const branchOptions = useMemo(() => {
+    const list = Array.isArray(branches) ? branches : [];
+    return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+  }, [branches]);
+
+  const branchIdForNumbering = String(branchId || '').trim() || resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
   const invoiceDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const invoiceNumbering = invoiceDocSettings?.numbering?.invoice;
   const isInvoiceAuto = String(invoiceNumbering?.mode || '').toLowerCase() === 'auto';
   const lockInvoiceNumberOnCreate = !isEdit && isInvoiceAuto && !invoiceNumbering?.allowManualOverride;
   const generatedInvoiceNumber = !isEdit ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'invoice', branchId: branchIdForNumbering, takenNumbers: (db.invoices || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) : '';
 
+  /*
+   * Only the warehouses of the chosen branch. Stock leaving a shelf that
+   * belongs to another branch is the mis-post this ordering exists to stop.
+   * With no branch chosen the list is everything, as before.
+   */
   const warehouseOptions = useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
-    return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
-  }, [warehouses]);
+    const scope = String(branchId || '').trim();
+    const inScope = scope ? list.filter((w) => String(w?.branchId || '').trim() === scope) : list;
+    return inScope.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+  }, [warehouses, branchId]);
+
+  const onBranchChange = (nextBranchId) => {
+    const next = String(nextBranchId || '').trim();
+    setBranchId(next);
+    // A warehouse left over from the previous branch would silently move the
+    // wrong stock, so it is dropped rather than carried across.
+    setFormData((p) => {
+      const held = String(p.warehouseId || '').trim();
+      if (!held || !next) return p;
+      const w = (Array.isArray(warehouses) ? warehouses : []).find((x) => String(x?.id || '').trim() === held);
+      if (w && String(w.branchId || '').trim() === next) return p;
+      return { ...p, warehouseId: '' };
+    });
+  };
 
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
 
@@ -2939,15 +3106,20 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         if (resolved.source !== 'item master') {
           notify.info(`Rate ${resolved.rate} from ${resolved.source}`);
         }
-        // Batch-tracked items default to the FEFO batch (earliest expiry).
+        // Batch-tracked items open the batch prompt, pre-set to the FEFO
+        // batch (earliest expiry) so dismissing it still leaves a valid line.
+        // Untracked items never see it — asking for a batch on a service is
+        // the noise this gating exists to remove.
         if (isTracked(item)) {
           const pick = fefoPick(db, currentCompany.id, item.id, Number(newItems[index].quantity) || 1);
           newItems[index].batchId = pick ? pick.id : '';
           newItems[index].batchNo = pick ? pick.batchNo : '';
-          if (pick) notify.info(`Batch ${pick.batchNo} (FEFO${pick.expiryDate ? `, exp ${pick.expiryDate}` : ''})`);
+          newItems[index].expiryDate = pick ? pick.expiryDate || '' : '';
+          setBatchPrompt({ index, itemId: item.id });
         } else {
           newItems[index].batchId = '';
           newItems[index].batchNo = '';
+          newItems[index].expiryDate = '';
         }
       }
     } else {
@@ -3289,7 +3461,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       if (hasApiSession) {
         const backendInvoiceId = String(existingInvoice?.backendInvoiceId || '').trim();
         const payload = {
-          branchId: String(activeBranchId || branchIdForNumbering || '').trim(),
+          branchId: String(branchId || branchIdForNumbering || '').trim(),
           warehouseId: String(updatedInvoice.warehouseId || '').trim(),
           number: String(updatedInvoice.number || '').trim(),
           date: String(updatedInvoice.date || '').trim(),
@@ -3345,7 +3517,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     const hasApiSession = Boolean(String(localStorage.getItem('token') || '').trim() && String(localStorage.getItem('activeOrgId') || '').trim());
     if (hasApiSession) {
       const payload = {
-        branchId: String(activeBranchId || branchIdForNumbering || '').trim(),
+        branchId: String(branchId || branchIdForNumbering || '').trim(),
         warehouseId: String(newInvoice.warehouseId || '').trim(),
         number: String(newInvoice.number || '').trim(),
         date: String(newInvoice.date || '').trim(),
@@ -3545,21 +3717,11 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
-      {isCancelled ? (
-        <div
-          className="flex items-start gap-2 rounded-lg p-3 text-sm"
-          style={{ background: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn-ink))' }}
-          role="status"
-        >
-          <Ban size={16} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
-          <span>
-            This invoice was cancelled{existingInvoiceRecord?.cancelledAt ? ` on ${existingInvoiceRecord.cancelledAt}` : ''}. It
-            keeps its number so the series has no hole, and it cannot be edited. Raise a new invoice instead.
-          </span>
-        </div>
-      ) : null}
-
       <DocFormActions
+        title={screenTitle}
+        subtitle={screenSubtitle}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
         primaryLabel={isDraftInvoice ? (isEdit ? 'Finalize Invoice' : 'Create Invoice') : 'Update Invoice'}
         onPrimary={() => setSubmitAsDraft(false)}
         secondaryLabel={isDraftInvoice ? 'Save Draft' : ''}
@@ -3618,6 +3780,20 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ].filter(Boolean)}
       />
 
+      {isCancelled ? (
+        <div
+          className="flex items-start gap-2 rounded-lg p-3 text-sm"
+          style={{ background: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn-ink))' }}
+          role="status"
+        >
+          <Ban size={16} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
+          <span>
+            This invoice was cancelled{existingInvoiceRecord?.cancelledAt ? ` on ${existingInvoiceRecord.cancelledAt}` : ''}. It
+            keeps its number so the series has no hole, and it cannot be edited. Raise a new invoice instead.
+          </span>
+        </div>
+      ) : null}
+
       {prefsOpen ? (
         <div className="space-y-3">
           <InvoiceFieldSettings
@@ -3655,259 +3831,321 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       ) : null}
 
       {/*
-        Warehouse, number and the two dates on one line.
+        The head of the document, in two columns.
 
-        The number and dates used to sit in a tinted strip above the form,
-        which read as a separate object rather than the top of the invoice —
-        and it pushed the warehouse, the field that decides which stock moves,
-        down the page.
+        Left is who and where: the branch, the warehouse its stock leaves, and
+        the customer under them. Right is the paperwork: the number, the two
+        dates that govern it, and the reference it answers to. They were one
+        four-across band before, which put the number between the warehouse and
+        the customer and read as neither.
       */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          ref={(el) => fieldErrors.register('warehouseId', el)}
-          data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
-        >
-          <WarehouseField
-            value={formData.warehouseId}
-            onChange={(warehouseId) => {
-              fieldErrors.clearField('warehouseId');
-              setFormData((p) => ({ ...p, warehouseId }));
-            }}
-            options={warehouseOptions}
-            activeWarehouseId={defaultWarehouseId}
-            isEdit={Boolean(initialData)}
-            className="ui-select"
-          />
-          <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
-        </div>
-
-        <div>
-          <label htmlFor="invoice-number" className="block text-sm font-medium mb-1">
-            Invoice No.
-          </label>
-          <input
-            id="invoice-number"
-            type="text"
-            value={formData.number ?? ''}
-            onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-            disabled={lockInvoiceNumberOnCreate}
-            required
-            aria-invalid={fieldErrors.error('number') ? true : undefined}
-            className="ui-input ui-mono"
-          />
-          <p className="mt-1 text-xs ui-muted">
-            {lockInvoiceNumberOnCreate ? 'Numbered automatically from the series' : 'Auto from Settings; type over it when needed.'}
-          </p>
-          <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
-        </div>
-
-        <div>
-          <label htmlFor="invoice-date" className="block text-sm font-medium mb-1">
-            Date <span className="text-[rgb(var(--neg-ink))]">*</span>
-          </label>
-          <input
-            id="invoice-date"
-            type="date"
-            value={formData.date}
-            required
-            onChange={(e) =>
-              setFormData((p) => ({
-                ...p,
-                date: e.target.value,
-                // Terms are counted from the document date, so moving the date
-                // moves the due date with it.
-                dueDate: selectedCustomer ? dueDateFor(e.target.value, selectedCustomer) || p.dueDate : p.dueDate,
-              }))
-            }
-            className="ui-input"
-          />
-          <FieldError error={fieldErrors.error('date')} id={fieldErrors.errorId('date')} />
-        </div>
-
-        <div>
-          <label htmlFor="invoice-due" className="block text-sm font-medium mb-1">
-            Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
-          </label>
-          <input
-            id="invoice-due"
-            type="date"
-            value={formData.dueDate}
-            required
-            onChange={(e) => setFormData((p) => ({ ...p, dueDate: e.target.value }))}
-            className="ui-input"
-          />
-          {prefOn('dueDateFromTerms') ? <p className="mt-1 text-xs ui-muted">Follows the payment terms.</p> : null}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          className="lg:col-span-2"
-          ref={(el) => fieldErrors.register('customerId', el)}
-          data-invalid-within={fieldErrors.error('customerId') ? 'true' : undefined}
-        >
-          <CustomerPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.customerId}
-            onChange={(customerId) =>
-              setFormData((prev) => {
-                // Requirement 12: the due date follows the customer's agreed
-                // terms instead of a blanket +30 days. The server recomputes
-                // this on save from the same terms, so showing anything else
-                // here would just be a number that changes after saving.
-                const picked = customers.find((c) => String(c.id) === String(customerId));
-                fieldErrors.clearField('customerId');
-                return {
-                  ...prev,
-                  customerId,
-                  dueDate: picked ? dueDateFor(prev.date, picked) || prev.dueDate : prev.dueDate,
-                };
-              })
-            }
-          />
-          <FieldError error={fieldErrors.error('customerId')} id={fieldErrors.errorId('customerId')} />
-          {selectedCustomer ? (
-            <p className="mt-1 text-xs ui-muted">Terms: {termsLabel(selectedCustomer)}</p>
-          ) : null}
-          {prefOn('shipTo') && selectedCustomer && Array.isArray(selectedCustomer.shipToAddresses) && selectedCustomer.shipToAddresses.length > 0 ? (
-            <div className="mt-2">
-              <label className="block text-xs ui-muted mb-1">Deliver to</label>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-7 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="invoice-branch" className="block text-sm font-medium mb-1">
+                Branch
+              </label>
               <select
-                value={formData.shipToCode || ''}
-                onChange={(e) => {
-                  const code = e.target.value;
-                  const addr = selectedCustomer.shipToAddresses.find((a) => a.code === code) || null;
-                  setFormData((p) => ({ ...p, shipToCode: code, shipToAddress: addr }));
-                }}
+                id="invoice-branch"
+                value={branchId || ''}
+                onChange={(e) => onBranchChange(e.target.value)}
                 className="ui-select w-full px-3 py-2"
               >
-                <option value="">Billing address</option>
-                {selectedCustomer.shipToAddresses.map((a) => (
-                  <option key={a.code} value={a.code}>
-                    {a.code} — {a.label || a.line1 || a.city}
+                <option value="">All branches</option>
+                {branchOptions.map((b) => (
+                  <option key={String(b.id)} value={String(b.id)}>
+                    {b.name || `Branch ${b.id}`}
                   </option>
                 ))}
               </select>
             </div>
-          ) : null}
-        </div>
 
-        {prefOn('iec') ? (
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              IEC <span className="ui-subtle font-normal">(if applicable)</span>
-            </label>
-            <input
-              type="text"
-              value={formData.iecNumber}
-              onChange={(e) => setFormData((p) => ({ ...p, iecNumber: e.target.value }))}
-              className="ui-input"
-              placeholder="Enter IEC"
+          <div
+            ref={(el) => fieldErrors.register('warehouseId', el)}
+            data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
+          >
+            <WarehouseField
+              value={formData.warehouseId}
+              onChange={(warehouseId) => {
+                fieldErrors.clearField('warehouseId');
+                setFormData((p) => ({ ...p, warehouseId }));
+              }}
+              options={warehouseOptions}
+              activeWarehouseId={defaultWarehouseId}
+              isEdit={Boolean(initialData)}
+              showSourceHint={false}
+              className="ui-select"
             />
+            <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
           </div>
-        ) : null}
+          </div>
 
-        {prefOn('lut') ? (
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              LUT <span className="ui-subtle font-normal">(if applicable)</span>
-            </label>
-            <input
-              type="text"
-              value={formData.lutNumber}
-              onChange={(e) => setFormData((p) => ({ ...p, lutNumber: e.target.value }))}
-              className="ui-input"
-              placeholder="Select LUT"
+          <div
+            ref={(el) => fieldErrors.register('customerId', el)}
+            data-invalid-within={fieldErrors.error('customerId') ? 'true' : undefined}
+          >
+            <CustomerPicker
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              value={formData.customerId}
+              onChange={(customerId) =>
+                setFormData((prev) => {
+                  // Requirement 12: the due date follows the customer's agreed
+                  // terms instead of a blanket +30 days. The server recomputes
+                  // this on save from the same terms, so showing anything else
+                  // here would just be a number that changes after saving.
+                  const picked = customers.find((c) => String(c.id) === String(customerId));
+                  fieldErrors.clearField('customerId');
+                  return {
+                    ...prev,
+                    customerId,
+                    dueDate: picked ? dueDateFor(prev.date, picked) || prev.dueDate : prev.dueDate,
+                  };
+                })
+              }
             />
-            <p className="mt-1 text-xs ui-muted">Zero-rated export without payment of IGST.</p>
+            <FieldError error={fieldErrors.error('customerId')} id={fieldErrors.errorId('customerId')} />
+            {selectedCustomer ? (
+              <p className="mt-1 text-xs ui-muted">Terms: {termsLabel(selectedCustomer)}</p>
+            ) : null}
+            {prefOn('shipTo') && selectedCustomer && Array.isArray(selectedCustomer.shipToAddresses) && selectedCustomer.shipToAddresses.length > 0 ? (
+              <div className="mt-2">
+                <label className="block text-xs ui-muted mb-1">Deliver to</label>
+                <select
+                  value={formData.shipToCode || ''}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    const addr = selectedCustomer.shipToAddresses.find((a) => a.code === code) || null;
+                    setFormData((p) => ({ ...p, shipToCode: code, shipToAddress: addr }));
+                  }}
+                  className="ui-select w-full px-3 py-2"
+                >
+                  <option value="">Billing address</option>
+                  {selectedCustomer.shipToAddresses.map((a) => (
+                    <option key={a.code} value={a.code}>
+                      {a.code} — {a.label || a.line1 || a.city}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
-        ) : null}
 
-        {prefOn('reverseCharge') ? (
-          <div className="flex items-end pb-2">
-            <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!!formData.reverseCharge}
-                onChange={(e) => setFormData({ ...formData, reverseCharge: e.target.checked })}
-                className="ui-checkbox"
-              />
-              Reverse charge (RCM)
-            </label>
-          </div>
-        ) : null}
-
-        {prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
-          <div>
-            <label className="block text-sm font-medium mb-1">Cost Center</label>
-            <select
-              value={formData.costCenterId || ''}
-              onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
-              className="ui-select w-full px-3 py-2"
-            >
-              <option value="">— none —</option>
-              {(db.costCenters || [])
-                .filter((c) => c.companyId === currentCompany.id)
-                .map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-            </select>
-          </div>
-        ) : null}
-
-        {prefOn('salesman') && (db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
-          <div>
-            <label className="block text-sm font-medium mb-1">Salesman</label>
-            <select
-              value={formData.salesmanId || ''}
-              onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
-              className="ui-select w-full px-3 py-2"
-            >
-              <option value="">— none —</option>
-              {(db.salesmen || [])
-                .filter((s) => s.companyId === currentCompany.id)
-                .map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-            </select>
-          </div>
-        ) : null}
-
-        {renderCustomFields('header')}
-      </div>
-
-      {prefOn('customerRef') || customFields.some((f) => f.formPlacement === 'reference') ? (
-        <div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4"
-          style={{ borderTop: '1px solid rgb(var(--border))' }}
-        >
-          {prefOn('customerRef') ? (
+          {/* Optional header fields, two across so a company with four of
+              them enabled does not get a column of full-width inputs. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {prefOn('iec') ? (
             <div>
-              <label className="block text-sm font-medium mb-1">Ref No.</label>
+              <label className="block text-sm font-medium mb-1">
+                IEC <span className="ui-subtle font-normal">(if applicable)</span>
+              </label>
               <input
                 type="text"
-                value={formData.refNo}
-                onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+                value={formData.iecNumber}
+                onChange={(e) => setFormData((p) => ({ ...p, iecNumber: e.target.value }))}
                 className="ui-input"
-                placeholder="Estimate / Quotation / Sales Order"
+                placeholder="Enter IEC"
               />
             </div>
           ) : null}
+          {prefOn('lut') ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                LUT <span className="ui-subtle font-normal">(if applicable)</span>
+              </label>
+              <input
+                type="text"
+                value={formData.lutNumber}
+                onChange={(e) => setFormData((p) => ({ ...p, lutNumber: e.target.value }))}
+                className="ui-input"
+                placeholder="Select LUT"
+              />
+              <p className="mt-1 text-xs ui-muted">Zero-rated export without payment of IGST.</p>
+            </div>
+          ) : null}
+          {prefOn('reverseCharge') ? (
+            <div className="flex items-end pb-2">
+              <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!formData.reverseCharge}
+                  onChange={(e) => setFormData({ ...formData, reverseCharge: e.target.checked })}
+                  className="ui-checkbox"
+                />
+                Reverse charge (RCM)
+              </label>
+            </div>
+          ) : null}
+          {prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Cost Center</label>
+              <select
+                value={formData.costCenterId || ''}
+                onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
+                className="ui-select w-full px-3 py-2"
+              >
+                <option value="">— none —</option>
+                {(db.costCenters || [])
+                  .filter((c) => c.companyId === currentCompany.id)
+                  .map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+              </select>
+            </div>
+          ) : null}
+          {prefOn('salesman') && (db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
+            <div>
+              <label className="block text-sm font-medium mb-1">Salesman</label>
+              <select
+                value={formData.salesmanId || ''}
+                onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
+                className="ui-select w-full px-3 py-2"
+              >
+                <option value="">— none —</option>
+                {(db.salesmen || [])
+                  .filter((s) => s.companyId === currentCompany.id)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+              </select>
+            </div>
+          ) : null}
+          </div>
+
+        </div>
+
+        <div className="lg:col-span-5 space-y-4">
+          <div>
+            <label htmlFor="invoice-number" className="block text-sm font-medium mb-1">
+              Invoice No.
+            </label>
+            {/* The gear sits on the field it governs. Changing a series is a
+                different act from raising an invoice, so it opens over the
+                form rather than navigating away from a half-typed document. */}
+            <div className="flex items-start gap-2">
+              <input
+                id="invoice-number"
+                type="text"
+                value={formData.number ?? ''}
+                onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
+                disabled={lockInvoiceNumberOnCreate}
+                required
+                aria-invalid={fieldErrors.error('number') ? true : undefined}
+                className="ui-input ui-mono flex-1 min-w-0"
+              />
+              <button
+                type="button"
+                ref={numberingBtnRef}
+                onClick={() => setNumberingOpen((v) => !v)}
+                className="ui-btn ui-btn-secondary !px-2 shrink-0"
+                aria-label="Invoice numbering settings"
+                aria-haspopup="dialog"
+                aria-expanded={numberingOpen}
+              >
+                <Settings2 size={16} aria-hidden="true" />
+              </button>
+            </div>
+            <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
+            {numberingOpen ? (
+              <InvoiceNumberingPopover
+                anchorRef={numberingBtnRef}
+                db={db}
+                setDb={setDb}
+                currentCompany={currentCompany}
+                branchId={branchIdForNumbering}
+                settings={invoiceNumbering}
+                onClose={() => setNumberingOpen(false)}
+                onOpenFullSettings={() => {
+                  setNumberingOpen(false);
+                  goToSettings('docNumbering');
+                }}
+              />
+            ) : null}
+          </div>
+
+          {/* Two dates side by side rather than a quarter of the page each:
+              a date input needs about 150px and was being given 340. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="invoice-date" className="block text-sm font-medium mb-1">
+                Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="invoice-date"
+                type="date"
+                value={formData.date}
+                required
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    date: e.target.value,
+                    // Terms are counted from the document date, so moving the
+                    // date moves the due date with it.
+                    dueDate: selectedCustomer ? dueDateFor(e.target.value, selectedCustomer) || p.dueDate : p.dueDate,
+                  }))
+                }
+                className="ui-input"
+              />
+              <FieldError error={fieldErrors.error('date')} id={fieldErrors.errorId('date')} />
+            </div>
+
+            <div>
+              <label htmlFor="invoice-due" className="block text-sm font-medium mb-1">
+                Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="invoice-due"
+                type="date"
+                value={formData.dueDate}
+                required
+                onChange={(e) => setFormData((p) => ({ ...p, dueDate: e.target.value }))}
+                className="ui-input"
+              />
+              {prefOn('dueDateFromTerms') ? <p className="mt-1 text-xs ui-muted">Follows the payment terms.</p> : null}
+            </div>
+          </div>
 
           {prefOn('customerRef') ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">Ref Date</label>
-              <input
-                type="date"
-                value={formData.refDate}
-                onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-                className="ui-input"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="invoice-ref-no" className="block text-sm font-medium mb-1">Ref No.</label>
+                <input
+                  id="invoice-ref-no"
+                  type="text"
+                  value={formData.refNo}
+                  onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+                  className="ui-input"
+                  placeholder="Estimate / Quotation / Sales Order"
+                />
+              </div>
+              <div>
+                <label htmlFor="invoice-ref-date" className="block text-sm font-medium mb-1">Ref Date</label>
+                <input
+                  id="invoice-ref-date"
+                  type="date"
+                  value={formData.refDate}
+                  onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+                  className="ui-input"
+                />
+              </div>
             </div>
           ) : null}
+        </div>
+      </div>
 
+      {/*
+        Custom fields, under the whole head rather than tucked into whichever
+        column had room. Two per row at half the width each, so a company that
+        configures six gets three tidy rows instead of a ragged column.
+      */}
+      {customFields.some((f) => f.formPlacement === 'header' || f.formPlacement === 'reference') ? (
+        <div
+          className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4"
+          style={{ borderTop: '1px solid rgb(var(--border))' }}
+        >
+          {renderCustomFields('header')}
           {renderCustomFields('reference')}
         </div>
       ) : null}
@@ -4142,8 +4380,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <tbody>
               {formData.items.map((item, idx) => {
                 const lineMaster = items.find((i) => String(i.id) === String(item.itemId));
-                const lineTracked = isTracked(lineMaster);
-                const lineBatches = lineTracked ? batchesForItem(db, currentCompany.id, item.itemId) : [];
                 return (
                 <React.Fragment key={idx}>
                 <tr className="border-t" data-line-row={idx}>
@@ -4252,32 +4488,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                     </button>
                   </td>
                 </tr>
-                {lineTracked ? (
-                  <tr className="border-t-0">
-                    <td colSpan={9} className="px-3 pb-2 pt-0">
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="ui-muted font-medium">Batch:</span>
-                        <select
-                          value={item.batchId || ''}
-                          onChange={(e) => {
-                            const b = lineBatches.find((x) => String(x.id) === e.target.value);
-                            updateItem(idx, 'batchId', e.target.value);
-                            updateItem(idx, 'batchNo', b ? b.batchNo : '');
-                          }}
-                          className="ui-select ui-btn-sm w-72 px-2 text-xs"
-                        >
-                          <option value="">Select batch (FEFO order)</option>
-                          {lineBatches.map((b) => (
-                            <option key={b.id} value={b.id}>
-                              {b.batchNo} — {b.remaining} left{b.expiryDate ? ` · exp ${b.expiryDate}` : ''}
-                            </option>
-                          ))}
-                        </select>
-                        {lineBatches.length === 0 ? <span className="text-[rgb(var(--warn-ink))]">No batches in stock — receive via a bill first.</span> : null}
-                      </div>
-                    </td>
-                  </tr>
-                ) : null}
                 </React.Fragment>
                 );
               })}
@@ -4529,6 +4739,87 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
         <FieldErrorSummary errors={fieldErrors.errors} />
       </div>
+      {/*
+        Batch and expiry, asked once.
+
+        Only for items whose master says they are tracked, only at the moment
+        one is chosen, and never as a field on the form afterwards — the
+        invoice itself is where the batch is read back.
+      */}
+      {batchPrompt ? (
+        <Modal
+          onClose={() => setBatchPrompt(null)}
+          title={`Batch — ${items.find((i) => String(i.id) === String(batchPrompt.itemId))?.name || 'item'}`}
+          maxWidthClass="max-w-lg"
+        >
+          {(() => {
+            const line = formData.items[batchPrompt.index] || {};
+            const options = batchesForItem(db, currentCompany.id, batchPrompt.itemId);
+            const need = Number(line.quantity) || 0;
+            if (!options.length) {
+              return (
+                <div className="space-y-3">
+                  <p className="text-sm" style={{ color: 'rgb(var(--warn-ink))' }}>
+                    Nothing of this item is in stock under a batch. Receive it on a bill first, or the invoice will not
+                    save.
+                  </p>
+                  <div className="flex justify-end">
+                    <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setBatchPrompt(null)}>
+                      Close
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div className="space-y-3">
+                <p className="text-sm ui-muted">
+                  Earliest expiry first. The first batch that can cover {need || 1} is already selected.
+                </p>
+                <div className="ui-card divide-y" style={{ borderColor: 'rgb(var(--border))' }}>
+                  {options.map((b) => {
+                    const on = String(line.batchId || '') === String(b.id);
+                    const short = b.remaining < need;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => {
+                          updateItem(batchPrompt.index, 'batchId', String(b.id));
+                          updateItem(batchPrompt.index, 'batchNo', b.batchNo);
+                          updateItem(batchPrompt.index, 'expiryDate', b.expiryDate || '');
+                          setBatchPrompt(null);
+                        }}
+                        className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-3"
+                        style={on ? { backgroundColor: 'rgb(var(--accent-soft))' } : undefined}
+                      >
+                        <span className="min-w-0">
+                          <span className="ui-mono text-sm font-medium block truncate">{b.batchNo}</span>
+                          <span className="ui-caption">
+                            {b.expiryDate ? `Expires ${b.expiryDate}` : 'No expiry recorded'}
+                          </span>
+                        </span>
+                        <span
+                          className="ui-mono text-sm shrink-0"
+                          style={short ? { color: 'rgb(var(--warn))' } : undefined}
+                        >
+                          {b.remaining} left
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setBatchPrompt(null)}>
+                    Keep the selected batch
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </Modal>
+      ) : null}
+
     </form>
   );
 };

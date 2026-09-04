@@ -26,6 +26,12 @@ import Popover from './ui/Popover';
  * `group` are kept together under its heading, because "preview this document"
  * and "change every document of this type" are different kinds of act and
  * mixing them is how somebody edits a template mid-invoice.
+ *
+ * Pass `title` (and optionally `onBack`) to make this the document's header
+ * rather than a bare row of buttons: the name on the left, every way out of
+ * the screen on the right. `sticky` then pins it to the top of the scroll
+ * container, so Save is reachable from the twentieth line of a long invoice
+ * without scrolling back up for it.
  */
 export const DocFormActions = ({
   primaryLabel,
@@ -36,6 +42,11 @@ export const DocFormActions = ({
   menu = [],
   disabled = false,
   children = null,
+  title = '',
+  subtitle = '',
+  onBack = null,
+  backLabel = 'Back',
+  sticky = false,
 }) => {
   const menuBtnRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -48,9 +59,41 @@ export const DocFormActions = ({
     else groups.push({ name, items: [item] });
   });
 
+  /*
+   * As a plain row this sits flush right and tucks up under whatever preceded
+   * it. As a header it spans the card it lives in — hence the negative
+   * margins, which cancel the card's own padding — and carries a rule and a
+   * solid background so lines scrolling under it stay legible.
+   *
+   * `top-0` is measured against #main-content, which owns the only scroll in
+   * the shell; there is no app header to offset against inside it.
+   */
+  const shellClass = title
+    ? `flex items-center justify-between gap-3 flex-wrap -mx-4 -mt-4 mb-1 px-4 py-3 ${
+        sticky ? 'sticky top-0 z-30' : ''
+      }`
+    : 'flex items-center justify-end gap-2 -mb-2';
+
+  const shellStyle = title
+    ? { backgroundColor: 'rgb(var(--surface))', borderBottom: '1px solid rgb(var(--border))' }
+    : undefined;
+
   return (
-    <div className="flex items-center justify-end gap-2 -mb-2">
+    <div className={shellClass} style={shellStyle}>
+      {title ? (
+        <div className="min-w-0">
+          <h3 className="ui-title text-lg truncate">{title}</h3>
+          {subtitle ? <div className="text-sm ui-muted truncate">{subtitle}</div> : null}
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-2 flex-wrap justify-end">
       {children}
+      {onBack ? (
+        <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
+          {backLabel}
+        </button>
+      ) : null}
       {secondaryLabel ? (
         <button type="button" onClick={onSecondary} className="ui-btn ui-btn-secondary" disabled={disabled}>
           {secondaryLabel}
@@ -107,6 +150,7 @@ export const DocFormActions = ({
           ) : null}
         </>
       ) : null}
+      </div>
     </div>
   );
 };

@@ -340,7 +340,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                 const total = Number(l?.lineTotal ?? l?.amount ?? 0);
                 return (
                   <tr key={idx}>
-                    <td className="px-3 py-2 text-sm text-gray-900">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
+                    <td className="px-3 py-2 text-sm text-gray-900">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
                     <td className="px-3 py-2 text-sm text-right">{Number.isFinite(qty) ? qty : '-'}</td>
                     <td className="px-3 py-2 text-sm text-right">{formatMoney(Number.isFinite(rate) ? rate : 0, currentCompany)}</td>
                     <td className="px-3 py-2 text-sm text-right font-medium">{formatMoney(Number.isFinite(total) ? total : 0, currentCompany)}</td>
@@ -570,7 +570,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-3 py-2">{idx + 1}</td>
-                          <td className="px-3 py-2">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
+                          <td className="px-3 py-2">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
                           <td className="px-3 py-2">{hsn || '-'}</td>
                           <td className="px-3 py-2 text-right">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                           <td className="px-3 py-2 text-right">{formatMoney(Number.isFinite(rate) ? rate : 0, currentCompany)}</td>
@@ -727,7 +727,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-2 py-2 border-r-2 border-gray-900">{idx + 1}</td>
-                          <td className="px-2 py-2 border-r-2 border-gray-900">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-600">{batchNote(l)}</div> : null}</td>
+                          <td className="px-2 py-2 border-r-2 border-gray-900">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-600">{batchNote(l)}</div> : null}</td>
                           <td className="px-2 py-2 border-r-2 border-gray-900">{hsn || '-'}</td>
                           <td className="px-2 py-2 text-right border-r-2 border-gray-900">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                           <td className="px-2 py-2 text-right border-r-2 border-gray-900">{formatMoney(rate, currentCompany)}</td>
@@ -876,7 +876,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                       return (
                         <tr key={idx}>
                           <td className="px-3 py-2">{idx + 1}</td>
-                          <td className="px-3 py-2">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
+                          <td className="px-3 py-2">{name || '-'}{batchNote(l) ? <div className="text-[10px] text-gray-500">{batchNote(l)}</div> : null}</td>
                           <td className="px-3 py-2 text-right">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                           <td className="px-3 py-2 text-right">{formatMoney(Number.isFinite(taxable) ? taxable : 0, currentCompany)}</td>
                           <td className="px-3 py-2 text-right">{Number.isFinite(gstRate) ? gstRate : 0}</td>
@@ -1042,7 +1042,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                     return (
                       <tr key={idx} className="border-b border-gray-200 last:border-b-0">
                         <td className="p-1 border-r border-gray-900 text-center">{idx + 1}</td>
-                        <td className="p-1 border-r border-gray-900">{name || '-'}{prefOn('batch') && batchNote(l) ? <div className="text-[9px] text-gray-600">{batchNote(l)}</div> : null}</td>
+                        <td className="p-1 border-r border-gray-900">{name || '-'}{batchNote(l) ? <div className="text-[9px] text-gray-600">{batchNote(l)}</div> : null}</td>
                         {!isCompact && <td className="p-1 border-r border-gray-900 text-center">{hsn || '-'}</td>}
                         <td className="p-1 border-r border-gray-900 text-center">{Number.isFinite(qty) ? `${qty}${unit ? ` ${unit}` : ''}` : '-'}</td>
                         {!isCompact && <td className="p-1 border-r border-gray-900 text-right">{formatMoney(Number.isFinite(rate) ? rate : 0, currentCompany)}</td>}

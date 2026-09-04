@@ -25,6 +25,7 @@ const WarehouseField = ({
   label = 'Warehouse *',
   className = 'ui-select w-full px-3 py-2',
   required = true,
+  showSourceHint = true,
 }) => {
   const active = String(activeWarehouseId || '').trim();
   const locked = Boolean(active) && !isEdit;
@@ -49,7 +50,11 @@ const WarehouseField = ({
             {name}
           </span>
         </div>
-        <div className="text-xs ui-muted mt-1">From the header. Switch it there to enter somewhere else.</div>
+        {/* Suppressed where the form asks for the branch itself: the sentence
+            points at a header control that is no longer the one in charge. */}
+        {showSourceHint ? (
+          <div className="text-xs ui-muted mt-1">From the header. Switch it there to enter somewhere else.</div>
+        ) : null}
       </div>
     );
   }

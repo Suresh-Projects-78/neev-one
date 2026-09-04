@@ -12577,25 +12577,22 @@ const AppShell = () => {
         if (invoiceEditor.open) {
           const isEdit = Boolean(invoiceEditor.initial && invoiceEditor.initial?.id !== undefined && invoiceEditor.initial?.id !== null);
           return (
+            /*
+             * No header of its own any more. The name of the document and
+             * every way out of it — Back, Save Draft, Create Invoice, ⋮ — are
+             * one pinned bar inside the form, so the primary action is still
+             * on screen at the twentieth line.
+             */
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="ui-title text-lg">{isEdit ? 'Edit Invoice' : 'New Invoice'}</h3>
-                  <div className="text-sm ui-muted">{isEdit ? invoiceEditor.initial?.number || '' : ''}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setInvoiceEditor({ open: false, initial: null })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
               <div className="ui-surface border rounded-xl p-4">
                 <InvoiceForm
                   db={dbForUser}
                   setDb={setDb}
                   currentCompany={currentCompany}
+                  branches={branchesForUser}
+                  screenTitle={isEdit ? 'Edit Invoice' : 'New Invoice'}
+                  screenSubtitle={isEdit ? invoiceEditor.initial?.number || '' : ''}
+                  onBack={() => setInvoiceEditor({ open: false, initial: null })}
                   initialData={invoiceEditor.initial}
                   warehouses={warehousesForUser}
                   defaultWarehouseId={activeWarehouseId}
