@@ -128,6 +128,65 @@ describe('receipts and payments', () => {
     expect(tb.body.totals.balanced).toBe(true);
   });
 
+  it('splits a receipt across the bank, TDS and charges, crediting the customer with the whole settlement', async () => {
+    const org = await makeOwner();
+    const modes = await modesFor(org);
+    const bank = modes.find((m) => m.controlKind === 'BANK')!;
+
+    // An invoice of 10,000 settled by 8,950 in the bank, 1,000 withheld as TDS
+    // and 50 taken by the bank. The customer is discharged of the full 10,000.
+    await request(app)
+      .post(`/api/orgs/${org.orgId}/payments`)
+      .set(auth(org))
+      .send({
+        direction: 'RECEIPT',
+        date: '2026-08-17',
+        partyType: 'CUSTOMER',
+        partyName: 'Acme',
+        ledgerAccountId: bank.id,
+        amount: 8950,
+        deductions: [
+          { kind: 'TDS', amount: 1000 },
+          { kind: 'BANK_CHARGES', amount: 50 },
+        ],
+      })
+      .expect(201);
+
+    const tb = await request(app).get(`/api/orgs/${org.orgId}/ledger/trial-balance`).set(auth(org)).expect(200);
+    const row = (kind: string) => tb.body.rows.find((r: any) => r.controlKind === kind) || { debit: 0, credit: 0 };
+
+    // Only the cash reaches the bank — the whole point of the split.
+    expect(row('BANK').debit).toBeCloseTo(8950, 2);
+    expect(row('TDS_RECEIVABLE').debit).toBeCloseTo(1000, 2);
+    expect(row('BANK_CHARGES').debit).toBeCloseTo(50, 2);
+    expect(row('AR').credit).toBeCloseTo(10000, 2);
+    expect(tb.body.totals.balanced).toBe(true);
+  });
+
+  it('measures allocations against the settlement, not just the cash', async () => {
+    const org = await makeOwner();
+    const modes = await modesFor(org);
+    const bank = modes.find((m) => m.controlKind === 'BANK')!;
+
+    // 900 in the bank plus 100 of TDS settles 1,000 — so allocating 1,000 is
+    // within the payment, and allocating 1,001 is not.
+    const over = await request(app)
+      .post(`/api/orgs/${org.orgId}/payments`)
+      .set(auth(org))
+      .send({
+        direction: 'RECEIPT',
+        date: '2026-08-17',
+        partyType: 'CUSTOMER',
+        partyName: 'Acme',
+        ledgerAccountId: bank.id,
+        amount: 900,
+        deductions: [{ kind: 'TDS', amount: 100 }],
+        allocations: [{ docType: 'INVOICE', docId: 'missing-doc', amount: 1001 }],
+      });
+    expect(over.status).toBe(400);
+    expect(String(over.body.error)).toMatch(/more than the payment/i);
+  });
+
   it('posts a payment as payable debit and cash credit', async () => {
     const org = await makeOwner();
     const modes = await modesFor(org);

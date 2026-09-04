@@ -51,6 +51,24 @@ const paymentSchema = z.object({
   allocations: z
     .array(z.object({ docType: z.enum(['INVOICE', 'BILL']), docId: z.string().min(1), amount: z.number().positive() }))
     .optional(),
+  /*
+   * What settled the document without reaching the bank.
+   *
+   * `amount` stays the cash that actually moved, so bank balances and
+   * reconciliation are unaffected by this. A deduction is an additional debit —
+   * tax the customer withheld against our PAN, or what the bank took on the way
+   * through — and the party is credited with the sum of the two, because that
+   * is how much of the invoice is now settled.
+   */
+  deductions: z
+    .array(
+      z.object({
+        kind: z.enum(['TDS', 'BANK_CHARGES', 'OTHER']),
+        amount: z.number().positive(),
+        note: z.string().max(120).optional().nullable(),
+      })
+    )
+    .optional(),
 });
 
 const normalize = (row: any) => ({
@@ -132,8 +150,13 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
   });
   if (!mode) return res.status(400).json({ error: 'Choose a cash or bank account for this payment' });
 
+  const deductionTotal = round2((body.deductions || []).reduce((sum, d) => sum + d.amount, 0));
+  // What the document was settled by: the cash, plus everything deducted from
+  // it on the way. Allocations are measured against this, not against the cash.
+  const settledTotal = round2(body.amount + deductionTotal);
+
   const allocationTotal = (body.allocations || []).reduce((sum, a) => sum + a.amount, 0);
-  if (allocationTotal > body.amount + 0.005) {
+  if (allocationTotal > settledTotal + 0.005) {
     return res.status(400).json({ error: 'Allocated amount is more than the payment' });
   }
 
@@ -250,9 +273,28 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
               // exchange gain/loss. The three always foot to zero because the
               // difference is defined as the gap between the first two.
               { ledgerAccountId: mode.id, debit: toBase(body.amount, payRate), description: 'Money received' },
+              /*
+               * Each deduction is its own debit, at the payment's own rate.
+               * TDS is an asset — tax already paid on our behalf, claimed
+               * against the year's liability. Bank and other charges are
+               * expenses. Neither reached the bank, and both settled the
+               * invoice, which is why the credit below is the sum.
+               */
+              ...(body.deductions || []).map((d) => ({
+                controlKind:
+                  d.kind === 'TDS'
+                    ? ('TDS_RECEIVABLE' as const)
+                    : d.kind === 'BANK_CHARGES'
+                      ? ('BANK_CHARGES' as const)
+                      : ('EXPENSES' as const),
+                debit: toBase(d.amount, payRate),
+                description:
+                  d.note ||
+                  (d.kind === 'TDS' ? 'TDS deducted by customer' : d.kind === 'BANK_CHARGES' ? 'Bank charges' : 'Other charges'),
+              })),
               {
                 controlKind: 'AR',
-                credit: round2(toBase(body.amount, payRate) - fxDifference),
+                credit: round2(toBase(settledTotal, payRate) - fxDifference),
                 partyType: 'CUSTOMER',
                 partyId: body.partyId || null,
                 description: `From ${body.partyName || 'customer'}`,

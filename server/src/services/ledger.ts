@@ -30,7 +30,12 @@ export type ControlKind =
   | 'ROUNDING'
   | 'OPENING_DIFF'
   | 'SUSPENSE'
-  | 'FX_GAIN_LOSS';
+  | 'FX_GAIN_LOSS'
+  /* Deductions a customer makes from a payment: tax withheld against our PAN,
+     and what the bank takes on the way through. Both settle the invoice even
+     though neither reaches the bank account. */
+  | 'TDS_RECEIVABLE'
+  | 'BANK_CHARGES';
 
 export type PostingLine = {
   controlKind?: ControlKind;
@@ -91,6 +96,7 @@ export const DEFAULT_ACCOUNTS: Array<{
   { code: '1200', name: 'Cash-in-Hand', accountType: 'ASSET', controlKind: 'CASH' },
   { code: '1300', name: 'Bank Accounts', accountType: 'ASSET', controlKind: 'BANK' },
   { code: '1400', name: 'Stock-in-Hand', accountType: 'ASSET', controlKind: 'STOCK' },
+  { code: '1450', name: 'TDS Receivable', accountType: 'ASSET', controlKind: 'TDS_RECEIVABLE' },
   { code: '1500', name: 'Input CGST', accountType: 'ASSET', controlKind: 'CGST_IN' },
   { code: '1510', name: 'Input SGST', accountType: 'ASSET', controlKind: 'SGST_IN' },
   { code: '1520', name: 'Input IGST', accountType: 'ASSET', controlKind: 'IGST_IN' },
@@ -102,6 +108,7 @@ export const DEFAULT_ACCOUNTS: Array<{
   { code: '4000', name: 'Sales Accounts', accountType: 'INCOME', controlKind: 'SALES' },
   { code: '5000', name: 'Purchase Accounts', accountType: 'EXPENSE', controlKind: 'PURCHASES' },
   { code: '5100', name: 'Indirect Expenses', accountType: 'EXPENSE', controlKind: 'EXPENSES' },
+  { code: '5200', name: 'Bank Charges', accountType: 'EXPENSE', controlKind: 'BANK_CHARGES' },
   { code: '9997', name: 'Exchange Gain / Loss', accountType: 'EXPENSE', controlKind: 'FX_GAIN_LOSS' },
   { code: '9998', name: 'Rounding Difference', accountType: 'EXPENSE', controlKind: 'ROUNDING' },
   { code: '9999', name: 'Suspense / Uncategorised', accountType: 'ASSET', controlKind: 'SUSPENSE' },
@@ -192,13 +199,59 @@ async function resolveControlAccountId(
       select: { id: true },
     }));
 
-  if (!row) {
+  if (row) return row.id;
+
+  /*
+   * Create it rather than refuse.
+   *
+   * A control kind added after an org was set up has no account, and the org
+   * has no way to make one — ledger setup only runs once. Refusing meant every
+   * book opened before the feature shipped could not use it. The seed table is
+   * the definition of what the account should be, so this is that definition
+   * being applied late rather than a new account being invented.
+   */
+  const seed = DEFAULT_ACCOUNTS.find((a) => a.controlKind === controlKind);
+  if (!seed) {
     throw new PostingError(
       `No ledger account configured for control kind ${controlKind}. Run ledger setup for this org.`,
       500
     );
   }
-  return row.id;
+
+  const existingCode = await tx.ledgerAccount.findFirst({
+    where: { orgId, branchId: null, code: seed.code },
+    select: { id: true },
+  });
+  if (existingCode) return existingCode.id;
+
+  // Ownership is copied from an account the org already has rather than passed
+  // down through every caller: this runs inside a posting, and the tenant is
+  // already settled by the time it does.
+  const sibling = await tx.ledgerAccount.findFirst({
+    where: { orgId },
+    select: { accountId: true, createdByUserId: true },
+  });
+  if (!sibling) {
+    throw new PostingError(
+      `No ledger account configured for control kind ${controlKind}. Run ledger setup for this org.`,
+      500
+    );
+  }
+
+  const created = await tx.ledgerAccount.create({
+    data: {
+      accountId: sibling.accountId,
+      orgId,
+      branchId: null,
+      code: seed.code,
+      name: seed.name,
+      accountType: seed.accountType,
+      controlKind: seed.controlKind,
+      createdByUserId: sibling.createdByUserId,
+    },
+    select: { id: true },
+  });
+  return created.id;
 }
 
 async function ensureFiscalYear(

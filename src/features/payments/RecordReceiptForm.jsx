@@ -58,6 +58,10 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     ledgerAccountId: initial.ledgerAccountId,
     reference: initial.reference,
     notes: initial.notes,
+    // Deducted on the way: tax the customer withheld, and what the bank took.
+    tdsAmount: initialData?.tdsAmount ? String(initialData.tdsAmount) : '',
+    bankCharges: initialData?.bankCharges ? String(initialData.bankCharges) : '',
+    otherCharges: initialData?.otherCharges ? String(initialData.otherCharges) : '',
   }));
 
   const { modes, loading: modesLoading, error: modesError } = usePaymentModes();
@@ -114,7 +118,25 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
   const computed = useMemo(() => {
     const receiptAmount = Number(formData.amount ?? 0);
+    /*
+     * "Amount received" is what the invoice was settled by, not what reached
+     * the bank.
+     *
+     * A customer who owes 10,000 and withholds 1,000 of TDS has settled
+     * 10,000 — the invoice is discharged in full even though 9,000 arrived.
+     * So allocation is measured against this figure, and the cash is what is
+     * left after the deductions.
+     */
     const totalAmount = Number.isFinite(receiptAmount) ? Math.max(0, receiptAmount) : 0;
+    const pos = (v) => {
+      const n = Number(v ?? 0);
+      return Number.isFinite(n) ? Math.max(0, n) : 0;
+    };
+    const tds = pos(formData.tdsAmount);
+    const bankCharges = pos(formData.bankCharges);
+    const otherCharges = pos(formData.otherCharges);
+    const deductions = round2(tds + bankCharges + otherCharges);
+    const netCash = round2(totalAmount - deductions);
 
     let allocated = 0;
     const lines = [];
@@ -145,8 +167,21 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       allocated: round2(allocated),
       advance,
       lines,
+      tds,
+      bankCharges,
+      otherCharges,
+      deductions,
+      netCash,
     };
-  }, [allocations, creditNotes, formData.amount, outstandingInvoices]);
+  }, [
+    allocations,
+    creditNotes,
+    formData.amount,
+    formData.tdsAmount,
+    formData.bankCharges,
+    formData.otherCharges,
+    outstandingInvoices,
+  ]);
 
   const toggleInvoice = (inv, selected) => {
     const key = String(inv.id);
@@ -230,6 +265,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       return;
     }
 
+    // More deducted than received leaves a negative amount in the bank, which
+    // is not a receipt — it is a typo.
+    if (computed.deductions > amount + 0.0001) {
+      notify.error('Deductions cannot be more than the amount received');
+      return;
+    }
+
 
     const customers = safeArray(db.customers).filter((c) => c.companyId === companyId);
     const customer = customers.find((c) => Number(c.id) === customerIdNum) || null;
@@ -265,9 +307,17 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           partyName: customerName || null,
           ledgerAccountId: String(ledgerAccountId).trim(),
           instrumentRef: formData.reference || null,
-          amount: round2(amount),
+          // The cash, not the settlement: the bank ledger must only ever see
+          // what reached the bank. The deductions below are posted to their own
+          // accounts and the customer is credited with the sum of both.
+          amount: round2(computed.netCash),
           notes: formData.notes || null,
           allocations: serverAllocations,
+          deductions: [
+            computed.tds > 0 ? { kind: 'TDS', amount: round2(computed.tds) } : null,
+            computed.bankCharges > 0 ? { kind: 'BANK_CHARGES', amount: round2(computed.bankCharges) } : null,
+            computed.otherCharges > 0 ? { kind: 'OTHER', amount: round2(computed.otherCharges) } : null,
+          ].filter(Boolean),
         });
       } catch (err) {
         setSaving(false);
@@ -302,6 +352,10 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       amount: round2(amount),
       allocatedAmount: round2(computed.allocated),
       advanceAmount: round2(computed.advance),
+      tdsAmount: round2(computed.tds),
+      bankCharges: round2(computed.bankCharges),
+      otherCharges: round2(computed.otherCharges),
+      netCashAmount: round2(computed.netCash),
       allocations: computed.lines.map((l) => ({
         voucherType: 'invoice',
         voucherId: l.invoiceId,
@@ -403,6 +457,51 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             {...fieldErrors.props('amount')}
           />
           <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
+          <p className="mt-1 text-xs ui-muted">What the invoice is settled by, before deductions.</p>
+        </div>
+
+        {/*
+          What came off the payment on the way.
+
+          None of these reached the bank and all of them settled the invoice,
+          so they are stated here and posted as their own ledger lines — TDS to
+          the receivable it is, charges to the expense they are — with the
+          customer credited for the whole amount above.
+        */}
+        <div
+          className="col-span-2 rounded-xl p-3"
+          style={{ backgroundColor: 'rgb(var(--accent-soft))', border: '1px solid rgb(var(--brand) / 0.18)' }}
+        >
+          <div className="ui-t-sec mb-2">Deductions</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { k: 'tdsAmount', label: 'TDS deduction' },
+              { k: 'bankCharges', label: 'Bank charges' },
+              { k: 'otherCharges', label: 'Other charges' },
+            ].map((f) => (
+              <div key={f.k}>
+                <label className="block text-sm font-medium mb-1" htmlFor={`rcpt-${f.k}`}>
+                  {f.label}
+                </label>
+                <input
+                  id={`rcpt-${f.k}`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  className="ui-input ui-mono w-full px-3 py-2"
+                  value={formData[f.k]}
+                  onChange={(e) => setFormData((p) => ({ ...p, [f.k]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+          {computed.deductions > 0 ? (
+            <p className="mt-2 text-xs ui-muted">
+              {formatMoney(computed.deductions, currentCompany)} deducted ·{' '}
+              {formatMoney(computed.netCash, currentCompany)} actually received into the account.
+            </p>
+          ) : null}
         </div>
 
         <div
@@ -470,18 +569,54 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
-        <div>
-          <div className="ui-muted">Allocated</div>
-          <div className="font-semibold">{formatMoney(computed.allocated, currentCompany)}</div>
-        </div>
-        <div>
-          <div className="ui-muted">Advance</div>
-          <div className="font-semibold">{formatMoney(computed.advance, currentCompany)}</div>
-        </div>
-        <div>
-          <div className="ui-muted">Selected Invoices</div>
-          <div className="font-semibold">{selectedInvoiceIds.length}</div>
+      {/*
+        The receipt in one column: what settled the invoice, what came off it,
+        and what actually reached the account. The last figure is the one that
+        should match the bank statement, so it is the one set apart.
+      */}
+      <div className="ui-card p-4">
+        <div className="ui-t-sec mb-3">Receipt summary</div>
+        <div className="space-y-1.5 text-sm">
+          <div className="flex justify-between">
+            <span className="ui-muted">Amount received</span>
+            <span className="ui-mono">{formatMoney(computed.totalAmount, currentCompany)}</span>
+          </div>
+          {computed.tds > 0 ? (
+            <div className="flex justify-between">
+              <span className="ui-muted">TDS deduction</span>
+              <span className="ui-mono">− {formatMoney(computed.tds, currentCompany)}</span>
+            </div>
+          ) : null}
+          {computed.bankCharges > 0 ? (
+            <div className="flex justify-between">
+              <span className="ui-muted">Bank charges</span>
+              <span className="ui-mono">− {formatMoney(computed.bankCharges, currentCompany)}</span>
+            </div>
+          ) : null}
+          {computed.otherCharges > 0 ? (
+            <div className="flex justify-between">
+              <span className="ui-muted">Other charges</span>
+              <span className="ui-mono">− {formatMoney(computed.otherCharges, currentCompany)}</span>
+            </div>
+          ) : null}
+
+          <div className="flex justify-between pt-1.5" style={{ borderTop: '1px solid rgb(var(--border))' }}>
+            <span className="ui-muted">Total allocated</span>
+            <span className="ui-mono">{formatMoney(computed.allocated, currentCompany)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="ui-muted">Advance (unallocated)</span>
+            <span className="ui-mono">{formatMoney(computed.advance, currentCompany)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="ui-muted">Invoices selected</span>
+            <span className="ui-mono">{selectedInvoiceIds.length}</span>
+          </div>
+
+          <div className="ui-total-row pt-2" style={{ borderTop: '1px solid rgb(var(--border))' }}>
+            <span>Net into the account</span>
+            <span>{formatMoney(computed.netCash, currentCompany)}</span>
+          </div>
         </div>
       </div>
 
