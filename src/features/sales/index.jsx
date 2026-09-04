@@ -1747,7 +1747,7 @@ export const EstimatesList = ({
     }
     openModal(
       <EstimateForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />,
-      { title: 'New Estimate', maxWidthClass: 'max-w-5xl' }
+      { title: 'New Quotation', maxWidthClass: 'max-w-5xl' }
     );
   };
 
@@ -1764,7 +1764,7 @@ export const EstimatesList = ({
         initialData={estimate}
         onClose={() => openModal(null)}
       />,
-      { title: 'Edit Estimate', maxWidthClass: 'max-w-5xl' }
+      { title: 'Edit Quotation', maxWidthClass: 'max-w-5xl' }
     );
   };
 
@@ -1834,7 +1834,7 @@ export const EstimatesList = ({
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
-      { title: `New Invoice from ${estimate?.number || 'Estimate'}`.trim(), maxWidthClass: 'max-w-7xl' }
+      { title: `New Invoice from ${estimate?.number || 'Quotation'}`.trim(), maxWidthClass: 'max-w-7xl' }
     );
   };
 
@@ -1873,13 +1873,13 @@ export const EstimatesList = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Estimates</h3>
+        <h3 className="ui-t-sec">Quotations</h3>
         <button
           type="button"
           onClick={openNewEstimate}
           className="ui-btn ui-btn-primary "
         >
-          <Plus size={20} /> New Estimate
+          <Plus size={20} /> New Quotation
         </button>
       </div>
 
@@ -1891,10 +1891,10 @@ export const EstimatesList = ({
         countLabel="estimates"
         onExport={() =>
           exportRows({
-            fileName: `Estimates_${currentCompany?.name || 'company'}`,
+            fileName: `Quotations_${currentCompany?.name || 'company'}`,
             label: 'estimate(s)',
             columns: [
-              { key: 'number', label: 'Estimate #' },
+              { key: 'number', label: 'Quotation #' },
               { key: 'customerName', label: 'Customer' },
               { key: 'date', label: 'Date' },
               { key: 'dueDate', label: 'Due' },
@@ -1912,7 +1912,7 @@ export const EstimatesList = ({
         <table className="ui-table w-full ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Estimate #" col="number" state={estFilters} className="ui-th" />
+              <ColumnHeader label="Quotation #" col="number" state={estFilters} className="ui-th" />
               <ColumnHeader label="Customer" col="customer" state={estFilters} className="ui-th" />
               <ColumnHeader label="Warehouse" col="warehouse" state={estFilters} className="ui-th" />
               <ColumnHeader label="Date" col="date" state={estFilters} className="ui-th" />
@@ -1935,7 +1935,7 @@ export const EstimatesList = ({
                       description="An estimate is a quote you can turn into an invoice once the customer agrees."
                       action={
                         <button type="button" onClick={openNewEstimate} className="ui-btn ui-btn-primary">
-                          <Plus size={16} /> New Estimate
+                          <Plus size={16} /> New Quotation
                         </button>
                       }
                     />
@@ -1975,11 +1975,11 @@ export const EstimatesList = ({
         dateTo={estPeriod.dateTo}
         onDateFromChange={estPeriod.setDateFrom}
         onDateToChange={estPeriod.setDateTo}
-        exportTitle="Estimates — {currentCompany?.name || 'Company'}"
-        exportFileName={`Estimates_${currentCompany?.name || 'company'}`}
-        exportSheetName="Estimates"
+        exportTitle="Quotations — {currentCompany?.name || 'Company'}"
+        exportFileName={`Quotations_${currentCompany?.name || 'company'}`}
+        exportSheetName="Quotations"
         exportColumns={[
-              { key: 'number', label: 'Estimate #' },
+              { key: 'number', label: 'Quotation #' },
               { key: 'customerName', label: 'Customer' },
               { key: 'date', label: 'Date' },
               { key: 'dueDate', label: 'Due' },
@@ -2029,7 +2029,7 @@ export const EstimatesList = ({
                         }
                       }}
                       className="ui-btn ui-btn-ghost !px-1.5"
-                      aria-label="Estimate actions"
+                      aria-label="Quotation actions"
                       data-estimate-menu-button={est.id}
                     >
                       <MoreVertical size={18} />
@@ -4061,7 +4061,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   value={formData.refNo}
                   onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
                   className="ui-input"
-                  placeholder="Estimate / Quotation / Sales Order"
+                  placeholder="Quotation / Sales Order"
                 />
               </div>
               <div>
@@ -4937,7 +4937,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   );
 };
 
-export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, onClose }) => {
+export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, onClose, screenTitle = '', screenSubtitle = '', onBack = null }) => {
   const formRef = useRef(null);
   const isEdit = Boolean(initialData && (initialData.id !== undefined && initialData.id !== null));
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
@@ -5058,7 +5058,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
     if (isEstimateAuto && lockEstimateNumberOnCreate) estimateNumber = String(generatedEstimateNumber || '').trim();
     if (!isEdit && isEstimateAuto && !estimateNumber) estimateNumber = String(generatedEstimateNumber || '').trim();
     if (!estimateNumber) {
-      notify.error('Estimate number is required');
+      notify.error('Quotation number is required');
       return;
     }
 
@@ -5069,7 +5069,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         (!isEdit || est.id !== initialData?.id)
     );
     if (estimateNumberClash) {
-      notify.error('Estimate number already exists. Please change the number or update numbering settings in Company Profile.');
+      notify.error('Quotation number already exists. Please change the number or update numbering settings in Company Profile.');
       return;
     }
 
@@ -5126,7 +5126,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         ),
       });
       onClose?.();
-      notify.success('Estimate updated successfully!');
+      notify.success('Quotation updated successfully!');
       return;
     }
 
@@ -5151,7 +5151,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         backendDocId = saved?.id || null;
         serverNumber = String(saved?.number || '');
       } catch (err) {
-        notify.error(String(err?.message || 'Estimate not saved to the server.'));
+        notify.error(String(err?.message || 'Quotation not saved to the server.'));
         return;
       }
     }
@@ -5172,7 +5172,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'estimate', usedNumber: estimateNumber, branchId: activeBranchId || null }),
     });
     onClose?.();
-    notify.success('Estimate created successfully!');
+    notify.success('Quotation created successfully!');
   };
 
   // The shared document contract, so an estimate behaves like the invoice it
@@ -5186,11 +5186,17 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
-      <DocFormActions primaryLabel={isEdit ? 'Update Estimate' : 'Create Estimate'} />
+      <DocFormActions
+        title={screenTitle}
+        subtitle={screenSubtitle}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
+        primaryLabel={isEdit ? 'Update Quotation' : 'Create Quotation'}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Estimate Number</label>
+          <label className="block text-sm font-medium mb-1">Quotation Number</label>
           <input
             type="text"
             value={formData.number}
@@ -5210,7 +5216,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Estimate Date</label>
+          <label className="block text-sm font-medium mb-1">Quotation Date</label>
           <input
             type="date"
             value={formData.date}

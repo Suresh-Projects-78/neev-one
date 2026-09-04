@@ -108,7 +108,7 @@ export default function SalesBySalesman({ db, currentCompany }) {
                 <th className="ui-th ui-num">Invoiced Sales (pre-GST)</th>
                 <th className="ui-th ui-num">Sales Orders</th>
                 <th className="ui-th ui-num">Order Value</th>
-                <th className="ui-th ui-num">Estimates</th>
+                <th className="ui-th ui-num">Quotations</th>
                 <th className="ui-th ui-num">Quote Value</th>
                 <th className="ui-th ui-num">Commission</th>
               </tr>

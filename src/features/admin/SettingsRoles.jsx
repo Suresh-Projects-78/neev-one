@@ -72,7 +72,7 @@ const PERMISSION_MATRIX = [
     label: 'Sales',
     items: [
       { label: 'Invoices', module: 'SALES', subModule: 'Invoices', supports: { view: true, edit: true, del: true } },
-      { label: 'Estimates / Quotes', module: 'SALES', subModule: 'Estimates / Quotes', supports: { view: true, edit: true, del: true } },
+      { label: 'Quotations', module: 'SALES', subModule: 'Estimates / Quotes', supports: { view: true, edit: true, del: true } },
       { label: 'Credit Notes', module: 'SALES', subModule: 'Credit Notes', supports: { view: true, edit: true, del: true } },
     ],
   },

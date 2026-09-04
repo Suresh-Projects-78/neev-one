@@ -93,8 +93,8 @@ const SOURCES = [
   {
     collection: 'estimates',
     screen: 'estimates',
-    group: 'Estimates',
-    label: (r) => str(r.number) || 'Estimate',
+    group: 'Quotations',
+    label: (r) => str(r.number) || 'Quotation',
     detail: (r) => str(r.customerName),
     terms: (r) => [r.number, r.customerName],
   },

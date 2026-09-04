@@ -252,19 +252,23 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             Pending orders ({pendingRows.length})
           </button>
           <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
-            <Plus size={15} aria-hidden="true" /> New SO
+            <Plus size={15} aria-hidden="true" /> New Sales Order
           </button>
         </div>
       </div>
 
       {open ? (
         <div className="ui-card space-y-4 p-5">
+          {/* The same bar an invoice carries: the document's name on the left,
+              every way out of it on the right, pinned so Create stays reachable
+              from the last line. */}
           <DocFormActions
-            primaryLabel="Create SO"
+            title="New Sales Order"
+            onBack={() => setOpen(false)}
+            sticky
+            primaryLabel="Create Sales Order"
             primaryType="button"
             onPrimary={save}
-            secondaryLabel="Cancel"
-            onSecondary={() => setOpen(false)}
           />
           <div className="grid gap-3 sm:grid-cols-4">
             <div>

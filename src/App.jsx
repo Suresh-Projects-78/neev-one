@@ -503,7 +503,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
     const idStr = String(customerId);
     const sources = [
       { key: 'invoices', label: 'Invoice' },
-      { key: 'estimates', label: 'Estimate' },
+      { key: 'estimates', label: 'Quotation' },
       { key: 'creditNotes', label: 'Credit Note' },
     ];
 
@@ -1920,7 +1920,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
     const idStr = String(itemId);
     const sources = [
       { key: 'invoices', label: 'Invoice' },
-      { key: 'estimates', label: 'Estimate' },
+      { key: 'estimates', label: 'Quotation' },
       { key: 'creditNotes', label: 'Credit Note' },
       { key: 'purchaseOrders', label: 'Purchase Order' },
       { key: 'bills', label: 'Bill' },
@@ -11542,7 +11542,7 @@ const AppShell = () => {
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
           { key: 'pos', label: 'POS', icon: Receipt, perm: 'SALES::Invoices::CREATE', feature: 'pos' },
           { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW', feature: 'standaloneReceiptsPayments' },
-          { key: 'estimates', label: 'Estimates / Quotes', icon: ClipboardList, perm: 'SALES::Estimates::VIEW', feature: 'estimates' },
+          { key: 'estimates', label: 'Quotations', icon: ClipboardList, perm: 'SALES::Estimates::VIEW', feature: 'estimates' },
           { key: 'salesOrders', label: 'Sales Orders', icon: ClipboardList, perm: 'SALES::Invoices::VIEW', feature: 'salesOrders' },
           { key: 'deliveryChallans', label: 'Delivery Challans', icon: Truck, perm: 'SALES::Invoices::VIEW', feature: 'deliveryChallans' },
           { key: 'creditNotes', label: 'Sales Returns', icon: Receipt, perm: 'SALES::Credit Notes::VIEW', feature: 'creditNotes' },
@@ -12435,26 +12435,21 @@ const AppShell = () => {
         if (estimateEditor.open) {
           const isEdit = Boolean(estimateEditor.initial && estimateEditor.initial?.id !== undefined && estimateEditor.initial?.id !== null);
           return (
+            /*
+             * The same shell an invoice gets: no header of its own, because the
+             * name of the document and every way out of it live in one pinned
+             * bar inside the form.
+             */
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="ui-t-sec">{isEdit ? 'Edit Estimate' : 'New Estimate'}</h3>
-                  <div className="text-sm ui-muted">{isEdit ? estimateEditor.initial?.number || '' : ''}</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEstimateEditor({ open: false, initial: null })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
               <div className="ui-surface border rounded-xl p-4">
                 <EstimateForm
                   db={dbForUser}
                   setDb={setDb}
                   currentCompany={currentCompany}
                   initialData={estimateEditor.initial}
+                  screenTitle={isEdit ? 'Edit Quotation' : 'New Quotation'}
+                  screenSubtitle={isEdit ? estimateEditor.initial?.number || '' : ''}
+                  onBack={() => setEstimateEditor({ open: false, initial: null })}
                   onClose={() => setEstimateEditor({ open: false, initial: null })}
                 />
               </div>

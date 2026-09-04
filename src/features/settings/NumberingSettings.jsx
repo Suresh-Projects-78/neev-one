@@ -9,7 +9,7 @@ const DOC_TYPES = [
   { key: 'RECEIPT', label: 'Receipts' },
   { key: 'PAYMENT', label: 'Payments' },
   { key: 'BILL', label: 'Bills' },
-  { key: 'ESTIMATE', label: 'Estimates' },
+  { key: 'ESTIMATE', label: 'Quotations' },
   { key: 'CREDIT_NOTE', label: 'Credit notes' },
   { key: 'DEBIT_NOTE', label: 'Debit notes' },
   { key: 'JOURNAL', label: 'Journals' },
