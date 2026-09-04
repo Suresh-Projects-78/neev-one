@@ -162,13 +162,6 @@ export const InvoicesList = ({
   const grid = useGridView({
     storageKey: `grid:${currentCompany?.id || 'x'}:invoices:v2`,
     columns: GRID_COLUMNS,
-    getFilterSnapshot: () => ({ searchText, statusFilter, dateFrom, dateTo }),
-    applyFilterSnapshot: (f) => {
-      setSearchText(String(f?.searchText ?? ''));
-      setStatusFilter(String(f?.statusFilter ?? ''));
-      setDateFrom(String(f?.dateFrom ?? ''));
-      setDateTo(String(f?.dateTo ?? ''));
-    },
   });
   const col = (key) => !gridEnabled || grid.isVisible(key);
   const [selectedIds, setSelectedIds] = useState(() => new Set());

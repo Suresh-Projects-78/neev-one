@@ -1,118 +1,74 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bookmark, Check, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 
 /**
  * The one grid control in a list's toolbar: Layout.
  *
- * This was two buttons — Views and Columns — sitting next to each other and
- * doing halves of the same job. Which columns you want to see is not a
- * separate preference from the view you are working in; it is part of what a
- * view *is*, along with the filters. Splitting them meant configuring a view
- * happened in one popover and half of its content in another, and the Columns
- * button silently detached you from the named view you were in.
+ * It is a column chooser and nothing else — every column the list can show,
+ * each with a checkbox, and a way back to the default set.
  *
- * One button now, with two states: the list of saved views, and an editor for
- * creating one or changing one that exists.
+ * It used to be a saved-views feature: name an arrangement, store it with the
+ * filters that were on screen, edit it, delete it, and pick between them. That
+ * is a bigger idea than the job, and it put four controls and an explanation
+ * in front of the thing people actually came for, which is to turn a column
+ * off. Naming and storing arrangements is gone; what is left is the list.
  *
- * Still a popover rather than a modal — choosing what a list shows is a
- * glance-level action and must not cover the table it is configuring.
+ * Columns marked `always` — the identity column and the row actions — are
+ * shown greyed and cannot be turned off, because a row with no way to tell
+ * which record it is is not a shorter row, it is a broken one.
  */
 export default function GridControls({ grid }) {
+  const columns = grid.columns || [];
   const [open, setOpen] = useState(false);
-  /** null = the list; otherwise the view being created or edited. */
-  const [editor, setEditor] = useState(null);
-  const [showColumns, setShowColumns] = useState(false);
   const [pos, setPos] = useState(null);
-  const rootRef = useRef(null);
   const btnRef = useRef(null);
+  const rootRef = useRef(null);
 
-  /**
-   * The panel is rendered on <body>, not beside the button.
+  /*
+   * Placed against the viewport rather than inside the toolbar.
    *
-   * The toolbar it sits in is a .ui-card with overflow:hidden, which cut the
-   * panel off at the card's edge: the view editor ran to 742px inside a card
-   * ending at 515, so its column list and its Save button simply were not
-   * there. Positioned from the button's rect instead, and flipped up when
-   * there is no room below.
+   * The toolbar sits in a scroll container with its own stacking context, so
+   * an absolutely positioned panel was clipped by it. Portalled to the body
+   * and given fixed coordinates, it can hang past the edge of its parent the
+   * way a menu is supposed to.
    */
   const place = () => {
-    const el = btnRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
+    const r = btnRef.current?.getBoundingClientRect();
+    if (!r) return;
     const width = 288;
-    const pad = 12;
-    const vw = window.innerWidth || 1024;
-    const vh = window.innerHeight || 768;
-    let left = r.right - width;
-    left = Math.max(pad, Math.min(left, vw - width - pad));
-    setPos({ left, top: r.bottom + 8, maxHeight: Math.max(200, vh - r.bottom - 8 - pad) });
+    const gap = 6;
+    const left = Math.max(8, Math.min(r.right - width, window.innerWidth - width - 8));
+    const top = r.bottom + gap;
+    setPos({ left, top, maxHeight: Math.max(180, window.innerHeight - top - 12) });
   };
 
-  const close = () => {
-    setOpen(false);
-    setEditor(null);
-    setShowColumns(false);
-  };
+  const close = () => setOpen(false);
 
   useEffect(() => {
     if (!open) return undefined;
     const onDown = (e) => {
-      // The panel is portalled to <body>, so it is not inside the trigger's
-      // ref: without this check every click on a view, on the name box or on
-      // Save counted as a click outside and shut the panel before it acted.
-      if (e.target instanceof Element && e.target.closest('[data-views-pop]')) return;
-      if (!rootRef.current?.contains(e.target)) close();
+      if (rootRef.current?.contains(e.target)) return;
+      if (e.target.closest?.('[data-layout-pop]')) return;
+      close();
     };
     const onKey = (e) => {
       if (e.key === 'Escape') close();
     };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
+    const onMove = () => place();
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onKey);
+    window.addEventListener('resize', onMove);
+    window.addEventListener('scroll', onMove, true);
     return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', onMove);
+      window.removeEventListener('scroll', onMove, true);
     };
   }, [open]);
 
-  const { columns } = grid;
-
-  const startNew = () =>
-    setEditor({ originalName: '', name: '', hidden: [...(grid.hidden || [])] });
-
-  const startEdit = (view) =>
-    setEditor({
-      originalName: view.name,
-      name: view.name,
-      hidden: Array.isArray(view.hidden) ? [...view.hidden] : [],
-    });
-
-  const editorVisible = (key) => {
-    const col = columns.find((c) => c.key === key);
-    if (col?.always) return true;
-    return !(editor?.hidden || []).includes(key);
-  };
-
-  const toggleEditorColumn = (key) => {
-    const col = columns.find((c) => c.key === key);
-    if (col?.always) return;
-    setEditor((p) => ({
-      ...p,
-      hidden: p.hidden.includes(key) ? p.hidden.filter((k) => k !== key) : [...p.hidden, key],
-    }));
-  };
-
-  const nameRef = useRef(null);
-  const editorOpen = Boolean(editor);
-  useEffect(() => {
-    if (editorOpen) nameRef.current?.focus();
-  }, [editorOpen]);
-
-  const submitEditor = (e) => {
-    e.preventDefault();
-    if (!editor?.name.trim()) return;
-    if (grid.upsertView(editor)) close();
-  };
+  const hiddenCount = columns.filter((c) => !c.always && !grid.isVisible(c.key)).length;
 
   return (
     <div ref={rootRef} className="relative flex items-center gap-2">
@@ -130,108 +86,36 @@ export default function GridControls({ grid }) {
       >
         <Bookmark size={15} aria-hidden="true" />
         Layout
+        {/* How many are off, so a list missing a column says so on the button
+            rather than leaving somebody to wonder where it went. */}
+        {hiddenCount ? (
+          <span
+            className="ui-mono text-xs rounded-full px-1.5"
+            style={{ backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--fg))' }}
+          >
+            {hiddenCount}
+          </span>
+        ) : null}
       </button>
 
-      {open && !editor && pos ? createPortal(
-        <div
-          className="ui-card ui-in-pop fixed z-[120] w-72 overflow-y-auto p-3"
-          style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight }}
-          data-views-pop=""
-          role="menu"
-        >
-          {/*
-            The state the list starts in, named.
-            It was there all along and had no entry, so the only way back from a
-            saved layout was to know that clicking the active one again did
-            nothing. A layout you cannot leave is a trap.
-          */}
-          <ul className="mb-2 max-h-56 overflow-y-auto">
-            <li className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  grid.applyView(null);
-                  close();
-                }}
-                className="ui-btn ui-btn-ghost flex-1 !justify-start"
-              >
-                {!grid.activeView ? <Check size={14} aria-hidden="true" /> : <span className="w-3.5" />}
-                <span className="truncate">Default view</span>
-              </button>
-            </li>
-          </ul>
-
-          {grid.views.length === 0 ? (
-            <p className="ui-caption px-1 pb-2">
-              No saved layouts yet. A layout remembers the columns you want, under a name.
-            </p>
-          ) : (
-            <ul className="mb-2 max-h-56 overflow-y-auto">
-              {grid.views.map((v) => (
-                <li key={v.name} className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      grid.applyView(v.name);
-                      close();
-                    }}
-                    className="ui-btn ui-btn-ghost flex-1 !justify-start"
-                  >
-                    {grid.activeView === v.name ? <Check size={14} aria-hidden="true" /> : <span className="w-3.5" />}
-                    <span className="truncate">{v.name}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startEdit(v)}
-                    className="ui-icon-btn"
-                    aria-label={`Edit layout ${v.name}`}
-                    title="Edit"
-                  >
-                    <Pencil size={14} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => grid.deleteView(v.name)}
-                    className="ui-icon-btn"
-                    aria-label={`Delete layout ${v.name}`}
-                    title="Delete"
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="border-t pt-2" style={{ borderColor: 'rgb(var(--border))' }}>
-            <button type="button" onClick={startNew} className="ui-btn ui-btn-ghost w-full !justify-start">
-              <Plus size={14} aria-hidden="true" />
-              New layout from what is on screen
-            </button>
-
-            {/*
-              Columns without committing to a name. Saving a view for a column
-              you wanted to see once would be a chore, and this is where people
-              will now look for the control that used to be its own button.
-            */}
-            <button
-              type="button"
-              onClick={() => setShowColumns((v) => !v)}
-              className="ui-btn ui-btn-ghost w-full !justify-start"
-              aria-expanded={showColumns}
+      {open && pos
+        ? createPortal(
+            <div
+              className="ui-card ui-in-pop fixed z-[120] w-72 overflow-y-auto p-2"
+              style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight }}
+              data-layout-pop=""
+              role="menu"
             >
-              <span className="w-3.5" />
-              {showColumns ? 'Hide column list' : 'Show or hide columns'}
-            </button>
+              <div className="ui-caption px-2 pb-1.5">Columns</div>
 
-            {showColumns ? (
-              <ul className="mt-1 max-h-48 overflow-y-auto">
+              <ul>
                 {columns.map((c) => (
                   <li key={c.key}>
                     <label
                       className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm ${
-                        c.always ? 'opacity-50' : 'cursor-pointer'
+                        c.always ? 'opacity-50' : 'cursor-pointer ui-hover-sunken'
                       }`}
+                      title={c.always ? 'This column cannot be hidden' : undefined}
                     >
                       <input
                         type="checkbox"
@@ -244,88 +128,22 @@ export default function GridControls({ grid }) {
                     </label>
                   </li>
                 ))}
-                <li className="px-2 pt-1">
-                  <button type="button" onClick={grid.resetColumns} className="ui-btn ui-btn-ghost !h-7 !px-2 text-xs">
-                    Reset columns
-                  </button>
-                </li>
               </ul>
-            ) : null}
-          </div>
-        </div>,
-        document.body
-      ) : null}
 
-      {open && editor && pos ? createPortal(
-        <form
-          onSubmit={submitEditor}
-          className="ui-card ui-in-pop fixed z-[120] w-72 overflow-y-auto p-3"
-          style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight }}
-          data-views-pop=""
-          role="dialog"
-          aria-label={editor.originalName ? `Edit layout ${editor.originalName}` : 'New layout'}
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <span className="ui-card-label">{editor.originalName ? 'Edit layout' : 'New layout'}</span>
-            <button type="button" onClick={() => setEditor(null)} className="ui-icon-btn" aria-label="Back to layouts">
-              <X size={14} aria-hidden="true" />
-            </button>
-          </div>
-
-          <label className="block">
-            <span className="ui-t-label">Name</span>
-            <input
-              type="text"
-              value={editor.name}
-              onChange={(e) => setEditor((p) => ({ ...p, name: e.target.value }))}
-              placeholder="Overdue this month"
-              className="ui-input mt-1 !h-8 w-full text-sm"
-              ref={nameRef}
-            />
-          </label>
-
-          <div className="mt-3">
-            <span className="ui-t-label">Columns</span>
-            <ul className="mt-1 max-h-44 overflow-y-auto">
-              {columns.map((c) => (
-                <li key={c.key}>
-                  <label
-                    className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm ${
-                      c.always ? 'opacity-50' : 'cursor-pointer'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={editorVisible(c.key)}
-                      disabled={Boolean(c.always)}
-                      onChange={() => toggleEditorColumn(c.key)}
-                      className="ui-checkbox"
-                    />
-                    {c.label}
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <p className="ui-caption mt-2">
-            {editor.originalName
-              ? 'Keeps the filters this layout was saved with.'
-              : 'Saves the filters currently on screen.'}
-          </p>
-
-          <div className="mt-2 flex items-center justify-end gap-2 border-t pt-2" style={{ borderColor: 'rgb(var(--border))' }}>
-            <button type="button" onClick={() => setEditor(null)} className="ui-btn ui-btn-ghost ui-btn-sm">
-              Cancel
-            </button>
-            <button type="submit" className="ui-btn ui-btn-primary ui-btn-sm" disabled={!editor.name.trim()}>
-              <Save size={14} aria-hidden="true" />
-              Save layout
-            </button>
-          </div>
-        </form>,
-        document.body
-      ) : null}
+              <div className="mt-1 border-t pt-1" style={{ borderColor: 'rgb(var(--border))' }}>
+                <button
+                  type="button"
+                  onClick={grid.resetColumns}
+                  className="ui-btn ui-btn-ghost w-full !justify-start"
+                  disabled={!hiddenCount}
+                >
+                  Show every column
+                </button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }
@@ -340,12 +158,12 @@ export function BulkBar({ count, onClear, children }) {
   return (
     <div
       className="ui-in-fade sticky top-0 z-10 flex items-center gap-3 border-b px-4 py-2.5"
-      style={{ borderColor: 'rgb(var(--border))', backgroundColor: 'rgb(var(--surface-sunken))' }}
+      style={{ backgroundColor: 'rgb(var(--accent-soft))', borderColor: 'rgb(var(--border))' }}
     >
       <span className="text-sm font-medium">{count} selected</span>
-      <div className="flex items-center gap-2">{children}</div>
-      <button type="button" onClick={onClear} className="ui-icon-btn ml-auto" aria-label="Clear selection">
-        <X size={15} aria-hidden="true" />
+      <div className="ms-auto flex items-center gap-2">{children}</div>
+      <button type="button" onClick={onClear} className="ui-btn ui-btn-ghost ui-btn-sm">
+        Clear
       </button>
     </div>
   );
