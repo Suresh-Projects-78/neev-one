@@ -60,6 +60,33 @@ export const amountInWordsInr = (value) => {
   return `${negative ? 'Minus ' : ''}Rupees ${body}${paiseText} Only`;
 };
 
+/**
+ * The deduction the customer will make, stated under the total.
+ *
+ * Under it, not inside it: the invoice is raised for the total and the
+ * receivable is the total. This says what will actually be paid, so nobody has
+ * to work out later why the remittance was short.
+ */
+const TdsLines = ({ invoice, currentCompany, cls = '' }) => {
+  const amount = Number(invoice?.tdsAmount || 0);
+  if (!(amount > 0)) return null;
+  const code = String(invoice?.tdsSection || '').trim();
+  const rate = Number(invoice?.tdsRate || 0);
+  const net = Math.max(0, Number(invoice?.total || 0) - amount);
+  return (
+    <>
+      <div className={`flex justify-between ${cls}`}>
+        <span>Less: TDS{code ? ` ${code}` : ''}{rate ? ` @ ${rate}%` : ''}</span>
+        <span>− {formatMoney(amount, currentCompany)}</span>
+      </div>
+      <div className={`flex justify-between font-bold ${cls}`}>
+        <span>Net payable</span>
+        <span>{formatMoney(net, currentCompany)}</span>
+      </div>
+    </>
+  );
+};
+
 const batchNote = (l) =>
   String(l?.batchNo || '').trim()
     ? `Batch ${String(l.batchNo).trim()}${String(l?.expiryDate || '').trim() ? ` · Exp ${String(l.expiryDate).trim()}` : ''}`
@@ -378,6 +405,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
             <span>Total</span>
             <span>{formatMoney(Number(invoice?.total ?? 0), currentCompany)}</span>
           </div>
+          <TdsLines invoice={invoice} currentCompany={currentCompany} />
           {prefOn('amountInWords') ? (
             <div className="border-t pt-2 mt-2 text-xs text-gray-600">{amountInWordsInr(Number(invoice?.total ?? 0))}</div>
           ) : null}
@@ -523,6 +551,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                   <span className="font-bold">Total</span>
                   <span className="font-bold">{formatMoney(Number(invoice?.total ?? 0), currentCompany)}</span>
                 </div>
+                <TdsLines invoice={invoice} currentCompany={currentCompany} />
               </div>
             </div>
 
@@ -834,6 +863,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                   <span className="font-bold">Total</span>
                   <span className="font-bold">{formatMoney(Number(invoice?.total ?? 0), currentCompany)}</span>
                 </div>
+                <TdsLines invoice={invoice} currentCompany={currentCompany} />
               </div>
             </div>
 

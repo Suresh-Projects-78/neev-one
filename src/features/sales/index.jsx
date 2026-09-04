@@ -16,6 +16,7 @@ import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } f
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
+import { TDS_SECTIONS, tdsAmountOn, tdsDefaultRate, tdsShortLabel } from '../../utils/tds';
 import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
 import EwbTransportForm from '../../components/EwbTransportForm';
 import EInvoiceWorkflow from './EInvoiceWorkflow';
@@ -2981,6 +2982,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       timesheetRef: initialData?.timesheetRef || '',
       paymentTermDays: initialData?.paymentTermDays ?? '',
       notesText: initialData?.notesText || '',
+      // TDS the customer will withhold. Stated on the document so both sides
+      // agree the figure before the payment arrives short.
+      tdsSection: initialData?.tdsSection || '',
+      tdsRate: initialData?.tdsRate ?? '',
     };
   });
 
@@ -3313,6 +3318,26 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     otherCharges: formData.otherCharges,
   });
 
+  /*
+   * The taxable value, and what the customer will withhold from it.
+   *
+   * The base is the amount GST is charged on — after any invoice-level
+   * discount, including other charges, and before the tax itself. CBDT
+   * Circular 23/2017: where GST is shown separately, tax is deducted on the
+   * amount excluding it.
+   *
+   * The invoice total does not move. TDS is the customer's withholding, not a
+   * discount: reducing the total here would understate output GST and lose
+   * part of the receivable.
+   */
+  const tdsBase = Math.max(
+    0,
+    Number(computed.subtotal || 0) - Number(computed.invoiceDiscount || 0) + Number(computed.otherChargesTotal || 0)
+  );
+  const tdsRateValue = Number(formData.tdsRate || 0);
+  const tdsAmount = formData.tdsSection ? tdsAmountOn(tdsBase, tdsRateValue) : 0;
+  const netReceivable = Math.max(0, Number(computed.total || 0) - tdsAmount);
+
   /**
    * The invoice as it stands right now, shaped like a saved one.
    *
@@ -3503,6 +3528,11 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       igstTotal: computed.igstTotal,
       gstTotal: computed.gstTotal,
       total: computed.total,
+      // Stated on the document, never netted off the total: the receivable is
+      // the total, and the deduction is tax the customer pays on our behalf.
+      tdsSection: formData.tdsSection || '',
+      tdsRate: formData.tdsSection ? tdsRateValue : 0,
+      tdsAmount,
     };
 
     const existingPaidAmount = isEdit ? Number(existingInvoice?.paidAmount ?? 0) : 0;
@@ -3667,6 +3697,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           : undefined,
         otherCharges: Array.isArray(newInvoice.otherCharges) && newInvoice.otherCharges.length ? newInvoice.otherCharges : undefined,
         otherChargesTotal: Number.isFinite(Number(newInvoice.otherChargesTotal)) ? Number(newInvoice.otherChargesTotal) : undefined,
+        tdsSection: newInvoice.tdsSection || undefined,
+        tdsRate: Number(newInvoice.tdsRate) > 0 ? Number(newInvoice.tdsRate) : undefined,
+        tdsAmount: Number(newInvoice.tdsAmount) > 0 ? Number(newInvoice.tdsAmount) : undefined,
         shipToAddressId: newInvoice.shipToAddressId ?? undefined,
         sourceChallanId: newInvoice.sourceChallanId ?? undefined,
         sourceSalesOrderId: newInvoice.sourceSalesOrderId ?? undefined,
@@ -4772,6 +4805,66 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             {customFields.some((f) => f.formPlacement === 'notes') ? (
               <div className="grid gap-3 sm:grid-cols-2">{renderCustomFields('notes')}</div>
             ) : null}
+
+            {/*
+              TDS the customer will withhold.
+              Off until a section is chosen, because most invoices have none
+              and a rate box on every one of them is a question nobody asked.
+              Picking a section seeds the rate that applies with a PAN on file;
+              the rate stays editable, since an individual contractor is 1%
+              where a company is 2% and a certificate under section 197 can
+              override both.
+            */}
+            <div>
+              <label className="block text-sm font-medium mb-1" htmlFor="invoice-tds-section">
+                TDS deduction <span className="ui-subtle font-normal">(if the customer deducts)</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_6rem] gap-3">
+                <select
+                  id="invoice-tds-section"
+                  className="ui-select w-full px-3 py-2"
+                  value={formData.tdsSection || ''}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    setFormData((p) => ({
+                      ...p,
+                      tdsSection: code,
+                      // Seed the rate from the section, but never overwrite a
+                      // rate the operator has already typed for that section.
+                      tdsRate: code ? (p.tdsSection === code && p.tdsRate !== '' ? p.tdsRate : tdsDefaultRate(code)) : '',
+                    }));
+                  }}
+                >
+                  <option value="">No TDS on this invoice</option>
+                  {TDS_SECTIONS.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.code} — {t.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    aria-label="TDS rate percent"
+                    disabled={!formData.tdsSection}
+                    className="ui-input ui-mono"
+                    value={formData.tdsRate === '' ? '' : formData.tdsRate}
+                    onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))}
+                  />
+                  <span className="ui-muted text-sm">%</span>
+                </div>
+              </div>
+              {formData.tdsSection ? (
+                <p className="mt-1 text-xs ui-muted">
+                  {formatMoney(tdsAmount, currentCompany)} on a taxable value of{' '}
+                  {formatMoney(tdsBase, currentCompany)}. The invoice total does not change — this is what the
+                  customer withholds and deposits against your PAN.
+                </p>
+              ) : null}
+            </div>
           </div>
           <div className="flex justify-end">
             <div className="w-64 space-y-2">
@@ -4818,6 +4911,20 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <span>Total:</span>
               <span>{formatMoney(computed.total, currentCompany)}</span>
             </div>
+            {/* Below the total, not inside it: the invoice is for the total,
+                and this is what will actually arrive. */}
+            {tdsAmount > 0 ? (
+              <>
+                <div className="flex justify-between">
+                  <span>Less: {tdsShortLabel(formData.tdsSection, tdsRateValue)}</span>
+                  <span className="text-[rgb(var(--neg-ink))]">− {formatMoney(tdsAmount, currentCompany)}</span>
+                </div>
+                <div className="ui-total-row">
+                  <span>Net receivable:</span>
+                  <span>{formatMoney(netReceivable, currentCompany)}</span>
+                </div>
+              </>
+            ) : null}
             </div>
           </div>
         </div>
