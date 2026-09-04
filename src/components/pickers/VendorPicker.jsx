@@ -7,6 +7,9 @@ import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
+import { rankedSearch } from '../../utils/rankedSearch';
+import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useRecentPicks } from './useRecentPicks';
 
 export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCreated, onClose }) => {
   const isEdit = Boolean(initialData);
@@ -964,18 +967,48 @@ const VendorPicker = ({
   const selectedVendorName = value ? getVendorDisplayName(findVendor(value)) : '';
 
   const normalizedVendorSearch = vendorSearch.trim().toLowerCase();
+  const recents = useRecentPicks('vendor', currentCompany?.id);
+
+  // Same ranking every list in the product uses: exact, then starts-with,
+  // then a word inside the name, then GSTIN or phone, then a loose match.
+  // Unfiltered, the vendors this operator actually buys from come first.
   const filteredVendors = normalizedVendorSearch
-    ? vendors.filter((v) => {
-        const haystack = `${v.displayName || v.name || ''} ${v.email || ''} ${v.phone || ''} ${v.gstin || ''}`.toLowerCase();
-        return haystack.includes(normalizedVendorSearch);
+    ? rankedSearch(vendors, normalizedVendorSearch, {
+        fields: (v) => [getVendorDisplayName(v), v.email, v.phone],
+        codes: (v) => [v.gstin, v.pan, v.phone],
       })
-    : vendors;
+    : recents.promote(vendors);
 
   const closePopup = () => {
     setShowVendorPopup(false);
     setVendorPopupMode('select');
     setVendorSearch('');
   };
+
+  const chooseVendor = (vendor) => {
+    if (!vendor) return;
+    recents.remember(vendor.id);
+    onChange(String(vendor.id));
+    closePopup();
+  };
+
+  const openPopup = () => {
+    if (disabled) return;
+    setVendorPopupMode('select');
+    setVendorSearch('');
+    setShowVendorPopup(true);
+  };
+
+  const {
+    activeIndex: vendorActiveIndex,
+    setActiveIndex: setVendorActiveIndex,
+    listRef: vendorListRef,
+    onKeyDown: onVendorListKeys,
+  } = useListboxKeys({
+    count: filteredVendors.length,
+    onChoose: (i) => chooseVendor(filteredVendors[i]),
+    onCancel: closePopup,
+  });
 
   return (
     <>
@@ -985,12 +1018,10 @@ const VendorPicker = ({
           type="button"
           disabled={disabled}
           title={disabled ? disabledHint || 'Locked' : undefined}
-          onClick={() => {
-            if (disabled) return;
-            setVendorPopupMode('select');
-            setVendorSearch('');
-            setShowVendorPopup(true);
-          }}
+          onClick={openPopup}
+          onKeyDown={openOnKey(openPopup)}
+          aria-haspopup="listbox"
+          aria-expanded={showVendorPopup}
           className={`flex-1 px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
         >
           {selectedVendorName || 'Select Vendor'}
@@ -1024,6 +1055,13 @@ const VendorPicker = ({
                   type="text"
                   value={vendorSearch}
                   onChange={(e) => setVendorSearch(e.target.value)}
+                  onKeyDown={onVendorListKeys}
+                  role="combobox"
+                  aria-expanded="true"
+                  aria-controls="vendor-picker-list"
+                  aria-activedescendant={
+                    filteredVendors[vendorActiveIndex] ? `vendor-opt-${filteredVendors[vendorActiveIndex].id}` : undefined
+                  }
                   className="ui-input"
                   placeholder="Search vendor (name, phone, GSTIN)"
                   autoFocus
@@ -1037,27 +1075,39 @@ const VendorPicker = ({
                 </button>
               </div>
 
-              <div className="max-h-80 overflow-y-auto space-y-1">
+              <div
+                id="vendor-picker-list"
+                ref={vendorListRef}
+                role="listbox"
+                className="max-h-80 overflow-y-auto space-y-1"
+              >
                 {filteredVendors.length === 0 ? (
                   <div className="text-sm ui-muted">No vendors found.</div>
                 ) : (
-                  filteredVendors.map((v) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => {
-                        onChange(String(v.id));
-                        closePopup();
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${ String(v.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                      }`}
-                    >
-                      <div className="text-sm font-medium ui-fg">{getVendorDisplayName(v)}</div>
-                      {(v.phone || v.gstin) && (
-                        <div className="text-xs ui-muted truncate">{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
-                      )}
-                    </button>
-                  ))
+                  filteredVendors.map((v, i) => {
+                    const on = i === vendorActiveIndex;
+                    return (
+                      <button
+                        key={v.id}
+                        id={`vendor-opt-${v.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={String(v.id) === String(value)}
+                        data-active={on || undefined}
+                        onMouseEnter={() => setVendorActiveIndex(i)}
+                        onClick={() => chooseVendor(v)}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
+                          on || String(v.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
+                        }`}
+                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                      >
+                        <div className="text-sm font-medium ui-fg">{getVendorDisplayName(v)}</div>
+                        {(v.phone || v.gstin) && (
+                          <div className="text-xs ui-muted truncate">{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
+                        )}
+                      </button>
+                    );
+                  })
                 )}
               </div>
 

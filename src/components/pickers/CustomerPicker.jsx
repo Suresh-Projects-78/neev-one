@@ -6,6 +6,9 @@ import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
+import { rankedSearch } from '../../utils/rankedSearch';
+import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useRecentPicks } from './useRecentPicks';
 
 export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, onCreated, onClose }) => {
   const isEdit = Boolean(initialData);
@@ -1026,18 +1029,62 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
   const selectedCustomerName = value ? getCustomerDisplayName(findCustomer(value)) : '';
 
   const normalizedCustomerSearch = customerSearch.trim().toLowerCase();
+  const recents = useRecentPicks('customer', currentCompany?.id);
+
+  /*
+   * Ranked, not merely filtered.
+   *
+   * A substring match put "Sundaram Traders" above "Ram Kumar" for the query
+   * "ram", because that was the order the array happened to be in. The shared
+   * ranking puts an exact hit first, then a name that starts with what was
+   * typed, then a word inside it, then a GSTIN or phone, then a loose
+   * subsequence.
+   *
+   * With nothing typed the list leads with whoever this operator actually
+   * invoices, which for most shops is the same fifteen names all week.
+   */
   const filteredCustomers = normalizedCustomerSearch
-    ? customers.filter((c) => {
-        const haystack = `${c.displayName || c.name || ''} ${c.contactPerson || ''} ${c.email || ''} ${c.mobile || c.phone || ''} ${c.gstin || ''} ${c.pan || ''}`.toLowerCase();
-        return haystack.includes(normalizedCustomerSearch);
+    ? rankedSearch(customers, normalizedCustomerSearch, {
+        fields: (c) => [
+          getCustomerDisplayName(c),
+          c.contactPerson,
+          c.email,
+          c.mobile || c.phone,
+        ],
+        codes: (c) => [c.gstin, c.pan, c.mobile || c.phone],
       })
-    : customers;
+    : recents.promote(customers);
 
   const closePopup = () => {
     setShowCustomerPopup(false);
     setCustomerPopupMode('select');
     setCustomerSearch('');
   };
+
+  const chooseCustomer = (customer) => {
+    if (!customer) return;
+    recents.remember(customer.id);
+    onChange(String(customer.id));
+    closePopup();
+  };
+
+  const openPopup = () => {
+    if (disabled) return;
+    setCustomerPopupMode('select');
+    setCustomerSearch('');
+    setShowCustomerPopup(true);
+  };
+
+  const {
+    activeIndex: customerActiveIndex,
+    setActiveIndex: setCustomerActiveIndex,
+    listRef: customerListRef,
+    onKeyDown: onCustomerListKeys,
+  } = useListboxKeys({
+    count: filteredCustomers.length,
+    onChoose: (i) => chooseCustomer(filteredCustomers[i]),
+    onCancel: closePopup,
+  });
 
   return (
     <>
@@ -1046,12 +1093,10 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
         type="button"
         disabled={disabled}
         title={disabled ? disabledHint || 'Locked' : undefined}
-        onClick={() => {
-          if (disabled) return;
-          setCustomerPopupMode('select');
-          setCustomerSearch('');
-          setShowCustomerPopup(true);
-        }}
+        onClick={openPopup}
+        onKeyDown={openOnKey(openPopup)}
+        aria-haspopup="listbox"
+        aria-expanded={showCustomerPopup}
         className={`w-full px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
       >
         {selectedCustomerName || 'Select Customer'}
@@ -1073,6 +1118,15 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                   type="text"
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
+                  onKeyDown={onCustomerListKeys}
+                  role="combobox"
+                  aria-expanded="true"
+                  aria-controls="customer-picker-list"
+                  aria-activedescendant={
+                    filteredCustomers[customerActiveIndex]
+                      ? `customer-opt-${filteredCustomers[customerActiveIndex].id}`
+                      : undefined
+                  }
                   className="ui-input"
                   placeholder="Search customer (name, email, phone, GSTIN)"
                   autoFocus
@@ -1086,29 +1140,41 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                 </button>
               </div>
 
-              <div className="max-h-80 overflow-y-auto space-y-1">
+              <div
+                id="customer-picker-list"
+                ref={customerListRef}
+                role="listbox"
+                className="max-h-80 overflow-y-auto space-y-1"
+              >
                 {filteredCustomers.length === 0 ? (
                   <div className="text-sm ui-muted">No customers found.</div>
                 ) : (
-                  filteredCustomers.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        onChange(String(c.id));
-                        closePopup();
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${ String(c.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                      }`}
-                    >
-                      <div className="text-sm font-medium ui-fg">{getCustomerDisplayName(c)}</div>
-                      {(c.email || c.mobile || c.phone) && (
-                        <div className="text-xs ui-muted truncate">
-                          {[c.email, c.mobile || c.phone].filter(Boolean).join(' • ')}
-                        </div>
-                      )}
-                    </button>
-                  ))
+                  filteredCustomers.map((c, i) => {
+                    const on = i === customerActiveIndex;
+                    return (
+                      <button
+                        key={c.id}
+                        id={`customer-opt-${c.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={String(c.id) === String(value)}
+                        data-active={on || undefined}
+                        onMouseEnter={() => setCustomerActiveIndex(i)}
+                        onClick={() => chooseCustomer(c)}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
+                          on || String(c.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
+                        }`}
+                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                      >
+                        <div className="text-sm font-medium ui-fg">{getCustomerDisplayName(c)}</div>
+                        {(c.email || c.mobile || c.phone) && (
+                          <div className="text-xs ui-muted truncate">
+                            {[c.email, c.mobile || c.phone].filter(Boolean).join(' • ')}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })
                 )}
               </div>
 

@@ -2779,6 +2779,50 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     onOpenInvoiceSettings(screen);
   };
 
+  /**
+   * Whether anything has actually been typed into this document.
+   *
+   * Deliberately narrow: a form that opens with today's date and a generated
+   * number is not "dirty", and warning about that would train people to click
+   * through the warning that matters.
+   */
+  const hasUnsavedInput = () =>
+    Boolean(
+      String(formData.customerId || '').trim() ||
+        String(formData.refNo || '').trim() ||
+        String(formData.notesText || '').trim() ||
+        (formData.items || []).some((l) => l.itemId || Number(l.quantity) > 1 || Number(l.rate) > 0)
+    );
+
+  /** Back, but not over the top of work. */
+  const requestBack = async () => {
+    if (typeof onBack !== 'function') return;
+    if (hasUnsavedInput()) {
+      const ok = await confirmDialog({
+        title: isEdit ? 'Leave without saving?' : 'Discard this invoice?',
+        message: 'Nothing here has been saved yet. Leaving now loses it.',
+        confirmLabel: isEdit ? 'Leave without saving' : 'Discard it',
+      });
+      if (!ok) return;
+    }
+    onBack();
+  };
+
+  // The browser's own reload / close, which no in-app dialog can intercept.
+  useEffect(() => {
+    const onBeforeUnload = (e) => {
+      if (!hasUnsavedInput()) return;
+      e.preventDefault();
+      // Chrome ignores the string and shows its own wording; setting it is
+      // still what arms the prompt in older engines.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData]);
+
+
   const setCustomField = (key, value) =>
     setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
 
@@ -2958,6 +3002,19 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   const numberingBtnRef = useRef(null);
   const [numberingOpen, setNumberingOpen] = useState(false);
+
+  /*
+   * Land on the first field.
+   *
+   * Opening a form and then reaching for the mouse to click into it is the
+   * one keystroke nobody should have to spend. preventScroll because the form
+   * may open scrolled, and yanking the page is worse than not focusing.
+   */
+  useEffect(() => {
+    const first = formRef.current?.querySelector('#invoice-branch');
+    if (first instanceof HTMLElement) first.focus({ preventScroll: true });
+    // Once, on open. Re-running would steal focus mid-typing.
+  }, []);
 
   /*
    * Which line, if any, is waiting on a batch.
@@ -3671,6 +3728,21 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     const mod = e.metaKey || e.ctrlKey;
     if (mod && String(e.key).toLowerCase() === 's') {
       e.preventDefault();
+      // Ctrl+S means save what is here. On a draftable document that is the
+      // draft — the browser's own Ctrl+S saves a page nobody wants, and this
+      // one should never be the keystroke that finalises a GST number.
+      if (isDraftInvoice && !isEdit) {
+        submitAsDraftNow();
+        return;
+      }
+      setSubmitAsDraft(false);
+      formRef.current?.requestSubmit();
+      return;
+    }
+    if (mod && e.key === 'Enter') {
+      // Ctrl+Enter is the commit: create the invoice, draft or not.
+      e.preventDefault();
+      setSubmitAsDraft(false);
       formRef.current?.requestSubmit();
       return;
     }
@@ -3705,14 +3777,38 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     }
 
     if (e.key !== 'Enter' || e.shiftKey || mod) return;
-    // Enter inside a line opens the next one. Anywhere else it would submit
-    // the form early, which is the classic way to book a half-typed invoice.
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
     if (target.tagName === 'TEXTAREA') return;
-    if (!target.closest('tbody')) return;
+
+    // Enter inside a line opens the next one.
+    if (target.closest('tbody')) {
+      e.preventDefault();
+      addItem();
+      return;
+    }
+
+    /*
+     * Enter anywhere else moves on rather than submitting.
+     *
+     * A single-input form submits on Enter and so does this one, which is the
+     * classic way to book a half-typed invoice from the customer field. The
+     * buttons keep their own behaviour — Enter on Create Invoice still
+     * creates it — so the only thing this changes is the header fields, where
+     * Enter now means "done with this one".
+     */
+    if (target.tagName === 'BUTTON' || target.getAttribute('role') === 'button') return;
+    const form = formRef.current;
+    if (!form) return;
+    const focusables = Array.from(
+      form.querySelectorAll(
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+      )
+    ).filter((el) => el.offsetParent !== null);
+    const at = focusables.indexOf(target);
+    if (at === -1) return;
     e.preventDefault();
-    addItem();
+    focusables[at + 1]?.focus();
   };
 
   return (
@@ -3720,7 +3816,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       <DocFormActions
         title={screenTitle}
         subtitle={screenSubtitle}
-        onBack={onBack}
+        onBack={onBack ? requestBack : null}
         sticky={Boolean(screenTitle)}
         primaryLabel={isDraftInvoice ? (isEdit ? 'Finalize Invoice' : 'Create Invoice') : 'Update Invoice'}
         onPrimary={() => setSubmitAsDraft(false)}
@@ -3933,87 +4029,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             ) : null}
           </div>
 
-          {/* Optional header fields, two across so a company with four of
-              them enabled does not get a column of full-width inputs. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {prefOn('iec') ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                IEC <span className="ui-subtle font-normal">(if applicable)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.iecNumber}
-                onChange={(e) => setFormData((p) => ({ ...p, iecNumber: e.target.value }))}
-                className="ui-input"
-                placeholder="Enter IEC"
-              />
-            </div>
-          ) : null}
-          {prefOn('lut') ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                LUT <span className="ui-subtle font-normal">(if applicable)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.lutNumber}
-                onChange={(e) => setFormData((p) => ({ ...p, lutNumber: e.target.value }))}
-                className="ui-input"
-                placeholder="Select LUT"
-              />
-              <p className="mt-1 text-xs ui-muted">Zero-rated export without payment of IGST.</p>
-            </div>
-          ) : null}
-          {prefOn('reverseCharge') ? (
-            <div className="flex items-end pb-2">
-              <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!formData.reverseCharge}
-                  onChange={(e) => setFormData({ ...formData, reverseCharge: e.target.checked })}
-                  className="ui-checkbox"
-                />
-                Reverse charge (RCM)
-              </label>
-            </div>
-          ) : null}
-          {prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">Cost Center</label>
-              <select
-                value={formData.costCenterId || ''}
-                onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
-                className="ui-select w-full px-3 py-2"
-              >
-                <option value="">— none —</option>
-                {(db.costCenters || [])
-                  .filter((c) => c.companyId === currentCompany.id)
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-              </select>
-            </div>
-          ) : null}
-          {prefOn('salesman') && (db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
-            <div>
-              <label className="block text-sm font-medium mb-1">Salesman</label>
-              <select
-                value={formData.salesmanId || ''}
-                onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
-                className="ui-select w-full px-3 py-2"
-              >
-                <option value="">— none —</option>
-                {(db.salesmen || [])
-                  .filter((s) => s.companyId === currentCompany.id)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-              </select>
-            </div>
-          ) : null}
-          </div>
-
         </div>
 
         <div className="lg:col-span-5 space-y-4">
@@ -4149,6 +4164,101 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           {renderCustomFields('reference')}
         </div>
       ) : null}
+
+      {/*
+        Everything a company can switch on: export paperwork, reverse charge,
+        cost centre, salesman. Under the head rather than inside it, so Tab
+        runs branch → warehouse → customer → number → dates → refs → custom
+        fields → the first line without detouring through fields most books
+        never turn on.
+      */}
+      {[
+        prefOn('iec'),
+        prefOn('lut'),
+        prefOn('reverseCharge'),
+        prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id),
+        prefOn('salesman') && (db.salesmen || []).some((x) => x.companyId === currentCompany.id),
+      ].some(Boolean) ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {prefOn('iec') ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              IEC <span className="ui-subtle font-normal">(if applicable)</span>
+            </label>
+            <input
+              type="text"
+              value={formData.iecNumber}
+              onChange={(e) => setFormData((p) => ({ ...p, iecNumber: e.target.value }))}
+              className="ui-input"
+              placeholder="Enter IEC"
+            />
+          </div>
+        ) : null}
+        {prefOn('lut') ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              LUT <span className="ui-subtle font-normal">(if applicable)</span>
+            </label>
+            <input
+              type="text"
+              value={formData.lutNumber}
+              onChange={(e) => setFormData((p) => ({ ...p, lutNumber: e.target.value }))}
+              className="ui-input"
+              placeholder="Select LUT"
+            />
+            <p className="mt-1 text-xs ui-muted">Zero-rated export without payment of IGST.</p>
+          </div>
+        ) : null}
+        {prefOn('reverseCharge') ? (
+          <div className="flex items-end pb-2">
+            <label className="inline-flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!formData.reverseCharge}
+                onChange={(e) => setFormData({ ...formData, reverseCharge: e.target.checked })}
+                className="ui-checkbox"
+              />
+              Reverse charge (RCM)
+            </label>
+          </div>
+        ) : null}
+        {prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Cost Center</label>
+            <select
+              value={formData.costCenterId || ''}
+              onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="">— none —</option>
+              {(db.costCenters || [])
+                .filter((c) => c.companyId === currentCompany.id)
+                .map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+            </select>
+          </div>
+        ) : null}
+        {prefOn('salesman') && (db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
+          <div>
+            <label className="block text-sm font-medium mb-1">Salesman</label>
+            <select
+              value={formData.salesmanId || ''}
+              onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
+              className="ui-select w-full px-3 py-2"
+            >
+              <option value="">— none —</option>
+              {(db.salesmen || [])
+                .filter((s) => s.companyId === currentCompany.id)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+            </select>
+          </div>
+        ) : null}
+        </div>
+      ) : null}
+
 
       {[
         prefOn('lut'),

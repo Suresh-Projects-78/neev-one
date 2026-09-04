@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import Popover from '../ui/Popover';
+import { rankedSearch } from '../../utils/rankedSearch';
+import { useListboxKeys, openOnKey } from './useListboxKeys';
 
 const normalizeText = (v) => String(v || '').trim().toLowerCase();
 
@@ -38,20 +40,22 @@ const PopupSelect = ({
   void ignoredLegacyProps;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0);
   const triggerRef = useRef(null);
   const searchRef = useRef(null);
-  const listRef = useRef(null);
 
   const normalizedQuery = normalizeText(query);
 
+  /*
+   * Ranked by the same rule as every other list: exact, starts-with, a word
+   * inside the label, then the code, then anything containing it. A ledger
+   * code is typed rather than read, so it is matched as a code and outranks a
+   * stray substring in some other account's name.
+   */
   const filtered = useMemo(() => {
     if (!normalizedQuery) return options || [];
-    return (options || []).filter((o) => {
-      const labelText = normalizeText(o?.label);
-      const valueText = normalizeText(o?.value);
-      const codeText = normalizeText(o?.code);
-      return labelText.includes(normalizedQuery) || valueText.includes(normalizedQuery) || codeText.includes(normalizedQuery);
+    return rankedSearch(options || [], normalizedQuery, {
+      fields: (o) => [o?.label, o?.value],
+      codes: (o) => [o?.code],
     });
   }, [normalizedQuery, options]);
 
@@ -108,27 +112,38 @@ const PopupSelect = ({
     searchRef.current?.focus();
   }, [open, showSearch]);
 
-  // Keep the highlighted row in view when the arrows walk past the fold.
-  useEffect(() => {
-    if (!open) return;
-    const row = listRef.current?.querySelector('[data-active="true"]');
-    row?.scrollIntoView({ block: 'nearest' });
-  }, [open, activeIndex]);
+  /*
+   * The shared keyboard contract, so this behaves exactly like the customer,
+   * vendor and item lists: arrows wrap, Home/End jump, PageUp/Down move ten,
+   * Enter takes the highlight, Escape leaves without changing anything.
+   *
+   * Enter on an empty result falls through to the create-this action when the
+   * caller allows one — otherwise typing a new value and pressing Enter would
+   * silently do nothing.
+   */
+  const {
+    activeIndex,
+    setActiveIndex,
+    listRef,
+    onKeyDown: onListKeys,
+  } = useListboxKeys({
+    count: filtered.length,
+    onChoose: (i) => {
+      const picked = filtered[i];
+      if (picked) applyValue(picked.value);
+    },
+    onCancel: closePopup,
+    // Only where there is no search box to take the keystroke.
+    firstLetter: showSearch ? null : (i) => filtered[i]?.label,
+  });
 
   const onKeyDown = (e) => {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (e.key === 'Enter' && !filtered.length && canUseCustom && !customIsAlreadyOption) {
       e.preventDefault();
-      if (!filtered.length) return;
-      const step = e.key === 'ArrowDown' ? 1 : -1;
-      setActiveIndex((i) => (i + step + filtered.length) % filtered.length);
+      runCustomAction(customValue);
       return;
     }
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const picked = filtered[activeIndex];
-      if (picked) applyValue(picked.value);
-      else if (canUseCustom && !customIsAlreadyOption) runCustomAction(customValue);
-    }
+    onListKeys(e);
   };
 
   return (
@@ -138,6 +153,7 @@ const PopupSelect = ({
         ref={triggerRef}
         type="button"
         onClick={openPopup}
+        onKeyDown={openOnKey(() => { if (!open) openPopup(); })}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}

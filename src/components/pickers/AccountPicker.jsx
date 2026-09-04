@@ -5,6 +5,9 @@ import Modal from '../ui/Modal';
 import { CustomerForm } from './CustomerPicker';
 import { VendorForm } from './VendorPicker';
 import PopupSelect from './PopupSelect';
+import { rankedSearch } from '../../utils/rankedSearch';
+import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useRecentPicks } from './useRecentPicks';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -340,18 +343,47 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
   const selectedLabel = selected ? `${selected.code ? `${selected.code} - ` : ''}${selected.name}` : '';
 
   const normalizedSearch = String(search || '').trim().toLowerCase();
+  const recents = useRecentPicks('account', currentCompany?.id);
+
+  // A ledger code is typed, not read, so a code hit outranks the same string
+  // appearing inside another account's name. Unfiltered, the ledgers this
+  // operator actually posts to come first.
   const filtered = normalizedSearch
-    ? accounts.filter((a) => {
-        const haystack = `${a.code || ''} ${a.name || ''} ${a.type || ''} ${a.subType || ''} ${a.ledgerCategory || ''}`.toLowerCase();
-        return haystack.includes(normalizedSearch);
+    ? rankedSearch(accounts, normalizedSearch, {
+        fields: (a) => [a.name, a.ledgerCategory, a.type, a.subType],
+        codes: (a) => [a.code],
       })
-    : accounts;
+    : recents.promote(accounts);
 
   const closePopup = () => {
     setShowPopup(false);
     setMode('select');
     setSearch('');
   };
+
+  const chooseAccount = (account) => {
+    if (!account) return;
+    recents.remember(account.id);
+    onChange?.(String(account.id));
+    closePopup();
+  };
+
+  const openPopup = () => {
+    setMode('select');
+    setSearch('');
+    setShowPopup(true);
+  };
+
+  const {
+    activeIndex: accountActiveIndex,
+    setActiveIndex: setAccountActiveIndex,
+    listRef: accountListRef,
+    onKeyDown: onAccountListKeys,
+  } = useListboxKeys({
+    count: filtered.length,
+    onChoose: (i) => chooseAccount(filtered[i]),
+    onCancel: closePopup,
+  });
 
   // A plain render function, not a component defined during render: the
   // latter gets a fresh component type on every parent render, so React
@@ -403,11 +435,10 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
       {label ? <label className="block text-sm font-medium mb-1">{label}</label> : null}
       <button
         type="button"
-        onClick={() => {
-          setMode('select');
-          setSearch('');
-          setShowPopup(true);
-        }}
+        onClick={openPopup}
+        onKeyDown={openOnKey(openPopup)}
+        aria-haspopup="listbox"
+        aria-expanded={showPopup}
         className="w-full px-3 py-2 border rounded-lg ui-surface text-left"
       >
         {selectedLabel || 'Select Account'}
@@ -421,32 +452,51 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={onAccountListKeys}
+                role="combobox"
+                aria-expanded="true"
+                aria-controls="account-picker-list"
+                aria-activedescendant={
+                  filtered[accountActiveIndex] ? `account-opt-${filtered[accountActiveIndex].id}` : undefined
+                }
                 className="ui-input w-full px-3 py-2"
                 placeholder="Search account (code, name, type)"
                 autoFocus
               />
 
-              <div className="max-h-80 overflow-y-auto space-y-1">
+              <div
+                id="account-picker-list"
+                ref={accountListRef}
+                role="listbox"
+                className="max-h-80 overflow-y-auto space-y-1"
+              >
                 {filtered.length === 0 ? (
                   <div className="text-sm ui-muted">No accounts found.</div>
                 ) : (
-                  filtered.map((a) => (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() => {
-                        onChange?.(String(a.id));
-                        closePopup();
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${ String(a.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                      }`}
-                    >
-                      <div className="text-sm font-medium ui-fg">{a.code ? `${a.code} - ` : ''}{a.name}</div>
-                      {(a.type || a.subType || a.ledgerCategory) && (
-                        <div className="text-xs ui-muted truncate">{[a.ledgerCategory, a.type, a.subType].filter(Boolean).join(' • ')}</div>
-                      )}
-                    </button>
-                  ))
+                  filtered.map((a, i) => {
+                    const on = i === accountActiveIndex;
+                    return (
+                      <button
+                        key={a.id}
+                        id={`account-opt-${a.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={String(a.id) === String(value)}
+                        data-active={on || undefined}
+                        onMouseEnter={() => setAccountActiveIndex(i)}
+                        onClick={() => chooseAccount(a)}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
+                          on || String(a.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
+                        }`}
+                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                      >
+                        <div className="text-sm font-medium ui-fg">{a.code ? `${a.code} - ` : ''}{a.name}</div>
+                        {(a.type || a.subType || a.ledgerCategory) && (
+                          <div className="text-xs ui-muted truncate">{[a.ledgerCategory, a.type, a.subType].filter(Boolean).join(' • ')}</div>
+                        )}
+                      </button>
+                    );
+                  })
                 )}
               </div>
 

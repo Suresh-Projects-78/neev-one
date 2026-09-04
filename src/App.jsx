@@ -188,6 +188,7 @@ import CompanyGroups from './features/companies/CompanyGroups';
 import CommandPalette from './components/ui/CommandPalette';
 import { buildRecordIndex, searchRecords } from './utils/searchIndex';
 import { setSearchSeed } from './utils/searchSeed';
+import { useGlobalShortcuts } from './components/ui/useGlobalShortcuts';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
@@ -11968,6 +11969,36 @@ const AppShell = () => {
   // Hide anything the user cannot open. The server re-checks on every request;
   // this only stops the UI offering doors that are locked.
   const { open: paletteOpen, setOpen: setPaletteOpen } = useCommandPalette();
+
+  /*
+   * Alt+I / S / P / R / C / D and Ctrl+/ — the review sheet's global set.
+   *
+   * Each one lands the operator on the screen that owns the document and
+   * opens its editor, rather than opening a floating form over whatever they
+   * were looking at: the list behind a new invoice is part of how you check
+   * you are not raising it twice.
+   */
+  useGlobalShortcuts({
+    newInvoice: () => {
+      setActive('invoices');
+      setInvoiceEditor({ open: true, initial: null });
+    },
+    newSalesOrder: () => setActive('salesOrders'),
+    newPayment: () => {
+      setActive('payments');
+      setPaymentEditor({ open: true });
+    },
+    newReceipt: () => {
+      setActive('receipts');
+      setReceiptEditor({ open: true, initial: null });
+    },
+    newCreditNote: () => {
+      setActive('creditNotes');
+      setCreditNoteEditor({ open: true, initialOriginalInvoiceId: null });
+    },
+    dashboard: () => setActive('dashboard'),
+    openCommand: () => setPaletteOpen(true),
+  });
 
   // --- shell trio: collapsed rail, quick create, notifications ---
   const [navCollapsed, setNavCollapsed] = useState(() => localStorage.getItem('navCollapsed') === '1');

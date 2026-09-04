@@ -5,6 +5,9 @@ import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createItem, listItems } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
+import { rankedSearch } from '../../utils/rankedSearch';
+import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useRecentPicks } from './useRecentPicks';
 
 const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item', autoFocus = false }) => {
   const serverItems = useServerMasters(
@@ -61,18 +64,52 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   const selectedItemName = selectedItem ? selectedItem.name : '';
 
   const normalizedSearch = itemSearch.trim().toLowerCase();
+  const recents = useRecentPicks('item', currentCompany?.id);
+
+  /*
+   * A code is typed, a name is read.
+   *
+   * So "FG-100" matching an SKU outranks "FG-100" appearing somewhere inside
+   * a description, and the shared ranking puts an exact hit above a
+   * starts-with above a word inside the name. Unfiltered, the items this line
+   * usually sells lead the list.
+   */
   const filteredItems = normalizedSearch
-    ? items.filter((i) => {
-        const haystack = `${i.code || ''} ${i.name || ''} ${i.hsnSac || ''}`.toLowerCase();
-        return haystack.includes(normalizedSearch);
+    ? rankedSearch(items, normalizedSearch, {
+        fields: (i) => [i.name, i.description],
+        codes: (i) => [i.code, i.sku, i.barcode, i.hsnSac],
       })
-    : items;
+    : recents.promote(items);
 
   const closePopup = () => {
     setShowItemPopup(false);
     setItemSearch('');
     setMode('select');
   };
+
+  const chooseItem = (item) => {
+    if (!item) return;
+    recents.remember(item.id);
+    onChange(String(item.id), item);
+    closePopup();
+  };
+
+  const openPopup = () => {
+    setItemSearch('');
+    resetNewItem();
+    setShowItemPopup(true);
+  };
+
+  const {
+    activeIndex: itemActiveIndex,
+    setActiveIndex: setItemActiveIndex,
+    listRef: itemListRef,
+    onKeyDown: onItemListKeys,
+  } = useListboxKeys({
+    count: filteredItems.length,
+    onChoose: (i) => chooseItem(filteredItems[i]),
+    onCancel: closePopup,
+  });
 
   const uoms = useMemo(
     () =>
@@ -138,11 +175,10 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
       <button
         type="button"
         ref={triggerRef}
-        onClick={() => {
-          setItemSearch('');
-          resetNewItem();
-          setShowItemPopup(true);
-        }}
+        onClick={openPopup}
+        onKeyDown={openOnKey(openPopup)}
+        aria-haspopup="listbox"
+        aria-expanded={showItemPopup}
         className="ui-input text-left !py-1 !min-h-0"
       >
         {selectedItemName || 'Select Item'}
@@ -157,6 +193,13 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   type="text"
                   value={itemSearch}
                   onChange={(e) => setItemSearch(e.target.value)}
+                  onKeyDown={onItemListKeys}
+                  role="combobox"
+                  aria-expanded="true"
+                  aria-controls="item-picker-list"
+                  aria-activedescendant={
+                    filteredItems[itemActiveIndex] ? `item-opt-${filteredItems[itemActiveIndex].id}` : undefined
+                  }
                   className="ui-input w-full px-3 py-2"
                   placeholder="Search item (name, code, HSN/SAC)"
                   autoFocus
@@ -185,29 +228,41 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
             )}
 
             {mode === 'select' ? (
-              <div className="max-h-80 overflow-y-auto space-y-1">
+              <div
+                id="item-picker-list"
+                ref={itemListRef}
+                role="listbox"
+                className="max-h-80 overflow-y-auto space-y-1"
+              >
                 {filteredItems.length === 0 ? (
                   <div className="text-sm ui-muted">No items found.</div>
                 ) : (
-                  filteredItems.map((i) => (
-                    <button
-                      key={i.id}
-                      type="button"
-                      onClick={() => {
-                        onChange(String(i.id), i);
-                        closePopup();
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${ String(i.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                      }`}
-                    >
-                      <div className="text-sm font-medium ui-fg">{i.name}</div>
-                      <div className="text-xs ui-muted truncate">
-                        {[i.code, i.hsnSac ? `HSN/SAC ${i.hsnSac}` : null, `GST ${Number(i.gstRate || 0)}%`]
-                          .filter(Boolean)
-                          .join(' • ')}
-                      </div>
-                    </button>
-                  ))
+                  filteredItems.map((i, n) => {
+                    const on = n === itemActiveIndex;
+                    return (
+                      <button
+                        key={i.id}
+                        id={`item-opt-${i.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={String(i.id) === String(value)}
+                        data-active={on || undefined}
+                        onMouseEnter={() => setItemActiveIndex(n)}
+                        onClick={() => chooseItem(i)}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
+                          on || String(i.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
+                        }`}
+                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                      >
+                        <div className="text-sm font-medium ui-fg">{i.name}</div>
+                        <div className="text-xs ui-muted truncate">
+                          {[i.code, i.hsnSac ? `HSN/SAC ${i.hsnSac}` : null, `GST ${Number(i.gstRate || 0)}%`]
+                            .filter(Boolean)
+                            .join(' • ')}
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             ) : (
