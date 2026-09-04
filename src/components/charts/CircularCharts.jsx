@@ -393,6 +393,11 @@ export function SeriesBars({
       },
       yAxis: {
         type: 'value',
+        // Whole rupees only. Without this a series whose maximum is small gets
+        // a 0-to-1 axis with fractional ticks, and a compact money formatter
+        // renders those as "₹0 ₹0 ₹0 ₹1 ₹1 ₹1" — six labels, three distinct
+        // values, and no way to tell which is which.
+        minInterval: 1,
         splitLine: { lineStyle: { color: t.border, type: 'dashed' } },
         axisLabel: { color: t.muted, fontSize: 11, formatter: (v) => (formatter ? formatter(v) : v) },
       },

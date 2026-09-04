@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import Modal from '../../components/ui/Modal';
+import Illustration from '../../components/ui/Illustration';
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { getCustomerDisplayName } from '../../utils/contacts';
 
@@ -162,9 +163,12 @@ const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodW
 
       <div className="ui-money-lg mt-2.5">{value}</div>
 
-      <div className="flex items-center gap-1.5 mt-1.5 text-xs">
+      <div className="flex items-center gap-1.5 mt-1.5 text-xs min-w-0">
         {flat ? (
-          <span className="ui-subtle">{note || 'No change on the previous period'}</span>
+          // One line. "No change on the previous period" wrapped to two on
+          // every card that had nothing to compare, which made four of the six
+          // tiles taller than the two that did.
+          <span className="ui-subtle truncate">{note || 'No change'}</span>
         ) : (
           <>
             <span
@@ -225,6 +229,27 @@ const Panel = ({ title, subtitle, control, children, className = '' }) => (
     </div>
     {children}
   </section>
+);
+
+/**
+ * What a panel says when the period is empty.
+ *
+ * "Nothing billed in this period" is true and useless: the book usually has
+ * data, just not here, and a flat line at zero with a hover tooltip reads as a
+ * chart that failed rather than a window with nothing in it. So the reason is
+ * stated, and where the data actually is, the way to it is one button.
+ */
+const EmptyPanel = ({ height = 240, title, detail = '', action = null }) => (
+  <div className="flex flex-col items-center justify-center text-center gap-2 px-4" style={{ minHeight: height }}>
+    <Illustration kind="filtered" size={72} />
+    <p className="ui-t-sec mt-1">{title}</p>
+    {detail ? <p className="ui-muted text-sm max-w-sm">{detail}</p> : null}
+    {action ? (
+      <button type="button" onClick={action.onClick} className="ui-btn ui-btn-secondary mt-1">
+        {action.label}
+      </button>
+    ) : null}
+  </div>
 );
 
 const StatusPill = ({ status }) => {
@@ -551,6 +576,45 @@ const SalesOverview = ({
 
   const breakdownTotal = breakdown.reduce((t, r) => t + Number(r.value || 0), 0);
 
+  /*
+   * A chart of nothing should say why, not draw a flat line.
+   *
+   * There are three different kinds of empty and they need different answers:
+   * the book has no invoices at all; the period has none but another period
+   * does; or the period has invoices and every one of them is a draft, which
+   * is money the page deliberately does not count. Only the first is really
+   * "no data".
+   */
+  const periodHasValue = performance.some(
+    (b) => Number(b.invoiced) || Number(b.received) || Number(b.outstanding)
+  );
+
+  const emptyReason = useMemo(() => {
+    if (periodHasValue) return null;
+
+    if (current.rows.length) {
+      return {
+        title: 'Everything in this period is still a draft',
+        detail: `${current.rows.length} invoice${current.rows.length === 1 ? '' : 's'} dated in this period, none of them issued. A draft is an intention, so it is counted but not billed.`,
+        action: null,
+      };
+    }
+
+    const dates = allInvoices.map((i) => String(i.date || '').slice(0, 10)).filter(Boolean).sort();
+    const newest = dates[dates.length - 1] || '';
+    if (!newest) {
+      return { title: 'No invoices yet', detail: 'Raise the first one and this fills in.', action: null };
+    }
+
+    // The narrowest period on offer that actually contains the newest invoice.
+    const target = periods.find((p) => p.key !== periodKey && newest >= p.from && newest <= p.to);
+    return {
+      title: `Nothing billed between ${prettyDate(period.from)} and ${prettyDate(period.to)}`,
+      detail: `The most recent invoice is dated ${prettyDate(newest)}.`,
+      action: target ? { label: `Show ${target.label.toLowerCase()}`, onClick: () => setPeriodKey(target.key) } : null,
+    };
+  }, [periodHasValue, current.rows.length, allInvoices, periods, periodKey, period.from, period.to]);
+
   const recentInvoices = useMemo(
     () =>
       allInvoices
@@ -795,7 +859,7 @@ const SalesOverview = ({
             />
           }
         >
-          {performance.length ? (
+          {performance.length && periodHasValue ? (
             <>
               <Suspense fallback={<ChartFallback height={300} />}>
                 <LazySeriesBars
@@ -822,7 +886,7 @@ const SalesOverview = ({
               </div>
             </>
           ) : (
-            <p className="ui-muted text-sm py-16 text-center">Nothing billed in this period.</p>
+            <EmptyPanel height={300} {...(emptyReason || { title: 'Nothing billed in this period' })} />
           )}
         </Panel>
 
@@ -874,7 +938,7 @@ const SalesOverview = ({
               </ul>
             </div>
           ) : (
-            <p className="ui-muted text-sm py-16 text-center">Nothing billed in this period.</p>
+            <EmptyPanel height={260} {...(emptyReason || { title: 'Nothing billed in this period' })} />
           )}
         </Panel>
       </div>
