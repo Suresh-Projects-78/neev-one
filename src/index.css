@@ -27,11 +27,12 @@
 :root {
   /* Surfaces */
   /* A whisper of pine in the ground. At #FAFAFA the accent read cold and
-     stranded — a near-black green needs the neutrals biased toward it or it
-     looks like ink somebody spilled on a grey page. This is 1% saturation:
-     invisible as a colour, and the difference between the accent looking
-     placed and looking pasted on. */
-  --app-bg: 249 251 250;        /* #F9FBFA */
+     stranded — an accent needs the neutrals biased toward it or it looks like
+     ink somebody spilled on a grey page. This is 1% saturation: invisible as a
+     colour, and the difference between the accent looking placed and looking
+     pasted on. Warm now that the brand is warm again; it was biased green
+     while the brand was pine. */
+  --app-bg: 250 250 249;        /* #FAFAF9 */
   --surface: 255 255 255;       /* #FFFFFF */
   --surface-raised: 255 255 255;
   --surface-sunken: 250 250 250;
@@ -43,32 +44,26 @@
   --fg-muted: 75 85 99;         /* #4B5563 — 7.6:1 on white; #6B7280 read as washed out at 13-14px */
   --fg-subtle: 107 114 128;     /* #6B7280 — 4.83:1, the quietest tier that is still AA */
 
-  /* Brand — pine. The primary action and the active state.
-     Tuned from #214539 to #1C3B35: eight degrees colder and three points
-     darker. At the original value it sat 18 degrees in hue and nine points in
-     lightness from --pos, the green that means paid, and a dark-green nav row
-     beside a green status pill read as related. At #1C3B35 the gap is 26
-     degrees and thirteen points, so one is unambiguously near-black chrome and
-     the other unambiguously a mid-tone status. */
-  --brand: 28 59 53;            /* #1C3B35 — 12.2:1 on white */
-  --brand-deep: 22 48 43;       /* #16302B — the deeper series on charts */
-  --brand-hover: 39 79 71;      /* #274F47 */
-  --brand-soft: 238 246 245;    /* #EEF6F5 */
-  --on-brand: 255 255 255;      /* white on pine is 12.2:1; the old ink was for orange */
-  --brand-ink: 34 79 70;        /* #224F46 — pine as text, 9.2:1 */
-  --brand-panel: 10 20 17;      /* deep pine-neutral for inverted brand surfaces */
+  /* Brand — orange. The primary action and the active state. */
+  --brand: 249 115 22;          /* #F97316 */
+  --brand-deep: 194 65 12;      /* #C2410C — the money-out series; same family, unmistakably not the brand bar */
+  --brand-hover: 234 88 12;
+  --brand-soft: 255 247 237;
+  --on-brand: 26 12 3;          /* 6.82:1 on the orange; white was 2.80:1 */
+  --brand-ink: 124 45 18;
+  --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
 
   /* Primary action == brand, so there is one obvious next step per screen. */
-  --primary: 28 59 53;
-  --on-primary: 255 255 255;    /* white on pine, same as --on-brand */
-  --primary-hover: 39 79 71;
+  --primary: 249 115 22;
+  --on-primary: 26 12 3;        /* ink on orange, same as --on-brand */
+  --primary-hover: 234 88 12;
 
   /* Accent + focus ring follow the brand rather than introducing a third hue. */
-  --accent: 28 59 53;
-  --accent-hover: 39 79 71;
-  --accent-soft: 238 246 245;
-  --on-accent: 255 255 255;
-  --ring: 28 59 53;
+  --accent: 249 115 22;
+  --accent-hover: 234 88 12;
+  --accent-soft: 255 247 237;
+  --on-accent: 26 12 3;
+  --ring: 249 115 22;
 
   /* No second accent on chrome. Success/warning/danger exist for status. */
   --info: 107 114 128;
@@ -179,29 +174,25 @@
   --fg-muted: 148 163 184;
   --fg-subtle: 161 161 170;   /* 6.5:1 on the dark card — was 3.72:1 */
 
-  /* A near-black primary cannot stay near-black on a near-black ground, so pine
-     inverts to a light button with a dark label. It took two corrections to
-     land: a straight inversion sat 24 degrees from the dark --pos green, which
-     is the collision the light theme had just solved; rotating to a saturated
-     177 degrees then sat five degrees from --col-party. Muted to 22 percent
-     saturation it reads as sea-grey rather than teal and clears both. */
-  --brand: 168 199 198;         /* #A8C7C6 — 10.6:1 on the dark ground */
-  --brand-deep: 127 168 166;    /* #7FA8A6 — the second series on dark */
-  --brand-hover: 188 213 212;   /* #BCD5D4 */
-  --brand-soft: 23 50 45;       /* #17322D */
-  --on-brand: 11 17 16;         /* #0B1110 — dark label on the light button */
-  --brand-ink: 168 199 198;
-  --brand-panel: 8 15 13;
+  /* Orange lifts slightly in dark so it keeps its contrast against a dark
+     surface without turning fluorescent. */
+  --brand: 251 146 60;
+  --brand-deep: 253 186 116;    /* orange-300 — reads as the second series on dark, not a duplicate of brand */
+  --brand-hover: 253 186 116;
+  --brand-soft: 43 26 14;
+  --on-brand: 26 12 3;
+  --brand-ink: 254 215 170;
+  --brand-panel: 9 11 17;
 
-  --primary: 168 199 198;
-  --on-primary: 11 17 16;
-  --primary-hover: 188 213 212;
+  --primary: 249 115 22;
+  --on-primary: 26 12 3;
+  --primary-hover: 251 146 60;
 
-  --accent: 168 199 198;
-  --accent-hover: 188 213 212;
-  --accent-soft: 23 50 45;
-  --on-accent: 11 17 16;
-  --ring: 168 199 198;
+  --accent: 251 146 60;
+  --accent-hover: 253 186 116;
+  --accent-soft: 43 26 14;
+  --on-accent: 26 12 3;
+  --ring: 251 146 60;
 
   --info: 161 161 170;
   --info-soft: 39 39 42;
