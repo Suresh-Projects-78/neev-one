@@ -84,6 +84,48 @@
      "receivables are purple" means nothing except "not the one beside it".
      Where a figure does carry meaning — overdue — it borrows the semantic
      colour instead of inventing a seventh. */
+  /* --- navigation tones ---------------------------------------------------
+     One hue per module, carried by the icon only.
+
+     The eleven module tints that used to colour the whole rail were removed
+     because eleven coloured *labels* is past what colour can carry — the text
+     stopped being scannable and the accent lost its meaning. A coloured icon
+     beside neutral text is a different thing: the label still reads as text,
+     the hue works as a landmark you learn once, and the accent stays the
+     accent. Chosen far enough apart in hue to be told apart at 16px, and away
+     from the money semantics so a red icon never reads as a warning.
+  --------------------------------------------------------------------------- */
+  --nav-dashboard: 37 99 235;    /* blue */
+  --nav-sales: 22 163 74;        /* green */
+  --nav-crm: 124 58 237;         /* violet */
+  --nav-purchases: 217 119 6;    /* amber */
+  --nav-cashbank: 13 148 136;    /* teal */
+  --nav-expenses: 219 39 119;    /* pink — not the danger red */
+  --nav-inventory: 234 88 12;    /* orange */
+  --nav-journal: 79 70 229;      /* indigo */
+  --nav-approvals: 2 132 199;    /* sky */
+  --nav-reports: 8 145 178;      /* cyan */
+  --nav-masterdata: 100 116 139; /* slate */
+  --nav-settings: 82 82 91;      /* zinc */
+
+  /* The same twelve hues, dark enough to be read as text.
+     A child label takes its module's colour so the tree is colour-coded, but
+     seven of the twelve icon hues sit between 3:1 and 4.5:1 on this ground —
+     fine for a 16px glyph, not for a word. These are the deeper step of each
+     hue; every one clears 4.5:1, the lowest being purchases at 4.71. */
+  --nav-dashboard-ink: 29 78 216;
+  --nav-sales-ink: 21 128 61;
+  --nav-crm-ink: 109 40 217;
+  --nav-purchases-ink: 161 98 7;
+  --nav-cashbank-ink: 15 118 110;
+  --nav-expenses-ink: 190 24 93;
+  --nav-inventory-ink: 194 65 12;
+  --nav-journal-ink: 67 56 202;
+  --nav-approvals-ink: 3 105 161;
+  --nav-reports-ink: 14 116 144;
+  --nav-masterdata-ink: 71 85 105;
+  --nav-settings-ink: 63 63 70;
+
   --ov-blue: 37 99 235;   --ov-blue-soft: 219 234 254;   --ov-blue-wash: 240 246 255;
   --ov-green: 22 163 74;  --ov-green-soft: 220 252 231;  --ov-green-wash: 241 252 245;
   --ov-amber: 217 119 6;  --ov-amber-soft: 254 243 199;  --ov-amber-wash: 255 251 240;
@@ -229,6 +271,35 @@
   /* The overview palette, dark. The solids lift so they clear the dark ground;
      the washes and soft tints become dark, low-saturation grounds rather than
      the pale ones, because a pale card on a dark page is a hole in it. */
+  /* The same twelve, lifted so they clear a dark ground at 16px. */
+  --nav-dashboard: 96 165 250;
+  --nav-sales: 74 222 128;
+  --nav-crm: 167 139 250;
+  --nav-purchases: 251 191 36;
+  --nav-cashbank: 45 212 191;
+  --nav-expenses: 244 114 182;
+  --nav-inventory: 251 146 60;
+  --nav-journal: 129 140 248;
+  --nav-approvals: 56 189 248;
+  --nav-reports: 34 211 238;
+  --nav-masterdata: 148 163 184;
+  --nav-settings: 161 161 170;
+
+  /* On a dark ground the icon hues are already light enough to read as text,
+     so the ink is the same value rather than a deeper one. */
+  --nav-dashboard-ink: 96 165 250;
+  --nav-sales-ink: 74 222 128;
+  --nav-crm-ink: 167 139 250;
+  --nav-purchases-ink: 251 191 36;
+  --nav-cashbank-ink: 45 212 191;
+  --nav-expenses-ink: 244 114 182;
+  --nav-inventory-ink: 251 146 60;
+  --nav-journal-ink: 129 140 248;
+  --nav-approvals-ink: 56 189 248;
+  --nav-reports-ink: 34 211 238;
+  --nav-masterdata-ink: 148 163 184;
+  --nav-settings-ink: 161 161 170;
+
   --ov-blue: 96 165 250;   --ov-blue-soft: 30 41 74;    --ov-blue-wash: 20 26 40;
   --ov-green: 74 222 128;  --ov-green-soft: 22 51 34;   --ov-green-wash: 16 30 22;
   --ov-amber: 251 191 36;  --ov-amber-soft: 56 43 12;   --ov-amber-wash: 33 27 14;
@@ -467,18 +538,67 @@
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg));
   }
-  /* A top-level module is the brand, in semibold. Its children stay neutral,
-     which is what carries the hierarchy now that the eleven module tints are
-     gone — rank by weight and colour rather than by eleven competing hues.
-     The icon inherits, so it comes with the label. */
+  /* A module name is the strongest text in the rail: near-black at 600, so it
+     outranks its children by weight and value rather than by hue. The hue is
+     spent on the icon instead, where twelve of them are landmarks rather than
+     twelve competing labels. */
   .ui-nav-item[data-level='module'] {
-    color: rgb(var(--brand-ink));
+    color: rgb(var(--fg));
     font-weight: 600;
+    letter-spacing: -0.005em;
   }
   .ui-nav-item[data-level='module']:hover {
-    color: rgb(var(--brand));
-    background-color: rgb(var(--accent-soft));
+    color: rgb(var(--fg));
+    background-color: rgb(var(--surface-sunken));
   }
+
+  /* A child takes its module's colour, in the readable step of it.
+     It was `--fg-subtle`, which ranked the tree correctly and was too faint to
+     read — quiet is not the same as invisible. Hue now carries the grouping
+     and weight carries the rank: 450 against the module's 600. */
+  .ui-nav-item:not([data-level='module']) {
+    color: rgb(var(--fg-muted));
+    font-weight: 450;
+  }
+  .ui-nav-item:not([data-level='module'])[data-tone] {
+    color: rgb(var(--nav-tone-ink, var(--fg-muted)));
+  }
+  .ui-nav-item:not([data-level='module']):hover {
+    color: rgb(var(--fg));
+  }
+
+  /* --- the module hue, on the icon only ------------------------------------
+     Set on `color` because lucide strokes with currentColor. It applies to
+     the svg rather than the button so the label keeps its own value, and it
+     survives the active state, which recolours the button.
+  --------------------------------------------------------------------------- */
+  .ui-nav-item[data-tone] svg { color: rgb(var(--nav-tone, var(--fg-muted))); }
+  .ui-nav-item[data-tone='dashboard']  { --nav-tone: var(--nav-dashboard); }
+  .ui-nav-item[data-tone='dashboard'] { --nav-tone-ink: var(--nav-dashboard-ink); }
+  .ui-nav-item[data-tone='sales']      { --nav-tone: var(--nav-sales); }
+  .ui-nav-item[data-tone='sales'] { --nav-tone-ink: var(--nav-sales-ink); }
+  .ui-nav-item[data-tone='crm']        { --nav-tone: var(--nav-crm); }
+  .ui-nav-item[data-tone='crm'] { --nav-tone-ink: var(--nav-crm-ink); }
+  .ui-nav-item[data-tone='purchases']  { --nav-tone: var(--nav-purchases); }
+  .ui-nav-item[data-tone='purchases'] { --nav-tone-ink: var(--nav-purchases-ink); }
+  .ui-nav-item[data-tone='cashbank']   { --nav-tone: var(--nav-cashbank); }
+  .ui-nav-item[data-tone='cashbank'] { --nav-tone-ink: var(--nav-cashbank-ink); }
+  .ui-nav-item[data-tone='expenses']   { --nav-tone: var(--nav-expenses); }
+  .ui-nav-item[data-tone='expenses'] { --nav-tone-ink: var(--nav-expenses-ink); }
+  .ui-nav-item[data-tone='inventory']  { --nav-tone: var(--nav-inventory); }
+  .ui-nav-item[data-tone='inventory'] { --nav-tone-ink: var(--nav-inventory-ink); }
+  .ui-nav-item[data-tone='journal']    { --nav-tone: var(--nav-journal); }
+  .ui-nav-item[data-tone='journal'] { --nav-tone-ink: var(--nav-journal-ink); }
+  .ui-nav-item[data-tone='approvals']  { --nav-tone: var(--nav-approvals); }
+  .ui-nav-item[data-tone='approvals'] { --nav-tone-ink: var(--nav-approvals-ink); }
+  .ui-nav-item[data-tone='reports']    { --nav-tone: var(--nav-reports); }
+  .ui-nav-item[data-tone='reports'] { --nav-tone-ink: var(--nav-reports-ink); }
+  .ui-nav-item[data-tone='masterdata'] { --nav-tone: var(--nav-masterdata); }
+  .ui-nav-item[data-tone='masterdata'] { --nav-tone-ink: var(--nav-masterdata-ink); }
+  .ui-nav-item[data-tone='settings']   { --nav-tone: var(--nav-settings); }
+  .ui-nav-item[data-tone='settings'] { --nav-tone-ink: var(--nav-settings-ink); }
+  /* Icon and label are the same hue on a child, so nothing is dimmed further:
+     a faded icon beside coloured text read as disabled. */
 
   /* Active has to outrank a module that is merely coloured, so it takes the
      full-strength brand at 700 on top of the wash and the bar. */
@@ -493,6 +613,9 @@
     background-color: rgb(var(--accent-soft));
     font-weight: 700;
   }
+  /* Where you are is the accent's job. The module hue steps aside for it so
+     two colours are never competing to mean "current". */
+  .ui-nav-item[data-active='true'][data-tone] svg { color: rgb(var(--brand)); opacity: 1; }
   /* Active state is carried by an indicator bar as well as colour, so the
      current location is not signalled by colour alone. */
   .ui-nav-item[data-active='true']::before {

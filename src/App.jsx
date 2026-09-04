@@ -11545,11 +11545,12 @@ const AppShell = () => {
 
   const navModel = useMemo(
     () => [
-      { type: 'item', key: 'dashboard', label: 'Dashboard', icon: PhDashboard, ph: true },
+      { type: 'item', key: 'dashboard', label: 'Dashboard', icon: PhDashboard, ph: true, tone: 'dashboard' },
       {
         type: 'group',
         key: 'salesMenu',
         label: 'Sales',
+        tone: 'sales',
         icon: PhSales,
         ph: true,
         items: [
@@ -11570,6 +11571,7 @@ const AppShell = () => {
         type: 'group',
         key: 'crmMenu',
         label: 'CRM',
+        tone: 'crm',
         icon: Users,
         /*
          * The people, not just the chasing.
@@ -11594,6 +11596,7 @@ const AppShell = () => {
         type: 'group',
         key: 'purchasesMenu',
         label: 'Purchases',
+        tone: 'purchases',
         icon: PhPurchases,
         ph: true,
         items: [
@@ -11604,14 +11607,15 @@ const AppShell = () => {
           { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW', feature: 'debitNotes' },
         ],
       },
-      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, perm: 'CASHBANK::Cash & Bank::VIEW' },
+      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW' },
       // A group of one is a menu that opens onto itself. With the duplicate
       // Payments entry gone, Expenses is a destination, not a section.
-      { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
+      { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, tone: 'expenses', perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
       {
         type: 'group',
         key: 'inventoryMenu',
         label: 'Inventory',
+        tone: 'inventory',
         icon: PhInventory,
         ph: true,
         items: [
@@ -11624,13 +11628,14 @@ const AppShell = () => {
           { key: 'reorderAlerts', label: 'Reorder Alerts', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'reorderAlerts' },
         ],
       },
-      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, perm: 'ACCOUNTING::Journal Entries::VIEW' },
-      { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, feature: 'approvals' },
-      { type: 'item', key: 'reports', label: 'Reports', icon: PhReports, ph: true, permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
+      { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tone: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
+      { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, tone: 'approvals', feature: 'approvals' },
+      { type: 'item', key: 'reports', label: 'Reports', icon: PhReports, ph: true, tone: 'reports', permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
       {
         type: 'group',
         key: 'mdmMenu',
         label: 'Master Data',
+        tone: 'masterdata',
         icon: PhMaster,
         ph: true,
         items: [
@@ -11650,6 +11655,7 @@ const AppShell = () => {
         type: 'group',
         key: 'settingsMenu',
         label: 'Settings',
+        tone: 'settings',
         icon: PhSettings,
         ph: true,
         /*
@@ -13844,6 +13850,7 @@ const AppShell = () => {
                       onClick={() => setActive(entry.key)}
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : ''}`}
                       data-level="module"
+                      data-tone={entry.tone}
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
                       title={navCollapsed ? entry.label : undefined}
@@ -13884,6 +13891,7 @@ const AppShell = () => {
                       }}
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
                       data-level="module"
+                      data-tone={entry.tone}
                       data-active={isGroupActive || undefined}
                       aria-expanded={isOpen}
                       title={navCollapsed ? entry.label : undefined}
@@ -13932,6 +13940,7 @@ const AppShell = () => {
                               type="button"
                               onClick={() => setActive(item.key)}
                               className="ui-nav-item"
+                              data-tone={entry.tone}
                               data-active={isActive}
                               aria-current={isActive ? 'page' : undefined}
                             >
