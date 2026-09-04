@@ -156,6 +156,14 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
         description="What an invoice contains. A field switched off leaves the form and the printed document — it is never greyed out."
         actions={
           <>
+            {/* The way back to whatever opened this. It was only in `embedded`
+                mode — the drawer — so reaching this screen from a More menu
+                left no exit but the navigation rail. */}
+            {onBack ? (
+              <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
+                <ArrowLeft size={15} aria-hidden="true" /> Back
+              </button>
+            ) : null}
             <span className="ui-pill ui-pill-neutral">
               {onCount} of {INVOICE_PREFS.length} on
             </span>

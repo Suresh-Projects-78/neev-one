@@ -16,7 +16,7 @@ import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } f
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
-import { TDS_SECTIONS, tdsAmountOn, tdsDefaultRate, tdsShortLabel } from '../../utils/tds';
+import { TDS_SECTIONS, tdsAmountOn, tdsDefaultRate } from '../../utils/tds';
 import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
 import { branchLabel } from '../../utils/branchLabel';
 import EwbTransportForm from '../../components/EwbTransportForm';
@@ -145,6 +145,7 @@ export const InvoicesList = ({
   const [perPage, setPerPage] = useState(10);
   const moreBtnRef = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem('neev:tip:recurringInvoices') === 'dismissed'
   );
@@ -891,25 +892,45 @@ const statusReason = (doc, status, company, nowMs) => {
                       <Download size={15} aria-hidden="true" /> Import invoices
                     </button>
 
-                    <div className="ui-caption px-3 pt-1.5 pb-1">Export invoices</div>
-                    {[
-                      { k: 'pdf', label: 'PDF', Icon: FileText },
-                      { k: 'xlsx', label: 'Excel', Icon: Table2 },
-                      { k: 'csv', label: 'CSV', Icon: Download },
-                    ].map((o) => (
-                      <button
-                        key={o.k}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setMoreOpen(false);
-                          runExport(o.k);
-                        }}
-                        className="w-full text-left flex items-center gap-2 px-3 py-2 ps-6 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                      >
-                        <o.Icon size={15} aria-hidden="true" /> {o.label}
-                      </button>
-                    ))}
+                    {/* Three formats behind one entry, not three entries.
+                        Listed flat they pushed the settings below the fold and
+                        made a four-item menu read as six. */}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      aria-expanded={exportOpen}
+                      onClick={() => setExportOpen((v) => !v)}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <Download size={15} aria-hidden="true" /> Export invoices
+                      <ChevronDown
+                        size={14}
+                        aria-hidden="true"
+                        className="ms-auto transition-transform"
+                        style={exportOpen ? { transform: 'rotate(180deg)' } : undefined}
+                      />
+                    </button>
+                    {exportOpen
+                      ? [
+                          { k: 'pdf', label: 'PDF', Icon: FileText },
+                          { k: 'xlsx', label: 'Excel', Icon: Table2 },
+                          { k: 'csv', label: 'CSV', Icon: Download },
+                        ].map((o) => (
+                          <button
+                            key={o.k}
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setMoreOpen(false);
+                              setExportOpen(false);
+                              runExport(o.k);
+                            }}
+                            className="w-full text-left flex items-center gap-2 px-3 py-2 ps-9 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                          >
+                            <o.Icon size={15} aria-hidden="true" /> {o.label}
+                          </button>
+                        ))
+                      : null}
 
                     <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
                     <div className="ui-caption px-3 pb-1.5">Configure — every invoice</div>
@@ -4710,65 +4731,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <div className="grid gap-3 sm:grid-cols-2">{renderCustomFields('notes')}</div>
             ) : null}
 
-            {/*
-              TDS the customer will withhold.
-              Off until a section is chosen, because most invoices have none
-              and a rate box on every one of them is a question nobody asked.
-              Picking a section seeds the rate that applies with a PAN on file;
-              the rate stays editable, since an individual contractor is 1%
-              where a company is 2% and a certificate under section 197 can
-              override both.
-            */}
-            <div>
-              <label className="ui-label" htmlFor="invoice-tds-section">
-                TDS deduction <span className="ui-subtle font-normal">(if the customer deducts)</span>
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_6rem] gap-3">
-                <select
-                  id="invoice-tds-section"
-                  className="ui-select w-full px-3 py-2"
-                  value={formData.tdsSection || ''}
-                  onChange={(e) => {
-                    const code = e.target.value;
-                    setFormData((p) => ({
-                      ...p,
-                      tdsSection: code,
-                      // Seed the rate from the section, but never overwrite a
-                      // rate the operator has already typed for that section.
-                      tdsRate: code ? (p.tdsSection === code && p.tdsRate !== '' ? p.tdsRate : tdsDefaultRate(code)) : '',
-                    }));
-                  }}
-                >
-                  <option value="">No TDS on this invoice</option>
-                  {TDS_SECTIONS.map((t) => (
-                    <option key={t.code} value={t.code}>
-                      {t.code} — {t.label}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    aria-label="TDS rate percent"
-                    disabled={!formData.tdsSection}
-                    className="ui-input ui-mono"
-                    value={formData.tdsRate === '' ? '' : formData.tdsRate}
-                    onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))}
-                  />
-                  <span className="ui-muted text-sm">%</span>
-                </div>
-              </div>
-              {formData.tdsSection ? (
-                <p className="mt-1 text-xs ui-muted">
-                  {formatMoney(tdsAmount, currentCompany)} on a taxable value of{' '}
-                  {formatMoney(tdsBase, currentCompany)}. The invoice total does not change — this is what the
-                  customer withholds and deposits against your PAN.
-                </p>
-              ) : null}
-            </div>
           </div>
           <div className="flex justify-end">
             <div className="w-64 space-y-2">
@@ -4817,10 +4779,64 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             </div>
             {/* Below the total, not inside it: the invoice is for the total,
                 and this is what will actually arrive. */}
+            {/*
+              TDS sits with the total it is taken from, not across the page.
+
+              The section and the rate are how it is chosen, so they live in
+              the chooser; once chosen, the line beside the total is the figure
+              and the word TDS, because that is what a reader of the totals
+              wants. The full section is on the document and in the return.
+            */}
+            <div className="pt-1">
+              <label className="ui-label" htmlFor="invoice-tds-section">
+                TDS deduction <span className="ui-subtle font-normal">(if the customer deducts)</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  id="invoice-tds-section"
+                  className="ui-select flex-1 min-w-0 px-2 py-1.5 text-sm"
+                  value={formData.tdsSection || ''}
+                  onChange={(e) => {
+                    const code = e.target.value;
+                    setFormData((p) => ({
+                      ...p,
+                      tdsSection: code,
+                      tdsRate: code ? (p.tdsSection === code && p.tdsRate !== '' ? p.tdsRate : tdsDefaultRate(code)) : '',
+                    }));
+                  }}
+                >
+                  <option value="">None</option>
+                  {TDS_SECTIONS.map((t) => (
+                    <option key={t.code} value={t.code}>
+                      {t.code} — {t.label} · {t.rate}%
+                    </option>
+                  ))}
+                </select>
+                {formData.tdsSection ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      aria-label="TDS rate percent"
+                      className="ui-input ui-mono w-16 px-2 py-1.5 text-sm"
+                      value={formData.tdsRate === '' ? '' : formData.tdsRate}
+                      onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))}
+                    />
+                    <span className="ui-muted text-sm">%</span>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
             {tdsAmount > 0 ? (
               <>
-                <div className="flex justify-between">
-                  <span>Less: {tdsShortLabel(formData.tdsSection, tdsRateValue)}</span>
+                <div className="flex justify-between pt-1">
+                  {/* Just "TDS" and the figure. The section is chosen above and
+                      printed on the document; repeating it here made the
+                      totals column read like a tax return. */}
+                  <span>Less: TDS</span>
                   <span className="text-[rgb(var(--neg-ink))]">− {formatMoney(tdsAmount, currentCompany)}</span>
                 </div>
                 <div className="ui-total-row">

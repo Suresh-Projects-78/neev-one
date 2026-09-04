@@ -1874,8 +1874,7 @@
     font-weight: 500;
   }
 
-  /* Money: tabular and right-aligned so magnitudes line up by digit, heavier
-     than its neighbours because it is the third thing every reader checks. */
+  /* Money: tabular and right-aligned so magnitudes line up by digit. */
   .ui-col-amount.ui-col-amount {
     /* DESIGN.md rule 4: every displayed amount is monospace. This rule set
        tabular-nums, weight and alignment but never the family, so every rupee
@@ -1883,7 +1882,11 @@
        matters most, and the only place it was not applied. */
     font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
+    /* 500, per DESIGN.md. This is the rule that puts a weight on every figure
+       in every table, so it is the one that made the whole product look bold —
+       and the one an earlier pass claimed to fix and did not. Monospace and
+       right alignment already say "this is money" without shouting it. */
+    font-weight: 500;
     color: rgb(var(--fg));
     text-align: right;
     white-space: nowrap;

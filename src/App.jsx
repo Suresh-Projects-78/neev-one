@@ -13085,7 +13085,17 @@ const AppShell = () => {
       case 'settingsTerms':
         return <TermsSettings db={db} setDb={setDb} currentCompany={currentCompany} />;
       case 'settingsInvoiceFields':
-        return <InvoiceFieldSettings db={db} setDb={setDb} currentCompany={currentCompany} />;
+        // Reached from a list's More menu, so it needs the same way back the
+        // import screen needed: the Back button only existed in `embedded`
+        // mode, which is the drawer, not this route.
+        return (
+          <InvoiceFieldSettings
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            onBack={() => setActive(lastScreenRef.current || 'invoices')}
+          />
+        );
       case 'settingsFeatures':
         return <FeatureSettings />;
       // The Business panes are the same screen filtered to one part of the
