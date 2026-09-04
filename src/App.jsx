@@ -14059,6 +14059,7 @@ const AppShell = () => {
                       type="button"
                       onClick={() => setActive(entry.key)}
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : ''}`}
+                      data-level="module"
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
                       title={navCollapsed ? entry.label : undefined}
@@ -14098,8 +14099,9 @@ const AppShell = () => {
                         setOpenGroups((prev) => (prev[entry.key] ? {} : { [entry.key]: true }));
                       }}
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
+                      data-level="module"
+                      data-active={isGroupActive || undefined}
                       aria-expanded={isOpen}
-                      style={isGroupActive ? { color: 'rgb(var(--fg))' } : undefined}
                       title={navCollapsed ? entry.label : undefined}
                     >
                       <span className={`flex items-center gap-2.5 ${navCollapsed ? 'md:gap-0' : ''}`}>

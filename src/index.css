@@ -360,13 +360,18 @@
     background-color: rgb(var(--primary-hover));
     border-color: rgb(var(--primary-hover));
   }
+  /* Secondary carries the brand in its text and its edge, not in a fill.
+     A filled second button would be a second primary, and the rule is one
+     per screen — this reads as "belongs to this product" without competing
+     with the action the page actually wants. */
   .ui-btn-secondary {
     background-color: rgb(var(--surface));
-    color: rgb(var(--fg));
-    border: 1px solid rgb(var(--border-strong));
+    color: rgb(var(--brand-ink));
+    border: 1px solid rgb(var(--brand) / 0.28);
   }
   .ui-btn-secondary:hover:not(:disabled) {
-    background-color: rgb(var(--surface-sunken));
+    background-color: rgb(var(--accent-soft));
+    border-color: rgb(var(--brand) / 0.45);
   }
   .ui-btn-ghost {
     background-color: transparent;
@@ -431,10 +436,31 @@
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg));
   }
+  /* A top-level module is the brand, in semibold. Its children stay neutral,
+     which is what carries the hierarchy now that the eleven module tints are
+     gone — rank by weight and colour rather than by eleven competing hues.
+     The icon inherits, so it comes with the label. */
+  .ui-nav-item[data-level='module'] {
+    color: rgb(var(--brand-ink));
+    font-weight: 600;
+  }
+  .ui-nav-item[data-level='module']:hover {
+    color: rgb(var(--brand));
+    background-color: rgb(var(--accent-soft));
+  }
+
+  /* Active has to outrank a module that is merely coloured, so it takes the
+     full-strength brand at 700 on top of the wash and the bar. */
   .ui-nav-item[data-active='true'] {
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg));
     font-weight: 600;
+  }
+  .ui-nav-item[data-level='module'][data-active='true'],
+  .ui-nav-item[data-active='true'][data-level='module'] {
+    color: rgb(var(--brand));
+    background-color: rgb(var(--accent-soft));
+    font-weight: 700;
   }
   /* Active state is carried by an indicator bar as well as colour, so the
      current location is not signalled by colour alone. */
