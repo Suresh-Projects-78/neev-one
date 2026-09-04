@@ -370,21 +370,28 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
    * card that can only ever read zero teaches people the row above it is
    * guesswork too. These are the splits the data actually supports.
    */
+  /*
+   * Over `shown`, the rows actually on screen — not `rows`, the whole book.
+   *
+   * Reading the unfiltered set meant searching for one party left five figures
+   * describing every receipt ever taken, sitting directly above a table showing
+   * three. Two different sets of data on one screen with nothing saying so.
+   */
   const headline = useMemo(() => {
     const sum = (rs) => rs.reduce((t, r) => t + Number(r.amount || 0), 0);
     const month = new Date().toISOString().slice(0, 7);
     const byMode = new Map();
-    for (const r of rows) byMode.set(r.mode || '—', (byMode.get(r.mode || '—') || 0) + Number(r.amount || 0));
+    for (const r of shown) byMode.set(r.mode || '—', (byMode.get(r.mode || '—') || 0) + Number(r.amount || 0));
     const top = [...byMode.entries()].sort((a2, b2) => b2[1] - a2[1])[0];
     return {
-      count: rows.length,
-      total: sum(rows),
-      thisMonth: sum(rows.filter((r) => String(r.date || '').slice(0, 7) === month)),
-      allocated: sum(rows.filter((r) => (r.allocations || []).length > 0)),
-      unallocated: sum(rows.filter((r) => Number(r.advanceAmount || 0) > 0)),
+      count: shown.length,
+      total: sum(shown),
+      thisMonth: sum(shown.filter((r) => String(r.date || '').slice(0, 7) === month)),
+      allocated: sum(shown.filter((r) => (r.allocations || []).length > 0)),
+      unallocated: sum(shown.filter((r) => Number(r.advanceAmount || 0) > 0)),
       topMode: top ? { name: top[0], value: top[1] } : null,
     };
-  }, [rows]);
+  }, [shown]);
 
   return (
     <div className="space-y-4">

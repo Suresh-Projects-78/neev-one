@@ -1569,37 +1569,15 @@ const billStatusReason = (doc, status, company, nowMs) => {
     { key: 'balance', label: 'Balance', align: 'right', value: (r) => Math.max(0, Number(r.total || 0) - Number(r.paidAmount || 0)) },
   ];
 
-  const billHeadline = useMemo(() => {
-    const live = bills.filter((b) => String(b.status || '').toLowerCase() !== 'draft');
-    const bal = (b) => Math.max(0, Number(b.total || 0) - Number(b.paidAmount || 0));
-    const today = new Date().toISOString().slice(0, 10);
-    return {
-      count: bills.length,
-      billed: live.reduce((t, b) => t + Number(b.total || 0), 0),
-      paid: live.reduce((t, b) => t + Number(b.paidAmount || 0), 0),
-      unpaid: live.reduce((t, b) => t + bal(b), 0),
-      overdue: live
-        .filter((b) => bal(b) > 0 && String(b.dueDate || '').slice(0, 10) && String(b.dueDate).slice(0, 10) < today)
-        .reduce((t, b) => t + bal(b), 0),
-    };
-  }, [bills]);
-
-  const billStatusCounts = useMemo(() => {
-    const c = { '': bills.length };
-    for (const b of bills) {
-      const d = getDerivedStatus(b);
-      c[d] = (c[d] || 0) + 1;
-    }
-    return c;
-  }, [bills]);
-
-  const filteredBills = colFilters.applyFilters(
+  /*
+   * Every filter this page offers EXCEPT the status tab.
+   *
+   * Split out because the tab counts have to be computed against this set, not
+   * against the fully filtered one: counting after the status filter would make
+   * every tab except the selected one read zero the moment you picked one.
+   */
+  const billsExStatus = colFilters.applyFilters(
     bills
-      .filter((b) => {
-        const derived = getDerivedStatus(b);
-        if (statusFilter === 'All') return true;
-        return derived === statusFilter;
-      })
       .filter((b) => billPeriod.inRange(b?.date))
       .slice()
       .sort((a, b) => {
@@ -1619,6 +1597,44 @@ const billStatusReason = (doc, status, company, nowMs) => {
       status: (r) => getDerivedStatus(r),
     }
   );
+
+  /** The rows the table draws: the above, narrowed by the selected status tab. */
+  const filteredBills =
+    statusFilter === 'All'
+      ? billsExStatus
+      : billsExStatus.filter((b) => getDerivedStatus(b) === statusFilter);
+
+  /*
+   * The five figures across the top, over the rows actually on screen.
+   *
+   * They used to read the whole book while the table drew the filtered set, so
+   * narrowing to one vendor or one month left the cards describing the year —
+   * two different sets of data on one screen with nothing saying so.
+   */
+  const billHeadline = useMemo(() => {
+    const live = filteredBills.filter((b) => String(b.status || '').toLowerCase() !== 'draft');
+    const bal = (b) => Math.max(0, Number(b.total || 0) - Number(b.paidAmount || 0));
+    const today = new Date().toISOString().slice(0, 10);
+    return {
+      count: filteredBills.length,
+      billed: live.reduce((t, b) => t + Number(b.total || 0), 0),
+      paid: live.reduce((t, b) => t + Number(b.paidAmount || 0), 0),
+      unpaid: live.reduce((t, b) => t + bal(b), 0),
+      overdue: live
+        .filter((b) => bal(b) > 0 && String(b.dueDate || '').slice(0, 10) && String(b.dueDate).slice(0, 10) < today)
+        .reduce((t, b) => t + bal(b), 0),
+    };
+  }, [filteredBills]);
+
+  /** Counted over everything the search, period and column filters left standing. */
+  const billStatusCounts = useMemo(() => {
+    const c = { '': billsExStatus.length };
+    for (const b of billsExStatus) {
+      const d = getDerivedStatus(b);
+      c[d] = (c[d] || 0) + 1;
+    }
+    return c;
+  }, [billsExStatus]);
 
   // Over the filtered set, so the figure always describes what is on screen.
   const { pageCount: billPageCount, safePage: safeBillPage, pageRows: pagedBills } = usePaged(filteredBills, perPage, page);
@@ -1874,7 +1890,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
 
       <StatusTabs
         value={statusFilter}
-        counts={{ ...billStatusCounts, All: bills.length }}
+        counts={{ ...billStatusCounts, All: billsExStatus.length }}
         onChange={(v) => {
           setStatusFilter(v);
           setPage(1);

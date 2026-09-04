@@ -174,16 +174,24 @@ export default function PriceLists({ db, setDb, currentCompany }) {
   const plSearch = useListSearch(lists, ['name', 'description']);
   const searched = plSearch.filtered;
 
+  /*
+   * Counted over what the search left standing, not over the whole book.
+   *
+   * Reading `lists` here meant typing a name narrowed the table to two rows
+   * while the tabs above still said eleven — the figures and the rows
+   * describing different sets of data on one screen. Counted before the status
+   * tab is applied, so picking one does not zero the others.
+   */
   const counts = useMemo(() => {
-    const c = { All: lists.length, Active: 0, Inactive: 0, Expired: 0 };
-    for (const p of lists) {
+    const c = { All: searched.length, Active: 0, Inactive: 0, Expired: 0 };
+    for (const p of searched) {
       const st = statusOf(p, today);
       if (st === 'active') c.Active += 1;
       else if (st === 'inactive') c.Inactive += 1;
       else c.Expired += 1;
     }
     return c;
-  }, [lists, today]);
+  }, [searched, today]);
 
   const filtered = useMemo(() => {
     if (statusFilter === 'All') return searched;
