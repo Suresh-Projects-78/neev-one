@@ -346,3 +346,85 @@ export function RankedBars({ data = [], height = 240, formatter }) {
 
   return <ReactECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} notMerge />;
 }
+
+/**
+ * Two bar series and a line over the same periods.
+ *
+ * The module overviews ask one question the single-series bars cannot answer:
+ * of what was billed in a period, how much actually arrived, and what is still
+ * outstanding. Three numbers per period, and the comparison only works if they
+ * share an axis — two charts side by side make the eye do arithmetic.
+ *
+ * Bars for the two quantities that are compared to each other, a line for the
+ * one that is a running level rather than a total. Outstanding is not "more
+ * bar", it is where the balance sat, and drawing it as a third bar invites
+ * people to add all three together.
+ *
+ * @param data    [{ label, invoiced, received, outstanding }]
+ * @param series  labels for the three, so a purchase overview can say
+ *                "Billed / Paid / Payable" without a second component
+ */
+export function SeriesBars({
+  data = [],
+  height = 300,
+  formatter,
+  series = { bar1: 'Invoiced', bar2: 'Received', line: 'Outstanding' },
+}) {
+  const t = useChartTheme();
+
+  const option = useMemo(
+    () => ({
+      ...common(t),
+      color: [t.ovBlue, t.ovGreen, t.brand],
+      grid: { left: 8, right: 8, top: 16, bottom: 4, containLabel: true },
+      legend: { show: false },
+      tooltip: {
+        ...tooltipStyle(t),
+        trigger: 'axis',
+        axisPointer: { type: 'shadow', shadowStyle: { color: t.sunken } },
+        valueFormatter: (v) => (formatter ? formatter(v) : v),
+      },
+      xAxis: {
+        type: 'category',
+        data: data.map((d) => d.label),
+        axisLine: { lineStyle: { color: t.border } },
+        axisTick: { show: false },
+        axisLabel: { color: t.muted, fontSize: 11, hideOverlap: true },
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: t.border, type: 'dashed' } },
+        axisLabel: { color: t.muted, fontSize: 11, formatter: (v) => (formatter ? formatter(v) : v) },
+      },
+      series: [
+        {
+          name: series.bar1,
+          type: 'bar',
+          data: data.map((d) => Number(d.invoiced || 0)),
+          barMaxWidth: 18,
+          itemStyle: { color: t.ovBlue, borderRadius: [4, 4, 0, 0] },
+        },
+        {
+          name: series.bar2,
+          type: 'bar',
+          data: data.map((d) => Number(d.received || 0)),
+          barMaxWidth: 18,
+          itemStyle: { color: t.ovGreen, borderRadius: [4, 4, 0, 0] },
+        },
+        {
+          name: series.line,
+          type: 'line',
+          data: data.map((d) => Number(d.outstanding || 0)),
+          smooth: false,
+          symbol: 'circle',
+          symbolSize: 7,
+          lineStyle: { color: t.brand, width: 2 },
+          itemStyle: { color: t.brand },
+        },
+      ],
+    }),
+    [t, data, formatter, series]
+  );
+
+  return <ReactECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} notMerge />;
+}

@@ -69,6 +69,28 @@
   --info: 107 114 128;
   --info-soft: 245 245 245;
 
+  /* Links inside content — an invoice number that opens the invoice, a "View
+     All" that leaves the panel. Blue because a blue underlined-on-hover word
+     is the one convention no user has to be taught, and because the accent is
+     spoken for by the primary action. Not used for chrome. */
+  --link: 37 99 235;            /* #2563EB — 5.2:1 on white */
+  --link-hover: 29 78 216;      /* #1D4ED8 */
+
+  /* The overview palette.
+     Six figures across the top of a module overview, each answering a
+     different question. They are told apart by hue rather than by reading six
+     labels, so each gets a tint for its card, a stronger one behind its icon,
+     and a solid for the icon itself. These are categorical, not semantic:
+     "receivables are purple" means nothing except "not the one beside it".
+     Where a figure does carry meaning — overdue — it borrows the semantic
+     colour instead of inventing a seventh. */
+  --ov-blue: 37 99 235;   --ov-blue-soft: 219 234 254;   --ov-blue-wash: 240 246 255;
+  --ov-green: 22 163 74;  --ov-green-soft: 220 252 231;  --ov-green-wash: 241 252 245;
+  --ov-amber: 217 119 6;  --ov-amber-soft: 254 243 199;  --ov-amber-wash: 255 251 240;
+  --ov-violet: 124 58 237;--ov-violet-soft: 237 233 254; --ov-violet-wash: 247 245 255;
+  --ov-red: 220 38 38;    --ov-red-soft: 254 226 226;    --ov-red-wash: 254 244 243;
+  --ov-orange: 234 88 12; --ov-orange-soft: 255 237 213; --ov-orange-wash: 255 248 241;
+
   /* Column hues — document numbers and party names get their own treatment so
      a row reads as fields, not prose.
 
@@ -197,6 +219,20 @@
   --info: 161 161 170;
   --info-soft: 39 39 42;
 
+  /* Blue at this lightness is unreadable on a dark ground, so links lift. */
+  --link: 96 165 250;           /* #60A5FA — 7.4:1 on the dark card */
+  --link-hover: 147 197 253;
+
+  /* The overview palette, dark. The solids lift so they clear the dark ground;
+     the washes and soft tints become dark, low-saturation grounds rather than
+     the pale ones, because a pale card on a dark page is a hole in it. */
+  --ov-blue: 96 165 250;   --ov-blue-soft: 30 41 74;    --ov-blue-wash: 20 26 40;
+  --ov-green: 74 222 128;  --ov-green-soft: 22 51 34;   --ov-green-wash: 16 30 22;
+  --ov-amber: 251 191 36;  --ov-amber-soft: 56 43 12;   --ov-amber-wash: 33 27 14;
+  --ov-violet: 167 139 250;--ov-violet-soft: 44 34 72;  --ov-violet-wash: 27 23 40;
+  --ov-red: 248 113 113;   --ov-red-soft: 62 26 26;     --ov-red-wash: 36 20 20;
+  --ov-orange: 251 146 60; --ov-orange-soft: 61 34 12;  --ov-orange-wash: 35 24 15;
+
   --col-doc: 214 211 209;   /* stone-300 — an identifier, not a flag */
   --col-party: 94 234 212;  /* teal-300 ~11:1 */
 
@@ -216,10 +252,11 @@
 
 @layer base {
   html {
-    /* Geist is built for interfaces: sharp at 13-14px, real tabular figures,
-       and not the Inter everyone else ships. Inter stays as the fallback so a
-       cold cache never renders system-ui. */
-    font-family: 'Geist', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    /* Inter, matching the reference the module overviews are drawn from.
+       Geist stays behind it as the fallback: it was the face here before, so a
+       cold cache renders something built for interfaces rather than
+       system-ui. */
+    font-family: 'Inter', 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     /* Tabular figures everywhere: money columns must not jitter between rows. */
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;

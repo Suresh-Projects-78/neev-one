@@ -191,6 +191,7 @@ import { setSearchSeed } from './utils/searchSeed';
 import { useGlobalShortcuts } from './components/ui/useGlobalShortcuts';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import { useDocumentFormKeys } from './components/ui/useDocumentFormKeys';
+import SalesOverview from './features/sales/SalesOverview';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
@@ -229,297 +230,6 @@ const resolveServerOrgId = (company) => {
   }
 };
 
-const SalesOverview = ({ db, currentCompany, branches = [], warehouses = [], branchesLoading = false, branchesError = '' }) => {
-  const [branchPickerOpen, setBranchPickerOpen] = useState(false);
-  // Pinned once per mount: month bucketing must not shift between renders.
-  const [nowTs] = useState(() => Date.now());
-
-  const [selectedBranchIds, setSelectedBranchIds] = useState(() => {
-    try {
-      const raw = String(localStorage.getItem('dashboardBranchIds') || '').trim();
-      if (!raw) return [];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed.map((x) => normalizeId(x)).filter(Boolean) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [pendingBranchIds, setPendingBranchIds] = useState(() => selectedBranchIds);
-
-  const branchesSorted = useMemo(() => {
-    return (Array.isArray(branches) ? branches : [])
-      .slice()
-      .sort((a, b) => getBranchLabel(a).localeCompare(getBranchLabel(b)));
-  }, [branches]);
-
-  const branchById = useMemo(() => {
-    const map = new Map();
-    for (const b of Array.isArray(branches) ? branches : []) {
-      map.set(normalizeId(b?.id), b);
-    }
-    return map;
-  }, [branches]);
-
-  const warehouseById = useMemo(() => {
-    const map = new Map();
-    for (const w of Array.isArray(warehouses) ? warehouses : []) {
-      map.set(normalizeId(w?.id), w);
-    }
-    return map;
-  }, [warehouses]);
-
-  const branchFilterLabel = useMemo(() => {
-    if (!selectedBranchIds.length) return 'All';
-    if (selectedBranchIds.length === 1) {
-      const b = branchById.get(normalizeId(selectedBranchIds[0])) || null;
-      return getBranchLabel(b) || '1 selected';
-    }
-    return `${selectedBranchIds.length} selected`;
-  }, [selectedBranchIds, branchById]);
-
-  const invoiceBranchId = (inv) => {
-    const whId = normalizeId(inv?.warehouseId);
-    if (!whId) return '';
-    const wh = warehouseById.get(whId) || null;
-    return normalizeId(wh?.branchId);
-  };
-
-  const branchAllowsDoc = (branchId) => {
-    if (!selectedBranchIds.length) return true; // All branches
-    const bid = normalizeId(branchId);
-    if (!bid) return false;
-    return selectedBranchIds.includes(bid);
-  };
-
-  const invoices = (Array.isArray(db?.invoices) ? db.invoices : [])
-    .filter((i) => i.companyId === currentCompany.id)
-    .filter((i) => branchAllowsDoc(invoiceBranchId(i)));
-
-  const totalSales = invoices.reduce((sum, i) => sum + Number(i.total || 0), 0);
-  const paidSales = invoices.filter((i) => i.status === 'Paid').reduce((sum, i) => sum + Number(i.total || 0), 0);
-
-  const collectedPct = totalSales > 0 ? Math.round((paidSales / totalSales) * 100) : 0;
-  const unpaidCount = invoices.filter((i) => i.status !== 'Paid').length;
-
-  return (
-    <div className="space-y-5">
-      <PageHeader
-        title="Sales"
-        description={`${invoices.length} invoice${invoices.length === 1 ? '' : 's'} in view`}
-        actions={
-          <button
-            type="button"
-            onClick={() => {
-              setPendingBranchIds(selectedBranchIds);
-              setBranchPickerOpen(true);
-            }}
-            className="ui-btn ui-btn-secondary"
-          >
-            <Building2 size={15} aria-hidden="true" />
-            Branches: {branchFilterLabel}
-          </button>
-        }
-      />
-
-      <div className="ui-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile
-          label="Total sales"
-          amount={totalSales}
-          format={(v) => formatMoneyCompact(v, currentCompany)}
-          title={formatMoney(totalSales, currentCompany)}
-          hint={`Across ${invoices.length} invoices`}
-          icon={BarChart3}
-        />
-        <StatTile
-          label="Collected"
-          amount={paidSales}
-          format={(v) => formatMoneyCompact(v, currentCompany)}
-          title={formatMoney(paidSales, currentCompany)}
-          hint={`${collectedPct}% of billed value`}
-          tone="pos"
-          icon={Receipt}
-        />
-        <StatTile
-          label="Outstanding"
-          amount={totalSales - paidSales}
-          format={(v) => formatMoneyCompact(v, currentCompany)}
-          title={formatMoney(totalSales - paidSales, currentCompany)}
-          hint={`${unpaidCount} invoice${unpaidCount === 1 ? '' : 's'} awaiting payment`}
-          tone="neg"
-          icon={FileText}
-        />
-        <StatTile
-          label="Average invoice"
-          amount={invoices.length ? totalSales / invoices.length : 0}
-          format={(v) => formatMoneyCompact(v, currentCompany)}
-          title={formatMoney(invoices.length ? totalSales / invoices.length : 0, currentCompany)}
-          hint="Billed value per invoice"
-          icon={ClipboardList}
-        />
-      </div>
-
-      <div className="ui-card p-4 ui-in" style={{ animationDelay: '160ms' }}>
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <span className="ui-muted text-xs font-semibold uppercase tracking-wide">Collection progress</span>
-          <span className="ui-title text-sm">{collectedPct}%</span>
-        </div>
-        <div
-          className="h-2 rounded-full overflow-hidden"
-          style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
-          role="progressbar"
-          aria-valuenow={collectedPct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Share of billed value collected"
-        >
-          <div
-            className="h-full rounded-full ui-bar-fill transition-[width] duration-500 ease-out"
-            style={{ width: `${collectedPct}%`, backgroundColor: 'rgb(var(--pos))' }}
-          />
-        </div>
-        <div className="ui-subtle text-xs mt-2">
-          {formatMoney(paidSales, currentCompany)} collected of {formatMoney(totalSales, currentCompany)} billed
-        </div>
-      </div>
-
-      {invoices.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          <ChartCard title="Billed by month" subtitle="Last six months, in view">
-            <Suspense fallback={<ModuleChartFallback height={240} />}>
-              <LazyPeriodBars
-                data={(() => {
-                  const out = [];
-                  const base = new Date(nowTs);
-                  for (let i = 5; i >= 0; i--) {
-                    const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
-                    out.push({
-                      key: `${d.getFullYear()}-${d.getMonth()}`,
-                      label: d.toLocaleDateString(undefined, { month: 'short' }),
-                      value: 0,
-                    });
-                  }
-                  const byKey = new Map(out.map((b) => [b.key, b]));
-                  for (const inv of invoices) {
-                    const d = new Date(`${String(inv.date || '').slice(0, 10)}T00:00:00`);
-                    if (Number.isNaN(d.getTime())) continue;
-                    const b = byKey.get(`${d.getFullYear()}-${d.getMonth()}`);
-                    if (b) b.value += Number(inv.total || 0);
-                  }
-                  return out;
-                })()}
-                height={240}
-                formatter={(v) => formatMoneyCompact(v, currentCompany)}
-              />
-            </Suspense>
-          </ChartCard>
-
-          <ChartCard title="Invoice status mix" subtitle="Share of billed value, by status">
-            <Suspense fallback={<ModuleChartFallback height={240} />}>
-              <LazyCompositionPie
-                data={(() => {
-                  const byStatus = new Map();
-                  for (const inv of invoices) {
-                    const key = String(inv.status || 'Unpaid');
-                    byStatus.set(key, (byStatus.get(key) || 0) + Number(inv.total || 0));
-                  }
-                  return [...byStatus.entries()].map(([name, value]) => ({ name, value }));
-                })()}
-                height={200}
-                formatter={(v) => formatMoneyCompact(v, currentCompany)}
-              />
-            </Suspense>
-          </ChartCard>
-        </div>
-      ) : null}
-
-      {branchPickerOpen ? (
-        <Modal onClose={() => setBranchPickerOpen(false)} title="Select Branches" maxWidthClass="max-w-2xl">
-          <div className="space-y-4">
-            <button
-              type="button"
-              onClick={() => setPendingBranchIds([])}
-              className={`w-full px-4 py-3 rounded-lg border text-left ${ pendingBranchIds.length === 0 ? 'ui-sunken ui-border-c' : 'ui-surface ui-hover-sunken ui-border-c'
-              }`}
-            >
-              <div className="font-medium">All branches</div>
-              <div className="text-xs ui-muted">Show dashboard totals for all branches</div>
-            </button>
-
-            <div className="border rounded-lg overflow-hidden">
-              <div className="max-h-[55vh] overflow-y-auto divide-y">
-                {branchesLoading ? (
-                  <div className="px-4 py-10 text-center ui-muted">Loading branches…</div>
-                ) : branchesError ? (
-                  <div className="px-4 py-10 text-center text-[rgb(var(--neg))]">{branchesError}</div>
-                ) : branchesSorted.length === 0 ? (
-                  <div className="px-4 py-10 text-center ui-muted">No branches</div>
-                ) : (
-                  branchesSorted.map((b) => {
-                    const id = normalizeId(b?.id);
-                    const checked = pendingBranchIds.length > 0 && pendingBranchIds.includes(id);
-                    return (
-                      <label key={id} className="flex items-center gap-3 px-4 py-3 ui-hover-sunken cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => {
-                            const want = Boolean(e.target.checked);
-                            setPendingBranchIds((prev) => {
-                              const cur = Array.isArray(prev) ? prev : [];
-                              const next = new Set(cur);
-                              if (want) {
-                                next.add(id);
-                              } else {
-                                next.delete(id);
-                              }
-                              return Array.from(next);
-                            });
-                          }}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                        <div>
-                          <div className="font-medium ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
-                          <div className="text-xs ui-muted">{id}</div>
-                        </div>
-                      </label>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setBranchPickerOpen(false)}
-                className="ui-btn ui-btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const next = Array.isArray(pendingBranchIds) ? pendingBranchIds.map((x) => normalizeId(x)).filter(Boolean) : [];
-                  setSelectedBranchIds(next);
-                  try {
-                    localStorage.setItem('dashboardBranchIds', JSON.stringify(next));
-                  } catch {
-                    // ignore
-                  }
-                  setBranchPickerOpen(false);
-                }}
-                className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </Modal>
-      ) : null}
-    </div>
-  );
-};
 
 const VendorsList = ({ db, setDb, currentCompany }) => {
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
@@ -12623,6 +12333,23 @@ const AppShell = () => {
             warehouses={warehousesForUser}
             branchesLoading={branchesLoading}
             branchesError={branchesError}
+            onNavigate={setActive}
+            /* The quick actions land on the screen that owns the document and
+               open its editor, rather than floating a form over the overview:
+               the list behind a new invoice is part of how you check you are
+               not raising it twice. */
+            onNewInvoice={() => {
+              setActive('invoices');
+              setInvoiceEditor({ open: true, initial: null });
+            }}
+            onNewCreditNote={() => {
+              setActive('creditNotes');
+              setCreditNoteEditor({ open: true, initialOriginalInvoiceId: null });
+            }}
+            onRecordReceipt={() => {
+              setActive('receipts');
+              setReceiptEditor({ open: true, initial: null });
+            }}
           />
         );
       case 'invoices':
@@ -13524,7 +13251,7 @@ const AppShell = () => {
       case 'settings':
         return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       default:
-        return <SalesOverview db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} warehouses={warehousesForUser} />;
+        return <SalesOverview db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} warehouses={warehousesForUser} onNavigate={setActive} />;
     }
   }, [active, billEditor, branchesForUser, creditNoteEditor, currentCompany, dbForUser, debitNoteEditor, estimateEditor, invoiceEditor, journalEditor, openLedger, paymentEditor, receiptEditor, ledgerNav, stockTransferEditor, warehousesForUser, activeWarehouseId, activeBranchId, poEditor]);
 

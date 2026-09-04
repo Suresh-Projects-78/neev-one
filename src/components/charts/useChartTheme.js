@@ -31,6 +31,14 @@ const build = () => ({
   surface: readVar('--surface', '#FFFFFF'),
   sunken: readVar('--surface-sunken', '#F8FAFC'),
   border: readVar('--border', '#E5E7EB'),
+  // The categorical overview palette, so a chart on a module overview uses the
+  // same blue and green as the cards above it rather than a second set.
+  ovBlue: readVar('--ov-blue', '#2563EB'),
+  ovGreen: readVar('--ov-green', '#16A34A'),
+  ovAmber: readVar('--ov-amber', '#D97706'),
+  ovViolet: readVar('--ov-violet', '#7C3AED'),
+  ovRed: readVar('--ov-red', '#DC2626'),
+  ovOrange: readVar('--ov-orange', '#EA580C'),
 });
 
 export function useChartTheme() {
