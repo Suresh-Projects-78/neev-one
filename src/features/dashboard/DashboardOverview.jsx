@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
+import Illustration from '../../components/ui/Illustration';
 import ChartCard from '../../components/charts/ChartCard';
 import { useTilt } from '../../components/ui/useTilt';
 /**
@@ -1011,16 +1012,34 @@ export default function DashboardOverview({
               ) : null}
             </>
           ) : (
-            <p className="ui-subtle ui-t-body mt-3">Every invoice in the book is settled.</p>
+            /*
+              These three panels sit side by side, so one of them going empty
+              cannot just print a sentence and leave two hundred pixels of
+              nothing under it — which is exactly what it did, next to two
+              siblings full of bars and a dial. The art fills the space the
+              grid is holding open anyway, and says the same thing the sentence
+              does.
+            */
+            <div className="flex flex-1 flex-col items-center justify-center py-6 text-center">
+              <Illustration kind="done" size={78} className="mb-3 opacity-90" />
+              <p className="ui-subtle ui-t-body">Every invoice in the book is settled.</p>
+            </div>
           )}
         </div>
 
         {/* Ranking — who to call first. */}
-        <div className="ui-card p-4">
+        <div className="ui-card p-4 flex flex-col">
           <h2 className="ui-t-sec">Who owes you most</h2>
           <p className="ui-subtle ui-t-body mt-0.5">
             {topDebtors.length ? 'By balance, with how late the oldest is' : 'Nobody owes you anything'}
           </p>
+          {!topDebtors.length ? (
+            <div className="flex flex-1 flex-col items-center justify-center py-6 text-center">
+              <Illustration kind="done" size={78} className="mb-3 opacity-90" />
+              <p className="ui-subtle ui-t-body">Nothing to chase today.</p>
+            </div>
+          ) : null}
+
           {topDebtors.length ? (
             <div className="mt-3 space-y-2.5">
               {topDebtors.map((c) => {
