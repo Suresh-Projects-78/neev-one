@@ -38,24 +38,28 @@ export function StatCards({ cards, company }) {
   return (
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Summary">
       {cards.filter(Boolean).map((c) => (
-        <div key={c.label} className="ui-card p-4 relative">
+        <div key={c.label} className="ui-card p-3 relative">
           <span
-            className="h-8 w-8 rounded-full grid place-items-center absolute top-3 end-3"
+            className="h-7 w-7 rounded-full grid place-items-center absolute top-2.5 end-2.5"
             style={{ backgroundColor: `rgb(var(--${c.tone}) / 0.12)`, color: `rgb(var(--${c.tone}))` }}
             aria-hidden="true"
           >
-            <c.Icon size={16} />
+            <c.Icon size={15} />
           </span>
           <span className="block">
-            <span className="ui-card-label block pe-9 min-h-8">{c.label}</span>
+            {/* One line, clipped rather than wrapped. Two-line labels forced a
+                32px reservation on every card whether or not any label used it,
+                and five of those across the top of a list is a band of empty
+                space between the toolbar and the first invoice. */}
+            <span className="ui-card-label block pe-8 truncate" title={c.label}>{c.label}</span>
             <span
-              className={`block font-semibold leading-8 ${c.count ? 'text-2xl' : 'ui-mono text-lg'}`}
+              className={`block font-semibold leading-7 ${c.count ? 'text-xl' : 'ui-mono text-base'}`}
               style={c.tone === 'neg' || c.tone === 'warn' ? { color: `rgb(var(--${c.tone}))` } : undefined}
             >
               {c.count ? String(c.value) : formatMoney(c.value, company)}
             </span>
           </span>
-          <span className="ui-subtle text-xs block">{c.hint || 'This financial year'}</span>
+          <span className="ui-subtle text-[11px] block leading-4">{c.hint || 'This financial year'}</span>
         </div>
       ))}
     </section>
