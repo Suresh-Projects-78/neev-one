@@ -5266,17 +5266,21 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
           <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
+                {/* A line number, so "line 3 is wrong" means something when
+                    somebody is reading the note back over the phone. */}
+                <th className="ui-th w-10 text-left">#</th>
+                <th className="ui-th text-left">Item</th>
+                <th className="ui-th text-left">Description</th>
+                <th className="ui-th text-left">Qty</th>
+                <th className="ui-th text-left">Rate</th>
+                <th className="ui-th text-left">Line Total</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {formData.items.map((item, idx) => (
                 <tr key={idx} className="border-t" data-line-row={idx}>
+                  <td className="ui-col-meta px-3 py-2 ui-mono ui-subtle">{idx + 1}</td>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -5367,7 +5371,24 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
   );
 };
 
-export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoiceId, onClose, warehouses = [], defaultWarehouseId = '' }) => {
+/**
+ * Why the note was raised.
+ *
+ * Not decoration: GSTR-1 reports credit notes in the CDNR table and the return
+ * carries the reason, so a note without one is a note somebody has to classify
+ * again at filing time. The codes are the ones the portal accepts.
+ */
+export const CREDIT_NOTE_REASONS = [
+  { code: '01', label: 'Sales Return' },
+  { code: '02', label: 'Post-sale discount' },
+  { code: '03', label: 'Deficiency in service' },
+  { code: '04', label: 'Correction in invoice' },
+  { code: '05', label: 'Change in place of supply' },
+  { code: '06', label: 'Finalisation of provisional assessment' },
+  { code: '07', label: 'Others' },
+];
+
+export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoiceId, onClose, warehouses = [], branches = [], defaultWarehouseId = '', screenTitle = '', onBack = null }) => {
   const formRef = useRef(null);
   const companyInvoices = db.invoices.filter((i) => i.companyId === currentCompany.id);
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
@@ -5395,8 +5416,39 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
     originalInvoiceId: '',
     customerId: '',
     warehouseId: String(defaultWarehouseId || '').trim(),
+    // The portal wants a reason on every credit note; Sales Return is the one
+    // that fits most of them, so it is the default rather than a blank.
+    reasonCode: '01',
+    refNo: '',
+    refDate: '',
     items: [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
   });
+
+  /*
+   * Branch, asked for rather than inferred, and clamped to one that exists —
+   * the same treatment the invoice got, for the same reason: the seed can name
+   * a branch this user has since lost access to, and a picker with no matching
+   * option prints its own value, which is a cuid.
+   */
+  const [branchId, setBranchId] = useState(() => initBranchId || activeBranchId || '');
+  const branchIdInList =
+    !branchId || (Array.isArray(branches) ? branches : []).some((b) => String(b?.id || '') === String(branchId))
+      ? branchId
+      : '';
+  const branchOptions = useMemo(
+    () => (Array.isArray(branches) ? branches : []).slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || ''))),
+    [branches]
+  );
+
+  const [originalPreviewOpen, setOriginalPreviewOpen] = useState(false);
+
+  /** The invoice this note reverses, and the date the portal will ask for. */
+  const originalInvoice = useMemo(
+    () => companyInvoices.find((i) => String(i.id) === String(formData.originalInvoiceId)) || null,
+    // companyInvoices is rebuilt each render from the same source.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [formData.originalInvoiceId, db.invoices]
+  );
 
   const branchIdForNumbering = resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
   const creditDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
@@ -5709,6 +5761,13 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       date: formData.date,
       originalInvoiceId: onAccountMode ? null : originalInvoice.id,
       originalInvoiceNumber: onAccountMode ? '' : originalInvoice.number,
+      // GSTR-1 reports a credit note against the original invoice's number and
+      // date, and carries the reason it was raised. All three are captured on
+      // the document so none has to be reconstructed at filing time.
+      originalInvoiceDate: onAccountMode ? '' : String(originalInvoice.date || ''),
+      reasonCode: String(formData.reasonCode || '').trim(),
+      reasonLabel: CREDIT_NOTE_REASONS.find((r) => r.code === String(formData.reasonCode || '').trim())?.label || '',
+      branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
       // On account: the value waits on the customer's ledger until knocked off.
       settlementMode: onAccountMode ? 'ON_ACCOUNT' : 'DOCUMENT',
       invoiceIds: onAccountMode ? (formData.invoiceIds || []).map(String) : [],
@@ -5765,7 +5824,48 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
-      <DocFormActions primaryLabel="Create Credit Note" />
+      <DocFormActions
+        title={screenTitle}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
+        primaryLabel="Create Credit Note"
+      />
+
+      {/* Where the goods came back to, and under which branch's number series.
+          Both were inferred from the header before; a company running one
+          warehouse for two branches could not say which. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="cn-branch" className="block text-sm font-medium mb-1">Branch</label>
+          <select
+            id="cn-branch"
+            className="ui-select w-full px-3 py-2"
+            value={branchIdInList || ''}
+            onChange={(e) => setBranchId(e.target.value)}
+          >
+            <option value="">All branches</option>
+            {branchOptions.map((b) => (
+              <option key={String(b.id)} value={String(b.id)}>{b.name || `Branch ${b.id}`}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="cn-reason" className="block text-sm font-medium mb-1">
+            Reason <span className="text-[rgb(var(--neg-ink))]">*</span>
+          </label>
+          <select
+            id="cn-reason"
+            className="ui-select w-full px-3 py-2"
+            value={formData.reasonCode}
+            onChange={(e) => setFormData({ ...formData, reasonCode: e.target.value })}
+            required
+          >
+            {CREDIT_NOTE_REASONS.map((r) => (
+              <option key={r.code} value={r.code}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
@@ -5850,6 +5950,31 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                   <option key={inv.id} value={String(inv.number || '')} />
                 ))}
               </datalist>
+              <p className="mt-1 text-xs ui-muted">
+                Enter the invoice number to fetch its details. Items, customer and tax are loaded from it.
+              </p>
+              {/*
+                The date of the invoice being reversed, and a way back to it.
+                GSTR-1 reports a credit note against the original invoice's
+                number *and* date, so a note raised without the date in view is
+                one somebody has to go and look up at filing time.
+              */}
+              {originalInvoice ? (
+                <p className="mt-1 text-xs ui-muted flex items-center gap-2 flex-wrap">
+                  <span>
+                    Original invoice dated <span className="ui-mono">{originalInvoice.date || '—'}</span> ·{' '}
+                    {formatMoney(Number(originalInvoice.total || 0), currentCompany)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setOriginalPreviewOpen(true)}
+                    style={{ color: 'rgb(var(--link))' }}
+                    className="font-medium"
+                  >
+                    View invoice
+                  </button>
+                </p>
+              ) : null}
             </>
           )}
         </div>
@@ -5897,17 +6022,21 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
+                {/* A line number, so "line 3 is wrong" means something when
+                    somebody is reading the note back over the phone. */}
+                <th className="ui-th w-10 text-left">#</th>
+                <th className="ui-th text-left">Item</th>
+                <th className="ui-th text-left">Description</th>
+                <th className="ui-th text-left">Qty</th>
+                <th className="ui-th text-left">Rate</th>
+                <th className="ui-th text-left">Line Total</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {formData.items.map((item, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t" data-line-row={idx}>
+                  <td className="ui-col-meta px-3 py-2 ui-mono ui-subtle">{idx + 1}</td>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -5994,6 +6123,20 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       />
 
       <DocFormFootnote />
+
+      {/* The invoice being reversed, read-only, over the note. Checking what
+          was billed should not mean leaving a half-typed credit note. */}
+      {originalPreviewOpen && originalInvoice ? (
+        <Modal
+          onClose={() => setOriginalPreviewOpen(false)}
+          title={`Invoice ${originalInvoice.number || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+        >
+          <div className="overflow-x-auto">
+            <InvoicePreview db={db} currentCompany={currentCompany} invoice={originalInvoice} />
+          </div>
+        </Modal>
+      ) : null}
     </form>
   );
 };

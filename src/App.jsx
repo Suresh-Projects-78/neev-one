@@ -12536,17 +12536,10 @@ const AppShell = () => {
       case 'creditNotes':
         if (creditNoteEditor.open) {
           return (
+            /* Same shell as an invoice: no header of its own, because the
+               document's name and every way out of it are one pinned bar
+               inside the form. */
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="ui-t-sec">New Credit Note</h3>
-                <button
-                  type="button"
-                  onClick={() => setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
               <div className="ui-surface border rounded-xl p-4">
                 <CreditNoteForm
                   db={dbForUser}
@@ -12554,7 +12547,10 @@ const AppShell = () => {
                   currentCompany={currentCompany}
                   initialOriginalInvoiceId={creditNoteEditor.initialOriginalInvoiceId}
                   warehouses={warehousesForUser}
+                  branches={branchesForUser}
                   defaultWarehouseId={activeWarehouseId}
+                  screenTitle="Create Credit Note"
+                  onBack={() => setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null })}
                   onClose={() => setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null })}
                 />
               </div>
