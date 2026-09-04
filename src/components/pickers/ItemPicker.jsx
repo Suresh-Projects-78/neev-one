@@ -1,3 +1,4 @@
+import React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useFeatures } from '../../permissions/useFeatures';
 import { nextItemCode, bumpItemCodeSeries } from '../../utils/itemCode';
@@ -5,7 +6,7 @@ import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createItem, listItems } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
-import { rankedSearch } from '../../utils/rankedSearch';
+import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 
@@ -103,6 +104,27 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
     setShowItemPopup(true);
   };
 
+  const itemSearchOpts = {
+    fields: (i) => [i.name, i.description],
+    codes: (i) => [i.code, i.sku, i.barcode, i.hsnSac],
+  };
+
+  /*
+   * Tab out of the search box takes the one match, when there is exactly one.
+   *
+   * Requirement 15 says highlight without auto-selecting while somebody is
+   * still typing; section 9 says a full code should not have to be confirmed.
+   * Both hold at once if the selection happens on the way out of the field
+   * rather than on every keystroke.
+   */
+  const onItemSearchTab = (e) => {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+    const sole = soleConfidentMatch(items, itemSearch, itemSearchOpts);
+    if (sole) chooseItem(sole);
+  };
+
+  const itemRecentCount = normalizedSearch ? 0 : recents.recentCount(filteredItems);
+
   const {
     activeIndex: itemActiveIndex,
     setActiveIndex: setItemActiveIndex,
@@ -196,7 +218,10 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   type="text"
                   value={itemSearch}
                   onChange={(e) => setItemSearch(e.target.value)}
-                  onKeyDown={onItemListKeys}
+                  onKeyDown={(e) => {
+                    onItemSearchTab(e);
+                    onItemListKeys(e);
+                  }}
                   role="combobox"
                   aria-expanded="true"
                   aria-controls="item-picker-list"
@@ -243,8 +268,15 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   filteredItems.map((i, n) => {
                     const on = n === itemActiveIndex;
                     return (
+                      <React.Fragment key={i.id}>
+                      {/* The habitual rows, called what they are. */}
+                      {itemRecentCount && n === 0 ? (
+                        <div className="ui-caption px-1 pt-1 pb-0.5">Recently used</div>
+                      ) : null}
+                      {itemRecentCount && n === itemRecentCount ? (
+                        <div className="ui-caption px-1 pt-2 pb-0.5">All items</div>
+                      ) : null}
                       <button
-                        key={i.id}
                         id={`item-opt-${i.id}`}
                         type="button"
                         role="option"
@@ -264,6 +296,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                             .join(' • ')}
                         </div>
                       </button>
+                      </React.Fragment>
                     );
                   })
                 )}

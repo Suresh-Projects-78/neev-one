@@ -1,3 +1,4 @@
+import React from 'react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
@@ -6,7 +7,7 @@ import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
-import { rankedSearch } from '../../utils/rankedSearch';
+import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 
@@ -1085,6 +1086,27 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
     setShowCustomerPopup(true);
   };
 
+  const customerSearchOpts = {
+    fields: (c) => [getCustomerDisplayName(c), c.contactPerson, c.email, c.mobile || c.phone],
+    codes: (c) => [c.gstin, c.pan, c.mobile || c.phone],
+  };
+
+  /*
+   * Tab out of the search box takes the one match, when there is exactly one.
+   *
+   * Requirement 15 says highlight without auto-selecting while somebody is
+   * still typing; section 9 says a full code should not have to be confirmed.
+   * Both hold at once if the selection happens on the way out of the field
+   * rather than on every keystroke.
+   */
+  const onCustomerSearchTab = (e) => {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+    const sole = soleConfidentMatch(customers, customerSearch, customerSearchOpts);
+    if (sole) chooseCustomer(sole);
+  };
+
+  const customerRecentCount = normalizedCustomerSearch ? 0 : recents.recentCount(filteredCustomers);
+
   const {
     activeIndex: customerActiveIndex,
     setActiveIndex: setCustomerActiveIndex,
@@ -1129,7 +1151,10 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                   type="text"
                   value={customerSearch}
                   onChange={(e) => setCustomerSearch(e.target.value)}
-                  onKeyDown={onCustomerListKeys}
+                  onKeyDown={(e) => {
+                    onCustomerSearchTab(e);
+                    onCustomerListKeys(e);
+                  }}
                   role="combobox"
                   aria-expanded="true"
                   aria-controls="customer-picker-list"
@@ -1163,8 +1188,15 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                   filteredCustomers.map((c, i) => {
                     const on = i === customerActiveIndex;
                     return (
+                      <React.Fragment key={c.id}>
+                      {/* The habitual names, called what they are. */}
+                      {customerRecentCount && i === 0 ? (
+                        <div className="ui-caption px-1 pt-1 pb-0.5">Recently used</div>
+                      ) : null}
+                      {customerRecentCount && i === customerRecentCount ? (
+                        <div className="ui-caption px-1 pt-2 pb-0.5">All customers</div>
+                      ) : null}
                       <button
-                        key={c.id}
                         id={`customer-opt-${c.id}`}
                         type="button"
                         role="option"
@@ -1184,6 +1216,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                           </div>
                         )}
                       </button>
+                      </React.Fragment>
                     );
                   })
                 )}

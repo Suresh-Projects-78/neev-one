@@ -16,6 +16,7 @@ import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } f
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
+import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
 import EwbTransportForm from '../../components/EwbTransportForm';
 import EInvoiceWorkflow from './EInvoiceWorkflow';
 import { resolveDiscountForLine } from '../../utils/discounts';
@@ -2884,7 +2885,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     return String(w?.branchId || '').trim() || activeBranchId || '';
   };
 
-  const initWarehouseId = String(initialData?.warehouseId || defaultWarehouseId || '').trim();
+  // The document's own warehouse, then the one used last, then whatever the
+  // header has selected. Editing an existing invoice never picks up a
+  // remembered value — that would move stock nobody asked to move.
+  const initWarehouseId = String(
+    initialData?.warehouseId || getLastSelection('warehouse', currentCompany?.id) || defaultWarehouseId || ''
+  ).trim();
   const initBranchId = resolveBranchIdFromWarehouseId(initWarehouseId) || '';
   const invoiceDocSettingsInit = getDocSettings(db, currentCompany, { branchId: initBranchId || null });
   const invoiceNumberingInit = invoiceDocSettingsInit?.numbering?.invoice;
@@ -2986,7 +2992,14 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * — and it left the field that decides the number series invisible. Seeded
    * from the document being edited, then from the header selection.
    */
-  const [branchId, setBranchId] = useState(() => initBranchId || activeBranchId || '');
+  /*
+   * Seeded from the document being edited, then from what was chosen last
+   * time, then from the header selection. A shop that raises forty invoices
+   * out of one warehouse should be asked once, not forty times.
+   */
+  const [branchId, setBranchId] = useState(
+    () => initBranchId || getLastSelection('branch', currentCompany?.id) || activeBranchId || ''
+  );
 
   const numberingBtnRef = useRef(null);
   const [numberingOpen, setNumberingOpen] = useState(false);
@@ -3028,6 +3041,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const onBranchChange = (nextBranchId) => {
     const next = String(nextBranchId || '').trim();
     setBranchId(next);
+    setLastSelection('branch', currentCompany?.id, next);
     // A warehouse left over from the previous branch would silently move the
     // wrong stock, so it is dropped rather than carried across.
     setFormData((p) => {
@@ -3939,6 +3953,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               value={formData.warehouseId}
               onChange={(warehouseId) => {
                 fieldErrors.clearField('warehouseId');
+                setLastSelection('warehouse', currentCompany?.id, warehouseId);
                 setFormData((p) => ({ ...p, warehouseId }));
               }}
               options={warehouseOptions}

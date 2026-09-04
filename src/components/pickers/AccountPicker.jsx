@@ -1,3 +1,4 @@
+import React from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { notify } from '../ui/notify';
 
@@ -5,7 +6,7 @@ import Modal from '../ui/Modal';
 import { CustomerForm } from './CustomerPicker';
 import { VendorForm } from './VendorPicker';
 import PopupSelect from './PopupSelect';
-import { rankedSearch } from '../../utils/rankedSearch';
+import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 
@@ -378,6 +379,27 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
     setShowPopup(true);
   };
 
+  const accountSearchOpts = {
+    fields: (a) => [a.name, a.ledgerCategory, a.type, a.subType],
+    codes: (a) => [a.code],
+  };
+
+  /*
+   * Tab out of the search box takes the one match, when there is exactly one.
+   *
+   * Requirement 15 says highlight without auto-selecting while somebody is
+   * still typing; section 9 says a full code should not have to be confirmed.
+   * Both hold at once if the selection happens on the way out of the field
+   * rather than on every keystroke.
+   */
+  const onAccountSearchTab = (e) => {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+    const sole = soleConfidentMatch(accounts, search, accountSearchOpts);
+    if (sole) chooseAccount(sole);
+  };
+
+  const accountRecentCount = normalizedSearch ? 0 : recents.recentCount(filtered);
+
   const {
     activeIndex: accountActiveIndex,
     setActiveIndex: setAccountActiveIndex,
@@ -457,7 +479,10 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={onAccountListKeys}
+                onKeyDown={(e) => {
+                    onAccountSearchTab(e);
+                    onAccountListKeys(e);
+                  }}
                 role="combobox"
                 aria-expanded="true"
                 aria-controls="account-picker-list"
@@ -481,8 +506,15 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                   filtered.map((a, i) => {
                     const on = i === accountActiveIndex;
                     return (
+                      <React.Fragment key={a.id}>
+                      {/* The habitual rows, called what they are. */}
+                      {accountRecentCount && i === 0 ? (
+                        <div className="ui-caption px-1 pt-1 pb-0.5">Recently used</div>
+                      ) : null}
+                      {accountRecentCount && i === accountRecentCount ? (
+                        <div className="ui-caption px-1 pt-2 pb-0.5">All accounts</div>
+                      ) : null}
                       <button
-                        key={a.id}
                         id={`account-opt-${a.id}`}
                         type="button"
                         role="option"
@@ -500,6 +532,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                           <div className="text-xs ui-muted truncate">{[a.ledgerCategory, a.type, a.subType].filter(Boolean).join(' • ')}</div>
                         )}
                       </button>
+                      </React.Fragment>
                     );
                   })
                 )}

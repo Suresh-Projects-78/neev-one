@@ -97,7 +97,26 @@ export function useRecentPicks(kind, scope = '') {
   const hasHistory = useMemo(() => Object.keys(entries).length > 0, [entries]);
   const isRecent = useCallback((id) => Boolean(entries[String(id ?? '')]), [entries]);
 
-  return { remember, promote, hasHistory, isRecent };
+  /**
+   * How many of the promoted rows are actually habitual, so the list can say
+   * "Recently used" over them and "All" over the rest.
+   *
+   * Capped: a heading over eleven of twelve rows is a heading that tells you
+   * nothing, and the point of the section is that the top of the list is
+   * short enough to read without scrolling.
+   */
+  const recentCount = useCallback(
+    (rows, idOf = (r) => r?.id) => {
+      const list = Array.isArray(rows) ? rows : [];
+      let n = 0;
+      while (n < list.length && n < 5 && entries[String(idOf(list[n]) ?? '')]) n += 1;
+      // A heading over the whole list is noise, not structure.
+      return n >= list.length ? 0 : n;
+    },
+    [entries]
+  );
+
+  return { remember, promote, hasHistory, isRecent, recentCount };
 }
 
 export default useRecentPicks;

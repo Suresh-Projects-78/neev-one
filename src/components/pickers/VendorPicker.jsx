@@ -1,3 +1,4 @@
+import React from 'react';
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
@@ -7,7 +8,7 @@ import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
-import { rankedSearch } from '../../utils/rankedSearch';
+import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 
@@ -1003,6 +1004,27 @@ const VendorPicker = ({
     setShowVendorPopup(true);
   };
 
+  const vendorSearchOpts = {
+    fields: (v) => [getVendorDisplayName(v), v.email, v.phone],
+    codes: (v) => [v.gstin, v.pan, v.phone],
+  };
+
+  /*
+   * Tab out of the search box takes the one match, when there is exactly one.
+   *
+   * Requirement 15 says highlight without auto-selecting while somebody is
+   * still typing; section 9 says a full code should not have to be confirmed.
+   * Both hold at once if the selection happens on the way out of the field
+   * rather than on every keystroke.
+   */
+  const onVendorSearchTab = (e) => {
+    if (e.key !== 'Tab' || e.shiftKey) return;
+    const sole = soleConfidentMatch(vendors, vendorSearch, vendorSearchOpts);
+    if (sole) chooseVendor(sole);
+  };
+
+  const vendorRecentCount = normalizedVendorSearch ? 0 : recents.recentCount(filteredVendors);
+
   const {
     activeIndex: vendorActiveIndex,
     setActiveIndex: setVendorActiveIndex,
@@ -1060,7 +1082,10 @@ const VendorPicker = ({
                   type="text"
                   value={vendorSearch}
                   onChange={(e) => setVendorSearch(e.target.value)}
-                  onKeyDown={onVendorListKeys}
+                  onKeyDown={(e) => {
+                    onVendorSearchTab(e);
+                    onVendorListKeys(e);
+                  }}
                   role="combobox"
                   aria-expanded="true"
                   aria-controls="vendor-picker-list"
@@ -1092,8 +1117,15 @@ const VendorPicker = ({
                   filteredVendors.map((v, i) => {
                     const on = i === vendorActiveIndex;
                     return (
+                      <React.Fragment key={v.id}>
+                      {/* The habitual rows, called what they are. */}
+                      {vendorRecentCount && i === 0 ? (
+                        <div className="ui-caption px-1 pt-1 pb-0.5">Recently used</div>
+                      ) : null}
+                      {vendorRecentCount && i === vendorRecentCount ? (
+                        <div className="ui-caption px-1 pt-2 pb-0.5">All vendors</div>
+                      ) : null}
                       <button
-                        key={v.id}
                         id={`vendor-opt-${v.id}`}
                         type="button"
                         role="option"
@@ -1111,6 +1143,7 @@ const VendorPicker = ({
                           <div className="text-xs ui-muted truncate">{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
                         )}
                       </button>
+                      </React.Fragment>
                     );
                   })
                 )}
