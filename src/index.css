@@ -157,7 +157,10 @@
   --sidebar-w: 260px;
   --sidebar-w-collapsed: 72px;
   --topbar-h: 56px;
-  --content-max: 1600px;
+  /* Was 1600px, which left a 1920 desktop with 320px of empty gutter beside a
+     table people were scrolling sideways. A list is the one thing in this
+     product that genuinely wants the width. */
+  --content-max: 1920px;
 
   --shadow-card: 0 1px 2px 0 rgb(17 24 39 / 0.03), 0 1px 1px 0 rgb(17 24 39 / 0.02);
   --shadow-pop: 0 4px 12px -2px rgb(17 24 39 / 0.06), 0 12px 32px -12px rgb(17 24 39 / 0.10);

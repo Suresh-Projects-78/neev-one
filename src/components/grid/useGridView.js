@@ -125,6 +125,15 @@ export function useGridView({ storageKey, columns, getFilterSnapshot, applyFilte
   };
 
   const applyView = (name) => {
+    // No name means the default: every column back, no saved filters, and
+    // nothing marked active. It is the state the list starts in, and without a
+    // way back to it a saved layout is one you cannot leave.
+    if (!name) {
+      setHidden([]);
+      applyFilterSnapshot({});
+      setActiveView('');
+      return;
+    }
     const view = views.find((v) => v.name === name);
     if (!view) return;
     setHidden(Array.isArray(view.hidden) ? view.hidden : []);

@@ -55,7 +55,7 @@ import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
-import { periodRange, usePeriodFilter, LIST_PERIODS, describeView } from '../../components/ListControls';
+import { usePeriodFilter, LIST_PERIODS, describeView } from '../../components/ListControls';
 import { exportListPdf } from '../../utils/listPdf';
 import { exportListXlsx } from '../../utils/listXlsx';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
@@ -141,14 +141,8 @@ export const InvoicesList = ({
    */
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const filterBtnRef = useRef(null);
-  const [filtersOpen, setFiltersOpen] = useState(false);
   const moreBtnRef = useRef(null);
   const [moreOpen, setMoreOpen] = useState(false);
-  const newBtnRef = useRef(null);
-  const [newOpen, setNewOpen] = useState(false);
-  const exportBtnRef = useRef(null);
-  const [exportOpen, setExportOpen] = useState(false);
   const [tipDismissed, setTipDismissed] = useState(
     () => localStorage.getItem('neev:tip:recurringInvoices') === 'dismissed'
   );
@@ -301,9 +295,38 @@ const statusReason = (doc, status, company, nowMs) => {
     return chips;
   }, [searchText, statusFilter, dateFrom, dateTo, colFilters]);
 
+  /**
+   * Export what is on screen — this tab, this search, this period.
+   *
+   * Lives beside the other page-level actions in the More menu now rather than
+   * under its own icon beside the status tabs, which was the only page action
+   * that had wandered off on its own.
+   */
+  const runExport = (kind) => {
+    const common = {
+      fileName: `Invoices_${currentCompany?.name || 'company'}`,
+      columns: exportColumns,
+      rows: filteredInvoices,
+    };
+    const subtitle = describeView({ period, dateFrom, dateTo, status: statusFilter, search: searchText });
+    if (kind === 'pdf') {
+      exportListPdf({
+        ...common,
+        title: `Invoices — ${currentCompany?.name || 'Company'}`,
+        subtitle,
+        footNote: `${filteredInvoices.length} invoice(s) · exported from Neev One`,
+      });
+    } else if (kind === 'xlsx') {
+      exportListXlsx({ ...common, subtitle, sheetName: 'Invoices' });
+    } else {
+      exportRows({ ...common, label: 'invoice(s)' });
+    }
+  };
+
   const clearAllInvoiceFilters = () => {
     setSearchText('');
     setStatusFilter('');
+    setPeriod('all');
     setDateFrom('');
     setDateTo('');
     colFilters.clearAll();
@@ -441,26 +464,12 @@ const statusReason = (doc, status, company, nowMs) => {
    * path decides what is in view, so the chips, the totals, the table and both
    * exports can never disagree about the period.
    */
-  /**
-   * How many filters are actually narrowing the list, for the badge on the
-   * Filters button. Declared after the state it reads — a const in the same
-   * scope is in its temporal dead zone until then, and the component threw
-   * rather than rendering when this sat above `period`.
+  /*
+   * The badge counter and the period helper went with the Filters button.
+   * The date range they drove is still honoured by `filteredInvoices` — a
+   * saved layout can carry one — and the Date column filter is how it is set
+   * now, so nothing that could narrow the list has been taken away.
    */
-  const activeFilterCount =
-    (searchText.trim() ? 1 : 0) +
-    (statusFilter ? 1 : 0) +
-    (period !== 'all' ? 1 : 0) +
-    Object.keys(colFilters.filters || {}).length;
-
-  const applyPeriod = (key) => {
-    setPeriod(key);
-    const range = periodRange(key);
-    // A custom range keeps whatever dates are already typed.
-    if (!range) return;
-    setDateFrom(range.from);
-    setDateTo(range.to);
-  };
 
   /**
    * The columns an export carries: the document's own figures, not the
@@ -832,74 +841,17 @@ const statusReason = (doc, status, company, nowMs) => {
               label="Search invoices"
             />
 
-            <div className="relative">
-              <button
-                type="button"
-                ref={filterBtnRef}
-                onClick={() => setFiltersOpen((v) => !v)}
-                className="ui-btn ui-btn-secondary"
-                aria-haspopup="dialog"
-                aria-expanded={filtersOpen}
-              >
-                <SlidersHorizontal size={15} aria-hidden="true" /> Filters
-                {activeFilterCount ? (
-                  <span
-                    className="ui-mono text-xs rounded-full px-1.5"
-                    style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-accent, 255 255 255))' }}
-                  >
-                    {activeFilterCount}
-                  </span>
-                ) : null}
-              </button>
-              {filtersOpen ? (
-                <Popover anchorRef={filterBtnRef} onClose={() => setFiltersOpen(false)} minWidth={264}>
-                  <div className="p-3 space-y-3">
-                    <div>
-                      <label className="ui-label" htmlFor="inv-period">Period</label>
-                      <select
-                        id="inv-period"
-                        value={period}
-                        onChange={(e) => {
-                          applyPeriod(e.target.value);
-                          setPage(1);
-                        }}
-                        className="ui-select w-full px-3 py-2"
-                      >
-                        {LIST_PERIODS.map((p2) => (
-                          <option key={p2.key} value={p2.key}>{p2.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    {period === 'custom' ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="ui-label">From</label>
-                          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
-                        </div>
-                        <div>
-                          <label className="ui-label">To</label>
-                          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
-                        </div>
-                      </div>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSearchText('');
-                        setStatusFilter('');
-                        applyPeriod('all');
-                        colFilters.clearAll();
-                        setPage(1);
-                        setFiltersOpen(false);
-                      }}
-                      className="ui-btn ui-btn-ghost ui-btn-sm w-full"
-                    >
-                      Clear all filters
-                    </button>
-                  </div>
-                </Popover>
-              ) : null}
-            </div>
+            {/*
+              Layout takes the place the Filters button had.
+
+              Filters was a period select and a date range sitting behind a
+              popover, while every column already carries its own filter and
+              the status tabs carry the one people actually use. Two ways to
+              narrow the same list is one too many, and the one behind a button
+              was the one nobody found. The Date column filter still does the
+              range.
+            */}
+            {gridEnabled ? <GridControls grid={grid} /> : null}
 
             {/*
               Page-level actions, kept apart from the row menu.
@@ -922,94 +874,87 @@ const statusReason = (doc, status, company, nowMs) => {
               {moreOpen ? (
                 <Popover anchorRef={moreBtnRef} onClose={() => setMoreOpen(false)} minWidth={228}>
                   <div className="py-1" role="menu">
+                    {/*
+                      Import, export, and the two screens that configure every
+                      invoice. Export moved in here from a lone icon beside the
+                      status tabs: it is a page-level action like the rest of
+                      these, and it was the only one living somewhere else.
+                    */}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMoreOpen(false);
+                        if (typeof onNavigate === 'function') onNavigate('dataImport');
+                      }}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                    >
+                      <Download size={15} aria-hidden="true" /> Import invoices
+                    </button>
+
+                    <div className="ui-caption px-3 pt-1.5 pb-1">Export invoices</div>
                     {[
-                      { k: 'dataImport', label: 'Import invoices', Icon: Download },
-                      { k: 'recurringInvoices', label: 'Recurring invoices', Icon: RefreshCw },
-                      { sep: true },
-                      { k: 'settingsInvoiceFields', label: 'Invoice fields', Icon: SlidersHorizontal, group: 'Configure — every invoice' },
+                      { k: 'pdf', label: 'PDF', Icon: FileText },
+                      { k: 'xlsx', label: 'Excel', Icon: Table2 },
+                      { k: 'csv', label: 'CSV', Icon: Download },
+                    ].map((o) => (
+                      <button
+                        key={o.k}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMoreOpen(false);
+                          runExport(o.k);
+                        }}
+                        className="w-full text-left flex items-center gap-2 px-3 py-2 ps-6 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                      >
+                        <o.Icon size={15} aria-hidden="true" /> {o.label}
+                      </button>
+                    ))}
+
+                    <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
+                    <div className="ui-caption px-3 pb-1.5">Configure — every invoice</div>
+                    {[
+                      { k: 'settingsInvoiceFields', label: 'Invoice settings', Icon: SlidersHorizontal },
+                      { k: 'settingsInvoiceFields', label: 'Custom fields', Icon: Plus, id: 'custom' },
                       { k: 'invoiceTemplates', label: 'Invoice template', Icon: Settings2 },
-                    ].map((o, i) =>
-                      o.sep ? (
-                        <div key={`s${i}`} className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
-                      ) : (
-                        <React.Fragment key={o.k}>
-                          {o.group ? <div className="ui-caption px-3 pb-1.5">{o.group}</div> : null}
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => {
-                              setMoreOpen(false);
-                              if (typeof onNavigate === 'function') onNavigate(o.k);
-                            }}
-                            className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                          >
-                            <o.Icon size={15} aria-hidden="true" /> {o.label}
-                          </button>
-                        </React.Fragment>
-                      )
-                    )}
+                      { k: 'recurringInvoices', label: 'Recurring invoices', Icon: RefreshCw },
+                    ].map((o) => (
+                      <button
+                        key={o.id || o.k}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMoreOpen(false);
+                          if (typeof onNavigate === 'function') onNavigate(o.k);
+                        }}
+                        className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                      >
+                        <o.Icon size={15} aria-hidden="true" /> {o.label}
+                      </button>
+                    ))}
                   </div>
                 </Popover>
               ) : null}
             </div>
 
             {/*
-              Split button: the face does the common thing, the caret offers the
-              two documents an invoice is usually raised from. One click for the
-              case that happens most, one more for the cases that do not.
+              One button, one thing.
+
+              It was a split button whose caret offered "from an estimate" and
+              "from a delivery challan" — neither of which created anything.
+              Both navigated to another list to pick a document to convert, so
+              the caret on the create button led away from creating. Those
+              conversions still start where the documents are, which is where
+              somebody looking at an estimate already is.
             */}
-            <span className="inline-flex">
-              <PermissionButton
-                permission="SALES::Invoices::CREATE"
-                onClick={openNewInvoice}
-                className="ui-btn ui-btn-primary !rounded-e-none"
-              >
-                <Plus size={16} aria-hidden="true" /> New Invoice
-              </PermissionButton>
-              <button
-                type="button"
-                ref={newBtnRef}
-                onClick={() => setNewOpen((v) => !v)}
-                className="ui-btn ui-btn-primary !rounded-s-none !px-2"
-                style={{ borderInlineStart: '1px solid rgb(255 255 255 / 0.28)' }}
-                aria-haspopup="menu"
-                aria-expanded={newOpen}
-                aria-label="More ways to create an invoice"
-              >
-                <ChevronDown size={15} aria-hidden="true" />
-              </button>
-              {newOpen ? (
-                <Popover anchorRef={newBtnRef} onClose={() => setNewOpen(false)} minWidth={236}>
-                  <div className="py-1" role="menu">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setNewOpen(false);
-                        if (typeof onNavigate === 'function') onNavigate('estimates');
-                      }}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                    >
-                      <FileText size={15} aria-hidden="true" /> From an estimate
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setNewOpen(false);
-                        if (typeof onNavigate === 'function') onNavigate('deliveryChallans');
-                      }}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                    >
-                      <ClipboardList size={15} aria-hidden="true" /> From a delivery challan
-                    </button>
-                    <p className="ui-caption px-3 pt-1 pb-2">
-                      Both open their list, where you pick the document to convert.
-                    </p>
-                  </div>
-                </Popover>
-              ) : null}
-            </span>
+            <PermissionButton
+              permission="SALES::Invoices::CREATE"
+              onClick={openNewInvoice}
+              className="ui-btn ui-btn-primary"
+            >
+              <Plus size={16} aria-hidden="true" /> New Invoice
+            </PermissionButton>
           </>
         }
       />
@@ -1076,63 +1021,6 @@ const statusReason = (doc, status, company, nowMs) => {
               </button>
             );
           })}
-        </div>
-        <div className="ms-auto flex items-center gap-2">
-          {gridEnabled ? <GridControls grid={grid} /> : null}
-          <div className="relative">
-            <button
-              type="button"
-              ref={exportBtnRef}
-              onClick={() => setExportOpen((v) => !v)}
-              className="ui-btn ui-btn-secondary ui-btn-sm"
-              aria-haspopup="menu"
-              aria-expanded={exportOpen}
-              aria-label="Export"
-              title="Export"
-            >
-              <Download size={15} aria-hidden="true" />
-            </button>
-            {exportOpen ? (
-              <Popover anchorRef={exportBtnRef} onClose={() => setExportOpen(false)} minWidth={216}>
-                <div className="py-1" role="menu">
-                  {[
-                    { k: 'pdf', label: 'PDF', Icon: FileText },
-                    { k: 'xlsx', label: 'Excel', Icon: Table2 },
-                    { k: 'csv', label: 'CSV', Icon: Download },
-                  ].map((o) => (
-                    <button
-                      key={o.k}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setExportOpen(false);
-                        const common = {
-                          fileName: `Invoices_${currentCompany?.name || 'company'}`,
-                          columns: exportColumns,
-                          rows: filteredInvoices,
-                        };
-                        const subtitle = describeView({ period, dateFrom, dateTo, status: statusFilter, search: searchText });
-                        if (o.k === 'pdf') {
-                          exportListPdf({ ...common, title: `Invoices — ${currentCompany?.name || 'Company'}`, subtitle,
-                            footNote: `${filteredInvoices.length} invoice(s) · exported from Neev One` });
-                        } else if (o.k === 'xlsx') {
-                          exportListXlsx({ ...common, subtitle, sheetName: 'Invoices' });
-                        } else {
-                          exportRows({ ...common, label: 'invoice(s)' });
-                        }
-                      }}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
-                    >
-                      <o.Icon size={15} aria-hidden="true" /> {o.label}
-                    </button>
-                  ))}
-                  <p className="ui-caption px-3 pt-1 pb-2">
-                    Exports what you are looking at — this tab, this search, this period.
-                  </p>
-                </div>
-              </Popover>
-            ) : null}
-          </div>
         </div>
       </div>
 

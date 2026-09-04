@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Bookmark, Check, Pencil, Plus, Save, Trash2, X } from 'lucide-react';
 
 /**
- * The one grid control in a list's toolbar: Views.
+ * The one grid control in a list's toolbar: Layout.
  *
  * This was two buttons — Views and Columns — sitting next to each other and
  * doing halves of the same job. Which columns you want to see is not a
@@ -129,7 +129,7 @@ export default function GridControls({ grid }) {
         aria-expanded={open}
       >
         <Bookmark size={15} aria-hidden="true" />
-        Views
+        Layout
       </button>
 
       {open && !editor && pos ? createPortal(
@@ -139,9 +139,31 @@ export default function GridControls({ grid }) {
           data-views-pop=""
           role="menu"
         >
+          {/*
+            The state the list starts in, named.
+            It was there all along and had no entry, so the only way back from a
+            saved layout was to know that clicking the active one again did
+            nothing. A layout you cannot leave is a trap.
+          */}
+          <ul className="mb-2 max-h-56 overflow-y-auto">
+            <li className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  grid.applyView(null);
+                  close();
+                }}
+                className="ui-btn ui-btn-ghost flex-1 !justify-start"
+              >
+                {!grid.activeView ? <Check size={14} aria-hidden="true" /> : <span className="w-3.5" />}
+                <span className="truncate">Default view</span>
+              </button>
+            </li>
+          </ul>
+
           {grid.views.length === 0 ? (
             <p className="ui-caption px-1 pb-2">
-              No saved views yet. A view remembers the filters and the columns you want, under a name.
+              No saved layouts yet. A layout remembers the columns you want, under a name.
             </p>
           ) : (
             <ul className="mb-2 max-h-56 overflow-y-auto">
@@ -162,7 +184,7 @@ export default function GridControls({ grid }) {
                     type="button"
                     onClick={() => startEdit(v)}
                     className="ui-icon-btn"
-                    aria-label={`Edit view ${v.name}`}
+                    aria-label={`Edit layout ${v.name}`}
                     title="Edit"
                   >
                     <Pencil size={14} aria-hidden="true" />
@@ -171,7 +193,7 @@ export default function GridControls({ grid }) {
                     type="button"
                     onClick={() => grid.deleteView(v.name)}
                     className="ui-icon-btn"
-                    aria-label={`Delete view ${v.name}`}
+                    aria-label={`Delete layout ${v.name}`}
                     title="Delete"
                   >
                     <Trash2 size={14} aria-hidden="true" />
@@ -184,7 +206,7 @@ export default function GridControls({ grid }) {
           <div className="border-t pt-2" style={{ borderColor: 'rgb(var(--border))' }}>
             <button type="button" onClick={startNew} className="ui-btn ui-btn-ghost w-full !justify-start">
               <Plus size={14} aria-hidden="true" />
-              New view from what is on screen
+              New layout from what is on screen
             </button>
 
             {/*
@@ -241,11 +263,11 @@ export default function GridControls({ grid }) {
           style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight }}
           data-views-pop=""
           role="dialog"
-          aria-label={editor.originalName ? `Edit view ${editor.originalName}` : 'New view'}
+          aria-label={editor.originalName ? `Edit layout ${editor.originalName}` : 'New layout'}
         >
           <div className="mb-2 flex items-center justify-between">
-            <span className="ui-card-label">{editor.originalName ? 'Edit view' : 'New view'}</span>
-            <button type="button" onClick={() => setEditor(null)} className="ui-icon-btn" aria-label="Back to views">
+            <span className="ui-card-label">{editor.originalName ? 'Edit layout' : 'New layout'}</span>
+            <button type="button" onClick={() => setEditor(null)} className="ui-icon-btn" aria-label="Back to layouts">
               <X size={14} aria-hidden="true" />
             </button>
           </div>
@@ -288,7 +310,7 @@ export default function GridControls({ grid }) {
 
           <p className="ui-caption mt-2">
             {editor.originalName
-              ? 'Keeps the filters this view was saved with.'
+              ? 'Keeps the filters this layout was saved with.'
               : 'Saves the filters currently on screen.'}
           </p>
 
@@ -298,7 +320,7 @@ export default function GridControls({ grid }) {
             </button>
             <button type="submit" className="ui-btn ui-btn-primary ui-btn-sm" disabled={!editor.name.trim()}>
               <Save size={14} aria-hidden="true" />
-              Save view
+              Save layout
             </button>
           </div>
         </form>,
