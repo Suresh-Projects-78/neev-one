@@ -3001,6 +3001,20 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     () => initBranchId || getLastSelection('branch', currentCompany?.id) || activeBranchId || ''
   );
 
+  /*
+   * A remembered branch that no longer exists shows as nothing, not as an id.
+   *
+   * The seed can come from three places — the document, what was chosen last
+   * time, the header — and any of them can name a branch this user has since
+   * lost access to, or that was deleted. The field then rendered the raw cuid,
+   * because a picker with no matching option falls back to its own value. An
+   * empty field reading "All branches" is the honest answer.
+   */
+  const branchIdInList =
+    !branchId || (Array.isArray(branches) ? branches : []).some((b) => String(b?.id || '') === String(branchId))
+      ? branchId
+      : '';
+
   const numberingBtnRef = useRef(null);
   const [numberingOpen, setNumberingOpen] = useState(false);
 
@@ -3019,7 +3033,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
   }, [branches]);
 
-  const branchIdForNumbering = String(branchId || '').trim() || resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
+  const branchIdForNumbering = String(branchIdInList || '').trim() || resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
   const invoiceDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const invoiceNumbering = invoiceDocSettings?.numbering?.invoice;
   const isInvoiceAuto = String(invoiceNumbering?.mode || '').toLowerCase() === 'auto';
@@ -3033,10 +3047,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    */
   const warehouseOptions = useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
-    const scope = String(branchId || '').trim();
+    const scope = String(branchIdInList || '').trim();
     const inScope = scope ? list.filter((w) => String(w?.branchId || '').trim() === scope) : list;
     return inScope.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
-  }, [warehouses, branchId]);
+  }, [warehouses, branchIdInList]);
 
   const onBranchChange = (nextBranchId) => {
     const next = String(nextBranchId || '').trim();
@@ -3563,7 +3577,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       if (hasApiSession) {
         const backendInvoiceId = String(existingInvoice?.backendInvoiceId || '').trim();
         const payload = {
-          branchId: String(branchId || branchIdForNumbering || '').trim(),
+          branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
           warehouseId: String(updatedInvoice.warehouseId || '').trim(),
           number: String(updatedInvoice.number || '').trim(),
           date: String(updatedInvoice.date || '').trim(),
@@ -3619,7 +3633,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     const hasApiSession = Boolean(String(localStorage.getItem('token') || '').trim() && String(localStorage.getItem('activeOrgId') || '').trim());
     if (hasApiSession) {
       const payload = {
-        branchId: String(branchId || branchIdForNumbering || '').trim(),
+        branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
         warehouseId: String(newInvoice.warehouseId || '').trim(),
         number: String(newInvoice.number || '').trim(),
         date: String(newInvoice.date || '').trim(),
@@ -3934,7 +3948,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <PopupSelect
                 label="Branch"
                 title="branches"
-                value={String(branchId || '')}
+                value={String(branchIdInList || '')}
                 onChange={onBranchChange}
                 options={[
                   { value: '', label: 'All branches' },
@@ -4020,8 +4034,16 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
         </div>
 
-        <div className="lg:col-span-5 space-y-4">
-          <div>
+        {/* The paperwork column, ruled off from the left. Number and both dates
+            sit on one row: they are read together — issued on, due by — and
+            splitting them put a full-width number above a pair of narrow
+            dates, which reads as two unrelated groups. */}
+        <div
+          className="lg:col-span-5 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="min-w-0">
             <label htmlFor="invoice-number" className="block text-sm font-medium mb-1">
               Invoice No.
             </label>
@@ -4069,10 +4091,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             ) : null}
           </div>
 
-          {/* Two dates side by side rather than a quarter of the page each:
-              a date input needs about 150px and was being given 340. */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="min-w-0">
               <label htmlFor="invoice-date" className="block text-sm font-medium mb-1">
                 Date <span className="text-[rgb(var(--neg-ink))]">*</span>
               </label>
@@ -4095,7 +4114,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <FieldError error={fieldErrors.error('date')} id={fieldErrors.errorId('date')} />
             </div>
 
-            <div>
+            <div className="min-w-0">
               <label htmlFor="invoice-due" className="block text-sm font-medium mb-1">
                 Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
               </label>
