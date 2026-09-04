@@ -59,7 +59,7 @@ export function StatCards({ cards, company }) {
               {c.count ? String(c.value) : formatMoney(c.value, company)}
             </span>
           </span>
-          <span className="ui-subtle text-[11px] block leading-4">{c.hint || 'This financial year'}</span>
+          <span className="ui-subtle text-xs block leading-4">{c.hint || 'This financial year'}</span>
         </div>
       ))}
     </section>

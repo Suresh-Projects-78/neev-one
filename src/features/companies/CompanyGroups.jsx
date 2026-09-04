@@ -237,7 +237,7 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
 
       {editing ? (
         <div className="ui-card ui-in p-5">
-          <h3 className="ui-title text-base mb-3">{editing.id != null ? 'Edit company' : 'New company'}</h3>
+          <h3 className="ui-t-sec mb-3">{editing.id != null ? 'Edit company' : 'New company'}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="ui-label">Name</label>

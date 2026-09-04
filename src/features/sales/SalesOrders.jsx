@@ -409,7 +409,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                     <td className="ui-col-date px-4 py-2.5">{o.date}</td>
                     <td className="ui-col-entity px-4 py-2.5">{o.customerName}</td>
                     <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(o.total || 0), currentCompany)}</td>
-                    <td className="px-4 py-2.5 text-sm">
+                    <td className="px-4 py-2.5">
                       {prog.ordered} / {prog.delivered} / {prog.billed}
                     </td>
                     <td className="px-4 py-2.5"><StatusPill status={prog.status} /></td>

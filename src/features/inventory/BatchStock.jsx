@@ -130,7 +130,7 @@ export default function BatchStock({ db, currentCompany }) {
               {bsSearchRows.map((b) => (
                 <tr key={b.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5">{b.itemName}</td>
-                  <td className="ui-col-id px-4 py-2.5 font-mono text-sm">{b.batchNo}</td>
+                  <td className="ui-col-id px-4 py-2.5 font-mono">{b.batchNo}</td>
                   <td className="ui-col-date px-4 py-2.5">{b.mfgDate || '—'}</td>
                   <td className="ui-col-date px-4 py-2.5">
                     {b.expiryDate || '—'}
@@ -139,7 +139,7 @@ export default function BatchStock({ db, currentCompany }) {
                   <td className="px-4 py-2.5 text-right">{b.qtyIn}</td>
                   <td className="px-4 py-2.5 text-right">{b.qtyOut}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{b.remaining}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-sm">{b.sourceBillNumber || '—'}</td>
+                  <td className="ui-col-meta px-4 py-2.5">{b.sourceBillNumber || '—'}</td>
                   <td className="px-4 py-2.5">{chip(b) ? <StatusPill status={chip(b)} /> : null}</td>
                 </tr>
               ))}

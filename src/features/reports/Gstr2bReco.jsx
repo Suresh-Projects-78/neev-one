@@ -121,19 +121,19 @@ export default function Gstr2bReco({ db, currentCompany }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="ui-card p-4">
               <div className="ui-caption">ITC safe to claim (matched)</div>
-              <div className="ui-amount-pos text-2xl font-bold">{itcLine(result.summary.claimable)}</div>
+              <div className="ui-money-lg ui-amount-pos">{itcLine(result.summary.claimable)}</div>
               <div className="ui-caption mt-0.5">
                 IGST {money(result.summary.claimable.igst)} · CGST {money(result.summary.claimable.cgst)} · SGST {money(result.summary.claimable.sgst)}
               </div>
             </div>
             <div className="ui-card p-4">
               <div className="ui-caption">ITC in 2B but missing from books</div>
-              <div className="text-2xl font-bold">{itcLine(result.summary.missingFromBooks)}</div>
+              <div className="ui-money-lg">{itcLine(result.summary.missingFromBooks)}</div>
               <div className="ui-caption mt-0.5">Enter these bills to claim it.</div>
             </div>
             <div className="ui-card p-4">
               <div className="ui-caption">Bills the supplier has not filed</div>
-              <div className="ui-amount-neg text-2xl font-bold">{result.summary.atRiskBills}</div>
+              <div className="ui-money-lg ui-amount-neg">{result.summary.atRiskBills}</div>
               <div className="ui-caption mt-0.5">ITC at risk — chase these suppliers.</div>
             </div>
           </div>

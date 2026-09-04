@@ -325,7 +325,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
             >
               Back
             </button>
-            <h3 className="ui-title text-lg">New Vendor</h3>
+            <h3 className="ui-t-sec">New Vendor</h3>
           </div>
         </div>
 
@@ -349,7 +349,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
               Back
             </button>
             <div>
-              <h3 className="ui-title text-lg">Edit Vendor</h3>
+              <h3 className="ui-t-sec">Edit Vendor</h3>
               <div className="text-sm ui-muted">{getVendorDisplayName(editingVendor) || ''}</div>
             </div>
           </div>
@@ -371,7 +371,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Vendors</h3>
+        <h3 className="ui-t-sec">Vendors</h3>
         <button
           type="button"
           onClick={() => setIsCreating(true)}
@@ -575,7 +575,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
             >
               Back
             </button>
-            <h3 className="ui-title text-lg">New Customer</h3>
+            <h3 className="ui-t-sec">New Customer</h3>
           </div>
         </div>
 
@@ -599,7 +599,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
               Back
             </button>
             <div>
-              <h3 className="ui-title text-lg">Edit Customer</h3>
+              <h3 className="ui-t-sec">Edit Customer</h3>
               <div className="text-sm ui-muted">{getCustomerDisplayName(editingCustomer) || ''}</div>
             </div>
           </div>
@@ -621,7 +621,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Customers</h3>
+        <h3 className="ui-t-sec">Customers</h3>
         <button
           type="button"
           onClick={() => setIsCreating(true)}
@@ -1050,7 +1050,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             >
               Back
             </button>
-            <h3 className="ui-title text-lg">New Expense</h3>
+            <h3 className="ui-t-sec">New Expense</h3>
           </div>
         </div>
 
@@ -1071,7 +1071,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Expenses</h3>
+        <h3 className="ui-t-sec">Expenses</h3>
         <PermissionButton
           permission="EXPENSES::Expenses::CREATE"
           onClick={() => setIsCreating(true)}
@@ -1616,7 +1616,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
           of the form keeps the full width for entry. */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="ui-title text-base">Expense</div>
+          <div className="ui-t-sec">Expense</div>
           <div className="text-xs ui-muted">Book a spend against one or more expense ledgers.</div>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -1771,7 +1771,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                 const row = computed.rows[idx] || { gstAmount: 0, lineTotal: 0 };
                 return (
                   <tr key={idx} data-line-row={idx}>
-                    <td className="px-3 py-2 text-sm ui-muted">{idx + 1}</td>
+                    <td className="px-3 py-2 ui-muted">{idx + 1}</td>
                     <td className="px-3 py-2">
                       <select
                         value={line.ledgerId || ''}
@@ -1829,10 +1829,10 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                         <span className="ui-muted text-sm" title="GST applies only to registered vendors">NA</span>
                       )}
                     </td>
-                    <td className="ui-col-amount px-3 py-2 text-right text-sm">
+                    <td className="ui-col-amount px-3 py-2 text-right">
                       {vendorChargesGst ? formatMoney(row.gstAmount, currentCompany) : <span className="ui-muted">NA</span>}
                     </td>
-                    <td className="ui-col-amount px-3 py-2 text-right text-sm font-semibold">{formatMoney(row.lineTotal, currentCompany)}</td>
+                    <td className="ui-col-amount px-3 py-2 text-right font-semibold">{formatMoney(row.lineTotal, currentCompany)}</td>
                     <td className="px-3 py-2 text-right">
                       <button type="button" onClick={() => removeLine(idx)} className="text-[rgb(var(--neg))]" aria-label={`Remove line ${idx + 1}`}>
                         <Trash2 size={16} />
@@ -1888,7 +1888,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
               <span>NA</span>
             </div>
           )}
-          <div className="flex justify-between border-t pt-2 font-bold text-lg">
+          <div className="ui-total-row border-t pt-2">
             <span>Total Expense:</span>
             <span>{formatMoney(computed.total, currentCompany)}</span>
           </div>
@@ -1976,7 +1976,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Items</h3>
+        <h3 className="ui-t-sec">Items</h3>
         <button
           onClick={() =>
             openModal(
@@ -2684,7 +2684,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
 const StockAdjustment = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
-      <h3 className="ui-title text-lg mb-4">Stock Adjustment</h3>
+      <h3 className="ui-t-sec mb-4">Stock Adjustment</h3>
       <p className="ui-muted">Adjust inventory stock levels</p>
     </div>
   );
@@ -2705,11 +2705,11 @@ const InventoryOverview = ({ db, currentCompany }) => {
       <div className="grid grid-cols-2 gap-6">
         <div className="ui-surface rounded-xl shadow-sm p-6 border">
           <h4 className="text-sm ui-muted mb-2">Total Items</h4>
-          <p className="text-3xl font-bold">{items.length}</p>
+          <p className="ui-money-lg">{items.length}</p>
         </div>
         <div className="ui-surface rounded-xl shadow-sm p-6 border">
           <h4 className="text-sm ui-muted mb-2">Inventory Value</h4>
-          <p className="text-3xl font-bold">{formatMoney(totalValue, currentCompany)}</p>
+          <p className="ui-money-lg">{formatMoney(totalValue, currentCompany)}</p>
         </div>
       </div>
     </div>
@@ -3063,7 +3063,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Chart of Accounts</h3>
+        <h3 className="ui-t-sec">Chart of Accounts</h3>
         <div className="flex gap-2">
           {coaView === 'ledgers' ? (
             <button
@@ -3173,8 +3173,8 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     return (
                       <tr key={a.id} className="ui-hover-sunken">
                         <td className="px-4 py-2.5 ui-col-entity">{a.name}</td>
-                        <td className="ui-col-meta px-4 py-2.5 text-sm ui-fg">{a._groupName || '-'}</td>
-                        <td className="ui-col-meta px-4 py-2.5 text-sm ui-fg">{a._parent || '-'}</td>
+                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{a._groupName || '-'}</td>
+                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{a._parent || '-'}</td>
                         <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(a.balance || 0, currentCompany)}</td>
                         <td
                           className="px-4 py-2.5 text-right"
@@ -3263,8 +3263,8 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     return (
                       <tr key={g.id} className="ui-hover-sunken">
                         <td className="px-4 py-2.5 ui-col-entity">{g.name}</td>
-                        <td className="ui-col-meta px-4 py-2.5 text-sm ui-fg">{g._parent || '-'}</td>
-                        <td className="ui-col-meta px-4 py-2.5 text-sm ui-fg">{String(g.groupCategory || 'General')}</td>
+                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{g._parent || '-'}</td>
+                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{String(g.groupCategory || 'General')}</td>
                         <td
                           className="px-4 py-2.5 text-right"
                           onMouseDown={(e) => e.stopPropagation()}
@@ -3999,7 +3999,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Journal Entries</h3>
+        <h3 className="ui-t-sec">Journal Entries</h3>
         <button
           onClick={onNewJournal}
           className="ui-btn ui-btn-primary "
@@ -4515,7 +4515,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="ui-title text-lg">Trial Balance</h3>
+      <h3 className="ui-t-sec">Trial Balance</h3>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
         <table className="ui-table w-full">
@@ -4539,7 +4539,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
                     {account.name}
                   </button>
                 </td>
-                <td className="ui-col-meta px-4 py-2.5 text-sm ui-muted">{account._group || '-'}</td>
+                <td className="ui-col-meta px-4 py-2.5 ui-muted">{account._group || '-'}</td>
                 <td className="ui-col-amount px-4 py-2.5 text-right">
                   {account._debit > 0 ? formatMoney(account._debit, currentCompany) : '-'}
                 </td>
@@ -4789,7 +4789,7 @@ const LedgerView = ({
     if (!openModal) return notify.error('No modal handler available');
     openModal(
       <div className="space-y-4">
-        <h4 className="text-lg font-medium">Entry details</h4>
+        <h4 className="ui-t-sec">Entry details</h4>
         <div className="text-sm ui-fg">
           <pre className="whitespace-pre-wrap text-xs">{JSON.stringify(row, null, 2)}</pre>
         </div>
@@ -5223,7 +5223,7 @@ const LedgerView = ({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="ui-title text-lg">Ledger</h3>
+          <h3 className="ui-t-sec">Ledger</h3>
           <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
             Back
           </button>
@@ -5369,7 +5369,7 @@ const LedgerView = ({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="ui-title text-lg">Ledger: {account.name}</h3>
+          <h3 className="ui-t-sec">Ledger: {account.name}</h3>
           <div className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</div>
         </div>
           <div className="flex items-center gap-2">
@@ -5655,7 +5655,7 @@ const LedgerView = ({
 const AccountingOverview = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
-      <h3 className="ui-title text-lg mb-4">Accounting Module</h3>
+      <h3 className="ui-t-sec mb-4">Accounting Module</h3>
       <p className="ui-muted">Select a sub-module from the sidebar</p>
     </div>
   );
@@ -5726,7 +5726,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Profit & Loss Statement</h3>
+        <h3 className="ui-t-sec">Profit & Loss Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
@@ -5734,7 +5734,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
-          <h4 className="ui-title text-base">{currentCompany.name}</h4>
+          <h4 className="ui-t-sec">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Profit & Loss Statement</p>
           <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
         </div>
@@ -5773,7 +5773,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
           </div>
 
           <div
-            className={`flex justify-between font-bold text-lg border-t-2 pt-4 ${netProfit >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}
+            className={`ui-total-row border-t-2 pt-4 ${netProfit >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}
           >
             <span>NET PROFIT</span>
             <span>{formatMoney(netProfit, currentCompany)}</span>
@@ -5828,7 +5828,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Balance Sheet</h3>
+        <h3 className="ui-t-sec">Balance Sheet</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
@@ -5836,7 +5836,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
-          <h4 className="ui-title text-base">{currentCompany.name}</h4>
+          <h4 className="ui-t-sec">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Balance Sheet</p>
           <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
         </div>
@@ -5903,7 +5903,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
               </div>
             </div>
 
-            <div className="flex justify-between font-bold text-lg border-t-2 mt-4 pt-2">
+            <div className="ui-total-row border-t-2 mt-4 pt-2">
               <span>Total Liabilities & Equity</span>
               <span>{formatMoney(liabilities + equity + netProfit, currentCompany)}</span>
             </div>
@@ -5958,7 +5958,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Cash Flow Statement</h3>
+        <h3 className="ui-t-sec">Cash Flow Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
           <Download size={20} /> Export PDF
         </button>
@@ -5966,7 +5966,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border">
         <div className="text-center mb-6">
-          <h4 className="ui-title text-base">{currentCompany.name}</h4>
+          <h4 className="ui-t-sec">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Cash Flow Statement</p>
           <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
           <p className="text-xs ui-muted mt-2">
@@ -6007,7 +6007,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
             </div>
           </div>
 
-          <div className={`flex justify-between font-bold text-lg border-t-2 pt-4 ${totals.net >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}>
+          <div className={`ui-total-row border-t-2 pt-4 ${totals.net >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}>
             <span>NET CASH FLOW</span>
             <span>{formatMoney(totals.net, currentCompany)}</span>
           </div>
@@ -6022,7 +6022,7 @@ const SalesReports = ({ db, currentCompany }) => {
 
   return (
     <div className="space-y-4">
-      <h3 className="ui-title text-lg">Sales Reports</h3>
+      <h3 className="ui-t-sec">Sales Reports</h3>
 
       <div className="grid grid-cols-2 gap-6">
         <div className="ui-surface rounded-xl shadow-sm p-6 border">
@@ -6045,7 +6045,7 @@ const SalesReports = ({ db, currentCompany }) => {
 
         <div className="ui-surface rounded-xl shadow-sm p-6 border">
           <h4 className="font-bold mb-4">Total Sales</h4>
-          <p className="text-3xl font-bold text-[rgb(var(--pos))]">{formatMoney(invoices.reduce((sum, i) => sum + i.total, 0), currentCompany)}</p>
+          <p className="ui-money-lg ui-amount-pos">{formatMoney(invoices.reduce((sum, i) => sum + i.total, 0), currentCompany)}</p>
         </div>
       </div>
     </div>
@@ -6134,7 +6134,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
       <div className={`h-2 ${accentBarClass}`} />
       <div className="p-4 flex items-start justify-between">
         <div>
-          <div className="ui-title text-base ui-fg">{companyName}</div>
+          <div className="ui-t-sec ui-fg">{companyName}</div>
           <div className="text-xs ui-muted">Document Template Preview</div>
         </div>
         <div className="text-right">
@@ -6220,7 +6220,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="flex justify-between">
             <div>
               <div className="text-xs ui-muted">{companyName}</div>
-              <div className="ui-title text-lg">{voucherLabel}</div>
+              <div className="ui-t-sec">{voucherLabel}</div>
             </div>
             <div className="text-right text-xs ui-muted">
               <div>No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
@@ -6263,7 +6263,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
         <div className={`rounded-lg p-4 text-white ${accentBarClass}`}>
           <div className="flex items-start justify-between">
             <div>
-              <div className="ui-title text-base">{companyName}</div>
+              <div className="ui-t-sec">{companyName}</div>
               <div className="text-xs opacity-90">{title}</div>
             </div>
             <div className="text-right text-xs opacity-95">
@@ -6930,7 +6930,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
 const MdmOverview = () => {
   return (
     <div className="ui-surface rounded-xl shadow-sm p-6 border">
-      <h3 className="ui-title text-lg mb-2">Master Data (MDM)</h3>
+      <h3 className="ui-t-sec mb-2">Master Data (MDM)</h3>
       <p className="ui-muted">Select a master from the sidebar</p>
     </div>
   );
@@ -6977,7 +6977,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Units of Measure (UoM)</h3>
+        <h3 className="ui-t-sec">Units of Measure (UoM)</h3>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
@@ -7164,7 +7164,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
     <div className="space-y-4">
       <div className="flex justify-between items-center gap-3 flex-wrap">
         <div>
-          <h3 className="ui-title text-lg">Item Categories</h3>
+          <h3 className="ui-t-sec">Item Categories</h3>
           <div className="text-sm ui-muted">The list every item picks its category from.</div>
         </div>
       </div>
@@ -7402,7 +7402,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">GST Rates</h3>
+        <h3 className="ui-t-sec">GST Rates</h3>
       </div>
 
       <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
@@ -7563,7 +7563,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Numbering</h3>
+        <h3 className="ui-t-sec">Numbering</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
@@ -7832,7 +7832,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Templates</h3>
+        <h3 className="ui-t-sec">Templates</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
@@ -7972,7 +7972,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Invoice Templates</h3>
+        <h3 className="ui-t-sec">Invoice Templates</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
@@ -8157,7 +8157,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Company Profile</h3>
+        <h3 className="ui-t-sec">Company Profile</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
           Save
         </button>
@@ -8395,7 +8395,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-center justify-between">
         <div>
-          <div className="ui-title text-base">Tax & Compliances</div>
+          <div className="ui-t-sec">Tax & Compliances</div>
           <div className="text-sm ui-muted">GST, TDS and TCS settings</div>
         </div>
         <button
@@ -9355,7 +9355,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
-            <div className="ui-title text-base">Users, Roles, Branches & Warehouses</div>
+            <div className="ui-t-sec">Users, Roles, Branches & Warehouses</div>
             <div className="text-sm ui-muted">Manage users, roles, branches and warehouses</div>
           </div>
           <div className="flex items-center gap-2">
@@ -9489,9 +9489,9 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                               className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedUserId(String(u.userId))}
                             >
-                              <td className="ui-col-entity px-4 py-3 text-sm font-medium ui-fg">{u.name || '-'}</td>
-                              <td className="ui-col-entity px-4 py-3 text-sm ui-fg">{u.email || '-'}</td>
-                              <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{u.roleLabel || u.roleKey || '-'}</td>
+                              <td className="ui-col-entity px-4 py-3 font-medium ui-fg">{u.name || '-'}</td>
+                              <td className="ui-col-entity px-4 py-3 ui-fg">{u.email || '-'}</td>
+                              <td className="ui-col-meta px-4 py-3 ui-fg">{u.roleLabel || u.roleKey || '-'}</td>
                             </tr>
                           );
                         })
@@ -9727,8 +9727,8 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                               className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedRoleId(String(r.id))}
                             >
-                              <td className="ui-col-meta px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
-                              <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
+                              <td className="ui-col-meta px-4 py-3 font-medium ui-fg">{r.label}</td>
+                              <td className="ui-col-meta px-4 py-3 ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                             </tr>
                           );
                         })
@@ -9898,9 +9898,9 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         const active = String(r.id) === String(selectedRoleId);
                         return (
                           <tr key={String(r.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedRoleId(String(r.id))}>
-                            <td className="ui-col-meta px-4 py-3 text-sm font-medium ui-fg">{r.label}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{r.description || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
+                            <td className="ui-col-meta px-4 py-3 font-medium ui-fg">{r.label}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-muted">{r.description || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                           </tr>
                         );
                       })
@@ -10006,10 +10006,10 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         const active = String(b.id) === String(selectedBranchId);
                         return (
                           <tr key={String(b.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedBranchId(String(b.id))}>
-                            <td className="ui-col-entity px-4 py-3 text-sm font-medium ui-fg">{b.name}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{b.code || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{b.address || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm">{b.isActive !== false ? <span className="text-[rgb(var(--pos))]">Active</span> : <span className="text-[rgb(var(--neg))]">Inactive</span>}</td>
+                            <td className="ui-col-entity px-4 py-3 font-medium ui-fg">{b.name}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-fg">{b.code || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-muted">{b.address || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3">{b.isActive !== false ? <span className="text-[rgb(var(--pos))]">Active</span> : <span className="text-[rgb(var(--neg))]">Inactive</span>}</td>
                           </tr>
                         );
                       })
@@ -10147,11 +10147,11 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                         const active = String(w.id) === String(selectedWarehouseId);
                         return (
                           <tr key={String(w.id)} className={`cursor-pointer ${active ? 'bg-stone-100' : 'ui-hover-sunken'}`} onClick={() => setSelectedWarehouseId(String(w.id))}>
-                            <td className="ui-col-entity px-4 py-3 text-sm font-medium ui-fg">{w.name}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{w.code || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{w.location || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm ui-muted">{w.branchName || '-'}</td>
-                            <td className="ui-col-meta px-4 py-3 text-sm">{w.isActive !== false ? <span className="text-[rgb(var(--pos))]">Active</span> : <span className="text-[rgb(var(--neg))]">Inactive</span>}</td>
+                            <td className="ui-col-entity px-4 py-3 font-medium ui-fg">{w.name}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-fg">{w.code || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-muted">{w.location || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-muted">{w.branchName || '-'}</td>
+                            <td className="ui-col-meta px-4 py-3">{w.isActive !== false ? <span className="text-[rgb(var(--pos))]">Active</span> : <span className="text-[rgb(var(--neg))]">Inactive</span>}</td>
                           </tr>
                         );
                       })
@@ -10237,7 +10237,7 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="ui-title text-base">Company</div>
+                  <div className="ui-t-sec">Company</div>
                   <div className="text-sm ui-muted">Basic, contact and registered address</div>
                 </div>
                 <button
@@ -10580,7 +10580,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">GST - GSTR-1 (Summary)</h3>
+        <h3 className="ui-t-sec">GST - GSTR-1 (Summary)</h3>
         <GstrExportControl
           label="Portal JSON"
           onExport={(period) => {
@@ -10598,18 +10598,18 @@ const Gstr1Report = ({ db, currentCompany }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Taxable Value (Net)</div>
-          <div className="ui-title text-xl">{formatMoney(totals.taxableAmount, currentCompany)}</div>
+          <div className="ui-money-lg">{formatMoney(totals.taxableAmount, currentCompany)}</div>
         </div>
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">GST (Net)</div>
-          <div className="ui-title text-xl">{formatMoney(totals.gstAmount, currentCompany)}</div>
+          <div className="ui-money-lg">{formatMoney(totals.gstAmount, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             CGST {formatMoney(totals.cgstAmount, currentCompany)} · SGST {formatMoney(totals.sgstAmount, currentCompany)} · IGST {formatMoney(totals.igstAmount, currentCompany)}
           </div>
         </div>
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Total (Net)</div>
-          <div className="ui-title text-xl">{formatMoney(totals.totalAmount, currentCompany)}</div>
+          <div className="ui-money-lg">{formatMoney(totals.totalAmount, currentCompany)}</div>
         </div>
       </div>
 
@@ -10754,7 +10754,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">GST - GSTR-3B (Summary)</h3>
+        <h3 className="ui-t-sec">GST - GSTR-3B (Summary)</h3>
         <GstrExportControl
           label="Portal JSON"
           onExport={(period) => {
@@ -10780,7 +10780,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Outward Supplies (Net)</div>
-          <div className="ui-title text-xl">{formatMoney(outwardNet.gst, currentCompany)}</div>
+          <div className="ui-money-lg">{formatMoney(outwardNet.gst, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             Taxable {formatMoney(outwardNet.taxable, currentCompany)} · CGST {formatMoney(outwardNet.cgst, currentCompany)} · SGST {formatMoney(outwardNet.sgst, currentCompany)} · IGST {formatMoney(outwardNet.igst, currentCompany)}
           </div>
@@ -10788,7 +10788,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
 
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">ITC (Bills + Expenses)</div>
-          <div className="ui-title text-xl">{formatMoney(inwardItc.gst, currentCompany)}</div>
+          <div className="ui-money-lg">{formatMoney(inwardItc.gst, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             Taxable {formatMoney(inwardItc.taxable, currentCompany)} · CGST {formatMoney(inwardItc.cgst, currentCompany)} · SGST {formatMoney(inwardItc.sgst, currentCompany)} · IGST {formatMoney(inwardItc.igst, currentCompany)}
           </div>
@@ -10796,7 +10796,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
 
         <div className="ui-surface rounded-xl shadow-sm p-5 border">
           <div className="text-sm ui-muted">Net Tax Payable (Proxy)</div>
-          <div className="ui-title text-xl">{formatMoney(netPayable.gst, currentCompany)}</div>
+          <div className="ui-money-lg">{formatMoney(netPayable.gst, currentCompany)}</div>
           <div className="text-xs ui-muted mt-1">
             CGST {formatMoney(netPayable.cgst, currentCompany)} · SGST {formatMoney(netPayable.sgst, currentCompany)} · IGST {formatMoney(netPayable.igst, currentCompany)}
           </div>
@@ -12438,7 +12438,7 @@ const AppShell = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="ui-title text-lg">{isEdit ? 'Edit Estimate' : 'New Estimate'}</h3>
+                  <h3 className="ui-t-sec">{isEdit ? 'Edit Estimate' : 'New Estimate'}</h3>
                   <div className="text-sm ui-muted">{isEdit ? estimateEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
@@ -12505,7 +12505,7 @@ const AppShell = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="ui-title text-lg">{isEdit ? 'Edit Journal Entry' : 'New Journal Entry'}</h3>
+                  <h3 className="ui-t-sec">{isEdit ? 'Edit Journal Entry' : 'New Journal Entry'}</h3>
                   <div className="text-sm ui-muted">{isEdit ? journalEditor.initial?.number || '' : ''}</div>
                 </div>
                 <button
@@ -12543,7 +12543,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="ui-title text-lg">New Credit Note</h3>
+                <h3 className="ui-t-sec">New Credit Note</h3>
                 <button
                   type="button"
                   onClick={() => setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null })}
@@ -12582,7 +12582,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="ui-title text-lg">Record Receipt</h3>
+                <h3 className="ui-t-sec">Record Receipt</h3>
                 <button
                   type="button"
                   onClick={() => setReceiptEditor({ open: false })}
@@ -12618,7 +12618,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="ui-title text-lg">Record Payment</h3>
+                <h3 className="ui-t-sec">Record Payment</h3>
                 <button
                   type="button"
                   onClick={() => setPaymentEditor({ open: false })}
@@ -12729,7 +12729,7 @@ const AppShell = () => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="ui-title text-lg">
+                  <h3 className="ui-t-sec">
                     {mode === 'branch'
                       ? stockTransferEditor.initial
                         ? 'Edit Branch Transfer'
@@ -12806,7 +12806,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="ui-title text-lg">{poEditor.initial ? 'Edit Purchase Order' : 'New Purchase Order'}</h3>
+                <h3 className="ui-t-sec">{poEditor.initial ? 'Edit Purchase Order' : 'New Purchase Order'}</h3>
                 <button
                   type="button"
                   onClick={() => setPoEditor({ open: false, initial: null })}
@@ -12884,7 +12884,7 @@ const AppShell = () => {
         if (typeof BillsList === 'undefined' || typeof BillForm === 'undefined') {
           return (
             <div className="space-y-3">
-              <div className="ui-title text-lg">Bills</div>
+              <div className="ui-t-sec">Bills</div>
               <div className="ui-surface border rounded-xl p-4 text-sm ui-fg">
                 Bills module failed to load (missing component). Please refresh the page.
               </div>
@@ -12902,7 +12902,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="ui-title text-lg">New Bill</h3>
+                <h3 className="ui-t-sec">New Bill</h3>
                 <button
                   type="button"
                   onClick={() => setBillEditor({ open: false, initial: null })}
@@ -12948,7 +12948,7 @@ const AppShell = () => {
           return (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="ui-title text-lg">New Debit Note</h3>
+                <h3 className="ui-t-sec">New Debit Note</h3>
                 <button
                   type="button"
                   onClick={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
@@ -13353,7 +13353,7 @@ const AppShell = () => {
     return (
       <div className="min-h-screen ui-sunken flex items-center justify-center p-6">
         <div className="max-w-lg w-full ui-surface border rounded-xl p-6">
-          <div className="ui-title text-base">No branches assigned</div>
+          <div className="ui-t-sec">No branches assigned</div>
           <div className="text-sm ui-muted mt-2">
             Your user does not have access to any branch. Ask an admin to assign branches to your user.
           </div>

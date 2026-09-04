@@ -101,7 +101,7 @@ export default function Toaster() {
             aria-hidden="true"
           />
           <div className="ui-card ui-in-pop relative w-full max-w-sm p-5" style={{ boxShadow: 'var(--shadow-pop)' }}>
-            <h2 id="confirm-title" className="ui-title text-base">{confirm.title}</h2>
+            <h2 id="confirm-title" className="ui-t-sec">{confirm.title}</h2>
             {confirm.message ? <p className="ui-muted mt-2 text-sm leading-relaxed">{confirm.message}</p> : null}
             <div className="mt-5 flex justify-end gap-2">
               <button ref={cancelRef} type="button" onClick={() => settle(false)} className="ui-btn ui-btn-secondary">

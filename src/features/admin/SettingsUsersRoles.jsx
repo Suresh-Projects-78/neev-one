@@ -30,7 +30,7 @@ export function SettingsUsersRoles({ orgId }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="ui-title text-xl">Users & Roles</div>
+          <h1 className="ui-t-page">Users &amp; Roles</h1>
           <div className="text-sm ui-muted">Create users and define role permissions</div>
         </div>
       </div>
@@ -41,7 +41,7 @@ export function SettingsUsersRoles({ orgId }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <RoleCreateForm orgId={orgId} onCreated={load} />
         <div className="ui-surface border rounded-xl p-4">
-          <div className="text-lg font-semibold mb-2">Existing Roles</div>
+          <div className="ui-t-sec mb-2">Existing Roles</div>
           <div className="divide-y">
             {roles.map((r) => (
               <div key={r.id} className="py-3">

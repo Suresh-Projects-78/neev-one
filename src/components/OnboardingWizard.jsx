@@ -171,7 +171,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
 
         {step === 0 ? (
           <div>
-            <h2 id="onboard-title" className="ui-title text-lg flex items-center gap-2">
+            <h2 id="onboard-title" className="ui-t-sec flex items-center gap-2">
               <Building2 size={18} style={{ color: 'rgb(var(--brand))' }} aria-hidden="true" /> Welcome — set up your company
             </h2>
             <p className="ui-muted mt-1 text-sm">GSTIN and state drive every tax split, so they are worth thirty seconds now.</p>
@@ -224,7 +224,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
 
         {step === 1 ? (
           <div>
-            <h2 id="onboard-title" className="ui-title text-lg flex items-center gap-2">
+            <h2 id="onboard-title" className="ui-t-sec flex items-center gap-2">
               <UserPlus size={18} style={{ color: 'rgb(var(--brand))' }} aria-hidden="true" /> Who do you bill first?
             </h2>
             <p className="ui-muted mt-1 text-sm">A name and a state is enough to raise the first invoice. The rest can come later.</p>
@@ -272,7 +272,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
 
         {step === 2 ? (
           <div>
-            <h2 id="onboard-title" className="ui-title text-lg">Books begin with a document</h2>
+            <h2 id="onboard-title" className="ui-t-sec">Books begin with a document</h2>
             <p className="ui-muted mt-1 text-sm">
               Raise the first invoice and watch it post to the ledger the moment you save — the trial balance foots from
               day one.

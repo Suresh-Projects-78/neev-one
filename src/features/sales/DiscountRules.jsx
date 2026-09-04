@@ -412,9 +412,9 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               {shownRules.map((r) => (
                 <tr key={r.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5 font-medium">{r.name}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-sm">{scopeLabel(r)}</td>
-                  <td className="px-4 py-2.5 text-sm">{valueLabel(r)}</td>
-                  <td className="ui-col-date px-4 py-2.5 text-sm">
+                  <td className="ui-col-meta px-4 py-2.5">{scopeLabel(r)}</td>
+                  <td className="px-4 py-2.5">{valueLabel(r)}</td>
+                  <td className="ui-col-date px-4 py-2.5">
                     {r.validFrom || r.validTo ? `${r.validFrom || '…'} → ${r.validTo || '…'}` : 'Always'}
                   </td>
                   <td className="px-4 py-2.5"><StatusPill status={r.active === false ? 'Paused' : 'Active'} /></td>

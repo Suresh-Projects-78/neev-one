@@ -271,7 +271,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
 
       {dayCloseOpen ? (
         <div className="ui-card space-y-4 p-5">
-          <h3 className="ui-title text-base">Day close — {today}</h3>
+          <h3 className="ui-t-sec">Day close — {today}</h3>
           <div className="grid gap-3 sm:grid-cols-4 text-sm">
             <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Invoices</div><div className="text-xl font-bold">{todaysSales.length}</div></div>
             <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Cash</div><div className="text-xl font-bold">{formatMoney(byTender.Cash, currentCompany)}</div></div>
@@ -367,7 +367,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             <div className="mt-4 space-y-1 border-t pt-3 text-sm">
               <div className="flex justify-between"><span>Subtotal</span><span>{formatMoney(computed.subtotal, currentCompany)}</span></div>
               <div className="flex justify-between"><span>GST</span><span>{formatMoney(computed.gstTotal, currentCompany)}</span></div>
-              <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{formatMoney(computed.total, currentCompany)}</span></div>
+              <div className="flex justify-between ui-t-sec"><span>Total</span><span>{formatMoney(computed.total, currentCompany)}</span></div>
             </div>
 
             <div className="mt-3 space-y-2">

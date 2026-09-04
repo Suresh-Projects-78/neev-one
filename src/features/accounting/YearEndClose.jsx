@@ -257,17 +257,17 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="ui-card p-4">
           <div className="ui-caption">Income ({fy.label})</div>
-          <div className="ui-amount-pos text-2xl font-bold">{money(totals.income)}</div>
+          <div className="ui-money-lg ui-amount-pos">{money(totals.income)}</div>
           <div className="ui-caption mt-0.5">Invoice + other-charge values, net of credit notes.</div>
         </div>
         <div className="ui-card p-4">
           <div className="ui-caption">Expenses</div>
-          <div className="text-2xl font-bold">{money(totals.expense)}</div>
+          <div className="ui-money-lg">{money(totals.expense)}</div>
           <div className="ui-caption mt-0.5">Bills + expenses, net of debit notes.</div>
         </div>
         <div className="ui-card p-4">
           <div className="ui-caption">Net {net >= 0 ? 'profit' : 'loss'} to transfer</div>
-          <div className={`text-2xl font-bold ${net >= 0 ? 'ui-amount-pos' : 'ui-amount-neg'}`}>{money(Math.abs(net))}</div>
+          <div className={`ui-money-lg ${net >= 0 ? 'ui-amount-pos' : 'ui-amount-neg'}`}>{money(Math.abs(net))}</div>
           <input
             type="number"
             step="0.01"

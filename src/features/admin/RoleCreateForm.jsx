@@ -64,7 +64,7 @@ export function RoleCreateForm({ orgId, onCreated }) {
 
   return (
     <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
-      <div className="ui-title text-base">Create Role</div>
+      <div className="ui-t-sec">Create Role</div>
       {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
       <div className="grid grid-cols-3 gap-4">

@@ -294,7 +294,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="ui-title text-lg">Warehouses</div>
+        <div className="ui-t-sec">Warehouses</div>
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
@@ -345,7 +345,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
         <div className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-lg font-semibold">Warehouse Details</div>
+              <div className="ui-t-sec">Warehouse Details</div>
               <div className="text-xs ui-muted">{selectedWarehouse.name || ''}</div>
             </div>
             <div className="flex gap-2">
@@ -520,7 +520,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
 
       {showForm && (
         <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
-          <div className="text-lg font-semibold">New Warehouse</div>
+          <div className="ui-t-sec">New Warehouse</div>
 
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-12 sm:col-span-6">
@@ -640,20 +640,20 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             <tbody className="divide-y">
               {filteredWarehouses.map((w) => (
                 <tr key={w.id} className="ui-hover-sunken">
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">
+                  <td className="ui-col-meta px-4 py-3 ui-fg">
                     {(() => {
                       const b = branchLookup.get(String(w.branchId || ''));
                       return (b && (b.branchName || b.name)) ? String(b.branchName || b.name) : '—';
                     })()}
                   </td>
-                  <td className="px-4 py-3 text-sm font-medium ui-fg">
+                  <td className="px-4 py-3 font-medium ui-fg">
                     <button type="button" className="text-left hover:underline" onClick={() => openView(w.id)}>
                       {w.name || '—'}
                     </button>
                   </td>
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[w.city, w.state].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[w.addressLine1, w.addressLine2].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="ui-col-id px-4 py-3 text-sm ui-fg">{w.gstin || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{[w.city, w.state].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{[w.addressLine1, w.addressLine2].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="ui-col-id px-4 py-3 ui-fg">{w.gstin || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="relative inline-block text-left" data-warehouse-actions>
                       <button

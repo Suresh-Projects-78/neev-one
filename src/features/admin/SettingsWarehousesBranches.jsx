@@ -56,7 +56,7 @@ export function SettingsWarehousesBranches({ orgId }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <div className="ui-title text-xl">Warehouse & Branches</div>
+          <h1 className="ui-t-page">Warehouse &amp; Branches</h1>
           <div className="text-sm ui-muted">Manage branches and warehouses with GST validation</div>
         </div>
         <div className="flex gap-2">
@@ -78,7 +78,7 @@ export function SettingsWarehousesBranches({ orgId }) {
       {tab === 'branches' ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 ui-surface border rounded-xl p-4">
-            <div className="text-lg font-semibold mb-2">Branches</div>
+            <div className="ui-t-sec mb-2">Branches</div>
             <div className="divide-y">
               {branches.map((b) => (
                 <div key={b.id} className="py-3 flex items-center justify-between">
@@ -98,7 +98,7 @@ export function SettingsWarehousesBranches({ orgId }) {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 ui-surface border rounded-xl p-4">
-            <div className="text-lg font-semibold mb-2">Warehouses</div>
+            <div className="ui-t-sec mb-2">Warehouses</div>
             <div className="divide-y">
               {warehouses.map((w) => (
                 <div key={w.id} className="py-3 flex items-center justify-between">

@@ -1566,6 +1566,44 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
   }
+  /* A figure large enough to be the point of a card.
+     The ramp stops at 24px for prose because nothing between 16 and 24 has a
+     job — but a headline amount is not prose, and the summary panels were
+     reaching for `ui-title text-xl`, which put money in the sans face at a
+     size the scale does not have. One role instead: monospace, tabular, and
+     the same 20px everywhere a figure leads a card. */
+  .ui-money-lg {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.25rem;       /* 20px */
+    line-height: 1.75rem;     /* 28px */
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: rgb(var(--fg));
+  }
+  /* The line a document ends on: a label and the figure it totals.
+     Nine of these had grown as `flex justify-between font-bold text-lg`, which
+     put the grand total of an invoice in the sans face at a size the ramp does
+     not have. One class instead — the label at section size, the figure in the
+     money role — so the last number on a document is set like every other
+     number in the product. */
+  .ui-total-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 1rem;          /* 16px */
+    line-height: 1.5rem;
+    font-weight: 600;
+  }
+  .ui-total-row > :last-child {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1.25rem;       /* 20px */
+    line-height: 1.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
   .ui-card-label {
     font-size: 0.875rem;      /* 14px */
     font-weight: 500;

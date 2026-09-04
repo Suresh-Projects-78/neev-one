@@ -328,7 +328,7 @@ export function SettingsUsers({ orgId }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="ui-title text-lg">Users</div>
+        <div className="ui-t-sec">Users</div>
         <button
           type="button"
           onClick={openCreate}
@@ -379,7 +379,7 @@ export function SettingsUsers({ orgId }) {
         <div className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-lg font-semibold">User Details</div>
+              <div className="ui-t-sec">User Details</div>
               <div className="text-xs ui-muted">{selectedUser.fullName || selectedUser.name || selectedUser.email || ''}</div>
             </div>
             <div className="flex gap-2">
@@ -650,7 +650,7 @@ export function SettingsUsers({ orgId }) {
 
       {editingUserId ? (
         <form onSubmit={saveEdit} className="ui-surface border rounded-xl p-5 space-y-4">
-          <div className="text-lg font-semibold">Edit User</div>
+          <div className="ui-t-sec">Edit User</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Full Name *</label>
@@ -737,14 +737,14 @@ export function SettingsUsers({ orgId }) {
             <tbody className="divide-y">
               {filteredUsers.map((u) => (
                 <tr key={u.id} className="ui-hover-sunken">
-                  <td className="px-4 py-3 text-sm font-medium ui-fg">
+                  <td className="px-4 py-3 font-medium ui-fg">
                     <button type="button" className="text-left hover:underline" onClick={() => openView(u.id)}>
                       {u.fullName || u.name}
                     </button>
                   </td>
-                  <td className="ui-col-entity px-4 py-3 text-sm ui-fg">{u.email}</td>
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{getRoleName(u.roleId)}</td>
-                  <td className="ui-col-meta px-4 py-3 text-sm">
+                  <td className="ui-col-entity px-4 py-3 ui-fg">{u.email}</td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{getRoleName(u.roleId)}</td>
+                  <td className="ui-col-meta px-4 py-3">
                     <span className={`px-2 py-1 rounded-lg text-xs font-medium ${u.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
                       {u.isActive !== false ? 'Active' : 'Inactive'}
                     </span>

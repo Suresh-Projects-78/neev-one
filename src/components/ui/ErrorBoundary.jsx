@@ -20,7 +20,7 @@ class ErrorBoundary extends React.Component {
     return (
       <div className="min-h-screen flex items-center justify-center ui-sunken p-6">
         <div className="w-full max-w-lg ui-surface border rounded-xl p-6">
-          <div className="text-lg font-semibold">Something went wrong</div>
+          <div className="ui-t-sec">Something went wrong</div>
           <div className="text-sm ui-muted mt-2">
             Try refreshing the page. If the problem continues, check the last change.
           </div>

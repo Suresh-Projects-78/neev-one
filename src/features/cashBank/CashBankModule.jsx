@@ -1294,10 +1294,10 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                                 onChange={(e) => toggleKnockoffRow(key, e.target.checked, suggested)}
                               />
                             </td>
-                            <td className="ui-col-meta px-4 py-3 text-sm">{inv.number || `INV-${inv.id}`}</td>
-                            <td className="ui-col-date px-4 py-3 text-sm">{inv.date}</td>
-                            <td className="ui-col-amount px-4 py-3 text-sm text-right">{formatMoney(balance, currentCompany)}</td>
-                            <td className="px-4 py-3 text-sm text-right">
+                            <td className="ui-col-meta px-4 py-3">{inv.number || `INV-${inv.id}`}</td>
+                            <td className="ui-col-date px-4 py-3">{inv.date}</td>
+                            <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(balance, currentCompany)}</td>
+                            <td className="px-4 py-3 text-right">
                               <input
                                 type="number"
                                 className="ui-input w-28 px-2 py-1 text-right"
@@ -1376,10 +1376,10 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                                 onChange={(e) => toggleKnockoffRow(key, e.target.checked, suggested)}
                               />
                             </td>
-                            <td className="ui-col-meta px-4 py-3 text-sm">{d.number || `${d.voucherType}-${d.id}`}</td>
-                            <td className="ui-col-date px-4 py-3 text-sm">{d.date}</td>
-                            <td className="ui-col-amount px-4 py-3 text-sm text-right">{formatMoney(d.balance, currentCompany)}</td>
-                            <td className="px-4 py-3 text-sm text-right">
+                            <td className="ui-col-meta px-4 py-3">{d.number || `${d.voucherType}-${d.id}`}</td>
+                            <td className="ui-col-date px-4 py-3">{d.date}</td>
+                            <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.balance, currentCompany)}</td>
+                            <td className="px-4 py-3 text-right">
                               <input
                                 type="number"
                                 className="ui-input w-28 px-2 py-1 text-right"
@@ -1842,7 +1842,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="ui-title text-lg">Cash & Bank</h3>
+          <h3 className="ui-t-sec">Cash & Bank</h3>
           <div className="text-sm ui-muted">Reconcile bank/cash transactions with receipts and payments.</div>
         </div>
 
@@ -2041,24 +2041,24 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                     const ledgerName = categorised ? (ledger?.name || '-') : 'Uncategorised';
                     return (
                       <tr key={t.id} className="ui-hover-sunken">
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3">
                           <input
                             type="checkbox"
                             checked={selectedTxnIds.has(String(t.id))}
                             onChange={(e) => toggleSelectTxn(t.id, e.target.checked)}
                           />
                         </td>
-                        <td className="ui-col-date px-4 py-3 text-sm">{t.date}</td>
-                        <td className="ui-col-meta px-4 py-3 text-sm">{String(t.description || '').trim() || '-'}</td>
-                        <td className="ui-col-meta px-4 py-3 text-sm">{ledgerName}</td>
-                        <td className="ui-col-meta px-4 py-3 text-sm">{String(t.narration || '').trim() || '-'}</td>
-                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-[rgb(var(--neg))]">
+                        <td className="ui-col-date px-4 py-3">{t.date}</td>
+                        <td className="ui-col-meta px-4 py-3">{String(t.description || '').trim() || '-'}</td>
+                        <td className="ui-col-meta px-4 py-3">{ledgerName}</td>
+                        <td className="ui-col-meta px-4 py-3">{String(t.narration || '').trim() || '-'}</td>
+                        <td className="ui-col-amount px-4 py-3 text-right font-semibold text-[rgb(var(--neg))]">
                           {isOut ? formatMoney(Number(t.amount ?? 0), currentCompany) : '-'}
                         </td>
-                        <td className="ui-col-amount px-4 py-3 text-sm text-right font-semibold text-[rgb(var(--pos))]">
+                        <td className="ui-col-amount px-4 py-3 text-right font-semibold text-[rgb(var(--pos))]">
                           {isOut ? '-' : formatMoney(Number(t.amount ?? 0), currentCompany)}
                         </td>
-                        <td className="px-4 py-3 text-sm">
+                        <td className="px-4 py-3">
                           {t.readOnly ? (
                             <StatusPill status="Recorded" />
                           ) : categorised ? (

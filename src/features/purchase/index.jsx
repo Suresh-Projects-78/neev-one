@@ -636,7 +636,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                 <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
               <span>{formatMoney(computed.total, currentCompany)}</span>
             </div>
@@ -834,7 +834,7 @@ export const PurchaseOrdersList = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Purchase Orders</h3>
+        <h3 className="ui-t-sec">Purchase Orders</h3>
         <button onClick={createPo} className="ui-btn ui-btn-primary ">
           <Plus size={20} /> New PO
         </button>
@@ -1377,7 +1377,7 @@ export const PurchaseOrderForm = ({
 
         <div className="mt-4 flex justify-end">
           <div className="w-64 space-y-2">
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
               <span>{formatMoney(subtotal, currentCompany)}</span>
             </div>
@@ -2837,7 +2837,7 @@ export const DebitNoteForm = ({
                 <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
               <span>{formatMoney(computed.total, currentCompany)}</span>
             </div>
@@ -2953,7 +2953,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Debit Notes</h3>
+        <h3 className="ui-t-sec">Debit Notes</h3>
         <button
           onClick={() => {
             if (typeof onNewDebitNote === 'function') {

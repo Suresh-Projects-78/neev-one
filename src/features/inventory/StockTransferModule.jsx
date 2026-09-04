@@ -586,7 +586,7 @@ export const StockTransferEditor = ({
                 ? 'Edit Warehouse Transfer'
                 : 'New Warehouse Transfer'}
           </div>
-          <div className="ui-title text-lg">{String(form.number || '').trim() || 'Draft'}</div>
+          <div className="ui-t-sec">{String(form.number || '').trim() || 'Draft'}</div>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-44">
@@ -1054,7 +1054,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-lg font-semibold">{transfer?.number || 'Stock Transfer'}</div>
+          <div className="ui-t-sec">{transfer?.number || 'Stock Transfer'}</div>
           <div className="text-sm ui-muted">{transfer?.date || '-'}</div>
         </div>
         <StatusPill status={status} />
@@ -1701,7 +1701,7 @@ export const StockTransfersList = ({
     <div className="space-y-4">
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
-          <h3 className="ui-title text-lg">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>
+          <h3 className="ui-t-sec">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>
           <div className="text-sm ui-muted">
             {mode === 'branch'
               ? 'Transfer Out (Branch movement) → Transfer In (Branch movement)'

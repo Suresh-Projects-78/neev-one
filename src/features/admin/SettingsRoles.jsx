@@ -365,7 +365,7 @@ export function SettingsRoles({ orgId }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="ui-title text-lg">User Roles &amp; Permissions</div>
+        <div className="ui-t-sec">User Roles &amp; Permissions</div>
         <button
           type="button"
           onClick={openCreate}
@@ -415,7 +415,7 @@ export function SettingsRoles({ orgId }) {
         <div className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-lg font-semibold">Role Details</div>
+              <div className="ui-t-sec">Role Details</div>
               <div className="text-xs ui-muted">{selectedRole.name || ''}</div>
             </div>
             <div className="flex gap-2">
@@ -469,7 +469,7 @@ export function SettingsRoles({ orgId }) {
 
       {showForm && (
         <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
-          <div className="text-lg font-semibold">{editRole ? 'Edit Role' : 'New Role'}</div>
+          <div className="ui-t-sec">{editRole ? 'Edit Role' : 'New Role'}</div>
           <div>
             <label className="block text-sm font-medium mb-1">Role Name *</label>
             <input className="ui-input w-full px-3 py-2" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
@@ -620,13 +620,13 @@ export function SettingsRoles({ orgId }) {
             <tbody className="divide-y">
               {filteredRoles.map((r) => (
                 <tr key={r.id} className="ui-hover-sunken">
-                  <td className="px-4 py-3 text-sm font-medium ui-fg">
+                  <td className="px-4 py-3 font-medium ui-fg">
                     <button type="button" className="text-left hover:underline" onClick={() => openView(r.id)}>
                       {r.name}
                     </button>
                   </td>
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{r.description || '-'}</td>
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{Number(r.assignedUsersCount || 0)}</td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{r.description || '-'}</td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{Number(r.assignedUsersCount || 0)}</td>
                   <td className="ui-col-meta px-4 py-3">
                     <StatusPill status="Active" />
                   </td>

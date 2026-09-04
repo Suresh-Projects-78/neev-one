@@ -242,7 +242,7 @@ export const RolePermissionManager = () => {
 
         <div className="md:text-right">
           <div className="ui-muted text-xs font-semibold uppercase tracking-wide">Granted</div>
-          <div className="ui-title text-2xl">{grantedCount}</div>
+          <div className="ui-money-lg">{grantedCount}</div>
           <div className="ui-subtle text-xs">permissions across {catalog.modules.length} modules</div>
         </div>
       </div>

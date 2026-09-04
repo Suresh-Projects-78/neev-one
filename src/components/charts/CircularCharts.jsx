@@ -71,7 +71,7 @@ export function DonutChart({ data = [], centerLabel, centerValue, height = 230, 
           stays selectable and readable to a screen reader. */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
         <span className="ui-subtle text-[0.6875rem] font-semibold uppercase tracking-wider">{centerLabel}</span>
-        <span className="ui-title text-xl font-semibold tabular-nums mt-0.5">
+        <span className="ui-money-lg mt-0.5">
           {centerValue ?? (formatter ? formatter(total) : total)}
         </span>
       </div>

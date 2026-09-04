@@ -1984,7 +1984,7 @@ export const EstimatesList = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Estimates</h3>
+        <h3 className="ui-t-sec">Estimates</h3>
         <button
           type="button"
           onClick={openNewEstimate}
@@ -2364,7 +2364,7 @@ export const CreditNotesList = ({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="ui-title text-lg">Credit Notes</h3>
+        <h3 className="ui-t-sec">Credit Notes</h3>
         <button
           type="button"
           onClick={openNewCreditNote}
@@ -4795,7 +4795,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
               <span>{formatMoney(computed.total, currentCompany)}</span>
             </div>
@@ -4825,7 +4825,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           moment to see it is before more credit is extended, not after. */}
       <div className="ui-entry-summary">
         <span className="ui-t-label">Total</span>
-        <span className="fig text-lg">{formatMoney(computed.total, currentCompany)}</span>
+        <span className="ui-money-lg">{formatMoney(computed.total, currentCompany)}</span>
         <span className="ui-caption">
           {formData.items.filter((l) => String(l.itemId || '').trim()).length} line(s)
           {computed.gstTotal > 0 ? ` · ${formatMoney(computed.gstTotal, currentCompany)} GST` : ''}
@@ -5329,7 +5329,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                 <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
               <span>{formatMoney(computed.total, currentCompany)}</span>
             </div>
@@ -5960,7 +5960,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                 <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-lg border-t pt-2">
+            <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
               <span>{formatMoney(computed.total, currentCompany)}</span>
             </div>

@@ -40,7 +40,7 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
 
   return (
     <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
-      <div className="ui-title text-base">Inter-branch Transfer</div>
+      <div className="ui-t-sec">Inter-branch Transfer</div>
       {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 
       <div className="grid grid-cols-2 gap-4">

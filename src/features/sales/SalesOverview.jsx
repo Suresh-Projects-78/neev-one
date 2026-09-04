@@ -135,7 +135,7 @@ const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodW
         </span>
       </div>
 
-      <div className="ui-mono text-2xl font-bold mt-2.5 tracking-tight">{value}</div>
+      <div className="ui-money-lg mt-2.5">{value}</div>
 
       <div className="flex items-center gap-1.5 mt-1.5 text-xs">
         {flat ? (
@@ -193,7 +193,7 @@ const Panel = ({ title, subtitle, control, children, className = '' }) => (
   <section className={`ui-card p-5 ${className}`}>
     <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
       <div className="min-w-0">
-        <h3 className="ui-title text-lg">{title}</h3>
+        <h3 className="ui-t-sec">{title}</h3>
         {subtitle ? <p className="text-sm ui-muted mt-0.5">{subtitle}</p> : null}
       </div>
       {control}
@@ -574,7 +574,7 @@ const SalesOverview = ({
           until you know what window it covers. */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
-          <h2 className="ui-title text-3xl">Sales Overview</h2>
+          <h1 className="ui-t-page">Sales Overview</h1>
           <p className="ui-muted text-sm mt-1">
             Get a snapshot of your sales performance, receivables and credit notes.
           </p>
@@ -859,8 +859,8 @@ const SalesOverview = ({
                           {inv.number || '—'}
                         </button>
                       </td>
-                      <td className="px-3 py-2 text-sm truncate max-w-[12rem]">{customerNameFor(inv)}</td>
-                      <td className="px-3 py-2 text-sm ui-muted whitespace-nowrap">{prettyDate(inv.date)}</td>
+                      <td className="px-3 py-2 truncate max-w-[12rem]">{customerNameFor(inv)}</td>
+                      <td className="px-3 py-2 ui-muted whitespace-nowrap">{prettyDate(inv.date)}</td>
                       <td className="ui-col-amount px-3 py-2">{money(inv.total)}</td>
                       <td className="px-3 py-2">
                         <StatusPill status={derivedStatus(inv)} />
@@ -904,8 +904,8 @@ const SalesOverview = ({
                           {cn.number || '—'}
                         </button>
                       </td>
-                      <td className="px-3 py-2 text-sm truncate max-w-[12rem]">{customerNameFor(cn)}</td>
-                      <td className="px-3 py-2 text-sm ui-muted whitespace-nowrap">{prettyDate(cn.date)}</td>
+                      <td className="px-3 py-2 truncate max-w-[12rem]">{customerNameFor(cn)}</td>
+                      <td className="px-3 py-2 ui-muted whitespace-nowrap">{prettyDate(cn.date)}</td>
                       <td className="ui-col-amount px-3 py-2">{money(cn.total)}</td>
                     </tr>
                   ))}

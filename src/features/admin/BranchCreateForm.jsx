@@ -78,7 +78,7 @@ export function BranchCreateForm({ orgId, onCreated }) {
 
   return (
     <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
-      <div className="ui-title text-base">Create Branch</div>
+      <div className="ui-t-sec">Create Branch</div>
 
       {error ? <div className="text-sm text-[rgb(var(--neg))]">{error}</div> : null}
 

@@ -222,7 +222,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="ui-title text-lg">Branches</div>
+        <div className="ui-t-sec">Branches</div>
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
@@ -274,7 +274,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
         <div className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-lg font-semibold">Branch Details</div>
+              <div className="ui-t-sec">Branch Details</div>
               <div className="text-xs ui-muted">{selectedBranch.branchCode || ''}</div>
             </div>
             <div className="flex gap-2">
@@ -442,7 +442,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
 
       {showForm && (
         <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
-          <div className="text-lg font-semibold">New Branch</div>
+          <div className="ui-t-sec">New Branch</div>
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-12 sm:col-span-4">
               <label className="block text-sm font-medium mb-1">Branch Code *</label>
@@ -526,20 +526,20 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
             <tbody className="divide-y">
               {filteredBranches.map((b) => (
                 <tr key={b.id} className="ui-hover-sunken">
-                  <td className="px-4 py-3 text-sm ui-fg">
+                  <td className="px-4 py-3 ui-fg">
                     <button type="button" className="text-left hover:underline" onClick={() => openView(b.id)}>
                       <div className="font-mono">{b.branchCode || '—'}</div>
                       <div className="text-xs ui-muted">{b.branchName || ''}</div>
                     </button>
                   </td>
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{[b.city, b.state].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="ui-col-meta px-4 py-3 text-sm ui-fg">{b.addressLine1 || '—'}</td>
-                  <td className="ui-col-meta px-4 py-3 text-sm">
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{[b.city, b.state].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{b.addressLine1 || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3">
                     <span className={`px-2 py-1 rounded-lg text-xs font-medium ${b.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
                       {b.isActive !== false ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="ui-col-id px-4 py-3 text-sm ui-fg font-mono">{b.gstin || '—'}</td>
+                  <td className="ui-col-id px-4 py-3 ui-fg font-mono">{b.gstin || '—'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="relative inline-block text-left" data-branch-actions>
                       <button
