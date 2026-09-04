@@ -9,6 +9,7 @@ import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
+import { useRemoteSearch } from './useRemoteSearch';
 
 const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item', autoFocus = false }) => {
   const serverItems = useServerMasters(
@@ -66,6 +67,13 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
 
   const normalizedSearch = itemSearch.trim().toLowerCase();
   const recents = useRecentPicks('item', currentCompany?.id);
+
+  // Above the page the server returns, typing has to reach the server or the
+  // SKU may simply not be in the browser to find.
+  useRemoteSearch(serverItems.reload, itemSearch, {
+    localSize: items.length,
+    enabled: showItemPopup,
+  });
 
   /*
    * A code is typed, a name is read.

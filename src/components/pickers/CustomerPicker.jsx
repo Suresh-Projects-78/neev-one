@@ -10,6 +10,7 @@ import PopupSelect from './PopupSelect';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
+import { useRemoteSearch } from './useRemoteSearch';
 
 export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, onCreated, onClose }) => {
   const isEdit = Boolean(initialData);
@@ -1032,6 +1033,13 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
 
   const normalizedCustomerSearch = customerSearch.trim().toLowerCase();
   const recents = useRecentPicks('customer', currentCompany?.id);
+
+  // Above the page the server returns, typing has to reach the server or the
+  // name may simply not be in the browser to find.
+  useRemoteSearch(serverCustomers.reload, customerSearch, {
+    localSize: customers.length,
+    enabled: showCustomerPopup,
+  });
 
   /*
    * Ranked, not merely filtered.

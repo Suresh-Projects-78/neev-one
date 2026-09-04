@@ -11,6 +11,7 @@ import PopupSelect from './PopupSelect';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
+import { useRemoteSearch } from './useRemoteSearch';
 
 export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCreated, onClose }) => {
   const isEdit = Boolean(initialData);
@@ -970,6 +971,13 @@ const VendorPicker = ({
 
   const normalizedVendorSearch = vendorSearch.trim().toLowerCase();
   const recents = useRecentPicks('vendor', currentCompany?.id);
+
+  // Above the page the server returns, typing has to reach the server or the
+  // name may simply not be in the browser to find.
+  useRemoteSearch(serverVendors.reload, vendorSearch, {
+    localSize: vendors.length,
+    enabled: showVendorPopup,
+  });
 
   // Same ranking every list in the product uses: exact, then starts-with,
   // then a word inside the name, then GSTIN or phone, then a loose match.
