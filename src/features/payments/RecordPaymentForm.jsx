@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { getNextNumericId } from '../../utils/ids';
 import { round2, formatMoney } from '../../utils/money';
 
 const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, onClose }) => {
+  const formRef = useRef(null);
   const isInvoice = voucherType === 'invoice';
   const title = isInvoice ? 'Record Receipt' : 'Record Payment';
 
@@ -86,8 +88,16 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
     onClose?.();
   };
 
+  /*
+   * The shared document contract. A payment has no line grid, so this is the
+   * part that matters on a settlement screen: Ctrl+S saves, Ctrl+Enter
+   * commits, and Enter moves to the next field instead of posting the moment
+   * the cursor is in the amount box.
+   */
+  const onFormKeyDown = useDocumentFormKeys({ formRef });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-4">
       <DocFormActions primaryLabel={title} secondaryLabel="Cancel" onSecondary={onClose} />
 
       <div>

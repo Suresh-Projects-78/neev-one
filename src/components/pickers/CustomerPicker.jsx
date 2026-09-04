@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createCustomer, listCustomers } from '../../api/masters';
@@ -1022,6 +1022,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
   const findCustomer = (id) =>
     customers.find((c) => String(c.id) === String(id)) ||
     (db?.customers || []).find((c) => String(c.id) === String(id));
+  const triggerRef = useRef(null);
   const [showCustomerPopup, setShowCustomerPopup] = useState(false);
   const [customerPopupMode, setCustomerPopupMode] = useState('select');
   const [customerSearch, setCustomerSearch] = useState('');
@@ -1055,10 +1056,19 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
       })
     : recents.promote(customers);
 
+  /*
+   * Closing puts focus back on the field that opened it.
+   *
+   * Without this the dialog unmounts and focus falls to the document body, so
+   * the Tab after a selection starts again from the top of the page instead
+   * of moving to the next field — which breaks the whole point of picking
+   * without the mouse.
+   */
   const closePopup = () => {
     setShowCustomerPopup(false);
     setCustomerPopupMode('select');
     setCustomerSearch('');
+    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
   };
 
   const chooseCustomer = (customer) => {
@@ -1090,6 +1100,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
     <>
       <label className="block text-sm font-medium mb-1">{label}</label>
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         title={disabled ? disabledHint || 'Locked' : undefined}

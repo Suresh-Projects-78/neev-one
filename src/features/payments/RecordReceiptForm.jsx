@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
+import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -30,6 +31,7 @@ const canCollectAgainstInvoice = (inv, notes) => {
 };
 
 const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
+  const formRef = useRef(null);
   const fieldErrors = useFieldErrors('receipt');
   const companyId = currentCompany.id;
 
@@ -357,8 +359,16 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     onClose?.();
   };
 
+  /*
+   * The shared document contract. A receipt has no line grid, so this is the
+   * part that matters on a settlement screen: Ctrl+S saves, Ctrl+Enter
+   * commits, and Enter moves to the next field instead of posting the moment
+   * the cursor is in the amount box.
+   */
+  const onFormKeyDown = useDocumentFormKeys({ formRef });
+
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
       <DocFormActions
         primaryLabel={saving ? 'Recording…' : 'Record Receipt'}
         disabled={saving}

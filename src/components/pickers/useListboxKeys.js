@@ -54,6 +54,12 @@ export function useListboxKeys({ count, onChoose, onCancel, firstLetter = null, 
 
   const onKeyDown = useCallback(
     (e) => {
+      // Alt+Up closes an open list, the mirror of the Alt+Down that opened it.
+      if (e.altKey && e.key === 'ArrowUp') {
+        e.preventDefault();
+        onCancel?.();
+        return;
+      }
       if (e.altKey || e.ctrlKey || e.metaKey) return;
 
       switch (e.key) {

@@ -7,6 +7,7 @@ import BillPreview from './BillPreview';
 import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance, documentOutstanding } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
+import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { PermissionButton } from '../../permissions/ActionGuard';
@@ -362,8 +363,16 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     notify.success(`Bill created successfully!${newBatches.length ? ` ${newBatches.length} batch(es) received.` : ''}`);
   };
 
+  // The shared document contract: same keys on a bill as on an invoice.
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: formData.items.length,
+    addLine: addItem,
+    removeLine: removeItem,
+  });
+
   return (
-    <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
       <DocFormActions primaryLabel={initialData?.id ? 'Update Bill' : 'Create Bill'} />
 
       <div className="flex justify-end">
@@ -517,7 +526,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                 const tracked = isTracked(master);
                 return (
                   <React.Fragment key={idx}>
-                    <tr className="border-t">
+                    <tr className="border-t" data-line-row={idx}>
                       <td className="ui-col-meta px-3 py-2">
                         <ItemPicker
                           db={db}
@@ -1038,6 +1047,7 @@ export const PurchaseOrderForm = ({
   warehouses = [],
   defaultWarehouseId = '',
 }) => {
+  const formRef = useRef(null);
   const isEditPo = Boolean(initialData?.id);
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
   const itemsMaster = db.items.filter((i) => i.companyId === currentCompany.id);
@@ -1241,8 +1251,17 @@ export const PurchaseOrderForm = ({
     notify.success('Purchase order created successfully!');
   };
 
+  // The shared document contract, so a purchase order behaves like the bill it
+  // becomes.
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: formData.items.length,
+    addLine: addItem,
+    removeLine: removeItem,
+  });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
       <DocFormActions primaryLabel={isEditPo ? 'Update PO' : 'Create PO'} />
 
       <div className="grid grid-cols-2 gap-4">
@@ -1312,7 +1331,7 @@ export const PurchaseOrderForm = ({
             </thead>
             <tbody>
               {formData.items.map((item, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t" data-line-row={idx}>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -2155,6 +2174,7 @@ export const DebitNoteForm = ({
   defaultWarehouseId = '',
   initialData = null,
 }) => {
+  const formRef = useRef(null);
   const companyBills = db.bills.filter((b) => b.companyId === currentCompany.id);
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
   const itemsMaster = db.items.filter((i) => i.companyId === currentCompany.id);
@@ -2608,8 +2628,17 @@ export const DebitNoteForm = ({
     notify.success('Debit note created successfully!');
   };
 
+  // The shared document contract, so a debit note answers to the same keys as
+  // the bill it corrects.
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: formData.items.length,
+    addLine: addItem,
+    removeLine: removeItem,
+  });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
       <DocFormActions primaryLabel={initialData?.id ? 'Update Debit Note' : 'Create Debit Note'} />
 
       <div className="grid grid-cols-2 gap-4">
@@ -2741,7 +2770,7 @@ export const DebitNoteForm = ({
             </thead>
             <tbody>
               {formData.items.map((item, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t" data-line-row={idx}>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}

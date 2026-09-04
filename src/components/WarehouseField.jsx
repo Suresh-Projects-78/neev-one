@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { Lock } from 'lucide-react';
 
+import PopupSelect from './pickers/PopupSelect';
+
 /**
  * The warehouse a document belongs to.
  *
@@ -23,10 +25,13 @@ const WarehouseField = ({
   branchLabel = '',
   isEdit = false,
   label = 'Warehouse *',
-  className = 'ui-select w-full px-3 py-2',
-  required = true,
   showSourceHint = true,
+  // Sized and validated by the panel itself now that this is a searchable
+  // dropdown rather than a <select>. Call sites still pass both; swallowed
+  // here rather than made every caller's problem to remove.
+  ...ignoredLegacyProps
 }) => {
+  void ignoredLegacyProps;
   const active = String(activeWarehouseId || '').trim();
   const locked = Boolean(active) && !isEdit;
 
@@ -59,22 +64,23 @@ const WarehouseField = ({
     );
   }
 
+  /*
+   * The same searchable dropdown the customer, vendor, item and account
+   * fields use, rather than a bare <select>. A company with forty warehouses
+   * could not type to find one, and the keyboard behaviour differed from
+   * every other selection on the same form.
+   */
   return (
     <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      <select
-        value={value || ''}
-        onChange={(e) => onChange?.(e.target.value)}
-        className={className}
-        required={required}
-      >
-        <option value="">Select Warehouse</option>
-        {options.map((w) => (
-          <option key={String(w.id)} value={String(w.id)}>
-            {w.name || `Warehouse ${w.id}`}
-          </option>
-        ))}
-      </select>
+      <PopupSelect
+        label={label}
+        title="warehouses"
+        value={String(value || '')}
+        onChange={(next) => onChange?.(next)}
+        options={options.map((w) => ({ value: String(w.id), label: w.name || `Warehouse ${w.id}` }))}
+        placeholder="Select Warehouse"
+        showValueSubtext={false}
+      />
     </div>
   );
 };

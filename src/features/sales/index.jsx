@@ -24,6 +24,8 @@ import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 import Popover from '../../components/ui/Popover';
+import PopupSelect from '../../components/pickers/PopupSelect';
+import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import Modal from '../../components/ui/Modal';
 import InvoiceFieldSettings from '../settings/InvoiceFieldSettings';
 
@@ -2808,20 +2810,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     onBack();
   };
 
-  // The browser's own reload / close, which no in-app dialog can intercept.
-  useEffect(() => {
-    const onBeforeUnload = (e) => {
-      if (!hasUnsavedInput()) return;
-      e.preventDefault();
-      // Chrome ignores the string and shows its own wording; setting it is
-      // still what arms the prompt in older engines.
-      e.returnValue = '';
-    };
-    window.addEventListener('beforeunload', onBeforeUnload);
-    return () => window.removeEventListener('beforeunload', onBeforeUnload);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData]);
-
 
   const setCustomField = (key, value) =>
     setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
@@ -3004,19 +2992,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const [numberingOpen, setNumberingOpen] = useState(false);
 
   /*
-   * Land on the first field.
-   *
-   * Opening a form and then reaching for the mouse to click into it is the
-   * one keystroke nobody should have to spend. preventScroll because the form
-   * may open scrolled, and yanking the page is worse than not focusing.
-   */
-  useEffect(() => {
-    const first = formRef.current?.querySelector('#invoice-branch');
-    if (first instanceof HTMLElement) first.focus({ preventScroll: true });
-    // Once, on open. Re-running would steal focus mid-typing.
-  }, []);
-
-  /*
    * Which line, if any, is waiting on a batch.
    *
    * Batch and expiry used to live in a permanent sub-row under every tracked
@@ -3130,7 +3105,41 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     // db is the whole book; the lines that matter are its stock documents.
   }, [db, currentCompany.id, formData.warehouseId]);
 
+  /*
+   * Which cells the operator has typed into by hand, per line.
+   *
+   * Choosing an item fills the description, rate, tax and HSN from the master
+   * — right the first time, wrong the second, because re-picking the item on
+   * a line whose rate was negotiated wipes the negotiated rate. Kept in a ref
+   * rather than on the line so it can never be written into the saved
+   * document, and reset for a line whenever its item changes, since that is a
+   * new line in everything but position.
+   */
+  const touchedCellsRef = useRef({});
+
+  const markTouched = (index, field) => {
+    const map = touchedCellsRef.current;
+    map[index] = map[index] || new Set();
+    map[index].add(field);
+  };
+
+  const isTouched = (index, field) => Boolean(touchedCellsRef.current[index]?.has(field));
+
+  /** Keep the record lined up with the rows after an insert or a delete. */
+  const shiftTouched = (from, delta) => {
+    const next = {};
+    for (const [k, v] of Object.entries(touchedCellsRef.current)) {
+      const i = Number(k);
+      if (i < from) next[i] = v;
+      else if (delta < 0 && i === from) continue;
+      else next[i + delta] = v;
+    }
+    touchedCellsRef.current = next;
+  };
+
   const updateItem = (index, field, value, pickedItem = null) => {
+    if (field === 'itemId') delete touchedCellsRef.current[index];
+    else markTouched(index, field);
     const newItems = [...formData.items];
 
     if (field === 'itemId') {
@@ -3151,14 +3160,16 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           // this invoice was raised does not price it.
           onDate: formData.date,
         });
+        // Everything the master knows, except whatever this operator has
+        // already overruled on this line.
         newItems[index] = {
           ...newItems[index],
           itemId: value,
-          description: item.name,
-          rate: resolved.rate,
-          rateSource: resolved.source,
-          gstRate: Number(item.gstRate ?? 0),
-          hsnSac: item.hsnSac || '',
+          ...(isTouched(index, 'description') ? {} : { description: item.name }),
+          ...(isTouched(index, 'rate') ? {} : { rate: resolved.rate, rateSource: resolved.source }),
+          ...(isTouched(index, 'gstRate') ? {} : { gstRate: Number(item.gstRate ?? 0) }),
+          ...(isTouched(index, 'hsnSac') ? {} : { hsnSac: item.hsnSac || '' }),
+          ...(isTouched(index, 'unit') || !item.unit ? {} : { unit: item.unit }),
         };
         if (resolved.source !== 'item master') {
           notify.info(`Rate ${resolved.rate} from ${resolved.source}`);
@@ -3238,10 +3249,30 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   };
 
   const removeItem = (index) => {
+    shiftTouched(index, -1);
     setFormData({
       ...formData,
       items: formData.items.filter((_, i) => i !== index),
     });
+  };
+
+  /**
+   * Copy a line and put the copy directly under it.
+   *
+   * Batch and any recorded expiry are dropped: the copy is a new line that has
+   * not been told which batch it draws from, and inheriting one would quietly
+   * commit stock the operator never chose.
+   */
+  const duplicateItem = (index) => {
+    const source = formData.items[index];
+    if (!source) return;
+    const copy = { ...source, batchId: '', batchNo: '', expiryDate: '' };
+    shiftTouched(index + 1, 1);
+    setFocusRowIndex(index + 1);
+    setFormData((prev) => ({
+      ...prev,
+      items: [...prev.items.slice(0, index + 1), copy, ...prev.items.slice(index + 1)],
+    }));
   };
 
   const computed = computeGstForLines({
@@ -3724,92 +3755,36 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   // Hands stay on the keyboard. These are the bindings a Tally operator
   // already has in muscle memory, so entry does not slow down on arrival.
-  const onFormKeyDown = (e) => {
-    const mod = e.metaKey || e.ctrlKey;
-    if (mod && String(e.key).toLowerCase() === 's') {
-      e.preventDefault();
-      // Ctrl+S means save what is here. On a draftable document that is the
-      // draft — the browser's own Ctrl+S saves a page nobody wants, and this
-      // one should never be the keystroke that finalises a GST number.
+  /*
+   * The shared document keyboard contract, in place of a handler this form
+   * had grown for itself: Ctrl+S saves the draft, Ctrl+Enter commits, Enter
+   * advances (and opens the next line inside the grid), Tab off the last cell
+   * of the last line opens one, Ctrl+= adds, Ctrl+D duplicates, Ctrl+Delete
+   * removes.
+   */
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    // Ctrl+S should never be the keystroke that finalises a GST number, so on
+    // a draftable document it saves the draft.
+    onSave: () => {
       if (isDraftInvoice && !isEdit) {
         submitAsDraftNow();
         return;
       }
       setSubmitAsDraft(false);
       formRef.current?.requestSubmit();
-      return;
-    }
-    if (mod && e.key === 'Enter') {
-      // Ctrl+Enter is the commit: create the invoice, draft or not.
-      e.preventDefault();
+    },
+    onCommit: () => {
       setSubmitAsDraft(false);
       formRef.current?.requestSubmit();
-      return;
-    }
-    /**
-     * Tab out of the *last* control of the *last* line starts the next one,
-     * the way a Tally operator expects.
-     *
-     * This used to hang off the row's own onKeyDown and fired on any cell in
-     * the last row, so tabbing from the item to the quantity opened a line
-     * nobody asked for — when it fired at all. Enter has always been handled
-     * here at the form, which is the level a keystroke from inside the table
-     * reliably reaches, so Tab is handled here too.
-     */
-    if (e.key === 'Tab' && !e.shiftKey && !mod) {
-      const el = e.target;
-      if (!(el instanceof HTMLElement)) return;
-      const row = el.closest('[data-line-row]');
-      if (!row) return;
-      if (Number(row.dataset.lineRow) !== formData.items.length - 1) return;
-      // The last thing you *type into*, not the last thing you can focus.
-      // The row ends with a delete button, so counting that as the last field
-      // meant Tab from the final rate or discount did nothing, and the new
-      // line only opened from the bin icon — which is not where anybody's
-      // hands are.
-      const entry = row.querySelectorAll(
-        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled])'
-      );
-      if (!entry.length || entry[entry.length - 1] !== el) return;
-      e.preventDefault();
-      addItem();
-      return;
-    }
-
-    if (e.key !== 'Enter' || e.shiftKey || mod) return;
-    const target = e.target;
-    if (!(target instanceof HTMLElement)) return;
-    if (target.tagName === 'TEXTAREA') return;
-
-    // Enter inside a line opens the next one.
-    if (target.closest('tbody')) {
-      e.preventDefault();
-      addItem();
-      return;
-    }
-
-    /*
-     * Enter anywhere else moves on rather than submitting.
-     *
-     * A single-input form submits on Enter and so does this one, which is the
-     * classic way to book a half-typed invoice from the customer field. The
-     * buttons keep their own behaviour — Enter on Create Invoice still
-     * creates it — so the only thing this changes is the header fields, where
-     * Enter now means "done with this one".
-     */
-    if (target.tagName === 'BUTTON' || target.getAttribute('role') === 'button') return;
-    const form = formRef.current;
-    if (!form) return;
-    const focusables = Array.from(
-      form.querySelectorAll(
-        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
-      )
-    ).filter((el) => el.offsetParent !== null);
-    const at = focusables.indexOf(target);
-    if (at === -1) return;
-    e.preventDefault();
-    focusables[at + 1]?.focus();
-  };
+    },
+    lineCount: formData.items.length,
+    addLine: addItem,
+    duplicateLine: duplicateItem,
+    removeLine: removeItem,
+    autoFocus: '#invoice-branch-field button',
+    isDirty: hasUnsavedInput,
+  });
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
@@ -3938,23 +3913,22 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-7 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="invoice-branch" className="block text-sm font-medium mb-1">
-                Branch
-              </label>
-              <select
-                id="invoice-branch"
-                value={branchId || ''}
-                onChange={(e) => onBranchChange(e.target.value)}
-                className="ui-select w-full px-3 py-2"
-              >
-                <option value="">All branches</option>
-                {branchOptions.map((b) => (
-                  <option key={String(b.id)} value={String(b.id)}>
-                    {b.name || `Branch ${b.id}`}
-                  </option>
-                ))}
-              </select>
+            {/* The same searchable dropdown as every other selection on this
+                form — a chain with forty branches should be typed at, not
+                scrolled. */}
+            <div id="invoice-branch-field">
+              <PopupSelect
+                label="Branch"
+                title="branches"
+                value={String(branchId || '')}
+                onChange={onBranchChange}
+                options={[
+                  { value: '', label: 'All branches' },
+                  ...branchOptions.map((b) => ({ value: String(b.id), label: b.name || `Branch ${b.id}` })),
+                ]}
+                placeholder="All branches"
+                showValueSubtext={false}
+              />
             </div>
 
           <div
@@ -4935,6 +4909,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 };
 
 export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, onClose }) => {
+  const formRef = useRef(null);
   const isEdit = Boolean(initialData && (initialData.id !== undefined && initialData.id !== null));
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   const estimateDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
@@ -5171,8 +5146,17 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
     notify.success('Estimate created successfully!');
   };
 
+  // The shared document contract, so an estimate behaves like the invoice it
+  // will become.
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: formData.items.length,
+    addLine: addItem,
+    removeLine: removeItem,
+  });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
       <DocFormActions primaryLabel={isEdit ? 'Update Estimate' : 'Create Estimate'} />
 
       <div className="grid grid-cols-2 gap-4">
@@ -5257,7 +5241,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             </thead>
             <tbody>
               {formData.items.map((item, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t" data-line-row={idx}>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -5349,6 +5333,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 };
 
 export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoiceId, onClose, warehouses = [], defaultWarehouseId = '' }) => {
+  const formRef = useRef(null);
   const companyInvoices = db.invoices.filter((i) => i.companyId === currentCompany.id);
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
   const itemsMaster = db.items.filter((i) => i.companyId === currentCompany.id);
@@ -5734,8 +5719,17 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
     notify.success('Credit note created successfully!');
   };
 
+  // The shared document contract, so a credit note answers to the same keys
+  // as the invoice it reverses.
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: formData.items.length,
+    addLine: addItem,
+    removeLine: removeItem,
+  });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
       <DocFormActions primaryLabel="Create Credit Note" />
 
       <div className="grid grid-cols-2 gap-4">

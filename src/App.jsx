@@ -190,6 +190,7 @@ import { buildRecordIndex, searchRecords } from './utils/searchIndex';
 import { setSearchSeed } from './utils/searchSeed';
 import { useGlobalShortcuts } from './components/ui/useGlobalShortcuts';
 import { useCommandPalette } from './components/ui/useCommandPalette';
+import { useDocumentFormKeys } from './components/ui/useDocumentFormKeys';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
@@ -1884,8 +1885,17 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
   const costCenters = (db.costCenters || []).filter((c) => c.companyId === currentCompany.id);
 
+  // The shared document contract: same keys on an expense voucher as on a
+  // bill.
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: formData.lines.length,
+    addLine,
+    removeLine,
+  });
+
   return (
-    <form ref={formRef} onSubmit={handleSubmit} noValidate className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
       <DocFormActions
         primaryLabel="Submit Expense"
         secondaryLabel="Save Draft"
@@ -2050,7 +2060,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
               {formData.lines.map((line, idx) => {
                 const row = computed.rows[idx] || { gstAmount: 0, lineTotal: 0 };
                 return (
-                  <tr key={idx}>
+                  <tr key={idx} data-line-row={idx}>
                     <td className="px-3 py-2 text-sm ui-muted">{idx + 1}</td>
                     <td className="px-3 py-2">
                       <select
@@ -4401,6 +4411,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
 };
 
 const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null }) => {
+  const formRef = useRef(null);
   const accounts = db.chartOfAccounts.filter((a) => a.companyId === currentCompany.id);
 
   const accountOptions = useMemo(() => {
@@ -4608,8 +4619,18 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
     onClose?.();
   };
 
+  // The shared document contract, so a journal answers to the same keys as
+  // every other document: Ctrl+S saves, Enter moves on, Ctrl+= adds a line,
+  // Ctrl+D duplicates it, Ctrl+Delete removes it.
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: formData.lines.length,
+    addLine,
+    removeLine,
+  });
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
       <DocFormActions
         primaryLabel={isEdit ? 'Update Entry' : 'Create Entry'}
         disabled={!isBalanced}
@@ -4656,7 +4677,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
             </thead>
             <tbody>
               {formData.lines.map((line, idx) => (
-                <tr key={idx} className="border-t">
+                <tr key={idx} className="border-t" data-line-row={idx}>
                   <td className="ui-col-meta px-3 py-2">
                     <PopupSelect
                       label={null}

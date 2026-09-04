@@ -81,10 +81,13 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
       })
     : recents.promote(items);
 
+  // Focus goes back to the cell that opened this, so Tab carries on into the
+  // description and quantity instead of restarting at the top of the page.
   const closePopup = () => {
     setShowItemPopup(false);
     setItemSearch('');
     setMode('select');
+    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
   };
 
   const chooseItem = (item) => {

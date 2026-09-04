@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { notify } from '../ui/notify';
 
 import Modal from '../ui/Modal';
@@ -322,6 +322,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
       .sort((a, b) => String(a.code || '').localeCompare(String(b.code || '')));
   }, [db.chartOfAccounts, currentCompany.id]);
 
+  const triggerRef = useRef(null);
   const [showPopup, setShowPopup] = useState(false);
   const [mode, setMode] = useState('select');
   const [search, setSearch] = useState('');
@@ -355,10 +356,13 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
       })
     : recents.promote(accounts);
 
+  // Focus goes back to the field that opened this, so the next Tab continues
+  // the form instead of restarting at the top of the page.
   const closePopup = () => {
     setShowPopup(false);
     setMode('select');
     setSearch('');
+    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
   };
 
   const chooseAccount = (account) => {
@@ -434,6 +438,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
     <>
       {label ? <label className="block text-sm font-medium mb-1">{label}</label> : null}
       <button
+        ref={triggerRef}
         type="button"
         onClick={openPopup}
         onKeyDown={openOnKey(openPopup)}

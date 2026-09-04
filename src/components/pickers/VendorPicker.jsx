@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
 import { createVendor, listVendors } from '../../api/masters';
@@ -960,6 +960,7 @@ const VendorPicker = ({
   const findVendor = (id) =>
     vendors.find((v) => String(v.id) === String(id)) ||
     (db?.vendors || []).find((v) => String(v.id) === String(id));
+  const triggerRef = useRef(null);
   const [showVendorPopup, setShowVendorPopup] = useState(false);
   const [vendorPopupMode, setVendorPopupMode] = useState('select');
   const [vendorSearch, setVendorSearch] = useState('');
@@ -979,10 +980,13 @@ const VendorPicker = ({
       })
     : recents.promote(vendors);
 
+  // Focus goes back to the field that opened this, so the next Tab continues
+  // the form instead of restarting at the top of the page.
   const closePopup = () => {
     setShowVendorPopup(false);
     setVendorPopupMode('select');
     setVendorSearch('');
+    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
   };
 
   const chooseVendor = (vendor) => {
@@ -1015,6 +1019,7 @@ const VendorPicker = ({
       <label className="block text-sm font-medium mb-1">{label}</label>
       <div className="flex items-center gap-2">
         <button
+          ref={triggerRef}
           type="button"
           disabled={disabled}
           title={disabled ? disabledHint || 'Locked' : undefined}
