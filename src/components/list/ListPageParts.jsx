@@ -35,31 +35,51 @@ import { exportListXlsx } from '../../utils/listXlsx';
  * the narrowest column the five-across grid produces.
  */
 export function StatCards({ cards, company }) {
+  const shown = cards.filter(Boolean);
+  /*
+   * The hint line was a default reading "This financial year" on every card of
+   * every list. It cost a line of height five times over, and once the figures
+   * started following the filters it was also wrong — filter to one customer
+   * and the card is not showing the financial year at all. It is now only
+   * rendered where a caller has something to say, and reserved across the row
+   * when any card does, so the tiles stay the same height as each other.
+   */
+  const anyHint = shown.some((c) => c.hint);
+
   return (
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Summary">
-      {cards.filter(Boolean).map((c) => (
-        <div key={c.label} className="ui-card p-3 relative">
+    <section className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="Summary">
+      {shown.map((c) => (
+        <div key={c.label} className="ui-card px-3 py-2.5 flex items-center gap-2.5">
+          {/* Beside the figure rather than floating in the corner. Absolute
+              positioning was what forced the tile to be tall enough to have a
+              corner to float in. */}
           <span
-            className="h-7 w-7 rounded-full grid place-items-center absolute top-2.5 end-2.5"
+            className="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0"
             style={{ backgroundColor: `rgb(var(--${c.tone}) / 0.12)`, color: `rgb(var(--${c.tone}))` }}
             aria-hidden="true"
           >
             <c.Icon size={15} />
           </span>
-          <span className="block">
+
+          <span className="block min-w-0">
             {/* One line, clipped rather than wrapped. Two-line labels forced a
                 32px reservation on every card whether or not any label used it,
                 and five of those across the top of a list is a band of empty
                 space between the toolbar and the first invoice. */}
-            <span className="ui-card-label block pe-8 truncate" title={c.label}>{c.label}</span>
+            <span className="ui-t-label block truncate" title={c.label}>
+              {c.label}
+            </span>
             <span
-              className={`block font-semibold leading-7 ${c.count ? 'text-xl' : 'ui-mono text-base'}`}
+              className={`block font-semibold leading-6 truncate ${c.count ? 'text-base' : 'ui-mono text-base'}`}
+              title={c.count ? String(c.value) : formatMoney(c.value, company)}
               style={c.tone === 'neg' || c.tone === 'warn' ? { color: `rgb(var(--${c.tone}))` } : undefined}
             >
               {c.count ? String(c.value) : formatMoney(c.value, company)}
             </span>
+            {anyHint ? (
+              <span className="ui-subtle text-xs block leading-4 truncate">{c.hint || '\u00a0'}</span>
+            ) : null}
           </span>
-          <span className="ui-subtle text-xs block leading-4">{c.hint || 'This financial year'}</span>
         </div>
       ))}
     </section>
