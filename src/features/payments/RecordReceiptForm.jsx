@@ -85,7 +85,20 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
   const ledgerAccountId =
     formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
-  const [allocations, setAllocations] = useState(() => ({}));
+  /*
+   * Opened against one invoice, that invoice is already ticked.
+   *
+   * Recording a receipt from an invoice row used to prefill only the customer
+   * and the outstanding amount, so the money arrived unallocated and the
+   * invoice it came from stayed open — the one thing the operator was
+   * certainly trying to close.
+   */
+  const [allocations, setAllocations] = useState(() => {
+    const id = initialData?.allocateInvoiceId;
+    const amt = Number(initialData?.amount ?? 0);
+    if (!id || !(amt > 0)) return {};
+    return { [String(id)]: { selected: true, amount: round2(amt) } };
+  });
 
   const invoices = useMemo(() => {
     return safeArray(db.invoices)
@@ -672,7 +685,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                       </td>
                       <td className="ui-col-meta px-4 py-3 font-medium">{inv.number || '-'}</td>
                       <td className="ui-col-date px-4 py-3">{inv.date || '-'}</td>
-                      <td className="ui-col-amount px-4 py-3 text-right font-semibold">{formatMoney(bal, currentCompany)}</td>
+                      <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(bal, currentCompany)}</td>
                       <td className="px-4 py-3 text-right">
                         <input
                           type="number"

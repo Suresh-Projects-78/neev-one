@@ -242,7 +242,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
                   <td className="px-4 py-2.5 text-right">
                     {rateApplied}%{halfRate ? <span className="ui-caption block">half rate (&lt;180d)</span> : null}
                   </td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{money(dep)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{money(dep)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{money(closingWdv)}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button type="button" onClick={() => remove(asset)} className="ui-icon-btn !h-8 !w-8" aria-label={`Remove ${asset.name}`}>

@@ -163,8 +163,8 @@ export default function Salesmen({ db, setDb, currentCompany }) {
                   <td className="ui-col-meta px-4 py-2.5">{s.phone || '—'}</td>
                   <td className="px-4 py-2.5">{Number(s.commissionPct || 0)}%</td>
                   <td className="px-4 py-2.5 text-right">{invoices}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(sales, currentCompany)}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(commission, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(sales, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(commission, currentCompany)}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button type="button" onClick={() => remove(s)} className="ui-icon-btn !h-8 !w-8" aria-label={`Remove ${s.name}`}>
                       <Trash2 size={14} />

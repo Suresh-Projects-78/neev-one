@@ -190,20 +190,20 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
           <div className="flex items-center gap-6 text-sm">
             <span className="text-right">
               <span className="ui-caption block">Billed</span>
-              <span className="ui-col-amount font-semibold" title={formatMoney(act.billed, c)}>
+              <span className="ui-col-amount" title={formatMoney(act.billed, c)}>
                 {formatMoneyCompact(act.billed, c)}
               </span>
             </span>
             <span className="text-right">
               <span className="ui-caption block">Outstanding</span>
-              <span className="ui-col-amount font-semibold" title={formatMoney(act.outstanding, c)}>
+              <span className="ui-col-amount" title={formatMoney(act.outstanding, c)}>
                 {formatMoneyCompact(act.outstanding, c)}
               </span>
             </span>
             {roll ? (
               <span className="text-right">
                 <span className="ui-caption block">Group billed</span>
-                <span className="ui-col-amount font-semibold" title={formatMoney(roll.billed, c)}>
+                <span className="ui-col-amount" title={formatMoney(roll.billed, c)}>
                   {formatMoneyCompact(roll.billed, c)}
                 </span>
               </span>

@@ -415,11 +415,20 @@ importsRouter.post('/orgs/:orgId/imports/:batchId/commit', CREATE, async (req, r
           const qty = money(r.data.quantity);
           const rate = money(r.data.rate);
           const gstRate = money(r.data.gst_rate) || 0;
-          const taxable = qty * rate;
+          // A line discount is a percentage off the line before tax, which is
+          // how the creation form applies it — importing without it made every
+          // discounted historical line arrive at list price.
+          const discountPct = Math.max(0, Math.min(100, money(r.data.discount_pct) || 0));
+          const gross = qty * rate;
+          const taxable = gross - (gross * discountPct) / 100;
           return {
             description: String(r.data.description || '').trim(),
+            itemCode: String(r.data.item_code || '').trim() || undefined,
+            unit: String(r.data.unit || '').trim() || undefined,
+            hsnSac: String(r.data.hsn_sac || '').trim() || undefined,
             quantity: qty,
             rate,
+            discountPct: discountPct || undefined,
             gstRate,
             taxableAmount: taxable,
             gstAmount: (taxable * gstRate) / 100,
@@ -441,8 +450,12 @@ importsRouter.post('/orgs/:orgId/imports/:batchId/commit', CREATE, async (req, r
             branchId,
             number: g.key,
             date: String(first.date).trim(),
+            dueDate: String(first.due_date || '').trim() || null,
             customerName: String(first.customer_name).trim(),
             customerGstin: String(first.customer_gstin || '').trim() || null,
+            placeOfSupplyState: String(first.place_of_supply || '').trim() || null,
+            refNo: String(first.ref_no || '').trim() || null,
+            refDate: String(first.ref_date || '').trim() || null,
             subtotal: new Prisma.Decimal(subtotal.toFixed(2)),
             cgstTotal: new Prisma.Decimal(tax.cgst.toFixed(2)),
             sgstTotal: new Prisma.Decimal(tax.sgst.toFixed(2)),

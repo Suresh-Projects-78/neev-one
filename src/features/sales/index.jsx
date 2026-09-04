@@ -29,6 +29,7 @@ import Popover from '../../components/ui/Popover';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import Modal from '../../components/ui/Modal';
+import Drawer from '../../components/ui/Drawer';
 import InvoiceFieldSettings from '../settings/InvoiceFieldSettings';
 
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
@@ -530,6 +531,10 @@ const statusReason = (doc, status, company, nowMs) => {
         initialData={{
           customerId: invoice?.customerId,
           amount: Math.max(0, Number(invoice?.total ?? 0) - Number(invoice?.paidAmount ?? 0)),
+          // The invoice this was opened from, ticked and allocated. Without
+          // it the money landed on account and the invoice stayed open.
+          allocateInvoiceId: invoice?.id,
+          reference: invoice?.number || '',
         }}
         onClose={() => openModal(null)}
       />,
@@ -1988,7 +1993,7 @@ export const EstimatesList = ({
                   <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                   <td className="ui-col-date px-4 py-2.5">{est.date || '-'}</td>
                   <td className="ui-col-date px-4 py-2.5">{est.dueDate || '-'}</td>
-                  <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(est.total || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5">{formatMoney(est.total || 0, currentCompany)}</td>
                   {/*
                     An estimate that has already become an invoice looked
                     exactly like one still waiting on the customer. The only
@@ -2334,7 +2339,7 @@ export const CreditNotesList = ({
                     <td className="ui-col-entity px-4 py-2.5">{cn.customerName || '-'}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                     <td className="ui-col-date px-4 py-2.5">{cn.date || '-'}</td>
-                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(cn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(cn.total || 0, currentCompany)}</td>
                     {/*
                       Whether this credit has actually reached the books. A
                       draft does not post, and without this column there was
@@ -3807,23 +3812,29 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
       ) : null}
 
-      {prefsOpen ? (
-        <div className="space-y-3">
-          <InvoiceFieldSettings
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            embedded
-            onBack={() => setPrefsOpen(false)}
-          />
-          <div style={{ borderTop: '1px solid rgb(var(--border))' }} className="pt-3">
-            <button type="button" onClick={() => setPrefsOpen(false)} className="ui-btn ui-btn-primary">
-              Back to the invoice
-            </button>
-            <span className="ui-caption ml-3">Nothing typed above was lost — the invoice is exactly as you left it.</span>
-          </div>
-        </div>
-      ) : null}
+      {/*
+        Settings arrive beside the invoice, not on top of it.
+
+        This used to render InvoiceFieldSettings inline, so choosing
+        "Preferences" or "Custom Field" from the menu put a settings screen in
+        the middle of a half-typed invoice — two screens stacked on one page,
+        neither with the width it needed, and no clear way to tell which one
+        you were editing. The invoice stays where it was, behind the scrim.
+      */}
+      <Drawer
+        open={prefsOpen}
+        onClose={() => setPrefsOpen(false)}
+        title="Invoice settings"
+        description="Applies to every invoice, not just this one. Nothing typed here is lost."
+      >
+        <InvoiceFieldSettings
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          embedded
+          onBack={() => setPrefsOpen(false)}
+        />
+      </Drawer>
 
       {previewOpen && !prefsOpen ? (
         <div className="ui-card p-4">
@@ -3853,7 +3864,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         the customer and read as neither.
       */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
-        <div className="lg:col-span-7 space-y-4">
+        <div className="lg:col-span-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* The same searchable dropdown as every other selection on this
                 form — a chain with forty branches should be typed at, not
@@ -3953,10 +3964,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             splitting them put a full-width number above a pair of narrow
             dates, which reads as two unrelated groups. */}
         <div
-          className="lg:col-span-5 space-y-4 lg:ps-6"
+          className="lg:col-span-6 space-y-4 lg:ps-6"
           style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr] gap-3">
           <div className="min-w-0">
             <label htmlFor="invoice-number" className="block text-sm font-medium mb-1">
               Invoice No.
@@ -3964,7 +3975,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             {/* The gear sits on the field it governs. Changing a series is a
                 different act from raising an invoice, so it opens over the
                 form rather than navigating away from a half-typed document. */}
-            <div className="flex items-start gap-2">
+            <div className="relative">
               <input
                 id="invoice-number"
                 type="text"
@@ -3973,18 +3984,19 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 disabled={lockInvoiceNumberOnCreate}
                 required
                 aria-invalid={fieldErrors.error('number') ? true : undefined}
-                className="ui-input ui-mono flex-1 min-w-0"
+                className="ui-input ui-mono w-full pe-9"
               />
               <button
                 type="button"
                 ref={numberingBtnRef}
                 onClick={() => setNumberingOpen((v) => !v)}
-                className="ui-btn ui-btn-secondary !px-2 shrink-0"
+                className="absolute end-1 top-1/2 -translate-y-1/2 ui-icon-btn !h-7 !w-7"
                 aria-label="Invoice numbering settings"
                 aria-haspopup="dialog"
                 aria-expanded={numberingOpen}
+                title="Numbering"
               >
-                <Settings2 size={16} aria-hidden="true" />
+                <SlidersHorizontal size={15} aria-hidden="true" />
               </button>
             </div>
             <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
@@ -4394,19 +4406,29 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <table className="ui-table w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">
+                {/*
+                  Widths, because there were none.
+
+                  Every column took whatever the browser gave it, and the
+                  description input is the greediest thing in the row, so the
+                  item — the column the line is actually about — was squeezed
+                  into whatever was left. A quarter of the line to the item,
+                  a fifth to the description, and the numeric columns pinned
+                  to the width their content needs.
+                */}
+                <th className="ui-th text-left w-[25%]">Item</th>
+                <th className="ui-th text-left w-[20%]">Description</th>
+                <th className="ui-th text-left w-[7%]">
                   Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Unit</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">
+                <th className="ui-th text-left w-[8%]">Unit</th>
+                <th className="ui-th text-left w-[11%]">
                   Rate (₹) <span className="text-[rgb(var(--neg-ink))]">*</span>
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Disc %</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Tax %</th>
-                <th className="px-3 py-2 text-right text-xs font-medium">Amount (₹)</th>
-                <th className="px-3 py-2"></th>
+                <th className="ui-th text-left w-[7%]">Disc %</th>
+                <th className="ui-th text-left w-[9%]">Tax %</th>
+                <th className="ui-th text-right w-[11%]">Amount (₹)</th>
+                <th className="px-3 py-2 w-10"></th>
               </tr>
             </thead>
             <tbody>
@@ -4452,7 +4474,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="ui-input w-full px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -4513,7 +4535,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       <span className="text-sm">{Number(item.gstRate ?? 0)}%</span>
                     )}
                   </td>
-                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
@@ -5311,7 +5333,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                       step="0.01"
                     />
                   </td>
-                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
@@ -6067,7 +6089,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       step="0.01"
                     />
                   </td>
-                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />

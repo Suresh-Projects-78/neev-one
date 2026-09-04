@@ -176,7 +176,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
                     <td className="ui-col-entity px-4 py-2.5">{inv.customerName}</td>
                     <td className="ui-col-date px-4 py-2.5">{inv.dueDate || '—'}</td>
                     <td className="px-4 py-2.5 text-right">{overdue > 0 ? `${overdue}d` : '—'}</td>
-                    <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(balance, currentCompany)}</td>
+                    <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(balance, currentCompany)}</td>
                     <td className="px-4 py-2.5">
                       <StatusPill status={stageLabel(stage)} />
                       {urgent ? <span className="ui-caption ml-1 text-[rgb(var(--warn-ink))]">Send now</span> : null}

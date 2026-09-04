@@ -325,7 +325,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                   <td className="px-3 py-2">
                     <input type="number" min="0" step="0.01" value={l.rate} onChange={(e) => updateLine(idx, 'rate', e.target.value)} className="ui-input w-24 px-2 py-1" />
                   </td>
-                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(computed.lines[idx]?.lineTotal || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2">{formatMoney(computed.lines[idx]?.lineTotal || 0, currentCompany)}</td>
                 </tr>
               ))}
             </tbody>

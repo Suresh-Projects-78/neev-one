@@ -578,7 +578,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
                       <td className="ui-col-meta px-4 py-3">{d.voucherType === 'bill' ? 'Bill' : 'Expense'}</td>
                       <td className="ui-col-meta px-4 py-3 font-medium">{d.number || '-'}</td>
                       <td className="ui-col-date px-4 py-3">{d.date || '-'}</td>
-                      <td className="ui-col-amount px-4 py-3 text-right font-semibold">{formatMoney(d.balance, currentCompany)}</td>
+                      <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.balance, currentCompany)}</td>
                       <td className="px-4 py-3 text-right">
                         <input
                           type="number"

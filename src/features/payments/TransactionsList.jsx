@@ -301,7 +301,7 @@ const TransactionView = ({ title, payload }) => {
                         {a?.voucherType ? `${getVoucherLabel(a.voucherType)}: ` : ''}
                         {a?.documentNumber || a?.voucherId || '-'}
                       </td>
-                      <td className="ui-col-amount px-3 py-2 text-right font-semibold">
+                      <td className="ui-col-amount px-3 py-2 text-right">
                         {formatMoney(Number(a?.amount ?? 0), payload?.currentCompany)}
                       </td>
                     </tr>
@@ -487,7 +487,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
                   <td className="ui-col-entity px-4 py-2.5">{r.partyName || '-'}</td>
                   <td className="ui-col-meta px-4 py-2.5">{r.mode || '-'}</td>
                   <td className="ui-col-meta px-4 py-2.5">{r.reference || '-'}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(r.amount || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(r.amount || 0, currentCompany)}</td>
                 </tr>
               ))
             )}

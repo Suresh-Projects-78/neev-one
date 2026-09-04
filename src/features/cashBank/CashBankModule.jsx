@@ -2052,10 +2052,10 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                         <td className="ui-col-meta px-4 py-3">{String(t.description || '').trim() || '-'}</td>
                         <td className="ui-col-meta px-4 py-3">{ledgerName}</td>
                         <td className="ui-col-meta px-4 py-3">{String(t.narration || '').trim() || '-'}</td>
-                        <td className="ui-col-amount px-4 py-3 text-right font-semibold text-[rgb(var(--neg))]">
+                        <td className="ui-col-amount px-4 py-3 text-right text-[rgb(var(--neg))]">
                           {isOut ? formatMoney(Number(t.amount ?? 0), currentCompany) : '-'}
                         </td>
-                        <td className="ui-col-amount px-4 py-3 text-right font-semibold text-[rgb(var(--pos))]">
+                        <td className="ui-col-amount px-4 py-3 text-right text-[rgb(var(--pos))]">
                           {isOut ? '-' : formatMoney(Number(t.amount ?? 0), currentCompany)}
                         </td>
                         <td className="px-4 py-3">

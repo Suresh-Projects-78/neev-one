@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, Download, FileUp, Upload } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, FileUp, Upload, ChevronLeft } from 'lucide-react';
 
 import {
   commitImport,
@@ -30,7 +30,7 @@ const saveTextAsFile = (text, filename) => {
   URL.revokeObjectURL(url);
 };
 
-export default function ImportCenter() {
+export default function ImportCenter({ onBack = null }) {
   const [specs, setSpecs] = useState([]);
   const [unsupported, setUnsupported] = useState([]);
   const [docType, setDocType] = useState('');
@@ -134,6 +134,17 @@ export default function ImportCenter() {
       <PageHeader
         title="Import data"
         description="Files are checked before anything is written. You see every problem first, and rows that are fine still go through."
+        actions={
+          /* This screen is reached from a list's More menu, which navigates
+             away from that list. Without a way back it was a dead end — the
+             only exit was the navigation rail, which does not remember where
+             you came from. */
+          onBack ? (
+            <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
+              <ChevronLeft size={15} aria-hidden="true" /> Back
+            </button>
+          ) : null
+        }
       />
 
       {error ? (

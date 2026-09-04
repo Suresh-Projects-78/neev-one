@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { buildApp } from '../app.js';
 import { parseCsv, toCsv } from '../services/csv.js';
+import { prisma } from '../utils/prisma.js';
 
 /**
  * Requirements 15 and 16: importing documents, and a downloadable template.
@@ -285,6 +286,41 @@ describe('invoice import', () => {
     // 2500 net + 18% = 2950, and the quoted comma in the name survived.
     expect(Number(found.total)).toBeCloseTo(2950, 2);
     expect(found.customerName).toBe('Acme, Ltd');
+  });
+
+  it('carries the columns the creation form has: due date, refs, unit, HSN and a line discount', async () => {
+    const num = `EXT-${rnd().toUpperCase()}`;
+    const csv = [
+      'invoice_no,date,customer_name,description,quantity,rate,gst_rate,due_date,item_code,unit,hsn_sac,discount_pct,ref_no,ref_date,place_of_supply',
+      `${num},2026-04-04,Acme,Consulting,2,1000,18,2026-05-04,FG-100,Hrs,9983,10,SO-77,2026-04-01,Karnataka`,
+    ].join('\n');
+
+    const staged = await stage('INVOICE', csv).expect(201);
+    await validate(staged.body.batch.id).expect(200);
+    await commit(staged.body.batch.id).expect(200);
+
+    const list = await request(app).get(`/api/orgs/${owner.orgId}/invoices`).set(auth(owner)).expect(200);
+    const found = list.body.invoices.find((i: any) => i.number === num);
+    expect(found).toBeTruthy();
+
+    expect(found.dueDate).toBe('2026-05-04');
+    expect(found.refNo).toBe('SO-77');
+    expect(found.refDate).toBe('2026-04-01');
+    expect(found.placeOfSupplyState).toBe('Karnataka');
+
+    // 2 x 1000 less 10% is 1800 taxable, plus 18% is 2124. Importing without
+    // the discount column brought every discounted historical line in at list
+    // price, which is the figure this pins.
+    expect(Number(found.total)).toBeCloseTo(2124, 2);
+
+    // The list endpoint does not carry line JSON, so the lines are read from
+    // the row itself.
+    const row = await prisma.invoice.findFirst({ where: { number: num }, select: { itemsJson: true } });
+    const line = JSON.parse(String(row?.itemsJson || '[]'))[0];
+    expect(line.unit).toBe('Hrs');
+    expect(line.hsnSac).toBe('9983');
+    expect(line.itemCode).toBe('FG-100');
+    expect(line.discountPct).toBe(10);
   });
 
   it('rejects a quantity that is not a number', async () => {

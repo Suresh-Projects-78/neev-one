@@ -186,7 +186,7 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
                   <td className="px-4 py-2.5 text-right">{r.docs}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{money(r.cumulative)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{r.excess ? money(r.excess) : '—'}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{r.tax ? money(r.tax) : '—'}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{r.tax ? money(r.tax) : '—'}</td>
                 </tr>
               ))}
             </tbody>

@@ -1832,7 +1832,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                     <td className="ui-col-amount px-3 py-2 text-right">
                       {vendorChargesGst ? formatMoney(row.gstAmount, currentCompany) : <span className="ui-muted">NA</span>}
                     </td>
-                    <td className="ui-col-amount px-3 py-2 text-right font-semibold">{formatMoney(row.lineTotal, currentCompany)}</td>
+                    <td className="ui-col-amount px-3 py-2 text-right">{formatMoney(row.lineTotal, currentCompany)}</td>
                     <td className="px-3 py-2 text-right">
                       <button type="button" onClick={() => removeLine(idx)} className="text-[rgb(var(--neg))]" aria-label={`Remove line ${idx + 1}`}>
                         <Trash2 size={16} />
@@ -3175,7 +3175,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                         <td className="px-4 py-2.5 ui-col-entity">{a.name}</td>
                         <td className="ui-col-meta px-4 py-2.5 ui-fg">{a._groupName || '-'}</td>
                         <td className="ui-col-meta px-4 py-2.5 ui-fg">{a._parent || '-'}</td>
-                        <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(a.balance || 0, currentCompany)}</td>
+                        <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(a.balance || 0, currentCompany)}</td>
                         <td
                           className="px-4 py-2.5 text-right"
                           onMouseDown={(e) => e.stopPropagation()}
@@ -4087,8 +4087,8 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                     <div className="font-medium">{jv.narration || '-'}</div>
                     <div className="text-xs ui-muted">{(jv.lines || []).length} lines</div>
                   </td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
                     <StatusPill status={(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'Balanced' : 'Unbalanced'} />
                   </td>
@@ -10645,7 +10645,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.cgstAmount || 0), currentCompany)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.sgstAmount || 0), currentCompany)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.igstAmount || 0), currentCompany)}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(Number(r.gstAmount || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.gstAmount || 0), currentCompany)}</td>
                 </tr>
               ))
             )}
@@ -10693,7 +10693,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.cgst || 0), currentCompany)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.sgst || 0), currentCompany)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.igst || 0), currentCompany)}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(Number(r.total || 0), currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(r.total || 0), currentCompany)}</td>
                 </tr>
               ))
             )}
@@ -11395,6 +11395,21 @@ const AppShell = () => {
   ]);
 
   const [active, setActive] = useState('dashboard');
+
+  /*
+   * The screen before this one, for the sub-screens that are reached from a
+   * list's More menu and have to get back to it. A ref rather than state:
+   * nothing renders from it, and writing it during a screen change should not
+   * cause a second render.
+   */
+  const lastScreenRef = useRef('invoices');
+  const prevScreenRef = useRef(active);
+  useEffect(() => {
+    if (prevScreenRef.current !== active) {
+      lastScreenRef.current = prevScreenRef.current;
+      prevScreenRef.current = active;
+    }
+  }, [active]);
 
   /**
    * A new screen starts at the top of itself.
@@ -13089,7 +13104,9 @@ const AppShell = () => {
       case 'settingsCurrencies':
         return <CurrencySettings />;
       case 'dataImport':
-        return <ImportCenter />;
+        // Back to wherever the More menu was opened from, defaulting to the
+        // invoices list because that is where import is offered.
+        return <ImportCenter onBack={() => setActive(lastScreenRef.current || 'invoices')} />;
       case 'batchSerial':
         return <BatchSerialManager />;
       case 'stockAdjustments':

@@ -118,7 +118,7 @@ export default function SalesBySalesman({ db, currentCompany }) {
                 <tr key={r.salesman ? r.salesman.id : `un-${i}`} className="ui-hover-sunken">
                   <td className="ui-col-entity px-4 py-2.5 font-medium">{r.salesman ? r.salesman.name : 'Unassigned'}</td>
                   <td className="px-4 py-2.5 text-right">{r.invoices}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(r.invoiceSales, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(r.invoiceSales, currentCompany)}</td>
                   <td className="px-4 py-2.5 text-right">{r.orders}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(r.orderValue, currentCompany)}</td>
                   <td className="px-4 py-2.5 text-right">{r.estimates}</td>
@@ -133,7 +133,7 @@ export default function SalesBySalesman({ db, currentCompany }) {
                 <td className="px-4 py-2.5 text-right font-semibold">{totals.invoices}</td>
                 <td className="ui-col-amount px-4 py-2.5 text-right font-bold">{formatMoney(totals.invoiceSales, currentCompany)}</td>
                 <td colSpan={4}></td>
-                <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{formatMoney(totals.commission, currentCompany)}</td>
+                <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(totals.commission, currentCompany)}</td>
               </tr>
             </tfoot>
           </table>

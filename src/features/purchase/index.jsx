@@ -565,7 +565,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                           step="0.01"
                         />
                       </td>
-                      <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
+                      <td className="ui-col-amount px-3 py-2">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
                       <td className="px-3 py-2">
                         <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                           <Trash2 size={16} />
@@ -915,7 +915,7 @@ export const PurchaseOrdersList = ({
                     <td className="ui-col-entity px-4 py-2.5">{po.vendorName}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                     <td className="ui-col-date px-4 py-2.5">{po.date}</td>
-                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(po.total || 0, currentCompany)}</td>
+                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(po.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <StatusPill status={status} />
                     </td>
@@ -1363,7 +1363,7 @@ export const PurchaseOrderForm = ({
                       step="0.01"
                     />
                   </td>
-                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney(item.amount || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2">{formatMoney(item.amount || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
@@ -1992,7 +1992,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                     <td className="ui-col-date px-4 py-2.5">{b.date}</td>
                     <td className="ui-col-id px-4 py-2.5">{b.refNo || '-'}</td>
                     <td className="ui-col-date px-4 py-2.5">{b.refDate || '-'}</td>
-                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(b.total || 0, currentCompany)}</td>
+                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(b.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <StatusPill status={derived} reason={billStatusReason(b, derived, currentCompany, nowMs)} />
                       {returnMark ? (
@@ -2818,7 +2818,7 @@ export const DebitNoteForm = ({
                       step="0.01"
                     />
                   </td>
-                  <td className="ui-col-amount px-3 py-2 font-semibold">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
                       <Trash2 size={16} />
@@ -3072,7 +3072,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                     <td className="ui-col-entity px-4 py-2.5">{dn.vendorName}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
                     <td className="ui-col-date px-4 py-2.5">{dn.date}</td>
-                    <td className="ui-col-amount px-4 py-2.5 font-semibold">{formatMoney(dn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(dn.total || 0, currentCompany)}</td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <StatusPill status={dn.status || 'Draft'} />
                     </td>

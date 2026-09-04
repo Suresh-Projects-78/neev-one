@@ -63,6 +63,23 @@ export const IMPORT_SPECS: Record<string, ImportSpec> = {
       { key: 'rate', label: 'Rate', required: true, hint: 'Per unit, before tax', sample: '10000.00' },
       { key: 'gst_rate', label: 'GST %', required: false, hint: '0, 5, 12, 18 or 28', sample: '18' },
       { key: 'tax_type', label: 'Tax type', required: false, hint: 'CGST_SGST (default) or IGST for inter-state', sample: 'CGST_SGST' },
+      /*
+       * The rest of what the creation form collects.
+       *
+       * The template stopped at nine columns while the form had a dozen more,
+       * so an imported year came in without due dates, references, units,
+       * HSN codes or discounts — all of it re-keyed by hand afterwards, which
+       * is the work importing was supposed to remove. Every one of these is
+       * optional: a file that worked yesterday still works.
+       */
+      { key: 'due_date', label: 'Due date', required: false, hint: 'YYYY-MM-DD', sample: '2026-05-05' },
+      { key: 'item_code', label: 'Item code', required: false, hint: 'Matched to an existing item', sample: 'FG-100' },
+      { key: 'unit', label: 'Unit', required: false, hint: 'Pcs, Kg, Hrs…', sample: 'Pcs' },
+      { key: 'hsn_sac', label: 'HSN / SAC', required: false, hint: 'Falls back to the item master', sample: '9983' },
+      { key: 'discount_pct', label: 'Line discount %', required: false, hint: 'Applied before tax', sample: '0' },
+      { key: 'ref_no', label: 'Ref no', required: false, hint: 'Quotation or sales order', sample: '' },
+      { key: 'ref_date', label: 'Ref date', required: false, hint: 'YYYY-MM-DD', sample: '' },
+      { key: 'place_of_supply', label: 'Place of supply', required: false, hint: 'State name', sample: 'Karnataka' },
     ],
   },
 

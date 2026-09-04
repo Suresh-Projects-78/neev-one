@@ -219,7 +219,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
                       <td className="ui-col-date px-4 py-2.5">{r.date}</td>
                       <td className="ui-col-amount px-4 py-2.5 text-right">{money(r.taxable)}</td>
                       <td className="ui-col-amount px-4 py-2.5 text-right">{money(r.igst + r.cgst + r.sgst)}</td>
-                      <td className="ui-col-amount px-4 py-2.5 text-right font-semibold">{money(r.total)}</td>
+                      <td className="ui-col-amount px-4 py-2.5 text-right">{money(r.total)}</td>
                       <td className="ui-col-meta px-4 py-2.5">{r.bill?.number || '—'}</td>
                       <td className="px-4 py-2.5">
                         {tab === 'amountMismatch' ? <StatusPill status={`Diff ${money(r.diff)}`} /> : null}
