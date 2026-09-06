@@ -181,24 +181,19 @@ export const Field = ({ label, htmlFor, required = false, hint = '', children, c
 );
 
 /**
- * The foot of a document: the amount in words on the left, what is payable on
- * the right. Only rendered when the document type asks for it.
+ * The foot of a document: the amount, written out.
+ *
+ * A GST invoice carries the sum in words and this prints on the document, so
+ * the words earn their place. The numeral beside them did not: it sat directly
+ * under the Total in the column above and again above the running total at the
+ * foot, which put the same figure on screen three times and made a reader
+ * check whether the three agreed. Words on their own say the thing the
+ * numerals cannot.
  */
-export const AmountInWordsBand = ({ words, amount }) => (
-  <div
-    className="rounded-xl px-4 py-3 flex items-center justify-between gap-4 flex-wrap"
-    style={{ background: 'rgb(var(--accent-soft))' }}
-  >
-    <div>
-      <div className="ui-caption">Amount in words</div>
-      <div className="text-sm font-medium">{words}</div>
-    </div>
-    <div className="text-right">
-      <div className="ui-caption">Total payable</div>
-      <div className="ui-money-lg" style={{ color: 'rgb(var(--brand-ink))' }}>
-        {amount}
-      </div>
-    </div>
+export const AmountInWordsBand = ({ words }) => (
+  <div className="rounded-xl px-4 py-3" style={{ background: 'rgb(var(--accent-soft))' }}>
+    <div className="ui-caption">Amount in words</div>
+    <div className="text-sm font-medium">{words}</div>
   </div>
 );
 

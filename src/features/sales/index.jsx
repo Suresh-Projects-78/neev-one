@@ -3862,23 +3862,27 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         />
       </Drawer>
 
-      {previewOpen && !prefsOpen ? (
-        <div className="ui-card p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="ui-t-label">Preview — what the customer receives</span>
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(false)}
-              className="ui-btn ui-btn-ghost ui-btn-sm"
-            >
-              <X size={14} aria-hidden="true" /> Close preview
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <InvoicePreview db={db} currentCompany={currentCompany} invoice={previewInvoice} />
-          </div>
+      {/*
+        The preview is a document, so it gets a document's own space.
+
+        It used to render as a card spliced into the form above the branch and
+        warehouse fields: the half-typed invoice was pushed down the page, the
+        editor and the preview were on screen at once, and an A4 sheet had to
+        fit the editor's column. A drawer leaves the form where it was, visible
+        behind the scrim, and gives the sheet a width it can actually be read
+        at. Wider than the settings drawer for the same reason.
+      */}
+      <Drawer
+        open={previewOpen && !prefsOpen}
+        onClose={() => setPreviewOpen(false)}
+        title={`Preview — ${previewInvoice?.number || 'this invoice'}`}
+        description="What the customer receives"
+        widthClass="w-[min(64rem,72vw)]"
+      >
+        <div className="overflow-x-auto">
+          <InvoicePreview db={db} currentCompany={currentCompany} invoice={previewInvoice} />
         </div>
-      ) : null}
+      </Drawer>
 
       {/*
         The head of the document, in two columns.
@@ -4855,10 +4859,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       </div>
 
       {prefOn('amountInWords') ? (
-        <AmountInWordsBand
-          words={amountInWordsInr(computed.total)}
-          amount={formatMoney(computed.total, currentCompany)}
-        />
+        <AmountInWordsBand words={amountInWordsInr(computed.total)} />
       ) : null}
 
       <DocFormFootnote
@@ -5397,10 +5398,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
       </div>
 
-      <AmountInWordsBand
-        words={amountInWordsInr(computed.total)}
-        amount={formatMoney(computed.total, currentCompany)}
-      />
+      <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
     </form>
@@ -6153,10 +6151,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         </div>
       </div>
 
-      <AmountInWordsBand
-        words={amountInWordsInr(computed.total)}
-        amount={formatMoney(computed.total, currentCompany)}
-      />
+      <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
 

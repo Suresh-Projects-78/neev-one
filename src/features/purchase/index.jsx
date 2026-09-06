@@ -644,10 +644,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         </div>
       </div>
 
-      <AmountInWordsBand
-        words={amountInWordsInr(computed.total)}
-        amount={formatMoney(computed.total, currentCompany)}
-      />
+      <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
 
@@ -2861,10 +2858,7 @@ export const DebitNoteForm = ({
         </div>
       </div>
 
-      <AmountInWordsBand
-        words={amountInWordsInr(computed.total)}
-        amount={formatMoney(computed.total, currentCompany)}
-      />
+      <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
     </form>

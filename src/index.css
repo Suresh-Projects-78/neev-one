@@ -2017,8 +2017,13 @@
   .ui-grid-dense .ui-select {
     min-height: 2.125rem;      /* 34px control */
     padding: 0.25rem 0.5rem;
-    font-size: 0.8125rem;      /* 13px — the table-cell size in DESIGN.md */
-    line-height: 1.125rem;     /* 18px */
+    /* 12px, the floor of the type scale — "nothing below 12px". Asked for
+       twice and decided against the recommendation to stay at the 13px
+       table-cell size: the row-height cut had already bought most of the
+       space, and the remaining ~3px a row is paid for in how quickly a rate
+       can be read without misreading a digit. Deliberate, not drift. */
+    font-size: 0.75rem;
+    line-height: 1rem;
   }
 
   /* Figures in a line grid are money and counts, so they follow the money row
