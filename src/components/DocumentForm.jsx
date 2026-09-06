@@ -69,7 +69,10 @@ export const DocFormActions = ({
    * the shell; there is no app header to offset against inside it.
    */
   const shellClass = title
-    ? `flex items-center justify-between gap-3 flex-wrap -mx-4 -mt-4 mb-1 px-4 py-3 ${
+    ? // `rounded-t-xl` because the negative margins take this bar out to the
+      // card's border box, where a square fill was overprinting the card's own
+      // rounded top corners.
+      `flex items-center justify-between gap-3 flex-wrap -mx-4 -mt-4 mb-1 px-4 py-3 rounded-t-xl ${
         sticky ? 'sticky top-0 z-30' : ''
       }`
     : 'flex items-center justify-end gap-2 -mb-2';
