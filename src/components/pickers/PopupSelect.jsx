@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import Popover from '../ui/Popover';
@@ -39,6 +39,8 @@ const PopupSelect = ({
 }) => {
   void ignoredLegacyProps;
   const [open, setOpen] = useState(false);
+  // Stable per instance: several of these sit on one form.
+  const listId = useId();
   const [query, setQuery] = useState('');
   const triggerRef = useRef(null);
   const searchRef = useRef(null);
@@ -155,6 +157,31 @@ const PopupSelect = ({
     onListKeys(e);
   };
 
+  /*
+   * The trigger keeps the caret for as long as the list is open, and every key
+   * is answered from here.
+   *
+   * Focus used to be pushed into the portalled panel, which meant the trigger,
+   * the panel's own focus claim, the panel's hand-back on close and the
+   * caller's move to the next field were all trying to place the cursor. The
+   * order varied, so the arrows moved nothing, Tab was answered by the form
+   * behind, and Enter worked only when the race happened to fall the right
+   * way. One element owns the keyboard now, so there is nothing to race.
+   *
+   * A panel with a search box is the exception: the caret has to be in the box
+   * to type, and an input is a real focus target, so those keep the old route.
+   */
+  const onTriggerKeyDown = (e) => {
+    if (!open) {
+      openOnKey(() => openPopup())(e);
+      return;
+    }
+    if (showSearch) return;
+    onKeyDown(e);
+  };
+
+  const activeOptionId = open && filtered[activeIndex] ? `${listId}-opt-${activeIndex}` : undefined;
+
   return (
     <>
       {label ? <label className="ui-label">{label}</label> : null}
@@ -162,10 +189,22 @@ const PopupSelect = ({
         ref={triggerRef}
         type="button"
         onClick={openPopup}
-        onKeyDown={openOnKey(() => { if (!open) openPopup(); })}
+        onKeyDown={onTriggerKeyDown}
+        onBlur={(e) => {
+          // The caret leaving the trigger ends the list, unless it went into
+          // the panel itself (a search box, or an option taking a click).
+          if (!open) return;
+          const next = e.relatedTarget;
+          if (!next) return;
+          if (next.closest?.('[role="dialog"]')) return;
+          setOpen(false);
+        }}
         disabled={disabled}
+        role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        aria-activedescendant={activeOptionId}
         className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg text-left ${
           disabled ? 'ui-sunken ui-muted cursor-not-allowed' : 'ui-surface ui-hover-sunken'
         }`}
@@ -175,7 +214,7 @@ const PopupSelect = ({
       </button>
 
       {open && (
-        <Popover anchorRef={triggerRef} onClose={() => closePopup()} onKeyDown={onKeyDown}>
+        <Popover anchorRef={triggerRef} onClose={() => closePopup()} onKeyDown={onKeyDown} autoFocus={showSearch}>
           {showSearch ? (
             <div className="p-2 border-b">
               <input
@@ -216,8 +255,8 @@ const PopupSelect = ({
              * could take focus at all, so the keyboard stayed on the trigger
              * behind it and the arrow keys had nothing to move.
              */
+            id={listId}
             tabIndex={-1}
-            data-autofocus={showSearch ? undefined : 'true'}
             className="overflow-y-auto divide-y outline-none"
           >
             {filtered.length === 0 ? (
@@ -226,7 +265,11 @@ const PopupSelect = ({
               filtered.map((o, i) => (
                 <button
                   key={`${String(o.value)}-${String(o.label)}`}
+                  id={`${listId}-opt-${i}`}
                   type="button"
+                  // Not a tab stop: the trigger holds the caret and points here
+                  // with aria-activedescendant.
+                  tabIndex={-1}
                   role="option"
                   aria-selected={String(o.value || '').trim() === normalizedValue}
                   data-active={i === activeIndex}

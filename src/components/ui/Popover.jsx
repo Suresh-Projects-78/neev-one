@@ -21,7 +21,27 @@ const MARGIN = 8;
 /** Enough rows to be worth opening downward for; below this, prefer the roomier side. */
 const MIN_USEFUL = 240;
 
-const Popover = ({ anchorRef, onClose, children, minWidth = 260, maxWidth = 420, labelledBy, onKeyDown }) => {
+const Popover = ({
+  anchorRef,
+  onClose,
+  children,
+  minWidth = 260,
+  maxWidth = 420,
+  labelledBy,
+  onKeyDown,
+  /*
+   * Whether the panel takes the caret when it opens.
+   *
+   * A panel with something to type into wants it. A panel that is only a list
+   * must NOT: moving focus into a portalled panel puts four things in a race
+   * to place the cursor — the trigger's own focus, this effect, the unmount
+   * hand-back below, and whatever the caller does after choosing — and the
+   * winner varied. That is what made Enter work only sometimes. Such a panel
+   * leaves focus on its trigger and drives the highlight through
+   * aria-activedescendant, which is the combobox pattern proper.
+   */
+  autoFocus = true,
+}) => {
   const panelRef = useRef(null);
   const returnFocusRef = useRef(null);
   const claimedFocusRef = useRef(false);
@@ -117,6 +137,7 @@ const Popover = ({ anchorRef, onClose, children, minWidth = 260, maxWidth = 420,
       document.removeEventListener('keydown', onKey, true);
       document.removeEventListener('pointerdown', onDown, true);
       const back = returnFocusRef.current;
+      if (!claimedFocusRef.current) return;
       if (back && typeof back.focus === 'function' && document.contains(back)) back.focus();
     };
   }, [anchorRef, onClose]);
@@ -126,7 +147,7 @@ const Popover = ({ anchorRef, onClose, children, minWidth = 260, maxWidth = 420,
   // the page underneath. Something inside may want the caret first (a search
   // box usually does); the panel claims it only if nothing else did.
   useEffect(() => {
-    if (!pos || claimedFocusRef.current) return;
+    if (!autoFocus || !pos || claimedFocusRef.current) return;
     claimedFocusRef.current = true;
     if (panelRef.current?.contains(document.activeElement)) return;
     // Whoever wants the caret says so with data-autofocus, and gets it here —
@@ -144,7 +165,7 @@ const Popover = ({ anchorRef, onClose, children, minWidth = 260, maxWidth = 420,
       return;
     }
     panelRef.current?.focus({ preventScroll: true });
-  }, [pos]);
+  }, [autoFocus, pos]);
 
   return createPortal(
     <div
