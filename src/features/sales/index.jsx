@@ -37,7 +37,7 @@ import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '..
 import { getInvoicePrefs, isInvoicePrefOn, getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { getNextNumericId } from '../../utils/ids';
-import { formatMoney, round2 } from '../../utils/money';
+import { formatMoney } from '../../utils/money';
 import { consumeSearchSeed } from '../../utils/searchSeed';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import InvoicePreview, { amountInWordsInr } from './InvoicePreview';
@@ -4077,7 +4077,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 onChange={(e) => setFormData((p) => ({ ...p, dueDate: e.target.value }))}
                 className="ui-input"
               />
-              {prefOn('dueDateFromTerms') ? <p className="mt-1 text-xs ui-muted">Follows the payment terms.</p> : null}
             </div>
           </div>
 
@@ -4428,7 +4427,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="ui-table w-full ui-table-wide">
+          <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 {/*
@@ -4489,7 +4488,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                           style={short ? { color: 'rgb(var(--neg))' } : undefined}
                         >
                           {short
-                            ? `Only ${available}${unit ? ` ${unit}` : ''} in stock — short by ${round2(wanted - available)}`
+                            ? `Only ${available}${unit ? ` ${unit}` : ''} in stock`
                             : `In stock: ${available}${unit ? ` ${unit}` : ''}`}
                         </p>
                       );
@@ -5299,7 +5298,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="ui-table w-full ui-table-wide">
+          <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 {/* A line number, so "line 3 is wrong" means something when
@@ -6055,7 +6054,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="ui-table w-full ui-table-wide">
+          <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
                 {/* A line number, so "line 3 is wrong" means something when

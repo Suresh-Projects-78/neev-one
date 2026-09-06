@@ -278,6 +278,16 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     filteredItems[itemActiveIndex] ? `item-opt-${filteredItems[itemActiveIndex].id}` : undefined
                   }
                   className="ui-input w-full px-3 py-2"
+                                    /*
+                  * The dialog decides who gets the caret, and it looks for
+                  * this attribute. React's own autoFocus runs first and is
+                  * then overruled: the dialog found nothing claiming focus
+                  * and took it for the panel itself, so every keystroke went
+                  * to a div. The arrows moved nothing and Enter chose
+                  * nothing, while Escape still worked — because the dialog
+                  * listens for that one on the window.
+                  */
+                  data-autofocus="true"
                   placeholder="Search item (name, code, HSN/SAC)"
                   autoFocus
                 />
