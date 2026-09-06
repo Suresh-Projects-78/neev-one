@@ -13,7 +13,8 @@ import { useCallback, useEffect, useRef } from 'react';
  *   Ctrl+;            today's date, in a date field (Excel's)
  *   Enter             move to the next field; inside the line grid, open the
  *                     next line
- *   Tab               from the last cell of the last line, open the next line
+ *   Tab               from the last cell of the last line, open the next line;
+ *                     out of a date field, straight to the next field
  *   Ctrl+= / Ctrl++   add a line
  *   Ctrl+D            duplicate the line the cursor is in
  *   Ctrl+Delete       delete it
@@ -35,6 +36,14 @@ import { useCallback, useEffect, useRef } from 'react';
  * @param autoFocus      selector for the field to land on when the form opens
  * @param isDirty        () => boolean, for the unload guard
  */
+/** Everything in a form the cursor can be put on, in the order it is read. */
+const formFocusables = (form) =>
+  Array.from(
+    form.querySelectorAll(
+      'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
+    )
+  ).filter((el) => el.offsetParent !== null);
+
 export function useDocumentFormKeys({
   formRef,
   onSave = null,
@@ -74,9 +83,14 @@ export function useDocumentFormKeys({
        * Checked against the real DOM ancestry, which is what tells a portal
        * apart from a control genuinely inside the form.
        */
-      if (e.target instanceof HTMLElement && e.target.closest('[role="dialog"], [role="listbox"], [role="menu"]')) {
-        return;
-      }
+      const popup =
+        e.target instanceof HTMLElement
+          ? e.target.closest('[role="dialog"], [role="listbox"], [role="menu"]')
+          : null;
+      // ...but a form can *be* the dialog — several documents open in a modal.
+      // Only a popup floating above this form disowns the keystroke; one that
+      // contains the form is the form's own frame.
+      if (popup && !popup.contains(formRef.current)) return;
 
       if (mod && key === 's') {
         e.preventDefault();
@@ -141,6 +155,35 @@ export function useDocumentFormKeys({
         return;
       }
 
+      /*
+       * Tab leaves a date field in one press.
+       *
+       * A native date input is three little spinners — day, month, year — and
+       * the browser makes Tab walk them before it will let go of the field, so
+       * one Tab out of a date costs three. Nobody keying invoices wants that:
+       * the browser already advances the segments for you as you type the
+       * digits, so the only thing Tab is asked to do here is leave.
+       *
+       * Scoped to document forms on purpose. This is the browser's own
+       * behaviour being overridden, and it is worth overriding exactly where
+       * dates are typed all day.
+       */
+      if (e.key === 'Tab' && e.target instanceof HTMLInputElement && e.target.type === 'date') {
+        const form = formRef.current;
+        if (form) {
+          const focusables = formFocusables(form);
+          const at = focusables.indexOf(e.target);
+          if (at !== -1) {
+            const next = focusables[at + (e.shiftKey ? -1 : 1)];
+            if (next) {
+              e.preventDefault();
+              next.focus();
+              return;
+            }
+          }
+        }
+      }
+
       if (e.key === 'Tab' && !e.shiftKey && row && c.addLine) {
         /*
          * Tab out of the last control of the last line starts the next one,
@@ -182,11 +225,7 @@ export function useDocumentFormKeys({
       if (target.tagName === 'BUTTON' || target.getAttribute('role') === 'button') return;
       const form = formRef.current;
       if (!form) return;
-      const focusables = Array.from(
-        form.querySelectorAll(
-          'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
-        )
-      ).filter((el) => el.offsetParent !== null);
+      const focusables = formFocusables(form);
       const at = focusables.indexOf(target);
       if (at === -1) return;
       e.preventDefault();
