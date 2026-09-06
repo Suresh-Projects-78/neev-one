@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 import Popover from '../ui/Popover';
 import { rankedSearch } from '../../utils/rankedSearch';
-import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
+import { useListboxKeys, openOnKey } from './useListboxKeys';
 
 const normalizeText = (v) => String(v || '').trim().toLowerCase();
 
@@ -86,12 +86,15 @@ const PopupSelect = ({
   const closePopup = ({ advance = false } = {}) => {
     setOpen(false);
     setQuery('');
-    // Cancelling leaves the hands where they were; choosing carries on to the
-    // next field, because picking is the end of this field's business.
-    requestAnimationFrame(() => {
-      if (advance) focusNextAfter(triggerRef.current);
-      else triggerRef.current?.focus({ preventScroll: true });
-    });
+    /*
+     * The caret stays on the trigger, which is where it already is — this
+     * panel never took it. Moving on is Tab's job and the browser's, not
+     * ours: hand-computing the next control gave a second, worse copy of the
+     * page's tab order, and when the two disagreed Tab looked like it skipped
+     * the warehouse field. `advance` is now only about not stealing focus
+     * back on a mouse pick.
+     */
+    if (!advance) requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
   };
 
   const applyValue = (next) => {
@@ -140,6 +143,7 @@ const PopupSelect = ({
       const picked = filtered[i];
       if (picked) applyValue(picked.value);
     },
+    nativeTab: true,
     onCancel: () => closePopup(),
     // Tab off a list nobody drove: leave the value alone and carry on,
     // rather than snapping back to the field just left.

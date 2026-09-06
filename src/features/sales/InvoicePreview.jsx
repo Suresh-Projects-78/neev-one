@@ -260,9 +260,20 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
     return (db.customers || []).find((c) => c.companyId === company.id && c.id === id) || null;
   }, [db, company.id, invoice?.customerId]);
 
+  /*
+   * The item masters, indexed the way the pickers index them.
+   *
+   * This compared companyId with `===` while every picker compares it as a
+   * number, so a book whose ids arrived from the server as strings matched in
+   * the picker and missed here: the item could be chosen onto a line and then
+   * had no name on the document. A line falls back to its own recorded name
+   * below, but the index should not be the thing that is wrong.
+   */
   const itemsById = useMemo(() => {
     const map = new Map();
-    (db.items || []).filter((i) => i.companyId === company.id).forEach((i) => map.set(String(i.id), i));
+    (db.items || [])
+      .filter((i) => Number(i.companyId) === Number(company.id))
+      .forEach((i) => map.set(String(i.id), i));
     return map;
   }, [db, company.id]);
 
@@ -361,7 +372,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
             ) : (
               lines.map((l, idx) => {
                 const item = l?.itemId ? itemsById.get(String(l.itemId)) : null;
-                const name = item?.name || l?.description || '';
+                const name = item?.name || l?.name || l?.description || '';
                 const qty = Number(l?.quantity ?? 0);
                 const rate = Number(l?.rate ?? 0);
                 const total = Number(l?.lineTotal ?? l?.amount ?? 0);
@@ -580,7 +591,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                   ) : (
                     lines.map((l, idx) => {
                       const item = l?.itemId ? itemsById.get(String(l.itemId)) : null;
-                      const name = String(item?.name || l?.description || '').trim();
+                      const name = String(item?.name || l?.name || l?.description || '').trim();
                       const hsn = String(l?.hsnSac || item?.hsnSac || '').trim();
                       const qty = Number(l?.quantity ?? 0);
                       const unit = String(item?.unit || '').trim();
@@ -741,7 +752,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                   ) : (
                     lines.map((l, idx) => {
                       const item = l?.itemId ? itemsById.get(String(l.itemId)) : null;
-                      const name = String(item?.name || l?.description || '').trim();
+                      const name = String(item?.name || l?.name || l?.description || '').trim();
                       const hsn = String(l?.hsnSac || item?.hsnSac || '').trim();
                       const qty = safeNum(l?.quantity);
                       const unit = String(item?.unit || '').trim();
@@ -889,7 +900,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                   ) : (
                     lines.map((l, idx) => {
                       const item = l?.itemId ? itemsById.get(String(l.itemId)) : null;
-                      const name = String(item?.name || l?.description || '').trim();
+                      const name = String(item?.name || l?.name || l?.description || '').trim();
                       const qty = Number(l?.quantity ?? 0);
                       const unit = String(item?.unit || '').trim();
                       const taxable = Number(l?.taxableAmount ?? l?.amount ?? 0);
@@ -1055,7 +1066,7 @@ const InvoicePreview = ({ db, currentCompany, invoice }) => {
                 ) : (
                   lines.map((l, idx) => {
                     const item = l?.itemId ? itemsById.get(String(l.itemId)) : null;
-                    const name = String(item?.name || l?.description || '').trim();
+                    const name = String(item?.name || l?.name || l?.description || '').trim();
                     const hsn = String(l?.hsnSac || item?.hsnSac || '').trim();
                     const qty = Number(l?.quantity ?? 0);
                     const unit = String(item?.unit || '').trim();

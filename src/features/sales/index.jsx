@@ -1007,7 +1007,7 @@ const statusReason = (doc, status, company, nowMs) => {
         appears and disappears is a tab people stop trusting.
       */}
       <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 flex-wrap" role="tablist" aria-label="Invoice status">
+        <div className="ui-segmented" role="tablist" aria-label="Invoice status">
           {STATUS_TABS.map((t) => {
             const on = statusFilter === t.value;
             const n = statusCounts[t.value] ?? 0;
@@ -1021,26 +1021,10 @@ const statusReason = (doc, status, company, nowMs) => {
                   setStatusFilter(t.value);
                   setPage(1);
                 }}
-                className="ui-btn ui-btn-sm"
-                style={
-                  on
-                    ? // Solid brand, not a wash. A pale tint on a pale ground made
-                      // the chosen tab read as "slightly warmer" rather than
-                      // "chosen"; filled, there is no question which one is on.
-                      { borderColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))', backgroundColor: 'rgb(var(--brand))' }
-                    : { borderColor: 'rgb(var(--border))', color: 'rgb(var(--fg-muted))' }
-                }
+                className="ui-segment"
               >
                 {t.label}
-                <span
-                  className="ui-mono text-xs rounded-full px-1.5"
-                  style={{
-                    backgroundColor: on ? 'rgb(var(--on-brand) / 0.16)' : 'rgb(var(--surface-sunken))',
-                    color: on ? 'rgb(var(--on-brand))' : 'rgb(var(--fg))',
-                  }}
-                >
-                  {n}
-                </span>
+                <span className="ui-segment-count">{n}</span>
               </button>
             );
           })}

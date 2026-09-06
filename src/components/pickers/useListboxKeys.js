@@ -34,6 +34,21 @@ export function useListboxKeys({
   initialIndex = 0,
   chooseOnTab = true,
   onTabOut = null,
+  /*
+   * Whether Tab is left to the browser once the value is taken.
+   *
+   * Where nothing traps focus, this should be true: the browser's own tab
+   * order is the one the page actually has, and it cannot skip a field.
+   * Computing "the next control" by hand — querying the form, filtering for
+   * what looks visible, stepping one along — is a second, worse copy of that
+   * order, and every time its idea of visible disagreed with the browser's,
+   * Tab appeared to jump a field.
+   *
+   * A dialog is the exception. It traps Tab and is unmounting on this very
+   * keystroke, so there is no reliable native order to fall back on and the
+   * caller places focus itself.
+   */
+  nativeTab = false,
 }) {
   const [rawIndex, setActiveIndex] = useState(initialIndex);
   const listRef = useRef(null);
@@ -136,7 +151,7 @@ export function useListboxKeys({
            * silently choose something on the way.
            */
           if (e.shiftKey || !chooseOnTab) return;
-          e.preventDefault();
+          if (!nativeTab) e.preventDefault();
           e.stopPropagation();
           if (count && movedRef.current) onChoose?.(activeIndex);
           else (onTabOut || onCancel)?.();
@@ -169,7 +184,7 @@ export function useListboxKeys({
         }
       }
     },
-    [activeIndex, chooseOnTab, count, firstLetter, move, onCancel, onChoose, onTabOut]
+    [activeIndex, chooseOnTab, count, firstLetter, move, nativeTab, onCancel, onChoose, onTabOut]
   );
 
   return { activeIndex, setActiveIndex, listRef, onKeyDown };
