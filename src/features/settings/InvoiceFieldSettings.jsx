@@ -35,7 +35,19 @@ import {
  * confirm — a company that has tuned thirty switches and idly changes the
  * dropdown should not lose that silently.
  */
-export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = false, onBack = null }) => {
+/**
+ * @param pane  'fields' — the switches that decide which of the fields this
+ *              product already knows about appear on an invoice.
+ *              'custom' — only the fields this company invents for itself.
+ *
+ * These were one screen, and that was the complaint: a company looking for
+ * "custom fields" had to scroll past ninety built-in switches to reach the
+ * six lines that were actually theirs, which made the built-in switches look
+ * like custom fields somebody else had already created for them. Two
+ * destinations, two jobs.
+ */
+export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = false, onBack = null, pane = 'fields' }) => {
+  const customOnly = pane === 'custom';
   const bankAccounts = useMemo(() => listBankAccounts(db, currentCompany.id), [db, currentCompany.id]);
   const payment = useMemo(() => getInvoicePaymentDetails(currentCompany), [currentCompany]);
   const prefs = useMemo(() => getInvoicePrefs(currentCompany), [currentCompany]);
@@ -152,8 +164,12 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
       {header}
       {embedded ? null : (
       <PageHeader
-        title="Invoice Fields"
-        description="What an invoice contains. A field switched off leaves the form and the printed document — it is never greyed out."
+        title={customOnly ? 'Custom Fields' : 'Invoice Settings'}
+        description={
+          customOnly
+            ? 'Fields you invent, for things this product does not already have a box for. Nothing here exists until you create it.'
+            : 'What an invoice contains. A field switched off leaves the form and the printed document — it is never greyed out.'
+        }
         actions={
           <>
             {/* The way back to whatever opened this. It was only in `embedded`
@@ -164,24 +180,29 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 <ArrowLeft size={15} aria-hidden="true" /> Back
               </button>
             ) : null}
-            <span className="ui-pill ui-pill-neutral">
-              {onCount} of {INVOICE_PREFS.length} on
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                write({ resetToIndustryDefault: true });
-                notify.success(`Reset to the ${industryLabel} defaults.`);
-              }}
-              className="ui-btn ui-btn-secondary"
-            >
-              Reset to industry default
-            </button>
+            {customOnly ? null : (
+              <>
+                <span className="ui-pill ui-pill-neutral">
+                  {onCount} of {INVOICE_PREFS.length} on
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    write({ resetToIndustryDefault: true });
+                    notify.success(`Reset to the ${industryLabel} defaults.`);
+                  }}
+                  className="ui-btn ui-btn-secondary"
+                >
+                  Reset to industry default
+                </button>
+              </>
+            )}
           </>
         }
       />
       )}
 
+      {customOnly ? null : (
       <section className={embedded ? 'p-4' : 'ui-card p-4'}>
         <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
           <div>
@@ -220,8 +241,9 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
           ) : null}
         </div>
       </section>
+      )}
 
-      {INVOICE_PREF_GROUPS.map((group) => {
+      {customOnly ? [] : INVOICE_PREF_GROUPS.map((group) => {
         const list = INVOICE_PREFS.filter((p) => p.group === group.key);
         const { on, total } = countPrefsOn(prefs, group.key);
         return (
@@ -276,7 +298,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
         );
       })}
 
-      {isInvoicePrefOn(prefs, 'bankQr') ? (
+      {!customOnly && isInvoicePrefOn(prefs, 'bankQr') ? (
         <section className={embedded ? 'overflow-hidden' : 'ui-card overflow-hidden'}>
           <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))', borderTop: embedded ? '1px solid rgb(var(--border))' : undefined }}>
             <div className="ui-title text-sm">Payment details on the invoice</div>
@@ -364,6 +386,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
         </section>
       ) : null}
 
+      {embedded || customOnly ? (
       <section className={embedded ? 'overflow-hidden' : 'ui-card overflow-hidden'}>
         <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))', borderTop: embedded ? '1px solid rgb(var(--border))' : undefined }}>
           <div className="flex items-baseline gap-2 flex-wrap" id="invoice-custom-fields">
@@ -508,10 +531,12 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
           </div>
         ) : null}
       </section>
+      ) : null}
 
       <p className="ui-subtle text-xs">
-        Switching a field off hides it on new and existing invoices; nothing already recorded is deleted. Turning it
-        back on brings the values back with it.
+        {customOnly
+          ? 'A custom field appears on the invoice form as soon as it is created, and on the printed copy wherever you placed it. Deleting one leaves values already recorded on past invoices untouched.'
+          : 'Switching a field off hides it on new and existing invoices; nothing already recorded is deleted. Turning it back on brings the values back with it.'}
       </p>
     </div>
   );

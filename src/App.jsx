@@ -11,6 +11,7 @@ import StockTransferModule, { StockTransferEditor } from './features/inventory/S
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   BadgePercent,
   BarChart3,
   Check,
@@ -7929,7 +7930,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
   );
 };
 
-const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
+const InvoiceTemplateSettings = ({ db, setDb, currentCompany, onBack = null }) => {
   const [docSettings, setDocSettings] = useState(() => getDocSettings(db, currentCompany));
   const [templatePreview, setTemplatePreview] = useState(null);
 
@@ -7963,6 +7964,9 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
       ),
     });
     notify.success('Invoice template saved.');
+    // Saving finishes the job. Staying on a settings page that has just been
+    // committed leaves people hunting for the way out of it.
+    if (typeof onBack === 'function') onBack();
   };
 
   const cfg = docSettings?.templates?.invoice;
@@ -7971,9 +7975,16 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany }) => {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Invoice Templates</h3>
-        <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg ">
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          {onBack ? (
+            <button type="button" onClick={onBack} className="ui-icon-btn shrink-0" aria-label="Back">
+              <ArrowLeft size={18} />
+            </button>
+          ) : null}
+          <h3 className="ui-t-sec truncate">Invoice Templates</h3>
+        </div>
+        <button type="button" onClick={handleSave} className="ui-btn ui-btn-primary shrink-0">
           Save
         </button>
       </div>
@@ -11685,7 +11696,8 @@ const AppShell = () => {
           { key: 'settingsAccounting', label: 'Accounting', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsPaymentsReceipts', label: 'Payments & Receipts', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsDocuments', label: 'Documents', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsInvoiceFields', label: 'Invoice Fields', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsInvoiceFields', label: 'Invoice Settings', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsCustomFields', label: 'Custom Fields', icon: Plus, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
 
           { type: 'subgroup', label: 'Tax & Compliance' },
@@ -12423,10 +12435,15 @@ const AppShell = () => {
                     setInvoiceEditor({ open: true, initial: copy });
                   }}
                   onOpenInvoiceSettings={(screen) => {
-                    // Configuring the document is not part of raising it, so
-                    // the form closes rather than leaving a half-typed invoice
-                    // behind a settings screen.
-                    setInvoiceEditor({ open: false, initial: null });
+                    /*
+                     * Navigate, but do not tear the document down.
+                     *
+                     * This used to close the editor before leaving, so saving a
+                     * template dropped you on the invoice *list* and the invoice
+                     * you were raising was gone. Configuring the document is a
+                     * detour, not an exit: the editor stays open behind the
+                     * settings route and is still there when Back returns.
+                     */
                     setActive(screen);
                   }}
                 />
@@ -13052,7 +13069,17 @@ const AppShell = () => {
       case 'gstRates':
         return <GstRatesList db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'invoiceTemplates':
-        return <InvoiceTemplateSettings db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+        // Reached from a document's More menu and from Master Data, so it has
+        // to hand control back to whichever of those sent it — and saving is
+        // the end of the errand, not the middle of it.
+        return (
+          <InvoiceTemplateSettings
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            onBack={() => setActive(lastScreenRef.current || 'invoices')}
+          />
+        );
       case 'docNumbering':
         return <DocNumberingSettings db={dbForUser} setDb={setDb} currentCompany={currentCompany} branches={branchesForUser} />;
       case 'docTemplates':
@@ -13093,6 +13120,20 @@ const AppShell = () => {
             db={db}
             setDb={setDb}
             currentCompany={currentCompany}
+            pane="fields"
+            onBack={() => setActive(lastScreenRef.current || 'invoices')}
+          />
+        );
+      case 'settingsCustomFields':
+        // The same component, the other half of it. Custom fields used to share
+        // this route with the built-in switches, so both More-menu entries
+        // landed on one page and neither name meant anything.
+        return (
+          <InvoiceFieldSettings
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            pane="custom"
             onBack={() => setActive(lastScreenRef.current || 'invoices')}
           />
         );
