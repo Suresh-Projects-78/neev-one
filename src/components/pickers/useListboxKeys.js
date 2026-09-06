@@ -147,3 +147,35 @@ export function openOnKey(open) {
 }
 
 export default useListboxKeys;
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/**
+ * Where focus goes when a picker closes.
+ *
+ * Cancelling belongs on the trigger: nothing was chosen, so the hands are
+ * still on that field. Choosing belongs on the *next* control, because
+ * picking is the end of that field's business — the next thing anybody types
+ * is the description, or the quantity, or whatever follows.
+ *
+ * Every picker used to return focus to the trigger in both cases, which is
+ * what "tab is not selecting properly" was describing: Tab chose the row, the
+ * dialog closed, focus snapped back to the field it had just left, and the
+ * keystroke looked like it had been swallowed.
+ *
+ * The search is scoped to the line first, then the form, so a picker sitting
+ * in a table row advances along the row rather than jumping to whatever the
+ * document happens to hold next.
+ */
+export function focusNextAfter(trigger) {
+  if (!trigger) return;
+  const scope =
+    trigger.closest('[data-line-row]') || trigger.closest('tr') || trigger.closest('form') || document.body;
+  const focusables = Array.from(scope.querySelectorAll(FOCUSABLE)).filter(
+    (el) => el === trigger || el.offsetParent !== null
+  );
+  const at = focusables.indexOf(trigger);
+  const next = at >= 0 ? focusables[at + 1] : null;
+  (next || trigger).focus({ preventScroll: true });
+}

@@ -7,7 +7,7 @@ import { CustomerForm } from './CustomerPicker';
 import { VendorForm } from './VendorPicker';
 import PopupSelect from './PopupSelect';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
-import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -359,18 +359,22 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
 
   // Focus goes back to the field that opened this, so the next Tab continues
   // the form instead of restarting at the top of the page.
-  const closePopup = () => {
+  const closePopup = ({ advance = false } = {}) => {
     setShowPopup(false);
     setMode('select');
     setSearch('');
-    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => {
+      // Choosing moves on; cancelling stays put. See focusNextAfter.
+      if (advance) focusNextAfter(triggerRef.current);
+      else triggerRef.current?.focus({ preventScroll: true });
+    });
   };
 
   const chooseAccount = (account) => {
     if (!account) return;
     recents.remember(account.id);
     onChange?.(String(account.id));
-    closePopup();
+    closePopup({ advance: true });
   };
 
   const openPopup = () => {
@@ -395,7 +399,12 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
   const onAccountSearchTab = (e) => {
     if (e.key !== 'Tab' || e.shiftKey) return;
     const sole = soleConfidentMatch(accounts, search, accountSearchOpts);
-    if (sole) chooseAccount(sole);
+    if (!sole) return;
+    // Swallow the Tab: the dialog's focus trap would otherwise move focus
+    // inside a dialog that is closing on this very keystroke.
+    e.preventDefault();
+    e.stopPropagation();
+    chooseAccount(sole);
   };
 
   const accountRecentCount = normalizedSearch ? 0 : recents.recentCount(filtered);
@@ -408,7 +417,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
   } = useListboxKeys({
     count: filtered.length,
     onChoose: (i) => chooseAccount(filtered[i]),
-    onCancel: closePopup,
+    onCancel: () => closePopup(),
   });
 
   // A plain render function, not a component defined during render: the
@@ -472,7 +481,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
       </button>
 
       {showPopup && (
-        <Modal onClose={closePopup} title={modalTitle} maxWidthClass={mode === 'choose' ? 'max-w-lg' : 'max-w-2xl'}>
+        <Modal onClose={() => closePopup()} title={modalTitle} maxWidthClass={mode === 'choose' ? 'max-w-lg' : 'max-w-2xl'}>
           {mode === 'select' ? (
             <div className="space-y-3">
               <input
@@ -522,14 +531,26 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                         data-active={on || undefined}
                         onMouseEnter={() => setAccountActiveIndex(i)}
                         onClick={() => chooseAccount(a)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
-                          on || String(a.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                        }`}
-                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ${
+                          on ? '' : 'ui-hover-sunken '
+                        }${String(a.id) === String(value) && !on ? 'ui-sunken ui-border-c' : 'ui-border-c'}`}
+                        /* Filled, not outlined: the cursor row shared `ui-sunken`
+                           with the already-chosen row and differed only by border
+                           colour, so pressing the down arrow looked like nothing
+                           had happened. */
+                        style={
+                          on
+                            ? {
+                                backgroundColor: 'rgb(var(--brand))',
+                                borderColor: 'rgb(var(--brand))',
+                                color: 'rgb(var(--on-brand))',
+                              }
+                            : undefined
+                        }
                       >
-                        <div className="text-sm font-medium ui-fg">{a.code ? `${a.code} - ` : ''}{a.name}</div>
+                        <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{a.code ? `${a.code} - ` : ''}{a.name}</div>
                         {(a.type || a.subType || a.ledgerCategory) && (
-                          <div className="text-xs ui-muted truncate">{[a.ledgerCategory, a.type, a.subType].filter(Boolean).join(' • ')}</div>
+                          <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>{[a.ledgerCategory, a.type, a.subType].filter(Boolean).join(' • ')}</div>
                         )}
                       </button>
                       </React.Fragment>
@@ -560,7 +581,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 if (ledgerId) onChange?.(ledgerId);
                 closePopup();
               }}
-              onClose={closePopup}
+              onClose={() => closePopup()}
             />
           ) : mode === 'createCustomer' ? (
             <CustomerForm
@@ -572,7 +593,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 if (ledgerId) onChange?.(ledgerId);
                 closePopup();
               }}
-              onClose={closePopup}
+              onClose={() => closePopup()}
             />
           ) : (
             <AccountForm
@@ -581,7 +602,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
               currentCompany={currentCompany}
               excludeGroupCategories={['Customer', 'Vendor']}
               onCreated={(acc) => onChange?.(String(acc.id))}
-              onClose={closePopup}
+              onClose={() => closePopup()}
             />
           )}
         </Modal>

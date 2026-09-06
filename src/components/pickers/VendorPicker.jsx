@@ -9,7 +9,7 @@ import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
-import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 import { useRemoteSearch } from './useRemoteSearch';
 
@@ -991,18 +991,22 @@ const VendorPicker = ({
 
   // Focus goes back to the field that opened this, so the next Tab continues
   // the form instead of restarting at the top of the page.
-  const closePopup = () => {
+  const closePopup = ({ advance = false } = {}) => {
     setShowVendorPopup(false);
     setVendorPopupMode('select');
     setVendorSearch('');
-    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => {
+      // Choosing moves on; cancelling stays put. See focusNextAfter.
+      if (advance) focusNextAfter(triggerRef.current);
+      else triggerRef.current?.focus({ preventScroll: true });
+    });
   };
 
   const chooseVendor = (vendor) => {
     if (!vendor) return;
     recents.remember(vendor.id);
     onChange(String(vendor.id));
-    closePopup();
+    closePopup({ advance: true });
   };
 
   const openPopup = () => {
@@ -1028,7 +1032,12 @@ const VendorPicker = ({
   const onVendorSearchTab = (e) => {
     if (e.key !== 'Tab' || e.shiftKey) return;
     const sole = soleConfidentMatch(vendors, vendorSearch, vendorSearchOpts);
-    if (sole) chooseVendor(sole);
+    if (!sole) return;
+    // Swallow the Tab: the dialog's focus trap would otherwise move focus
+    // inside a dialog that is closing on this very keystroke.
+    e.preventDefault();
+    e.stopPropagation();
+    chooseVendor(sole);
   };
 
   const vendorRecentCount = normalizedVendorSearch ? 0 : recents.recentCount(filteredVendors);
@@ -1041,7 +1050,7 @@ const VendorPicker = ({
   } = useListboxKeys({
     count: filteredVendors.length,
     onChoose: (i) => chooseVendor(filteredVendors[i]),
-    onCancel: closePopup,
+    onCancel: () => closePopup(),
   });
 
   return (
@@ -1079,7 +1088,7 @@ const VendorPicker = ({
 
       {showVendorPopup && (
         <Modal
-          onClose={closePopup}
+          onClose={() => closePopup()}
           title={vendorPopupMode === 'create' ? 'Create Vendor' : 'Select Vendor'}
           maxWidthClass="max-w-lg"
         >
@@ -1141,14 +1150,26 @@ const VendorPicker = ({
                         data-active={on || undefined}
                         onMouseEnter={() => setVendorActiveIndex(i)}
                         onClick={() => chooseVendor(v)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
-                          on || String(v.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                        }`}
-                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ${
+                          on ? '' : 'ui-hover-sunken '
+                        }${String(v.id) === String(value) && !on ? 'ui-sunken ui-border-c' : 'ui-border-c'}`}
+                        /* Filled, not outlined: the cursor row shared `ui-sunken`
+                           with the already-chosen row and differed only by border
+                           colour, so pressing the down arrow looked like nothing
+                           had happened. */
+                        style={
+                          on
+                            ? {
+                                backgroundColor: 'rgb(var(--brand))',
+                                borderColor: 'rgb(var(--brand))',
+                                color: 'rgb(var(--on-brand))',
+                              }
+                            : undefined
+                        }
                       >
-                        <div className="text-sm font-medium ui-fg">{getVendorDisplayName(v)}</div>
+                        <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{getVendorDisplayName(v)}</div>
                         {(v.phone || v.gstin) && (
-                          <div className="text-xs ui-muted truncate">{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
+                          <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
                         )}
                       </button>
                       </React.Fragment>
@@ -1207,7 +1228,7 @@ const VendorPicker = ({
                 }
                 onChange(String(vendor.id));
               }}
-              onClose={closePopup}
+              onClose={() => closePopup()}
             />
           )}
         </Modal>

@@ -8,7 +8,7 @@ import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
-import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 import { useRemoteSearch } from './useRemoteSearch';
 
@@ -1073,18 +1073,22 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
    * of moving to the next field — which breaks the whole point of picking
    * without the mouse.
    */
-  const closePopup = () => {
+  const closePopup = ({ advance = false } = {}) => {
     setShowCustomerPopup(false);
     setCustomerPopupMode('select');
     setCustomerSearch('');
-    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => {
+      // Choosing moves on; cancelling stays put. See focusNextAfter.
+      if (advance) focusNextAfter(triggerRef.current);
+      else triggerRef.current?.focus({ preventScroll: true });
+    });
   };
 
   const chooseCustomer = (customer) => {
     if (!customer) return;
     recents.remember(customer.id);
     onChange(String(customer.id));
-    closePopup();
+    closePopup({ advance: true });
   };
 
   const openPopup = () => {
@@ -1110,7 +1114,12 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
   const onCustomerSearchTab = (e) => {
     if (e.key !== 'Tab' || e.shiftKey) return;
     const sole = soleConfidentMatch(customers, customerSearch, customerSearchOpts);
-    if (sole) chooseCustomer(sole);
+    if (!sole) return;
+    // Swallow the Tab: the dialog's focus trap would otherwise move focus
+    // inside a dialog that is closing on this very keystroke.
+    e.preventDefault();
+    e.stopPropagation();
+    chooseCustomer(sole);
   };
 
   const customerRecentCount = normalizedCustomerSearch ? 0 : recents.recentCount(filteredCustomers);
@@ -1123,7 +1132,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
   } = useListboxKeys({
     count: filteredCustomers.length,
     onChoose: (i) => chooseCustomer(filteredCustomers[i]),
-    onCancel: closePopup,
+    onCancel: () => closePopup(),
   });
 
   return (
@@ -1146,7 +1155,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
 
       {showCustomerPopup && (
         <Modal
-          onClose={closePopup}
+          onClose={() => closePopup()}
           title={customerPopupMode === 'create' ? 'Create Customer' : 'Select Customer'}
           maxWidthClass="max-w-lg"
         >
@@ -1212,14 +1221,26 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                         data-active={on || undefined}
                         onMouseEnter={() => setCustomerActiveIndex(i)}
                         onClick={() => chooseCustomer(c)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
-                          on || String(c.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                        }`}
-                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ${
+                          on ? '' : 'ui-hover-sunken '
+                        }${String(c.id) === String(value) && !on ? 'ui-sunken ui-border-c' : 'ui-border-c'}`}
+                        /* Filled, not outlined: the cursor row shared `ui-sunken`
+                           with the already-chosen row and differed only by border
+                           colour, so pressing the down arrow looked like nothing
+                           had happened. */
+                        style={
+                          on
+                            ? {
+                                backgroundColor: 'rgb(var(--brand))',
+                                borderColor: 'rgb(var(--brand))',
+                                color: 'rgb(var(--on-brand))',
+                              }
+                            : undefined
+                        }
                       >
-                        <div className="text-sm font-medium ui-fg">{getCustomerDisplayName(c)}</div>
+                        <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{getCustomerDisplayName(c)}</div>
                         {(c.email || c.mobile || c.phone) && (
-                          <div className="text-xs ui-muted truncate">
+                          <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
                             {[c.email, c.mobile || c.phone].filter(Boolean).join(' • ')}
                           </div>
                         )}
@@ -1288,7 +1309,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                 }
                 onChange(String(customer.id));
               }}
-              onClose={closePopup}
+              onClose={() => closePopup()}
             />
           )}
         </Modal>

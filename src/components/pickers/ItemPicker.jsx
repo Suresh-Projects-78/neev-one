@@ -7,7 +7,7 @@ import Modal from '../ui/Modal';
 import { createItem, listItems } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
-import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 import { useRemoteSearch } from './useRemoteSearch';
 
@@ -90,20 +90,35 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
       })
     : recents.promote(items);
 
-  // Focus goes back to the cell that opened this, so Tab carries on into the
-  // description and quantity instead of restarting at the top of the page.
-  const closePopup = () => {
+  /**
+   * Where focus lands when the picker closes.
+   *
+   * Cancelling goes back to the cell that opened the picker — nothing was
+   * chosen, so the hands are still on the item field. Choosing goes *forward*,
+   * to the next control in the same line, because picking an item is the end
+   * of that cell's business and the next thing anybody types is the
+   * description or the quantity.
+   *
+   * Returning focus to the trigger on a choice was the bug behind "tab not
+   * selecting properly": Tab picked the item, the dialog closed, and focus
+   * snapped back to the field it had just left, so the row appeared to eat
+   * the keystroke and the operator had to Tab a second time.
+   */
+  const closePopup = ({ advance = false } = {}) => {
     setShowItemPopup(false);
     setItemSearch('');
     setMode('select');
-    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
+    requestAnimationFrame(() => {
+      if (advance) focusNextAfter(triggerRef.current);
+      else triggerRef.current?.focus({ preventScroll: true });
+    });
   };
 
   const chooseItem = (item) => {
     if (!item) return;
     recents.remember(item.id);
     onChange(String(item.id), item);
-    closePopup();
+    closePopup({ advance: true });
   };
 
   const openPopup = () => {
@@ -128,7 +143,16 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   const onItemSearchTab = (e) => {
     if (e.key !== 'Tab' || e.shiftKey) return;
     const sole = soleConfidentMatch(items, itemSearch, itemSearchOpts);
-    if (sole) chooseItem(sole);
+    if (!sole) return;
+    /*
+     * Swallow the Tab. The dialog's own focus trap would otherwise move focus
+     * to the next control *inside the dialog* on the very keystroke that
+     * closes the dialog, and the two would race — which is why the cursor
+     * used to end up somewhere nobody asked for. We place focus ourselves.
+     */
+    e.preventDefault();
+    e.stopPropagation();
+    chooseItem(sole);
   };
 
   const itemRecentCount = normalizedSearch ? 0 : recents.recentCount(filteredItems);
@@ -141,7 +165,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   } = useListboxKeys({
     count: filteredItems.length,
     onChoose: (i) => chooseItem(filteredItems[i]),
-    onCancel: closePopup,
+    onCancel: () => closePopup(),
   });
 
   const uoms = useMemo(
@@ -218,7 +242,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
       </button>
 
       {showItemPopup && (
-        <Modal onClose={closePopup} title="Select Item" maxWidthClass="max-w-lg">
+        <Modal onClose={() => closePopup()} title="Select Item" maxWidthClass="max-w-lg">
           <div className="space-y-3">
             {mode === 'select' ? (
               <div className="flex items-center gap-2">
@@ -292,13 +316,27 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                         data-active={on || undefined}
                         onMouseEnter={() => setItemActiveIndex(n)}
                         onClick={() => chooseItem(i)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border ui-hover-sunken ${
-                          on || String(i.id) === String(value) ? 'ui-sunken ui-border-c' : 'ui-border-c'
-                        }`}
-                        style={on ? { borderColor: 'rgb(var(--brand))' } : undefined}
+                        className={`w-full text-left px-3 py-2 rounded-lg border ${
+                          on ? '' : 'ui-hover-sunken '
+                        }${String(i.id) === String(value) && !on ? 'ui-sunken ui-border-c' : 'ui-border-c'}`}
+                        /*
+                         * The cursor row is filled, not merely outlined. It
+                         * previously shared `ui-sunken` with the already-chosen
+                         * row and differed only by border colour, so pressing ↓
+                         * looked like nothing had happened.
+                         */
+                        style={
+                          on
+                            ? {
+                                backgroundColor: 'rgb(var(--brand))',
+                                borderColor: 'rgb(var(--brand))',
+                                color: 'rgb(var(--on-brand))',
+                              }
+                            : undefined
+                        }
                       >
-                        <div className="text-sm font-medium ui-fg">{i.name}</div>
-                        <div className="text-xs ui-muted truncate">
+                        <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{i.name}</div>
+                        <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
                           {[i.code, i.hsnSac ? `HSN/SAC ${i.hsnSac}` : null, `GST ${Number(i.gstRate || 0)}%`]
                             .filter(Boolean)
                             .join(' • ')}
