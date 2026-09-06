@@ -60,6 +60,23 @@ export function useDocumentFormKeys({
       const mod = e.metaKey || e.ctrlKey;
       const key = String(e.key || '').toLowerCase();
 
+      /*
+       * A form does not own the keyboard while something is open on top of it.
+       *
+       * Dropdowns, dialogs and menus render through a portal, and a React
+       * portal propagates its events up the *component* tree, not the DOM
+       * tree — so a keystroke typed into a panel floating above this form
+       * still arrives here. Without this guard, Tab on an open warehouse list
+       * reached the line-grid handler and started a new item row, and Enter
+       * walked focus through fields the person could not even see.
+       *
+       * Checked against the real DOM ancestry, which is what tells a portal
+       * apart from a control genuinely inside the form.
+       */
+      if (e.target instanceof HTMLElement && e.target.closest('[role="dialog"], [role="listbox"], [role="menu"]')) {
+        return;
+      }
+
       if (mod && key === 's') {
         e.preventDefault();
         (c.onSave || submit)();

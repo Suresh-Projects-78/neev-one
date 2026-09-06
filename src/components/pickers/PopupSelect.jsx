@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 import Popover from '../ui/Popover';
 import { rankedSearch } from '../../utils/rankedSearch';
-import { useListboxKeys, openOnKey } from './useListboxKeys';
+import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 
 const normalizeText = (v) => String(v || '').trim().toLowerCase();
 
@@ -81,22 +81,28 @@ const PopupSelect = ({
     setOpen((prev) => !prev);
   };
 
-  const closePopup = () => {
+  const closePopup = ({ advance = false } = {}) => {
     setOpen(false);
     setQuery('');
+    // Cancelling leaves the hands where they were; choosing carries on to the
+    // next field, because picking is the end of this field's business.
+    requestAnimationFrame(() => {
+      if (advance) focusNextAfter(triggerRef.current);
+      else triggerRef.current?.focus({ preventScroll: true });
+    });
   };
 
   const applyValue = (next) => {
     const nextValue = String(next || '').trim();
     onChange?.(nextValue);
-    closePopup();
+    closePopup({ advance: true });
   };
 
   const runCustomAction = (next) => {
     const nextValue = String(next || '').trim();
     if (!nextValue) return;
     if (typeof onCustomAction === 'function') {
-      closePopup();
+      closePopup({ advance: true });
       onCustomAction(nextValue);
       return;
     }
@@ -132,7 +138,10 @@ const PopupSelect = ({
       const picked = filtered[i];
       if (picked) applyValue(picked.value);
     },
-    onCancel: closePopup,
+    onCancel: () => closePopup(),
+    // Tab off a list nobody drove: leave the value alone and carry on,
+    // rather than snapping back to the field just left.
+    onTabOut: () => closePopup({ advance: true }),
     // Only where there is no search box to take the keystroke.
     firstLetter: showSearch ? null : (i) => filtered[i]?.label,
   });
@@ -166,7 +175,7 @@ const PopupSelect = ({
       </button>
 
       {open && (
-        <Popover anchorRef={triggerRef} onClose={closePopup} onKeyDown={onKeyDown}>
+        <Popover anchorRef={triggerRef} onClose={() => closePopup()} onKeyDown={onKeyDown}>
           {showSearch ? (
             <div className="p-2 border-b">
               <input
@@ -201,6 +210,14 @@ const PopupSelect = ({
           <div
             ref={listRef}
             role="listbox"
+            /*
+             * Focusable, and the panel's default claim when no search box is
+             * rendered. Below the search threshold nothing inside the panel
+             * could take focus at all, so the keyboard stayed on the trigger
+             * behind it and the arrow keys had nothing to move.
+             */
+            tabIndex={-1}
+            data-autofocus={showSearch ? undefined : 'true'}
             className="overflow-y-auto divide-y outline-none"
           >
             {filtered.length === 0 ? (
@@ -215,18 +232,26 @@ const PopupSelect = ({
                   data-active={i === activeIndex}
                   onMouseEnter={() => setActiveIndex(i)}
                   onClick={() => applyValue(o.value)}
-                  className={`w-full px-3 py-2 text-left text-sm ${i === activeIndex ? 'ui-sunken' : ''}`}
+                  className={`w-full px-3 py-2 text-left text-sm ${i === activeIndex ? '' : 'ui-hover-sunken'}`}
+                  /* Filled, not a faint wash. The cursor row was `ui-sunken`
+                     alone, which on a white panel is close enough to nothing
+                     that pressing the down arrow looked like a dead key. */
+                  style={
+                    i === activeIndex
+                      ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
+                      : undefined
+                  }
                 >
                   {String(o.code || '').trim() ? (
                     <div className="grid grid-cols-[72px_1fr] gap-2 items-center">
-                      <div className="text-xs ui-muted">{String(o.code || '').trim()}</div>
-                      <div className="font-medium ui-fg">{o.label}</div>
+                      <div className={`text-xs ${i === activeIndex ? 'opacity-80' : 'ui-muted'}`}>{String(o.code || '').trim()}</div>
+                      <div className={`font-medium ${i === activeIndex ? '' : 'ui-fg'}`}>{o.label}</div>
                     </div>
                   ) : (
-                    <div className="font-medium ui-fg">{o.label}</div>
+                    <div className={`font-medium ${i === activeIndex ? '' : 'ui-fg'}`}>{o.label}</div>
                   )}
                   {showValueSubtext && String(o.value || '').trim() !== String(o.label || '').trim() ? (
-                    <div className="text-xs ui-muted">{o.value}</div>
+                    <div className={`text-xs ${i === activeIndex ? 'opacity-80' : 'ui-muted'}`}>{o.value}</div>
                   ) : null}
                 </button>
               ))

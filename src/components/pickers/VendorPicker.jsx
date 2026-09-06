@@ -1051,6 +1051,9 @@ const VendorPicker = ({
     count: filteredVendors.length,
     onChoose: (i) => chooseVendor(filteredVendors[i]),
     onCancel: () => closePopup(),
+    // Tab off a list nobody drove: leave the value alone and carry on,
+    // rather than snapping back to the field just left.
+    onTabOut: () => closePopup({ advance: true }),
   });
 
   return (

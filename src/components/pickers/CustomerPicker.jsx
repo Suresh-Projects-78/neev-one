@@ -1133,6 +1133,9 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
     count: filteredCustomers.length,
     onChoose: (i) => chooseCustomer(filteredCustomers[i]),
     onCancel: () => closePopup(),
+    // Tab off a list nobody drove: leave the value alone and carry on,
+    // rather than snapping back to the field just left.
+    onTabOut: () => closePopup({ advance: true }),
   });
 
   return (

@@ -166,6 +166,9 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
     count: filteredItems.length,
     onChoose: (i) => chooseItem(filteredItems[i]),
     onCancel: () => closePopup(),
+    // Tab off a list nobody drove: leave the value alone and carry on,
+    // rather than snapping back to the field just left.
+    onTabOut: () => closePopup({ advance: true }),
   });
 
   const uoms = useMemo(

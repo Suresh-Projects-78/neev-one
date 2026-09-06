@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  *   Home / End     first and last
  *   PageUp/Down    ten at a time
  *   Enter          take the highlighted row
+ *   Tab            take the highlighted row and carry on to the next field
  *   Escape         leave without changing anything
  *   a–z, 0–9       jump to the next row starting with that character
  *
@@ -24,9 +25,26 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  * @param onCancel   called on Escape
  * @param firstLetter optional (index) => string, for first-letter jumps
  */
-export function useListboxKeys({ count, onChoose, onCancel, firstLetter = null, initialIndex = 0 }) {
+export function useListboxKeys({
+  count,
+  onChoose,
+  onCancel,
+  firstLetter = null,
+  initialIndex = 0,
+  chooseOnTab = true,
+  onTabOut = null,
+}) {
   const [rawIndex, setActiveIndex] = useState(initialIndex);
   const listRef = useRef(null);
+  /*
+   * Whether the person has actually driven the cursor in this list.
+   *
+   * Tab may only commit a highlight somebody chose. On a freshly opened list
+   * the cursor sits on row 0 by default, and treating Tab as "take row 0"
+   * would put an item nobody picked onto the invoice — silently, on the key
+   * people press to leave a field. Untouched, Tab just leaves.
+   */
+  const movedRef = useRef(false);
 
   /*
    * A list that shrinks under the cursor — because someone typed another
@@ -47,6 +65,7 @@ export function useListboxKeys({ count, onChoose, onCancel, firstLetter = null, 
   const move = useCallback(
     (step) => {
       if (!count) return;
+      movedRef.current = true;
       setActiveIndex((i) => (i + step + count) % count);
     },
     [count]
@@ -57,6 +76,7 @@ export function useListboxKeys({ count, onChoose, onCancel, firstLetter = null, 
       // Alt+Up closes an open list, the mirror of the Alt+Down that opened it.
       if (e.altKey && e.key === 'ArrowUp') {
         e.preventDefault();
+        e.stopPropagation();
         onCancel?.();
         return;
       }
@@ -65,34 +85,64 @@ export function useListboxKeys({ count, onChoose, onCancel, firstLetter = null, 
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
+          e.stopPropagation();
           move(1);
           return;
         case 'ArrowUp':
           e.preventDefault();
+          e.stopPropagation();
           move(-1);
           return;
         case 'Home':
           e.preventDefault();
+          e.stopPropagation();
+          movedRef.current = true;
           setActiveIndex(0);
           return;
         case 'End':
           e.preventDefault();
+          e.stopPropagation();
+          movedRef.current = true;
           setActiveIndex(Math.max(0, count - 1));
           return;
         case 'PageDown':
           e.preventDefault();
+          e.stopPropagation();
+          movedRef.current = true;
           setActiveIndex((i) => Math.min(count - 1, i + 10));
           return;
         case 'PageUp':
           e.preventDefault();
+          e.stopPropagation();
+          movedRef.current = true;
           setActiveIndex((i) => Math.max(0, i - 10));
           return;
         case 'Enter':
           e.preventDefault();
+          e.stopPropagation();
           if (count) onChoose?.(activeIndex);
+          return;
+        case 'Tab':
+          /*
+           * Tab commits the highlight and moves on, which is how every field
+           * in a document is left. It used to fall straight through: the list
+           * ignored it, the browser moved focus to wherever the panel happened
+           * to sit in the document, and the keystroke also reached the form
+           * behind — which is how pressing Tab on an open dropdown ended up
+           * adding a line to the item grid.
+           *
+           * Shift+Tab is left alone: going backwards out of a list should not
+           * silently choose something on the way.
+           */
+          if (e.shiftKey || !chooseOnTab) return;
+          e.preventDefault();
+          e.stopPropagation();
+          if (count && movedRef.current) onChoose?.(activeIndex);
+          else (onTabOut || onCancel)?.();
           return;
         case 'Escape':
           e.preventDefault();
+          e.stopPropagation();
           onCancel?.();
           return;
         default:
@@ -112,12 +162,13 @@ export function useListboxKeys({ count, onChoose, onCancel, firstLetter = null, 
         const i = (activeIndex + n) % count;
         if (String(firstLetter(i) || '').trim().toLowerCase().startsWith(ch)) {
           e.preventDefault();
+          movedRef.current = true;
           setActiveIndex(i);
           return;
         }
       }
     },
-    [activeIndex, count, firstLetter, move, onCancel, onChoose]
+    [activeIndex, chooseOnTab, count, firstLetter, move, onCancel, onChoose, onTabOut]
   );
 
   return { activeIndex, setActiveIndex, listRef, onKeyDown };

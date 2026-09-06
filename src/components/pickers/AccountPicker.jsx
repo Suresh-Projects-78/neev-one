@@ -418,6 +418,9 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
     count: filtered.length,
     onChoose: (i) => chooseAccount(filtered[i]),
     onCancel: () => closePopup(),
+    // Tab off a list nobody drove: leave the value alone and carry on,
+    // rather than snapping back to the field just left.
+    onTabOut: () => closePopup({ advance: true }),
   });
 
   // A plain render function, not a component defined during render: the
