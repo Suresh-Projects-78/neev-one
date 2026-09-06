@@ -50,6 +50,12 @@
   --brand-hover: 234 88 12;
   --brand-soft: 255 247 237;
   --on-brand: 26 12 3;          /* 6.82:1 on the orange; white was 2.80:1 */
+  /* What is legible on a filled semantic tone. Light mode's greens, reds and
+     ambers are dark enough for white (4.8:1 at worst); dark mode lifts the
+     same tokens to light tints, where white would be about 1.7:1 and the ink
+     has to go the other way. One token, flipped per theme, so the segments
+     never restyle themselves inside a theme block. */
+  --on-tone: 255 255 255;
   --brand-ink: 124 45 18;
   --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
 
@@ -255,6 +261,7 @@
   --brand-hover: 253 186 116;
   --brand-soft: 43 26 14;
   --on-brand: 26 12 3;
+  --on-tone: 26 12 3;   /* the tones are light tints here; ink goes dark */
   --brand-ink: 254 215 170;
   --brand-panel: 9 11 17;
 
@@ -1939,19 +1946,34 @@
     transition: background-color var(--dur-surface) ease, color var(--dur-surface) ease,
       box-shadow var(--dur-surface) ease;
   }
+  /* Each segment carries a hue, named by the state it stands for. `--seg` is
+     the solid; `--seg-on` is what is legible on that solid. Every pair below
+     was measured: white clears 4.8:1 on all of them, and the orange takes
+     --on-brand because white on it is 2.80:1. */
+  .ui-segment[data-tone='all']       { --seg: var(--brand);    --seg-on: var(--on-brand); }
+  .ui-segment[data-tone='draft']     { --seg: var(--fg-muted); --seg-on: var(--on-tone); }
+  .ui-segment[data-tone='sent']      { --seg: var(--ov-blue);  --seg-on: var(--on-tone); }
+  .ui-segment[data-tone='partial']   { --seg: var(--warn);     --seg-on: var(--on-tone); }
+  .ui-segment[data-tone='paid']      { --seg: var(--pos);      --seg-on: var(--on-tone); }
+  .ui-segment[data-tone='overdue']   { --seg: var(--neg);      --seg-on: var(--on-tone); }
+  .ui-segment[data-tone='cancelled'] { --seg: var(--info);     --seg-on: var(--on-tone); }
+
+  /* Hover keeps the label at full strength on a wash of the segment's own
+     hue. Tinting the *text* instead would mean checking six more foreground
+     pairs against six different washes, and two of them do not clear 4.5. */
   .ui-segment:hover {
-    background-color: rgb(var(--accent-soft));
-    color: rgb(var(--brand-ink));
+    background-color: rgb(var(--seg, var(--brand)) / 0.12);
+    color: rgb(var(--fg));
   }
   .ui-segment[aria-selected='true'] {
-    background-color: rgb(var(--brand));
-    color: rgb(var(--on-brand));
+    background-color: rgb(var(--seg, var(--brand)));
+    color: rgb(var(--seg-on, var(--on-brand)));
     /* Raised, so the choice reads as sitting on top of the track. */
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
   }
   .ui-segment[aria-selected='true']:hover {
-    background-color: rgb(var(--brand));
-    color: rgb(var(--on-brand));
+    background-color: rgb(var(--seg, var(--brand)));
+    color: rgb(var(--seg-on, var(--on-brand)));
   }
   .ui-segment-count {
     font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1962,8 +1984,17 @@
     background-color: rgb(var(--fg) / 0.08);
     color: inherit;
   }
-  .ui-segment[aria-selected='true'] .ui-segment-count {
-    background-color: rgb(var(--on-brand) / 0.16);
+  /* Solid only where there is something to count. A red nought beside Overdue
+     is an alarm about nothing, and seven lit chips at once is no signal at
+     all — so the hue arrives with the first record. */
+  .ui-segment-count[data-on='true'] {
+    background-color: rgb(var(--seg, var(--brand)));
+    color: rgb(var(--seg-on, var(--on-brand)));
+  }
+  .ui-segment[aria-selected='true'] .ui-segment-count,
+  .ui-segment[aria-selected='true'] .ui-segment-count[data-on='true'] {
+    background-color: rgb(var(--seg-on, var(--on-brand)) / 0.22);
+    color: rgb(var(--seg-on, var(--on-brand)));
   }
 
   /* A line grid at the density this product is specified at.

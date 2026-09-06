@@ -432,14 +432,26 @@ const statusReason = (doc, status, company, nowMs) => {
     return c;
   }, [invoicesExStatus]);
 
+  /*
+   * Each status carries its own colour, from the money semantics the palette
+   * already defines: settled is green, late is red, part-paid is the amber
+   * this product uses for attention. Sent is the one state that is not a fact
+   * about the money — the document is out and the clock is running — so it
+   * takes the blue this book already uses for a thing in flight.
+   *
+   * Cancelled is deliberately NOT orange. Orange is the brand here and means
+   * "this is the active thing"; a voided document is the opposite of active,
+   * and two oranges in one strip would make the chosen tab ambiguous. It is
+   * grey, which is what a document that no longer counts should look like.
+   */
   const STATUS_TABS = [
-    { value: '', label: 'All' },
-    { value: 'Draft', label: 'Draft' },
-    { value: 'Unpaid', label: 'Sent' },
-    { value: 'Partial', label: 'Partially paid' },
-    { value: 'Paid', label: 'Paid' },
-    { value: 'Over due', label: 'Overdue' },
-    { value: 'Cancelled', label: 'Cancelled' },
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Draft', label: 'Draft', tone: 'draft' },
+    { value: 'Unpaid', label: 'Sent', tone: 'sent' },
+    { value: 'Partial', label: 'Partially paid', tone: 'partial' },
+    { value: 'Paid', label: 'Paid', tone: 'paid' },
+    { value: 'Over due', label: 'Overdue', tone: 'overdue' },
+    { value: 'Cancelled', label: 'Cancelled', tone: 'cancelled' },
   ];
 
   /**
@@ -1022,9 +1034,14 @@ const statusReason = (doc, status, company, nowMs) => {
                   setPage(1);
                 }}
                 className="ui-segment"
+                data-tone={t.tone}
               >
                 {t.label}
-                <span className="ui-segment-count">{n}</span>
+                {/* The colour marks something that is there. A red 0 next to
+                    Overdue is an alarm about nothing; grey until it counts. */}
+                <span className="ui-segment-count" data-on={n > 0 ? 'true' : undefined}>
+                  {n}
+                </span>
               </button>
             );
           })}
