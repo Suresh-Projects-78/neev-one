@@ -936,7 +936,7 @@ const statusReason = (doc, status, company, nowMs) => {
                     <div className="ui-caption px-3 pb-1.5">Configure — every invoice</div>
                     {[
                       { k: 'settingsInvoiceFields', label: 'Invoice settings', Icon: SlidersHorizontal },
-                      { k: 'settingsInvoiceFields', label: 'Custom fields', Icon: Plus, id: 'custom' },
+                      { k: 'settingsCustomFields', label: 'Custom fields', Icon: Plus },
                       { k: 'invoiceTemplates', label: 'Invoice template', Icon: Settings2 },
                       { k: 'recurringInvoices', label: 'Recurring invoices', Icon: RefreshCw },
                     ].map((o) => (
@@ -1024,7 +1024,10 @@ const statusReason = (doc, status, company, nowMs) => {
                 className="ui-btn ui-btn-sm"
                 style={
                   on
-                    ? { borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand-ink))', backgroundColor: 'rgb(var(--accent-soft))' }
+                    ? // Solid brand, not a wash. A pale tint on a pale ground made
+                      // the chosen tab read as "slightly warmer" rather than
+                      // "chosen"; filled, there is no question which one is on.
+                      { borderColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))', backgroundColor: 'rgb(var(--brand))' }
                     : { borderColor: 'rgb(var(--border))', color: 'rgb(var(--fg-muted))' }
                 }
               >
@@ -1032,8 +1035,8 @@ const statusReason = (doc, status, company, nowMs) => {
                 <span
                   className="ui-mono text-xs rounded-full px-1.5"
                   style={{
-                    backgroundColor: on ? 'rgb(var(--brand) / 0.10)' : 'rgb(var(--surface-sunken))',
-                    color: on ? 'rgb(var(--brand-ink))' : 'rgb(var(--fg))',
+                    backgroundColor: on ? 'rgb(var(--on-brand) / 0.16)' : 'rgb(var(--surface-sunken))',
+                    color: on ? 'rgb(var(--on-brand))' : 'rgb(var(--fg))',
                   }}
                 >
                   {n}
@@ -2496,7 +2499,7 @@ const InvoiceNumberingPopover = ({ anchorRef, db, setDb, currentCompany, branchI
           <label className="ui-label" htmlFor="inv-num-mode">How numbers are issued</label>
           <select
             id="inv-num-mode"
-            className="ui-select w-full px-3 py-2"
+            className="ui-select"
             value={draft.mode}
             onChange={(e) => set({ mode: e.target.value })}
           >
@@ -2753,7 +2756,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 id={id}
                 value={value}
                 onChange={(e) => setCustomField(f.key, e.target.value)}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select"
               >
                 <option value="">— none —</option>
                 {f.options.map((o) => (
@@ -3966,7 +3969,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                     const addr = selectedCustomer.shipToAddresses.find((a) => a.code === code) || null;
                     setFormData((p) => ({ ...p, shipToCode: code, shipToAddress: addr }));
                   }}
-                  className="ui-select w-full px-3 py-2"
+                  className="ui-select"
                 >
                   <option value="">Billing address</option>
                   {selectedCustomer.shipToAddresses.map((a) => (
@@ -4184,7 +4187,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <select
               value={formData.costCenterId || ''}
               onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
-              className="ui-select w-full px-3 py-2"
+              className="ui-select"
             >
               <option value="">— none —</option>
               {(db.costCenters || [])
@@ -4201,7 +4204,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <select
               value={formData.salesmanId || ''}
               onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
-              className="ui-select w-full px-3 py-2"
+              className="ui-select"
             >
               <option value="">— none —</option>
               {(db.salesmen || [])
@@ -4432,14 +4435,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   Widths, because there were none.
 
                   Every column took whatever the browser gave it, and the
-                  description input is the greediest thing in the row, so the
-                  item — the column the line is actually about — was squeezed
-                  into whatever was left. A quarter of the line to the item,
-                  a fifth to the description, and the numeric columns pinned
-                  to the width their content needs.
+                  Every cell's control is `w-full`, so these percentages are
+                  the whole story. They used to be half of it: the numeric
+                  inputs were fixed pixel widths, which left a strip of dead
+                  space in each cell that no column width could reclaim, and
+                  made the item column look padded while the description ran
+                  out of room.
                 */}
-                <th className="ui-th text-left w-[25%]">Item</th>
-                <th className="ui-th text-left w-[20%]">Description</th>
+                <th className="ui-th text-left w-[19%]">Item</th>
+                <th className="ui-th text-left w-[26%]">Description</th>
                 <th className="ui-th text-left w-[7%]">
                   Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
                 </th>
@@ -4504,7 +4508,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="ui-input w-20 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                       min="1"
                     />
                   </td>
@@ -4519,7 +4523,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="ui-input w-24 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                       min="0"
                       step="0.01"
                     />
@@ -4529,7 +4533,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       type="number"
                       value={item.discountPct || ''}
                       onChange={(e) => updateItem(idx, 'discountPct', e.target.value)}
-                      className="ui-input w-16 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                       min="0"
                       max="100"
                       step="0.01"
@@ -4541,7 +4545,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       <select
                         value={String(item.gstRate ?? 0)}
                         onChange={(e) => updateItem(idx, 'gstRate', e.target.value)}
-                        className="ui-select w-20 px-2 py-1"
+                        className="ui-select w-full min-w-0 px-2 py-1"
                         aria-label={`GST rate for line ${idx + 1}`}
                       >
                         {[0, 0.1, 0.25, 1, 1.5, 3, 5, 6, 7.5, 12, 18, 28].map((r) => (
@@ -4695,7 +4699,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       return { ...prev, paymentTermDays: days, dueDate: nextDue };
                     });
                   }}
-                  className="ui-select w-full px-3 py-2"
+                  className="ui-select"
                 >
                   <option value="">
                     {selectedCustomer ? `From the customer — ${termsLabel(selectedCustomer)}` : 'From the customer'}
@@ -4721,7 +4725,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   value={formData.notesText}
                   onChange={(e) => setFormData((p) => ({ ...p, notesText: e.target.value }))}
                   rows={3}
-                  className="ui-input w-full px-3 py-2"
+                  className="ui-input"
                   placeholder="Enter notes here…"
                 />
               </div>
@@ -5273,7 +5277,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             <select
               value={formData.salesmanId || ''}
               onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
-              className="ui-select w-full px-3 py-2"
+              className="ui-select"
             >
               <option value="">— none —</option>
               {(db.salesmen || [])
@@ -5336,7 +5340,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="ui-input w-20 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                       min="1"
                     />
                   </td>
@@ -5345,7 +5349,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="ui-input w-24 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                       min="0"
                       step="0.01"
                     />
@@ -5871,7 +5875,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           <label htmlFor="cn-branch" className="ui-label">Branch</label>
           <select
             id="cn-branch"
-            className="ui-select w-full px-3 py-2"
+            className="ui-select"
             value={branchIdInList || ''}
             onChange={(e) => setBranchId(e.target.value)}
           >
@@ -5887,7 +5891,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           </label>
           <select
             id="cn-reason"
-            className="ui-select w-full px-3 py-2"
+            className="ui-select"
             value={formData.reasonCode}
             onChange={(e) => setFormData({ ...formData, reasonCode: e.target.value })}
             required
@@ -6092,7 +6096,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       type="number"
                       value={item.quantity}
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
-                      className="ui-input w-20 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                       min="1"
                     />
                   </td>
@@ -6101,7 +6105,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="ui-input w-24 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                       min="0"
                       step="0.01"
                     />
