@@ -1984,8 +1984,35 @@
   }
   .ui-grid-dense .ui-input,
   .ui-grid-dense .ui-select {
-    min-height: 2.125rem;   /* 34px */
+    min-height: 2.125rem;      /* 34px control */
     padding: 0.25rem 0.5rem;
+    font-size: 0.8125rem;      /* 13px — the table-cell size in DESIGN.md */
+    line-height: 1.125rem;     /* 18px */
+  }
+
+  /* Figures in a line grid are money and counts, so they follow the money row
+     of the type scale: mono, tabular, right-aligned. They were the body face,
+     left-aligned, which is why a column of rates did not line up on the
+     decimal and had to be read one cell at a time. */
+  .ui-grid-dense input[type='number'] {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    text-align: right;
+  }
+
+  /* The spin buttons cost about 20px in every numeric cell and are the one
+     control nobody keying a document ever reaches for — the arrow keys walk
+     the column now. Reclaiming that space is what lets the item column have
+     the width it needs. */
+  .ui-grid-dense input[type='number']::-webkit-outer-spin-button,
+  .ui-grid-dense input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .ui-grid-dense input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
   }
 
   /* Column headings: quiet, uppercase, wide-tracked — a label for the column,

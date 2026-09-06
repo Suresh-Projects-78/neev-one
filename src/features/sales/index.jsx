@@ -4425,18 +4425,18 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   made the item column look padded while the description ran
                   out of room.
                 */}
-                <th className="ui-th text-left w-[19%]">Item</th>
-                <th className="ui-th text-left w-[26%]">Description</th>
-                <th className="ui-th text-left w-[7%]">
+                <th className="ui-th text-left w-[28%]">Item</th>
+                <th className="ui-th text-left w-[20%]">Description</th>
+                <th className="ui-th ui-num w-[7%]">
                   Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
                 </th>
-                <th className="ui-th text-left w-[8%]">Unit</th>
-                <th className="ui-th text-left w-[11%]">
+                <th className="ui-th text-left w-[6%]">Unit</th>
+                <th className="ui-th ui-num w-[11%]">
                   Rate (₹) <span className="text-[rgb(var(--neg-ink))]">*</span>
                 </th>
-                <th className="ui-th text-left w-[7%]">Disc %</th>
-                <th className="ui-th text-left w-[9%]">Tax %</th>
-                <th className="ui-th text-right w-[11%]">Amount (₹)</th>
+                <th className="ui-th ui-num w-[7%]">Disc %</th>
+                <th className="ui-th ui-num w-[8%]">Tax %</th>
+                <th className="ui-th ui-num w-[13%]">Amount (₹)</th>
                 <th className="px-3 py-2 w-10"></th>
               </tr>
             </thead>
@@ -4499,7 +4499,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                     {/* The unit belongs to the item, so it is shown rather than
                         asked for. Typing it per line is how two lines of the
                         same item end up billed in different units. */}
-                    <span className="text-sm ui-muted">{String(lineMaster?.unit || '').trim() || '—'}</span>
+                    <span className="text-[0.8125rem] ui-muted">{String(lineMaster?.unit || '').trim() || '—'}</span>
                   </td>
                   <td className="px-3 py-2">
                     <input
@@ -4541,7 +4541,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       // A value, not a disabled control: the rate comes from the
                       // item master, and a greyed-out box invites a fight with a
                       // field that will not move.
-                      <span className="text-sm">{Number(item.gstRate ?? 0)}%</span>
+                      <span className="ui-num block text-[0.8125rem]">{Number(item.gstRate ?? 0)}%</span>
                     )}
                   </td>
                   <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
