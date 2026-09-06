@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef } from 'react';
  *
  *   Ctrl+S            save (the draft, where the caller offers one)
  *   Ctrl+Enter        commit
+ *   Ctrl+;            today's date, in a date field (Excel's)
  *   Enter             move to the next field; inside the line grid, open the
  *                     next line
  *   Tab               from the last cell of the last line, open the next line
@@ -82,6 +83,33 @@ export function useDocumentFormKeys({
         (c.onSave || submit)();
         return;
       }
+      /*
+       * Ctrl+; — today, into whichever date field the cursor is in.
+       *
+       * Straight out of Excel, where it is muscle memory for anyone who keys
+       * figures for a living, and there is nothing to weigh against it: the
+       * combination means nothing else in a browser. An invoice date, a due
+       * date and a receipt date are typed dozens of times a day and are almost
+       * always today, which is the whole argument for it.
+       *
+       * The value has to go in through the element's own setter and an input
+       * event, or React never hears about it and the next render puts the old
+       * value straight back.
+       */
+      if (mod && e.key === ';') {
+        const el = e.target;
+        if (el instanceof HTMLInputElement && el.type === 'date' && !el.disabled && !el.readOnly) {
+          e.preventDefault();
+          const d = new Date();
+          const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+          if (setter) setter.call(el, iso);
+          else el.value = iso;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          return;
+        }
+      }
+
       if (mod && e.key === 'Enter') {
         e.preventDefault();
         (c.onCommit || submit)();

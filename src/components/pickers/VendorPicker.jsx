@@ -1103,6 +1103,20 @@ const VendorPicker = ({
                   value={vendorSearch}
                   onChange={(e) => setVendorSearch(e.target.value)}
                   onKeyDown={(e) => {
+                    /*
+                     * Alt+C — make the master you are missing without leaving
+                     * the field. Tally's reflex, and the biggest saving in the
+                     * whole keyboard: hitting a name that is not on file
+                     * otherwise means abandoning a half-typed document to go
+                     * and create one. Same New button, for hands that never
+                     * left the keys.
+                     */
+                    if (e.altKey && (e.key === 'c' || e.key === 'C')) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setVendorPopupMode('create');
+                      return;
+                    }
                     onVendorSearchTab(e);
                     onVendorListKeys(e);
                   }}

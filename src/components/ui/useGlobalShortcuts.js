@@ -50,6 +50,17 @@ export function useGlobalShortcuts(actions) {
       if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
 
       /*
+       * Navigation shortcuts do not fire out from under an open dialog or
+       * list. Alt+C means "new credit note" on a screen and "create the master
+       * I am missing" inside a picker — Tally's meaning, and the one the hands
+       * in that field expect. The same reasoning covers the rest: Alt+S while
+       * searching customers should not raise a sales order, and leaving a
+       * half-typed document to navigate elsewhere is never what was meant.
+       */
+      const el = document.activeElement;
+      if (el instanceof HTMLElement && el.closest('[role="dialog"], [role="listbox"], [role="menu"]')) return;
+
+      /*
        * Alt+letter is safe inside a text field on every platform we support —
        * it produces no character on Windows or Linux, and on macOS the
        * combinations below are not ones that type anything a person means to
