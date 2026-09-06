@@ -85,9 +85,35 @@ const Popover = ({ anchorRef, onClose, children, minWidth = 260, maxWidth = 420,
       onClose?.();
     };
 
+    /*
+     * A panel does not outlive the keyboard's interest in it.
+     *
+     * Whatever moves focus away — Tab, a click on another control, code that
+     * advances to the next field — the panel is no longer the thing being
+     * used, and leaving it on screen puts two open menus in front of someone
+     * at once. That is how an open warehouse list ended up hanging over an
+     * open customer dialog, with Enter landing on whichever of them the
+     * browser thought was focused.
+     *
+     * `relatedTarget` is what is *receiving* focus. When it is null the focus
+     * went nowhere in particular — an alt-tab, a click on dead space — and
+     * closing on that would fight the pointer handler above, which already
+     * owns dismissal by click.
+     */
+    const onFocusOut = (e) => {
+      const next = e.relatedTarget;
+      if (!next) return;
+      if (panelRef.current?.contains(next)) return;
+      if (anchorRef?.current?.contains(next)) return;
+      onClose?.();
+    };
+
+    const panelNow = panelRef.current;
+    panelNow?.addEventListener('focusout', onFocusOut);
     document.addEventListener('keydown', onKey, true);
     document.addEventListener('pointerdown', onDown, true);
     return () => {
+      panelNow?.removeEventListener('focusout', onFocusOut);
       document.removeEventListener('keydown', onKey, true);
       document.removeEventListener('pointerdown', onDown, true);
       const back = returnFocusRef.current;
