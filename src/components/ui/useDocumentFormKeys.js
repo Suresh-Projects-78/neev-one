@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { focusablesIn, nextFocusableAfter } from '../../utils/focusables';
 
 /**
  * The keyboard behaviour every document form shares.
@@ -13,6 +14,8 @@ import { useCallback, useEffect, useRef } from 'react';
  *   Ctrl+;            today's date, in a date field (Excel's)
  *   Enter             move to the next field; inside the line grid, open the
  *                     next line
+ *   ↑ ↓               move between fields; inside the grid, down a column
+ *   ← →               move between fields, once the caret is at the edge
  *   Tab               from the last cell of the last line, open the next line;
  *                     out of a date field, straight to the next field
  *   Ctrl+= / Ctrl++   add a line
@@ -36,13 +39,23 @@ import { useCallback, useEffect, useRef } from 'react';
  * @param autoFocus      selector for the field to land on when the form opens
  * @param isDirty        () => boolean, for the unload guard
  */
-/** Everything in a form the cursor can be put on, in the order it is read. */
-const formFocusables = (form) =>
-  Array.from(
-    form.querySelectorAll(
-      'input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])'
-    )
-  ).filter((el) => el.offsetParent !== null);
+/** The line row and column an element sits in, when it is inside the grid. */
+const gridCell = (el) => {
+  const row = el.closest('[data-line-row]');
+  const td = el.closest('td');
+  if (!row || !td || !td.parentElement) return null;
+  return { row, column: Array.prototype.indexOf.call(td.parentElement.children, td) };
+};
+
+/** The same column, one row up or down — the spreadsheet move. */
+const cellInRow = (form, cell, step) => {
+  const rows = Array.from(form.querySelectorAll('[data-line-row]'));
+  const at = rows.indexOf(cell.row);
+  const nextRow = rows[at + step];
+  if (at === -1 || !nextRow) return null;
+  const td = nextRow.children[cell.column];
+  return td ? focusablesIn(td)[0] || null : null;
+};
 
 export function useDocumentFormKeys({
   formRef,
@@ -171,7 +184,7 @@ export function useDocumentFormKeys({
       if (e.key === 'Tab' && e.target instanceof HTMLInputElement && e.target.type === 'date') {
         const form = formRef.current;
         if (form) {
-          const focusables = formFocusables(form);
+          const focusables = focusablesIn(form);
           const at = focusables.indexOf(e.target);
           if (at !== -1) {
             const next = focusables[at + (e.shiftKey ? -1 : 1)];
@@ -179,6 +192,79 @@ export function useDocumentFormKeys({
               e.preventDefault();
               next.focus();
               return;
+            }
+          }
+        }
+      }
+
+      /*
+       * The arrows move between fields, for hands that were trained on Tally
+       * and on a spreadsheet rather than on a web form.
+       *
+       * Down and Up step through the document; inside the line grid they step
+       * down a *column*, so walking a quantity down ten lines is ten presses
+       * and not a Tab dance across every rate and tax cell in between. That is
+       * the spreadsheet meaning of the key and it is what the grid looks like.
+       *
+       * Left and Right only leave a field when the caret is already against
+       * that end of the text. Anything else would make it impossible to edit a
+       * value character by character, which is a far worse trade than the
+       * convenience is worth.
+       *
+       * Left alone entirely: a textarea, which owns all four for its own
+       * lines, and anything with a list open, which owns Up and Down for its
+       * highlight. Selects keep Up and Down because that is how a native
+       * select changes value.
+       */
+      const arrow =
+        e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'ArrowRight';
+      if (arrow && !mod && !e.altKey && !e.shiftKey && e.target instanceof HTMLElement) {
+        const el = e.target;
+        const vertical = e.key === 'ArrowDown' || e.key === 'ArrowUp';
+        const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : -1;
+        const tag = el.tagName;
+
+        const owned =
+          tag === 'TEXTAREA' ||
+          (tag === 'SELECT' && vertical) ||
+          el.getAttribute('aria-expanded') === 'true' ||
+          el.getAttribute('role') === 'listbox';
+
+        if (!owned) {
+          const form = formRef.current;
+          if (form) {
+            let go = false;
+            if (vertical) {
+              go = true;
+            } else if (tag === 'INPUT' || tag === 'TEXTAREA') {
+              // Only at the very edge of the text, and only when nothing is
+              // selected — a caret with a selection is mid-edit.
+              const start = el.selectionStart;
+              const end = el.selectionEnd;
+              const len = String(el.value ?? '').length;
+              // A date or number input reports null here; it has no caret to
+              // preserve, so the arrow may leave.
+              if (start === null || end === null) go = true;
+              else if (start === end) go = step === 1 ? end === len : start === 0;
+            } else {
+              go = true;
+            }
+
+            if (go) {
+              const cell = vertical ? gridCell(el) : null;
+              const target = cell ? cellInRow(form, cell, step) : nextFocusableAfter(form, el, step);
+              if (target && target !== el) {
+                e.preventDefault();
+                target.focus();
+                if (typeof target.select === 'function' && target.tagName === 'INPUT') {
+                  try {
+                    target.select();
+                  } catch {
+                    /* a date input has nothing to select */
+                  }
+                }
+                return;
+              }
             }
           }
         }
@@ -225,7 +311,7 @@ export function useDocumentFormKeys({
       if (target.tagName === 'BUTTON' || target.getAttribute('role') === 'button') return;
       const form = formRef.current;
       if (!form) return;
-      const focusables = formFocusables(form);
+      const focusables = focusablesIn(form);
       const at = focusables.indexOf(target);
       if (at === -1) return;
       e.preventDefault();
