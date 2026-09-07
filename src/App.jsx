@@ -13701,7 +13701,7 @@ const AppShell = () => {
               <button
                 type="button"
                 onClick={() => setAccountMenuOpen((v) => !v)}
-                className="block h-8 w-8 shrink-0 rounded-full overflow-hidden"
+                className="block h-9 w-9 shrink-0 rounded-full overflow-hidden"
                 aria-haspopup="menu"
                 aria-expanded={accountMenuOpen}
                 aria-label="Your profile"
@@ -13713,12 +13713,12 @@ const AppShell = () => {
                     alt=""
                     width={32}
                     height={32}
-                    className="h-8 w-8 rounded-full object-cover"
+                    className="h-9 w-9 rounded-full object-cover"
                     style={{ border: '1px solid rgb(var(--border))' }}
                   />
                 ) : (
                   <span
-                    className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold"
+                    className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold"
                     style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
                     aria-hidden="true"
                   >

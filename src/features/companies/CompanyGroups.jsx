@@ -32,6 +32,13 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
   );
 
   const [editing, setEditing] = useState(null); // { id? , parentCompanyId? } — no id = create
+  /*
+   * The company being looked at, as opposed to the one being edited.
+   * Branches and warehouses both open what was saved; a company dropped you
+   * back on the list with a toast, so the only way to see what had actually
+   * been stored was to find the row again and press the pencil.
+   */
+  const [viewingId, setViewingId] = useState(null);
   const [form, setForm] = useState({ name: '', gstin: '', state: '', parentCompanyId: '' });
 
   /** Billed / outstanding per company, from its invoices. */
@@ -121,7 +128,8 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
             : c
         ),
       }));
-      notify.success(`${name} updated.`);
+      notify.success(`${name} saved.`);
+      setViewingId(editing.id);
     } else {
       setDb((prev) => {
         const list = Array.isArray(prev.companies) ? prev.companies : [];
@@ -143,9 +151,15 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
         };
       });
       notify.success(`${name} added to the group.`);
+      // The new row's id is the one the reducer just allotted.
+      setViewingId(
+        (Array.isArray(db?.companies) ? db.companies : []).reduce((m, c) => Math.max(m, num(c.id)), 0) + 1
+      );
     }
     setEditing(null);
   };
+
+  const viewingCompany = viewingId == null ? null : companies.find((c) => c.id === viewingId) || null;
 
   const setActive = (c) => {
     setDb((prev) => ({ ...prev, activeCompanyId: c.id }));
@@ -216,6 +230,13 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
                 Set active <ChevronRight size={13} aria-hidden="true" />
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={() => setViewingId(c.id)}
+              className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
+            >
+              View
+            </button>
             <button type="button" onClick={() => openEdit(c)} className="ui-icon-btn ui-btn-sm !w-8" aria-label={`Edit ${c.name}`}>
               <Pencil size={14} aria-hidden="true" />
             </button>
@@ -234,6 +255,56 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
         title="Company Profile"
         description="The group at a glance — switch the active company and see who owes what."
       />
+
+      {/*
+        What was just saved, in the shape branches and warehouses already use:
+        the record's own details, with the way back and the way to edit it in
+        the same place. Hidden while the editor is open, because the editor is
+        already showing the same record.
+      */}
+      {viewingCompany && !editing ? (
+        <section className="ui-card ui-in p-5" aria-label="Company details">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="min-w-0">
+              <h3 className="ui-t-sec truncate">{viewingCompany.name}</h3>
+              <p className="ui-caption">
+                {[viewingCompany.state, viewingCompany.gstin || 'No GSTIN'].filter(Boolean).join(' · ')}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button type="button" onClick={() => openEdit(viewingCompany)} className="ui-btn ui-btn-secondary">
+                <Pencil size={14} aria-hidden="true" /> Edit
+              </button>
+              <button type="button" onClick={() => setViewingId(null)} className="ui-btn ui-btn-ghost">
+                Close
+              </button>
+            </div>
+          </div>
+
+          <dl className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ['Name', viewingCompany.name],
+              ['State', viewingCompany.state || '—'],
+              ['GSTIN', viewingCompany.gstin || 'Not registered'],
+              ['Currency', viewingCompany.currency || 'INR'],
+              [
+                'Parent',
+                (companies.find((c) => c.id === viewingCompany.parentCompanyId) || {}).name || 'None — top of the group',
+              ],
+              ['Billed', formatMoney((activityById.get(viewingCompany.id) || {}).billed || 0, viewingCompany)],
+              [
+                'Outstanding',
+                formatMoney((activityById.get(viewingCompany.id) || {}).outstanding || 0, viewingCompany),
+              ],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <dt className="ui-caption">{k}</dt>
+                <dd className="ui-t-body mt-0.5">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
 
       {editing ? (
         <div className="ui-card ui-in p-5">

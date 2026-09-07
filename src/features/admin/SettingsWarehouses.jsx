@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TableSkeleton } from '../../components/ui/Primitives';
 import { exportRows } from '../../components/ListToolbar';
-import { confirmDialog } from '../../components/ui/notify';
+import { confirmDialog, notify } from '../../components/ui/notify';
 import { listBranches, listWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '../../api/admin';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
@@ -162,6 +162,8 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
 
       const res = await createWarehouse(orgId, payload);
       setWarehouses((prev) => [...prev, res.warehouse]);
+      // Saving opens what was saved, the same as a branch and a company.
+      if (res?.warehouse?.id) setViewWarehouseId(String(res.warehouse.id));
       if (typeof onWarehousesChanged === 'function') onWarehousesChanged();
       setForm({
         branchId: branchId ? String(branchId) : '',
@@ -252,7 +254,10 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
         await loadWarehouses();
       }
       if (typeof onWarehousesChanged === 'function') onWarehousesChanged();
+      // Back to the view of the record just saved, not out of it entirely.
       setEditingWarehouseId(null);
+      setViewWarehouseId(String(editingWarehouseId));
+      notify.success(`Warehouse "${payload.name}" saved.`);
     } catch (err) {
       setError(err.message || 'Failed to update warehouse');
     } finally {

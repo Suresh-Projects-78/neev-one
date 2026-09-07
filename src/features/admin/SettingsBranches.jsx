@@ -103,6 +103,13 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
       };
       const res = await createBranch(orgId, payload);
       setBranches((prev) => [...prev, res.branch]);
+      /*
+       * Saving opens what was saved. A create used to drop you back on the
+       * list with a toast, so the only way to check what had actually been
+       * stored was to find the row again and open it — and with several
+       * branches that is a search through a list you have just added to.
+       */
+      if (res?.branch?.id) setViewBranchId(String(res.branch.id));
       setForm({ branchCode: '', branchName: '', addressLine1: '', city: '', state: '', country: 'India', gstRegistrationType: 'UNREGISTERED', gstin: '' });
       setShowForm(false);
       notify.success(`Branch "${res.branch?.branchName || payload.branchName}" created.`);
@@ -194,7 +201,10 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
       } else {
         await loadBranches();
       }
+      // Back to the view of the record just saved, not out of it entirely.
       setEditingBranchId(null);
+      setViewBranchId(String(editingBranchId));
+      notify.success(`Branch "${payload.branchName}" saved.`);
     } catch (err) {
       setError(err.message || 'Failed to update branch');
     } finally {
