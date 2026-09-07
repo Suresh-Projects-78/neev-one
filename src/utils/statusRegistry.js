@@ -33,13 +33,13 @@ const REGISTRY = [
   // Outline, not grey fill: a draft is the absence of a document, not a
   // state of the money. It has to be distinguishable from Unpaid at a glance —
   // that pair being identical was the defect this registry exists to fix.
-  { key: 'draft', label: 'Draft', tone: 'outline', aliases: ['draft'] },
-  { key: 'unpaid', label: 'Unpaid', tone: 'neutral', aliases: ['unpaid', 'issued'] },
-  { key: 'partial', label: 'Partial', tone: 'warn', aliases: ['partial', 'partially paid'] },
-  { key: 'overdue', label: 'Overdue', tone: 'neg', aliases: ['overdue', 'over due'] },
-  { key: 'paid', label: 'Paid', tone: 'pos', aliases: ['paid', 'settled'] },
+  { key: 'draft', label: 'Draft', tone: 'outline', statusTone: 'draft', aliases: ['draft'] },
+  { key: 'unpaid', label: 'Unpaid', tone: 'neutral', statusTone: 'sent', aliases: ['unpaid', 'issued'] },
+  { key: 'partial', label: 'Partial', tone: 'warn', statusTone: 'partial', aliases: ['partial', 'partially paid'] },
+  { key: 'overdue', label: 'Overdue', tone: 'neg', statusTone: 'overdue', aliases: ['overdue', 'over due'] },
+  { key: 'paid', label: 'Paid', tone: 'pos', statusTone: 'paid', aliases: ['paid', 'settled'] },
   // Deliberately neutral. See the note above.
-  { key: 'cancelled', label: 'Cancelled', tone: 'neutral', aliases: ['cancelled', 'canceled', 'void'] },
+  { key: 'cancelled', label: 'Cancelled', tone: 'neutral', statusTone: 'cancelled', aliases: ['cancelled', 'canceled', 'void'] },
 
   // --- approval ------------------------------------------------------------
   { key: 'pendingApproval', label: 'Pending approval', tone: 'warn', aliases: ['pending approval', 'pending', 'awaiting approval'] },
@@ -73,7 +73,7 @@ const REGISTRY = [
   { key: 'billed', label: 'Billed', tone: 'pos', aliases: ['billed'] },
   { key: 'posted', label: 'Posted', tone: 'pos', aliases: ['posted'] },
   { key: 'active', label: 'Active', tone: 'pos', aliases: ['active'] },
-  { key: 'sent', label: 'Sent', tone: 'neutral', aliases: ['sent'] },
+  { key: 'sent', label: 'Sent', tone: 'neutral', statusTone: 'sent', aliases: ['sent'] },
   // A quote that became an invoice. Positive: the deal closed, and it is the
   // signal that stops anyone quoting the same job twice.
   { key: 'converted', label: 'Converted', tone: 'pos', aliases: ['converted'] },
@@ -109,10 +109,10 @@ for (const entry of REGISTRY) {
  */
 export const resolveStatus = (raw) => {
   const text = String(raw ?? '').trim();
-  if (!text) return { key: 'none', label: '—', tone: 'neutral', known: true };
+  if (!text) return { key: 'none', label: '—', tone: 'neutral', statusTone: null, known: true };
   const hit = BY_ALIAS.get(text.toLowerCase());
-  if (hit) return { key: hit.key, label: hit.label, tone: hit.tone, known: true };
-  return { key: 'unknown', label: text, tone: 'neutral', known: false };
+  if (hit) return { key: hit.key, label: hit.label, tone: hit.tone, statusTone: hit.statusTone || null, known: true };
+  return { key: 'unknown', label: text, tone: 'neutral', statusTone: null, known: false };
 };
 
 /** For tests and for the design docs: the canonical list, in declaration order. */

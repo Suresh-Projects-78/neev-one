@@ -56,6 +56,35 @@
      has to go the other way. One token, flipped per theme, so the segments
      never restyle themselves inside a theme block. */
   --on-tone: 255 255 255;
+
+  /* --- document status colours -------------------------------------------
+     Four values per status: `soft` is the resting fill, `strong` the fill when
+     the status is the one selected, `key` the saturated colour used for the
+     ring and the count, and `ink` the text, which sits on soft and strong
+     alike. Every ink/strong pair below was measured and clears 4.5:1; the
+     tightest is paid at 4.57. The key/`--on-tone` pairs clear 4.7.
+  ------------------------------------------------------------------------- */
+  --st-all-soft: 245 245 244;      --st-all-strong: 231 229 228;
+  --st-all-key: 120 113 108;       --st-all-ink: 68 64 60;
+
+  --st-draft-soft: 241 245 249;    --st-draft-strong: 226 232 240;
+  --st-draft-key: 100 116 139;     --st-draft-ink: 51 65 85;
+
+  --st-sent-soft: 239 246 255;     --st-sent-strong: 219 234 254;
+  --st-sent-key: 37 99 235;        --st-sent-ink: 29 78 216;
+
+  --st-partial-soft: 245 243 255;  --st-partial-strong: 237 233 254;
+  --st-partial-key: 124 58 237;    --st-partial-ink: 109 40 217;
+
+  --st-paid-soft: 240 253 244;     --st-paid-strong: 220 252 231;
+  --st-paid-key: 22 163 74;        --st-paid-ink: 21 128 61;
+
+  --st-overdue-soft: 254 242 242;  --st-overdue-strong: 254 226 226;
+  --st-overdue-key: 220 38 38;     --st-overdue-ink: 185 28 28;
+
+  --st-cancelled-soft: 244 244 245;--st-cancelled-strong: 228 228 231;
+  --st-cancelled-key: 82 82 91;    --st-cancelled-ink: 63 63 70;
+
   --brand-ink: 124 45 18;
   --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
 
@@ -262,6 +291,31 @@
   --brand-soft: 43 26 14;
   --on-brand: 26 12 3;
   --on-tone: 26 12 3;   /* the tones are light tints here; ink goes dark */
+
+  /* The same four roles, inverted: soft and strong become dark tints of the
+     hue and the ink becomes a light one. `key` lifts so it still reads as the
+     colour when it is a 2px ring on a dark ground. */
+  --st-all-soft: 41 37 36;         --st-all-strong: 58 54 52;
+  --st-all-key: 168 162 158;       --st-all-ink: 231 229 228;
+
+  --st-draft-soft: 30 41 59;       --st-draft-strong: 41 56 77;
+  --st-draft-key: 148 163 184;     --st-draft-ink: 203 213 225;
+
+  --st-sent-soft: 23 37 84;        --st-sent-strong: 30 58 138;
+  --st-sent-key: 96 165 250;       --st-sent-ink: 191 219 254;
+
+  --st-partial-soft: 46 16 101;    --st-partial-strong: 76 29 149;
+  --st-partial-key: 167 139 250;   --st-partial-ink: 221 214 254;
+
+  --st-paid-soft: 5 46 22;         --st-paid-strong: 20 83 45;
+  --st-paid-key: 74 222 128;       --st-paid-ink: 187 247 208;
+
+  --st-overdue-soft: 69 10 10;     --st-overdue-strong: 127 29 29;
+  --st-overdue-key: 248 113 113;   --st-overdue-ink: 254 202 202;
+
+  --st-cancelled-soft: 39 39 42;   --st-cancelled-strong: 63 63 70;
+  --st-cancelled-key: 161 161 170; --st-cancelled-ink: 228 228 231;
+
   --brand-ink: 254 215 170;
   --brand-panel: 9 11 17;
 
@@ -723,6 +777,20 @@
     background-color: rgb(var(--info-soft));
     color: rgb(var(--info));
   }
+  /* A status pill in the same colours as its filter tab. The tokens are the
+     status set, so Paid is one green across the strip, the Status column and
+     every other list the document turns up in. */
+  .ui-pill-status[data-tone='draft']     { --seg-strong: var(--st-draft-strong);     --seg-ink: var(--st-draft-ink); }
+  .ui-pill-status[data-tone='sent']      { --seg-strong: var(--st-sent-strong);      --seg-ink: var(--st-sent-ink); }
+  .ui-pill-status[data-tone='partial']   { --seg-strong: var(--st-partial-strong);   --seg-ink: var(--st-partial-ink); }
+  .ui-pill-status[data-tone='paid']      { --seg-strong: var(--st-paid-strong);      --seg-ink: var(--st-paid-ink); }
+  .ui-pill-status[data-tone='overdue']   { --seg-strong: var(--st-overdue-strong);   --seg-ink: var(--st-overdue-ink); }
+  .ui-pill-status[data-tone='cancelled'] { --seg-strong: var(--st-cancelled-strong); --seg-ink: var(--st-cancelled-ink); }
+  .ui-pill-status {
+    background-color: rgb(var(--seg-strong, var(--surface-sunken)));
+    color: rgb(var(--seg-ink, var(--fg-muted)));
+  }
+
   .ui-pill-neutral {
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg-muted));
@@ -2008,55 +2076,50 @@
     transition: background-color var(--dur-surface) ease, color var(--dur-surface) ease,
       box-shadow var(--dur-surface) ease;
   }
-  /* Each segment carries a hue, named by the state it stands for. `--seg` is
-     the solid; `--seg-on` is what is legible on that solid. Every pair below
-     was measured: white clears 4.8:1 on all of them, and the orange takes
-     --on-brand because white on it is 2.80:1. */
-  .ui-segment[data-tone='all']       { --seg: var(--brand);    --seg-on: var(--on-brand); }
-  .ui-segment[data-tone='draft']     { --seg: var(--fg-muted); --seg-on: var(--on-tone); }
-  .ui-segment[data-tone='sent']      { --seg: var(--ov-blue);  --seg-on: var(--on-tone); }
-  .ui-segment[data-tone='partial']   { --seg: var(--warn);     --seg-on: var(--on-tone); }
-  .ui-segment[data-tone='paid']      { --seg: var(--pos);      --seg-on: var(--on-tone); }
-  .ui-segment[data-tone='overdue']   { --seg: var(--neg);      --seg-on: var(--on-tone); }
-  .ui-segment[data-tone='cancelled'] { --seg: var(--info);     --seg-on: var(--on-tone); }
+  /* Each status wears its own colour at all times, not only when it is the
+     one being filtered on. A strip where six tabs are blank and one is filled
+     says "here is a selected thing"; a strip where every tab is tinted says
+     what each of them *is*, and the selection is then a matter of depth,
+     ring and shadow rather than of colour appearing from nowhere. */
+  .ui-segment[data-tone='all']       { --seg-soft: var(--st-all-soft);       --seg-strong: var(--st-all-strong);       --seg-key: var(--st-all-key);       --seg-ink: var(--st-all-ink); }
+  .ui-segment[data-tone='draft']     { --seg-soft: var(--st-draft-soft);     --seg-strong: var(--st-draft-strong);     --seg-key: var(--st-draft-key);     --seg-ink: var(--st-draft-ink); }
+  .ui-segment[data-tone='sent']      { --seg-soft: var(--st-sent-soft);      --seg-strong: var(--st-sent-strong);      --seg-key: var(--st-sent-key);      --seg-ink: var(--st-sent-ink); }
+  .ui-segment[data-tone='partial']   { --seg-soft: var(--st-partial-soft);   --seg-strong: var(--st-partial-strong);   --seg-key: var(--st-partial-key);   --seg-ink: var(--st-partial-ink); }
+  .ui-segment[data-tone='paid']      { --seg-soft: var(--st-paid-soft);      --seg-strong: var(--st-paid-strong);      --seg-key: var(--st-paid-key);      --seg-ink: var(--st-paid-ink); }
+  .ui-segment[data-tone='overdue']   { --seg-soft: var(--st-overdue-soft);   --seg-strong: var(--st-overdue-strong);   --seg-key: var(--st-overdue-key);   --seg-ink: var(--st-overdue-ink); }
+  .ui-segment[data-tone='cancelled'] { --seg-soft: var(--st-cancelled-soft); --seg-strong: var(--st-cancelled-strong); --seg-key: var(--st-cancelled-key); --seg-ink: var(--st-cancelled-ink); }
 
-  /* Hover keeps the label at full strength on a wash of the segment's own
-     hue. Tinting the *text* instead would mean checking six more foreground
-     pairs against six different washes, and two of them do not clear 4.5. */
+  /* The 2px ring is carried on every state, transparent until selected, so
+     choosing a tab cannot nudge the strip by two pixels. */
+  .ui-segment {
+    background-color: rgb(var(--seg-soft, var(--surface)));
+    color: rgb(var(--seg-ink, var(--fg-muted)));
+    border: 2px solid transparent;
+  }
   .ui-segment:hover {
-    background-color: rgb(var(--seg, var(--brand)) / 0.12);
-    color: rgb(var(--fg));
+    background-color: rgb(var(--seg-strong, var(--surface-sunken)));
   }
   .ui-segment[aria-selected='true'] {
-    background-color: rgb(var(--seg, var(--brand)));
-    color: rgb(var(--seg-on, var(--on-brand)));
-    /* Raised, so the choice reads as sitting on top of the track. */
-    box-shadow: 0 1px 2px rgb(0 0 0 / 0.18);
-  }
-  .ui-segment[aria-selected='true']:hover {
-    background-color: rgb(var(--seg, var(--brand)));
-    color: rgb(var(--seg-on, var(--on-brand)));
+    background-color: rgb(var(--seg-strong, var(--surface-sunken)));
+    color: rgb(var(--seg-ink, var(--fg)));
+    border-color: rgb(var(--seg-key, var(--brand)));
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.10);
   }
   .ui-segment-count {
     font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-variant-numeric: tabular-nums;
     font-size: 0.75rem;
+    line-height: 1rem;
     padding-inline: 0.375rem;
     border-radius: 9999px;
-    background-color: rgb(var(--fg) / 0.08);
-    color: inherit;
+    background-color: rgb(var(--seg-strong, var(--surface-sunken)));
+    color: rgb(var(--seg-ink, var(--fg)));
   }
-  /* Solid only where there is something to count. A red nought beside Overdue
-     is an alarm about nothing, and seven lit chips at once is no signal at
-     all — so the hue arrives with the first record. */
-  .ui-segment-count[data-on='true'] {
-    background-color: rgb(var(--seg, var(--brand)));
-    color: rgb(var(--seg-on, var(--on-brand)));
-  }
-  .ui-segment[aria-selected='true'] .ui-segment-count,
-  .ui-segment[aria-selected='true'] .ui-segment-count[data-on='true'] {
-    background-color: rgb(var(--seg-on, var(--on-brand)) / 0.22);
-    color: rgb(var(--seg-on, var(--on-brand)));
+  /* On the selected tab the count takes the saturated key, which is the one
+     place the full-strength status colour appears. */
+  .ui-segment[aria-selected='true'] .ui-segment-count {
+    background-color: rgb(var(--seg-key, var(--brand)));
+    color: rgb(var(--on-tone));
   }
 
   /* A line grid at the density this product is specified at.

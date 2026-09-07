@@ -134,11 +134,20 @@ export const StatStrip = ({ items = [], className = '' }) => {
  * narrow screen without the status losing its meaning.
  */
 export const StatusPill = ({ status, reason = '' }) => {
-  const { label, tone, known } = resolveStatus(status);
+  const { label, tone, statusTone, known } = resolveStatus(status);
 
+  /*
+   * A document status that has a colour of its own wears it — the same four
+   * values the filter tabs use, so Paid is the same green in the tab strip,
+   * in the Status column and anywhere else the document is listed. Statuses
+   * outside that set (approvals, transfers) keep the generic pos/neg/warn
+   * pills; they are not invoice states and inventing a hue for each would
+   * spend the palette on distinctions nobody makes.
+   */
   const pill = (
     <span
-      className={`ui-pill ui-pill-${tone}`}
+      data-tone={statusTone || undefined}
+      className={statusTone ? 'ui-pill ui-pill-status' : `ui-pill ui-pill-${tone}`}
       title={known ? undefined : `Unregistered status: ${label}`}
       style={known ? undefined : { outline: '1px dashed rgb(var(--neg))', outlineOffset: '1px' }}
     >
