@@ -151,6 +151,7 @@ import { usePeriodFilter } from './components/ListControls';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
+import CompanyProfileDetails from './features/settings/CompanyProfileDetails';
 import NumberingSettings from './features/settings/NumberingSettings';
 import CurrencySettings from './features/settings/CurrencySettings';
 const BatchSerialManager = lazy(() => import('./features/inventory/BatchSerialManager'));
@@ -8625,8 +8626,17 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
   );
 };
 
-const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showSidebar = true }) => {
+export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showSidebar = true }) => {
   const [activeTab, setActiveTab] = useState(() => (String(initialTab || 'company') === 'tax' ? 'tax' : 'company'));
+  /*
+   * Company Profile sat permanently open as a form, while its two neighbours
+   * under Organisation — Branches and Warehouses — show the record and put you
+   * into a form only when you ask. Three screens describing the same kind of
+   * thing behaved two different ways, and the one that mattered most was the
+   * odd one out: a form that is always open is a screen you can change by
+   * leaning on the keyboard.
+   */
+  const [editingCompany, setEditingCompany] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -10251,16 +10261,32 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   <div className="ui-t-sec">Company</div>
                   <div className="text-sm ui-muted">Basic, contact and registered address</div>
                 </div>
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={saveCompanySettings}
-                  className={`px-4 py-2 rounded-lg ${saving ? 'ui-sunken ui-subtle' : 'ui-btn ui-btn-primary '}`}
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
+                {editingCompany ? (
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setEditingCompany(false)} className="ui-btn ui-btn-ghost">
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={async () => {
+                        await saveCompanySettings();
+                        // Saving returns to the record, the same as a branch.
+                        setEditingCompany(false);
+                      }}
+                      className="ui-btn ui-btn-primary"
+                    >
+                      {saving ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setEditingCompany(true)} className="ui-btn ui-btn-secondary">
+                    <Pencil size={14} aria-hidden="true" /> Edit
+                  </button>
+                )}
               </div>
 
+              {editingCompany ? (
               <div className="space-y-6 max-w-4xl">
                 <div className="border rounded-xl p-5 shadow-sm ui-surface">
                   <div className="flex items-baseline justify-between gap-4 mb-4">
@@ -10428,6 +10454,9 @@ const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showS
                   </div>
                 </div>
               </div>
+              ) : (
+                <CompanyProfileDetails form={form} company={currentCompany} />
+              )}
             </div>
           ) : (
             <TaxCompliancesView db={db} setDb={setDb} currentCompany={currentCompany} />
@@ -11659,7 +11688,14 @@ const AppShell = () => {
         icon: PhMaster,
         ph: true,
         items: [
-          { key: 'companies', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
+          /*
+           * "Companies", not "Company Profile". Two nav entries carried that
+           * same label and opened different screens — this list of every
+           * company in the group, and the single active company's own record
+           * under Organisation — so asking for company profile got you
+           * whichever one you happened to click.
+           */
+          { key: 'companies', label: 'Companies', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', feature: 'companyGroups' },
           { key: 'items', label: 'Items', icon: Tags, perm: 'MASTERS::Items::VIEW' },
           { key: 'uoms', label: 'Units', icon: Boxes, perm: 'MASTERS::Items::VIEW' },
           { key: 'itemCategories', label: 'Item Categories', icon: Tags, perm: 'MASTERS::Items::VIEW' },
