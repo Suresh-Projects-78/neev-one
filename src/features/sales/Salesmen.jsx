@@ -3,7 +3,7 @@ import { Plus, Trash2, UserCheck } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { MoneyValue } from '../../components/sales';
+import { MoneyValue } from '../../components/docs';
 
 /**
  * Salesman master + performance report. Invoices carry salesmanId (picked on

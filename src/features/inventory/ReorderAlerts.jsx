@@ -3,10 +3,10 @@ import { PackageSearch } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
-import { formatMoney } from '../../utils/money';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { createDocApi, hasApiSession } from '../../api/purchaseDocs';
 import { getVendorDisplayName } from '../../utils/contacts';
+import { MoneyValue } from '../../components/docs';
 
 /**
  * Reorder alerts — inventory as buying decisions.
@@ -196,7 +196,9 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
                   <td className="px-4 py-2.5 text-right">{r.level}</td>
                   <td className="px-4 py-2.5 text-right font-semibold">{r.suggestedQty}</td>
                   <td className="ui-col-entity px-4 py-2.5">{r.last?.vendorName || '—'}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{r.last ? formatMoney(r.last.rate, currentCompany) : '—'}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right">
+                    {r.last ? <MoneyValue value={r.last.rate} company={currentCompany} /> : '—'}
+                  </td>
                   <td className="px-4 py-2.5 text-right">
                     <button type="button" onClick={() => draftPo(r)} disabled={busyId === r.item.id} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                       {busyId === r.item.id ? 'Drafting…' : 'Draft PO'}

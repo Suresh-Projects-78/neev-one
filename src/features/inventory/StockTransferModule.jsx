@@ -13,6 +13,7 @@ import { usePeriodFilter } from '../../components/ListControls';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { latestPurchaseRate } from '../../utils/pricing';
 import { formatMoney } from '../../utils/money';
+import { DocDate } from '../../components/docs';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1869,7 +1870,7 @@ export const StockTransfersList = ({
                       <td className="ui-col-meta px-4 py-2.5 font-medium">{t?.number || '-'}</td>
                       <td className="ui-col-meta px-4 py-2.5">{fromLabel || '-'}</td>
                       <td className="ui-col-meta px-4 py-2.5">{toLabel || '-'}</td>
-                      <td className="ui-col-date px-4 py-2.5">{t?.date || '-'}</td>
+                      <td className="ui-col-date px-4 py-2.5"><DocDate value={t?.date} /></td>
                       <td className="px-6 py-4">
                         <StatusPill status={status} />
                       </td>

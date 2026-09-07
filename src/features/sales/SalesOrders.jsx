@@ -15,7 +15,7 @@ import { computeGstForLines } from '../../utils/gst';
 import { getCompanyGstProfile, getPartyGstProfile, isIntraStateSupply } from '../../utils/gst';
 import { resolveSaleRate } from '../../utils/pricing';
 import { createDocApi, hasApiSession } from '../../api/purchaseDocs';
-import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 
 /**
  * Sales orders — the confirmed order between quote and invoice.

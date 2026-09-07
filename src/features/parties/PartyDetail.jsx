@@ -4,6 +4,7 @@ import { ArrowLeft, FileText, Mail, MapPin, Pencil, Phone, Wallet } from 'lucide
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import ChartCard from '../../components/charts/ChartCard';
 import { PageHeader, EmptyState, StatTile, StatusPill } from '../../components/ui/Primitives';
+import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 
 /**
  * One party, the whole story: the 360 view a phone call needs.
@@ -222,12 +223,12 @@ export default function PartyDetail({ db, currentCompany, party, kind = 'custome
                         className={onOpenDocument ? 'cursor-pointer' : ''}
                         onClick={onOpenDocument ? () => onOpenDocument(d) : undefined}
                       >
-                        <td className="ui-col-id">{d.number}</td>
+                        <td className="ui-col-id"><DocumentNumber value={d.number} /></td>
                         {isCustomer ? null : <td className="ui-col-meta">{d.type}</td>}
-                        <td className="ui-col-date">{d.date || '-'}</td>
-                        <td className="ui-col-date">{d.dueDate || '-'}</td>
-                        <td className="ui-col-amount">{formatMoney(d.total, currentCompany)}</td>
-                        <td className="ui-col-amount">{formatMoney(Math.max(0, d.total - d.paid), currentCompany)}</td>
+                        <td className="ui-col-date"><DocDate value={d.date || '-'} /></td>
+                        <td className="ui-col-date"><DocDate value={d.dueDate || '-'} /></td>
+                        <td className="ui-col-amount"><MoneyValue value={d.total} company={currentCompany} /></td>
+                        <td className="ui-col-amount"><MoneyValue value={Math.max(0, d.total - d.paid)} company={currentCompany} /></td>
                         <td><StatusPill status={d.status} /></td>
                       </tr>
                     ))}

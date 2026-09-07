@@ -23,7 +23,7 @@ import Illustration from '../../components/ui/Illustration';
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { branchLabel } from '../../utils/branchLabel';
-import { MoneyValue } from '../../components/sales';
+import { MoneyValue } from '../../components/docs';
 
 const LazySeriesBars = lazy(() =>
   import('../../components/charts/CircularCharts').then((m) => ({ default: m.SeriesBars }))

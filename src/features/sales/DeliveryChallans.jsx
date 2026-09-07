@@ -14,7 +14,7 @@ import { nextFreeVoucherNumber } from '../../utils/docSettings';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
-import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,

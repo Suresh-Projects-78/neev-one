@@ -8,6 +8,7 @@ import ItemPicker from '../../components/pickers/ItemPicker';
 import { formatMoney, round2 } from '../../utils/money';
 import { isStockItem } from '../../utils/inventory';
 import { generateVoucherNumber } from '../../utils/docSettings';
+import { DocumentNumber, DocDate } from '../../components/docs';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 const normalizeId = (v) => (v === undefined || v === null ? '' : String(v).trim());
@@ -580,8 +581,8 @@ const StockAdjustments = ({
                 const value = toNum(a.valueDelta);
                 return (
                   <tr key={a.id} className="ui-hover-sunken">
-                    <td className="ui-col-date px-4 py-2.5">{a.date || '—'}</td>
-                    <td className="ui-col-id px-4 py-2.5">{a.number || '—'}</td>
+                    <td className="ui-col-date px-4 py-2.5"><DocDate value={a.date} /></td>
+                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={a.number} label="adjustment" /></td>
                     <td className="ui-col-meta px-4 py-2.5">{branchLabel(a.branchId) || '—'}</td>
                     <td className="ui-col-meta px-4 py-2.5">
                       {warehouseById.get(normalizeId(a.warehouseId))?.name || '—'}

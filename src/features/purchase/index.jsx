@@ -51,6 +51,7 @@ import {
 } from '../../components/list/ListPageParts';
 import { PageHeader } from '../../components/ui/Primitives';
 import { blockIfClosed } from '../../utils/bookClose';
+import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
   const fieldErrors = useFieldErrors('bill');
@@ -908,11 +909,11 @@ export const PurchaseOrdersList = ({
                 const status = poStatusOf(po);
                 return (
                   <tr key={po.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-4 py-2.5 font-medium">{po.number}</td>
+                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={po.number} label="purchase order" /></td>
                     <td className="ui-col-entity px-4 py-2.5">{po.vendorName}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5">{po.date}</td>
-                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(po.total || 0, currentCompany)}</td>
+                    <td className="ui-col-date px-4 py-2.5"><DocDate value={po.date} /></td>
+                    <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={po.total || 0} company={currentCompany} /></td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <StatusPill status={status} />
                     </td>
@@ -1983,13 +1984,13 @@ const billStatusReason = (doc, status, company, nowMs) => {
                     onClick={() => openBillDocument(b)}
                     title="Open this bill as a document"
                   >
-                    <td className="ui-col-id px-4 py-2.5 font-medium text-[rgb(var(--brand))]">{b.number}</td>
+                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={b.number} label="bill" /></td>
                     <td className="ui-col-entity px-4 py-2.5">{b.vendorName}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5">{b.date}</td>
-                    <td className="ui-col-id px-4 py-2.5">{b.refNo || '-'}</td>
-                    <td className="ui-col-date px-4 py-2.5">{b.refDate || '-'}</td>
-                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(b.total || 0, currentCompany)}</td>
+                    <td className="ui-col-date px-4 py-2.5"><DocDate value={b.date} /></td>
+                    <td className="ui-col-meta px-4 py-2.5">{b.refNo || '-'}</td>
+                    <td className="ui-col-date px-4 py-2.5"><DocDate value={b.refDate || '-'} /></td>
+                    <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={b.total || 0} company={currentCompany} /></td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <StatusPill status={derived} reason={billStatusReason(b, derived, currentCompany, nowMs)} />
                       {returnMark ? (
@@ -3055,7 +3056,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={dn.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-4 py-2.5 font-medium">{dn.number}</td>
+                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={dn.number} label="debit note" /></td>
                     <td className="ui-col-meta px-4 py-2.5">
                       {dn.originalBillNumber || (
                         <span className="ui-muted">
@@ -3065,8 +3066,8 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                     </td>
                     <td className="ui-col-entity px-4 py-2.5">{dn.vendorName}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5">{dn.date}</td>
-                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(dn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-date px-4 py-2.5"><DocDate value={dn.date} /></td>
+                    <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={dn.total || 0} company={currentCompany} /></td>
                     <td className="ui-col-meta px-4 py-2.5">
                       <StatusPill status={dn.status || 'Draft'} />
                     </td>

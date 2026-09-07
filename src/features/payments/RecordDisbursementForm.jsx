@@ -10,6 +10,7 @@ import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
 import { documentOutstanding } from '../../utils/onAccount';
+import { DocDate } from '../../components/docs';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 

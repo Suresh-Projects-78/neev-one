@@ -9,6 +9,7 @@ import { ListToolbar, exportRows, useListSearch } from '../../components/ListToo
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { StatTile, TableTotals, StatusPill } from '../../components/ui/Primitives';
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
+import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1295,8 +1296,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                               />
                             </td>
                             <td className="ui-col-meta px-4 py-3">{inv.number || `INV-${inv.id}`}</td>
-                            <td className="ui-col-date px-4 py-3">{inv.date}</td>
-                            <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(balance, currentCompany)}</td>
+                            <td className="ui-col-date px-4 py-3"><DocDate value={inv.date} /></td>
+                            <td className="ui-col-amount px-4 py-3 text-right"><MoneyValue value={balance} company={currentCompany} /></td>
                             <td className="px-4 py-3 text-right">
                               <input
                                 type="number"
@@ -1377,8 +1378,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                               />
                             </td>
                             <td className="ui-col-meta px-4 py-3">{d.number || `${d.voucherType}-${d.id}`}</td>
-                            <td className="ui-col-date px-4 py-3">{d.date}</td>
-                            <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.balance, currentCompany)}</td>
+                            <td className="ui-col-date px-4 py-3"><DocDate value={d.date} /></td>
+                            <td className="ui-col-amount px-4 py-3 text-right"><MoneyValue value={d.balance} company={currentCompany} /></td>
                             <td className="px-4 py-3 text-right">
                               <input
                                 type="number"
@@ -2048,16 +2049,12 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                             onChange={(e) => toggleSelectTxn(t.id, e.target.checked)}
                           />
                         </td>
-                        <td className="ui-col-date px-4 py-3">{t.date}</td>
+                        <td className="ui-col-date px-4 py-3"><DocDate value={t.date} /></td>
                         <td className="ui-col-meta px-4 py-3">{String(t.description || '').trim() || '-'}</td>
                         <td className="ui-col-meta px-4 py-3">{ledgerName}</td>
                         <td className="ui-col-meta px-4 py-3">{String(t.narration || '').trim() || '-'}</td>
-                        <td className="ui-col-amount px-4 py-3 text-right text-[rgb(var(--neg))]">
-                          {isOut ? formatMoney(Number(t.amount ?? 0), currentCompany) : '-'}
-                        </td>
-                        <td className="ui-col-amount px-4 py-3 text-right text-[rgb(var(--pos))]">
-                          {isOut ? '-' : formatMoney(Number(t.amount ?? 0), currentCompany)}
-                        </td>
+                        <td className="ui-col-amount px-4 py-3 text-right text-[rgb(var(--neg))]"><MoneyValue value={isOut ? formatMoney(Number(t.amount ?? 0), currentCompany) : '-'} company={currentCompany} /></td>
+                        <td className="ui-col-amount px-4 py-3 text-right text-[rgb(var(--pos))]"><MoneyValue value={isOut ? '-' : formatMoney(Number(t.amount ?? 0), currentCompany)} company={currentCompany} /></td>
                         <td className="px-4 py-3">
                           {t.readOnly ? (
                             <StatusPill status="Recorded" />

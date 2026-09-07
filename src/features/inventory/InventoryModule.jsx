@@ -9,6 +9,7 @@ import Popover from '../../components/ui/Popover';
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import { useListSearch } from '../../components/ListToolbar';
 import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
+import { DocDate } from '../../components/docs';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -265,7 +266,7 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
             ) : (
               ledger.rows.map((r, idx) => (
                 <tr key={idx} className="ui-hover-sunken">
-                  <td className="ui-col-date px-4 py-3">{r.date || '-'}</td>
+                  <td className="ui-col-date px-4 py-3"><DocDate value={r.date} /></td>
                   <td className="ui-col-id px-4 py-3">
                     <div>{String(r.voucherType || '')}</div>
                     {r.voucherNote ? <div className="text-xs ui-muted">{String(r.voucherNote)}</div> : null}

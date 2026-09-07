@@ -51,7 +51,7 @@ import {
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { InvoiceIdentifier, DateCell, DueDateCell, Money, Balance } from '../../components/table/cells';
-import { MoneyValue } from '../../components/sales';
+import { MoneyValue } from '../../components/docs';
 import { PageHeader, StatusPill, EmptyState, TableTotals, FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { ListSearch, StatCards } from '../../components/list/ListPageParts';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';

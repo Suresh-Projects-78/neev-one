@@ -3,7 +3,7 @@ import { Bell, Copy, Mail, MessageCircle } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
-import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 import {
   collectiblesList,
   buildReminderMessage,

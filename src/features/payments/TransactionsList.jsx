@@ -12,7 +12,7 @@ import { PageHeader } from '../../components/ui/Primitives';
 import { CreditCard, FileText, Landmark, Receipt, Undo2 } from 'lucide-react';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
-import { DocumentNumber, SalesDate, MoneyValue } from '../../components/sales';
+import { DocumentNumber, SalesDate, MoneyValue } from '../../components/docs';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 

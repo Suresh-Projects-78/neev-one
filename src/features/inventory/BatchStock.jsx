@@ -3,6 +3,7 @@ import { Boxes } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { batchStockRows } from '../../utils/batches';
+import { DocDate } from '../../components/docs';
 
 /**
  * Batch-wise stock and expiry report.
@@ -131,7 +132,7 @@ export default function BatchStock({ db, currentCompany }) {
                 <tr key={b.id} className="border-t">
                   <td className="ui-col-entity px-4 py-2.5">{b.itemName}</td>
                   <td className="ui-col-id px-4 py-2.5 font-mono">{b.batchNo}</td>
-                  <td className="ui-col-date px-4 py-2.5">{b.mfgDate || '—'}</td>
+                  <td className="ui-col-date px-4 py-2.5"><DocDate value={b.mfgDate} /></td>
                   <td className="ui-col-date px-4 py-2.5">
                     {b.expiryDate || '—'}
                     {b.days != null ? <span className="ui-caption block">{b.days < 0 ? `${-b.days}d ago` : `in ${b.days}d`}</span> : null}

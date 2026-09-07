@@ -14,17 +14,21 @@ import {
 } from '../table/cells';
 
 /**
- * The Sales design system, in one place.
+ * The document design system, in one place.
  *
- * Every Sales surface — nine list screens, their detail pages, forms, drawers
- * and modals — reaches for these rather than choosing a colour. The point is
- * not tidiness: it is that "overdue" has to look the same in the Invoices
- * table, on a Sales Order, in a Receipt drawer and on the Overview, and the
+ * Every screen that lists or edits a document — Sales, Purchases, CRM, Cash &
+ * Bank, Expenses, Inventory, Journals — reaches for these rather than choosing
+ * a colour. The point is not tidiness: it is that "overdue" has to look the
+ * same on an invoice, a bill, a party statement and a stock transfer, and the
  * only way that holds is if none of those screens is allowed to decide.
+ *
+ * It began in Sales and the `Sales*` names are kept as aliases at the foot of
+ * this file, because a bill is not a sale and importing `SalesStatusBadge`
+ * into Purchases would teach the wrong thing.
  *
  * The palette is semantic, never decorative:
  *
- *   orange       the module itself — navigation, the primary action, selection
+ *   orange       the active module — navigation, selection, the primary action — navigation, the primary action, selection
  *   slate        draft — not yet real
  *   blue         sent, open, in progress
  *   purple       partially paid, pending, and money going back out
@@ -46,7 +50,7 @@ import {
  * so a status added there is styled everywhere at once and no screen has an
  * opinion of its own.
  */
-export const SalesStatusBadge = ({ status, reason = '' }) => <StatusPill status={status} reason={reason} />;
+export const StatusBadge = ({ status, reason = '' }) => <StatusPill status={status} reason={reason} />;
 
 /* ----------------------------------------------------------------- money - */
 
@@ -73,12 +77,12 @@ export const MoneyValue = ({ value, company, kind = 'amount', zeroAs = null }) =
 };
 
 /** What is left to collect, stated as "Settled" when there is nothing. */
-export const SalesBalance = Balance;
+export const BalanceValue = Balance;
 
 /* ------------------------------------------------------------------ date - */
 
 /** An issue date: a fact, so it takes no colour. */
-export const SalesDate = DateCell;
+export const DocDate = DateCell;
 
 /**
  * A due date: slate while it is comfortable, amber on the day, red past it —
@@ -103,7 +107,7 @@ export const DocumentNumber = InvoiceIdentifier;
  * the Paid pill and the Paid tab. The icon sits on a wash of its own tone and
  * the figure takes the ink; a card is never a filled block of colour.
  */
-export const SalesMetricCard = ({ label, value, company, tone = 'sent', Icon = null, count = false, hint = '' }) => {
+export const MetricCard = ({ label, value, company, tone = 'sent', Icon = null, count = false, hint = '' }) => {
   const text = count ? String(value ?? 0) : formatMoney(Number(value || 0), company);
   return (
     <div className="ui-card px-3 py-2.5 flex items-center gap-2.5" data-tone={tone}>
@@ -146,7 +150,7 @@ export const SalesMetricCard = ({ label, value, company, tone = 'sent', Icon = n
  * padding of its own. `hint` is for standing help; `error` replaces it, because
  * a field that is wrong has nothing more useful to say than why.
  */
-export const SalesFormField = ({ label, htmlFor = undefined, required = false, hint = '', error = '', children }) => (
+export const FormField = ({ label, htmlFor = undefined, required = false, hint = '', error = '', children }) => (
   <div>
     {label ? (
       <label className="ui-label" htmlFor={htmlFor}>
@@ -179,19 +183,19 @@ const COLUMN_RENDERERS = {
   documentNumber: ({ row, col, ctx }) => (
     <DocumentNumber value={col.value(row)} label={ctx.label} onOpen={col.onOpen ? () => col.onOpen(row) : null} />
   ),
-  date: ({ row, col }) => <SalesDate value={col.value(row)} />,
+  date: ({ row, col }) => <DocDate value={col.value(row)} />,
   dueDate: ({ row, col, ctx }) => (
     <DueDate value={col.value(row)} balance={col.balance ? col.balance(row) : 0} todayIso={ctx.todayIso} />
   ),
   money: ({ row, col, ctx }) => <MoneyValue value={col.value(row)} company={ctx.company} kind={col.kind || 'amount'} />,
   balance: ({ row, col, ctx }) => (
-    <SalesBalance value={col.value(row)} company={ctx.company} dueIso={col.dueIso ? col.dueIso(row) : null} todayIso={ctx.todayIso} />
+    <BalanceValue value={col.value(row)} company={ctx.company} dueIso={col.dueIso ? col.dueIso(row) : null} todayIso={ctx.todayIso} />
   ),
-  status: ({ row, col }) => <SalesStatusBadge status={col.value(row)} reason={col.reason ? col.reason(row) : ''} />,
+  status: ({ row, col }) => <StatusBadge status={col.value(row)} reason={col.reason ? col.reason(row) : ''} />,
   text: ({ row, col }) => <>{col.value(row) ?? '—'}</>,
 };
 
-export const SalesTable = ({ columns, rows, company, todayIso = null, label = 'document', rowKey, onRowClick = null, empty = null }) => {
+export const DocTable = ({ columns, rows, company, todayIso = null, label = 'document', rowKey, onRowClick = null, empty = null }) => {
   const ctx = { company, todayIso, label };
   if (!rows?.length && empty) return empty;
   return (
@@ -224,14 +228,24 @@ export const SalesTable = ({ columns, rows, company, todayIso = null, label = 'd
 };
 
 /** The set a Sales column is allowed to be. */
-export const SALES_COLUMN_TYPES = Object.keys(COLUMN_RENDERERS);
+export const DOC_COLUMN_TYPES = Object.keys(COLUMN_RENDERERS);
+
+/* The names Sales was built against. Kept so the module that grew this system
+   does not have to be rewritten to prove the system is general. */
+export const SalesStatusBadge = StatusBadge;
+export const SalesDate = DocDate;
+export const SalesBalance = BalanceValue;
+export const SalesMetricCard = MetricCard;
+export const SalesFormField = FormField;
+export const SalesTable = DocTable;
+export const SALES_COLUMN_TYPES = DOC_COLUMN_TYPES;
 
 export default {
-  SalesStatusBadge,
+  StatusBadge,
   MoneyValue,
   DueDate,
   DocumentNumber,
-  SalesMetricCard,
-  SalesTable,
-  SalesFormField,
+  MetricCard,
+  DocTable,
+  FormField,
 };

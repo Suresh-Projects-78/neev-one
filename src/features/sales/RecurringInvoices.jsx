@@ -9,7 +9,7 @@ import { advanceRunDate } from '../../hooks/useRecurringInvoices';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { computeGstForLines } from '../../utils/gst';
-import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
