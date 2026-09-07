@@ -199,7 +199,7 @@ export function CompositionPie({ data = [], height = 230, maxSlices = 5, palette
   // splitting that again squeezed customer names down to "Custome…". The
   // legend is the part that has to stay readable.
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <ReactECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} notMerge />
       <ChartLegend rows={rows} formatter={formatter} />
     </div>

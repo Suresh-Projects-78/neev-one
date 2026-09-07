@@ -168,7 +168,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
   const shownRules = drSearch.filtered;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader
           title="Discount Rules"

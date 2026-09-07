@@ -82,7 +82,7 @@ export default function CurrencySettings() {
   if (loading) return <Spinner />;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Currencies and exchange rates"
         description={`The books are kept in ${baseCurrency}. A document in any other currency is translated at the rate in force on its own date.`}

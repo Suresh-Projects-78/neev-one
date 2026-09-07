@@ -49,7 +49,7 @@ export default function TallyExport({ db, currentCompany }) {
     });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Tally Export"
         description="Masters + vouchers as Tally XML. In Tally: Gateway of Tally → Import Data → select the file. Import Masters first, then Vouchers."

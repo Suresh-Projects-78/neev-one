@@ -186,3 +186,52 @@ describe('weight marks structure, not content', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * One rhythm between the blocks of a page.
+ *
+ * DESIGN.md names three spacing values and no others — 12 inside a group, 24
+ * between groups, 40 between page sections. The screens were using 16 (43
+ * times), 20 (20 times) and 12 (3 times) at the top level, so two of the three
+ * commonest page gaps were not on the scale at all and no two modules agreed.
+ * A page opened after another page shifted its whole layout by four pixels for
+ * no reason a reader could name.
+ *
+ * Only the outermost wrapper of a screen is held here. Groups inside a page
+ * are free to use the tighter step.
+ */
+describe('pages share one vertical rhythm', () => {
+  /*
+   * Stated as a ban rather than a requirement, because a `return (` also opens
+   * a dropdown body, a prompt, or a template thumbnail — those are groups, and
+   * the tighter steps are right for them. What none of them may be is 16 or
+   * 20px, the two values on no scale in DESIGN.md and the two that between them
+   * accounted for every page-level gap in the product.
+   */
+  it('no wrapper uses the off-scale 16px step', () => {
+    const offenders = [];
+    for (const file of jsxFiles(SRC)) {
+      const source = readFileSync(file, 'utf8');
+      const root = /return \(\s*\n\s*<div className="(space-y-\d+)[^"]*"/g;
+      let m;
+      while ((m = root.exec(source)) !== null) {
+        if (m[1] === 'space-y-4' || m[1] === 'space-y-5') {
+          offenders.push(`${relative(SRC, file)}:${source.slice(0, m.index).split('\n').length} ${m[1]}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /*
+   * 20px is on no scale in DESIGN.md and never was — it appeared twice, in the
+   * hero and the sign-in form, and put those two screens on a rhythm nothing
+   * else in the product used.
+   */
+  it('nothing uses the 20px step, which is on no scale', () => {
+    const offenders = jsxFiles(SRC)
+      .filter((file) => /\bspace-y-5\b/.test(readFileSync(file, 'utf8')))
+      .map((file) => relative(SRC, file));
+    expect(offenders).toEqual([]);
+  });
+});

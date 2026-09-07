@@ -110,7 +110,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Payment Reminders"
         description="Due → +7 → +15 schedule. WhatsApp opens with the message ready — the fastest collections channel there is."

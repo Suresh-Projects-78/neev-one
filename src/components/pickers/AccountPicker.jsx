@@ -428,7 +428,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
   // unmounts and remounts the whole subtree (and any state in it) each time.
   const renderCreateChooser = () => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="text-sm ui-muted">Choose what you want to create:</div>
         <div className="grid grid-cols-1 gap-3">
           <button

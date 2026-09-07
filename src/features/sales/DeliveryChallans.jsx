@@ -181,7 +181,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title="Delivery Challans" description="Goods out without an invoice — job work, approval, own use. Convert to invoice when it becomes a sale." />
         <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">

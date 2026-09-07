@@ -1083,7 +1083,7 @@ export default function DashboardOverview({
   ].filter(Boolean);
 
   return (
-    <div className="ui-hero-ground space-y-5">
+    <div className="ui-hero-ground space-y-6">
       {/*
         The opening composition, in place of a page header and four cards.
 

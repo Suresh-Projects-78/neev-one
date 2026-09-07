@@ -245,7 +245,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
   });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title="Sales Orders" description="Quote → SO → Challan → Invoice. Delivered and billed track against each order." />
         <div className="flex items-center gap-2">

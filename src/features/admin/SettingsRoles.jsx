@@ -363,7 +363,7 @@ export function SettingsRoles({ orgId }) {
   }, [roles, viewRoleId]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="ui-t-sec">User Roles &amp; Permissions</div>
         <button

@@ -1840,7 +1840,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h3 className="ui-t-sec">Cash & Bank</h3>

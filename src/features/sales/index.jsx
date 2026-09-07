@@ -624,7 +624,7 @@ const statusReason = (doc, status, company, nowMs) => {
     };
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="ui-muted text-sm">{title}</div>
@@ -875,7 +875,7 @@ const statusReason = (doc, status, company, nowMs) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Sales Invoices"
         description="Create, view and manage all your sales invoices"
@@ -1961,7 +1961,7 @@ export const EstimatesList = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Quotations</h3>
         <button
@@ -2345,7 +2345,7 @@ export const CreditNotesList = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Credit Notes</h3>
         <button

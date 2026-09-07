@@ -95,7 +95,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
   const title = kind === 'receipt' ? 'Record Receipt' : 'Record Payment';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {kind === 'payment' ? (
         <div>
           <label className="ui-label">Type</label>
@@ -225,7 +225,7 @@ const TransactionView = ({ title, payload }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm ui-muted">{title}</div>
@@ -395,7 +395,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
   }, [shown]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title={title}
         description={`View and manage all ${title.toLowerCase()}`}

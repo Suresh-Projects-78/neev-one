@@ -213,7 +213,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
 
   if (!editing) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <PageHeader
           title="Price Lists"
           description="Rate cards per customer segment — Retail, Wholesale, key accounts. Invoicing picks the customer's list first."
@@ -459,7 +459,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
   const st = statusOf(editing, today);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title={editing.name}
         description="Rates on this list are used before the item's own price, for every customer pointed at it."

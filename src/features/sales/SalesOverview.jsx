@@ -692,7 +692,7 @@ const SalesOverview = ({
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Title left, the controls that govern every figure below it on the
           right — period first, because nothing else on the page means anything
           until you know what window it covers. */}

@@ -63,7 +63,7 @@ export default function CostCenters({ db, setDb, currentCompany }) {
   const ccSearch = useListSearch(rows, [(r) => r.center?.name]);
   const ccSearchRows = ccSearch.filtered;
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader title="Cost Centers" description="P&L by branch, project or vertical — tag invoices and expenses, see who actually makes money." />
 
       <div className="ui-card flex flex-wrap items-end gap-3 p-4">

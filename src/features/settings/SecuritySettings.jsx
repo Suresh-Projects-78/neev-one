@@ -113,7 +113,7 @@ export const SecuritySettings = () => {
   const setPolicyField = (patch) => setPolicy((p) => ({ ...p, ...patch }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Security"
         description="How people sign in, what the rules are, and what has happened."

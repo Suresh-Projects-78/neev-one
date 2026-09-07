@@ -114,7 +114,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
   const faSearch = useListSearch(rows, ['name', 'block']);
   const faSearchRows = faSearch.filtered;
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title="Fixed Assets" description={`Register + WDV depreciation schedule for ${fy.label}. Half rate applies automatically under 180 days of use.`} />
         <div className="flex gap-2">

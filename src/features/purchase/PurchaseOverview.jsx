@@ -127,7 +127,7 @@ export default function PurchaseOverview({ db, currentCompany }) {
   }, [docs]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Purchases"
         description={`${docs.length} bill${docs.length === 1 ? '' : 's'} and expenses in the last ${range.label.toLowerCase()}`}

@@ -176,7 +176,7 @@ export default function BatchSerialManager() {
   if (loading) return <Spinner />;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Batches and serial numbers"
         description="Receive stock into a lot, or register individual units. How an item is tracked is set on the item itself."

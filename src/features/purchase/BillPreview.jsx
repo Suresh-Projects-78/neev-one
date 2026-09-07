@@ -195,7 +195,7 @@ const BillPreview = ({ db, currentCompany, bill }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-wrap gap-2 justify-end">
         <button type="button" onClick={print} className="ui-btn ui-btn-secondary">
           <Printer size={15} aria-hidden="true" /> Print

@@ -830,7 +830,7 @@ export const PurchaseOrdersList = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Purchase Orders</h3>
         <button onClick={createPo} className="ui-btn ui-btn-primary">
@@ -1800,7 +1800,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Purchase Invoices"
         description="Create, view and manage all your vendor bills"
@@ -2962,7 +2962,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Debit Notes</h3>
         <button

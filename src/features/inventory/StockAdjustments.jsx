@@ -370,7 +370,7 @@ const StockAdjustments = ({
     .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {adjustments.length > 0 ? (
         <div className="ui-in-fade flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
           <span className="ui-muted">

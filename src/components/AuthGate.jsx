@@ -520,7 +520,7 @@ const AuthGate = ({ onAuth }) => {
                 <p className="ui-muted mt-2 text-sm">{getSubtitle()}</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Login Form */}
                 {mode === 'login' && (
                   <>

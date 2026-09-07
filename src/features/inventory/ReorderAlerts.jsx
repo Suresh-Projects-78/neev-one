@@ -125,7 +125,7 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
   const raSearch = useListSearch(rows, ['name', 'lastVendorName']);
   const raSearchRows = raSearch.filtered;
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Reorder Alerts"
         description="Stock items at or below their reorder level. Suggested order refills to 2× the level; one click drafts the PO to the last supplier."

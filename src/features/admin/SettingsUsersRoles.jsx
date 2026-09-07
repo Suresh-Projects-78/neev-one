@@ -27,7 +27,7 @@ export function SettingsUsersRoles({ orgId }) {
   }, [orgId]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="ui-t-page">Users &amp; Roles</h1>

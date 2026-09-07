@@ -120,7 +120,7 @@ export const FeatureSettings = ({ pane = '' }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title={paneMeta(pane)?.label || 'General Preferences'}
         description={

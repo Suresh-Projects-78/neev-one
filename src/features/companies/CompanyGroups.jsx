@@ -309,7 +309,7 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Companies"
         description="The group at a glance — switch the active company and see who owes what."

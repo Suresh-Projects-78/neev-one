@@ -145,7 +145,7 @@ export default function EInvoiceWorkflow({ invoice, company, customer, onRegiste
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-4">
         <Step done label="Create" />
         <Step done={issues.length === 0} active={issues.length > 0} label="Validate" />

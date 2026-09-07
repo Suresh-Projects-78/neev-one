@@ -261,7 +261,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title="Point of Sale" description="Counter sales — tap items, take payment, invoice and receipt book themselves." />
         <button type="button" onClick={() => setDayCloseOpen(true)} className="ui-btn ui-btn-secondary">

@@ -132,7 +132,7 @@ export const EmailSettings = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Email"
         description="Where messages are sent from, which notifications go out, and what was delivered."

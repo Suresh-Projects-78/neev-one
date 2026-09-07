@@ -71,7 +71,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
   const shownPerf = smSearch.filtered;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader title="Salesmen" description="Who sold what — every invoice can carry a salesman; commission is computed on pre-GST sales." />
 
       <div className="ui-card p-4">

@@ -160,7 +160,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
   ) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {header}
       {embedded ? null : (
       <PageHeader

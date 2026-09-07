@@ -53,7 +53,7 @@ export function SettingsWarehousesBranches({ orgId }) {
   const branchLookup = Object.fromEntries(branches.map((b) => [b.id, b]));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="ui-t-page">Warehouse &amp; Branches</h1>

@@ -326,7 +326,7 @@ export function SettingsUsers({ orgId }) {
   const selectedUser = viewUserId ? users.find((u) => String(u.id) === String(viewUserId)) || null : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="ui-t-sec">Users</div>
         <button

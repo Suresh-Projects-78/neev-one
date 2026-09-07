@@ -64,7 +64,7 @@ export const ApprovalsInbox = ({ currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Approvals"
         description="Documents held above an approval threshold. Nothing here has reached the books yet."

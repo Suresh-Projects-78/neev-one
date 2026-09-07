@@ -81,7 +81,7 @@ const KnockOffForm = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="ui-sunken rounded-xl p-3 text-sm flex flex-wrap gap-x-6 gap-y-1">
         <span>
           <span className="ui-muted">Note</span> <span>{note?.number}</span>

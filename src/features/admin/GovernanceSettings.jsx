@@ -106,7 +106,7 @@ export const GovernanceSettings = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Governance"
         description="Bundle roles, hold large documents for approval, and limit which records a user may touch."

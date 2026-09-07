@@ -255,7 +255,7 @@ export const ProfileSettings = () => {
   if (loading) return <SkeletonCard lines={5} />;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="My profile"
         description="Your details, and where you have access."

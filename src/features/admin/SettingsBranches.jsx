@@ -230,7 +230,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
   const selectedBranch = viewBranchId ? branches.find((b) => String(b.id) === String(viewBranchId)) || null : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="ui-t-sec">Branches</div>
         <button

@@ -54,7 +54,7 @@ export default function BatchStock({ db, currentCompany }) {
   const bsSearch = useListSearch(shown, ['itemName', 'batchNo', 'expiryDate', 'source']);
   const bsSearchRows = bsSearch.filtered;
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader title="Batch Stock & Expiry" description="Every batch received via bills, consumed by invoices — with what expires when." />
 
       <div className="flex flex-wrap gap-2">

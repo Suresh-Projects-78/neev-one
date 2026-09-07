@@ -386,7 +386,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     return [...seen.entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
   }, [templates]);
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Recurring Invoices"
         description="Create and manage automatic invoices for your customers. Invoices are raised on the schedule; you review and send."

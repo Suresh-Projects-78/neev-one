@@ -87,7 +87,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
   const visibleReco = recoSearch.filtered;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="GSTR-2B Reconciliation"
         description="Upload the portal's GSTR-2B JSON — every supplier invoice is matched to your bills so you know exactly which ITC is safe to claim."

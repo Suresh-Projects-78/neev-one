@@ -47,6 +47,13 @@ Nothing below 12px. Nothing between 16 and 24.
 - **Base:** 8px.
 - **Density:** comfortable-dense.
 - **Rhythm — three values, not six:** 12 inside a group, 24 between groups, 40 between page sections.
+  - **Page blocks are 24** (`space-y-6`), enforced on every screen root. Before
+    2026-09-08 the product used 16 in 43 screens and 20 in 20 more — two values
+    on no scale here — so opening one page after another shifted the layout for
+    no reason a reader could name.
+  - **16 (`space-y-4`) still appears inside cards and forms**, 122 times. It is
+    off the scale and should migrate to 12, but that tightens every form and
+    wants a visual pass rather than a codemod.
 - **Row height:** 36px table rows, 34px controls.
 
 ## Layout
@@ -150,6 +157,8 @@ because focus, portals and event order cannot be read off the source.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-08-24 | Shell + primitives rebuild over a discipline-only pass | The flat type scale is why it reads as a dense tool rather than premium SaaS; discipline alone would not fix it |
+| 2026-09-08 | One vertical rhythm for page blocks | 43 screens at 16px and 20 at 20px meant no two modules agreed, and neither value was on the documented scale |
+| 2026-09-08 | Weight marks structure, not content | 121 values carried semibold or bold. Spending weight on content leaves none for hierarchy — everything emphasised is nothing emphasised |
 | 2026-09-08 | Money drops to weight 400 | Monospace and right alignment already mark a figure as money. A weight on top made every amount in every table an emphasis, and a screen that is mostly amounts then had none |
 | 2026-09-08 | Status hues move out of type and into the tint | Seven saturated words in the filter strip competed with each other and with the figures beside them. Reverses the 2026-09-01 contrast increase, which raised the wrong thing |
 | 2026-08-24 | Monospace money | Digit-aligned columns; a wrong figure looks wrong. Stripe and Mercury do it, Indian accounting does not |

@@ -74,7 +74,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
   const totals = data?.totals;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Trial Balance"
         description="From posted journal entries. Debits and credits must agree exactly."

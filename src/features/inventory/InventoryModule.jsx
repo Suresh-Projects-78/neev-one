@@ -213,7 +213,7 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid grid-cols-2 gap-4 text-sm min-w-0">
           <div>
@@ -556,7 +556,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
   }, [items, summaryByItemId]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/*
         The totals lead, above the heading and small.
         They were four large cards between the title and the list, which

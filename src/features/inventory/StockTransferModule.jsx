@@ -942,7 +942,7 @@ const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel
   const anyMismatch = rows.some((r) => Math.abs(toNum(r.received) - r.sent) > 0.0001);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="text-sm ui-muted">
         Confirm what physically arrived. Short or excess quantities are flagged for resolution.
       </div>
@@ -1052,7 +1052,7 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
   const gaps = mismatchLines(transfer);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="ui-t-sec">{transfer?.number || 'Stock Transfer'}</div>
@@ -1286,7 +1286,7 @@ const TransferDocumentView = ({ transfer, branches, warehouses, db, currentCompa
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-end gap-2">
         <button type="button" onClick={onPrint} className="ui-btn ui-btn-secondary">
           Print
@@ -1699,7 +1699,7 @@ export const StockTransfersList = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
           <h3 className="ui-t-sec">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>

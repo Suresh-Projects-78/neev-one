@@ -317,7 +317,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
 
   if (isCreating) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -340,7 +340,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
 
   if (editingVendor) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -371,7 +371,7 @@ const VendorsList = ({ db, setDb, currentCompany }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Vendors</h3>
         <button
@@ -567,7 +567,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
 
   if (isCreating) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -590,7 +590,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
 
   if (editingCustomer) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -621,7 +621,7 @@ const CustomersList = ({ db, setDb, currentCompany }) => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Customers</h3>
         <button
@@ -1042,7 +1042,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
 
   if (isCreating) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
@@ -1071,7 +1071,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   })();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Expenses</h3>
         <PermissionButton
@@ -1976,7 +1976,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Items</h3>
         <button
@@ -2763,7 +2763,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     };
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="text-sm ui-muted">Choose what you want to create:</div>
 
         <div className="grid grid-cols-1 gap-3">
@@ -3063,7 +3063,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Chart of Accounts</h3>
         <div className="flex gap-2">
@@ -3999,7 +3999,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Journal Entries</h3>
         <button
@@ -4516,7 +4516,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
   const totalCredit = rows.reduce((sum, r) => sum + Number(r._credit ?? 0), 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h3 className="ui-t-sec">Trial Balance</h3>
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
@@ -4674,7 +4674,7 @@ const LedgerView = ({
       };
 
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="text-sm ui-muted">Choose which columns to show for this ledger.</div>
 
           <div className="max-h-80 overflow-y-auto border rounded-lg p-3 ui-surface">
@@ -4878,7 +4878,7 @@ const LedgerView = ({
         };
 
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="text-sm ui-muted">Edit entry — simple form or JSON.</div>
               <div>
@@ -5037,7 +5037,7 @@ const LedgerView = ({
         };
 
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="text-sm ui-muted">Edit voucher — simple form or JSON.</div>
               <div>
@@ -5223,7 +5223,7 @@ const LedgerView = ({
 
   if (!account) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="ui-t-sec">Ledger</h3>
           <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
@@ -5319,7 +5319,7 @@ const LedgerView = ({
       const [draftTo, setDraftTo] = useState(filterTo || '');
 
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="text-sm ui-muted">Select period for ledger entries.</div>
           <div className="flex gap-2">
             <div className="flex-1">
@@ -5368,7 +5368,7 @@ const LedgerView = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="ui-t-sec">Ledger: {account.name}</h3>
@@ -5726,7 +5726,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
   const netProfit = income - expenses;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Profit & Loss Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
@@ -5828,7 +5828,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
   const netProfit = income - expenses;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Balance Sheet</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
@@ -5958,7 +5958,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
   const positiveLines = totals.lines.filter((l) => Number(l.amount ?? 0) > 0).sort((a, b) => a.label.localeCompare(b.label));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Cash Flow Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
@@ -6023,7 +6023,7 @@ const SalesReports = ({ db, currentCompany }) => {
   const invoices = db.invoices.filter((i) => i.companyId === currentCompany.id);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <h3 className="ui-t-sec">Sales Reports</h3>
 
       <div className="grid grid-cols-2 gap-6">
@@ -6977,7 +6977,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Units of Measure (UoM)</h3>
       </div>
@@ -7163,7 +7163,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center gap-3 flex-wrap">
         <div>
           <h3 className="ui-t-sec">Item Categories</h3>
@@ -7402,7 +7402,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">GST Rates</h3>
       </div>
@@ -7563,7 +7563,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Numbering</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg">
@@ -7832,7 +7832,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Templates</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg">
@@ -7975,7 +7975,7 @@ const InvoiceTemplateSettings = ({ db, setDb, currentCompany, onBack = null }) =
   const accent = ACCENT_OPTIONS.find((a) => a.id === cfg?.accentId) || ACCENT_OPTIONS[0];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center gap-3">
         <div className="flex items-center gap-2 min-w-0">
           {onBack ? (
@@ -8167,7 +8167,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Company Profile</h3>
         <button onClick={handleSave} className="px-4 py-2 ui-btn ui-btn-primary rounded-lg">
@@ -9374,7 +9374,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
     const branchOptions = branches.map((b) => ({ value: String(b.id), label: b.name + (b.code ? ` (${b.code})` : '') }));
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <div className="ui-t-sec">Users, Roles, Branches & Warehouses</div>
@@ -10653,7 +10653,7 @@ const Gstr1Report = ({ db, currentCompany }) => {
   ].sort((a, b) => String(a.date).localeCompare(String(b.date)));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">GST - GSTR-1 (Summary)</h3>
         <GstrExportControl
@@ -10827,7 +10827,7 @@ const Gstr3bReport = ({ db, currentCompany }) => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">GST - GSTR-3B (Summary)</h3>
         <GstrExportControl
@@ -12626,7 +12626,7 @@ const AppShell = () => {
         if (journalEditor.open) {
           const isEdit = Boolean(journalEditor.initial && journalEditor.initial?.id !== undefined && journalEditor.initial?.id !== null);
           return (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="ui-t-sec">{isEdit ? 'Edit Journal Entry' : 'New Journal Entry'}</h3>
@@ -12700,7 +12700,7 @@ const AppShell = () => {
       case 'receipts':
         if (receiptEditor.open) {
           return (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="ui-t-sec">Record Receipt</h3>
                 <button
@@ -12736,7 +12736,7 @@ const AppShell = () => {
       case 'paymentsExpense':
         if (paymentEditor.open) {
           return (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="ui-t-sec">Record Payment</h3>
                 <button
@@ -12846,7 +12846,7 @@ const AppShell = () => {
         if (stockTransferEditor.open) {
           const mode = active === 'branchTransfers' ? 'branch' : 'warehouse';
           return (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="ui-t-sec">
@@ -12926,7 +12926,7 @@ const AppShell = () => {
           // Entered on its own page, the way a bill is — same shape of work,
           // same shape of screen.
           return (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="ui-t-sec">{poEditor.initial ? 'Edit Purchase Order' : 'New Purchase Order'}</h3>
                 <button
@@ -13022,7 +13022,7 @@ const AppShell = () => {
         }
         if (billEditor.open) {
           return (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="ui-t-sec">New Bill</h3>
                 <button
@@ -13068,7 +13068,7 @@ const AppShell = () => {
       case 'debitNotes':
         if (debitNoteEditor.open) {
           return (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="ui-t-sec">New Debit Note</h3>
                 <button
