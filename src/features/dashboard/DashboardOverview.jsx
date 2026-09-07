@@ -441,14 +441,6 @@ function nameFromEmail(email) {
   return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
 }
 
-function initialsFor(name, email, company) {
-  const src = name || String(email || '').split('@')[0] || company || '';
-  const parts = String(src).trim().split(/[\s._-]+/).filter(Boolean);
-  if (!parts.length) return '—';
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
 /**
  * Five bars each side of the greeting, breathing out of step.
  *
@@ -574,105 +566,107 @@ function NothingBilledYet({ payable, stockValue, company, onNewInvoice }) {
   );
 }
 
-function DashboardHero({ name, initials, avatarUrl, insights, onCommand, actions }) {
+/**
+ * The head of the page: who you are, the one thing worth knowing, and the
+ * ways in.
+ *
+ * It used to be a centred column — avatar, a 32px serif greeting, the insight,
+ * a row of dots, a 50px search bar and a caption under it — roughly 300px of
+ * vertical space before a single figure appeared, all of it stacked down the
+ * middle. That is the shape of a consumer welcome screen, and it read like
+ * one. The avatar was also the second copy on the page; the real one lives in
+ * the top bar, where a person's own face belongs.
+ *
+ * Left-aligned and on three lines now. The greeting and the search share the
+ * first, because they are the two things you arrive for; the insight sits
+ * under the greeting it qualifies; the actions close it off. Restraint rather
+ * than ornament is what reads as considered — and it gives back most of the
+ * height to the figures, which is what the page is actually for.
+ */
+function DashboardHero({ name, insights, onCommand, actions }) {
   const [idx, setIdx] = useState(0);
   const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
 
   return (
-    <section className="relative pt-8 pb-2 text-center" aria-label="Overview">
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt=""
-          width={48}
-          height={48}
-          className="mx-auto mb-5 h-12 w-12 rounded-full object-cover"
-          style={{ border: '1px solid rgb(var(--border))' }}
-        />
-      ) : (
-        <span
-          className="mx-auto mb-5 grid h-12 w-12 place-items-center rounded-full text-sm font-bold"
-          style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}
-          aria-hidden="true"
-        >
-          {initials}
-        </span>
-      )}
+    <section className="pt-1" aria-label="Overview">
+      <div className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="min-w-0">
+          <h1
+            className="ui-t-page"
+            style={{ fontSize: '1.75rem', lineHeight: '2.125rem', letterSpacing: '-0.015em' }}
+          >
+            {greetingFor(new Date().getHours())}
+            {name ? (
+              <>
+                , <span style={{ color: 'rgb(var(--fg-subtle))' }}>{name}</span>
+              </>
+            ) : null}
+          </h1>
 
-      <h1 className="ui-t-page" style={{ fontSize: '2rem', lineHeight: '2.5rem' }}>
-        {greetingFor(new Date().getHours())}
-        {name ? (
-          <>
-            ,{' '}
-            <span style={{ fontWeight: 300, color: 'rgb(var(--fg-subtle))' }}>{name}</span>
-          </>
-        ) : null}
-      </h1>
-
-      {active ? (
-        <p className="ui-t-body mt-2.5" style={{ color: 'rgb(var(--fg-muted))' }} aria-live="polite">
-          {active.text}
-        </p>
-      ) : (
-        <p className="ui-t-body mt-2.5" style={{ color: 'rgb(var(--fg-subtle))' }}>
-          Nothing needs you right now.
-        </p>
-      )}
-
-      {list.length > 1 ? (
-        <div className="mt-4 flex justify-center gap-1.5" role="tablist" aria-label="Insights">
-          {list.map((it, i) => (
-            <button
-              key={it.key}
-              type="button"
-              role="tab"
-              aria-selected={i === idx}
-              aria-label={it.label || `Insight ${i + 1}`}
-              onClick={() => setIdx(i)}
-              className="h-0.5 rounded-full transition-all"
-              style={{
-                width: i === idx ? 22 : 16,
-                backgroundColor: i === idx ? 'rgb(var(--brand))' : 'rgb(var(--border))',
-              }}
-            />
-          ))}
+          <div className="mt-1.5 flex items-center gap-2.5 flex-wrap">
+            <p className="ui-t-body" style={{ color: active ? 'rgb(var(--fg-muted))' : 'rgb(var(--fg-subtle))' }} aria-live="polite">
+              {active ? active.text : 'Nothing needs you right now.'}
+            </p>
+            {/* Inline with the sentence they page through, rather than
+                centred underneath as an anonymous row of marks. */}
+            {list.length > 1 ? (
+              <span className="flex items-center gap-1" role="tablist" aria-label="Insights">
+                {list.map((it, i) => (
+                  <button
+                    key={it.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={i === idx}
+                    aria-label={it.label || `Insight ${i + 1}`}
+                    onClick={() => setIdx(i)}
+                    className="h-1 rounded-full transition-all"
+                    style={{
+                      width: i === idx ? 16 : 6,
+                      backgroundColor: i === idx ? 'rgb(var(--brand))' : 'rgb(var(--border-strong))',
+                    }}
+                  />
+                ))}
+              </span>
+            ) : null}
+          </div>
         </div>
-      ) : null}
 
-      {onCommand ? (
-        <>
+        {onCommand ? (
           <button
             type="button"
             onClick={onCommand}
-            className="mx-auto mt-7 flex w-full max-w-xl items-center gap-3 rounded-xl border ps-4 pe-2 text-start"
+            className="flex w-full sm:w-auto sm:min-w-[19rem] items-center gap-2.5 rounded-lg border ps-3 pe-1.5 text-start shrink-0"
             style={{
-              height: 50,
-              borderColor: 'rgb(var(--border))',
-              backgroundColor: 'rgb(var(--surface-sunken))',
+              height: 40,
+              borderColor: 'rgb(var(--border-strong))',
+              backgroundColor: 'rgb(var(--surface))',
               color: 'rgb(var(--fg-subtle))',
             }}
           >
-            <Search size={16} aria-hidden="true" />
+            <Search size={15} aria-hidden="true" />
             <span className="ui-t-body truncate">Search invoices, customers, items…</span>
             <span
-              className="ms-auto grid h-9 w-9 place-items-center rounded-lg text-xs font-semibold"
-              style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}
+              className="ms-auto grid h-7 min-w-7 px-1.5 place-items-center rounded-md text-xs font-semibold"
+              style={{ backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--fg-muted))' }}
               aria-hidden="true"
             >
               ⌘K
             </span>
           </button>
-          <p className="ui-t-body mt-2" style={{ color: 'rgb(var(--fg-subtle))' }}>
-            Jump to any document, or start one
-          </p>
-        </>
-      ) : null}
+        ) : null}
+      </div>
 
       {actions?.length ? (
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          {actions.map((a) => (
-            <button key={a.label} type="button" onClick={a.onClick} className="ui-btn ui-btn-secondary">
+        <div className="mt-4 flex flex-wrap gap-2">
+          {actions.map((a, i) => (
+            <button
+              key={a.label}
+              type="button"
+              onClick={a.onClick}
+              /* One primary, first. The rest are ways in, not invitations. */
+              className={i === 0 ? 'ui-btn ui-btn-primary' : 'ui-btn ui-btn-secondary'}
+            >
               <a.Icon size={15} aria-hidden="true" />
               {a.label}
             </button>
@@ -683,13 +677,6 @@ function DashboardHero({ name, initials, avatarUrl, insights, onCommand, actions
   );
 }
 
-/**
- * The figures, as a hairline grid rather than six floating cards.
- *
- * One rule holds the composition together: a tile is a label, a figure and a
- * note, and nothing else. No icon, no sparkline, no chrome — the reason this
- * reads as calm is that every cell is the same shape.
- */
 function QuietTiles({ tiles, company }) {
   return (
     <section
@@ -740,8 +727,6 @@ export default function DashboardOverview({
   onOpenCustomers = null,
   onOpenReports = null,
   userName = '',
-  userAvatarUrl = '',
-  userInitials = '',
   onNavigate = null,
   onOpenCashBank = null,
 }) {
@@ -1007,7 +992,6 @@ export default function DashboardOverview({
    * test@… even after a real first name had been saved.
    */
   const heroName = String(userName || '').trim().split(/\s+/)[0] || nameFromEmail(userEmail);
-  const heroInitials = userInitials || initialsFor(heroName, userEmail, currentCompany?.name);
 
   const quickActions = [
     onNewInvoice ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice } : null,
@@ -1029,8 +1013,6 @@ export default function DashboardOverview({
       */}
       <DashboardHero
         name={heroName}
-        initials={heroInitials}
-        avatarUrl={userAvatarUrl}
         insights={heroInsights}
         onCommand={onOpenCommand}
         actions={quickActions}
