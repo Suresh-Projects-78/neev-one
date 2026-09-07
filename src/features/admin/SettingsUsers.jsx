@@ -332,7 +332,7 @@ export function SettingsUsers({ orgId }) {
         <button
           type="button"
           onClick={openCreate}
-          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
         >
           + Create User
         </button>
@@ -345,7 +345,7 @@ export function SettingsUsers({ orgId }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search users (name, email)"
-              className="ui-input w-full pl-3 pr-3 py-2 ui-surface"
+              className="ui-input w-full ui-surface"
             />
           </div>
         </div>
@@ -428,23 +428,23 @@ export function SettingsUsers({ orgId }) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="ui-label">Full Name *</label>
-                <input className="ui-input w-full px-3 py-2" value={form.fullName} onChange={onChange('fullName')} required />
+                <input className="ui-input w-full" value={form.fullName} onChange={onChange('fullName')} required />
               </div>
               <div>
                 <label className="ui-label">Email *</label>
-                <input type="email" className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} required />
+                <input type="email" className="ui-input w-full" value={form.email} onChange={onChange('email')} required />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="ui-label">Temp Password *</label>
-                <input type="password" className="ui-input w-full px-3 py-2" value={form.password} onChange={onChange('password')} required />
+                <input type="password" className="ui-input w-full" value={form.password} onChange={onChange('password')} required />
               </div>
               <div>
                 <label className="ui-label">Role</label>
                 <select
-                  className="ui-select w-full px-3 py-2 ui-surface"
+                  className="ui-select w-full ui-surface"
                   value={form.roleId}
                   onChange={(e) => {
                     if (e.target.value === '__new__') {
@@ -655,7 +655,7 @@ export function SettingsUsers({ orgId }) {
             <div>
               <label className="ui-label">Full Name *</label>
               <input
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 value={editForm.fullName}
                 onChange={(e) => setEditForm((p) => ({ ...p, fullName: e.target.value }))}
                 required
@@ -665,7 +665,7 @@ export function SettingsUsers({ orgId }) {
               <label className="ui-label">Email *</label>
               <input
                 type="email"
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 value={editForm.email}
                 onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))}
                 required
@@ -676,7 +676,7 @@ export function SettingsUsers({ orgId }) {
             <div>
               <label className="ui-label">Role</label>
               <select
-                className="ui-select w-full px-3 py-2 ui-surface"
+                className="ui-select w-full ui-surface"
                 value={editForm.roleId}
                 onChange={(e) => setEditForm((p) => ({ ...p, roleId: e.target.value }))}
               >
@@ -691,7 +691,7 @@ export function SettingsUsers({ orgId }) {
             <div>
               <label className="ui-label">Status</label>
               <select
-                className="ui-select w-full px-3 py-2 ui-surface"
+                className="ui-select w-full ui-surface"
                 value={editForm.isActive ? 'active' : 'inactive'}
                 onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.value === 'active' }))}
               >

@@ -369,7 +369,7 @@ export function SettingsRoles({ orgId }) {
         <button
           type="button"
           onClick={openCreate}
-          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
         >
           + Create Role
         </button>
@@ -382,7 +382,7 @@ export function SettingsRoles({ orgId }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search roles"
-              className="ui-input w-full pl-3 pr-3 py-2 ui-surface"
+              className="ui-input w-full ui-surface"
             />
           </div>
         </div>
@@ -472,7 +472,7 @@ export function SettingsRoles({ orgId }) {
           <div className="ui-t-sec">{editRole ? 'Edit Role' : 'New Role'}</div>
           <div>
             <label className="ui-label">Role Name *</label>
-            <input className="ui-input w-full px-3 py-2" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
+            <input className="ui-input w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Permissions</label>

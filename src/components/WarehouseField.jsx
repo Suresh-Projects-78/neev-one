@@ -48,7 +48,7 @@ const WarehouseField = ({
     return (
       <div>
         <label className="ui-label">{label.replace(' *', '')}</label>
-        <div className="ui-input w-full px-3 py-2 flex items-center gap-2 ui-sunken" aria-readonly="true">
+        <div className="ui-input w-full flex items-center gap-2 ui-sunken" aria-readonly="true">
           <Lock size={14} className="ui-muted shrink-0" aria-hidden="true" />
           <span className="truncate">
             {branchLabel ? `${branchLabel} · ` : ''}

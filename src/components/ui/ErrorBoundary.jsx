@@ -30,7 +30,7 @@ class ErrorBoundary extends React.Component {
           <div className="mt-6 flex gap-2">
             <button
               type="button"
-              className="px-4 py-2 rounded-lg ui-primary-bg "
+              className="px-4 py-2 rounded-lg ui-primary-bg"
               onClick={() => window.location.reload()}
             >
               Refresh

@@ -277,7 +277,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   aria-activedescendant={
                     filteredItems[itemActiveIndex] ? `item-opt-${filteredItems[itemActiveIndex].id}` : undefined
                   }
-                  className="ui-input w-full px-3 py-2"
+                  className="ui-input w-full"
                                     /*
                   * The dialog decides who gets the caret, and it looks for
                   * this attribute. React's own autoFocus runs first and is
@@ -476,7 +476,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                           trackingType: type === 'Service' ? 'NONE' : p.trackingType,
                         }));
                       }}
-                      className="ui-select w-full px-3 py-2"
+                      className="ui-select w-full"
                       data-autofocus="true"
                     >
                       <option>Goods</option>
@@ -494,7 +494,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="text"
                       value={newItem.code}
                       onChange={(e) => setNewItem((p) => ({ ...p, code: e.target.value }))}
-                      className="ui-input w-full px-3 py-2"
+                      className="ui-input w-full"
                       required
                     />
                   </div>
@@ -504,7 +504,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="text"
                       value={newItem.name}
                       onChange={(e) => setNewItem((p) => ({ ...p, name: e.target.value }))}
-                      className="ui-input w-full px-3 py-2"
+                      className="ui-input w-full"
                       required
                       autoFocus
                     />
@@ -515,7 +515,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       value={newItem.description || ''}
                       onChange={(e) => setNewItem((p) => ({ ...p, description: e.target.value }))}
                       rows={2}
-                      className="ui-input w-full px-3 py-2"
+                      className="ui-input w-full"
                       placeholder="What this item is — copied onto document lines"
                     />
                   </div>
@@ -531,7 +531,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                         }
                         setNewItem((p) => ({ ...p, unit: e.target.value }));
                       }}
-                      className="ui-select w-full px-3 py-2"
+                      className="ui-select w-full"
                     >
                       {String(newItem.unit ?? '').trim() && !uomNames.includes(String(newItem.unit ?? '').trim()) ? (
                         <option value={String(newItem.unit ?? '').trim()}>{String(newItem.unit ?? '').trim()} (legacy)</option>
@@ -584,7 +584,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="text"
                       value={newItem.hsnSac}
                       onChange={(e) => setNewItem((p) => ({ ...p, hsnSac: e.target.value }))}
-                      className="ui-input w-full px-3 py-2"
+                      className="ui-input w-full"
                     />
                   </div>
                   <div>
@@ -592,7 +592,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                     <select
                       value={String(newItem.gstRate ?? 0)}
                       onChange={(e) => setNewItem((p) => ({ ...p, gstRate: e.target.value }))}
-                      className="ui-select w-full px-3 py-2"
+                      className="ui-select w-full"
                     >
                       {!gstRateValues.includes(String(newItem.gstRate ?? 0)) ? (
                         <option value={String(newItem.gstRate ?? 0)}>{String(newItem.gstRate ?? 0)}% (legacy)</option>
@@ -614,7 +614,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="number"
                       value={newItem.salePrice}
                       onChange={(e) => setNewItem((p) => ({ ...p, salePrice: e.target.value }))}
-                      className="ui-input w-full px-3 py-2"
+                      className="ui-input w-full"
                       min="0"
                       step="0.01"
                     />
@@ -625,7 +625,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       type="number"
                       value={newItem.purchasePrice}
                       onChange={(e) => setNewItem((p) => ({ ...p, purchasePrice: e.target.value }))}
-                      className="ui-input w-full px-3 py-2"
+                      className="ui-input w-full"
                       min="0"
                       step="0.01"
                     />
@@ -637,7 +637,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                         type="number"
                         value={newItem.openingQty}
                         onChange={(e) => setNewItem((p) => ({ ...p, openingQty: e.target.value }))}
-                        className="ui-input w-full px-3 py-2"
+                        className="ui-input w-full"
                         min="0"
                         step="0.01"
                       />
@@ -660,7 +660,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                       <select
                         value={newItem.trackingType || 'NONE'}
                         onChange={(e) => setNewItem((p) => ({ ...p, trackingType: e.target.value }))}
-                        className="ui-select w-full px-3 py-2"
+                        className="ui-select w-full"
                       >
                         <option value="NONE">Not tracked</option>
                         <option value="BATCH">Track batch</option>
@@ -687,7 +687,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="px-3 py-2 rounded-lg text-sm ui-primary-bg ">
+                  <button type="submit" className="px-3 py-2 rounded-lg text-sm ui-primary-bg">
                     Create
                   </button>
                 </div>

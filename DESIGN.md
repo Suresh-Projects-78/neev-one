@@ -98,10 +98,43 @@ which are black on white in both themes because that is what comes out of a
 printer. Only 9 were real, in app chrome, and those are now tokens. Print
 surfaces are deliberately exempt from the token rule.
 
+## Screen Contract
+
+What "done" means for a screen, derived from the Sales Invoice rebuild. Every screen
+gets checked against this list; a screen that fails any line is not finished.
+
+**Both archetypes**
+1. **Shell.** A list or report uses `PageHeader`. A document uses `DocFormActions` —
+   title left; Back, secondary, primary and the ⋮ menu right, pinned while scrolling.
+2. **A way back.** Any screen reached *from* another screen carries a Back control that
+   returns to where it was opened from, not to a fixed home.
+3. **One primary action**, top right. Everything else is secondary or lives in ⋮.
+4. **Tokens only.** No `bg-*`/`text-*`/`border-*` palette literals in app chrome; print
+   surfaces are the documented exception. Contrast is measured with alpha composited,
+   never eyeballed.
+5. **Fields carry no local sizing.** `.ui-input` / `.ui-select` own their padding and
+   height. A `px-3 py-2` beside them is a silent override and reads as a different
+   size to the rest of the product.
+
+**Documents additionally**
+6. **Head in two columns**, ruled apart: who and where on the left, the paperwork —
+   number, dates, references — on the right.
+7. **Line grid** at `.ui-grid-dense`: 36px rows, 34px controls, column widths sized to
+   what the column holds, figures mono and right-aligned, no spin buttons.
+8. **Keyboard.** Pickers on the shared `useListboxKeys` contract; the form on
+   `useDocumentFormKeys`. Arrows move between fields and down a grid column, Tab commits
+   and advances, a date field is left in one press, Alt+C creates a master in place,
+   Ctrl+; enters today.
+9. **One figure per job** at the foot. The same total printed three times makes a reader
+   check whether the three agree.
+
+Keyboard behaviour is covered by tests in `src/**/*.test.jsx` and runs in the CI gate,
+because focus, portals and event order cannot be read off the source.
+
 ## Migration Order
 1. Type ramp + spacing rhythm into `src/index.css`. Six `space-y` values to three, four radii to two.
-2. ~~Remove the hardcoded palette classes.~~ Done — 9 real ones in app chrome
-   became tokens; the 298 in print documents stay as they are.
+2. ~~Remove the hardcoded palette classes.~~ Done (verified 2026-09-07) — the 9 in app
+   chrome are tokens; the 329 remaining are all print surfaces and stay as they are.
 3. Extract `DataTable`; retire the 346 copied header strings.
 4. Force `PageShell` on all 59 raw headings.
 5. Monospace money everywhere an amount displays.
@@ -116,4 +149,7 @@ surfaces are deliberately exempt from the token rule.
 | 2026-08-24 | No card-in-card on lists | 2–3 more rows per screen, less framing noise. Departs from the Zoho/Tally convention deliberately |
 | 2026-08-24 | Fraunces stays in-product for page titles | Serif-only-for-brand was considered and rejected; the serif is the differentiator |
 | 2026-08-24 | Orange kept as the single accent | Already tokenized, and rare against Tally blue / Zoho red / QuickBooks green |
+| 2026-09-07 | Field sizing lives in the token, not at the call site | 390 call sites restated `.ui-input`'s own padding and beat it. Heights were unaffected — `min-height` already governed — but the horizontal metric differed from the rest of the product |
+| 2026-09-07 | Selection is the accent's job | Six list screens marked the chosen row with `bg-stone-100`, a light-palette literal, so a selected row in dark mode was a near-white band across a dark table |
+| 2026-09-07 | The Screen Contract above is the definition of done | The invoice rebuild produced the same nine findings screen after screen; written down, they are reviewable instead of rediscovered |
 | 2026-08-24 | Print surfaces exempt from the token rule | A printed invoice is black on white whatever theme the app is in. The audit's 319-colour finding was 93% print documents and only 9 real violations |

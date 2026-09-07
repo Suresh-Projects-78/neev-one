@@ -322,7 +322,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={onSearchKeyDown}
-            className="ui-input mb-3 w-full px-3 py-2"
+            className="ui-input mb-3 w-full"
             placeholder="Search name / code — or scan a barcode"
             autoFocus
           />
@@ -375,14 +375,14 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="ui-input w-full px-3 py-2 text-sm"
+                className="ui-input w-full text-sm"
                 placeholder="Customer name (optional — Walk-in)"
               />
               <input
                 type="tel"
                 value={customerMobile}
                 onChange={(e) => setCustomerMobile(e.target.value.replace(/[^\d+ -]/g, '').slice(0, 15))}
-                className="ui-input w-full px-3 py-2 text-sm"
+                className="ui-input w-full text-sm"
                 placeholder="Customer mobile (optional)"
               />
               <div className="flex gap-2">

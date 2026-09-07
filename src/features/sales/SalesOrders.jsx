@@ -273,7 +273,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
               <label className="ui-label">Date</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full px-3 py-2" />
+              <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" />
             </div>
             <div>
               <label className="ui-label">Customer</label>
@@ -281,11 +281,11 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             </div>
             <div>
               <label className="ui-label">Expected delivery</label>
-              <input type="date" value={form.expectedDate} onChange={(e) => setForm((p) => ({ ...p, expectedDate: e.target.value }))} className="ui-input w-full px-3 py-2" />
+              <input type="date" value={form.expectedDate} onChange={(e) => setForm((p) => ({ ...p, expectedDate: e.target.value }))} className="ui-input w-full" />
             </div>
             <div>
               <label className="ui-label">Notes</label>
-              <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="Customer PO ref…" />
+              <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full" placeholder="Customer PO ref…" />
             </div>
             {(db.salesmen || []).some((sm) => sm.companyId === companyId) ? (
               <div>
@@ -293,7 +293,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                 <select
                   value={form.salesmanId || ''}
                   onChange={(e) => setForm((p) => ({ ...p, salesmanId: e.target.value ? Number(e.target.value) : '' }))}
-                  className="ui-select w-full px-3 py-2"
+                  className="ui-select w-full"
                 >
                   <option value="">— none —</option>
                   {(db.salesmen || []).filter((sm) => sm.companyId === companyId).map((sm) => (

@@ -127,14 +127,14 @@ export default function EInvoiceSettings() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div>
           <label className="ui-label">Provider</label>
-          <select value={form.provider} onChange={set('provider')} className="ui-select w-full px-3 py-2 ui-surface">
+          <select value={form.provider} onChange={set('provider')} className="ui-select w-full ui-surface">
             <option value="GSP">GSP REST gateway (MasterGST / ClearTax style)</option>
             <option value="NIC">NIC direct API (einvoice1.gst.gov.in)</option>
           </select>
         </div>
         <div>
           <label className="ui-label">Mode</label>
-          <select value={form.mode} onChange={set('mode')} className="ui-select w-full px-3 py-2 ui-surface">
+          <select value={form.mode} onChange={set('mode')} className="ui-select w-full ui-surface">
             <option value="SANDBOX">Sandbox (testing)</option>
             <option value="PRODUCTION">Production (live IRN)</option>
           </select>
@@ -144,17 +144,17 @@ export default function EInvoiceSettings() {
           <input
             value={form.baseUrl}
             onChange={set('baseUrl')}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             placeholder={form.provider === 'NIC' ? 'https://einv-apisandbox.nic.in' : 'https://api.mastergst.com/einvoice'}
           />
         </div>
         <div>
           <label className="ui-label">GSTIN used at the gateway</label>
-          <input value={form.gstin} onChange={set('gstin')} className="ui-input w-full px-3 py-2" placeholder="29ABCDE1234F1Z5" />
+          <input value={form.gstin} onChange={set('gstin')} className="ui-input w-full" placeholder="29ABCDE1234F1Z5" />
         </div>
         <div>
           <label className="ui-label">API username</label>
-          <input value={form.username} onChange={set('username')} className="ui-input w-full px-3 py-2" autoComplete="off" />
+          <input value={form.username} onChange={set('username')} className="ui-input w-full" autoComplete="off" />
         </div>
         <div>
           <label className="ui-label">API password</label>
@@ -162,14 +162,14 @@ export default function EInvoiceSettings() {
             type="password"
             value={form.password}
             onChange={set('password')}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             placeholder={meta.hasPassword ? '••••••••  (stored — type to replace)' : ''}
             autoComplete="new-password"
           />
         </div>
         <div>
           <label className="ui-label">Client ID</label>
-          <input value={form.clientId} onChange={set('clientId')} className="ui-input w-full px-3 py-2" autoComplete="off" />
+          <input value={form.clientId} onChange={set('clientId')} className="ui-input w-full" autoComplete="off" />
         </div>
         <div>
           <label className="ui-label">Client secret</label>
@@ -177,7 +177,7 @@ export default function EInvoiceSettings() {
             type="password"
             value={form.clientSecret}
             onChange={set('clientSecret')}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             placeholder={meta.hasClientSecret ? '••••••••  (stored — type to replace)' : ''}
             autoComplete="new-password"
           />
@@ -187,7 +187,7 @@ export default function EInvoiceSettings() {
           <input
             value={form.headersJson}
             onChange={set('headersJson')}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             placeholder='{"ip_address": "203.0.113.7"}'
           />
         </div>
@@ -197,7 +197,7 @@ export default function EInvoiceSettings() {
             <textarea
               value={form.publicKeyPem}
               onChange={set('publicKeyPem')}
-              className="ui-input w-full px-3 py-2 font-mono text-xs"
+              className="ui-input w-full font-mono text-xs"
               rows={4}
               placeholder={'-----BEGIN PUBLIC KEY-----\n…download from Help → API sandbox on einvoice1.gst.gov.in…\n-----END PUBLIC KEY-----'}
             />

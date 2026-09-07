@@ -291,7 +291,7 @@ export default function ImportCenter({ onBack = null }) {
       ) : null}
 
       {result ? (
-        <div className="rounded-lg border border-[rgb(var(--pos)/0.35)] bg-[rgb(var(--pos-soft))] px-4 py-3 text-sm text-green-800">
+        <div className="rounded-lg border border-[rgb(var(--pos)/0.35)] bg-[rgb(var(--pos-soft))] px-4 py-3 text-sm text-[rgb(var(--pos))]">
           Imported {result.committed} row{result.committed === 1 ? '' : 's'}.
           {result.failures?.length ? (
             <ul className="mt-2 space-y-1 text-[rgb(var(--neg))]">

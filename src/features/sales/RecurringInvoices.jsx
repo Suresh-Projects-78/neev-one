@@ -447,7 +447,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               type="text"
               value={scheduleName}
               onChange={(e) => setScheduleName(e.target.value)}
-              className="ui-input w-full px-3 py-2 sm:max-w-sm"
+              className="ui-input w-full sm:max-w-sm"
               placeholder="Office rent, AMC, monthly retainer…"
             />
             <p className="mt-1 text-xs ui-muted">
@@ -489,7 +489,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                     type="text"
                     value={draft.notes}
                     onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
-                    className="ui-input w-full px-3 py-2"
+                    className="ui-input w-full"
                     placeholder="Shown on every invoice this raises"
                   />
                 </div>
@@ -583,7 +583,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             {mode === 'COPY' ? (
             <div className="sm:col-span-2">
               <label className="ui-label">Repeat this invoice</label>
-              <select value={sourceInvoiceId} onChange={(e) => setSourceInvoiceId(e.target.value)} className="ui-select w-full px-3 py-2">
+              <select value={sourceInvoiceId} onChange={(e) => setSourceInvoiceId(e.target.value)} className="ui-select w-full">
                 <option value="">Select invoice</option>
                 {invoices
                   .filter((i) => String(i.status || '') !== 'Cancelled')
@@ -600,7 +600,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             ) : null}
             <div>
               <label className="ui-label">Frequency</label>
-              <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="ui-select w-full px-3 py-2">
+              <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="ui-select w-full">
                 <option value="WEEKLY">Weekly</option>
                 <option value="MONTHLY">Monthly</option>
                 <option value="QUARTERLY">Quarterly</option>
@@ -620,18 +620,18 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                   max="52"
                   value={interval}
                   onChange={(e) => setInterval_(e.target.value)}
-                  className="ui-input ui-mono w-20 px-3 py-2"
+                  className="ui-input ui-mono w-20"
                 />
                 <span className="ui-muted text-sm">{INTERVAL_UNIT[frequency] || 'month(s)'}</span>
               </div>
             </div>
             <div>
               <label className="ui-label">Start date</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="ui-input w-full px-3 py-2" />
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="ui-input w-full" />
             </div>
             <div>
               <label className="ui-label">End date (optional)</label>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="ui-input w-full px-3 py-2" />
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="ui-input w-full" />
             </div>
             <div className="sm:col-span-2">
               {/* An end date and a count are two different instructions.
@@ -664,7 +664,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                   disabled={endMode !== 'COUNT'}
                   value={maxOccurrences}
                   onChange={(e) => setMaxOccurrences(e.target.value)}
-                  className="ui-input ui-mono w-24 px-3 py-2"
+                  className="ui-input ui-mono w-24"
                 />
                 <span className="ui-muted text-sm">invoices</span>
               </div>
@@ -678,7 +678,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                 id="rec-due"
                 value={String(dueDays)}
                 onChange={(e) => setDueDays(e.target.value)}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 <option value="0">Due on receipt</option>
                 <option value="7">Net 7 days</option>
@@ -694,7 +694,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                 id="rec-branch"
                 value={scheduleBranchId}
                 onChange={(e) => setScheduleBranchId(e.target.value)}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 <option value="">All branches</option>
                 {(Array.isArray(branches) ? branches : []).map((b) => (
@@ -708,7 +708,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                 id="rec-warehouse"
                 value={scheduleWarehouseId}
                 onChange={(e) => setScheduleWarehouseId(e.target.value)}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 <option value="">Not set</option>
                 {(Array.isArray(warehouses) ? warehouses : []).map((w) => (
@@ -748,7 +748,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </div>
 
         <select
-          className="ui-select px-3 py-2 w-auto"
+          className="ui-select w-auto"
           value={customerFilter}
           onChange={(e) => { setCustomerFilter(e.target.value); setPage(1); }}
           aria-label="Customer"
@@ -760,7 +760,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </select>
 
         <select
-          className="ui-select px-3 py-2 w-auto"
+          className="ui-select w-auto"
           value={freqFilter}
           onChange={(e) => { setFreqFilter(e.target.value); setPage(1); }}
           aria-label="Frequency"
@@ -772,7 +772,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </select>
 
         <select
-          className="ui-select px-3 py-2 w-auto"
+          className="ui-select w-auto"
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           aria-label="Status"

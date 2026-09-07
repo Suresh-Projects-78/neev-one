@@ -444,7 +444,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             options={warehouseOptions}
             activeWarehouseId={defaultWarehouseId}
             isEdit={Boolean(initialData)}
-            className="ui-select w-full px-3 py-2 ui-surface"
+            className="ui-select w-full ui-surface"
           />
           <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
         </div>
@@ -458,7 +458,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               fieldErrors.clearField('date');
               setFormData({ ...formData, date: e.target.value });
             }}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             required
             {...fieldErrors.props('date')}
           />
@@ -470,7 +470,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="date"
             value={formData.dueDate}
             onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             required
           />
         </div>
@@ -481,7 +481,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="text"
             value={formData.refNo}
             onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             placeholder="Customer invoice no"
           />
         </div>
@@ -492,7 +492,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             type="date"
             value={formData.refDate}
             onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
           />
         </div>
       </div>
@@ -832,7 +832,7 @@ export const PurchaseOrdersList = ({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Purchase Orders</h3>
-        <button onClick={createPo} className="ui-btn ui-btn-primary ">
+        <button onClick={createPo} className="ui-btn ui-btn-primary">
           <Plus size={20} /> New PO
         </button>
       </div>
@@ -1290,7 +1290,7 @@ export const PurchaseOrderForm = ({
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             required
           />
         </div>
@@ -1302,7 +1302,7 @@ export const PurchaseOrderForm = ({
           activeWarehouseId={defaultWarehouseId}
           isEdit={isEditPo}
           required={false}
-          className="ui-select w-full px-3 py-2 ui-surface"
+          className="ui-select w-full ui-surface"
         />
       </div>
 
@@ -1384,7 +1384,7 @@ export const PurchaseOrderForm = ({
 
       <div>
         <label className="ui-label">Notes</label>
-        <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full px-3 py-2" rows={3} />
+        <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full" rows={3} />
       </div>
 
       <DocFormFootnote />
@@ -2717,7 +2717,7 @@ export const DebitNoteForm = ({
               </div>
             </div>
           ) : (
-            <select value={formData.originalBillId} onChange={(e) => onSelectOriginalBill(e.target.value)} className="ui-select w-full px-3 py-2" required>
+            <select value={formData.originalBillId} onChange={(e) => onSelectOriginalBill(e.target.value)} className="ui-select w-full" required>
               <option value="">Select Bill</option>
               {companyBills.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -2734,7 +2734,7 @@ export const DebitNoteForm = ({
           options={warehouseOptions}
           activeWarehouseId={defaultWarehouseId}
           isEdit={Boolean(initialData)}
-          className="ui-select w-full px-3 py-2 ui-surface"
+          className="ui-select w-full ui-surface"
         />
 
         <div>
@@ -2743,7 +2743,7 @@ export const DebitNoteForm = ({
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             required
           />
         </div>
@@ -2981,7 +2981,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               />
             );
           }}
-          className="ui-btn ui-btn-primary "
+          className="ui-btn ui-btn-primary"
         >
           <Plus size={20} /> New Debit Note
         </button>

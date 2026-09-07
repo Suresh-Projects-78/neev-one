@@ -1913,6 +1913,15 @@
      instead; the page itself never does. */
   .ui-table-wide { min-width: 60rem; }
 
+  /* The row you have picked, as opposed to the row under the pointer.
+     Six list screens marked selection with `bg-stone-100`, a literal from the
+     light palette, so a chosen row in dark mode was a near-white band across a
+     dark table. Selection is the accent's job and the accent flips with the
+     theme. */
+  .ui-row-active {
+    background-color: rgb(var(--accent-soft));
+  }
+
   /* A segmented control: one track, and the chosen segment raised out of it.
 
      These status tabs used to be loose buttons on the page ground, so the

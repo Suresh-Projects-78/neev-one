@@ -104,7 +104,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
               setVoucherType(e.target.value);
               setVoucherId('');
             }}
-            className="ui-select w-full px-3 py-2"
+            className="ui-select w-full"
           >
             <option value="bill">Bill</option>
             <option value="expense">Expense</option>
@@ -117,7 +117,7 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
         <select
           value={voucherId}
           onChange={(e) => setVoucherId(e.target.value)}
-          className="ui-select w-full px-3 py-2"
+          className="ui-select w-full"
         >
           <option value="">Select</option>
           {eligibleDocs.map((d) => (
@@ -241,7 +241,7 @@ const TransactionView = ({ title, payload }) => {
           <button
             type="button"
             onClick={doShare}
-            className="px-3 py-2 rounded-lg ui-btn ui-btn-primary "
+            className="px-3 py-2 rounded-lg ui-btn ui-btn-primary"
           >
             Share
           </button>
@@ -586,7 +586,7 @@ export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Receipt', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
         >
           Record Receipt
         </button>
@@ -663,7 +663,7 @@ export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal,
               { title: 'Record Payment', maxWidthClass: 'max-w-md' }
             );
           }}
-          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
         >
           Record Payment
         </button>

@@ -1901,7 +1901,7 @@ export const EstimatesList = ({
         <button
           type="button"
           onClick={openNewEstimate}
-          className="ui-btn ui-btn-primary "
+          className="ui-btn ui-btn-primary"
         >
           <Plus size={20} /> New Quotation
         </button>
@@ -2281,7 +2281,7 @@ export const CreditNotesList = ({
         <button
           type="button"
           onClick={openNewCreditNote}
-          className="ui-btn ui-btn-primary "
+          className="ui-btn ui-btn-primary"
         >
           <Plus size={20} /> New Credit Note
         </button>

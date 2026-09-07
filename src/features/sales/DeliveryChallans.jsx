@@ -200,7 +200,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           <div className="grid gap-3 sm:grid-cols-4">
             <div>
               <label className="ui-label">Date</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full px-3 py-2" />
+              <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" />
             </div>
             <div>
               <label className="ui-label">Customer</label>
@@ -208,7 +208,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             </div>
             <div>
               <label className="ui-label">Purpose</label>
-              <select value={form.purpose} onChange={(e) => setForm((p) => ({ ...p, purpose: e.target.value }))} className="ui-select w-full px-3 py-2">
+              <select value={form.purpose} onChange={(e) => setForm((p) => ({ ...p, purpose: e.target.value }))} className="ui-select w-full">
                 <option>Job Work</option>
                 <option>Supply on Approval</option>
                 <option>Own Use / Branch</option>
@@ -217,7 +217,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             </div>
             <div>
               <label className="ui-label">Vehicle No</label>
-              <input type="text" value={form.vehicleNo} onChange={(e) => setForm((p) => ({ ...p, vehicleNo: e.target.value }))} className="ui-input w-full px-3 py-2" placeholder="KA01AB1234" />
+              <input type="text" value={form.vehicleNo} onChange={(e) => setForm((p) => ({ ...p, vehicleNo: e.target.value }))} className="ui-input w-full" placeholder="KA01AB1234" />
             </div>
           </div>
 

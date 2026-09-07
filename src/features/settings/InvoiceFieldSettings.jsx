@@ -213,7 +213,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
               id="invoice-industry"
               value={pendingIndustry || prefs.industry}
               onChange={(e) => setPendingIndustry(e.target.value === prefs.industry ? '' : e.target.value)}
-              className="ui-select w-full px-3 py-2"
+              className="ui-select w-full"
             >
               {INVOICE_INDUSTRIES.map((i) => (
                 <option key={i.key} value={i.key}>
@@ -317,7 +317,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 id="pay-bank"
                 value={payment.bankAccountId}
                 onChange={(e) => writePayment({ bankAccountId: e.target.value })}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 <option value="">Do not print bank details</option>
                 {bankAccounts.map((a) => (
@@ -342,7 +342,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 type="text"
                 value={payment.upiId}
                 onChange={(e) => writePayment({ upiId: e.target.value })}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 placeholder="business@hdfcbank"
                 inputMode="email"
               />
@@ -362,7 +362,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 type="text"
                 value={payment.payeeName}
                 onChange={(e) => writePayment({ payeeName: e.target.value })}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 placeholder={currentCompany?.name || 'Company name'}
               />
               <label className="inline-flex items-center gap-2 text-sm cursor-pointer mt-2">
@@ -412,7 +412,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 type="text"
                 value={draft.label}
                 onChange={(e) => setDraft((p) => ({ ...p, label: e.target.value }))}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 placeholder="Transporter & vehicle no."
               />
             </div>
@@ -424,7 +424,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 id="cf-type"
                 value={draft.type}
                 onChange={(e) => setDraft((p) => ({ ...p, type: e.target.value }))}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 {CUSTOM_FIELD_TYPES.map((t) => (
                   <option key={t}>{t}</option>
@@ -453,7 +453,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 id="cf-form"
                 value={draft.formPlacement}
                 onChange={(e) => setDraft((p) => ({ ...p, formPlacement: e.target.value }))}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 {CUSTOM_FIELD_FORM_PLACEMENTS.map((p) => (
                   <option key={p.key} value={p.key}>
@@ -470,7 +470,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
                 id="cf-print"
                 value={draft.printPlacement}
                 onChange={(e) => setDraft((p) => ({ ...p, printPlacement: e.target.value }))}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 {CUSTOM_FIELD_PRINT_PLACEMENTS.map((p) => (
                   <option key={p.key} value={p.key}>

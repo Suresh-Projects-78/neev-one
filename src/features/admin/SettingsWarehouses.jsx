@@ -298,7 +298,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
         <button
           type="button"
           onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary "
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
         >
           + Create Warehouse
         </button>
@@ -311,7 +311,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search warehouses"
-              className="ui-input w-full pl-3 pr-3 py-2 ui-surface"
+              className="ui-input w-full ui-surface"
             />
           </div>
         </div>
@@ -381,25 +381,25 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 </div>
                 <div className="col-span-12 sm:col-span-6">
                   <label className="ui-label">Warehouse Name *</label>
-                  <input className="ui-input w-full px-3 py-2" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} required />
+                  <input className="ui-input w-full" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="ui-label">Address Line 1</label>
-                  <input className="ui-input w-full px-3 py-2" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} />
+                  <input className="ui-input w-full" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} />
                 </div>
                 <div>
                   <label className="ui-label">Address Line 2</label>
-                  <input className="ui-input w-full px-3 py-2" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
+                  <input className="ui-input w-full" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="ui-label">City</label>
-                  <input className="ui-input w-full px-3 py-2" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
+                  <input className="ui-input w-full" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
                 </div>
                 <div>
                   <PopupSelect
@@ -415,14 +415,14 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 </div>
                 <div>
                   <label className="ui-label">Country</label>
-                  <input className="ui-input w-full px-3 py-2" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
+                  <input className="ui-input w-full" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="ui-label">GST Registration</label>
-                  <select className="ui-select w-full px-3 py-2 ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
+                  <select className="ui-select w-full ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
                     <option value="UNREGISTERED">Unregistered</option>
                     <option value="REGULAR">Regular</option>
                     <option value="COMPOSITION">Composition</option>
@@ -431,7 +431,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 <div>
                   <label className="ui-label">GSTIN</label>
                   <input
-                    className="ui-input w-full px-3 py-2"
+                    className="ui-input w-full"
                     value={editForm.gstin}
                     onChange={(e) => {
                       const next = e.target.value;
@@ -447,15 +447,15 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="ui-label">Contact Person</label>
-                  <input className="ui-input w-full px-3 py-2" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
+                  <input className="ui-input w-full" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
                 </div>
                 <div>
                   <label className="ui-label">Phone</label>
-                  <input className="ui-input w-full px-3 py-2" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
+                  <input className="ui-input w-full" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
                 </div>
                 <div>
                   <label className="ui-label">Email</label>
-                  <input type="email" className="ui-input w-full px-3 py-2" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
+                  <input type="email" className="ui-input w-full" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
                 </div>
               </div>
 
@@ -537,25 +537,25 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             </div>
             <div className="col-span-12 sm:col-span-6">
               <label className="ui-label">Warehouse Name *</label>
-              <input className="ui-input w-full px-3 py-2" value={form.name} onChange={onChange('name')} required />
+              <input className="ui-input w-full" value={form.name} onChange={onChange('name')} required />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="ui-label">Address Line 1</label>
-              <input className="ui-input w-full px-3 py-2" value={form.addressLine1} onChange={onChange('addressLine1')} />
+              <input className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} />
             </div>
             <div>
               <label className="ui-label">Address Line 2</label>
-              <input className="ui-input w-full px-3 py-2" value={form.addressLine2} onChange={onChange('addressLine2')} />
+              <input className="ui-input w-full" value={form.addressLine2} onChange={onChange('addressLine2')} />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="ui-label">City</label>
-              <input className="ui-input w-full px-3 py-2" value={form.city} onChange={onChange('city')} />
+              <input className="ui-input w-full" value={form.city} onChange={onChange('city')} />
             </div>
             <div>
               <PopupSelect
@@ -571,14 +571,14 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             </div>
             <div>
               <label className="ui-label">Country</label>
-              <input className="ui-input w-full px-3 py-2" value={form.country} onChange={onChange('country')} />
+              <input className="ui-input w-full" value={form.country} onChange={onChange('country')} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="ui-label">GST Registration</label>
-              <select className="ui-select w-full px-3 py-2 ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+              <select className="ui-select w-full ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
                 <option value="UNREGISTERED">Unregistered</option>
                 <option value="REGULAR">Regular</option>
                 <option value="COMPOSITION">Composition</option>
@@ -587,7 +587,7 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
             <div>
               <label className="ui-label">GSTIN</label>
               <input
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 value={form.gstin}
                 onChange={onChange('gstin')}
                 placeholder="15 characters"
@@ -598,15 +598,15 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="ui-label">Contact Person</label>
-              <input className="ui-input w-full px-3 py-2" value={form.contactPerson} onChange={onChange('contactPerson')} />
+              <input className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
             </div>
             <div>
               <label className="ui-label">Phone</label>
-              <input className="ui-input w-full px-3 py-2" value={form.phone} onChange={onChange('phone')} />
+              <input className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
             </div>
             <div>
               <label className="ui-label">Email</label>
-              <input type="email" className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} />
+              <input type="email" className="ui-input w-full" value={form.email} onChange={onChange('email')} />
             </div>
           </div>
           <div className="flex justify-end gap-2">

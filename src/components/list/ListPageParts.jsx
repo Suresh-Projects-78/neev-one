@@ -191,7 +191,7 @@ export function FiltersButton({ period, onPeriodChange, dateFrom, dateTo, onDate
                 id="list-period"
                 value={period}
                 onChange={(e) => onPeriodChange(e.target.value)}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 {LIST_PERIODS.map((p) => (
                   <option key={p.key} value={p.key}>{p.label}</option>

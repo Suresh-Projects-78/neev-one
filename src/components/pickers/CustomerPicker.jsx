@@ -501,7 +501,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           type="text"
           value={formData.displayName}
           onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-          className="ui-input w-full px-3 py-2"
+          className="ui-input w-full"
           required
         />
       </div>
@@ -533,7 +533,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             step="0.01"
             value={formData.openingBalance}
             onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             placeholder="0.00"
           />
         </div>
@@ -542,7 +542,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           <select
             value={formData.openingBalanceType}
             onChange={(e) => setFormData((p) => ({ ...p, openingBalanceType: e.target.value }))}
-            className="ui-select w-full px-3 py-2"
+            className="ui-select w-full"
           >
             <option value="Dr">Dr — they owe us</option>
             <option value="Cr">Cr — we owe them</option>
@@ -557,7 +557,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             type="text"
             value={formData.contactPerson}
             onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
           />
         </div>
         <div>
@@ -566,7 +566,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             type="tel"
             value={formData.mobile}
             onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
           />
         </div>
       </div>
@@ -578,7 +578,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
           />
         </div>
         <div>
@@ -587,7 +587,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             type="tel"
             value={formData.alternatePhone}
             onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
           />
         </div>
       </div>
@@ -609,7 +609,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   pan: requiresGstin ? prev.pan : '',
                 }));
               }}
-              className="ui-select w-full px-3 py-2"
+              className="ui-select w-full"
             >
               <option value="Registered">Registered</option>
               <option value="Unregistered">Unregistered</option>
@@ -651,7 +651,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               type="text"
               value={formData.pan}
               onChange={(e) => setFormData({ ...formData, pan: e.target.value })}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
               placeholder={gstRegistrationRequiresGstinUi ? 'PAN required' : 'Optional'}
             />
           </div>
@@ -663,7 +663,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               max="365"
               value={formData.paymentTermDays}
               onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
               placeholder="30"
             />
             <p className="mt-1 text-xs ui-muted">
@@ -678,7 +678,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               step="0.01"
               value={formData.creditLimit}
               onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
               placeholder="0 = no limit"
             />
             <p className="mt-1 text-xs ui-muted">New invoices warn when outstanding would cross this.</p>
@@ -720,7 +720,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               type="text"
               value={formData.billingAddress.line1}
               onChange={(e) => updateBilling('line1', e.target.value)}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
             />
           </div>
           <div>
@@ -729,7 +729,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               type="text"
               value={formData.billingAddress.line2}
               onChange={(e) => updateBilling('line2', e.target.value)}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
             />
           </div>
         </div>
@@ -741,7 +741,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               type="text"
               value={formData.billingAddress.city}
               onChange={(e) => updateBilling('city', e.target.value)}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
             />
           </div>
           <div>
@@ -750,7 +750,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               type="text"
               value={formData.billingAddress.district}
               onChange={(e) => updateBilling('district', e.target.value)}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
             />
           </div>
           <div>
@@ -759,7 +759,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               type="text"
               value={formData.billingAddress.pincode}
               onChange={(e) => updateBilling('pincode', e.target.value)}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
             />
           </div>
         </div>
@@ -802,7 +802,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   type="text"
                   value={formData.shippingAddress.line1}
                   onChange={(e) => updateShipping('line1', e.target.value)}
-                  className="ui-input w-full px-3 py-2"
+                  className="ui-input w-full"
                 />
               </div>
               <div>
@@ -811,7 +811,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   type="text"
                   value={formData.shippingAddress.line2}
                   onChange={(e) => updateShipping('line2', e.target.value)}
-                  className="ui-input w-full px-3 py-2"
+                  className="ui-input w-full"
                 />
               </div>
             </div>
@@ -823,7 +823,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   type="text"
                   value={formData.shippingAddress.city}
                   onChange={(e) => updateShipping('city', e.target.value)}
-                  className="ui-input w-full px-3 py-2"
+                  className="ui-input w-full"
                 />
               </div>
               <div>
@@ -832,7 +832,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   type="text"
                   value={formData.shippingAddress.district}
                   onChange={(e) => updateShipping('district', e.target.value)}
-                  className="ui-input w-full px-3 py-2"
+                  className="ui-input w-full"
                 />
               </div>
               <div>
@@ -857,7 +857,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   type="text"
                   value={formData.shippingAddress.pincode}
                   onChange={(e) => updateShipping('pincode', e.target.value)}
-                  className="ui-input w-full px-3 py-2"
+                  className="ui-input w-full"
                 />
               </div>
             </div>
@@ -929,7 +929,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         })}
       </div>
 
-      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg ">
+      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg">
         {isEdit ? 'Update Customer' : 'Create Customer'}
       </button>
       </form>
@@ -956,7 +956,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 type="text"
                 value={groupDraftName}
                 onChange={(e) => setGroupDraftName(e.target.value)}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 placeholder="e.g., Walk-in Customers"
                 autoFocus
                 required
@@ -975,7 +975,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
               >
                 Cancel
               </button>
-              <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
+              <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg">
                 Create
               </button>
             </div>

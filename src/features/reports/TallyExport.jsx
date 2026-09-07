@@ -59,11 +59,11 @@ export default function TallyExport({ db, currentCompany }) {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="ui-label">From</label>
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ui-input px-3 py-2" />
+            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ui-input" />
           </div>
           <div>
             <label className="ui-label">To</label>
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ui-input px-3 py-2" />
+            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ui-input" />
           </div>
           <div className="ui-caption pb-2">Defaults to the current financial year.</div>
         </div>

@@ -595,7 +595,7 @@ export const StockTransferEditor = ({
               type="text"
               value={form.number}
               onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))}
-              className={`ui-input w-full px-3 py-2 ${!isEdit && lockTransferNumberOnCreate ? 'ui-sunken' : ''}`}
+              className={`ui-input w-full ${!isEdit && lockTransferNumberOnCreate ? 'ui-sunken' : ''}`}
               placeholder="Auto"
               disabled={readOnly || (!isEdit && lockTransferNumberOnCreate)}
             />
@@ -606,7 +606,7 @@ export const StockTransferEditor = ({
               type="date"
               value={form.date}
               onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
               required
               disabled={readOnly}
             />
@@ -623,7 +623,7 @@ export const StockTransferEditor = ({
             form. Only the destination is chosen here. */}
         <div>
           <label className="ui-label">From (active {mode === 'branch' ? 'branch' : 'warehouse'})</label>
-          <div className="ui-input ui-sunken w-full px-3 py-2">
+          <div className="ui-input ui-sunken w-full">
             {getBranchLabel(selectedSourceBranch) || '—'}
             {mode === 'warehouse' ? ` · ${getWarehouseLabel(selectedSourceWarehouse) || '—'}` : ''}
           </div>
@@ -644,7 +644,7 @@ export const StockTransferEditor = ({
                     normalizeId(p.targetWarehouseId) === normalizeId(nextId) ? '' : p.targetWarehouseId,
                 }));
               }}
-              className="ui-select w-full px-3 py-2 ui-surface"
+              className="ui-select w-full ui-surface"
               required
               disabled={readOnly}
             >
@@ -672,7 +672,7 @@ export const StockTransferEditor = ({
                   targetWarehouseId: '',
                 }));
               }}
-              className="ui-select w-full px-3 py-2 ui-surface"
+              className="ui-select w-full ui-surface"
               required
               disabled={readOnly}
             >
@@ -702,7 +702,7 @@ export const StockTransferEditor = ({
                 };
               });
             }}
-            className="ui-select w-full px-3 py-2 ui-surface"
+            className="ui-select w-full ui-surface"
             required
             disabled={readOnly || !normalizeId(mode === 'warehouse' ? form.sourceBranchId : form.targetBranchId)}
           >
@@ -996,7 +996,7 @@ const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel
 
       <div>
         <label className="ui-label">Note (optional)</label>
-        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="ui-input w-full px-3 py-2" placeholder="Damaged in transit, short packed…" />
+        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="ui-input w-full" placeholder="Damaged in transit, short packed…" />
       </div>
 
       {anyMismatch ? (
@@ -1711,7 +1711,7 @@ export const StockTransfersList = ({
           <button
             type="button"
             onClick={openCreate}
-            className="ui-btn ui-btn-primary "
+            className="ui-btn ui-btn-primary"
           >
           <Plus size={18} /> New Transfer Out
           </button>

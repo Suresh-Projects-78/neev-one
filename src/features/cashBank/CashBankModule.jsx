@@ -715,7 +715,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 placeholder="Search ledger"
                 autoFocus
               />
@@ -1148,7 +1148,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               <select
                 value={form.cashBankAccountId}
                 onChange={(e) => setForm((p) => ({ ...p, cashBankAccountId: e.target.value }))}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
                 required
               >
                 <option value="">Select</option>
@@ -1174,7 +1174,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 required
               />
             </div>
@@ -1184,7 +1184,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 <select
                   value={form.direction}
                   onChange={(e) => setForm((p) => ({ ...p, direction: e.target.value }))}
-                  className="ui-select w-full px-3 py-2"
+                  className="ui-select w-full"
                 >
                   <option value="IN">Receipt (Money In)</option>
                   <option value="OUT">Payment (Money Out)</option>
@@ -1226,7 +1226,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 type="number"
                 value={form.amount}
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 step="0.01"
                 required
               />
@@ -1405,7 +1405,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
               type="text"
               value={form.narration}
               onChange={(e) => setForm((p) => ({ ...p, narration: e.target.value }))}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
               placeholder="Narration"
             />
           </div>
@@ -1414,7 +1414,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg ui-hover-sunken">
               Cancel
             </button>
-            <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
+            <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
               {isEdit ? 'Save' : 'Add'}
             </button>
           </div>
@@ -1955,7 +1955,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             <select
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="ui-select w-full px-3 py-2"
+              className="ui-select w-full"
             >
               <option value="">Select</option>
               {cashBankAccounts.map((a) => (
@@ -1968,7 +1968,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
           <div>
             <label className="ui-label">View</label>
-            <select value={view} onChange={(e) => setView(e.target.value)} className="ui-select w-full px-3 py-2">
+            <select value={view} onChange={(e) => setView(e.target.value)} className="ui-select w-full">
               <option value="uncategorised">Uncategorised ({uncategorisedCount})</option>
               <option value="categorised">Categorised ({categorisedCount})</option>
               <option value="all">All ({allTxns.length})</option>

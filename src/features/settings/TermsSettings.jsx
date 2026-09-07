@@ -116,7 +116,7 @@ export const TermsSettings = ({ db, setDb, currentCompany }) => {
             <textarea
               value={draft[v.key]}
               onChange={(e) => setDraft((p) => ({ ...p, [v.key]: e.target.value }))}
-              className="ui-input w-full px-3 py-2"
+              className="ui-input w-full"
               rows={4}
               placeholder={
                 v.key === 'estimate'

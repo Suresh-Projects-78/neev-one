@@ -702,11 +702,11 @@ const AuthGate = ({ onAuth }) => {
 
                 {/* Success Message */}
                 {success && (
-                  <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-                    <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="rounded-xl p-4 flex items-start gap-3 bg-[rgb(var(--pos-soft))] border border-[rgb(var(--pos)/0.35)]">
+                    <svg className="w-5 h-5 text-[rgb(var(--pos))] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <p className="text-sm text-green-700">{success}</p>
+                    <p className="text-sm text-[rgb(var(--pos))]">{success}</p>
                   </div>
                 )}
 

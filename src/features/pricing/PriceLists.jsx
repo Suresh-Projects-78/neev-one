@@ -545,7 +545,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="ui-input mb-3 w-full px-3 py-2"
+            className="ui-input mb-3 w-full"
             placeholder="Search items"
             aria-label="Search items"
           />

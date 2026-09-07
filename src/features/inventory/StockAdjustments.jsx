@@ -407,7 +407,7 @@ const StockAdjustments = ({
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 required
               />
             </div>
@@ -420,7 +420,7 @@ const StockAdjustments = ({
                 id="adj-warehouse"
                 value={form.warehouseId}
                 onChange={(e) => setForm((p) => ({ ...p, warehouseId: e.target.value }))}
-                className="ui-select ui-surface w-full px-3 py-2"
+                className="ui-select ui-surface w-full"
                 required
               >
                 <option value="">Select warehouse</option>
@@ -444,7 +444,7 @@ const StockAdjustments = ({
                 type="text"
                 value={form.reason}
                 onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                 placeholder="Damaged in transit, audit shortfall…"
                 required
               />

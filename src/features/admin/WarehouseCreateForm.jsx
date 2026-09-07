@@ -60,7 +60,7 @@ export function WarehouseCreateForm({ orgId, branches = [], onCreated }) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="ui-label">Branch</label>
-          <select className="ui-select w-full px-3 py-2" value={form.branchId} onChange={onChange('branchId')} required>
+          <select className="ui-select w-full" value={form.branchId} onChange={onChange('branchId')} required>
             <option value="">Select branch</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -71,34 +71,34 @@ export function WarehouseCreateForm({ orgId, branches = [], onCreated }) {
         </div>
         <div>
           <label className="ui-label">Warehouse Name</label>
-          <input className="ui-input w-full px-3 py-2" value={form.name} onChange={onChange('name')} required />
+          <input className="ui-input w-full" value={form.name} onChange={onChange('name')} required />
         </div>
       </div>
 
       <div>
         <label className="ui-label">Address</label>
-        <input className="ui-input w-full px-3 py-2" value={form.addressLine1} onChange={onChange('addressLine1')} />
+        <input className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="ui-label">City</label>
-          <input className="ui-input w-full px-3 py-2" value={form.city} onChange={onChange('city')} />
+          <input className="ui-input w-full" value={form.city} onChange={onChange('city')} />
         </div>
         <div>
           <label className="ui-label">State</label>
-          <input className="ui-input w-full px-3 py-2" value={form.state} onChange={onChange('state')} />
+          <input className="ui-input w-full" value={form.state} onChange={onChange('state')} />
         </div>
         <div>
           <label className="ui-label">Country</label>
-          <input className="ui-input w-full px-3 py-2" value={form.country} onChange={onChange('country')} />
+          <input className="ui-input w-full" value={form.country} onChange={onChange('country')} />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="ui-label">GST Registration</label>
-          <select className="ui-select w-full px-3 py-2" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+          <select className="ui-select w-full" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
             <option value="REGULAR">Regular</option>
             <option value="COMPOSITION">Composition</option>
             <option value="UNREGISTERED">Unregistered</option>
@@ -106,22 +106,22 @@ export function WarehouseCreateForm({ orgId, branches = [], onCreated }) {
         </div>
         <div className="col-span-2">
           <label className="ui-label">GSTIN</label>
-          <input className="ui-input w-full px-3 py-2" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
+          <input className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="ui-label">Phone</label>
-          <input className="ui-input w-full px-3 py-2" value={form.phone} onChange={onChange('phone')} />
+          <input className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
         </div>
         <div>
           <label className="ui-label">Email</label>
-          <input className="ui-input w-full px-3 py-2" value={form.email} onChange={onChange('email')} />
+          <input className="ui-input w-full" value={form.email} onChange={onChange('email')} />
         </div>
         <div>
           <label className="ui-label">Contact Person</label>
-          <input className="ui-input w-full px-3 py-2" value={form.contactPerson} onChange={onChange('contactPerson')} />
+          <input className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
         </div>
       </div>
 

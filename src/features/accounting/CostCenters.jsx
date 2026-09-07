@@ -74,7 +74,7 @@ export default function CostCenters({ db, setDb, currentCompany }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
-            className="ui-input w-56 px-3 py-2"
+            className="ui-input w-56"
             placeholder="Retail counter / Project X…"
           />
         </div>

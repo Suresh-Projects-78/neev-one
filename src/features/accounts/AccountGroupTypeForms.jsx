@@ -121,7 +121,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
         <select
           value={formData.parent}
           onChange={(e) => setFormData((p) => ({ ...p, parent: e.target.value }))}
-          className="ui-select w-full px-3 py-2"
+          className="ui-select w-full"
         >
           {PARENT_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -137,7 +137,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="ui-input w-full px-3 py-2"
+          className="ui-input w-full"
           placeholder="e.g., Current Liabilities"
           required
         />
@@ -147,7 +147,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -266,7 +266,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           <select
             value={formData.typeId}
             onChange={(e) => setFormData((p) => ({ ...p, typeId: e.target.value, parentGroupId: '' }))}
-            className="ui-select w-full px-3 py-2"
+            className="ui-select w-full"
           >
             <option value="">Select</option>
             {accountTypes.map((t) => (
@@ -281,7 +281,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           <select
             value={formData.groupCategory}
             onChange={(e) => setFormData((p) => ({ ...p, groupCategory: e.target.value }))}
-            className="ui-select w-full px-3 py-2"
+            className="ui-select w-full"
           >
             <option value="Customer">Customer Group</option>
             <option value="Vendor">Vendor Group</option>
@@ -297,7 +297,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="ui-input w-full px-3 py-2"
+          className="ui-input w-full"
           placeholder="e.g., Sundry Debtors"
           required
         />
@@ -307,7 +307,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary ">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>

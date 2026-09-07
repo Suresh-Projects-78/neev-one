@@ -241,7 +241,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="ui-input w-full px-3 py-2"
+          className="ui-input w-full"
           placeholder="e.g., ABC Traders"
           required
         />
@@ -298,7 +298,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
           type="number"
           value={formData.openingBalance}
           onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-          className="ui-input w-full px-3 py-2"
+          className="ui-input w-full"
           step="0.01"
         />
       </div>
@@ -307,7 +307,7 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg ">
+        <button type="submit" className="px-4 py-2 rounded-lg ui-primary-bg">
           {isEdit ? 'Update' : 'Create'}
         </button>
       </div>
@@ -501,7 +501,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 aria-activedescendant={
                   filtered[accountActiveIndex] ? `account-opt-${filtered[accountActiveIndex].id}` : undefined
                 }
-                className="ui-input w-full px-3 py-2"
+                className="ui-input w-full"
                                 /*
                 * The dialog decides who gets the caret, and it looks for
                 * this attribute. React's own autoFocus runs first and is
@@ -576,7 +576,7 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
                 <button
                   type="button"
                   onClick={() => setMode('choose')}
-                  className="w-full px-4 py-2 ui-primary-bg rounded-lg "
+                  className="w-full px-4 py-2 ui-primary-bg rounded-lg"
                 >
                   Create new account
                 </button>

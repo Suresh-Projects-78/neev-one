@@ -131,7 +131,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
               <label className="ui-label">Asset name</label>
-              <input type="text" value={form.name} onChange={set('name')} className="ui-input w-full px-3 py-2" placeholder="Delivery van / Office AC…" />
+              <input type="text" value={form.name} onChange={set('name')} className="ui-input w-full" placeholder="Delivery van / Office AC…" />
             </div>
             <div>
               <label className="ui-label">Block</label>
@@ -141,7 +141,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
                   const b = ASSET_BLOCKS.find((x) => x.name === e.target.value);
                   setForm((p) => ({ ...p, block: e.target.value, depRate: b ? String(b.rate) : p.depRate }));
                 }}
-                className="ui-select w-full px-3 py-2"
+                className="ui-select w-full"
               >
                 {ASSET_BLOCKS.map((b) => (
                   <option key={b.name} value={b.name}>{b.name} ({b.rate}%)</option>
@@ -150,19 +150,19 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
             </div>
             <div>
               <label className="ui-label">Depreciation rate % (WDV)</label>
-              <input type="number" min="0" max="100" step="0.01" value={form.depRate} onChange={set('depRate')} className="ui-input w-full px-3 py-2" />
+              <input type="number" min="0" max="100" step="0.01" value={form.depRate} onChange={set('depRate')} className="ui-input w-full" />
             </div>
             <div>
               <label className="ui-label">Cost (₹)</label>
-              <input type="number" min="0" step="0.01" value={form.cost} onChange={set('cost')} className="ui-input w-full px-3 py-2" />
+              <input type="number" min="0" step="0.01" value={form.cost} onChange={set('cost')} className="ui-input w-full" />
             </div>
             <div>
               <label className="ui-label">Purchase date</label>
-              <input type="date" value={form.purchaseDate} onChange={set('purchaseDate')} className="ui-input w-full px-3 py-2" />
+              <input type="date" value={form.purchaseDate} onChange={set('purchaseDate')} className="ui-input w-full" />
             </div>
             <div>
               <label className="ui-label">Accumulated dep till last FY (₹)</label>
-              <input type="number" min="0" step="0.01" value={form.accumulatedDep} onChange={set('accumulatedDep')} className="ui-input w-full px-3 py-2" placeholder="0 for new assets" />
+              <input type="number" min="0" step="0.01" value={form.accumulatedDep} onChange={set('accumulatedDep')} className="ui-input w-full" placeholder="0 for new assets" />
             </div>
           </div>
           <div className="flex justify-end gap-2">

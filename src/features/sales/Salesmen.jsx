@@ -78,11 +78,11 @@ export default function Salesmen({ db, setDb, currentCompany }) {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="ui-label">Name</label>
-            <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="ui-input w-48 px-3 py-2" />
+            <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="ui-input w-48" />
           </div>
           <div>
             <label className="ui-label">Phone</label>
-            <input type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="ui-input w-36 px-3 py-2" />
+            <input type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="ui-input w-36" />
           </div>
           <div>
             <label className="ui-label">Commission %</label>
@@ -93,7 +93,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
               step="0.1"
               value={form.commissionPct}
               onChange={(e) => setForm((p) => ({ ...p, commissionPct: e.target.value }))}
-              className="ui-input w-28 px-3 py-2"
+              className="ui-input w-28"
               placeholder="0"
             />
           </div>

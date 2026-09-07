@@ -428,7 +428,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             required
           />
         </div>
@@ -441,7 +441,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
               fieldErrors.clearField('amount');
               setFormData((p) => ({ ...p, amount: e.target.value }));
             }}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             min="0"
             step="0.01"
             required
@@ -481,7 +481,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
                 fieldErrors.clearField('ledgerAccountId');
                 setFormData((p) => ({ ...p, ledgerAccountId: e.target.value }));
               }}
-              className="ui-select w-full px-3 py-2"
+              className="ui-select w-full"
               disabled={modesLoading}
               required
               {...fieldErrors.props('ledgerAccountId')}
@@ -509,7 +509,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
             type="text"
             value={formData.reference}
             onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-            className="ui-input w-full px-3 py-2"
+            className="ui-input w-full"
             placeholder="Txn / UTR / Cheque no"
           />
         </div>
@@ -604,7 +604,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         <textarea
           value={formData.notes}
           onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-          className="ui-input w-full px-3 py-2"
+          className="ui-input w-full"
           rows={3}
         />
       </div>
