@@ -588,19 +588,25 @@
     background-color: rgb(var(--surface-sunken));
   }
 
-  /* A child takes its module's colour, in the readable step of it.
-     It was `--fg-subtle`, which ranked the tree correctly and was too faint to
-     read — quiet is not the same as invisible. Hue now carries the grouping
-     and weight carries the rank: 450 against the module's 600. */
+  /* A child is one muted value, indented under its module.
+     It used to take its module's hue, which put a dozen different label
+     colours down one rail — green under Sales, violet under CRM, amber under
+     Purchases — and contradicted the note above about spending hue on the
+     icon rather than on twelve competing labels. Rank is carried by indent
+     and weight, which is what a tree is normally read by; hue is the module
+     icon's job alone. */
   .ui-nav-item:not([data-level='module']) {
     color: rgb(var(--fg-muted));
     font-weight: 450;
-  }
-  .ui-nav-item:not([data-level='module'])[data-tone] {
-    color: rgb(var(--nav-tone-ink, var(--fg-muted)));
+    padding-inline-start: 2rem;
   }
   .ui-nav-item:not([data-level='module']):hover {
     color: rgb(var(--fg));
+  }
+  /* A child icon is a bullet, not a landmark. Twelve coloured module glyphs
+     are findable; sixty are wallpaper. */
+  .ui-nav-item:not([data-level='module'])[data-tone] svg {
+    color: rgb(var(--fg-subtle));
   }
 
   /* --- the module hue, on the icon only ------------------------------------
@@ -636,8 +642,10 @@
   /* Icon and label are the same hue on a child, so nothing is dimmed further:
      a faded icon beside coloured text read as disabled. */
 
-  /* Active has to outrank a module that is merely coloured, so it takes the
-     full-strength brand at 700 on top of the wash and the bar. */
+  /* Active is one weight and one colour, everywhere. It used to step to 700 on
+     a module and 600 on a child, so the rail carried three weights and the
+     eye read the jump in stroke before the change in colour. The accent, the
+     wash and the bar already say "you are here" three times over. */
   .ui-nav-item[data-active='true'] {
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg));
@@ -650,12 +658,16 @@
        8.83:1, so the active item still reads as the accent and is readable. */
     color: rgb(var(--brand-ink));
     background-color: rgb(var(--accent-soft));
-    font-weight: 700;
+    font-weight: 600;
   }
   /* A selected child is the accent too, at the same readable value. */
   .ui-nav-item:not([data-level='module'])[data-active='true'] {
     color: rgb(var(--brand-ink));
-    font-weight: 600;
+    background-color: rgb(var(--accent-soft));
+    font-weight: 450;
+  }
+  .ui-nav-item:not([data-level='module'])[data-active='true'][data-tone] svg {
+    color: rgb(var(--brand-ink));
   }
   /* Where you are is the accent's job. The module hue steps aside for it so
      two colours are never competing to mean "current". The icon may keep the
