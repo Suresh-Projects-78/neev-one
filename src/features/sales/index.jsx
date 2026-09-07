@@ -4818,7 +4818,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <div className="w-64 space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>{formatMoney(computed.subtotal, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
             </div>
             {computed.invoiceDiscount > 0 ? (
               <div className="flex justify-between">
@@ -4829,35 +4829,35 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             {computed.invoiceDiscount > 0 || computed.otherChargesTotal > 0 ? (
               <div className="flex justify-between">
                 <span>Taxable Amount:</span>
-                <span>{formatMoney(computed.subtotal - computed.invoiceDiscount + computed.otherChargesTotal, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(computed.subtotal - computed.invoiceDiscount + computed.otherChargesTotal, currentCompany)}</span>
               </div>
             ) : null}
             {computed.otherChargesTotal > 0 ? (
               <div className="flex justify-between">
                 <span>Other charges:</span>
-                <span>{formatMoney(computed.otherChargesTotal, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(computed.otherChargesTotal, currentCompany)}</span>
               </div>
             ) : null}
             {isIntra ? (
               <>
                 <div className="flex justify-between">
                   <span>CGST:</span>
-                  <span>{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>SGST:</span>
-                  <span>{formatMoney(computed.sgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</span>
                 </div>
               </>
             ) : (
               <div className="flex justify-between">
                 <span>IGST:</span>
-                <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
             <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
-              <span>{formatMoney(computed.total, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
             </div>
             {/* Below the total, not inside it: the invoice is for the total,
                 and this is what will actually arrive. */}
@@ -4923,7 +4923,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 </div>
                 <div className="ui-total-row">
                   <span>Net receivable:</span>
-                  <span>{formatMoney(netReceivable, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(netReceivable, currentCompany)}</span>
                 </div>
               </>
             ) : null}
@@ -4958,7 +4958,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         {customerOutstanding > 0 ? (
           <span className="ui-caption">
             {getCustomerDisplayName(customer) || 'This customer'} owes{' '}
-            <span className="fig">{formatMoney(customerOutstanding, currentCompany)}</span> already
+            <span className="ui-money fig">{formatMoney(customerOutstanding, currentCompany)}</span> already
           </span>
         ) : null}
         <FieldErrorSummary errors={fieldErrors.errors} />
@@ -5445,28 +5445,28 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
           <div className="w-64 space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>{formatMoney(computed.subtotal, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
             </div>
             {isIntra ? (
               <>
                 <div className="flex justify-between">
                   <span>CGST:</span>
-                  <span>{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>SGST:</span>
-                  <span>{formatMoney(computed.sgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</span>
                 </div>
               </>
             ) : (
               <div className="flex justify-between">
                 <span>IGST:</span>
-                <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
             <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
-              <span>{formatMoney(computed.total, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
             </div>
           </div>
         </div>
@@ -6198,28 +6198,28 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           <div className="w-64 space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>{formatMoney(computed.subtotal, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
             </div>
             {isIntra ? (
               <>
                 <div className="flex justify-between">
                   <span>CGST:</span>
-                  <span>{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>SGST:</span>
-                  <span>{formatMoney(computed.sgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</span>
                 </div>
               </>
             ) : (
               <div className="flex justify-between">
                 <span>IGST:</span>
-                <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
             <div className="ui-total-row border-t pt-2">
               <span>Total:</span>
-              <span>{formatMoney(computed.total, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
             </div>
           </div>
         </div>

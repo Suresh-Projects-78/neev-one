@@ -593,7 +593,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
             <span className="ui-muted">Amount received</span>
-            <span className="ui-mono">{formatMoney(computed.totalAmount, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(computed.totalAmount, currentCompany)}</span>
           </div>
           {computed.tds > 0 ? (
             <div className="flex justify-between">
@@ -616,11 +616,11 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
           <div className="flex justify-between pt-1.5" style={{ borderTop: '1px solid rgb(var(--border))' }}>
             <span className="ui-muted">Total allocated</span>
-            <span className="ui-mono">{formatMoney(computed.allocated, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(computed.allocated, currentCompany)}</span>
           </div>
           <div className="flex justify-between">
             <span className="ui-muted">Advance (unallocated)</span>
-            <span className="ui-mono">{formatMoney(computed.advance, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(computed.advance, currentCompany)}</span>
           </div>
           <div className="flex justify-between">
             <span className="ui-muted">Invoices selected</span>
@@ -629,7 +629,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
           <div className="ui-total-row pt-2" style={{ borderTop: '1px solid rgb(var(--border))' }}>
             <span>Net into the account</span>
-            <span>{formatMoney(computed.netCash, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(computed.netCash, currentCompany)}</span>
           </div>
         </div>
       </div>

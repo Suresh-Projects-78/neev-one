@@ -568,7 +568,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
         <div className="ui-in-fade flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
           <span className="ui-muted">
             Stock value{' '}
-            <span className="ui-num font-semibold ui-fg" title={formatMoney(stockKpis.stockValue, currentCompany)}>
+            <span className="ui-money ui-num ui-fg" title={formatMoney(stockKpis.stockValue, currentCompany)}>
               {formatMoney(stockKpis.stockValue, currentCompany)}
             </span>
           </span>

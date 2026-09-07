@@ -274,9 +274,9 @@ export default function PosScreen({ db, setDb, currentCompany }) {
           <h3 className="ui-t-sec">Day close — {today}</h3>
           <div className="grid gap-3 sm:grid-cols-4 text-sm">
             <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Invoices</div><div className="ui-mono text-xl font-semibold">{todaysSales.length}</div></div>
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Cash</div><div className="ui-mono text-xl font-semibold">{formatMoney(byTender.Cash, currentCompany)}</div></div>
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">UPI</div><div className="ui-mono text-xl font-semibold">{formatMoney(byTender.UPI, currentCompany)}</div></div>
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Card</div><div className="ui-mono text-xl font-semibold">{formatMoney(byTender.Card, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Cash</div><div className="ui-money text-xl">{formatMoney(byTender.Cash, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">UPI</div><div className="ui-money text-xl">{formatMoney(byTender.UPI, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Card</div><div className="ui-money text-xl">{formatMoney(byTender.Card, currentCompany)}</div></div>
           </div>
 
           <div>
@@ -335,7 +335,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                 className="ui-card ui-lift p-3 text-left"
               >
                 <div className="truncate text-sm font-medium">{i.name}</div>
-                <div className="ui-caption">{formatMoney(Number(i.salePrice || 0), currentCompany)} · GST {Number(i.gstRate || 0)}%</div>
+                <div className="ui-money ui-caption">{formatMoney(Number(i.salePrice || 0), currentCompany)} · GST {Number(i.gstRate || 0)}%</div>
               </button>
             ))}
             {filtered.length === 0 ? <div className="ui-muted col-span-full p-6 text-center text-sm">No items match.</div> : null}
@@ -365,9 +365,9 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             )}
 
             <div className="mt-4 space-y-1 border-t pt-3 text-sm">
-              <div className="flex justify-between"><span>Subtotal</span><span>{formatMoney(computed.subtotal, currentCompany)}</span></div>
-              <div className="flex justify-between"><span>GST</span><span>{formatMoney(computed.gstTotal, currentCompany)}</span></div>
-              <div className="flex justify-between ui-t-sec"><span>Total</span><span>{formatMoney(computed.total, currentCompany)}</span></div>
+              <div className="flex justify-between"><span>Subtotal</span><span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span></div>
+              <div className="flex justify-between"><span>GST</span><span className="ui-money">{formatMoney(computed.gstTotal, currentCompany)}</span></div>
+              <div className="flex justify-between ui-t-sec"><span>Total</span><span className="ui-money">{formatMoney(computed.total, currentCompany)}</span></div>
             </div>
 
             <div className="mt-3 space-y-2">

@@ -519,11 +519,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
       <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
         <div>
           <div className="ui-muted">Allocated</div>
-          <div className="font-semibold">{formatMoney(computed.allocated, currentCompany)}</div>
+          <div className="ui-money">{formatMoney(computed.allocated, currentCompany)}</div>
         </div>
         <div>
           <div className="ui-muted">Advance</div>
-          <div className="font-semibold">{formatMoney(computed.advance, currentCompany)}</div>
+          <div className="ui-money">{formatMoney(computed.advance, currentCompany)}</div>
         </div>
         <div>
           <div className="ui-muted">Selected</div>

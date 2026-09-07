@@ -541,7 +541,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                           />
                         </td>
                         <td className="px-3 py-2 text-right ui-muted">{Number(l.gstRate) || 0}%</td>
-                        <td className="px-3 py-2 text-right font-medium">
+                        <td className="ui-money px-3 py-2 text-right">
                           {formatMoney((Number(l.quantity) || 0) * (Number(l.rate) || 0), currentCompany)}
                         </td>
                         <td className="px-2 py-2 text-right">
@@ -571,7 +571,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                 </button>
                 <div className="text-sm">
                   <span className="ui-muted mr-2">Each run:</span>
-                  <span className="font-semibold">{formatMoney(draftTotals.total || 0, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(draftTotals.total || 0, currentCompany)}</span>
                   <span className="ui-muted text-xs ml-2">
                     ({formatMoney(draftTotals.subtotal || 0, currentCompany)} + {formatMoney(draftTotals.gstTotal || 0, currentCompany)} GST)
                   </span>

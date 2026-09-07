@@ -1864,24 +1864,24 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         <div className="w-80 space-y-2">
           <div className="flex justify-between">
             <span>Subtotal:</span>
-            <span>{formatMoney(computed.subtotal, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
           </div>
           {vendorChargesGst ? (
             isIntra ? (
               <>
                 <div className="flex justify-between">
                   <span>CGST:</span>
-                  <span>{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>SGST:</span>
-                  <span>{formatMoney(computed.sgstTotal, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</span>
                 </div>
               </>
             ) : (
               <div className="flex justify-between">
                 <span>IGST:</span>
-                <span>{formatMoney(computed.igstTotal, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )
           ) : (
@@ -1892,7 +1892,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
           )}
           <div className="ui-total-row border-t pt-2">
             <span>Total Expense:</span>
-            <span>{formatMoney(computed.total, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
           </div>
         </div>
       </div>
@@ -2066,7 +2066,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
                 <td className="px-4 py-2.5 ui-col-meta">{item.type}</td>
                 <td className="px-4 py-2.5 ui-col-id">{item.hsnSac || '-'}</td>
                 <td className="px-4 py-2.5 ui-col-meta">{Number.isFinite(Number(item.gstRate)) ? Number(item.gstRate) : 0}</td>
-                <td className="px-4 py-2.5 ui-col-meta">{formatMoney(item.salePrice || 0, currentCompany)}</td>
+                <td className="ui-money px-4 py-2.5 ui-col-meta">{formatMoney(item.salePrice || 0, currentCompany)}</td>
                 <td className="px-4 py-2.5 ui-col-meta">
                   {isStockItem(item) ? (
                     <>
@@ -4553,7 +4553,7 @@ const TrialBalance = ({ db, currentCompany, onOpenLedger }) => {
             <tr className="ui-sunken font-bold border-t-2">
               <td className="px-4 py-2.5 ui-col-meta">TOTAL</td>
               <td className="ui-col-amount px-4 py-2.5" />
-              <td className="px-4 py-2.5 text-right">{formatMoney(totalDebit, currentCompany)}</td>
+              <td className="ui-money px-4 py-2.5 text-right">{formatMoney(totalDebit, currentCompany)}</td>
               <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(totalCredit, currentCompany)}</td>
             </tr>
           </tbody>
@@ -5583,19 +5583,19 @@ const LedgerView = ({
 
                             if (c.key === 'debit') {
                               return (
-                                <td key={c.key} className={`px-4 py-2 text-sm ui-muted text-right`}>{formatMoney(a.debit || 0, currentCompany)}</td>
+                                <td key={c.key} className={`ui-money px-4 py-2 text-sm ui-muted text-right`}>{formatMoney(a.debit || 0, currentCompany)}</td>
                               );
                             }
 
                             if (c.key === 'credit') {
                               return (
-                                <td key={c.key} className={`px-4 py-2 text-sm ui-muted text-right`}>{formatMoney(a.credit || 0, currentCompany)}</td>
+                                <td key={c.key} className={`ui-money px-4 py-2 text-sm ui-muted text-right`}>{formatMoney(a.credit || 0, currentCompany)}</td>
                               );
                             }
 
                             if (c.key === 'runningBalance') {
                               return (
-                                <td key={c.key} className={`px-4 py-2 text-sm ui-muted text-right`}>{a.runningBalance != null ? formatMoney(Number(a.runningBalance), currentCompany) : '-'}</td>
+                                <td key={c.key} className={`ui-money px-4 py-2 text-sm ui-muted text-right`}>{a.runningBalance != null ? formatMoney(Number(a.runningBalance), currentCompany) : '-'}</td>
                               );
                             }
 
@@ -5749,12 +5749,12 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
                   <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                     {account.name}
                   </button>
-                  <span>{formatMoney(account.balance || 0, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(account.balance || 0, currentCompany)}</span>
                 </div>
               ))}
             <div className="flex justify-between font-semibold border-t mt-2 pt-2">
               <span>Total Income</span>
-              <span>{formatMoney(income, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(income, currentCompany)}</span>
             </div>
           </div>
 
@@ -5765,12 +5765,12 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
                   <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                     {account.name}
                   </button>
-                  <span>{formatMoney(account.balance || 0, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(account.balance || 0, currentCompany)}</span>
                 </div>
               ))}
             <div className="flex justify-between font-semibold border-t mt-2 pt-2">
               <span>Total Expenses</span>
-              <span>{formatMoney(expenses, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(expenses, currentCompany)}</span>
             </div>
           </div>
 
@@ -5778,7 +5778,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
             className={`ui-total-row border-t-2 pt-4 ${netProfit >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}
           >
             <span>NET PROFIT</span>
-            <span>{formatMoney(netProfit, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(netProfit, currentCompany)}</span>
           </div>
         </div>
       </div>
@@ -5853,12 +5853,12 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
                   <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                     {account.name}
                   </button>
-                  <span>{formatMoney(account.balance || 0, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(account.balance || 0, currentCompany)}</span>
                 </div>
               ))}
             <div className="flex justify-between font-semibold border-t mt-2 pt-2">
               <span>Total Assets</span>
-              <span>{formatMoney(assets, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(assets, currentCompany)}</span>
             </div>
           </div>
 
@@ -5872,12 +5872,12 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
                     <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                       {account.name}
                     </button>
-                    <span>{formatMoney(account.balance || 0, currentCompany)}</span>
+                    <span className="ui-money">{formatMoney(account.balance || 0, currentCompany)}</span>
                   </div>
                 ))}
               <div className="flex justify-between font-semibold border-t mt-2 pt-2">
                 <span>Total Liabilities</span>
-                <span>{formatMoney(liabilities, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(liabilities, currentCompany)}</span>
               </div>
             </div>
 
@@ -5890,7 +5890,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
                     <button type="button" onClick={() => onOpenLedger && onOpenLedger(account.id)} className="ui-muted text-left hover:underline">
                       {account.name}
                     </button>
-                    <span>{formatMoney(account.balance || 0, currentCompany)}</span>
+                    <span className="ui-money">{formatMoney(account.balance || 0, currentCompany)}</span>
                   </div>
                 ))}
               <div className="flex justify-between py-1 pl-4">
@@ -5901,13 +5901,13 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
               </div>
               <div className="flex justify-between font-semibold border-t mt-2 pt-2">
                 <span>Total Equity</span>
-                <span>{formatMoney(equity + netProfit, currentCompany)}</span>
+                <span className="ui-money">{formatMoney(equity + netProfit, currentCompany)}</span>
               </div>
             </div>
 
             <div className="ui-total-row border-t-2 mt-4 pt-2">
               <span>Total Liabilities & Equity</span>
-              <span>{formatMoney(liabilities + equity + netProfit, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(liabilities + equity + netProfit, currentCompany)}</span>
             </div>
           </div>
         </div>
@@ -5984,12 +5984,12 @@ const CashFlowStatement = ({ db, currentCompany }) => {
               .map((l) => (
                 <div key={l.label} className="flex justify-between py-1 pl-4">
                   <span className="ui-muted">{l.label}</span>
-                  <span>{formatMoney(l.amount, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(l.amount, currentCompany)}</span>
                 </div>
               ))}
             <div className="flex justify-between font-semibold border-t mt-2 pt-2">
               <span>Total Inflows</span>
-              <span>{formatMoney(totals.inflow, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(totals.inflow, currentCompany)}</span>
             </div>
           </div>
 
@@ -6000,18 +6000,18 @@ const CashFlowStatement = ({ db, currentCompany }) => {
               .map((l) => (
                 <div key={l.label} className="flex justify-between py-1 pl-4">
                   <span className="ui-muted">{l.label}</span>
-                  <span>{formatMoney(l.amount, currentCompany)}</span>
+                  <span className="ui-money">{formatMoney(l.amount, currentCompany)}</span>
                 </div>
               ))}
             <div className="flex justify-between font-semibold border-t mt-2 pt-2">
               <span>Total Outflows</span>
-              <span>{formatMoney(totals.outflow, currentCompany)}</span>
+              <span className="ui-money">{formatMoney(totals.outflow, currentCompany)}</span>
             </div>
           </div>
 
           <div className={`ui-total-row border-t-2 pt-4 ${totals.net >= 0 ? 'text-[rgb(var(--pos))]' : 'text-[rgb(var(--neg))]'}`}>
             <span>NET CASH FLOW</span>
-            <span>{formatMoney(totals.net, currentCompany)}</span>
+            <span className="ui-money">{formatMoney(totals.net, currentCompany)}</span>
           </div>
         </div>
       </div>

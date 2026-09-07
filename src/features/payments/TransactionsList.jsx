@@ -136,15 +136,15 @@ const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onC
         <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
           <div>
             <div className="ui-muted">Total</div>
-            <div className="font-semibold">{formatMoney(Number(selected.total ?? 0), currentCompany)}</div>
+            <div className="ui-money">{formatMoney(Number(selected.total ?? 0), currentCompany)}</div>
           </div>
           <div>
             <div className="ui-muted">Paid</div>
-            <div className="font-semibold">{formatMoney(Number(selected.paidAmount ?? 0), currentCompany)}</div>
+            <div className="ui-money">{formatMoney(Number(selected.paidAmount ?? 0), currentCompany)}</div>
           </div>
           <div>
             <div className="ui-muted">Balance</div>
-            <div className="font-semibold">{formatMoney(getBalanceForVoucher(selected), currentCompany)}</div>
+            <div className="ui-money">{formatMoney(getBalanceForVoucher(selected), currentCompany)}</div>
           </div>
         </div>
       ) : null}
@@ -273,7 +273,7 @@ const TransactionView = ({ title, payload }) => {
           </div>
           <div>
             <div className="ui-muted">Amount</div>
-            <div className="font-semibold">{formatMoney(payload?.amount || 0, payload?.currentCompany)}</div>
+            <div className="ui-money">{formatMoney(payload?.amount || 0, payload?.currentCompany)}</div>
           </div>
         </div>
 
@@ -314,7 +314,7 @@ const TransactionView = ({ title, payload }) => {
             {Number(payload?.advanceAmount ?? 0) > 0 ? (
               <div className="mt-3 flex items-center justify-between">
                 <div className="ui-muted">Advance</div>
-                <div className="font-semibold">{formatMoney(Number(payload.advanceAmount ?? 0), payload?.currentCompany)}</div>
+                <div className="ui-money">{formatMoney(Number(payload.advanceAmount ?? 0), payload?.currentCompany)}</div>
               </div>
             ) : null}
           </div>

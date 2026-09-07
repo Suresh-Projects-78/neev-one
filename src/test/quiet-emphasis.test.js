@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -91,5 +91,71 @@ describe('detail panels state rather than emphasise', () => {
 
   it('a money value in a panel keeps the mono face', () => {
     expect(block('.ui-detail-value.ui-detail-mono')).toMatch(/Geist Mono/);
+  });
+});
+
+/**
+ * Every amount wears the money face, everywhere.
+ *
+ * DESIGN.md rule 4 says every displayed amount is monospace. Four classes were
+ * doing that job at two different weights — `.ui-money`, `.ui-amount`,
+ * `.ui-col-amount` and a bare `.ui-mono` — and a further hundred amounts
+ * carried none of them and rendered in the sans face beside figures that did.
+ * A rule applied in four ways in some places and not at all in others is what
+ * made the product look inconsistent page to page.
+ */
+
+import { readdirSync, statSync } from 'node:fs';
+
+const SRC = dirname(dirname(fileURLToPath(import.meta.url)));
+
+/* The printed document is black on white and outside the app's type rules. */
+const PRINT_SURFACES = new Set(['InvoicePreview.jsx', 'ExpenseVoucher.jsx']);
+
+const jsxFiles = (dir) =>
+  readdirSync(dir).flatMap((name) => {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) return jsxFiles(full);
+    if (!name.endsWith('.jsx') || name.includes('.test.')) return [];
+    if (PRINT_SURFACES.has(name)) return [];
+    return [full];
+  });
+
+const MONEY_MARK = /ui-col-amount|ui-cell-money|ui-detail-mono|ui-money|ui-amount|ui-mono|MoneyValue/;
+
+describe('every amount wears the money face', () => {
+  it('no element renders formatMoney in the sans face', () => {
+    const offenders = [];
+    for (const file of jsxFiles(SRC)) {
+      const source = readFileSync(file, 'utf8');
+      /*
+       * `[^<}]` on purpose. A looser class spans nested markup, so a container
+       * div wrapping a table of amounts matches as though it were the amount —
+       * which is exactly the mistake the codemod behind this rule made before
+       * the check was written.
+       */
+      const el = /<(span|div|td)((?:\s+[^<>]*?)?)>\s*\{[^<}]*formatMoney\(/g;
+      let m;
+      while ((m = el.exec(source)) !== null) {
+        if (!MONEY_MARK.test(m[2])) {
+          offenders.push(`${relative(SRC, file)}:${source.slice(0, m.index).split('\n').length}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  /* The two inline money classes must not drift apart on weight again. */
+  it('the inline money classes agree on weight 400', () => {
+    const shared = block('.ui-money,\n  .ui-amount');
+    expect(shared).toMatch(/font-weight:\s*400/);
+    expect(shared).toMatch(/Geist Mono/);
+  });
+
+  /* A headline figure is emphasised by its size, not by its weight as well. */
+  it('the KPI figure is not also bold', () => {
+    const weights = [...CSS.matchAll(/\.ui-kpi\s*\{[^}]*font-weight:\s*(\d+)/g)].map((m) => Number(m[1]));
+    expect(weights.length).toBeGreaterThan(0);
+    for (const w of weights) expect(w).toBeLessThanOrEqual(500);
   });
 });

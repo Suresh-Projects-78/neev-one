@@ -86,7 +86,7 @@ export function StatCards({ cards, company }) {
               {c.label}
             </span>
             <span
-              className={`block font-semibold leading-6 truncate ${c.count ? 'text-base' : 'ui-mono text-base'}`}
+              className={`block leading-6 truncate tabular-nums ${c.count ? 'text-base' : 'ui-mono text-base'}`}
               title={c.count ? String(c.value) : formatMoney(c.value, company)}
               style={toneVars(c.tone).figure ? { color: toneVars(c.tone).figure } : undefined}
             >

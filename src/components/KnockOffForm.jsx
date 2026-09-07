@@ -88,11 +88,11 @@ const KnockOffForm = ({
         </span>
         <span>
           <span className="ui-muted">Value</span>{' '}
-          <span className="font-medium">{formatMoney(balance.total, currentCompany)}</span>
+          <span className="ui-money">{formatMoney(balance.total, currentCompany)}</span>
         </span>
         <span>
           <span className="ui-muted">On account</span>{' '}
-          <span className="font-semibold text-[rgb(var(--brand))]">
+          <span className="ui-money text-[rgb(var(--brand))]">
             {formatMoney(balance.unsettled, currentCompany)}
           </span>
         </span>
@@ -118,7 +118,7 @@ const KnockOffForm = ({
                 <tr key={row.doc.id} className="ui-hover-sunken">
                   <td className="px-3 py-2 font-medium">{row.doc.number}</td>
                   <td className="px-3 py-2 ui-muted">{row.doc.date}</td>
-                  <td className="px-3 py-2 text-right">{formatMoney(row.outstanding, currentCompany)}</td>
+                  <td className="ui-money px-3 py-2 text-right">{formatMoney(row.outstanding, currentCompany)}</td>
                   <td className="px-3 py-2">
                     <input
                       type="number"
@@ -142,11 +142,11 @@ const KnockOffForm = ({
 
       <div className="flex items-center justify-between text-sm">
         <div className="ui-muted">
-          Allocating <span className="font-medium ui-fg">{formatMoney(entered, currentCompany)}</span>
+          Allocating <span className="ui-money ui-fg">{formatMoney(entered, currentCompany)}</span>
           {remaining > 0.0001 ? (
             <>
               {' '}
-              · <span className="font-medium ui-fg">{formatMoney(remaining, currentCompany)}</span> stays on account
+              · <span className="ui-money ui-fg">{formatMoney(remaining, currentCompany)}</span> stays on account
             </>
           ) : null}
         </div>

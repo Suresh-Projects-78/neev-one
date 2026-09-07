@@ -793,8 +793,8 @@ export const StockTransferEditor = ({
                           title={l.rateSource ? `Picked from ${l.rateSource}` : undefined}
                         />
                       </td>
-                      <td className="ui-col-meta px-3 py-2 text-right">{formatMoney(lineTaxable(l), currentCompany)}</td>
-                      <td className="ui-col-meta px-3 py-2 text-right">
+                      <td className="ui-money ui-col-meta px-3 py-2 text-right">{formatMoney(lineTaxable(l), currentCompany)}</td>
+                      <td className="ui-money ui-col-meta px-3 py-2 text-right">
                         {formatMoney(lineIgst(l), currentCompany)}
                         <div className="text-xs ui-muted">{toNum(l.gstRate || 0)}%</div>
                       </td>
@@ -866,15 +866,15 @@ export const StockTransferEditor = ({
             <div className="text-sm space-y-0.5 min-w-56">
               <div className="flex justify-between gap-6">
                 <span className="ui-muted">Taxable</span>
-                <span className="ui-num">{formatMoney(transferTotals.taxable, currentCompany)}</span>
+                <span className="ui-money ui-num">{formatMoney(transferTotals.taxable, currentCompany)}</span>
               </div>
               <div className="flex justify-between gap-6">
                 <span className="ui-muted">IGST</span>
-                <span className="ui-num">{formatMoney(transferTotals.igst, currentCompany)}</span>
+                <span className="ui-money ui-num">{formatMoney(transferTotals.igst, currentCompany)}</span>
               </div>
               <div className="flex justify-between gap-6 font-semibold border-t pt-0.5">
                 <span>Total</span>
-                <span className="ui-num">{formatMoney(transferTotals.total, currentCompany)}</span>
+                <span className="ui-money ui-num">{formatMoney(transferTotals.total, currentCompany)}</span>
               </div>
             </div>
           </div>

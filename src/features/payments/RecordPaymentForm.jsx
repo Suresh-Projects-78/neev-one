@@ -108,15 +108,15 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
       <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
         <div>
           <div className="ui-muted">Total</div>
-          <div className="font-semibold">{formatMoney(total, currentCompany)}</div>
+          <div className="ui-money">{formatMoney(total, currentCompany)}</div>
         </div>
         <div>
           <div className="ui-muted">Paid</div>
-          <div className="font-semibold">{formatMoney(alreadyPaid, currentCompany)}</div>
+          <div className="ui-money">{formatMoney(alreadyPaid, currentCompany)}</div>
         </div>
         <div>
           <div className="ui-muted">Balance</div>
-          <div className="font-semibold">{formatMoney(balance, currentCompany)}</div>
+          <div className="ui-money">{formatMoney(balance, currentCompany)}</div>
         </div>
       </div>
 

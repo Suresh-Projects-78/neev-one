@@ -525,8 +525,8 @@
     font-feature-settings: 'calt' 0; /* no ligatures in IDs and codes */
   }
   .ui-amount {
-    font-variant-numeric: tabular-nums;
-    font-weight: 500;
+    /* Face and weight come from the shared money rule below; this only adds
+       the default ink, so `.ui-amount-pos` / `-neg` can still override it. */
     color: rgb(var(--fg));
   }
   /* Doubled on purpose: .ui-kpi (defined later) also sets color at (0,1,0),
@@ -1824,11 +1824,12 @@
     border-color: rgb(var(--info) / 0.2);
   }
 
-  /* KPI figure: 40px, tabular, tight. The number is the point of the card. */
+  /* KPI figure: 40px, tabular, tight. The number is the point of the card —
+     and at this size that is already obvious, so the weight comes off. */
   .ui-kpi {
     font-size: clamp(1.75rem, 2.4vw, 2.5rem);
     line-height: 1.05;
-    font-weight: 700;
+    font-weight: 500;
     letter-spacing: -0.03em;
     font-variant-numeric: tabular-nums;
   }
@@ -1843,7 +1844,7 @@
   .ui-kpi {
     font-size: 2.625rem;      /* 42px */
     line-height: 1.02;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.035em;
     font-variant-numeric: tabular-nums;
     color: rgb(var(--fg));
@@ -1904,11 +1905,17 @@
 
   /* Money is monospace and tabular so a rupee column aligns to the digit and
      a wrong figure looks wrong. Right-alignment is the caller's job. */
-  .ui-money {
+  /* The one inline money face. Four classes were doing this job — `.ui-money`,
+     `.ui-amount`, `.ui-col-amount` and a bare `.ui-mono` — at two different
+     weights, and a hundred more amounts carried none of them and rendered in
+     the sans face. They agree now: monospace, tabular, weight 400. Alignment is
+     the only thing that varies, because only a column has digits to line up. */
+  .ui-money,
+  .ui-amount {
     font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.8125rem;     /* 13px */
     line-height: 1.125rem;
-    font-weight: 500;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
   }

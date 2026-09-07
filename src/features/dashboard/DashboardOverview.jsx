@@ -205,7 +205,7 @@ function BalanceCard({ label, value, company, tone = '', hint, note, accent, act
         <span className="ui-subtle text-xs">as of today</span>
       </div>
       <div
-        className={`ui-mono text-[1.55rem] font-semibold leading-9 ${rail ? 'pl-1' : ''}`}
+        className={`ui-mono tabular-nums text-[1.55rem] leading-9 ${rail ? 'pl-1' : ''}`}
         style={tone ? { color: `rgb(var(--${tone}))` } : undefined}
       >
         {value === null ? <span className="ui-subtle font-normal">—</span> : formatMoney(value, company)}
@@ -733,7 +733,7 @@ function QuietTiles({ tiles, company }) {
           </div>
           <div className="mt-2 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
             <span
-              className="ui-mono"
+              className="ui-money"
               style={{
                 fontSize: '1.3125rem',
                 lineHeight: '1.75rem',
@@ -1258,7 +1258,7 @@ export default function DashboardOverview({
           <p className="ui-subtle ui-t-body mt-0.5">
             {recv.count ? (
               <>
-                <span className="ui-mono">{formatMoney(recv.total, currentCompany)}</span> across {recv.count} invoice
+                <span className="ui-money">{formatMoney(recv.total, currentCompany)}</span> across {recv.count} invoice
                 {recv.count === 1 ? '' : 's'}
               </>
             ) : (
@@ -1312,7 +1312,7 @@ export default function DashboardOverview({
                   <div key={c.name}>
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="ui-t-body truncate" style={{ color: 'rgb(var(--col-party))', fontWeight: 600 }}>{c.name}</span>
-                      <span className="ui-mono ui-t-body" style={{ fontWeight: 600 }}>{formatMoney(c.amount, currentCompany)}</span>
+                      <span className="ui-money ui-t-body" style={{ fontWeight: 600 }}>{formatMoney(c.amount, currentCompany)}</span>
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                       <span className="h-1.5 flex-1 rounded-full overflow-hidden" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
@@ -1377,7 +1377,7 @@ export default function DashboardOverview({
                 <span className="ui-subtle ui-t-body">
                   {gst.creditCarried > 0 ? 'Credit carried' : 'Payable'}
                 </span>
-                <span className="ui-mono ui-t-body" style={{ fontWeight: 600 }}>
+                <span className="ui-money ui-t-body" style={{ fontWeight: 600 }}>
                   {formatMoney(gst.creditCarried > 0 ? gst.creditCarried : gst.payable, currentCompany)}
                 </span>
               </div>

@@ -381,7 +381,7 @@ const StockAdjustments = ({
             <span className="ui-num font-semibold ui-amount-neg">{formatMoney(Math.abs(totals.down), currentCompany)}</span>
           </span>
           <span className="ui-muted">
-            Net effect on stock <span className="ui-num font-semibold ui-fg">{formatMoney(totals.net, currentCompany)}</span>
+            Net effect on stock <span className="ui-money ui-num ui-fg">{formatMoney(totals.net, currentCompany)}</span>
           </span>
         </div>
       ) : null}
@@ -494,7 +494,7 @@ const StockAdjustments = ({
                         />
                         <div className="ui-caption">Minus for stock gone</div>
                       </td>
-                      <td className="ui-col-meta px-3 py-2 text-right">
+                      <td className="ui-money ui-col-meta px-3 py-2 text-right">
                         {formatMoney(valueOf(l.itemId, l.qtyDelta), currentCompany)}
                       </td>
                       <td className="px-3 py-2">
