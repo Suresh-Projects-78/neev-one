@@ -57,10 +57,11 @@
      never restyle themselves inside a theme block. */
   --on-tone: 255 255 255;
   /* A document reference is a link, and it is the one piece of text in a row
-     that is meant to be clicked. Indigo rather than the brand: orange is the
-     primary action and a table full of orange references would spend it. */
-  --doc-link: 67 56 202;        /* indigo-700 — 7.9:1 on white */
-  --doc-link-wash: 238 242 255; /* indigo-50, the hover ground */
+     meant to be clicked, so it wears the theme. The ink, not the accent
+     itself: raw orange on white is 3.15:1 and fails as text, while the ink is
+     the same hue at 8.83:1. */
+  --doc-link: 124 45 18;        /* brand ink — 8.83:1 on white */
+  --doc-link-wash: 255 247 237; /* brand soft, the hover ground */
   --credit: 109 40 217;         /* violet-700 — money going the other way */
 
 
@@ -71,8 +72,11 @@
      alike. Every ink/strong pair below was measured and clears 4.5:1; the
      tightest is paid at 4.57. The key/`--on-tone` pairs clear 4.7.
   ------------------------------------------------------------------------- */
-  --st-all-soft: 245 245 244;      --st-all-strong: 231 229 228;
-  --st-all-key: 120 113 108;       --st-all-ink: 68 64 60;
+  /* "All" is the theme's, being the default view of the module rather than a
+     state of the money — and it was one of three greys that could not be told
+     apart from each other. */
+  --st-all-soft: 255 247 237;      --st-all-strong: 255 237 213;
+  --st-all-key: 194 65 12;         --st-all-ink: 124 45 18;  /* orange-700: white on 600 was 3.56:1 */
 
   --st-draft-soft: 241 245 249;    --st-draft-strong: 226 232 240;
   --st-draft-key: 100 116 139;     --st-draft-ink: 51 65 85;
@@ -89,8 +93,11 @@
   --st-overdue-soft: 254 242 242;  --st-overdue-strong: 254 226 226;
   --st-overdue-key: 220 38 38;     --st-overdue-ink: 185 28 28;
 
-  --st-cancelled-soft: 244 244 245;--st-cancelled-strong: 228 228 231;
-  --st-cancelled-key: 82 82 91;    --st-cancelled-ink: 63 63 70;
+  /* Cancelled stays grey — a void document should be quiet — but a warm grey
+     two steps darker, so it is nobody's twin. Draft keeps the cool, light
+     slate: not yet real reads lighter than no longer valid. */
+  --st-cancelled-soft: 231 229 228;--st-cancelled-strong: 214 211 209;
+  --st-cancelled-key: 87 83 78;    --st-cancelled-ink: 68 64 60;
 
   --brand-ink: 124 45 18;
   --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
@@ -298,16 +305,16 @@
   --brand-soft: 43 26 14;
   --on-brand: 26 12 3;
   --on-tone: 26 12 3;   /* the tones are light tints here; ink goes dark */
-  --doc-link: 165 180 252;      /* indigo-300 on a dark ground */
-  --doc-link-wash: 30 27 75;
+  --doc-link: 254 215 170;      /* brand ink lifts on a dark ground */
+  --doc-link-wash: 43 26 14;
   --credit: 196 181 253;
 
 
   /* The same four roles, inverted: soft and strong become dark tints of the
      hue and the ink becomes a light one. `key` lifts so it still reads as the
      colour when it is a 2px ring on a dark ground. */
-  --st-all-soft: 41 37 36;         --st-all-strong: 58 54 52;
-  --st-all-key: 168 162 158;       --st-all-ink: 231 229 228;
+  --st-all-soft: 43 26 14;         --st-all-strong: 67 40 21;
+  --st-all-key: 251 146 60;        --st-all-ink: 254 215 170;
 
   --st-draft-soft: 30 41 59;       --st-draft-strong: 41 56 77;
   --st-draft-key: 148 163 184;     --st-draft-ink: 203 213 225;
@@ -324,8 +331,8 @@
   --st-overdue-soft: 69 10 10;     --st-overdue-strong: 127 29 29;
   --st-overdue-key: 248 113 113;   --st-overdue-ink: 254 202 202;
 
-  --st-cancelled-soft: 39 39 42;   --st-cancelled-strong: 63 63 70;
-  --st-cancelled-key: 161 161 170; --st-cancelled-ink: 228 228 231;
+  --st-cancelled-soft: 41 37 36;   --st-cancelled-strong: 68 64 60;
+  --st-cancelled-key: 168 162 158; --st-cancelled-ink: 231 229 228;
 
   --brand-ink: 254 215 170;
   --brand-panel: 9 11 17;
@@ -2061,6 +2068,10 @@
   .ui-cell-date { color: rgb(var(--fg-muted)); display: inline-flex; align-items: center; gap: 0.3rem; }
   .ui-cell-date svg { color: rgb(var(--fg-subtle)); flex: none; }
   /* Only a date with something at stake takes a colour. */
+  /* An issue date is a fact and stays neutral; a due date is a commitment, so
+     even an unremarkable one reads as a different kind of date. */
+  .ui-cell-date[data-urgency='future'] { color: rgb(var(--st-sent-ink)); }
+  .ui-cell-date[data-urgency='future'] svg { color: rgb(var(--st-sent-key)); }
   .ui-cell-date[data-urgency='today'] { color: rgb(var(--warn)); }
   .ui-cell-date[data-urgency='today'] svg { color: rgb(var(--warn)); }
   .ui-cell-date[data-urgency='overdue'] { color: rgb(var(--neg)); font-weight: 500; }
