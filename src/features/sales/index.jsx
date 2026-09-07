@@ -50,6 +50,7 @@ import {
   isIntraStateSupply,
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
+import { InvoiceIdentifier, DateCell, DueDateCell, Money, Balance } from '../../components/table/cells';
 import { PageHeader, StatusPill, EmptyState, TableTotals, FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { ListSearch, StatCards } from '../../components/list/ListPageParts';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -63,20 +64,6 @@ import { exportListXlsx } from '../../utils/listXlsx';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 import { blockIfClosed } from '../../utils/bookClose';
 
-
-/**
- * Past its due date and still carrying a balance.
- *
- * Both halves matter: a paid invoice whose due date has passed is not overdue,
- * and colouring it red would train people to ignore the colour.
- */
-const isOverdue = (doc) => {
-  const due = String(doc?.dueDate || '').slice(0, 10);
-  if (!due) return false;
-  const outstanding = Number(doc?.total ?? 0) - Number(doc?.paidAmount ?? 0);
-  if (outstanding <= 0.005) return false;
-  return due < new Date().toISOString().slice(0, 10);
-};
 
 /** Columns the invoices grid can show or hide. Identity and actions stay. */
 /**
@@ -1159,13 +1146,28 @@ const statusReason = (doc, status, company, nowMs) => {
                         />
                       </td>
                     ) : null}
-                    <td className="ui-col-id">{inv.number}</td>
+                    <td className="ui-col-id">
+                      <InvoiceIdentifier
+                        value={inv.number}
+                        label="invoice"
+                        onOpen={() => openViewInvoice(inv)}
+                      />
+                    </td>
                     {col('customer') ? <td className="ui-col-entity">{inv.customerName || '-'}</td> : null}
-                    {col('date') ? <td className="ui-col-date">{inv.date || '-'}</td> : null}
-                    {col('due') ? (
-                      <td className={`ui-col-date${isOverdue(inv) ? ' ui-col-date-late' : ''}`}>{inv.dueDate || '-'}</td>
+                    {col('date') ? (
+                      <td className="ui-col-date"><DateCell value={inv.date} /></td>
                     ) : null}
-                    <td className="ui-col-amount">{formatMoney(inv.total || 0, currentCompany)}</td>
+                    {col('due') ? (
+                      <td className="ui-col-date">
+                        <DueDateCell
+                          value={inv.dueDate}
+                          balance={Math.max(0, Number(inv.total || 0) - Number(inv.paidAmount || 0))}
+                        />
+                      </td>
+                    ) : null}
+                    <td className="ui-col-amount">
+                      <Money value={inv.total} company={currentCompany} />
+                    </td>
                     {col('status') ? (
                     <td>
                       <StatusPill status={derived} reason={statusReason(inv, derived, currentCompany, nowMs)} />
@@ -1184,14 +1186,11 @@ const statusReason = (doc, status, company, nowMs) => {
                     ) : null}
                     {/* The only date that earns colour: past due, still owed. */}
                     <td className="ui-col-amount">
-                      {(() => {
-                        const bal = Math.max(0, Number(inv.total || 0) - Number(inv.paidAmount || 0));
-                        return (
-                          <span style={bal > 0 ? { color: 'rgb(var(--fg))' } : { color: 'rgb(var(--fg-subtle))' }}>
-                            {formatMoney(bal, currentCompany)}
-                          </span>
-                        );
-                      })()}
+                      <Balance
+                        value={Math.max(0, Number(inv.total || 0) - Number(inv.paidAmount || 0))}
+                        company={currentCompany}
+                        dueIso={inv.dueDate}
+                      />
                     </td>
                     {col('amount') ? (
                       <td className="ui-col-amount">{formatMoney(Number(inv.subtotal || 0), currentCompany)}</td>

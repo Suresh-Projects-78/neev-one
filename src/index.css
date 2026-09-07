@@ -56,6 +56,13 @@
      has to go the other way. One token, flipped per theme, so the segments
      never restyle themselves inside a theme block. */
   --on-tone: 255 255 255;
+  /* A document reference is a link, and it is the one piece of text in a row
+     that is meant to be clicked. Indigo rather than the brand: orange is the
+     primary action and a table full of orange references would spend it. */
+  --doc-link: 67 56 202;        /* indigo-700 — 7.9:1 on white */
+  --doc-link-wash: 238 242 255; /* indigo-50, the hover ground */
+  --credit: 109 40 217;         /* violet-700 — money going the other way */
+
 
   /* --- document status colours -------------------------------------------
      Four values per status: `soft` is the resting fill, `strong` the fill when
@@ -291,6 +298,10 @@
   --brand-soft: 43 26 14;
   --on-brand: 26 12 3;
   --on-tone: 26 12 3;   /* the tones are light tints here; ink goes dark */
+  --doc-link: 165 180 252;      /* indigo-300 on a dark ground */
+  --doc-link-wash: 30 27 75;
+  --credit: 196 181 253;
+
 
   /* The same four roles, inverted: soft and strong become dark tints of the
      hue and the ink becomes a light one. `key` lifts so it still reads as the
@@ -2026,6 +2037,44 @@
     text-align: right;
     white-space: nowrap;
   }
+  /* --- semantic cell roles -------------------------------------------------
+     A column declares what its data *means* and the colour follows from that,
+     so a figure that is money owed looks the same in an invoice list, a
+     purchase list and a receipt list without any of them choosing a colour.
+     Colour is never the only signal: a state that matters also carries a word
+     or a glyph.
+  ------------------------------------------------------------------------- */
+  .ui-cell-ref {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--doc-link));
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    padding: 0.125rem 0.25rem;
+    margin-inline-start: -0.25rem;
+    cursor: pointer;
+  }
+  .ui-cell-ref:hover,
+  .ui-cell-ref:focus-visible { background-color: rgb(var(--doc-link-wash)); text-decoration: underline; }
+
+  .ui-cell-date { color: rgb(var(--fg-muted)); display: inline-flex; align-items: center; gap: 0.3rem; }
+  .ui-cell-date svg { color: rgb(var(--fg-subtle)); flex: none; }
+  /* Only a date with something at stake takes a colour. */
+  .ui-cell-date[data-urgency='today'] { color: rgb(var(--warn)); }
+  .ui-cell-date[data-urgency='today'] svg { color: rgb(var(--warn)); }
+  .ui-cell-date[data-urgency='overdue'] { color: rgb(var(--neg)); font-weight: 500; }
+  .ui-cell-date[data-urgency='overdue'] svg { color: rgb(var(--neg)); }
+
+  .ui-cell-money { font-variant-numeric: tabular-nums; }
+  .ui-cell-money[data-role='amount'] { color: rgb(var(--fg)); font-weight: 600; }
+  .ui-cell-money[data-role='paid'] { color: rgb(var(--pos)); }
+  .ui-cell-money[data-role='outstanding'] { color: rgb(var(--warn)); }
+  .ui-cell-money[data-role='overdue'] { color: rgb(var(--neg)); font-weight: 500; }
+  .ui-cell-money[data-role='credit'] { color: rgb(var(--credit)); }
+  .ui-cell-money[data-role='settled'] { color: rgb(var(--fg-subtle)); font-weight: 400; }
+  .ui-cell-settled { font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgb(var(--fg-subtle)); }
+
   .ui-col-amount-zero.ui-col-amount-zero { color: rgb(var(--fg-subtle)); font-weight: 400; }
   .ui-col-amount-neg.ui-col-amount-neg { color: rgb(var(--neg)); }
 
