@@ -443,9 +443,19 @@
     scroll-behavior: smooth;
   }
 
+  /* The ground goes all the way down. The shell paints its own, but anything
+     it does not cover — and the overscroll rubber-band at either end — falls
+     through to these, so they must not be bare white. */
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background-color: rgb(var(--app-bg));
+  }
   body {
     background-color: rgb(var(--app-bg));
     color: rgb(var(--fg));
+    overscroll-behavior: none;
   }
 
   /* Visible focus on every interactive element — never removed. */
@@ -2111,6 +2121,17 @@
      row height and destroys the scan rhythm. The card scrolls sideways
      instead; the page itself never does. */
   .ui-table-wide { min-width: 60rem; }
+
+  /* The shell owns the viewport, and everything under it is painted the same
+     ground. Without this, any height the shell does not claim — a browser
+     where 100dvh resolves short, a window taller than the page was rendered
+     at — showed as bare white below a page that had already stopped, which
+     reads as the app failing to fill rather than as empty space. */
+  .ui-app-shell {
+    height: 100vh;      /* every engine */
+    height: 100dvh;     /* the ones that have it, which is what we want */
+    min-height: 100vh;
+  }
 
   /* The rail scrolls, and a scroll area that ends flush against a rounded
      panel edge cuts its last row in half and reads as broken rather than as

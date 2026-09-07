@@ -13465,7 +13465,7 @@ const AppShell = () => {
      * viewport removes the travel rather than compensating for it.
      */
     <div
-      className="h-dvh flex flex-col overflow-hidden"
+      className="ui-app-shell flex flex-col overflow-hidden"
       style={{ backgroundColor: 'rgb(var(--app-bg))' }}
     >
       {/* Ambient brand light for the whole shell: fixed so it stays put while
