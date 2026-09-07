@@ -488,16 +488,27 @@ function SetupChecklist({ steps, onGo }) {
         />
       </div>
 
-      <ul className="mt-3 grid gap-2">
+      {/* Rows under one hairline, not six cards inside a card. DESIGN.md is
+          explicit about it, and the nesting was doing the work a divider does
+          at four times the ink. The step being asked for is marked by a rule
+          down its start edge rather than by a box around it. */}
+      <ul className="mt-3 -mx-4" style={{ borderTop: '1px solid rgb(var(--border))' }}>
         {steps.map((step) => {
           const isNext = step.key === nextKey;
           return (
-            <li key={step.key}>
+            <li key={step.key} style={{ borderBottom: '1px solid rgb(var(--border))' }}>
               <button
                 type="button"
                 onClick={() => onGo?.(step.go)}
-                className="w-full text-left ui-card p-3 flex items-center gap-3 ui-hover-sunken"
-                style={isNext ? { borderColor: 'rgb(var(--brand))', boxShadow: '0 0 0 1px rgb(var(--brand))' } : undefined}
+                className="w-full text-left px-4 py-2.5 flex items-center gap-3 ui-hover-sunken relative"
+                style={
+                  isNext
+                    ? {
+                        backgroundColor: 'rgb(var(--accent-soft))',
+                        boxShadow: 'inset 3px 0 0 0 rgb(var(--brand))',
+                      }
+                    : undefined
+                }
               >
                 <span
                   className="h-6 w-6 rounded-full grid place-items-center text-xs font-semibold shrink-0"

@@ -13614,50 +13614,13 @@ const AppShell = () => {
             )}
 
             {/*
-              Quick create: the two-click path to any new document.
-
-              Secondary, not primary. It was filled brand orange, and so is the
-              one action every page puts in its own top right — so on the
-              dashboard "New" and "New invoice" sat twelve pixels apart, both
-              shouting, and neither reading as the thing to do. This one repeats
-              on all fifty-nine screens; the page's own action is the one
-              DESIGN.md reserves the accent for.
+              The quick-create button used to sit here. It repeated on all
+              fifty-nine screens to offer what the page in front of you already
+              offers in its own top right, and it sat between the warehouse
+              picker and the notifications — a strip that says where you are,
+              not what you can do. Command-K reaches the same list from
+              anywhere without spending the space.
             */}
-            <div className="relative" ref={quickRef}>
-              <button
-                type="button"
-                onClick={() => setQuickOpen((v) => !v)}
-                className="ui-btn ui-btn-secondary !h-9 !px-2.5"
-                aria-haspopup="menu"
-                aria-expanded={quickOpen}
-                aria-label="Quick create"
-              >
-                <Plus size={16} aria-hidden="true" />
-                <span className="hidden lg:inline">New</span>
-              </button>
-              {quickOpen ? (
-                <div
-                  role="menu"
-                  className="ui-card ui-in-pop absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden py-1"
-                  style={{ boxShadow: 'var(--shadow-pop)' }}
-                >
-                  {QUICK_CREATE.map((q) => (
-                    <button
-                      key={q.label}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setQuickOpen(false);
-                        q.run();
-                      }}
-                      className="w-full px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[rgb(var(--surface-sunken))]"
-                    >
-                      {q.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
 
             {/* Notifications: computed from the books, never invented. */}
             <div className="relative" ref={notifRef}>
@@ -13880,7 +13843,7 @@ const AppShell = () => {
         menu, where it can be acted on once rather than ignored daily.
       */}
 
-      <div className="w-full flex-1 min-h-0 px-4 lg:px-6 py-5 flex flex-col md:flex-row gap-5 overflow-hidden">
+      <div className="w-full flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {mobileNavOpen ? (
           <div
             className="fixed inset-0 z-[110] md:hidden"
@@ -13901,7 +13864,7 @@ const AppShell = () => {
             /* Height, not max-height: the account block is pinned to the foot
                of the rail, and a content-sized rail leaves it floating in the
                middle of the screen with nothing under it. */
-            className="ui-panel p-2 md:h-full flex flex-col min-h-0"
+            className="ui-rail p-2 md:h-full flex flex-col min-h-0"
           >
             {/* Collapse control: desktop only — on a phone the rail already
                 stacks above the content and hiding labels saves nothing. */}
@@ -14084,7 +14047,7 @@ const AppShell = () => {
         <main
           id="main-content"
           key={active}
-          className="min-w-0 flex-1 ui-in-fade ui-content overflow-y-auto overflow-x-hidden min-h-0 pe-4"
+          className="min-w-0 flex-1 ui-in-fade ui-content overflow-y-auto overflow-x-hidden min-h-0 px-4 lg:px-6 py-5"
           /*
            * Two fixes, because the two families of scrollbar break this
            * differently.

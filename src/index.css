@@ -2127,6 +2127,17 @@
      where 100dvh resolves short, a window taller than the page was rendered
      at — showed as bare white below a page that had already stopped, which
      reads as the app failing to fill rather than as empty space. */
+  /* The navigation is a side of the window, not a card resting on it.
+     As a panel it needed a gutter around it to read as one, and that gutter
+     was the empty strip to its left and the empty block beneath it — a rail
+     that stops short of the floor leaves the ground showing under the one
+     element that should reach it. It runs edge to edge now, separated from
+     the content by a single hairline. */
+  .ui-rail {
+    background-color: rgb(var(--surface));
+    border-inline-end: 1px solid rgb(var(--border));
+  }
+
   .ui-app-shell {
     height: 100vh;      /* every engine */
     height: 100dvh;     /* the ones that have it, which is what we want */
