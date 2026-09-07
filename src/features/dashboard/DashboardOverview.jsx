@@ -1,9 +1,11 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
   Building2,
+  Check,
   CircleSlash,
   FileText,
   Minus,
@@ -15,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
+import { bookState, setupSteps, BOOK_NEW, BOOK_SETUP } from './bookState';
 import Illustration from '../../components/ui/Illustration';
 import ChartCard from '../../components/charts/ChartCard';
 import { useTilt } from '../../components/ui/useTilt';
@@ -457,18 +460,117 @@ function initialsFor(name, email, company) {
  * `@layer components` rules whose selector never appears literally in the
  * source.
  */
-const BARS_CLASS = {
-  l: 'ui-hero-bars ui-hero-bars-l',
-  r: 'ui-hero-bars ui-hero-bars-r',
-};
+/*
+ * The two columns of bars that used to stand behind the greeting are gone.
+ * They were drawn from nothing — five fixed heights, no relationship to the
+ * book — at the top of a page whose entire job is to report real money. A
+ * chart that cannot be read is decoration, and decoration that looks like data
+ * is worse than none.
+ */
 
-function HeroBars({ side }) {
+/**
+ * What is left to do before the book can be used.
+ *
+ * This is Home while there is nothing to summarise, rather than a dialog over
+ * the top of it. That is not only tidier: the wizard it replaces had to be
+ * dismissed, and dismissing it was exactly what made it come back at the next
+ * sign-in. A page has no such state to lose.
+ */
+function SetupChecklist({ steps, onGo }) {
+  const required = steps.filter((s) => !s.optional);
+  const done = required.filter((s) => s.done).length;
+  const nextKey = steps.find((s) => !s.done && !s.optional)?.key;
+
   return (
-    <div className={BARS_CLASS[side]} aria-hidden="true">
-      {[0, 1, 2, 3, 4].map((i) => (
-        <span key={i} className="ui-hero-bar" />
-      ))}
-    </div>
+    <section className="ui-card p-4" aria-label="Set up">
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <h2 className="ui-t-sec">Finish setting up</h2>
+        <span className="ui-caption">
+          {done} of {required.length}
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}>
+        <span
+          className="block h-full rounded-full"
+          style={{ width: `${Math.round((done / required.length) * 100)}%`, backgroundColor: 'rgb(var(--brand))' }}
+        />
+      </div>
+
+      <ul className="mt-3 grid gap-2">
+        {steps.map((step) => {
+          const isNext = step.key === nextKey;
+          return (
+            <li key={step.key}>
+              <button
+                type="button"
+                onClick={() => onGo?.(step.go)}
+                className="w-full text-left ui-card p-3 flex items-center gap-3 ui-hover-sunken"
+                style={isNext ? { borderColor: 'rgb(var(--brand))', boxShadow: '0 0 0 1px rgb(var(--brand))' } : undefined}
+              >
+                <span
+                  className="h-6 w-6 rounded-full grid place-items-center text-xs font-semibold shrink-0"
+                  style={
+                    step.done
+                      ? { backgroundColor: 'rgb(var(--st-paid-strong))', color: 'rgb(var(--st-paid-ink))' }
+                      : isNext
+                      ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
+                      : { backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--fg-subtle))' }
+                  }
+                  aria-hidden="true"
+                >
+                  {step.done ? <Check size={13} /> : ''}
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-medium truncate">
+                    {step.title}
+                    {step.optional ? <span className="ui-caption"> — optional</span> : null}
+                  </span>
+                  <span className="ui-caption block truncate">{step.detail}</span>
+                </span>
+                {/* The word as well as the ring, so "what is left" does not
+                    depend on telling two greys apart. */}
+                <span className="ms-auto ui-caption shrink-0" style={step.done ? undefined : { color: 'rgb(var(--brand-ink))', fontWeight: 600 }}>
+                  {step.done ? 'Done' : step.cta}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * The sentence a mid-setup book needs and never got.
+ *
+ * With purchases entered and nothing sold, the receivable panels truthfully
+ * report nothing outstanding — which reads as "all clear" when it means "you
+ * have not billed anyone". Said plainly here so the figures below cannot be
+ * misread as good news.
+ */
+function NothingBilledYet({ payable, stockValue, company, onNewInvoice }) {
+  return (
+    <section
+      className="ui-card p-4 flex items-start gap-3"
+      style={{ backgroundColor: 'rgb(var(--st-outstanding-soft))', borderColor: 'rgb(var(--st-outstanding-key) / 0.4)' }}
+      aria-label="Nothing billed yet"
+    >
+      <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: 'rgb(var(--st-outstanding-ink))' }} aria-hidden="true" />
+      <div className="min-w-0">
+        <p className="font-medium" style={{ color: 'rgb(var(--st-outstanding-ink))' }}>
+          You have not billed anyone yet.
+        </p>
+        <p className="ui-t-body ui-muted mt-0.5">
+          {stockValue > 0 ? `${formatMoney(stockValue, company)} of stock is on hand` : 'Your purchases are recorded'}
+          {payable > 0 ? ` and ${formatMoney(payable, company)} is owed to suppliers` : ''}, but the sales ledger is empty — so
+          “nothing outstanding” below is the absence of sales, not good news.
+        </p>
+      </div>
+      <button type="button" onClick={onNewInvoice} className="ui-btn ui-btn-primary ms-auto shrink-0">
+        Raise the first invoice
+      </button>
+    </section>
   );
 }
 
@@ -479,8 +581,6 @@ function DashboardHero({ name, initials, avatarUrl, insights, onCommand, actions
 
   return (
     <section className="relative pt-8 pb-2 text-center" aria-label="Overview">
-      <HeroBars side="l" />
-      <HeroBars side="r" />
       {avatarUrl ? (
         <img
           src={avatarUrl}
@@ -642,6 +742,8 @@ export default function DashboardOverview({
   userName = '',
   userAvatarUrl = '',
   userInitials = '',
+  onNavigate = null,
+  onOpenCashBank = null,
 }) {
   /**
    * Cash and accrual answer different questions and must never be mixed on one
@@ -728,6 +830,20 @@ export default function DashboardOverview({
   // Pinned once per mount rather than read during render: "now" moving between
   // renders makes the bucketing impure, and every memo below depends on it.
   const [now] = useState(() => Date.now());
+
+  /*
+   * Home reads the book before it draws. One layout for every state is what
+   * produced "every invoice in the book is settled" on a book that had never
+   * issued one.
+   */
+  const state = useMemo(() => bookState(db, currentCompany), [db, currentCompany]);
+  const steps = useMemo(() => setupSteps(db, currentCompany), [db, currentCompany]);
+  const goTo = (where) => {
+    if (where === 'newInvoice') return onNewInvoice?.();
+    if (where === 'customers') return onOpenCustomers?.();
+    if (where === 'cashBank') return onOpenCashBank?.();
+    return onNavigate?.(where);
+  };
 
 
 
@@ -920,6 +1036,20 @@ export default function DashboardOverview({
         actions={quickActions}
       />
 
+      {/* Nothing to summarise: Home is the setup list, and only that. */}
+      {state === BOOK_NEW ? <SetupChecklist steps={steps} onGo={goTo} /> : null}
+
+      {/* Figures are real but nothing has been billed — say so above them. */}
+      {state === BOOK_SETUP ? (
+        <NothingBilledYet
+          payable={pay.total}
+          stockValue={stock.value}
+          company={currentCompany}
+          onNewInvoice={onNewInvoice}
+        />
+      ) : null}
+
+      {state === BOOK_NEW ? null : (
       <QuietTiles
         company={currentCompany}
         tiles={[
@@ -966,6 +1096,11 @@ export default function DashboardOverview({
           },
         ]}
       />
+      )}
+
+      {/* Setup is not finished, so the remaining steps stay in view beside the
+          figures rather than vanishing the moment a first bill is entered. */}
+      {state === BOOK_SETUP ? <SetupChecklist steps={steps} onGo={goTo} /> : null}
 
       {/*
         The three things worth a look every morning, and the reason each one is
@@ -980,6 +1115,10 @@ export default function DashboardOverview({
         All three are "as of today" and none of them moves with the period
         control below — which is exactly why they sit above it.
       */}
+      {/* A panel with nothing to report is a hole with a caption. The three
+          below all answer questions about receivables, so they wait until
+          there are some. */}
+      {state === BOOK_NEW || state === BOOK_SETUP ? null : (
       <section className="grid gap-3 lg:grid-cols-3 pt-2" aria-label="Today">
         {/* Proportion — where the receivable book is sitting. */}
         <div className="ui-card p-4 flex flex-col">
@@ -1107,6 +1246,7 @@ export default function DashboardOverview({
           )}
         </div>
       </section>
+      )}
 
       {/*
         The period-governed detail used to live here: the thirty-day cash

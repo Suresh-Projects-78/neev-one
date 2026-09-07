@@ -11683,7 +11683,7 @@ const AppShell = () => {
         items: [
           { type: 'subgroup', label: 'Organisation' },
           { key: 'settingsCompany', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsBranches', label: 'Branches & Locations', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches', state: branchCountLabel },
+          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches', state: branchCountLabel },
           { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'warehouses', state: warehouseCountLabel },
           { key: 'yearEndClose', label: 'Financial Year', icon: Settings, perm: 'ACCOUNTING::Ledger::VIEW' },
           { key: 'settingsCurrencies', label: 'Currency', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
@@ -12330,6 +12330,8 @@ const AppShell = () => {
             }}
             onOpenInvoices={() => setActive('invoices')}
             onOpenReceipts={() => setActive('receipts')}
+            onNavigate={setActive}
+            onOpenCashBank={() => setActive('cashBank')}
             onOpenCustomers={() => setActive('customers')}
             onOpenPurchases={() => setActive('purchaseOverview')}
             // The warehouse selector in the header governed nothing on this
