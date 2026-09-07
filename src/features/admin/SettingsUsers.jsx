@@ -398,25 +398,25 @@ export function SettingsUsers({ orgId }) {
 
           <div className="grid grid-cols-12 gap-4 text-sm">
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs ui-muted">Name</div>
-              <div className="font-medium">{selectedUser.fullName || selectedUser.name || '—'}</div>
+              <div className="ui-detail-label">Name</div>
+              <div className="ui-detail-value">{selectedUser.fullName || selectedUser.name || '—'}</div>
             </div>
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs ui-muted">Email</div>
-              <div className="font-medium">{selectedUser.email || '—'}</div>
+              <div className="ui-detail-label">Email</div>
+              <div className="ui-detail-value">{selectedUser.email || '—'}</div>
             </div>
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs ui-muted">Role</div>
-              <div className="font-medium">{getRoleName(selectedUser.roleId)}</div>
+              <div className="ui-detail-label">Role</div>
+              <div className="ui-detail-value">{getRoleName(selectedUser.roleId)}</div>
             </div>
 
             <div className="col-span-12 sm:col-span-4">
-              <div className="text-xs ui-muted">Status</div>
-              <div className="font-medium">{selectedUser.isActive !== false ? 'Active' : 'Inactive'}</div>
+              <div className="ui-detail-label">Status</div>
+              <div className="ui-detail-value">{selectedUser.isActive !== false ? 'Active' : 'Inactive'}</div>
             </div>
             <div className="col-span-12 sm:col-span-8">
-              <div className="text-xs ui-muted">User ID</div>
-              <div className="font-medium font-mono">{selectedUser.id || '—'}</div>
+              <div className="ui-detail-label">User ID</div>
+              <div className="ui-detail-value ui-detail-mono">{selectedUser.id || '—'}</div>
             </div>
           </div>
         </div>

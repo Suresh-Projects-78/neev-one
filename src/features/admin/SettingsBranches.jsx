@@ -403,47 +403,47 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
           ) : (
             <div className="grid grid-cols-12 gap-4 text-sm">
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Branch Code</div>
-                <div className="font-medium font-mono">{selectedBranch.branchCode || '—'}</div>
+                <div className="ui-detail-label">Branch Code</div>
+                <div className="ui-detail-value ui-detail-mono">{selectedBranch.branchCode || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-8">
-                <div className="text-xs ui-muted">Branch Name</div>
-                <div className="font-medium">{selectedBranch.branchName || '—'}</div>
+                <div className="ui-detail-label">Branch Name</div>
+                <div className="ui-detail-value">{selectedBranch.branchName || '—'}</div>
               </div>
 
               <div className="col-span-12 sm:col-span-6">
-                <div className="text-xs ui-muted">Address</div>
-                <div className="font-medium">{[selectedBranch.addressLine1, selectedBranch.addressLine2].filter(Boolean).join(', ') || '—'}</div>
+                <div className="ui-detail-label">Address</div>
+                <div className="ui-detail-value">{[selectedBranch.addressLine1, selectedBranch.addressLine2].filter(Boolean).join(', ') || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-6">
-                <div className="text-xs ui-muted">Location</div>
-                <div className="font-medium">{[selectedBranch.city, selectedBranch.state, selectedBranch.country].filter(Boolean).join(', ') || '—'}</div>
+                <div className="ui-detail-label">Location</div>
+                <div className="ui-detail-value">{[selectedBranch.city, selectedBranch.state, selectedBranch.country].filter(Boolean).join(', ') || '—'}</div>
               </div>
 
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">GST Registration</div>
-                <div className="font-medium">{selectedBranch.gstRegistrationType || 'UNREGISTERED'}</div>
+                <div className="ui-detail-label">GST Registration</div>
+                <div className="ui-detail-value">{selectedBranch.gstRegistrationType || 'UNREGISTERED'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">GSTIN</div>
-                <div className="font-medium font-mono">{selectedBranch.gstin || '—'}</div>
+                <div className="ui-detail-label">GSTIN</div>
+                <div className="ui-detail-value ui-detail-mono">{selectedBranch.gstin || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Status</div>
-                <div className="font-medium">{selectedBranch.isActive !== false ? 'Active' : 'Inactive'}</div>
+                <div className="ui-detail-label">Status</div>
+                <div className="ui-detail-value">{selectedBranch.isActive !== false ? 'Active' : 'Inactive'}</div>
               </div>
 
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Contact Person</div>
-                <div className="font-medium">{selectedBranch.contactPerson || '—'}</div>
+                <div className="ui-detail-label">Contact Person</div>
+                <div className="ui-detail-value">{selectedBranch.contactPerson || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Phone</div>
-                <div className="font-medium">{selectedBranch.phone || '—'}</div>
+                <div className="ui-detail-label">Phone</div>
+                <div className="ui-detail-value">{selectedBranch.phone || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Email</div>
-                <div className="font-medium">{selectedBranch.email || '—'}</div>
+                <div className="ui-detail-label">Email</div>
+                <div className="ui-detail-value">{selectedBranch.email || '—'}</div>
               </div>
             </div>
           )}

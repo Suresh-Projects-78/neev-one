@@ -832,9 +832,12 @@
   .ui-pill-status[data-tone='cancelled'] { --seg-strong: var(--st-cancelled-strong); --seg-ink: var(--st-cancelled-ink); }
   .ui-pill-status[data-tone='outstanding'] { --seg-strong: var(--st-outstanding-strong); --seg-ink: var(--st-outstanding-ink); }
   .ui-pill-status[data-tone='refund']      { --seg-strong: var(--st-refund-strong);      --seg-ink: var(--st-refund-ink); }
+  /* Same rule as the filter strip: the pill's hue is its background, its text
+     is neutral. A row of coloured words down a status column competed with the
+     figures beside it, which are the thing being read. */
   .ui-pill-status {
     background-color: rgb(var(--seg-strong, var(--surface-sunken)));
-    color: rgb(var(--seg-ink, var(--fg-muted)));
+    color: rgb(var(--fg-muted));
   }
 
   .ui-pill-neutral {
@@ -2063,11 +2066,11 @@
        matters most, and the only place it was not applied. */
     font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-variant-numeric: tabular-nums;
-    /* 500, per DESIGN.md. This is the rule that puts a weight on every figure
-       in every table, so it is the one that made the whole product look bold —
-       and the one an earlier pass claimed to fix and did not. Monospace and
-       right alignment already say "this is money" without shouting it. */
-    font-weight: 500;
+    /* 400. Monospace and right alignment already say "this is money"; a
+       weight on top of them made every figure in every table shout, and a
+       screen that is mostly figures then reads as entirely emphasis. The
+       earlier 500 came from DESIGN.md, which is amended to match. */
+    font-weight: 400;
     color: rgb(var(--fg));
     text-align: right;
     white-space: nowrap;
@@ -2106,12 +2109,37 @@
   .ui-cell-date[data-urgency='overdue'] svg { color: rgb(var(--neg)); }
 
   .ui-cell-money { font-variant-numeric: tabular-nums; }
-  .ui-cell-money[data-role='amount'] { color: rgb(var(--fg)); font-weight: 600; }
+  .ui-cell-money[data-role='amount'] { color: rgb(var(--fg)); font-weight: 400; }
   .ui-cell-money[data-role='paid'] { color: rgb(var(--pos)); }
   .ui-cell-money[data-role='outstanding'] { color: rgb(var(--warn)); }
-  .ui-cell-money[data-role='overdue'] { color: rgb(var(--neg)); font-weight: 500; }
+  .ui-cell-money[data-role='overdue'] { color: rgb(var(--neg)); font-weight: 400; }
   .ui-cell-money[data-role='credit'] { color: rgb(var(--credit)); }
   .ui-cell-money[data-role='settled'] { color: rgb(var(--fg-subtle)); font-weight: 400; }
+  /* --- detail panels -------------------------------------------------------
+     A view page states what a record *is*. Every field in it was drawn at
+     medium weight in full-strength ink, so a panel of twelve fields was twelve
+     emphases and the eye had nowhere to rest — the opposite of a list, where
+     weight marks the exception worth looking at.
+
+     Values are grey, normal weight, and centred in their cell. Centred rather
+     than right-aligned even for money: right alignment exists so digits line up
+     down a column and can be compared, and a detail panel has no column — each
+     value stands alone. DESIGN.md rule 4 is scoped to tables for that reason. */
+  .ui-detail-label {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: rgb(var(--fg-subtle));
+  }
+  .ui-detail-value {
+    font-weight: 400;
+    color: rgb(var(--fg-muted));
+    text-align: center;
+  }
+  .ui-detail-value.ui-detail-mono {
+    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
   .ui-cell-settled { font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgb(var(--fg-subtle)); }
 
   .ui-col-amount-zero.ui-col-amount-zero { color: rgb(var(--fg-subtle)); font-weight: 400; }
@@ -2239,9 +2267,14 @@
 
   /* The 2px ring is carried on every state, transparent until selected, so
      choosing a tab cannot nudge the strip by two pixels. */
+  /* Text is neutral; the hue lives in the tint behind it and in the ring when
+     selected. Every tab carrying its status colour in the *type* put seven
+     saturated words side by side, and a strip meant to be scanned read as
+     seven competing emphases. Grey text on a pale tint says the same thing
+     once. */
   .ui-segment {
     background-color: rgb(var(--seg-soft, var(--surface)));
-    color: rgb(var(--seg-ink, var(--fg-muted)));
+    color: rgb(var(--fg-muted));
     border: 2px solid transparent;
   }
   .ui-segment:hover {
@@ -2249,7 +2282,7 @@
   }
   .ui-segment[aria-selected='true'] {
     background-color: rgb(var(--seg-strong, var(--surface-sunken)));
-    color: rgb(var(--seg-ink, var(--fg)));
+    color: rgb(var(--fg));
     border-color: rgb(var(--seg-key, var(--brand)));
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.10);
   }

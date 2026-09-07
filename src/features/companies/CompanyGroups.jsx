@@ -369,8 +369,8 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
               ],
             ].map(([k, v]) => (
               <div key={k}>
-                <dt className="ui-caption">{k}</dt>
-                <dd className="ui-t-body mt-0.5">{v}</dd>
+                <dt className="ui-detail-label">{k}</dt>
+                <dd className="ui-detail-value mt-0.5">{v}</dd>
               </div>
             ))}
           </dl>

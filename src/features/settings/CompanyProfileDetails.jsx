@@ -13,8 +13,10 @@ const DETAIL_SPAN = {
 
 const CompanyDetailField = ({ label, value, mono = false, span = 4 }) => (
   <div className={DETAIL_SPAN[span] || DETAIL_SPAN[4]}>
-    <div className="text-xs ui-muted">{label}</div>
-    <div className={mono ? 'font-medium font-mono' : 'font-medium'}>{String(value || '').trim() || '\u2014'}</div>
+    <div className="ui-detail-label">{label}</div>
+    <div className={mono ? 'ui-detail-value ui-detail-mono' : 'ui-detail-value'}>
+      {String(value || '').trim() || '\u2014'}
+    </div>
   </div>
 );
 

@@ -476,8 +476,8 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
           ) : (
             <div className="grid grid-cols-12 gap-4 text-sm">
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Branch</div>
-                <div className="font-medium">
+                <div className="ui-detail-label">Branch</div>
+                <div className="ui-detail-value">
                   {(() => {
                     const b = branchLookup.get(String(selectedWarehouse.branchId || ''));
                     return (b && (b.branchName || b.name)) ? String(b.branchName || b.name) : '—';
@@ -485,38 +485,38 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                 </div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">GST Registration</div>
-                <div className="font-medium">{selectedWarehouse.gstRegistrationType || 'UNREGISTERED'}</div>
+                <div className="ui-detail-label">GST Registration</div>
+                <div className="ui-detail-value">{selectedWarehouse.gstRegistrationType || 'UNREGISTERED'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">GSTIN</div>
-                <div className="font-medium">{selectedWarehouse.gstin || '—'}</div>
+                <div className="ui-detail-label">GSTIN</div>
+                <div className="ui-detail-value">{selectedWarehouse.gstin || '—'}</div>
               </div>
 
               <div className="col-span-12 sm:col-span-6">
-                <div className="text-xs ui-muted">Address</div>
-                <div className="font-medium">
+                <div className="ui-detail-label">Address</div>
+                <div className="ui-detail-value">
                   {[selectedWarehouse.addressLine1, selectedWarehouse.addressLine2].filter(Boolean).join(', ') || '—'}
                 </div>
               </div>
               <div className="col-span-12 sm:col-span-6">
-                <div className="text-xs ui-muted">Location</div>
-                <div className="font-medium">
+                <div className="ui-detail-label">Location</div>
+                <div className="ui-detail-value">
                   {[selectedWarehouse.city, selectedWarehouse.state, selectedWarehouse.country].filter(Boolean).join(', ') || '—'}
                 </div>
               </div>
 
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Contact Person</div>
-                <div className="font-medium">{selectedWarehouse.contactPerson || '—'}</div>
+                <div className="ui-detail-label">Contact Person</div>
+                <div className="ui-detail-value">{selectedWarehouse.contactPerson || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Phone</div>
-                <div className="font-medium">{selectedWarehouse.phone || '—'}</div>
+                <div className="ui-detail-label">Phone</div>
+                <div className="ui-detail-value">{selectedWarehouse.phone || '—'}</div>
               </div>
               <div className="col-span-12 sm:col-span-4">
-                <div className="text-xs ui-muted">Email</div>
-                <div className="font-medium">{selectedWarehouse.email || '—'}</div>
+                <div className="ui-detail-label">Email</div>
+                <div className="ui-detail-value">{selectedWarehouse.email || '—'}</div>
               </div>
             </div>
           )}

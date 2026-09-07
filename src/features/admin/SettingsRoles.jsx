@@ -437,19 +437,19 @@ export function SettingsRoles({ orgId }) {
 
           <div className="grid grid-cols-12 gap-4 text-sm">
             <div className="col-span-12 sm:col-span-6">
-              <div className="text-xs ui-muted">Role Name</div>
-              <div className="font-medium">{selectedRole.name || '—'}</div>
+              <div className="ui-detail-label">Role Name</div>
+              <div className="ui-detail-value">{selectedRole.name || '—'}</div>
             </div>
             <div className="col-span-12 sm:col-span-6">
-              <div className="text-xs ui-muted">Assigned Users</div>
-              <div className="font-medium">{Number(selectedRole.assignedUsersCount || 0)}</div>
+              <div className="ui-detail-label">Assigned Users</div>
+              <div className="ui-detail-value">{Number(selectedRole.assignedUsersCount || 0)}</div>
             </div>
             <div className="col-span-12">
-              <div className="text-xs ui-muted">Description</div>
-              <div className="font-medium">{selectedRole.description || '—'}</div>
+              <div className="ui-detail-label">Description</div>
+              <div className="ui-detail-value">{selectedRole.description || '—'}</div>
             </div>
             <div className="col-span-12">
-              <div className="text-xs ui-muted">Permissions</div>
+              <div className="ui-detail-label">Permissions</div>
               {Array.isArray(selectedRole._permissionLabels) && selectedRole._permissionLabels.length ? (
                 <div className="border rounded-lg p-3 ui-surface max-h-56 overflow-auto">
                   <div className="text-xs ui-muted mb-2">{selectedRole._permissionLabels.length} allowed permissions</div>

@@ -30,7 +30,7 @@ Loaded from Google Fonts in `src/index.css` (2026-08-24). Inter remains the fall
 | Section title | Geist | 16 / 24 | 600 | |
 | Body, UI | Geist | 14 / 20 | 400–500 | |
 | Table cell | Geist | 13 / 18 | 400 | |
-| Money | Geist Mono | 13 / 18 | 500 | tabular-nums, right-aligned |
+| Money | Geist Mono | 13 / 18 | 400 | tabular-nums, right-aligned |
 | Label, caption | Geist | 12 / 16 | 500 | `.04em`, uppercase |
 
 Nothing below 12px. Nothing between 16 and 24.
@@ -78,6 +78,11 @@ Rules that hold across every module:
 3. Print / Download / Share, in that order, above a document — never inside it.
 4. Every amount is monospace and right-aligned.
 5. Status is a pill; severity is carried by color *and* text, never color alone.
+6. A status hue is a **background**, never type. Pills and filter tabs keep grey
+   text on a pale tint; the word carries the meaning and the tint places it.
+7. Detail panels state a value in grey at normal weight. A view page is read,
+   not scanned for exceptions, so nothing in it is emphasised over anything
+   else.
 
 ## Audit Baseline (2026-08-24)
 Measured across `src/`. Migration is done when these reach zero.
@@ -145,6 +150,8 @@ because focus, portals and event order cannot be read off the source.
 | Date | Decision | Rationale |
 |------|----------|-----------|
 | 2026-08-24 | Shell + primitives rebuild over a discipline-only pass | The flat type scale is why it reads as a dense tool rather than premium SaaS; discipline alone would not fix it |
+| 2026-09-08 | Money drops to weight 400 | Monospace and right alignment already mark a figure as money. A weight on top made every amount in every table an emphasis, and a screen that is mostly amounts then had none |
+| 2026-09-08 | Status hues move out of type and into the tint | Seven saturated words in the filter strip competed with each other and with the figures beside them. Reverses the 2026-09-01 contrast increase, which raised the wrong thing |
 | 2026-08-24 | Monospace money | Digit-aligned columns; a wrong figure looks wrong. Stripe and Mercury do it, Indian accounting does not |
 | 2026-08-24 | No card-in-card on lists | 2–3 more rows per screen, less framing noise. Departs from the Zoho/Tally convention deliberately |
 | 2026-08-24 | Fraunces stays in-product for page titles | Serif-only-for-brand was considered and rejected; the serif is the differentiator |
