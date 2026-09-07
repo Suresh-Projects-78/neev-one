@@ -536,10 +536,53 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
   const body = statusSchema.parse(req.body);
+  const nextStatus = String(body.status || existing.status).trim();
+  const wasCancelled = String(existing.status || '').toLowerCase() === 'cancelled';
+  const nowCancelled = nextStatus.toLowerCase() === 'cancelled';
+
+  /*
+   * Cancelling an invoice has to take its ledger entry with it.
+   *
+   * Deleting an invoice already reversed the posted entry; cancelling did not,
+   * so the safer of the two actions was the one that left the books wrong. A
+   * cancelled invoice kept its sales revenue and its output GST sitting in the
+   * trial balance, overstating both the P&L and the tax liability, with nothing
+   * on any screen to explain the difference.
+   *
+   * Reversed with a contra entry rather than by editing the original: a posted
+   * row is immutable, and the audit trail should hold both halves.
+   *
+   * Guarded on the transition, not on the destination. Setting the status to
+   * Cancelled twice must not post a second reversal.
+   */
+  let reversedEntries = 0;
+  if (nowCancelled && !wasCancelled) {
+    const posted = await prisma.journalEntry.findMany({
+      where: {
+        accountId,
+        orgId,
+        sourceDocType: 'INVOICE',
+        sourceDocId: existing.id,
+        status: 'POSTED',
+      },
+      select: { id: true },
+    });
+    for (const p of posted) {
+      await reverseEntry({
+        accountId,
+        orgId,
+        branchId: req.tenant!.branchId,
+        userId: req.auth!.userId,
+        entryId: p.id,
+        narration: `Invoice ${existing.number || ''} cancelled`.trim(),
+      });
+      reversedEntries += 1;
+    }
+  }
 
   await prisma.$executeRawUnsafe(
     `UPDATE Invoice SET status = ?, paidAmount = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
-    String(body.status || existing.status).trim(),
+    nextStatus,
     body.paidAmount ?? toNumber(existing.paidAmount),
     existing.id
   );
@@ -549,7 +592,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
 
   await auditInvoiceChange(req, 'STATUS', existing, row);
 
-  res.json({ invoice: normalizeInvoiceResponse(row) });
+  res.json({ invoice: normalizeInvoiceResponse(row), reversedEntries });
 });
 
 invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOICE_MODULE, PermissionAction.DELETE, INVOICE_SUBMODULE), async (req, res) => {
@@ -559,7 +602,7 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
   const existingRows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT id, number, total FROM Invoice WHERE id = ? AND accountId = ? AND orgId = ? AND branchId = ?`,
+    `SELECT id, number, total, status FROM Invoice WHERE id = ? AND accountId = ? AND orgId = ? AND branchId = ?`,
     invoiceId,
     accountId,
     orgId,
@@ -567,6 +610,34 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
   );
   const existing = existingRows[0];
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
+
+  /*
+   * An issued invoice is cancelled, never deleted.
+   *
+   * Rule 46(b) requires a consecutive serial number unique to the financial
+   * year, and an invoice already reported in GSTR-1 has to be amended or
+   * credit-noted — deleting it leaves a hole in the series that has to be
+   * explained at assessment. A cancelled invoice keeps its number and stays on
+   * the list, which is the whole point of it.
+   *
+   * A draft is different: it was never issued, holds no number the return has
+   * seen, and deleting one destroys nothing.
+   *
+   * This is a business rule rather than a permission, deliberately. Holding
+   * SALES::Invoices::DELETE should not make an issued document destroyable —
+   * it governs drafts, and the law governs the rest.
+   */
+  const status = String(existing.status || '').trim();
+  if (status.toLowerCase() !== 'draft') {
+    return res.status(409).json({
+      error:
+        status.toLowerCase() === 'cancelled'
+          ? 'A cancelled invoice is kept for the record and cannot be deleted.'
+          : `Invoice ${existing.number || ''} has been issued and cannot be deleted. Cancel it instead — the number stays with the record.`.trim(),
+      code: 'INVOICE_ISSUED',
+      status,
+    });
+  }
 
   // Reverse any posted entry with a contra entry. Posted rows stay immutable,
   // so the audit trail keeps both the original and its reversal.

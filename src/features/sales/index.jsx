@@ -10,7 +10,7 @@ import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
 import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
-import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi } from '../../api/invoices';
+import { createInvoiceApi, deleteInvoiceApi, updateInvoiceApi, updateInvoiceStatusApi } from '../../api/invoices';
 import { useFeatures } from '../../permissions/useFeatures';
 import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
@@ -711,9 +711,41 @@ const statusReason = (doc, status, company, nowMs) => {
     );
   };
 
+  /*
+   * Cancelling used to write to the local store and stop there.
+   *
+   * The route to do it properly already existed and was never called, so the
+   * cancellation lived in one browser: sign in on another machine, or clear
+   * site data, and the invoice was live again with nothing recording that
+   * anyone had cancelled it. The server also reverses the invoice's journal
+   * entry now, so the books stop carrying revenue and output GST for a document
+   * that no longer exists.
+   *
+   * The local store is written only after the server agrees — the same order
+   * delete already used. Cancelling optimistically would put the list and the
+   * ledger back out of step, which is the bug being fixed.
+   */
   const cancelInvoice = async (invoice) => {
-    const ok = await confirmDialog({ title: 'Please confirm', message: `Cancel invoice ${invoice?.number || ''}?`.trim(), confirmLabel: 'Yes, continue' });
+    const ok = await confirmDialog({
+      title: 'Please confirm',
+      message: `Cancel invoice ${invoice?.number || ''}? Its number stays with the record and its ledger entry is reversed.`.trim(),
+      confirmLabel: 'Yes, continue',
+    });
     if (!ok) return;
+
+    const hasApiSession = Boolean(
+      String(localStorage.getItem('token') || '').trim() && String(localStorage.getItem('activeOrgId') || '').trim()
+    );
+    const backendInvoiceId = String(invoice?.backendInvoiceId || '').trim();
+    if (hasApiSession && backendInvoiceId) {
+      try {
+        await updateInvoiceStatusApi(backendInvoiceId, { status: 'Cancelled' });
+      } catch (e) {
+        notify.error(String(e?.message || 'Unable to cancel the invoice.'));
+        return;
+      }
+    }
+
     setDb((prev) => ({
       ...prev,
       invoices: (prev.invoices || []).map((inv) =>
@@ -726,6 +758,7 @@ const statusReason = (doc, status, company, nowMs) => {
           : inv
       ),
     }));
+    notify.success(`Invoice ${invoice?.number || ''} cancelled.`.trim());
   };
 
   const deleteInvoiceCore = async (invoice) => {
@@ -768,9 +801,31 @@ const statusReason = (doc, status, company, nowMs) => {
   const bulkDelete = async () => {
     const rows = filteredInvoices.filter((i) => selectedIds.has(i.id));
     if (!rows.length) return;
-    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete ${rows.length} invoice${rows.length === 1 ? '' : 's'}? This cannot be undone.`, confirmLabel: 'Yes, continue' });
+
+    /*
+     * Only drafts can be deleted, so a selection is split before anything is
+     * confirmed. Deleting the drafts and letting the rest fail one by one would
+     * have told the user the count they asked for and then quietly done less;
+     * the number in the confirmation is the number that will actually go.
+     */
+    const drafts = rows.filter((i) => String(i?.status || '') === 'Draft');
+    const issued = rows.length - drafts.length;
+    if (!drafts.length) {
+      notify.error(
+        `Nothing to delete — ${issued === 1 ? 'that invoice has' : 'those invoices have'} been issued. Cancel ${issued === 1 ? 'it' : 'them'} instead.`
+      );
+      return;
+    }
+
+    const ok = await confirmDialog({
+      title: 'Please confirm',
+      message:
+        `Delete ${drafts.length} draft invoice${drafts.length === 1 ? '' : 's'}? This cannot be undone.` +
+        (issued ? ` ${issued} issued invoice${issued === 1 ? '' : 's'} in the selection will be left alone — issued invoices are cancelled, not deleted.` : ''),
+      confirmLabel: 'Yes, continue',
+    });
     if (!ok) return;
-    for (const inv of rows) {
+    for (const inv of drafts) {
       // Sequential on purpose: each delete hits the API and then rewrites
       // db state; racing them loses updates to the last writer.
       // eslint-disable-next-line no-await-in-loop
@@ -1646,29 +1701,40 @@ const statusReason = (doc, status, company, nowMs) => {
 
                 <div className="border-t ui-border-c" />
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpenMenu(null);
-                    cancelInvoice(inv);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
-                >
-                  <Ban size={16} className="text-[rgb(var(--neg))]" />
-                  <span>Cancel</span>
-                </button>
+                {String(inv?.status || '') === 'Cancelled' ? null : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenu(null);
+                      cancelInvoice(inv);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
+                  >
+                    <Ban size={16} className="text-[rgb(var(--neg))]" />
+                    <span>Cancel</span>
+                  </button>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpenMenu(null);
-                    deleteInvoice(inv);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
-                >
-                  <Trash2 size={16} className="text-[rgb(var(--neg))]" />
-                  <span>Delete</span>
-                </button>
+                {/*
+                  Delete is offered on a draft and nowhere else. An issued
+                  invoice holds a number a GST return has seen, so the server
+                  refuses to delete one; showing the option anyway would just
+                  walk the user into a confirmation and then an error. Cancel is
+                  the action for an issued document, and it is directly above.
+                */}
+                {String(inv?.status || '') === 'Draft' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenu(null);
+                      deleteInvoice(inv);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2 text-[rgb(var(--neg))]"
+                  >
+                    <Trash2 size={16} className="text-[rgb(var(--neg))]" />
+                    <span>Delete</span>
+                  </button>
+                ) : null}
               </>
             );
           })()}
