@@ -45,15 +45,34 @@ const WarehouseField = ({
   if (locked) {
     const picked = options.find((w) => String(w.id) === active);
     const name = picked?.name || `Warehouse ${active}`;
+    const pinned = `${branchLabel ? `${branchLabel} · ` : ''}${name}`;
     return (
       <div>
-        <label className="ui-label">{label.replace(' *', '')}</label>
-        <div className="ui-input w-full flex items-center gap-2 ui-sunken" aria-readonly="true">
-          <Lock size={14} className="ui-muted shrink-0" aria-hidden="true" />
-          <span className="truncate">
-            {branchLabel ? `${branchLabel} · ` : ''}
-            {name}
-          </span>
+        <label className="ui-label" htmlFor="warehouse-pinned">
+          {label.replace(' *', '')}
+        </label>
+        {/*
+          A read-only input, not a div wearing an input's clothes.
+          This was a plain <div aria-readonly>, so it was not in the tab order:
+          Tab out of Branch landed on Customer and the warehouse field was
+          stepped over entirely, which read as Tab skipping a field. A readonly
+          input is the honest control — it is reached in sequence, its value can
+          be selected and copied, and it still cannot be edited.
+        */}
+        <div className="relative">
+          <Lock
+            size={14}
+            className="ui-muted absolute start-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+            aria-hidden="true"
+          />
+          <input
+            id="warehouse-pinned"
+            type="text"
+            readOnly
+            value={pinned}
+            title={pinned}
+            className="ui-input w-full ui-sunken ps-8 truncate"
+          />
         </div>
         {/* Suppressed where the form asks for the branch itself: the sentence
             points at a header control that is no longer the one in charge. */}

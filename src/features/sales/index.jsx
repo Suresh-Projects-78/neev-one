@@ -4596,7 +4596,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 <select
                   value={formData.invoiceDiscountType}
                   onChange={(e) => setFormData((p) => ({ ...p, invoiceDiscountType: e.target.value }))}
-                  className="ui-select !h-9 w-20 px-2 text-sm"
+                  className="ui-select w-20"
                 >
                   <option value="pct">%</option>
                   <option value="amt">₹</option>
@@ -4607,7 +4607,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   step="0.01"
                   value={formData.invoiceDiscountValue}
                   onChange={(e) => setFormData((p) => ({ ...p, invoiceDiscountValue: e.target.value }))}
-                  className="ui-input !h-9 w-28 px-2 text-sm"
+                  className="ui-input w-28"
                   placeholder="0"
                 />
                 {computed.invoiceDiscount > 0 ? (
@@ -4802,7 +4802,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               <div className="flex items-center gap-2">
                 <select
                   id="invoice-tds-section"
-                  className="ui-select flex-1 min-w-0 px-2 py-1.5 text-sm"
+                  className="ui-select flex-1 min-w-0"
                   value={formData.tdsSection || ''}
                   onChange={(e) => {
                     const code = e.target.value;

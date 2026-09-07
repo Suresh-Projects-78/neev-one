@@ -517,6 +517,19 @@
     font-size: 0.875rem;
     transition: border-color var(--dur-surface) ease, box-shadow var(--dur-surface) ease;
   }
+  /* A native date input renders a pixel taller than a text input — its own
+     picker sits inside it — so a date beside a text field on the same row sat
+     one pixel proud of it. Pinned, because a row of fields that do not share
+     a baseline is the thing people mean by "not aligned". */
+  input[type='date'].ui-input,
+  input[type='datetime-local'].ui-input,
+  input[type='time'].ui-input {
+    height: 2.25rem;
+  }
+  .ui-grid-dense input[type='date'].ui-input {
+    height: 2.125rem;
+  }
+
   .ui-input::placeholder {
     color: rgb(var(--fg-subtle));
   }

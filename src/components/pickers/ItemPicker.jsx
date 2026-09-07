@@ -239,7 +239,7 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
         onKeyDown={openOnKey(openPopup)}
         aria-haspopup="listbox"
         aria-expanded={showItemPopup}
-        className="ui-input text-left !py-1 !min-h-0"
+        className="ui-input text-left"
       >
         {selectedItemName || 'Select Item'}
       </button>
