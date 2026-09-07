@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { getNextNumericId } from '../../utils/ids';
 import { round2, formatMoney } from '../../utils/money';
+import { cashPaymentWarning, cashReceiptWarning } from '../../utils/cashLimits';
 
 const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, onClose }) => {
   const formRef = useRef(null);
@@ -22,9 +23,29 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
     notes: '',
   });
 
+  /*
+   * Section 40A(3) on the paying side, 269ST on the receiving side. This form
+   * does both, so which one applies follows the voucher.
+   *
+   * 40A(3) warns rather than blocks: Rule 6DD carries exceptions — payments to
+   * a bank or to government, places with no banking facility — and only the
+   * person entering it knows whether one applies. 269ST has no such escape at
+   * the counter and the penalty is the whole amount, so that one stops the save.
+   */
+  const cashWarning = useMemo(() => {
+    if (String(formData.mode || '').toLowerCase() !== 'cash') return null;
+    const amount = Number(formData.amount ?? 0);
+    if (!(amount > 0)) return null;
+    return isInvoice ? cashReceiptWarning({ amount }) : cashPaymentWarning({ amount });
+  }, [formData.mode, formData.amount, isInvoice]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const amount = Number(formData.amount ?? 0);
+    if (cashWarning?.severity === 'block') {
+      notify.error(`${cashWarning.section}: ${cashWarning.message}`);
+      return;
+    }
     if (!Number.isFinite(amount) || amount <= 0) {
       notify.error('Amount must be greater than 0');
       return;
@@ -98,6 +119,21 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-4">
+      {cashWarning ? (
+        <div
+          role="alert"
+          className="rounded-xl border p-3 text-sm"
+          style={{
+            borderColor: cashWarning.severity === 'block' ? 'rgb(var(--neg))' : 'rgb(var(--warn))',
+            backgroundColor:
+              cashWarning.severity === 'block' ? 'rgb(var(--neg-soft))' : 'rgb(var(--warn-soft, var(--surface-sunken)))',
+            color: 'rgb(var(--fg))',
+          }}
+        >
+          <span className="ui-t-label block mb-0.5">Section {cashWarning.section}</span>
+          {cashWarning.message}
+        </div>
+      ) : null}
       <DocFormActions primaryLabel={title} secondaryLabel="Cancel" onSecondary={onClose} />
 
       <div>

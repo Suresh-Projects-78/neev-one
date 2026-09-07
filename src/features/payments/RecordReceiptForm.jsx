@@ -1,4 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
+
+import { cashReceiptWarning } from '../../utils/cashLimits';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
@@ -239,6 +241,39 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     });
   };
 
+  /*
+   * Section 269ST: two lakh or more in cash from one person in one day, or
+   * against one transaction, attracts a penalty under 271DA equal to the whole
+   * amount received. Nothing in the product checked it, and the person at the
+   * counter has no way to know they are at the line.
+   *
+   * Counted per party per day, because that is the unit the section uses — two
+   * receipts of one lakh from the same customer on the same day breach it just
+   * as one of two lakh does.
+   */
+  const cashTakenTodayFromParty = useMemo(() => {
+    if (String(formData.mode || '').toLowerCase() !== 'cash') return 0;
+    const day = String(formData.date || '').slice(0, 10);
+    const customerId = formData.customerId;
+    if (!day || customerId === '' || customerId == null) return 0;
+    return (db?.payments || [])
+      .filter(
+        (p) =>
+          p.companyId === currentCompany?.id &&
+          p.voucherType === 'receipt' &&
+          String(p.mode || '').toLowerCase() === 'cash' &&
+          String(p.date || '').slice(0, 10) === day &&
+          String(p.customerId) === String(customerId) &&
+          String(p.id) !== String(initialData?.id ?? '')
+      )
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  }, [db?.payments, currentCompany?.id, formData.mode, formData.date, formData.customerId, initialData?.id]);
+
+  const cashWarning =
+    String(formData.mode || '').toLowerCase() === 'cash'
+      ? cashReceiptWarning({ amount: Number(formData.amount ?? 0), alreadyToday: cashTakenTodayFromParty })
+      : null;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -255,6 +290,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       fieldErrors.require('ledgerAccountId', ledgerAccountId, 'Choose where the money was received');
     }
     if (fieldErrors.failed()) return;
+
+    // 269ST is not a warning the user can accept: the penalty is the full
+    // amount, and there is no exception available at the counter.
+    if (cashWarning?.severity === 'block') {
+      fieldErrors.check('amount', false, `${cashWarning.section}: ${cashWarning.message}`);
+      return;
+    }
 
     // Validate allocations are within invoice balances
     for (const line of computed.lines) {
@@ -443,6 +485,26 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         secondaryLabel="Cancel"
         onSecondary={onClose}
       />
+
+      {/*
+        Shown while the amount is being typed, not only when Record is pressed.
+        A 269ST breach is a decision about how to take the money, and the person
+        needs it before they have taken it.
+      */}
+      {cashWarning ? (
+        <div
+          role="alert"
+          className="rounded-xl border p-3 text-sm"
+          style={{
+            borderColor: 'rgb(var(--neg))',
+            backgroundColor: 'rgb(var(--neg-soft, var(--surface-sunken)))',
+            color: 'rgb(var(--fg))',
+          }}
+        >
+          <span className="ui-t-label block mb-0.5">Section {cashWarning.section}</span>
+          {cashWarning.message}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-4">
         <div>
