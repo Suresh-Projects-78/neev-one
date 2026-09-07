@@ -60,8 +60,12 @@
      meant to be clicked, so it wears the theme. The ink, not the accent
      itself: raw orange on white is 3.15:1 and fails as text, while the ink is
      the same hue at 8.83:1. */
-  --doc-link: 124 45 18;        /* brand ink — 8.83:1 on white */
-  --doc-link-wash: 255 247 237; /* brand soft, the hover ground */
+  /* Orange that still looks orange. The brand ink reads brown at 9.4:1 —
+     safely legible and no longer recognisably the theme — while the raw
+     accent is 3.15:1 and fails as text. Orange-700 is the step that is both:
+     unmistakably the brand hue, and 5.16:1 on white. */
+  --doc-link: 194 65 12;        /* orange-700 — 5.16:1 on white */
+  --doc-link-wash: 255 237 213; /* orange-100, a hover ground that shows */
   --credit: 109 40 217;         /* violet-700 — money going the other way */
 
 
@@ -305,8 +309,8 @@
   --brand-soft: 43 26 14;
   --on-brand: 26 12 3;
   --on-tone: 26 12 3;   /* the tones are light tints here; ink goes dark */
-  --doc-link: 254 215 170;      /* brand ink lifts on a dark ground */
-  --doc-link-wash: 43 26 14;
+  --doc-link: 251 146 60;       /* the dark-mode accent itself — 7.9:1 here */
+  --doc-link-wash: 67 40 21;
   --credit: 196 181 253;
 
 
@@ -2055,7 +2059,7 @@
     font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
     font-variant-numeric: tabular-nums;
     color: rgb(var(--doc-link));
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
     border-radius: var(--radius-sm);
     padding: 0.125rem 0.25rem;
