@@ -308,14 +308,46 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
                   ]),
             ]
           : [
+              /*
+               * The vendor is debited with what the bill was SETTLED by, not
+               * with the cash that left the bank.
+               *
+               * This branch used to debit `body.amount` and emit no deduction
+               * lines at all, while the allocation check above measured against
+               * `settledTotal`. So a 1,00,000 bill paid as 90,000 with 10,000
+               * TDS was knocked off in full in the payments module and reduced
+               * Accounts Payable by 90,000 in the ledger — the party ledger and
+               * its control account disagreed by the deduction on every such
+               * payment, permanently, and the tax owed to the government was
+               * recorded nowhere. The receipt branch above always did this
+               * correctly; this one did not.
+               */
               {
                 controlKind: 'AP',
-                debit: round2(toBase(body.amount, payRate) - fxDifference),
+                debit: round2(toBase(settledTotal, payRate) - fxDifference),
                 partyType: 'VENDOR',
                 partyId: body.partyId || null,
                 description: `To ${body.partyName || 'vendor'}`,
               },
               { ledgerAccountId: mode.id, credit: toBase(body.amount, payRate), description: 'Money paid' },
+              /*
+               * Each deduction is its own credit. TDS we withhold is a
+               * liability until the challan is paid; anything else the payment
+               * was settled by without cash moving is credited to the same
+               * place its receipt-side twin debits.
+               */
+              ...(body.deductions || []).map((d) => ({
+                controlKind:
+                  d.kind === 'TDS'
+                    ? ('TDS_PAYABLE' as const)
+                    : d.kind === 'BANK_CHARGES'
+                      ? ('BANK_CHARGES' as const)
+                      : ('EXPENSES' as const),
+                credit: toBase(d.amount, payRate),
+                description:
+                  d.note ||
+                  (d.kind === 'TDS' ? 'TDS deducted from vendor' : d.kind === 'BANK_CHARGES' ? 'Bank charges' : 'Other deduction'),
+              })),
               ...(fxDifference === 0
                 ? []
                 : [

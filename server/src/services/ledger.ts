@@ -35,6 +35,12 @@ export type ControlKind =
      and what the bank takes on the way through. Both settle the invoice even
      though neither reaches the bank account. */
   | 'TDS_RECEIVABLE'
+  /* The other side of the same idea, and the one that was missing: tax WE
+     withhold when paying a vendor. It is ours only until the challan is paid,
+     so it is a liability from the moment it is deducted, and it is what a 26Q
+     return is reconciled against. Without it the deduction had nowhere to land
+     and was silently dropped from the ledger. */
+  | 'TDS_PAYABLE'
   | 'BANK_CHARGES';
 
 export type PostingLine = {
@@ -101,6 +107,7 @@ export const DEFAULT_ACCOUNTS: Array<{
   { code: '1510', name: 'Input SGST', accountType: 'ASSET', controlKind: 'SGST_IN' },
   { code: '1520', name: 'Input IGST', accountType: 'ASSET', controlKind: 'IGST_IN' },
   { code: '2000', name: 'Accounts Payable', accountType: 'LIABILITY', controlKind: 'AP' },
+  { code: '2050', name: 'TDS Payable', accountType: 'LIABILITY', controlKind: 'TDS_PAYABLE' },
   { code: '2100', name: 'Output CGST', accountType: 'LIABILITY', controlKind: 'CGST_OUT' },
   { code: '2110', name: 'Output SGST', accountType: 'LIABILITY', controlKind: 'SGST_OUT' },
   { code: '2120', name: 'Output IGST', accountType: 'LIABILITY', controlKind: 'IGST_OUT' },
