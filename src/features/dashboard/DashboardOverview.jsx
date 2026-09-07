@@ -1001,6 +1001,45 @@ export default function DashboardOverview({
   }, [recv, gst, pay, draftCount, overdueCount, stock, currentCompany]);
 
   /** Five is enough to act on; a ranking longer than that is a report. */
+  /**
+   * Money in and money out, by month.
+   *
+   * The one thing on a peer's home screen this page had no answer to, and the
+   * thing that fills the room the setup list leaves when it is finished — a
+   * dashboard that loses a section on the day setup completes is a dashboard
+   * with a hole in it from then on. Cash available is a balance; this is the
+   * direction, which is the question an owner actually opens the app with.
+   *
+   * Built from posted documents only, on the same rule the rest of the page
+   * uses: a draft is an intention and does not belong in a trend.
+   */
+  const flow = useMemo(() => {
+    const months = [];
+    const base = new Date(now);
+    for (let i = 5; i >= 0; i -= 1) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      months.push({
+        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: d.toLocaleString(undefined, { month: 'short' }),
+        inAmt: 0,
+        outAmt: 0,
+      });
+    }
+    const index = new Map(months.map((m) => [m.key, m]));
+    const add = (dateIso, field, amount) => {
+      const key = String(dateIso || '').slice(0, 7);
+      const row = index.get(key);
+      if (row) row[field] += Number(amount || 0);
+    };
+    for (const inv of postedInvoices) add(inv.date, 'inAmt', inv.total);
+    for (const b of (Array.isArray(db?.bills) ? db.bills : []).filter((x) => x.companyId === currentCompany?.id)) {
+      if (String(b.status || '').toLowerCase() === 'draft') continue;
+      add(b.date, 'outAmt', b.total);
+    }
+    const peak = Math.max(1, ...months.map((m) => Math.max(m.inAmt, m.outAmt)));
+    return { months, peak, any: months.some((m) => m.inAmt || m.outAmt) };
+  }, [postedInvoices, db, currentCompany, now]);
+
   const topDebtors = useMemo(
     () => (Array.isArray(recv?.byCustomer) ? recv.byCustomer : []).filter((c) => c.amount > 0).slice(0, 5),
     [recv]
@@ -1139,6 +1178,68 @@ export default function DashboardOverview({
         All three are "as of today" and none of them moves with the period
         control below — which is exactly why they sit above it.
       */}
+      {/*
+        Money in against money out, in the room the setup list vacates.
+
+        A page that loses a section the day setup finishes has a hole in it
+        from then on, and this is the panel the category expects and this one
+        did not have. Full width above the three, because a trend is read
+        across and the other three are read down.
+      */}
+      {state === BOOK_NEW || state === BOOK_SETUP ? null : (
+      <section className="ui-card p-4" aria-label="Money in and out">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h2 className="ui-t-sec">Money in and out</h2>
+          <p className="ui-subtle ui-t-body">Last six months · posted documents only</p>
+        </div>
+
+        {flow.any ? (
+          <>
+            <div className="mt-3 flex items-end gap-3" style={{ height: 92 }}>
+              {flow.months.map((m) => (
+                <div key={m.key} className="flex-1 min-w-0 flex flex-col justify-end" style={{ height: '100%' }}>
+                  <div className="flex items-end justify-center gap-1" style={{ height: '100%' }}>
+                    <span
+                      className="w-1/3 rounded-t"
+                      style={{
+                        height: `${Math.max(m.inAmt ? 3 : 0, (m.inAmt / flow.peak) * 100)}%`,
+                        backgroundColor: 'rgb(var(--st-paid-key))',
+                      }}
+                      title={`In ${formatMoney(m.inAmt, currentCompany)}`}
+                    />
+                    <span
+                      className="w-1/3 rounded-t"
+                      style={{
+                        height: `${Math.max(m.outAmt ? 3 : 0, (m.outAmt / flow.peak) * 100)}%`,
+                        backgroundColor: 'rgb(var(--st-overdue-key))',
+                      }}
+                      title={`Out ${formatMoney(m.outAmt, currentCompany)}`}
+                    />
+                  </div>
+                  <span className="ui-caption block text-center mt-1.5 truncate">{m.label}</span>
+                </div>
+              ))}
+            </div>
+            {/* The hues carry the reading, so the words carry it too. */}
+            <div className="mt-2 flex items-center gap-4 flex-wrap">
+              <span className="ui-t-body inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: 'rgb(var(--st-paid-key))' }} aria-hidden="true" />
+                In
+                <b className="ui-mono">{formatMoney(flow.months.reduce((a, m) => a + m.inAmt, 0), currentCompany)}</b>
+              </span>
+              <span className="ui-t-body inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: 'rgb(var(--st-overdue-key))' }} aria-hidden="true" />
+                Out
+                <b className="ui-mono">{formatMoney(flow.months.reduce((a, m) => a + m.outAmt, 0), currentCompany)}</b>
+              </span>
+            </div>
+          </>
+        ) : (
+          <p className="ui-subtle ui-t-body mt-3">Nothing posted in the last six months.</p>
+        )}
+      </section>
+      )}
+
       {/* A panel with nothing to report is a hole with a caption. The three
           below all answer questions about receivables, so they wait until
           there are some. */}

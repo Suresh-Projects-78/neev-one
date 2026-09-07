@@ -2138,6 +2138,21 @@
     border-inline-end: 1px solid rgb(var(--border));
   }
 
+  /* The two pickers in the top bar say where you are working — the branch and
+     the warehouse every document will be filed against. They were plain
+     inputs, indistinguishable from a search box, sitting beside an Add
+     warehouse button wearing the brand. Same treatment for all three: they are
+     one group and they choose the same thing. */
+  .ui-scope-select {
+    color: rgb(var(--brand-ink));
+    border-color: rgb(var(--brand) / 0.28);
+    font-weight: 500;
+  }
+  .ui-scope-select:hover:not(:disabled) {
+    background-color: rgb(var(--accent-soft));
+    border-color: rgb(var(--brand) / 0.45);
+  }
+
   .ui-app-shell {
     height: 100vh;      /* every engine */
     height: 100dvh;     /* the ones that have it, which is what we want */

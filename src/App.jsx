@@ -13575,7 +13575,7 @@ const AppShell = () => {
               <select
                 value={activeBranchId || ''}
                 onChange={(e) => setActiveBranch(e.target.value)}
-                className="ui-select hidden md:block !h-9 !min-h-0 max-w-[11rem] text-sm"
+                className="ui-select ui-scope-select hidden md:block !h-9 !min-h-0 max-w-[11rem] text-sm"
                 aria-label="Active branch"
               >
                 {branchesForUser.map((b) => (
@@ -13590,7 +13590,7 @@ const AppShell = () => {
               <select
                 value={activeWarehouseId || ''}
                 onChange={(e) => setActiveWarehouse(e.target.value)}
-                className="ui-select hidden md:block !h-9 !min-h-0 max-w-[11rem] text-sm"
+                className="ui-select ui-scope-select hidden md:block !h-9 !min-h-0 max-w-[11rem] text-sm"
                 aria-label="Active warehouse"
               >
                 <option value="">All warehouses</option>
