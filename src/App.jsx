@@ -8626,7 +8626,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
   );
 };
 
-export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showSidebar = true }) => {
+export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showSidebar = true, onOpenCompanyList = null }) => {
   const [activeTab, setActiveTab] = useState(() => (String(initialTab || 'company') === 'tax' ? 'tax' : 'company'));
   /*
    * Company Profile sat permanently open as a form, while its two neighbours
@@ -8637,6 +8637,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
    * leaning on the keyboard.
    */
   const [editingCompany, setEditingCompany] = useState(false);
+  const companyCount = (db?.companies || []).length;
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -10230,7 +10231,11 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
   };
 
   return (
-    <div className="ui-surface border rounded-xl overflow-hidden">
+    /*
+     * The wrapper is chrome for the sidebar. Without one it is a card holding
+     * cards, which is the framing noise DESIGN.md rules out.
+     */
+    <div className={showSidebar ? 'ui-surface border rounded-xl overflow-hidden' : ''}>
       <div className="flex">
         {showSidebar ? (
           <div className="w-64 border-r ui-surface p-4">
@@ -10257,9 +10262,21 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
           {activeTab === 'company' ? (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <div className="ui-t-sec">Company</div>
-                  <div className="text-sm ui-muted">Basic, contact and registered address</div>
+                <div className="min-w-0">
+                  <div className="ui-t-sec truncate">{currentCompany?.name || 'Company'}</div>
+                  {/*
+                    * This screen only ever shows the active company — there is
+                    * one `currentCompany` and saving writes to it. With a
+                    * single company the heading is enough; with several, a page
+                    * headed "Company" gave no way to tell whose record was on
+                    * screen, so it names the company and says where the others
+                    * are.
+                    */}
+                  <div className="text-sm ui-muted">
+                    {companyCount > 1
+                      ? `Active company · ${companyCount} in this book`
+                      : 'Basic, contact and registered address'}
+                  </div>
                 </div>
                 {editingCompany ? (
                   <div className="flex items-center gap-2">
@@ -10280,9 +10297,16 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                     </button>
                   </div>
                 ) : (
-                  <button type="button" onClick={() => setEditingCompany(true)} className="ui-btn ui-btn-secondary">
-                    <Pencil size={14} aria-hidden="true" /> Edit
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {companyCount > 1 && onOpenCompanyList ? (
+                      <button type="button" onClick={onOpenCompanyList} className="ui-btn ui-btn-ghost">
+                        Switch company
+                      </button>
+                    ) : null}
+                    <button type="button" onClick={() => setEditingCompany(true)} className="ui-btn ui-btn-secondary">
+                      <Pencil size={14} aria-hidden="true" /> Edit
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -13140,7 +13164,7 @@ const AppShell = () => {
       case 'companyProfile':
         return <CompanyProfile db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'settingsCompany':
-        return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="company" showSidebar={false} />;
+        return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="company" showSidebar={false} onOpenCompanyList={() => setActive('companies')} />;
       case 'settingsTax':
         return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="tax" showSidebar={false} />;
       case 'settingsBranches': {

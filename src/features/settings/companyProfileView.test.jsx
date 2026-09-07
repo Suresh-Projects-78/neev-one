@@ -78,3 +78,57 @@ describe('Company Profile', () => {
     expect(screen.getByText('Sunrise Traders Pvt Ltd')).toBeInTheDocument();
   });
 });
+
+/**
+ * With more than one company in the book, this screen still shows exactly one:
+ * the active company. That is fine — but a page headed "Company" gave no way to
+ * tell whose record was on screen, and no way to reach the other one.
+ */
+describe('Company Profile with several companies', () => {
+  const second = { id: 'c2', name: 'Moonrise Exports', profile: {} };
+
+  it('names the company it is showing', () => {
+    render(
+      <SettingsView
+        db={{ companies: [company, second] }}
+        setDb={() => {}}
+        currentCompany={company}
+        initialTab="company"
+        showSidebar={false}
+      />
+    );
+    expect(screen.getByText('Sunrise Traders')).toBeInTheDocument();
+    expect(screen.getByText(/Active company · 2 in this book/)).toBeInTheDocument();
+  });
+
+  it('offers a way to the other company, and does not when there is only one', async () => {
+    const user = userEvent.setup();
+    const opened = [];
+    const { unmount } = render(
+      <SettingsView
+        db={{ companies: [company, second] }}
+        setDb={() => {}}
+        currentCompany={company}
+        initialTab="company"
+        showSidebar={false}
+        onOpenCompanyList={() => opened.push('companies')}
+      />
+    );
+    await user.click(screen.getByRole('button', { name: /switch company/i }));
+    expect(opened).toEqual(['companies']);
+    unmount();
+
+    // One company: nothing to switch to, so no control offering it.
+    render(
+      <SettingsView
+        db={{ companies: [company] }}
+        setDb={() => {}}
+        currentCompany={company}
+        initialTab="company"
+        showSidebar={false}
+        onOpenCompanyList={() => opened.push('companies')}
+      />
+    );
+    expect(screen.queryByRole('button', { name: /switch company/i })).toBeNull();
+  });
+});

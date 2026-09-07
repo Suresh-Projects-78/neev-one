@@ -1,3 +1,5 @@
+import { GST_STATE_BY_CODE } from '../../utils/gst';
+
 /*
  * The spans are written out rather than interpolated: Tailwind scans the source
  * for whole class names, so `sm:col-span-${n}` is a class that never gets
@@ -26,7 +28,13 @@ const CompanyDetailField = ({ label, value, mono = false, span = 4 }) => (
  * missing value into an invisible one.
  */
 export const CompanyProfileDetails = ({ form, company }) => {
-  const address = [form.regAddress1, form.regAddress2, form.regCity, form.regStateCode, form.regPincode, form.regCountry]
+  /*
+   * `regStateCode` stores the GST state code — "29", not "Karnataka". The form
+   * hides that behind a <select> showing names, so a read view printing the
+   * stored value put a bare number where the user had chosen a state.
+   */
+  const stateName = GST_STATE_BY_CODE?.[String(form.regStateCode || '').trim()] || '';
+  const address = [form.regAddress1, form.regAddress2, form.regCity, stateName, form.regPincode, form.regCountry]
     .map((x) => String(x || '').trim())
     .filter(Boolean)
     .join(', ');
@@ -63,7 +71,7 @@ export const CompanyProfileDetails = ({ form, company }) => {
         <div className="text-sm font-semibold ui-fg">Registered address</div>
         <div className="grid grid-cols-12 gap-4 text-sm">
           <CompanyDetailField label="Address" value={address} span={12} />
-          <CompanyDetailField label="State / UT" value={form.regStateCode} />
+          <CompanyDetailField label="State / UT" value={stateName} />
           <CompanyDetailField label="Pincode" value={form.regPincode} mono />
           <CompanyDetailField label="Country" value={form.regCountry} />
         </div>

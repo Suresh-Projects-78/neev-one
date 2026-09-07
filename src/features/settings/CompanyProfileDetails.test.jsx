@@ -28,7 +28,7 @@ const form = {
   regAddress1: '12 MG Road',
   regAddress2: '',
   regCity: 'Bengaluru',
-  regStateCode: 'Karnataka',
+  regStateCode: '29', // the GST code is what is stored
   regPincode: '560001',
   regCountry: 'India',
 };
@@ -41,6 +41,18 @@ describe('the company shown as a record', () => {
     expect(screen.getByText('Retail, Services')).toBeInTheDocument();
     expect(screen.getByText('29AABCU9603R1ZJ')).toBeInTheDocument();
     expect(screen.getByText('12 MG Road, Bengaluru, Karnataka, 560001, India')).toBeInTheDocument();
+  });
+
+  /*
+   * The stored value is the GST state code. The form hides that behind a
+   * <select> of names, so printing the stored value put a bare "29" where the
+   * user had picked Karnataka.
+   */
+  it('names the state rather than printing its GST code', () => {
+    render(<CompanyProfileDetails form={form} company={{}} />);
+    const state = screen.getByText('State / UT').parentElement;
+    expect(state.textContent).toContain('Karnataka');
+    expect(state.textContent).not.toContain('29');
   });
 
   /*
