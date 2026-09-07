@@ -472,7 +472,7 @@ const AuthGate = ({ onAuth }) => {
                       <CheckIcon className="w-3.5 h-3.5" />
                     </span>
                     <span>
-                      <span className="block font-semibold text-[0.9375rem]">{title}</span>
+                      <span className="block font-medium text-[0.9375rem]">{title}</span>
                       <span className="block text-white/55 text-sm mt-0.5">{body}</span>
                     </span>
                   </li>

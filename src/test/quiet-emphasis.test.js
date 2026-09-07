@@ -159,3 +159,30 @@ describe('every amount wears the money face', () => {
     for (const w of weights) expect(w).toBeLessThanOrEqual(500);
   });
 });
+
+/**
+ * Weight is not how a value is presented.
+ *
+ * 121 elements across 45 files put `font-semibold` or `font-bold` on a data
+ * expression — a party name, a document number, a narration, a count. Weight is
+ * for structure (a page title, a section heading, a column header), and using it
+ * for content as well meant a screen had no hierarchy left to spend: everything
+ * was emphasised, so nothing was.
+ *
+ * The bar is 500. A name that leads a row may still be a little heavier than the
+ * fields under it; nothing rendered from data goes above that.
+ */
+describe('weight marks structure, not content', () => {
+  it('no data expression is rendered bold or semibold', () => {
+    const offenders = [];
+    for (const file of jsxFiles(SRC)) {
+      const source = readFileSync(file, 'utf8');
+      const el = /<\w+[^>]*className="([^"]*\bfont-(?:semibold|bold)\b[^"]*)"[^>]*>\s*\{[^<}]{0,70}/g;
+      let m;
+      while ((m = el.exec(source)) !== null) {
+        offenders.push(`${relative(SRC, file)}:${source.slice(0, m.index).split('\n').length}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

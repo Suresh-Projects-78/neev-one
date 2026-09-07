@@ -218,11 +218,11 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
         <div className="grid grid-cols-2 gap-4 text-sm min-w-0">
           <div>
             <div className="ui-muted">Item</div>
-            <div className="font-semibold">{ledger.item.name}</div>
+            <div className="font-medium">{ledger.item.name}</div>
           </div>
           <div>
             <div className="ui-muted">Opening Qty</div>
-            <div className="font-semibold">
+            <div className="font-medium">
               {ledger.openingQty} {unit}
             </div>
           </div>
@@ -274,7 +274,7 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
                   <td className="ui-col-meta px-4 py-3">{r.voucherNumber || '-'}</td>
                   <td className="ui-col-meta px-4 py-3 text-right">{r.qtyIn ? r.qtyIn : '-'}</td>
                   <td className="ui-col-meta px-4 py-3 text-right">{r.qtyOut ? r.qtyOut : '-'}</td>
-                  <td className="ui-col-meta px-4 py-3 text-right font-semibold">{r.balanceQty}</td>
+                  <td className="ui-col-meta px-4 py-3 text-right font-medium">{r.balanceQty}</td>
                 </tr>
               ))
             )}
@@ -573,7 +573,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
             </span>
           </span>
           <span className="ui-muted">
-            Items <span className="ui-num font-semibold ui-fg">{items.length}</span>
+            Items <span className="ui-num font-medium ui-fg">{items.length}</span>
           </span>
           <span className="ui-muted">
             Out of stock{' '}
@@ -768,7 +768,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
                   title="Click to view ledger"
                 >
                   <td className="ui-col-entity px-4 py-2.5">
-                    <div className="font-medium">{it.name}</div>
+                    <div>{it.name}</div>
                     <div className="text-xs ui-muted">{it.code || ''}</div>
                   </td>
                   <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(opening)}</td>
@@ -776,7 +776,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
                   <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(sales)}</td>
                   <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(dn)}</td>
                   <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(cn)}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-right font-semibold">{fmt(closing)}</td>
+                  <td className="ui-col-meta px-4 py-2.5 text-right font-medium">{fmt(closing)}</td>
                 </tr>
               );
             })}

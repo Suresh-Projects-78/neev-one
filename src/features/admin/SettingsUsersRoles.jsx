@@ -45,7 +45,7 @@ export function SettingsUsersRoles({ orgId }) {
           <div className="divide-y">
             {roles.map((r) => (
               <div key={r.id} className="py-3">
-                <div className="font-semibold">{r.name}</div>
+                <div className="font-medium">{r.name}</div>
                 <div className="text-xs ui-muted">{r.description || 'No description'}</div>
               </div>
             ))}

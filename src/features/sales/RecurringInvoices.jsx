@@ -836,7 +836,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                       <td className="ui-col-meta px-4 py-2.5 ui-mono ui-subtle">
                         {(safePage - 1) * perPage + i + 1}
                       </td>
-                      <td className="ui-col-entity px-4 py-2.5 font-medium">
+                      <td className="ui-col-entity px-4 py-2.5">
                         {t.name || t.sourceNumber || '—'}
                         {/* Where the schedule has reached, kept under the name
                             rather than in a column of its own: it is context

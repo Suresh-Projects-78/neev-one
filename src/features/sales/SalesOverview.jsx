@@ -157,7 +157,7 @@ const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodW
         >
           <Icon size={17} />
         </span>
-        <span className="text-sm font-medium" style={{ color: 'rgb(var(--fg-muted))' }}>
+        <span className="text-sm" style={{ color: 'rgb(var(--fg-muted))' }}>
           {label}
         </span>
       </div>
@@ -175,7 +175,7 @@ const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodW
         ) : (
           <>
             <span
-              className="inline-flex items-center gap-0.5 font-semibold"
+              className="inline-flex items-center gap-0.5 font-medium"
               style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
             >
               {up ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
@@ -274,7 +274,7 @@ const StatusPill = ({ status }) => {
   const it = map[key] || { bg: 'var(--ov-amber-soft)', fg: 'var(--ov-amber)', label: 'Pending' };
   return (
     <span
-      className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold"
+      className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
       style={{ backgroundColor: `rgb(${it.bg})`, color: `rgb(${it.fg})` }}
     >
       {it.label}
@@ -286,7 +286,7 @@ const PanelLink = ({ children, onClick }) => (
   <button
     type="button"
     onClick={onClick}
-    className="inline-flex items-center gap-1 text-sm font-medium"
+    className="inline-flex items-center gap-1 text-sm"
     style={{ color: 'rgb(var(--link))' }}
   >
     {children} <ArrowRight size={14} aria-hidden="true" />
@@ -739,7 +739,7 @@ const SalesOverview = ({
                     className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken"
                     style={p.key === periodKey ? { backgroundColor: 'rgb(var(--accent-soft))' } : undefined}
                   >
-                    <span className="font-medium">{p.label}</span>
+                    <span>{p.label}</span>
                     <span className="block ui-subtle text-xs">
                       {prettyDate(p.from)} – {prettyDate(p.to)}
                     </span>
@@ -937,7 +937,7 @@ const SalesOverview = ({
                       <span className="truncate">{r.name}</span>
                     </span>
                     <span className="flex flex-shrink-0 items-baseline gap-3">
-                      <span className="ui-mono font-medium">{money(r.value)}</span>
+                      <span className="ui-mono">{money(r.value)}</span>
                       <span className="ui-subtle text-xs w-8 text-right">
                         {breakdownTotal > 0 ? Math.round((r.value / breakdownTotal) * 100) : 0}%
                       </span>
@@ -1139,7 +1139,7 @@ const SalesOverview = ({
                           }
                         />
                         <div>
-                          <div className="font-medium ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
+                          <div className="ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
                           <div className="text-xs ui-muted">{id}</div>
                         </div>
                       </label>

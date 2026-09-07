@@ -1231,7 +1231,7 @@ const statusReason = (doc, status, company, nowMs) => {
                         const returnMark = returnStatusLabel(inv, db.creditNotes || [], 'originalInvoiceId');
                         return returnMark ? (
                           <span
-                            className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
+                            className="ml-1 px-2 py-1 rounded-full text-xs bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
                             title={`${returnMark} against this invoice`}
                           >
                             {returnMark}
@@ -2618,7 +2618,7 @@ const InvoiceNumberingPopover = ({ anchorRef, db, setDb, currentCompany, branchI
 
         <div className="rounded-lg px-3 py-2" style={{ background: 'rgb(var(--surface-sunken))' }}>
           <div className="ui-caption">Next invoice will be</div>
-          <div className="ui-mono text-sm font-semibold">{sample}</div>
+          <div className="ui-mono text-sm font-medium">{sample}</div>
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-1">
@@ -5018,7 +5018,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                         style={on ? { backgroundColor: 'rgb(var(--accent-soft))' } : undefined}
                       >
                         <span className="min-w-0">
-                          <span className="ui-mono text-sm font-medium block truncate">{b.batchNo}</span>
+                          <span className="ui-mono text-sm block truncate">{b.batchNo}</span>
                           <span className="ui-caption">
                             {b.expiryDate ? `Expires ${b.expiryDate}` : 'No expiry recorded'}
                           </span>

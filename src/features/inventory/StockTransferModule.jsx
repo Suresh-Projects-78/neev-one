@@ -715,8 +715,8 @@ export const StockTransferEditor = ({
             ))}
           </select>
           <div className="mt-1 text-xs ui-muted">
-            Branch: <span className="font-medium">{getBranchLabel(selectedTargetBranch) || '-'}</span> · State:{' '}
-            <span className="font-medium">{targetState || '-'}</span>
+            Branch: <span>{getBranchLabel(selectedTargetBranch) || '-'}</span> · State:{' '}
+            <span>{targetState || '-'}</span>
           </div>
         </div>
 
@@ -1064,12 +1064,12 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
           <div className="ui-muted">From</div>
-          <div className="font-semibold">{getBranchLabel(sb) || transfer?.sourceBranchName || '-'}</div>
+          <div className="font-medium">{getBranchLabel(sb) || transfer?.sourceBranchName || '-'}</div>
           <div className="ui-fg">{getWarehouseLabel(sw) || transfer?.sourceWarehouseName || '-'}</div>
         </div>
         <div>
           <div className="ui-muted">To</div>
-          <div className="font-semibold">{getBranchLabel(tb) || transfer?.targetBranchName || '-'}</div>
+          <div className="font-medium">{getBranchLabel(tb) || transfer?.targetBranchName || '-'}</div>
           <div className="ui-fg">{getWarehouseLabel(tw) || transfer?.targetWarehouseName || '-'}</div>
         </div>
       </div>
@@ -1122,14 +1122,14 @@ const StockTransferDetails = ({ transfer, branches, warehouses, db, currentCompa
                 return (
                   <tr key={idx} className={off ? 'bg-[rgb(var(--warn-soft))]' : 'ui-hover-sunken'}>
                     <td className="ui-col-entity px-4 py-3">
-                      <div className="font-medium">{l.name}</div>
+                      <div>{l.name}</div>
                       <div className="text-xs ui-muted">
                         {raw?.batchNo
                           ? `Batch ${raw.batchNo}${raw?.expiryDate ? ` · exp ${raw.expiryDate}` : ''}`
                           : l.itemId}
                       </div>
                     </td>
-                    <td className="ui-col-meta px-4 py-3 text-right font-semibold">
+                    <td className="ui-col-meta px-4 py-3 text-right font-medium">
                       {l.qty}{l.unit ? ` ${l.unit}` : ''}
                     </td>
                     <td className="ui-col-meta px-4 py-3 text-right">{settled ? received : '—'}</td>
@@ -1752,7 +1752,7 @@ export const StockTransfersList = ({
           <div className="rounded-xl border p-4 bg-[rgb(var(--warn-soft))]">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <div className="font-semibold text-[rgb(var(--warn-ink))]">
+                <div className="font-medium text-[rgb(var(--warn-ink))]">
                   {pendingIn.length} transfer(s) pending your approval
                 </div>
                 <div className="text-xs text-[rgb(var(--warn-ink))]">
@@ -1765,7 +1765,7 @@ export const StockTransfersList = ({
               {pendingIn.map((t) => (
                 <div key={normalizeId(t?.id)} className="flex items-center justify-between gap-3 flex-wrap ui-surface rounded-lg border px-3 py-2">
                   <div className="text-sm">
-                    <span className="font-medium">{t?.number || 'Transfer'}</span>
+                    <span>{t?.number || 'Transfer'}</span>
                     <span className="ui-muted"> · {t?.date || ''} · from {t?.sourceWarehouseName || t?.sourceBranchName || '-'}</span>
                   </div>
                   <button type="button" onClick={() => openReceive(t)} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
@@ -1867,7 +1867,7 @@ export const StockTransfersList = ({
                         openDocument(t);
                       }}
                     >
-                      <td className="ui-col-meta px-4 py-2.5 font-medium">{t?.number || '-'}</td>
+                      <td className="ui-col-meta px-4 py-2.5">{t?.number || '-'}</td>
                       <td className="ui-col-meta px-4 py-2.5">{fromLabel || '-'}</td>
                       <td className="ui-col-meta px-4 py-2.5">{toLabel || '-'}</td>
                       <td className="ui-col-date px-4 py-2.5"><DocDate value={t?.date} /></td>

@@ -273,7 +273,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
         <div className="ui-card space-y-4 p-5">
           <h3 className="ui-t-sec">Day close — {today}</h3>
           <div className="grid gap-3 sm:grid-cols-4 text-sm">
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Invoices</div><div className="ui-mono text-xl font-semibold">{todaysSales.length}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Invoices</div><div className="ui-mono text-xl font-medium">{todaysSales.length}</div></div>
             <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Cash</div><div className="ui-money text-xl">{formatMoney(byTender.Cash, currentCompany)}</div></div>
             <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">UPI</div><div className="ui-money text-xl">{formatMoney(byTender.UPI, currentCompany)}</div></div>
             <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Card</div><div className="ui-money text-xl">{formatMoney(byTender.Card, currentCompany)}</div></div>
@@ -334,7 +334,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                 onClick={() => addToCart(i)}
                 className="ui-card ui-lift p-3 text-left"
               >
-                <div className="truncate text-sm font-medium">{i.name}</div>
+                <div className="truncate text-sm">{i.name}</div>
                 <div className="ui-money ui-caption">{formatMoney(Number(i.salePrice || 0), currentCompany)} · GST {Number(i.gstRate || 0)}%</div>
               </button>
             ))}

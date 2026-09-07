@@ -235,7 +235,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
             <tbody>
               {faSearchRows.map(({ asset, openingWdv, rateApplied, halfRate, dep, closingWdv }) => (
                 <tr key={asset.id} className="border-t">
-                  <td className="ui-col-entity px-4 py-2.5 font-medium">{asset.name}</td>
+                  <td className="ui-col-entity px-4 py-2.5">{asset.name}</td>
                   <td className="ui-col-meta px-4 py-2.5">{asset.block}</td>
                   <td className="ui-col-date px-4 py-2.5"><DocDate value={asset.purchaseDate} /></td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{money(asset.cost)}</td>

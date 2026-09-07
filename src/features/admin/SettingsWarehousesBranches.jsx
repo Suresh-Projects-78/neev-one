@@ -83,7 +83,7 @@ export function SettingsWarehousesBranches({ orgId }) {
               {branches.map((b) => (
                 <div key={b.id} className="py-3 flex items-center justify-between">
                   <div>
-                    <div className="font-semibold">{b.branchName}</div>
+                    <div className="font-medium">{b.branchName}</div>
                     <div className="text-xs ui-muted">Code: {b.branchCode}</div>
                     {b.gstin ? <div className="text-xs ui-muted">GSTIN: {b.gstin}</div> : null}
                   </div>
@@ -103,7 +103,7 @@ export function SettingsWarehousesBranches({ orgId }) {
               {warehouses.map((w) => (
                 <div key={w.id} className="py-3 flex items-center justify-between">
                   <div>
-                    <div className="font-semibold">{w.name}</div>
+                    <div className="font-medium">{w.name}</div>
                     <div className="text-xs ui-muted">Branch: {branchLookup[w.branchId]?.branchName || branchLookup[w.branchId]?.name || '—'}</div>
                     {w.gstin ? <div className="text-xs ui-muted">GSTIN: {w.gstin}</div> : null}
                   </div>

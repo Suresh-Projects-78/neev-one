@@ -411,7 +411,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
             <tbody>
               {shownRules.map((r) => (
                 <tr key={r.id} className="border-t">
-                  <td className="ui-col-entity px-4 py-2.5 font-medium">{r.name}</td>
+                  <td className="ui-col-entity px-4 py-2.5">{r.name}</td>
                   <td className="ui-col-meta px-4 py-2.5">{scopeLabel(r)}</td>
                   <td className="px-4 py-2.5">{valueLabel(r)}</td>
                   <td className="ui-col-date px-4 py-2.5">

@@ -178,7 +178,7 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
             <tbody>
               {ttSearchRows.map((r, i) => (
                 <tr key={i} className={`border-t ${r.tax > 0 ? '' : 'opacity-60'}`}>
-                  <td className="ui-col-entity px-4 py-2.5 font-medium">
+                  <td className="ui-col-entity px-4 py-2.5">
                     {r.party}
                     {r.exempt ? <span className="ui-caption ml-1">(buyer deducts 194Q — exempt)</span> : null}
                   </td>

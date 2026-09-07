@@ -550,7 +550,7 @@ export function SettingsUsers({ orgId }) {
                             }}
                             onClick={(e) => e.stopPropagation()}
                           />
-                          <div className="font-medium ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
+                          <div className="ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
                         </label>
                       );
                     })
@@ -624,7 +624,7 @@ export function SettingsUsers({ orgId }) {
                           }}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <div className="font-medium ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
+                        <div className="ui-fg">{getBranchLabel(b) || `Branch ${id}`}</div>
                       </label>
                     );
                   })

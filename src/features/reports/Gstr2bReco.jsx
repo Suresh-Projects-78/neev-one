@@ -97,7 +97,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
         <div className="text-sm">
           {meta ? (
             <>
-              <span className="font-semibold">{meta.fileName}</span>
+              <span className="font-medium">{meta.fileName}</span>
               <span className="ui-muted"> · GSTIN {meta.gstin || '—'} · period {meta.period || '—'}</span>
             </>
           ) : (

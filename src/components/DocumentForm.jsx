@@ -193,7 +193,7 @@ export const Field = ({ label, htmlFor, required = false, hint = '', children, c
 export const AmountInWordsBand = ({ words }) => (
   <div className="rounded-xl px-4 py-3" style={{ background: 'rgb(var(--accent-soft))' }}>
     <div className="ui-caption">Amount in words</div>
-    <div className="text-sm font-medium">{words}</div>
+    <div className="text-sm">{words}</div>
   </div>
 );
 

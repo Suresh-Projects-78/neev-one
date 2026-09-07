@@ -239,7 +239,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
                 >
                   <Icon size={17} aria-hidden="true" />
                 </span>
-                <h3 className="mt-4 font-semibold">{title}</h3>
+                <h3 className="mt-4 font-medium">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed ui-muted">{body}</p>
               </article>
             ))}
@@ -265,7 +265,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
                 >
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <h3 className="mt-3 font-semibold">{title}</h3>
+                <h3 className="mt-3 font-medium">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed ui-muted max-w-[40ch]">{body}</p>
               </li>
             ))}

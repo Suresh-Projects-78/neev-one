@@ -191,10 +191,10 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
             <tbody>
               {raSearchRows.map((r) => (
                 <tr key={r.item.id} className="border-t">
-                  <td className="ui-col-entity px-4 py-2.5 font-medium">{r.item.name}</td>
+                  <td className="ui-col-entity px-4 py-2.5">{r.item.name}</td>
                   <td className={`px-4 py-2.5 text-right font-semibold ${r.closing <= 0 ? 'ui-amount-neg' : ''}`}>{r.closing}</td>
                   <td className="px-4 py-2.5 text-right">{r.level}</td>
-                  <td className="px-4 py-2.5 text-right font-semibold">{r.suggestedQty}</td>
+                  <td className="px-4 py-2.5 text-right font-medium">{r.suggestedQty}</td>
                   <td className="ui-col-entity px-4 py-2.5">{r.last?.vendorName || '—'}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">
                     {r.last ? <MoneyValue value={r.last.rate} company={currentCompany} /> : '—'}

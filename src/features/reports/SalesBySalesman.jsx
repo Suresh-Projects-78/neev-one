@@ -116,7 +116,7 @@ export default function SalesBySalesman({ db, currentCompany }) {
             <tbody className="divide-y">
               {rows.map((r, i) => (
                 <tr key={r.salesman ? r.salesman.id : `un-${i}`} className="ui-hover-sunken">
-                  <td className="ui-col-entity px-4 py-2.5 font-medium">{r.salesman ? r.salesman.name : 'Unassigned'}</td>
+                  <td className="ui-col-entity px-4 py-2.5">{r.salesman ? r.salesman.name : 'Unassigned'}</td>
                   <td className="px-4 py-2.5 text-right">{r.invoices}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(r.invoiceSales, currentCompany)}</td>
                   <td className="px-4 py-2.5 text-right">{r.orders}</td>
@@ -130,8 +130,8 @@ export default function SalesBySalesman({ db, currentCompany }) {
             <tfoot className="ui-sunken border-t">
               <tr>
                 <td className="px-4 py-2.5 font-semibold">Total</td>
-                <td className="px-4 py-2.5 text-right font-semibold">{totals.invoices}</td>
-                <td className="ui-col-amount px-4 py-2.5 text-right font-bold">{formatMoney(totals.invoiceSales, currentCompany)}</td>
+                <td className="px-4 py-2.5 text-right font-medium">{totals.invoices}</td>
+                <td className="ui-col-amount px-4 py-2.5 text-right font-medium">{formatMoney(totals.invoiceSales, currentCompany)}</td>
                 <td colSpan={4}></td>
                 <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(totals.commission, currentCompany)}</td>
               </tr>

@@ -327,7 +327,7 @@ export const RolePermissionManager = () => {
                         return (
                           <tr key={r.key}>
                             <td className="ui-col-meta">
-                              <div className="font-medium">{r.label}</div>
+                              <div>{r.label}</div>
                               {r.description ? <div className="ui-subtle text-xs">{r.description}</div> : null}
                             </td>
                             {ACTION_ORDER.map((a) => {

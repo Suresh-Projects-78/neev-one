@@ -240,7 +240,7 @@ export default function ImportCenter({ onBack = null }) {
 
       {batch ? (
         <div className="ui-card p-4 space-y-3">
-          <h3 className="font-semibold">
+          <h3 className="font-medium">
             {batch.totalRows} row{batch.totalRows === 1 ? '' : 's'} read — {batch.validRows} ready,{' '}
             {batch.errorRows} with problems
           </h3>

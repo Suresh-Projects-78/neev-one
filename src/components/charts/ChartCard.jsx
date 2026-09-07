@@ -26,7 +26,7 @@ export default function ChartCard({
     <section className="ui-card flex flex-col overflow-hidden">
       <header className="flex items-start justify-between gap-3 px-5 pt-5">
         <div className="min-w-0">
-          <h3 className="ui-card-label text-[0.9375rem] font-medium" style={{ color: 'rgb(var(--fg))' }}>
+          <h3 className="ui-card-label text-[0.9375rem]" style={{ color: 'rgb(var(--fg))' }}>
             {title}
           </h3>
           {subtitle ? <p className="ui-caption mt-0.5 truncate">{subtitle}</p> : null}

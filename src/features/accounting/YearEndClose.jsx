@@ -246,7 +246,7 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
           <label className="ui-label">Close the FY containing</label>
           <input type="date" value={fyDate} onChange={(e) => setFyDate(e.target.value)} className="ui-input" />
         </div>
-        <div className="pb-2 text-sm font-semibold">{fy.label} · {fy.from} → {fy.to}</div>
+        <div className="pb-2 text-sm font-medium">{fy.label} · {fy.from} → {fy.to}</div>
         {lock ? (
           <div className="pb-2 text-sm">
             <span className="ui-badge-warn rounded-full px-2 py-1 text-xs">Books locked up to {lock.upTo}</span>

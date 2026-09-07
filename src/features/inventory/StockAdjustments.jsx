@@ -374,11 +374,11 @@ const StockAdjustments = ({
       {adjustments.length > 0 ? (
         <div className="ui-in-fade flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
           <span className="ui-muted">
-            Written up <span className="ui-num font-semibold ui-amount-pos">{formatMoney(totals.up, currentCompany)}</span>
+            Written up <span className="ui-num font-medium ui-amount-pos">{formatMoney(totals.up, currentCompany)}</span>
           </span>
           <span className="ui-muted">
             Written off{' '}
-            <span className="ui-num font-semibold ui-amount-neg">{formatMoney(Math.abs(totals.down), currentCompany)}</span>
+            <span className="ui-num font-medium ui-amount-neg">{formatMoney(Math.abs(totals.down), currentCompany)}</span>
           </span>
           <span className="ui-muted">
             Net effect on stock <span className="ui-money ui-num ui-fg">{formatMoney(totals.net, currentCompany)}</span>

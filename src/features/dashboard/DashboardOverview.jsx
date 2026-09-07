@@ -538,7 +538,7 @@ function SetupChecklist({ steps, onGo }) {
                 }
               >
                 <span
-                  className="h-6 w-6 rounded-full grid place-items-center text-xs font-semibold shrink-0"
+                  className="h-6 w-6 rounded-full grid place-items-center text-xs font-medium shrink-0"
                   style={
                     step.done
                       ? { backgroundColor: 'rgb(var(--st-paid-strong))', color: 'rgb(var(--st-paid-ink))' }
@@ -551,7 +551,7 @@ function SetupChecklist({ steps, onGo }) {
                   {step.done ? <Check size={13} /> : ''}
                 </span>
                 <span className="min-w-0">
-                  <span className="block font-medium truncate">
+                  <span className="block truncate">
                     {step.title}
                     {step.optional ? <span className="ui-caption"> — optional</span> : null}
                   </span>

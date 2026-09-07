@@ -742,7 +742,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                           }}
                           className={`w-full px-4 py-3 text-left ui-hover-sunken ${isSelected ? 'ui-sunken' : ''}`}
                         >
-                          <div className="font-medium ui-fg">{o.label}</div>
+                          <div className="ui-fg">{o.label}</div>
                         </button>
                       );
                     })
@@ -1115,7 +1115,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         <form onSubmit={save} className="space-y-4">
           <div className="text-sm ui-muted">
             Add a bank/cash transaction for{' '}
-            <span className="font-semibold">{selectedCashBankAccount?.name || effectiveAccount?.name}</span>.
+            <span className="font-medium">{selectedCashBankAccount?.name || effectiveAccount?.name}</span>.
           </div>
 
           {!isCategoriseExisting ? (
@@ -1164,7 +1164,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           ) : (
             <div className="text-sm ui-muted">
               <span className="font-medium">Cash / Bank Account:</span>{' '}
-              <span className="font-semibold">{selectedCashBankAccount?.name || effectiveAccount?.name || '-'}</span>
+              <span className="font-medium">{selectedCashBankAccount?.name || effectiveAccount?.name || '-'}</span>
             </div>
           )}
 
@@ -1249,7 +1249,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 </div>
                 <div>
                   <div className="ui-muted">Selected</div>
-                  <div className="font-semibold">
+                  <div className="font-medium">
                     {Object.values(knockoffAllocations).filter((v) => Boolean(v?.selected)).length}
                   </div>
                 </div>
@@ -1332,7 +1332,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 </div>
                 <div>
                   <div className="ui-muted">Selected</div>
-                  <div className="font-semibold">
+                  <div className="font-medium">
                     {Object.values(knockoffAllocations).filter((v) => Boolean(v?.selected)).length}
                   </div>
                 </div>

@@ -102,7 +102,7 @@ const RecordPaymentForm = ({ db, setDb, currentCompany, voucherType, voucher, on
 
       <div>
         <div className="text-sm ui-muted">Document</div>
-        <div className="font-semibold">{voucher?.number || '-'}</div>
+        <div className="font-medium">{voucher?.number || '-'}</div>
       </div>
 
       <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">

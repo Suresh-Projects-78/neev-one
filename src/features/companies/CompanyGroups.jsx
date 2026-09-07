@@ -247,7 +247,7 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">{c.name}</span>
+              <span className="font-medium">{c.name}</span>
               {isActive ? <StatusPill status="Active" /> : null}
               {isGroupHead ? (
                 <span className="ui-caption">

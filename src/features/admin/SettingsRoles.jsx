@@ -490,7 +490,7 @@ export function SettingsRoles({ orgId }) {
                 return (
                   <div key={group.label} className="border-b last:border-b-0">
                     <div className="grid grid-cols-12">
-                      <div className="col-span-6 px-3 py-2 font-semibold">{group.label}</div>
+                      <div className="col-span-6 px-3 py-2 font-medium">{group.label}</div>
                       <div className="col-span-2 px-3 py-2 flex justify-center">
                         <input
                           type="checkbox"

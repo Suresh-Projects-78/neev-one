@@ -159,7 +159,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
             <tbody>
               {shownPerf.map(({ salesman: s, invoices, sales, commission }) => (
                 <tr key={s.id} className="border-t">
-                  <td className="ui-col-entity px-4 py-2.5 font-medium">{s.name}</td>
+                  <td className="ui-col-entity px-4 py-2.5">{s.name}</td>
                   <td className="ui-col-meta px-4 py-2.5">{s.phone || '—'}</td>
                   <td className="px-4 py-2.5">{Number(s.commissionPct || 0)}%</td>
                   <td className="px-4 py-2.5 text-right">{invoices}</td>

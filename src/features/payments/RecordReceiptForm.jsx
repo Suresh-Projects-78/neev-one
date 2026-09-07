@@ -684,7 +684,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                           onChange={(e) => toggleInvoice(inv, e.target.checked)}
                         />
                       </td>
-                      <td className="ui-col-meta px-4 py-3 font-medium">{inv.number || '-'}</td>
+                      <td className="ui-col-meta px-4 py-3">{inv.number || '-'}</td>
                       <td className="ui-col-date px-4 py-3">{inv.date || '-'}</td>
                       <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(bal, currentCompany)}</td>
                       <td className="px-4 py-3 text-right">

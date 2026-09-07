@@ -84,7 +84,7 @@ const KnockOffForm = ({
     <div className="space-y-4">
       <div className="ui-sunken rounded-xl p-3 text-sm flex flex-wrap gap-x-6 gap-y-1">
         <span>
-          <span className="ui-muted">Note</span> <span className="font-medium">{note?.number}</span>
+          <span className="ui-muted">Note</span> <span>{note?.number}</span>
         </span>
         <span>
           <span className="ui-muted">Value</span>{' '}
@@ -116,7 +116,7 @@ const KnockOffForm = ({
             <tbody className="divide-y">
               {openRows.map((row) => (
                 <tr key={row.doc.id} className="ui-hover-sunken">
-                  <td className="px-3 py-2 font-medium">{row.doc.number}</td>
+                  <td className="px-3 py-2">{row.doc.number}</td>
                   <td className="px-3 py-2 ui-muted">{row.doc.date}</td>
                   <td className="ui-money px-3 py-2 text-right">{formatMoney(row.outstanding, currentCompany)}</td>
                   <td className="px-3 py-2">

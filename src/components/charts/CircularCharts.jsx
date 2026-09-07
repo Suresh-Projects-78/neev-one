@@ -70,7 +70,7 @@ export function DonutChart({ data = [], centerLabel, centerValue, height = 230, 
       {/* Centre text sits outside the canvas so it inherits the app's font and
           stays selectable and readable to a screen reader. */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="ui-subtle text-[0.6875rem] font-semibold uppercase tracking-wider">{centerLabel}</span>
+        <span className="ui-subtle text-[0.6875rem] font-medium uppercase tracking-wider">{centerLabel}</span>
         <span className="ui-money-lg mt-0.5">
           {centerValue ?? (formatter ? formatter(total) : total)}
         </span>
@@ -226,7 +226,7 @@ export function ChartLegend({ rows = [], total, formatter }) {
             </span>
             <span className="flex flex-shrink-0 items-baseline gap-2">
               <span className="ui-subtle text-xs tabular-nums">{share}%</span>
-              <span className="tabular-nums font-medium">
+              <span className="tabular-nums">
                 {formatter ? formatter(r.value) : r.value}
               </span>
             </span>

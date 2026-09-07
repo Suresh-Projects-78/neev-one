@@ -232,7 +232,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
       role="dialog"
       aria-label={`Filter ${column.label || key}`}
     >
-      <div className="font-semibold ui-fg">{column.label || key}</div>
+      <div className="font-medium ui-fg">{column.label || key}</div>
 
       <div>
         <div className="ui-caption mb-1">Sort</div>

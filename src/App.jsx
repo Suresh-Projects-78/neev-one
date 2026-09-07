@@ -4086,7 +4086,7 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                   <td className="px-4 py-2.5 ui-col-entity">{jv.number}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{jv.date}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
-                    <div className="font-medium">{jv.narration || '-'}</div>
+                    <div>{jv.narration || '-'}</div>
                     <div className="text-xs ui-muted">{(jv.lines || []).length} lines</div>
                   </td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
@@ -4734,7 +4734,7 @@ const LedgerView = ({
       const showItemsInline = !selectedColumnKeys.includes('itemsSummary');
       return (
         <div>
-          <div className="text-sm font-medium ui-fg">{r?.particulars || '-'}</div>
+          <div className="text-sm ui-fg">{r?.particulars || '-'}</div>
           {showNarrationInline && r?.narration ? <div className="text-xs ui-muted">{r.narration}</div> : null}
           {showItemsInline && r?.itemsSummary ? <div className="text-xs ui-muted">{r.itemsSummary}</div> : null}
         </div>
@@ -5576,7 +5576,7 @@ const LedgerView = ({
                             if (c.key === 'particulars') {
                               return (
                                 <td key={c.key} className={`px-4 py-2 ${c.align === 'right' ? 'text-right' : 'text-left'} text-sm ui-muted pl-6`}>
-                                  <div className="font-medium">{a.particulars}</div>
+                                  <div>{a.particulars}</div>
                                 </td>
                               );
                             }
@@ -5614,7 +5614,7 @@ const LedgerView = ({
                 );
               });
             })()}
-            <tr className="ui-sunken font-bold border-t-2">
+            <tr className="ui-sunken font-medium border-t-2">
               {visibleColumns.map((c, idx) => {
                 if (c.key === 'debit') {
                   return (
@@ -6032,15 +6032,15 @@ const SalesReports = ({ db, currentCompany }) => {
           <div className="space-y-2">
             <div className="flex justify-between">
               <span>Draft</span>
-              <span className="font-semibold">{invoices.filter((i) => i.status === 'Draft').length}</span>
+              <span className="font-medium">{invoices.filter((i) => i.status === 'Draft').length}</span>
             </div>
             <div className="flex justify-between">
               <span>Paid</span>
-              <span className="font-semibold">{invoices.filter((i) => i.status === 'Paid').length}</span>
+              <span className="font-medium">{invoices.filter((i) => i.status === 'Paid').length}</span>
             </div>
             <div className="flex justify-between">
               <span>Unpaid</span>
-              <span className="font-semibold">{invoices.filter((i) => i.status === 'Unpaid').length}</span>
+              <span className="font-medium">{invoices.filter((i) => i.status === 'Unpaid').length}</span>
             </div>
           </div>
         </div>
@@ -6110,7 +6110,7 @@ const ReportsOverview = ({ sections, onNavigate }) => {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-2">
-                      <span className="font-semibold">{r.label}</span>
+                      <span className="font-medium">{r.label}</span>
                       <ArrowRight
                         size={15}
                         className="ui-subtle flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -6140,7 +6140,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="text-xs ui-muted">Document Template Preview</div>
         </div>
         <div className="text-right">
-          <div className="text-sm font-semibold">{voucherLabel}</div>
+          <div className="text-sm font-medium">{voucherLabel}</div>
           <div className="text-xs ui-muted">No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
           <div className="text-xs ui-muted">Date: {new Date().toISOString().slice(0, 10)}</div>
         </div>
@@ -6243,11 +6243,11 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className={`h-2 ${accentBarClass}`} />
           <div className="p-3 flex items-start justify-between">
             <div>
-              <div className="text-sm font-bold ui-fg">{companyName}</div>
+              <div className="text-sm font-medium ui-fg">{companyName}</div>
               <div className="text-xs ui-muted">{title}</div>
             </div>
             <div className="text-right text-xs ui-muted">
-              <div className="font-semibold ui-fg">{voucherLabel}</div>
+              <div className="font-medium ui-fg">{voucherLabel}</div>
               <div>No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
               <div>Date: {new Date().toISOString().slice(0, 10)}</div>
             </div>
@@ -6269,7 +6269,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
               <div className="text-xs opacity-90">{title}</div>
             </div>
             <div className="text-right text-xs opacity-95">
-              <div className="text-sm font-semibold">{voucherLabel}</div>
+              <div className="text-sm font-medium">{voucherLabel}</div>
               <div>No: {voucherLabel.toUpperCase().slice(0, 3)}-0001</div>
               <div>Date: {new Date().toISOString().slice(0, 10)}</div>
             </div>
@@ -6288,7 +6288,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="p-3 border-b border-gray-900">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-base font-bold">{companyName}</div>
+                <div className="text-base font-medium">{companyName}</div>
                 <div className="text-[10px] ui-fg">(Sample address line 1, city, state - pincode)</div>
                 <div className="text-[10px] ui-fg">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
@@ -6394,7 +6394,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="p-2 border-b border-gray-900">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-sm font-bold">{companyName}</div>
+                <div className="text-sm font-medium">{companyName}</div>
                 <div className="text-[10px] ui-fg">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
               <div className="text-right">
@@ -6478,7 +6478,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
           <div className="p-3 border-b border-gray-900">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-base font-bold">{companyName}</div>
+                <div className="text-base font-medium">{companyName}</div>
                 <div className="text-[10px] ui-fg">GSTIN: 27ABCDE1234F1Z5</div>
               </div>
               <div className="text-right">
@@ -6568,7 +6568,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
         <div className="border-2 border-gray-900">
           <div className="p-3 border-b-2 border-gray-900">
             <div className="flex items-center justify-between">
-              <div className="text-base font-bold">{companyName}</div>
+              <div className="text-base font-medium">{companyName}</div>
               <div className="text-center">
                 <div className="text-lg font-extrabold">TAX INVOICE</div>
                 <div className="text-[10px] font-semibold">A5 Boxed</div>
@@ -7264,7 +7264,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
                             className="ui-input w-full px-2 !h-8"
                           />
                         ) : (
-                          <span className="font-medium">{c.name}</span>
+                          <span>{c.name}</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5 ui-col-meta">
@@ -7707,7 +7707,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
             return (
               <div key={v.key} className="border rounded-lg px-3 py-2 lg:flex lg:items-end lg:gap-3">
                 <div className="lg:w-44 flex items-baseline justify-between lg:block shrink-0 pb-1 lg:pb-0">
-                  <div className="font-semibold text-sm">{v.label}</div>
+                  <div className="font-medium text-sm">{v.label}</div>
                   <div className="ui-caption truncate" title={formatVoucherNumberPreview(cfg)}>{formatVoucherNumberPreview(cfg)}</div>
                 </div>
 
@@ -7854,7 +7854,7 @@ const DocTemplateSettings = ({ db, setDb, currentCompany }) => {
             return (
               <div key={v.key} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between">
-                  <div className="font-semibold">{v.label}</div>
+                  <div className="font-medium">{v.label}</div>
                   <div className="flex items-center gap-2">
                     <div className="text-sm ui-muted">{templateName}</div>
                     <button
@@ -9511,7 +9511,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                               className={`cursor-pointer ${active ? 'ui-row-active' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedUserId(String(u.userId))}
                             >
-                              <td className="ui-col-entity px-4 py-3 font-medium ui-fg">{u.name || '-'}</td>
+                              <td className="ui-col-entity px-4 py-3 ui-fg">{u.name || '-'}</td>
                               <td className="ui-col-entity px-4 py-3 ui-fg">{u.email || '-'}</td>
                               <td className="ui-col-meta px-4 py-3 ui-fg">{u.roleLabel || u.roleKey || '-'}</td>
                             </tr>
@@ -9703,7 +9703,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                                   className="ui-checkbox mt-0.5"
                                 />
                                 <div>
-                                  <div className="font-medium">{p.label || key}</div>
+                                  <div>{p.label || key}</div>
                                   <div className="text-xs ui-muted">{key}</div>
                                 </div>
                               </label>
@@ -9749,7 +9749,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                               className={`cursor-pointer ${active ? 'ui-row-active' : 'ui-hover-sunken'}`}
                               onClick={() => setSelectedRoleId(String(r.id))}
                             >
-                              <td className="ui-col-meta px-4 py-3 font-medium ui-fg">{r.label}</td>
+                              <td className="ui-col-meta px-4 py-3 ui-fg">{r.label}</td>
                               <td className="ui-col-meta px-4 py-3 ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                             </tr>
                           );
@@ -9802,7 +9802,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                                     className="ui-checkbox mt-0.5"
                                   />
                                   <div>
-                                    <div className="font-medium">{p.label || key}</div>
+                                    <div>{p.label || key}</div>
                                     <div className="text-xs ui-muted">{key}</div>
                                   </div>
                                 </label>
@@ -9884,7 +9884,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                                 setNewRole((prev) => ({ ...prev, permissions: Array.from(next) }));
                               }} className="ui-checkbox mt-0.5" />
                               <div>
-                                <div className="font-medium">{p.label || key}</div>
+                                <div>{p.label || key}</div>
                                 <div className="text-xs ui-muted">{key}</div>
                               </div>
                             </label>
@@ -9920,7 +9920,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                         const active = String(r.id) === String(selectedRoleId);
                         return (
                           <tr key={String(r.id)} className={`cursor-pointer ${active ? 'ui-row-active' : 'ui-hover-sunken'}`} onClick={() => setSelectedRoleId(String(r.id))}>
-                            <td className="ui-col-meta px-4 py-3 font-medium ui-fg">{r.label}</td>
+                            <td className="ui-col-meta px-4 py-3 ui-fg">{r.label}</td>
                             <td className="ui-col-meta px-4 py-3 ui-muted">{r.description || '-'}</td>
                             <td className="ui-col-meta px-4 py-3 ui-fg">{r.isSystem ? 'System' : 'Custom'}</td>
                           </tr>
@@ -9960,7 +9960,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                             setRoleEdit((prev) => ({ ...prev, permissions: Array.from(next) }));
                           }} className="ui-checkbox mt-0.5" />
                           <div>
-                            <div className="font-medium">{p.label || key}</div>
+                            <div>{p.label || key}</div>
                             <div className="text-xs ui-muted">{key}</div>
                           </div>
                         </label>
@@ -10028,7 +10028,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                         const active = String(b.id) === String(selectedBranchId);
                         return (
                           <tr key={String(b.id)} className={`cursor-pointer ${active ? 'ui-row-active' : 'ui-hover-sunken'}`} onClick={() => setSelectedBranchId(String(b.id))}>
-                            <td className="ui-col-entity px-4 py-3 font-medium ui-fg">{b.name}</td>
+                            <td className="ui-col-entity px-4 py-3 ui-fg">{b.name}</td>
                             <td className="ui-col-meta px-4 py-3 ui-fg">{b.code || '-'}</td>
                             <td className="ui-col-meta px-4 py-3 ui-muted">{b.address || '-'}</td>
                             <td className="ui-col-meta px-4 py-3">{b.isActive !== false ? <span className="text-[rgb(var(--pos))]">Active</span> : <span className="text-[rgb(var(--neg))]">Inactive</span>}</td>
@@ -10169,7 +10169,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                         const active = String(w.id) === String(selectedWarehouseId);
                         return (
                           <tr key={String(w.id)} className={`cursor-pointer ${active ? 'ui-row-active' : 'ui-hover-sunken'}`} onClick={() => setSelectedWarehouseId(String(w.id))}>
-                            <td className="ui-col-entity px-4 py-3 font-medium ui-fg">{w.name}</td>
+                            <td className="ui-col-entity px-4 py-3 ui-fg">{w.name}</td>
                             <td className="ui-col-meta px-4 py-3 ui-fg">{w.code || '-'}</td>
                             <td className="ui-col-meta px-4 py-3 ui-muted">{w.location || '-'}</td>
                             <td className="ui-col-meta px-4 py-3 ui-muted">{w.branchName || '-'}</td>
@@ -10250,7 +10250,7 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                     className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${ isActive ? 'ui-row-active ui-border-c ui-fg' : 'ui-surface border-transparent ui-fg ui-hover-sunken'
                     }`}
                   >
-                    <div className="text-sm font-semibold">{s.title}</div>
+                    <div className="text-sm font-medium">{s.title}</div>
                   </button>
                 );
               })}
@@ -13760,7 +13760,7 @@ const AppShell = () => {
                           aria-hidden="true"
                         />
                         <span>
-                          <span className="block text-sm font-medium">{n.title}</span>
+                          <span className="block text-sm">{n.title}</span>
                           <span className="ui-caption">{n.body}</span>
                         </span>
                       </button>
@@ -13804,7 +13804,7 @@ const AppShell = () => {
                   />
                 ) : (
                   <span
-                    className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold"
+                    className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-medium"
                     style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
                     aria-hidden="true"
                   >
@@ -13830,7 +13830,7 @@ const AppShell = () => {
                       />
                     ) : (
                       <span
-                        className="h-9 w-9 rounded-full inline-flex items-center justify-center text-xs font-bold shrink-0"
+                        className="h-9 w-9 rounded-full inline-flex items-center justify-center text-xs font-medium shrink-0"
                         style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
                         aria-hidden="true"
                       >
@@ -13839,7 +13839,7 @@ const AppShell = () => {
                     )}
                     <span className="min-w-0">
                       {userDisplayName ? (
-                        <span className="block text-sm font-semibold truncate">{userDisplayName}</span>
+                        <span className="block text-sm font-medium truncate">{userDisplayName}</span>
                       ) : null}
                       <span className="ui-caption block truncate">{userEmail}</span>
                     </span>

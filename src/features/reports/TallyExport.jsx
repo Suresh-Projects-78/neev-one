@@ -86,7 +86,7 @@ export default function TallyExport({ db, currentCompany }) {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <div className="text-sm">
-            <span className="font-semibold">{totalVouchers}</span> voucher(s) in range ·{' '}
+            <span className="font-medium">{totalVouchers}</span> voucher(s) in range ·{' '}
             <span className="ui-muted">masters cover every referenced ledger</span>
           </div>
           <div className="flex gap-2">

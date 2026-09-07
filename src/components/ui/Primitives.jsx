@@ -239,7 +239,7 @@ export const EmptyState = ({
               className="ui-sunken border ui-border-c rounded-full text-xs px-2.5 py-1 inline-flex items-center gap-1.5"
             >
               <span className="ui-muted">{f.label}</span>
-              <span className="font-medium">{f.value}</span>
+              <span>{f.value}</span>
               {typeof f.onRemove === 'function' ? (
                 <button
                   type="button"
@@ -270,7 +270,7 @@ export const EmptyState = ({
               onClick={r.onSelect}
               className="ui-card p-3 hover:border-[rgb(var(--brand))] transition-colors"
             >
-              <span className="block text-sm font-semibold">{r.label}</span>
+              <span className="block text-sm font-medium">{r.label}</span>
               {r.description ? <span className="block ui-muted text-xs mt-0.5 leading-4">{r.description}</span> : null}
             </button>
           ))}

@@ -93,10 +93,10 @@ export function RoleCreateForm({ orgId, onCreated }) {
         <div className="p-4 space-y-4">
           {MODULES.map((m) => (
             <div key={m.module} className="space-y-2">
-              <div className="font-semibold">{m.module}</div>
+              <div className="font-medium">{m.module}</div>
               {m.subModules.map((sm) => (
                 <div key={sm} className="border rounded-lg p-3">
-                  <div className="text-sm font-medium mb-2">{sm}</div>
+                  <div className="text-sm mb-2">{sm}</div>
                   <div className="grid grid-cols-6 gap-2">
                     {ACTIONS.map((a) => {
                       const key = `${m.module}::${sm}::${a}`;

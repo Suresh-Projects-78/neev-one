@@ -160,7 +160,7 @@ export function BulkBar({ count, onClear, children }) {
       className="ui-in-fade sticky top-0 z-10 flex items-center gap-3 border-b px-4 py-2.5"
       style={{ backgroundColor: 'rgb(var(--accent-soft))', borderColor: 'rgb(var(--border))' }}
     >
-      <span className="text-sm font-medium">{count} selected</span>
+      <span className="text-sm">{count} selected</span>
       <div className="ms-auto flex items-center gap-2">{children}</div>
       <button type="button" onClick={onClear} className="ui-btn ui-btn-ghost ui-btn-sm">
         Clear

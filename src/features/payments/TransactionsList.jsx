@@ -229,7 +229,7 @@ const TransactionView = ({ title, payload }) => {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm ui-muted">{title}</div>
-          <div className="font-semibold">{payload?.documentNumber || '-'}</div>
+          <div className="font-medium">{payload?.documentNumber || '-'}</div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -253,23 +253,23 @@ const TransactionView = ({ title, payload }) => {
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <div className="ui-muted">Party</div>
-            <div className="font-medium">{payload?.partyName || '-'}</div>
+            <div>{payload?.partyName || '-'}</div>
           </div>
           <div>
             <div className="ui-muted">Date</div>
-            <div className="font-medium">{payload?.date || '-'}</div>
+            <div>{payload?.date || '-'}</div>
           </div>
           <div>
             <div className="ui-muted">Mode</div>
-            <div className="font-medium">{payload?.mode || '-'}</div>
+            <div>{payload?.mode || '-'}</div>
           </div>
           <div>
             <div className="ui-muted">Reference</div>
-            <div className="font-medium">{payload?.reference || '-'}</div>
+            <div>{payload?.reference || '-'}</div>
           </div>
           <div>
             <div className="ui-muted">Type</div>
-            <div className="font-medium">{payload?.typeLabel || '-'}</div>
+            <div>{payload?.typeLabel || '-'}</div>
           </div>
           <div>
             <div className="ui-muted">Amount</div>

@@ -285,7 +285,7 @@ export default function BatchSerialManager() {
                     ) : (
                       batches.map((b) => (
                         <tr key={b.id} className="border-t">
-                          <td className="ui-col-id px-4 py-2 font-medium">{b.batchNo}</td>
+                          <td className="ui-col-id px-4 py-2">{b.batchNo}</td>
                           <td className="ui-col-date px-4 py-2">
                             <ExpiryCell expiryDate={b.expiryDate} />
                           </td>
