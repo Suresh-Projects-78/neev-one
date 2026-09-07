@@ -34,7 +34,7 @@ async function makeOwner(): Promise<Ctx> {
   const setup = await request(app)
     .post('/api/auth/setup-company')
     .set('Authorization', `Bearer ${signup.body.token}`)
-    .send({ companyName: `Party Co ${Date.now()}-${rnd()}` });
+    .send({ companyName: `Party Co ${Date.now()}-${rnd()}`, state: 'Karnataka' });
   if (setup.status !== 200) {
     // eslint-disable-next-line no-console
     console.log('SETUP FAILED', setup.status, JSON.stringify(setup.body), 'signup was', signup.status);

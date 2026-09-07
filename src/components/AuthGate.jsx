@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import LandingPage from '../features/marketing/LandingPage';
 import AuthIllustration from './AuthIllustration';
 import { useTilt } from './ui/useTilt';
+import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../utils/gst';
+
+const GST_STATES = [...new Set(Object.values(GST_STATE_BY_CODE))].sort((a, b) => a.localeCompare(b));
 
 /* Inline marks rather than an icon package: this screen renders before the app
    shell loads, and the two glyphs it needs are not worth the import. Both are
@@ -33,6 +36,8 @@ const AuthGate = ({ onAuth }) => {
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [companyState, setCompanyState] = useState('');
+  const [companyGstin, setCompanyGstin] = useState('');
   const [resetToken, setResetToken] = useState('');
   
   // State
@@ -213,10 +218,34 @@ const AuthGate = ({ onAuth }) => {
       setError('Please enter your company name');
       return;
     }
+    if (!companyState) {
+      setError('Please choose the state your business is registered in');
+      return;
+    }
+    /*
+     * Caught here as well as on the server, because the server's message names
+     * a state code and this one can name the state.
+     */
+    const typedGstin = companyGstin.trim().toUpperCase();
+    if (typedGstin) {
+      const fromGstin = getGstStateFromGstin(typedGstin);
+      if (!fromGstin) {
+        setError('That GSTIN does not look right — check the first two digits');
+        return;
+      }
+      if (fromGstin !== companyState) {
+        setError(`That GSTIN belongs to ${fromGstin}, but you chose ${companyState}`);
+        return;
+      }
+    }
 
     setLoading(true);
     try {
-      const res = await api('setup-company', { companyName: companyName.trim() }, { 
+      const res = await api('setup-company', {
+        companyName: companyName.trim(),
+        state: companyState,
+        gstin: companyGstin.trim().toUpperCase() || null,
+      }, { 
         Authorization: `Bearer ${signupToken}` 
       });
       
@@ -636,6 +665,66 @@ const AuthGate = ({ onAuth }) => {
                       autoFocus
                     />
                     <p className="mt-2 text-sm ui-muted">This will be your first organization. You can add more later.</p>
+
+                    {/*
+                      The state is asked for here because it cannot be guessed
+                      and cannot be wrong. It decides whether a sale inside the
+                      state splits into CGST and SGST or leaves as IGST, on
+                      every invoice from the first one onward. It used to
+                      default to Karnataka for everybody.
+                    */}
+                    <div className="mt-4">
+                      <label className="ui-label" htmlFor="signup-state">
+                        State of registration <span className="text-[rgb(var(--neg-ink))]">*</span>
+                      </label>
+                      <select
+                        id="signup-state"
+                        className="ui-select h-11"
+                        value={companyState}
+                        onChange={(e) => {
+                          setCompanyState(e.target.value);
+                          if (error) setError('');
+                        }}
+                      >
+                        <option value="">Select state…</option>
+                        {GST_STATES.map((st) => (
+                          <option key={st} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-sm ui-muted">
+                        Decides how GST splits on your invoices. You can change it later in Settings.
+                      </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="ui-label" htmlFor="signup-gstin">
+                        GSTIN <span className="ui-muted font-normal">— optional</span>
+                      </label>
+                      <input
+                        id="signup-gstin"
+                        type="text"
+                        inputMode="text"
+                        autoComplete="off"
+                        maxLength={15}
+                        className="ui-input h-11 ui-mono uppercase"
+                        placeholder="29ABCDE1234F1Z5"
+                        value={companyGstin}
+                        onChange={(e) => {
+                          const next = e.target.value.toUpperCase();
+                          setCompanyGstin(next);
+                          if (error) setError('');
+                          // The first two digits are the state, so a GSTIN can
+                          // answer the question above rather than repeat it.
+                          const derived = getGstStateFromGstin(next);
+                          if (derived) setCompanyState(derived);
+                        }}
+                      />
+                      <p className="mt-1 text-sm ui-muted">
+                        Leave it blank if you are not registered yet — it fills the state in for you.
+                      </p>
+                    </div>
                   </div>
                 )}
 

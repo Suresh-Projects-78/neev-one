@@ -44,7 +44,7 @@ async function makeOwner(): Promise<Ctx> {
   const setup = await request(app)
     .post('/api/auth/setup-company')
     .set('Authorization', `Bearer ${signup.body.token}`)
-    .send({ companyName: `BS Co ${Date.now()}-${rnd()}` })
+    .send({ companyName: `BS Co ${Date.now()}-${rnd()}`, state: 'Karnataka' })
     .expect(200);
 
   const base = {

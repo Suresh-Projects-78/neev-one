@@ -29,6 +29,7 @@ import {
 import { sendTemplate } from '../services/mailer.js';
 import { policyForUser, validatePassword, getAuthPolicy } from '../services/policy.js';
 import { expandPreset, permKey } from '../constants/permissionCatalog.js';
+import { validateGstinOrThrow, deriveStateCodeFromInput } from '../utils/gstin.js';
 
 export const authRouter = Router();
 
@@ -443,7 +444,32 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
     return res.status(401).json({ error: String(e?.message || 'Unauthorized') });
   }
 
-  const body = z.object({ companyName: z.string().min(1) }).parse(req.body);
+  const body = z
+    .object({
+      companyName: z.string().min(1),
+      /*
+       * The state of the head office, and the single most consequential thing
+       * asked at signup. It decides whether every invoice this business ever
+       * raises splits into CGST + SGST or lands as IGST, and it used to be
+       * hard-coded to Karnataka for every tenant on earth — so a business in
+       * Maharashtra billing a customer in Maharashtra was charged IGST, and
+       * nothing on the screen said why.
+       */
+      state: z.string().min(1),
+      gstin: z.string().trim().toUpperCase().optional().nullable(),
+    })
+    .parse(req.body);
+
+  const stateName = String(body.state || '').trim();
+  if (!deriveStateCodeFromInput(stateName)) {
+    return res.status(400).json({ error: `Unknown state: ${stateName}` });
+  }
+
+  const gstin = String(body.gstin || '').trim().toUpperCase();
+  // Throws a 400 on a bad format, a bad checksum, or a GSTIN whose own state
+  // code disagrees with the state that was chosen.
+  validateGstinOrThrow(gstin, stateName);
+
   const now = new Date();
 
   // Create org + head-office branch, assign memberships
@@ -465,10 +491,12 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
       branchName: 'Head Office',
       addressLine1: '',
       city: '',
-      state: 'Karnataka',
+      state: stateName,
       country: 'India',
-      gstRegistrationType: 'UNREGISTERED',
-      gstin: null,
+      // A business that gives a GSTIN is registered by definition; one that
+      // does not is composition-or-unregistered and can say so later.
+      gstRegistrationType: gstin ? 'REGULAR' : 'UNREGISTERED',
+      gstin: gstin || null,
       parentBranchId: null,
       shareHeadOfficeSettings: false,
       createdByUserId: auth.userId,

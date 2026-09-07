@@ -34,7 +34,7 @@ async function makeTenant(label: string): Promise<Ctx> {
   const setup = await request(app)
     .post('/api/auth/setup-company')
     .set('Authorization', `Bearer ${token}`)
-    .send({ companyName: `${label} Co ${Date.now()}` })
+    .send({ companyName: `${label} Co ${Date.now()}`, state: 'Karnataka' })
     .expect(200);
 
   return {
