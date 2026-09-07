@@ -85,7 +85,7 @@ export const DocFormActions = ({
     <div className={shellClass} style={shellStyle}>
       {title ? (
         <div className="min-w-0">
-          <h3 className="ui-t-sec truncate">{title}</h3>
+          <h3 className="ui-t-doc truncate">{title}</h3>
           {subtitle ? <div className="text-sm ui-muted truncate">{subtitle}</div> : null}
         </div>
       ) : null}

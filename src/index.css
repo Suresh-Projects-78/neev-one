@@ -450,6 +450,7 @@
     padding: 0 0.875rem;
     border-radius: var(--radius-btn);
     font-size: 0.875rem;
+    line-height: 1.25rem;   /* stated, or a button label sits on 21 */
     font-weight: 500;
     cursor: pointer;
     transition: background-color var(--dur-surface) ease, border-color var(--dur-surface) ease, color var(--dur-surface) ease;
@@ -514,7 +515,10 @@
     color: rgb(var(--fg));
     border: 1px solid rgb(var(--border-strong));
     border-radius: var(--radius-input);
-    font-size: 0.875rem;
+    font-size: 0.875rem;    /* 14px */
+    line-height: 1.25rem;   /* 20px — stated, or it inherits 21 and a row of
+                               fields ends up on two different leadings */
+    font-weight: 400;
     transition: border-color var(--dur-surface) ease, box-shadow var(--dur-surface) ease;
   }
   /* A native date input renders a pixel taller than a text input — its own
@@ -547,10 +551,12 @@
      label above an input is read as prose, not as a column heading. */
   .ui-label {
     display: block;
-    font-size: 0.875rem;   /* 14px */
-    line-height: 1.25rem;
+    font-size: 0.8125rem;  /* 13px — a step under the value it introduces */
+    line-height: 1.125rem; /* 18px */
     font-weight: 500;
-    color: rgb(var(--fg));
+    /* Muted, because a label set at the same size, weight and value as its
+       answer competes with the answer. The question should be quieter. */
+    color: rgb(var(--fg-muted));
     margin-bottom: 0.25rem;
   }
 
@@ -563,6 +569,7 @@
     padding: 0.5rem 0.625rem;
     border-radius: var(--radius-btn);
     font-size: 0.875rem;
+    line-height: 1.25rem;
     font-weight: 500;
     color: rgb(var(--fg-muted));
     text-align: left;
@@ -597,7 +604,7 @@
      icon's job alone. */
   .ui-nav-item:not([data-level='module']) {
     color: rgb(var(--fg-muted));
-    font-weight: 450;
+    font-weight: 400;
     padding-inline-start: 2rem;
   }
   .ui-nav-item:not([data-level='module']):hover {
@@ -664,7 +671,7 @@
   .ui-nav-item:not([data-level='module'])[data-active='true'] {
     color: rgb(var(--brand-ink));
     background-color: rgb(var(--accent-soft));
-    font-weight: 450;
+    font-weight: 400;
   }
   .ui-nav-item:not([data-level='module'])[data-active='true'][data-tone] svg {
     color: rgb(var(--brand-ink));
@@ -697,7 +704,7 @@
     border-radius: 999px;
     font-size: 0.75rem;
     font-weight: 600;
-    line-height: 1.4;
+    line-height: 1rem;      /* 16px — a ratio here put 12px on 16.8 */
     white-space: nowrap;
   }
   .ui-pill-pos {
@@ -775,9 +782,13 @@
     z-index: 1;
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg-muted));
-    font-size: 0.75rem;
+    /* Matches .ui-th, which this outranks on specificity. The two disagreed,
+       so a column heading was 12px here and 11px anywhere a plain .ui-th was
+       used — one rule quietly winning is how a scale drifts. */
+    font-size: 0.6875rem;   /* 11px */
+    line-height: 1rem;      /* 16px */
     font-weight: 600;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     text-align: left;
     padding: 0.5rem 0.75rem;
@@ -791,7 +802,8 @@
     border-bottom: 1px solid rgb(var(--border));
     color: rgb(var(--fg));
     vertical-align: middle;
-    line-height: 1.125rem;
+    font-size: 0.8125rem;   /* 13px — the table-cell tier in DESIGN.md */
+    line-height: 1.125rem;  /* 18px */
   }
   .ui-table tbody tr {
     transition: background-color var(--dur-state) ease;
@@ -823,9 +835,13 @@
        uppercase still reads as a label, and "Invoice No." still fits its column
        instead of truncating to "Invoice N…". */
     padding: 0.5rem 0.5rem;
-    font-size: 0.75rem;
+    /* 11px with wide tracking, not 12px with tight. Tracking is what makes a
+       small uppercase run read as a label rather than as shouted body text,
+       and the wider spacing buys back the width the smaller size gives up. */
+    font-size: 0.6875rem;     /* 11px */
+    line-height: 1rem;        /* 16px */
     font-weight: 600;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgb(var(--fg-subtle));
     text-align: left;
@@ -1740,6 +1756,18 @@
     letter-spacing: -0.005em;
     color: rgb(var(--fg));
   }
+  /* The name of the document being worked on.
+     It borrowed .ui-t-sec, so "New Invoice" was set exactly like the section
+     heading three lines under it and the screen had no top. A step up in size
+     and a step up in weight, which is the jump Zoho makes for a title and the
+     one our ramp was missing — it stopped at 600. */
+  .ui-t-doc {
+    font-size: 1.125rem;      /* 18px */
+    line-height: 1.625rem;    /* 26px */
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: rgb(var(--fg));
+  }
   .ui-t-body {
     font-size: 0.875rem;      /* 14px */
     line-height: 1.25rem;     /* 20px */
@@ -1813,7 +1841,7 @@
     color: rgb(var(--fg-muted));
   }
   .ui-body { font-size: 0.9375rem; line-height: 1.6; }  /* 15px */
-  .ui-caption { font-size: 0.8125rem; color: rgb(var(--fg-muted)); }  /* 13px */
+  .ui-caption { font-size: 0.8125rem; line-height: 1.125rem; color: rgb(var(--fg-muted)); }  /* 13px */
 
   /* The one action a card is allowed. Text and arrow, no button chrome —
      a card full of buttons competes with the page's real primary action. */
@@ -2051,13 +2079,12 @@
   .ui-grid-dense .ui-select {
     min-height: 2.125rem;      /* 34px control */
     padding: 0.25rem 0.5rem;
-    /* 12px, the floor of the type scale — "nothing below 12px". Asked for
-       twice and decided against the recommendation to stay at the 13px
-       table-cell size: the row-height cut had already bought most of the
-       space, and the remaining ~3px a row is paid for in how quickly a rate
-       can be read without misreading a digit. Deliberate, not drift. */
-    font-size: 0.75rem;
-    line-height: 1rem;
+    /* 13px, the table-cell tier. This sat at 12px, the floor of the scale,
+       from an earlier pass; the calibration puts every cell in the product on
+       one size, and the row height is unchanged either way — the space came
+       from the padding, not from the type. */
+    font-size: 0.8125rem;
+    line-height: 1.125rem;
   }
 
   /* Figures in a line grid are money and counts, so they follow the money row
@@ -2088,9 +2115,14 @@
   /* Column headings: quiet, uppercase, wide-tracked — a label for the column,
      not a competitor to the data under it. */
   .ui-table thead th {
-    font-size: 0.75rem;
+    /* The third rule that sets a column heading, and the one that was winning
+       on source order — hence a heading that stayed 12px while two earlier
+       rules said 11. Same tier as .ui-th, stated once here so the cascade has
+       nothing left to argue about. */
+    font-size: 0.6875rem;   /* 11px */
+    line-height: 1rem;      /* 16px */
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgb(var(--fg-subtle));
   }
