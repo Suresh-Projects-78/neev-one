@@ -990,11 +990,11 @@ const statusReason = (doc, status, company, nowMs) => {
       <StatCards
         company={currentCompany}
         cards={[
-          { label: 'Total invoices', value: headline.count, count: true, tone: 'info', Icon: FileText },
-          { label: 'Total invoice amount', value: headline.billed, tone: 'party', Icon: Receipt },
-          { label: 'Paid amount', value: headline.paid, tone: 'pos', Icon: CreditCard },
-          { label: 'Outstanding amount', value: headline.outstanding, tone: 'warn', Icon: ClipboardList },
-          { label: 'Overdue amount', value: headline.overdue, tone: 'neg', Icon: Ban },
+          { label: 'Total invoices', value: headline.count, count: true, tone: 'draft', Icon: FileText },
+          { label: 'Total invoice amount', value: headline.billed, tone: 'sent', Icon: Receipt },
+          { label: 'Paid amount', value: headline.paid, tone: 'paid', Icon: CreditCard },
+          { label: 'Outstanding amount', value: headline.outstanding, tone: 'outstanding', Icon: ClipboardList },
+          { label: 'Overdue amount', value: headline.overdue, tone: 'overdue', Icon: Ban },
         ]}
       />
 
@@ -1194,10 +1194,10 @@ const statusReason = (doc, status, company, nowMs) => {
                       />
                     </td>
                     {col('amount') ? (
-                      <td className="ui-col-amount">{formatMoney(Number(inv.subtotal || 0), currentCompany)}</td>
+                      <td className="ui-col-amount"><MoneyValue value={inv.subtotal} company={currentCompany} /></td>
                     ) : null}
                     {col('gst') ? (
-                      <td className="ui-col-amount">{formatMoney(Number(inv.gstTotal || 0), currentCompany)}</td>
+                      <td className="ui-col-amount"><MoneyValue value={inv.gstTotal} company={currentCompany} /></td>
                     ) : null}
                     {col('warehouse') ? <td className="ui-col-meta">{whLabel}</td> : null}
                     <td

@@ -273,10 +273,10 @@ export default function PosScreen({ db, setDb, currentCompany }) {
         <div className="ui-card space-y-4 p-5">
           <h3 className="ui-t-sec">Day close — {today}</h3>
           <div className="grid gap-3 sm:grid-cols-4 text-sm">
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Invoices</div><div className="text-xl font-bold">{todaysSales.length}</div></div>
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Cash</div><div className="text-xl font-bold">{formatMoney(byTender.Cash, currentCompany)}</div></div>
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">UPI</div><div className="text-xl font-bold">{formatMoney(byTender.UPI, currentCompany)}</div></div>
-            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Card</div><div className="text-xl font-bold">{formatMoney(byTender.Card, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Invoices</div><div className="ui-mono text-xl font-semibold">{todaysSales.length}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Cash</div><div className="ui-mono text-xl font-semibold">{formatMoney(byTender.Cash, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">UPI</div><div className="ui-mono text-xl font-semibold">{formatMoney(byTender.UPI, currentCompany)}</div></div>
+            <div className="ui-sunken rounded-lg p-3"><div className="ui-caption">Card</div><div className="ui-mono text-xl font-semibold">{formatMoney(byTender.Card, currentCompany)}</div></div>
           </div>
 
           <div>

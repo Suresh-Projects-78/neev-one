@@ -848,7 +848,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                       <td className="px-4 py-2.5">{t.customerName || '—'}</td>
                       <td className="px-4 py-2.5">{FREQ_LABEL[t.frequency] || 'Monthly'}</td>
                       <td className="ui-col-amount px-4 py-2.5 text-right">
-                        {formatMoney(Number(t.total || 0), currentCompany)}
+                        <MoneyValue value={t.total} company={currentCompany} />
                       </td>
                       <td className="ui-col-date px-4 py-2.5">
                         {status === 'Active' ? <SalesDate value={t.nextRunDate} /> : '—'}

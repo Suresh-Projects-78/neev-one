@@ -34,6 +34,22 @@ import { exportListXlsx } from '../../utils/listXlsx';
  * the full width of the card and drops a step in size, which fits a crore at
  * the narrowest column the five-across grid produces.
  */
+/**
+ * The eight tones a Sales surface speaks in. A card naming one of these takes
+ * the status palette, so the Paid card is the same green as the Paid pill and
+ * the Paid tab; anything else keeps the older generic tokens, which is what
+ * the modules that have not been migrated still pass.
+ */
+const SALES_TONES = new Set(['draft', 'sent', 'partial', 'paid', 'outstanding', 'overdue', 'cancelled', 'refund']);
+const toneVars = (tone) =>
+  SALES_TONES.has(tone)
+    ? { wash: `rgb(var(--st-${tone}-strong))`, ink: `rgb(var(--st-${tone}-ink))`, figure: `rgb(var(--st-${tone}-ink))` }
+    : {
+        wash: `rgb(var(--${tone}) / 0.12)`,
+        ink: `rgb(var(--${tone}))`,
+        figure: tone === 'neg' || tone === 'warn' ? `rgb(var(--${tone}))` : undefined,
+      };
+
 export function StatCards({ cards, company }) {
   const shown = cards.filter(Boolean);
   /*
@@ -55,7 +71,7 @@ export function StatCards({ cards, company }) {
               corner to float in. */}
           <span
             className="h-8 w-8 rounded-lg grid place-items-center flex-shrink-0"
-            style={{ backgroundColor: `rgb(var(--${c.tone}) / 0.12)`, color: `rgb(var(--${c.tone}))` }}
+            style={{ backgroundColor: toneVars(c.tone).wash, color: toneVars(c.tone).ink }}
             aria-hidden="true"
           >
             <c.Icon size={15} />
@@ -72,7 +88,7 @@ export function StatCards({ cards, company }) {
             <span
               className={`block font-semibold leading-6 truncate ${c.count ? 'text-base' : 'ui-mono text-base'}`}
               title={c.count ? String(c.value) : formatMoney(c.value, company)}
-              style={c.tone === 'neg' || c.tone === 'warn' ? { color: `rgb(var(--${c.tone}))` } : undefined}
+              style={toneVars(c.tone).figure ? { color: toneVars(c.tone).figure } : undefined}
             >
               {c.count ? String(c.value) : formatMoney(c.value, company)}
             </span>

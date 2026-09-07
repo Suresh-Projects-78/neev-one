@@ -12,6 +12,7 @@ import { PageHeader } from '../../components/ui/Primitives';
 import { CreditCard, FileText, Landmark, Receipt, Undo2 } from 'lucide-react';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
+import { DocumentNumber, SalesDate, MoneyValue } from '../../components/sales';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -441,12 +442,12 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
       <StatCards
         company={currentCompany}
         cards={[
-          { label: `Total ${title.toLowerCase()}`, value: headline.count, count: true, tone: 'info', Icon: FileText },
-          { label: 'Total value', value: headline.total, tone: 'party', Icon: Receipt },
-          { label: 'This month', value: headline.thisMonth, tone: 'pos', Icon: CreditCard },
-          { label: 'Against documents', value: headline.allocated, tone: 'info', Icon: Landmark, hint: 'Allocated to invoices or bills' },
+          { label: `Total ${title.toLowerCase()}`, value: headline.count, count: true, tone: 'draft', Icon: FileText },
+          { label: 'Total value', value: headline.total, tone: 'sent', Icon: Receipt },
+          { label: 'This month', value: headline.thisMonth, tone: 'paid', Icon: CreditCard },
+          { label: 'Against documents', value: headline.allocated, tone: 'partial', Icon: Landmark, hint: 'Allocated to invoices or bills' },
           headline.topMode
-            ? { label: `Most used — ${headline.topMode.name}`, value: headline.topMode.value, tone: 'warn', Icon: Undo2, hint: 'By value' }
+            ? { label: `Most used — ${headline.topMode.name}`, value: headline.topMode.value, tone: 'outstanding', Icon: Undo2, hint: 'By value' }
             : null,
         ]}
       />
@@ -481,13 +482,14 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
                     if (typeof onView === 'function') onView(r);
                   }}
                 >
-                  <td className="ui-col-date px-4 py-2.5">{r.date || '-'}</td>
+                  <td className="ui-col-date px-4 py-2.5"><SalesDate value={r.date} /></td>
                   <td className="ui-col-meta px-4 py-2.5">{r.typeLabel}</td>
-                  <td className="ui-col-id px-4 py-2.5 font-medium">{r.documentNumber || '-'}</td>
+                  <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={r.documentNumber} label="receipt" /></td>
                   <td className="ui-col-entity px-4 py-2.5">{r.partyName || '-'}</td>
                   <td className="ui-col-meta px-4 py-2.5">{r.mode || '-'}</td>
                   <td className="ui-col-meta px-4 py-2.5">{r.reference || '-'}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(r.amount || 0, currentCompany)}</td>
+                  {/* Money that has arrived. */}
+                  <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={r.amount} company={currentCompany} kind="paid" /></td>
                 </tr>
               ))
             )}

@@ -3,7 +3,7 @@ import { Plus, Trash2, UserCheck } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { formatMoney } from '../../utils/money';
+import { MoneyValue } from '../../components/sales';
 
 /**
  * Salesman master + performance report. Invoices carry salesmanId (picked on
@@ -163,8 +163,9 @@ export default function Salesmen({ db, setDb, currentCompany }) {
                   <td className="ui-col-meta px-4 py-2.5">{s.phone || '—'}</td>
                   <td className="px-4 py-2.5">{Number(s.commissionPct || 0)}%</td>
                   <td className="px-4 py-2.5 text-right">{invoices}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(sales, currentCompany)}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(commission, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={sales} company={currentCompany} /></td>
+                  {/* Commission is money the business owes out, not revenue. */}
+                  <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={commission} company={currentCompany} kind="outstanding" /></td>
                   <td className="px-4 py-2.5 text-right">
                     <button type="button" onClick={() => remove(s)} className="ui-icon-btn !h-8 !w-8" aria-label={`Remove ${s.name}`}>
                       <Trash2 size={14} />
