@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { Building2, ChevronRight, CornerDownRight, Pencil } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Building2, ChevronRight, CornerDownRight, Pencil, Plus } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
 import { GST_STATE_BY_CODE } from '../../utils/gst';
+import { createCompany } from '../../api/auth';
 
 /**
  * The company group viewer.
@@ -25,13 +26,17 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-export default function CompanyGroups({ db, setDb, currentCompany, onSwitched }) {
+export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, initialAction = null, onActionConsumed = null }) {
   const companies = useMemo(
     () => (Array.isArray(db?.companies) ? db.companies : []),
     [db]
   );
 
   const [editing, setEditing] = useState(null); // { id? , parentCompanyId? } — no id = create
+  const [creating, setCreating] = useState(false);
+  // Arriving from "Add company" elsewhere should land on the form, not on the
+  // list with the same click still to make.
+  const initialActionRef = useRef(initialAction);
   /*
    * The company being looked at, as opposed to the one being edited.
    * Branches and warehouses both open what was saved; a company dropped you
@@ -96,6 +101,27 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
     return false;
   };
 
+  /*
+   * The create form existed but nothing opened it: `setEditing` was only ever
+   * called with an id. So the app had no way to add a company at all — the
+   * only one you could ever have was the one signup made.
+   */
+  const openCreate = () => {
+    setViewingId(null);
+    setEditing({});
+    setForm({ name: '', gstin: '', state: '', parentCompanyId: '' });
+  };
+
+  useEffect(() => {
+    if (initialActionRef.current !== 'create') return;
+    initialActionRef.current = null;
+    openCreate();
+    // Spent. Coming back to this screen later should show the list, not the
+    // form again.
+    onActionConsumed?.();
+    // Runs once, for the arriving intent.
+  }, []);
+
   const openEdit = (c) => {
     setEditing({ id: c.id });
     setForm({
@@ -130,33 +156,66 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
       }));
       notify.success(`${name} saved.`);
       setViewingId(editing.id);
-    } else {
-      setDb((prev) => {
-        const list = Array.isArray(prev.companies) ? prev.companies : [];
-        const nextId = list.reduce((m, c) => Math.max(m, num(c.id)), 0) + 1;
-        return {
-          ...prev,
-          companies: [
-            ...list,
-            {
-              id: nextId,
-              name,
-              gstin: form.gstin.trim(),
-              state: form.state.trim(),
-              parentCompanyId,
-              currency: 'INR',
-              createdAt: new Date().toISOString(),
-            },
-          ],
-        };
-      });
-      notify.success(`${name} added to the group.`);
-      // The new row's id is the one the reducer just allotted.
-      setViewingId(
-        (Array.isArray(db?.companies) ? db.companies : []).reduce((m, c) => Math.max(m, num(c.id)), 0) + 1
-      );
+      setEditing(null);
+      return;
     }
-    setEditing(null);
+
+    /*
+     * A new company is created on the SERVER first, and only written locally
+     * if that succeeded.
+     *
+     * The org is what the company actually is: it owns the branches, the
+     * warehouses and every document raised under it. A company appended only
+     * to the browser store has no `backendCompanyId`, so `resolveServerOrgId`
+     * falls back to the session's `activeOrgId` — and the second company would
+     * quietly read and write the first company's data while showing its own
+     * name at the top of the screen. Better to fail the create than to make
+     * that.
+     */
+    const state = form.state.trim();
+    if (!state) {
+      notify.error('Choose the state the company is registered in — it decides how GST splits.');
+      return;
+    }
+
+    setCreating(true);
+    createCompany({ companyName: name, state, gstin: form.gstin.trim().toUpperCase() || null })
+      .then((res) => {
+        const backendCompanyId = String(res?.company?.orgId || res?.company?.id || '').trim();
+        if (!backendCompanyId) throw new Error('The server did not return the new company.');
+
+        let allottedId = null;
+        setDb((prev) => {
+          const list = Array.isArray(prev.companies) ? prev.companies : [];
+          allottedId = list.reduce((m, c) => Math.max(m, num(c.id)), 0) + 1;
+          return {
+            ...prev,
+            companies: [
+              ...list,
+              {
+                id: allottedId,
+                name,
+                gstin: form.gstin.trim().toUpperCase(),
+                state,
+                parentCompanyId,
+                currency: 'INR',
+                profile: {
+                  backendCompanyId,
+                  backendBranchId: res?.branch?.id || null,
+                },
+                createdAt: new Date().toISOString(),
+              },
+            ],
+          };
+        });
+        notify.success(`${name} added to the group.`);
+        setViewingId(allottedId);
+        setEditing(null);
+      })
+      .catch((e) => {
+        notify.error(String(e?.message || 'Could not add the company.'));
+      })
+      .finally(() => setCreating(false));
   };
 
   const viewingCompany = viewingId == null ? null : companies.find((c) => c.id === viewingId) || null;
@@ -252,8 +311,20 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Company Profile"
+        title="Companies"
         description="The group at a glance — switch the active company and see who owes what."
+        actions={
+          /*
+            Hidden while the editor is open: the form already carries the
+            Add company button, and two controls with the same name doing
+            different things is the one-primary-action rule broken twice over.
+          */
+          editing ? null : (
+            <button type="button" onClick={openCreate} className="ui-btn ui-btn-primary">
+              <Plus size={15} aria-hidden="true" /> Add company
+            </button>
+          )
+        }
       />
 
       {/*
@@ -311,16 +382,16 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
           <h3 className="ui-t-sec mb-3">{editing.id != null ? 'Edit company' : 'New company'}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="ui-label">Name</label>
-              <input type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="ui-input" autoFocus />
+              <label className="ui-label" htmlFor="company-name">Name</label>
+              <input id="company-name" type="text" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} className="ui-input" autoFocus />
             </div>
             <div>
-              <label className="ui-label">GSTIN (optional)</label>
-              <input type="text" value={form.gstin} onChange={(e) => setForm((p) => ({ ...p, gstin: e.target.value }))} className="ui-input" placeholder="27ABCDE1234F1Z5" />
+              <label className="ui-label" htmlFor="company-gstin">GSTIN (optional)</label>
+              <input id="company-gstin" type="text" value={form.gstin} onChange={(e) => setForm((p) => ({ ...p, gstin: e.target.value }))} className="ui-input" placeholder="27ABCDE1234F1Z5" />
             </div>
             <div>
-              <label className="ui-label">State</label>
-              <select value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))} className="ui-select">
+              <label className="ui-label" htmlFor="company-state">State</label>
+              <select id="company-state" value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))} className="ui-select">
                 <option value="">Select state</option>
                 {Object.values(GST_STATE_BY_CODE).map((name) => (
                   <option key={name} value={name}>{name}</option>
@@ -328,8 +399,9 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
               </select>
             </div>
             <div>
-              <label className="ui-label">Parent company</label>
+              <label className="ui-label" htmlFor="company-parent">Parent company</label>
               <select
+                id="company-parent"
                 value={form.parentCompanyId}
                 onChange={(e) => setForm((p) => ({ ...p, parentCompanyId: e.target.value }))}
                 className="ui-select"
@@ -344,9 +416,11 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched })
             </div>
           </div>
           <div className="mt-4 flex justify-end gap-2">
-            <button type="button" onClick={() => setEditing(null)} className="ui-btn ui-btn-secondary">Cancel</button>
-            <button type="button" onClick={save} className="ui-btn ui-btn-primary">
-              {editing.id != null ? 'Save changes' : 'Add company'}
+            <button type="button" onClick={() => setEditing(null)} className="ui-btn ui-btn-secondary" disabled={creating}>
+              Cancel
+            </button>
+            <button type="button" onClick={save} className="ui-btn ui-btn-primary" disabled={creating}>
+              {editing.id != null ? 'Save changes' : creating ? 'Adding…' : 'Add company'}
             </button>
           </div>
         </div>

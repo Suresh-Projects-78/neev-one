@@ -8626,7 +8626,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
   );
 };
 
-export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showSidebar = true, onOpenCompanyList = null }) => {
+export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company', showSidebar = true, onOpenCompanyList = null, onAddCompany = null }) => {
   const [activeTab, setActiveTab] = useState(() => (String(initialTab || 'company') === 'tax' ? 'tax' : 'company'));
   /*
    * Company Profile sat permanently open as a form, while its two neighbours
@@ -10298,6 +10298,17 @@ export const SettingsView = ({ db, setDb, currentCompany, initialTab = 'company'
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
+                    {/*
+                      * Edit changes this company. Adding another one is a
+                      * different act and had no control anywhere in the app,
+                      * so the only company you could ever have was the one
+                      * signup made.
+                      */}
+                    {onAddCompany ? (
+                      <button type="button" onClick={onAddCompany} className="ui-btn ui-btn-ghost">
+                        <Plus size={14} aria-hidden="true" /> Add company
+                      </button>
+                    ) : null}
                     {companyCount > 1 && onOpenCompanyList ? (
                       <button type="button" onClick={onOpenCompanyList} className="ui-btn ui-btn-ghost">
                         Switch company
@@ -11214,6 +11225,9 @@ const AppShell = () => {
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchesError, setBranchesError] = useState('');
   const [branchesReloadKey, setBranchesReloadKey] = useState(0);
+  // What the Companies screen should do on arrival: 'create' opens its form,
+  // so "Add company" is one click rather than two screens.
+  const [companiesIntent, setCompaniesIntent] = useState(null);
 
   const [authCtx, setAuthCtx] = useState({ loading: false, error: '', data: null });
 
@@ -12900,6 +12914,8 @@ const AppShell = () => {
             db={dbForUser}
             setDb={setDb}
             currentCompany={currentCompany}
+            initialAction={companiesIntent}
+            onActionConsumed={() => setCompaniesIntent(null)}
             onSwitched={() => setActive('dashboard')}
           />
         );
@@ -13164,7 +13180,17 @@ const AppShell = () => {
       case 'companyProfile':
         return <CompanyProfile db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'settingsCompany':
-        return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="company" showSidebar={false} onOpenCompanyList={() => setActive('companies')} />;
+        return (
+          <SettingsView
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            initialTab="company"
+            showSidebar={false}
+            onOpenCompanyList={() => { setCompaniesIntent(null); setActive('companies'); }}
+            onAddCompany={() => { setCompaniesIntent('create'); setActive('companies'); }}
+          />
+        );
       case 'settingsTax':
         return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="tax" showSidebar={false} />;
       case 'settingsBranches': {
