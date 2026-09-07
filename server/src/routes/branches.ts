@@ -63,7 +63,19 @@ branchesRouter.post('/orgs/:orgId/branches', requirePermission('MASTERS', Permis
     validateGstinOrThrow(String(body.gstin || ''), body.state);
   }
 
-  const created = await prisma.branch.create({
+  /*
+   * Creating a branch also joins you to it.
+   *
+   * It did not, so the person who had just added a branch got 403 "No access
+   * to branch" the moment they switched to it — the warehouses under it would
+   * not list, and no document could be raised there. A branch you cannot enter
+   * is not a branch, and the creator is the one person certain to want in.
+   *
+   * Both writes or neither: a branch with no membership is the broken state
+   * this is fixing, so it must not be reachable by a half-failed create.
+   */
+  const created = await prisma.$transaction(async (tx) => {
+    const branch = await tx.branch.create({
     data: {
       accountId,
       orgId,
@@ -83,6 +95,13 @@ branchesRouter.post('/orgs/:orgId/branches', requirePermission('MASTERS', Permis
       shareHeadOfficeSettings: Boolean(body.shareHeadOfficeSettings),
       createdByUserId: userId,
     },
+    });
+
+    await tx.userBranchMembership.create({
+      data: { accountId, orgId, branchId: branch.id, userId },
+    });
+
+    return branch;
   });
 
   res.status(201).json({ branch: created });
