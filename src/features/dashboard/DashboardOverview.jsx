@@ -264,19 +264,46 @@ function AgeingBar({ buckets, total, company, onPick }) {
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
-        {AGEING_BUCKETS.filter((b) => (buckets[b.key] || 0) > 0).map((b) => (
-          <button
-            key={b.key}
-            type="button"
-            onClick={onPick ? () => onPick(b) : undefined}
-            className="inline-flex items-center gap-1.5 text-xs"
-            style={{ color: 'rgb(var(--fg-muted))', background: 'none', border: 0, padding: 0, cursor: onPick ? 'pointer' : 'default' }}
-          >
-            <span className="inline-block w-2 h-2 rounded-sm" style={{ backgroundColor: tones[b.tone] }} aria-hidden="true" />
-            {b.label} <b className="ui-mono" style={{ color: 'rgb(var(--fg))' }}>{formatMoney(buckets[b.key], company)}</b>
-          </button>
-        ))}
+      {/*
+        Every bucket, not only the ones with money in them.
+        The legend used to filter to non-zero, so a book with one invoice
+        showed a single chip and left the panel three-quarters empty beside two
+        siblings full of content. A blank bucket is also the answer to a
+        question — "is anything ninety days late?" — and it takes a row to say
+        no. Read down, this is the shape of the receivable book.
+      */}
+      <div className="mt-3" style={{ borderTop: '1px solid rgb(var(--border))' }}>
+        {AGEING_BUCKETS.map((b) => {
+          const amt = Number(buckets[b.key] || 0);
+          return (
+            <button
+              key={b.key}
+              type="button"
+              onClick={onPick && amt > 0 ? () => onPick(b) : undefined}
+              className="w-full flex items-center gap-2 py-1.5 text-start"
+              style={{
+                borderBottom: '1px solid rgb(var(--border))',
+                background: 'none',
+                cursor: onPick && amt > 0 ? 'pointer' : 'default',
+              }}
+            >
+              <span
+                className="inline-block w-2 h-2 rounded-sm shrink-0"
+                style={{ backgroundColor: amt > 0 ? tones[b.tone] : 'rgb(var(--border-strong))' }}
+                aria-hidden="true"
+              />
+              <span className="ui-t-body" style={{ color: amt > 0 ? 'rgb(var(--fg))' : 'rgb(var(--fg-subtle))' }}>
+                {b.label}
+              </span>
+              <span
+                className="ms-auto ui-mono text-[0.8125rem]"
+                style={{ color: amt > 0 ? 'rgb(var(--fg))' : 'rgb(var(--fg-subtle))', fontWeight: amt > 0 ? 500 : 400 }}
+              >
+                {amt > 0 ? formatMoney(amt, company) : '—'}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -691,7 +718,11 @@ function DashboardHero({ name, insights, onCommand, actions }) {
 function QuietTiles({ tiles, company }) {
   return (
     <section
-      className="mx-auto mt-11 grid max-w-4xl border-s border-t sm:grid-cols-2 lg:grid-cols-3"
+      /* Full width, like everything above and below it. It was `mx-auto
+         max-w-4xl`, which centred it 128px inside the page — narrower than the
+         header over it and the panels under it, aligned to neither, which is
+         most of what reads as untidy here. */
+      className="mt-6 grid border-s border-t sm:grid-cols-2 lg:grid-cols-3"
       style={{ borderColor: 'rgb(var(--border))' }}
       aria-label="Position"
     >
@@ -1173,7 +1204,7 @@ export default function DashboardOverview({
           ) : null}
 
           {topDebtors.length ? (
-            <div className="mt-3 space-y-2.5">
+            <div className="mt-3 space-y-2.5 flex-1 flex flex-col">
               {topDebtors.map((c) => {
                 const share = recv.total > 0 ? Math.max(4, Math.round((c.amount / recv.total) * 100)) : 0;
                 return (
@@ -1196,6 +1227,27 @@ export default function DashboardOverview({
                   </div>
                 );
               })}
+
+              {/*
+                What the list above adds up to, pinned to the foot of the card.
+                A book with one customer has one row and two hundred pixels of
+                nothing under it; this is not filler, it is the two facts a
+                collections conversation opens with — how much is out, and
+                whether any of it is late — and it anchors the card instead of
+                leaving it to float.
+              */}
+              <div
+                className="mt-auto pt-3 flex items-baseline justify-between gap-3"
+                style={{ borderTop: '1px solid rgb(var(--border))' }}
+              >
+                <span className="ui-subtle ui-t-body">
+                  {topDebtors.length} customer{topDebtors.length === 1 ? '' : 's'}
+                  {recv.count ? ` · ${recv.count} invoice${recv.count === 1 ? '' : 's'}` : ''}
+                </span>
+                <span className="ui-t-body" style={{ color: recv.oldestDays > 0 ? 'rgb(var(--neg))' : 'rgb(var(--pos))', fontWeight: 500 }}>
+                  {recv.oldestDays > 0 ? `oldest ${recv.oldestDays}d late` : 'none overdue'}
+                </span>
+              </div>
             </div>
           ) : null}
         </div>
