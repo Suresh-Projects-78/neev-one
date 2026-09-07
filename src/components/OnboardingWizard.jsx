@@ -29,13 +29,40 @@ const STATE_NAMES = Object.entries(GST_STATE_BY_CODE)
  * localStorage: seeing it once is enough.
  */
 
-const seenKey = (companyId) => `onboarded:${companyId}`;
+/*
+ * Keyed to the organisation on the server, not to the local book's company id.
+ *
+ * The local id is `1` for the first company in every browser, so two different
+ * businesses opened on one machine shared a flag, and a book restored on a new
+ * device had none. The org id is the thing that actually identifies whose
+ * books these are.
+ */
+const seenKey = (company) => {
+  const orgId = String(company?.profile?.backendCompanyId || '').trim();
+  return orgId ? `onboarded:org:${orgId}` : `onboarded:${company?.id}`;
+};
+
+/**
+ * Remember that the question has been asked.
+ *
+ * It used to be written only when somebody completed the wizard. Dismissing it
+ * set a React state flag, which lives until the next reload — so a person who
+ * closed it, or simply signed out with an empty book, was asked again at every
+ * single sign-in. Closing something is an answer, and it is stored like one.
+ */
+export const markOnboardingSeen = (company) => {
+  try {
+    localStorage.setItem(seenKey(company), '1');
+  } catch {
+    /* private mode: the session-level dismissal still holds */
+  }
+};
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const shouldOnboard = (db, company) => {
   if (!company?.id) return false;
   try {
-    if (localStorage.getItem(seenKey(company.id))) return false;
+    if (localStorage.getItem(seenKey(company))) return false;
   } catch {
     return false;
   }
@@ -53,11 +80,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
   const [customerState, setCustomerState] = useState(currentCompany?.state || '');
 
   const finish = () => {
-    try {
-      localStorage.setItem(seenKey(currentCompany.id), '1');
-    } catch {
-      /* still dismiss for the session */
-    }
+    markOnboardingSeen(currentCompany);
     onDone?.();
   };
 

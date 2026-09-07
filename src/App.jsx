@@ -4,7 +4,7 @@ import { notify, confirmDialog } from './components/ui/notify';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
 import { useRecurringInvoices } from './hooks/useRecurringInvoices';
-import OnboardingWizard, { shouldOnboard } from './components/OnboardingWizard';
+import OnboardingWizard, { shouldOnboard, markOnboardingSeen } from './components/OnboardingWizard';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExport';
 import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
@@ -13460,7 +13460,12 @@ const AppShell = () => {
         <OnboardingWizard
           setDb={setDb}
           currentCompany={currentCompany}
-          onDone={() => setOnboardDismissed(true)}
+          onDone={() => {
+            // Persisted as well as dismissed. Setting only React state meant
+            // the answer lasted until the next reload.
+            markOnboardingSeen(currentCompany);
+            setOnboardDismissed(true);
+          }}
           onCreateInvoice={() => {
             setActive('invoices');
             setInvoiceEditor({ open: true, initial: null });
