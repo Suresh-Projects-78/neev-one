@@ -2112,6 +2112,27 @@
      instead; the page itself never does. */
   .ui-table-wide { min-width: 60rem; }
 
+  /* The rail scrolls, and a scroll area that ends flush against a rounded
+     panel edge cuts its last row in half and reads as broken rather than as
+     "there is more". A short fade at each end says which it is, and only
+     appears when there is actually something past the edge. */
+  .ui-nav-scroll {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 12px,
+      #000 calc(100% - 16px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 12px,
+      #000 calc(100% - 16px),
+      transparent 100%
+    );
+  }
+
   /* The row you have picked, as opposed to the row under the pointer.
      Six list screens marked selection with `bg-stone-100`, a literal from the
      light palette, so a chosen row in dark mode was a near-white band across a

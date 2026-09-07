@@ -11413,6 +11413,15 @@ const AppShell = () => {
    * nothing renders from it, and writing it during a screen change should not
    * cause a second render.
    */
+  /*
+   * Where a jump came from, for screens that are also destinations in their
+   * own right. Customers and Company Profile live in the rail, so they cannot
+   * carry a permanent Back — but arriving at one from the setup checklist on
+   * Home leaves no way back at all. Recorded as a pair, so the offer expires
+   * on its own: the moment `active` is no longer the screen that was jumped
+   * to, the bar stops rendering and nothing has to be cleared.
+   */
+  const [returnTo, setReturnTo] = useState(null);
   const lastScreenRef = useRef('invoices');
   const prevScreenRef = useRef(active);
   useEffect(() => {
@@ -11689,12 +11698,12 @@ const AppShell = () => {
           { key: 'settingsCurrencies', label: 'Currency', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
 
           { type: 'subgroup', label: 'Business' },
-          { key: 'settingsFeatures', label: 'General Preferences', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
+          { key: 'settingsFeatures', label: 'Preferences', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
           { key: 'settingsSales', label: 'Sales', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsPurchases', label: 'Purchases', icon: ShoppingCart, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsInventory', label: 'Inventory', icon: Package, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsAccounting', label: 'Accounting', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsPaymentsReceipts', label: 'Payments & Receipts', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsPaymentsReceipts', label: 'Payments', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsDocuments', label: 'Documents', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsInvoiceFields', label: 'Invoice Settings', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsCustomFields', label: 'Custom Fields', icon: Plus, perm: 'SETTINGS::Company Profile::VIEW' },
@@ -11720,7 +11729,7 @@ const AppShell = () => {
           { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
 
           { type: 'subgroup', label: 'Automation' },
-          { key: 'recurringInvoices', label: 'Recurring Transactions', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
+          { key: 'recurringInvoices', label: 'Recurring', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
 
           { type: 'subgroup', label: 'System' },
           { key: 'dataImport', label: 'Data & Import', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports' },
@@ -12330,8 +12339,14 @@ const AppShell = () => {
             }}
             onOpenInvoices={() => setActive('invoices')}
             onOpenReceipts={() => setActive('receipts')}
-            onNavigate={setActive}
-            onOpenCashBank={() => setActive('cashBank')}
+            onNavigate={(dest) => {
+              setReturnTo({ from: 'dashboard', to: dest });
+              setActive(dest);
+            }}
+            onOpenCashBank={() => {
+              setReturnTo({ from: 'dashboard', to: 'cashBank' });
+              setActive('cashBank');
+            }}
             onOpenCustomers={() => setActive('customers')}
             onOpenPurchases={() => setActive('purchaseOverview')}
             // The warehouse selector in the header governed nothing on this
@@ -13902,7 +13917,7 @@ const AppShell = () => {
               <span className={navCollapsed ? 'md:hidden' : ''}>Collapse</span>
             </button>
 
-            <div className="space-y-0.5 min-h-0 flex-1 overflow-y-auto">
+            <div className="ui-nav-scroll space-y-0.5 min-h-0 flex-1 overflow-y-auto">
               {visibleNav.map((entry) => {
                 if (entry.type === 'item') {
                   const Icon = entry.icon;
@@ -14093,6 +14108,23 @@ const AppShell = () => {
             be an expired session or a server that is down. Branch errors were
             already surfaced; this is the warehouse counterpart.
           */}
+          {/* One bar rather than an onBack prop threaded into four components
+              that do not otherwise need one. */}
+          {returnTo && returnTo.to === active ? (
+            <div className="mb-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setActive(returnTo.from);
+                  setReturnTo(null);
+                }}
+                className="ui-btn ui-btn-ghost ui-btn-sm"
+              >
+                <ArrowLeft size={15} aria-hidden="true" /> Back to Home
+              </button>
+            </div>
+          ) : null}
+
           {warehousesError ? (
             <div className="mb-4 rounded-lg border border-[rgb(var(--neg)/0.35)] bg-[rgb(var(--neg-soft))] px-4 py-3 text-sm text-[rgb(var(--neg))]">
               Could not load warehouses: {warehousesError}
