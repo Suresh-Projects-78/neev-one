@@ -51,6 +51,7 @@ import {
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { InvoiceIdentifier, DateCell, DueDateCell, Money, Balance } from '../../components/table/cells';
+import { MoneyValue } from '../../components/sales';
 import { PageHeader, StatusPill, EmptyState, TableTotals, FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { ListSearch, StatCards } from '../../components/list/ListPageParts';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -2013,12 +2014,16 @@ export const EstimatesList = ({
         ]}
         exportRows={estimates}
       >
-                  <td className="ui-col-id px-4 py-2.5 font-medium">{est.number}</td>
+                  <td className="ui-col-id px-4 py-2.5"><InvoiceIdentifier value={est.number} label="quotation" /></td>
                   <td className="ui-col-entity px-4 py-2.5">{est.customerName || '-'}</td>
                   <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                  <td className="ui-col-date px-4 py-2.5">{est.date || '-'}</td>
-                  <td className="ui-col-date px-4 py-2.5">{est.dueDate || '-'}</td>
-                  <td className="ui-col-amount px-4 py-2.5">{formatMoney(est.total || 0, currentCompany)}</td>
+                  <td className="ui-col-date px-4 py-2.5"><DateCell value={est.date} /></td>
+                  {/* A quotation's "due" is its expiry: still open, so it is a
+                      live commitment and reads as one. */}
+                  <td className="ui-col-date px-4 py-2.5">
+                    <DueDateCell value={est.dueDate} balance={est.total || 0} />
+                  </td>
+                  <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={est.total} company={currentCompany} /></td>
                   {/*
                     An estimate that has already become an invoice looked
                     exactly like one still waiting on the customer. The only
@@ -2353,7 +2358,7 @@ export const CreditNotesList = ({
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={cn.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-4 py-2.5 font-medium">{cn.number}</td>
+                    <td className="ui-col-id px-4 py-2.5"><InvoiceIdentifier value={cn.number} label="credit note" /></td>
                     <td className="ui-col-meta px-4 py-2.5">
                       {cn.originalInvoiceNumber || (
                         <span className="ui-muted">
@@ -2363,8 +2368,12 @@ export const CreditNotesList = ({
                     </td>
                     <td className="ui-col-entity px-4 py-2.5">{cn.customerName || '-'}</td>
                     <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5">{cn.date || '-'}</td>
-                    <td className="ui-col-amount px-4 py-2.5">{formatMoney(cn.total || 0, currentCompany)}</td>
+                    <td className="ui-col-date px-4 py-2.5"><DateCell value={cn.date} /></td>
+                    {/* A credit note is money going back out, so it takes the
+                        refund colour rather than reading as revenue. */}
+                    <td className="ui-col-amount px-4 py-2.5">
+                      <MoneyValue value={cn.total} company={currentCompany} kind="refund" />
+                    </td>
                     {/*
                       Whether this credit has actually reached the books. A
                       draft does not post, and without this column there was

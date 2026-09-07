@@ -42,14 +42,14 @@ const REGISTRY = [
   { key: 'cancelled', label: 'Cancelled', tone: 'neutral', statusTone: 'cancelled', aliases: ['cancelled', 'canceled', 'void'] },
 
   // --- approval ------------------------------------------------------------
-  { key: 'pendingApproval', label: 'Pending approval', tone: 'warn', aliases: ['pending approval', 'pending', 'awaiting approval'] },
-  { key: 'approved', label: 'Approved', tone: 'pos', aliases: ['approved'] },
-  { key: 'rejected', label: 'Rejected', tone: 'neg', aliases: ['rejected', 'declined'] },
+  { key: 'pendingApproval', label: 'Pending approval', statusTone: 'partial', tone: 'warn', aliases: ['pending approval', 'pending', 'awaiting approval'] },
+  { key: 'approved', label: 'Approved', statusTone: 'paid', tone: 'pos', aliases: ['approved'] },
+  { key: 'rejected', label: 'Rejected', statusTone: 'overdue', tone: 'neg', aliases: ['rejected', 'declined'] },
 
   // --- stock movement ------------------------------------------------------
-  { key: 'inTransit', label: 'In transit', tone: 'warn', aliases: ['in transit', 'transferred out', 'transfer out'] },
-  { key: 'received', label: 'Received', tone: 'pos', aliases: ['received', 'transfer in'] },
-  { key: 'shortReceived', label: 'Short received', tone: 'warn', aliases: ['short received', 'short'] },
+  { key: 'inTransit', label: 'In transit', statusTone: 'sent', tone: 'warn', aliases: ['in transit', 'transferred out', 'transfer out'] },
+  { key: 'received', label: 'Received', statusTone: 'paid', tone: 'pos', aliases: ['received', 'transfer in'] },
+  { key: 'shortReceived', label: 'Short received', statusTone: 'outstanding', tone: 'warn', aliases: ['short received', 'short'] },
 
   // --- order / document lifecycle -----------------------------------------
   /**
@@ -63,34 +63,34 @@ const REGISTRY = [
    * money was owed that nobody had been invoiced for. An invoice never carries
    * this word: its status is derived as Unpaid, Partial, Paid or Overdue.
    */
-  { key: 'open', label: 'Open', tone: 'neutral', aliases: ['open'] },
-  { key: 'closed', label: 'Closed', tone: 'pos', aliases: ['closed', 'completed', 'fulfilled'] },
+  { key: 'open', label: 'Open', statusTone: 'sent', tone: 'neutral', aliases: ['open'] },
+  { key: 'closed', label: 'Closed', statusTone: 'cancelled', tone: 'pos', aliases: ['closed', 'completed', 'fulfilled'] },
   // Both are derived by the sales-order list from ordered/delivered/billed
   // counts, and neither had ever been declared — so a fully delivered order
   // came out flagged as an unknown status, which is the registry working but
   // is not a thing to leave in front of a user.
-  { key: 'delivered', label: 'Delivered', tone: 'pos', aliases: ['delivered'] },
-  { key: 'billed', label: 'Billed', tone: 'pos', aliases: ['billed'] },
-  { key: 'posted', label: 'Posted', tone: 'pos', aliases: ['posted'] },
-  { key: 'active', label: 'Active', tone: 'pos', aliases: ['active'] },
+  { key: 'delivered', label: 'Delivered', statusTone: 'paid', tone: 'pos', aliases: ['delivered'] },
+  { key: 'billed', label: 'Billed', statusTone: 'paid', tone: 'pos', aliases: ['billed'] },
+  { key: 'posted', label: 'Posted', statusTone: 'paid', tone: 'pos', aliases: ['posted'] },
+  { key: 'active', label: 'Active', statusTone: 'paid', tone: 'pos', aliases: ['active'] },
   { key: 'sent', label: 'Sent', tone: 'neutral', statusTone: 'sent', aliases: ['sent'] },
   // A quote that became an invoice. Positive: the deal closed, and it is the
   // signal that stops anyone quoting the same job twice.
-  { key: 'converted', label: 'Converted', tone: 'pos', aliases: ['converted'] },
-  { key: 'invoiced', label: 'Invoiced', tone: 'pos', aliases: ['invoiced'] },
-  { key: 'expired', label: 'Expired', tone: 'neutral', aliases: ['expired', 'lapsed'] },
-  { key: 'returned', label: 'Returned', tone: 'warn', aliases: ['returned'] },
+  { key: 'converted', label: 'Converted', statusTone: 'paid', tone: 'pos', aliases: ['converted'] },
+  { key: 'invoiced', label: 'Invoiced', statusTone: 'paid', tone: 'pos', aliases: ['invoiced'] },
+  { key: 'expired', label: 'Expired', statusTone: 'cancelled', tone: 'neutral', aliases: ['expired', 'lapsed'] },
+  { key: 'returned', label: 'Returned', statusTone: 'refund', tone: 'warn', aliases: ['returned'] },
 
   // --- reconciliation ------------------------------------------------------
-  { key: 'recorded', label: 'Recorded', tone: 'pos', aliases: ['recorded'] },
-  { key: 'categorised', label: 'Categorised', tone: 'pos', aliases: ['categorised', 'categorized'] },
-  { key: 'uncategorised', label: 'Uncategorised', tone: 'warn', aliases: ['uncategorised', 'uncategorized'] },
-  { key: 'balanced', label: 'Balanced', tone: 'pos', aliases: ['balanced'] },
-  { key: 'unbalanced', label: 'Unbalanced', tone: 'neg', aliases: ['unbalanced'] },
+  { key: 'recorded', label: 'Recorded', statusTone: 'paid', tone: 'pos', aliases: ['recorded'] },
+  { key: 'categorised', label: 'Categorised', statusTone: 'paid', tone: 'pos', aliases: ['categorised', 'categorized'] },
+  { key: 'uncategorised', label: 'Uncategorised', statusTone: 'outstanding', tone: 'warn', aliases: ['uncategorised', 'uncategorized'] },
+  { key: 'balanced', label: 'Balanced', statusTone: 'paid', tone: 'pos', aliases: ['balanced'] },
+  { key: 'unbalanced', label: 'Unbalanced', statusTone: 'overdue', tone: 'neg', aliases: ['unbalanced'] },
 
   // --- external filings ----------------------------------------------------
-  { key: 'registered', label: 'Registered', tone: 'pos', aliases: ['registered'] },
-  { key: 'failed', label: 'Failed', tone: 'neg', aliases: ['failed', 'error'] },
+  { key: 'registered', label: 'Registered', statusTone: 'paid', tone: 'pos', aliases: ['registered'] },
+  { key: 'failed', label: 'Failed', statusTone: 'overdue', tone: 'neg', aliases: ['failed', 'error'] },
 ];
 
 /** Every alias, lowercased, pointing at its entry. Built once. */

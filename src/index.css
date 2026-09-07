@@ -103,6 +103,12 @@
   --st-cancelled-soft: 231 229 228;--st-cancelled-strong: 214 211 209;
   --st-cancelled-key: 87 83 78;    --st-cancelled-ink: 68 64 60;
 
+  --st-outstanding-soft: 255 251 235;  --st-outstanding-strong: 254 243 199;
+  --st-outstanding-key: 180 83 9;      --st-outstanding-ink: 146 64 14;
+
+  --st-refund-soft: 245 243 255;       --st-refund-strong: 237 233 254;
+  --st-refund-key: 124 58 237;         --st-refund-ink: 109 40 217;
+
   --brand-ink: 124 45 18;
   --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
 
@@ -337,6 +343,12 @@
 
   --st-cancelled-soft: 41 37 36;   --st-cancelled-strong: 68 64 60;
   --st-cancelled-key: 168 162 158; --st-cancelled-ink: 231 229 228;
+
+  --st-outstanding-soft: 69 42 5;      --st-outstanding-strong: 120 74 12;
+  --st-outstanding-key: 251 191 36;    --st-outstanding-ink: 253 230 138;
+
+  --st-refund-soft: 46 16 101;         --st-refund-strong: 76 29 149;
+  --st-refund-key: 167 139 250;        --st-refund-ink: 221 214 254;
 
   --brand-ink: 254 215 170;
   --brand-panel: 9 11 17;
@@ -808,6 +820,8 @@
   .ui-pill-status[data-tone='paid']      { --seg-strong: var(--st-paid-strong);      --seg-ink: var(--st-paid-ink); }
   .ui-pill-status[data-tone='overdue']   { --seg-strong: var(--st-overdue-strong);   --seg-ink: var(--st-overdue-ink); }
   .ui-pill-status[data-tone='cancelled'] { --seg-strong: var(--st-cancelled-strong); --seg-ink: var(--st-cancelled-ink); }
+  .ui-pill-status[data-tone='outstanding'] { --seg-strong: var(--st-outstanding-strong); --seg-ink: var(--st-outstanding-ink); }
+  .ui-pill-status[data-tone='refund']      { --seg-strong: var(--st-refund-strong);      --seg-ink: var(--st-refund-ink); }
   .ui-pill-status {
     background-color: rgb(var(--seg-strong, var(--surface-sunken)));
     color: rgb(var(--seg-ink, var(--fg-muted)));
@@ -2152,6 +2166,8 @@
   .ui-segment[data-tone='paid']      { --seg-soft: var(--st-paid-soft);      --seg-strong: var(--st-paid-strong);      --seg-key: var(--st-paid-key);      --seg-ink: var(--st-paid-ink); }
   .ui-segment[data-tone='overdue']   { --seg-soft: var(--st-overdue-soft);   --seg-strong: var(--st-overdue-strong);   --seg-key: var(--st-overdue-key);   --seg-ink: var(--st-overdue-ink); }
   .ui-segment[data-tone='cancelled'] { --seg-soft: var(--st-cancelled-soft); --seg-strong: var(--st-cancelled-strong); --seg-key: var(--st-cancelled-key); --seg-ink: var(--st-cancelled-ink); }
+  .ui-segment[data-tone='outstanding'] { --seg-soft: var(--st-outstanding-soft); --seg-strong: var(--st-outstanding-strong); --seg-key: var(--st-outstanding-key); --seg-ink: var(--st-outstanding-ink); }
+  .ui-segment[data-tone='refund']      { --seg-soft: var(--st-refund-soft);      --seg-strong: var(--st-refund-strong);      --seg-key: var(--st-refund-key);      --seg-ink: var(--st-refund-ink); }
 
   /* The 2px ring is carried on every state, transparent until selected, so
      choosing a tab cannot nudge the strip by two pixels. */

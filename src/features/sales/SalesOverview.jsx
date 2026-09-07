@@ -23,6 +23,7 @@ import Illustration from '../../components/ui/Illustration';
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { branchLabel } from '../../utils/branchLabel';
+import { MoneyValue } from '../../components/sales';
 
 const LazySeriesBars = lazy(() =>
   import('../../components/charts/CircularCharts').then((m) => ({ default: m.SeriesBars }))
@@ -992,7 +993,7 @@ const SalesOverview = ({
                       <td className="px-2 py-2 ui-muted whitespace-nowrap" title={prettyDate(inv.date)}>
                         {shortDate(inv.date)}
                       </td>
-                      <td className="ui-col-amount px-2 py-2">{money(inv.total)}</td>
+                      <td className="ui-col-amount px-2 py-2"><MoneyValue value={inv.total} company={currentCompany} /></td>
                       <td className="px-2 py-2">
                         <StatusPill status={derivedStatus(inv)} />
                       </td>
@@ -1042,7 +1043,8 @@ const SalesOverview = ({
                       <td className="px-2 py-2 ui-muted whitespace-nowrap" title={prettyDate(cn.date)}>
                         {shortDate(cn.date)}
                       </td>
-                      <td className="ui-col-amount px-2 py-2">{money(cn.total)}</td>
+                      {/* A credit note is money going back out. */}
+                      <td className="ui-col-amount px-2 py-2"><MoneyValue value={cn.total} company={currentCompany} kind="refund" /></td>
                     </tr>
                   ))}
                 </tbody>

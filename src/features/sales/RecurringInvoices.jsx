@@ -9,6 +9,7 @@ import { advanceRunDate } from '../../hooks/useRecurringInvoices';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { computeGstForLines } from '../../utils/gst';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
@@ -849,7 +850,9 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                       <td className="ui-col-amount px-4 py-2.5 text-right">
                         {formatMoney(Number(t.total || 0), currentCompany)}
                       </td>
-                      <td className="ui-col-date px-4 py-2.5">{status === 'Active' ? t.nextRunDate || '—' : '—'}</td>
+                      <td className="ui-col-date px-4 py-2.5">
+                        {status === 'Active' ? <SalesDate value={t.nextRunDate} /> : '—'}
+                      </td>
                       <td className="px-4 py-2.5"><StatusPill status={status} /></td>
                       <td className="px-4 py-2.5 text-right">
                         <div className="relative inline-block">

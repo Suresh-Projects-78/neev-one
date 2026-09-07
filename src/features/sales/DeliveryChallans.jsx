@@ -14,6 +14,7 @@ import { nextFreeVoucherNumber } from '../../utils/docSettings';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -317,11 +318,11 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             <tbody>
               {challans.map((c) => (
                 <tr key={c.id} className="border-t">
-                  <td className="ui-col-id px-4 py-2.5 font-medium">{c.number}</td>
-                  <td className="ui-col-date px-4 py-2.5">{c.date}</td>
+                  <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={c.number} label="challan" /></td>
+                  <td className="ui-col-date px-4 py-2.5"><SalesDate value={c.date} /></td>
                   <td className="ui-col-entity px-4 py-2.5">{c.customerName}</td>
                   <td className="ui-col-meta px-4 py-2.5">{c.purpose}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(c.value || 0, currentCompany)}</td>
+                  <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={c.value} company={currentCompany} /></td>
                   <td className="px-4 py-2.5"><StatusPill status={c.status} /></td>
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2">

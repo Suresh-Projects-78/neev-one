@@ -15,6 +15,7 @@ import { computeGstForLines } from '../../utils/gst';
 import { getCompanyGstProfile, getPartyGstProfile, isIntraStateSupply } from '../../utils/gst';
 import { resolveSaleRate } from '../../utils/pricing';
 import { createDocApi, hasApiSession } from '../../api/purchaseDocs';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
 
 /**
  * Sales orders — the confirmed order between quote and invoice.
@@ -409,10 +410,10 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                 const prog = progressOf(o);
                 return (
                   <tr key={o.id} className="border-t">
-                    <td className="ui-col-id px-4 py-2.5 font-medium">{o.number}</td>
-                    <td className="ui-col-date px-4 py-2.5">{o.date}</td>
+                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={o.number} label="sales order" /></td>
+                    <td className="ui-col-date px-4 py-2.5"><SalesDate value={o.date} /></td>
                     <td className="ui-col-entity px-4 py-2.5">{o.customerName}</td>
-                    <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(Number(o.total || 0), currentCompany)}</td>
+                    <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={o.total} company={currentCompany} /></td>
                     <td className="px-4 py-2.5">
                       {prog.ordered} / {prog.delivered} / {prog.billed}
                     </td>

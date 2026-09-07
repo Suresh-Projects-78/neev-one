@@ -3,7 +3,7 @@ import { Bell, Copy, Mail, MessageCircle } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
-import { formatMoney } from '../../utils/money';
+import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/sales';
 import {
   collectiblesList,
   buildReminderMessage,
@@ -172,11 +172,11 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
                 const urgent = needsReminder(inv, today);
                 return (
                   <tr key={inv.id} className="border-t">
-                    <td className="ui-col-id px-4 py-2.5 font-medium">{inv.number}</td>
+                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={inv.number} label="invoice" /></td>
                     <td className="ui-col-entity px-4 py-2.5">{inv.customerName}</td>
-                    <td className="ui-col-date px-4 py-2.5">{inv.dueDate || '—'}</td>
+                    <td className="ui-col-date px-4 py-2.5"><DueDate value={inv.dueDate} balance={balance} /></td>
                     <td className="px-4 py-2.5 text-right">{overdue > 0 ? `${overdue}d` : '—'}</td>
-                    <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(balance, currentCompany)}</td>
+                    <td className="ui-col-amount px-4 py-2.5 text-right"><SalesBalance value={balance} company={currentCompany} dueIso={inv.dueDate} /></td>
                     <td className="px-4 py-2.5">
                       <StatusPill status={stageLabel(stage)} />
                       {urgent ? <span className="ui-caption ml-1 text-[rgb(var(--warn-ink))]">Send now</span> : null}
