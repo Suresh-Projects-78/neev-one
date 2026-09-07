@@ -11556,7 +11556,7 @@ const AppShell = () => {
 
   const navModel = useMemo(
     () => [
-      { type: 'item', key: 'dashboard', label: 'Dashboard', icon: PhDashboard, ph: true, tone: 'dashboard' },
+      { type: 'item', key: 'dashboard', label: 'Home', icon: PhDashboard, ph: true, tone: 'dashboard' },
       {
         type: 'group',
         key: 'salesMenu',
