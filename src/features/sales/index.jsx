@@ -16,7 +16,8 @@ import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } f
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
-import { TDS_SECTIONS, tdsAmountOn, tdsDefaultRate } from '../../utils/tds';
+import { DEDUCTEE_TYPES, TDS_SECTIONS, tdsAmountOn, tdsDefaultRate, tdsThresholdState, tdsVariesByDeductee } from '../../utils/tds';
+import { fyRange } from '../../utils/tdsTcs';
 import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
 import { branchLabel } from '../../utils/branchLabel';
 import EwbTransportForm from '../../components/EwbTransportForm';
@@ -2971,6 +2972,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       // TDS the customer will withhold. Stated on the document so both sides
       // agree the figure before the payment arrives short.
       tdsSection: initialData?.tdsSection || '',
+      tdsDeducteeType: initialData?.tdsDeducteeType || 'COMPANY',
       tdsRate: initialData?.tdsRate ?? '',
     };
   });
@@ -3321,7 +3323,38 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     Number(computed.subtotal || 0) - Number(computed.invoiceDiscount || 0) + Number(computed.otherChargesTotal || 0)
   );
   const tdsRateValue = Number(formData.tdsRate || 0);
-  const tdsAmount = formData.tdsSection ? tdsAmountOn(tdsBase, tdsRateValue) : 0;
+
+  /*
+   * What this customer has already been billed under this section this year,
+   * so the threshold means something.
+   *
+   * TDS is not due from the first rupee: 194J(b) starts at 50,000 for the year,
+   * 194C at 30,000 for one bill or 1,00,000 across the year. The app deducted
+   * regardless, which overstated the deduction on every small document. And
+   * once a limit IS passed the whole aggregate becomes liable, earlier
+   * documents included — so the figure has to know what came before it.
+   */
+  const tdsPriorValue = useMemo(() => {
+    const code = String(formData.tdsSection || '').trim();
+    const customerId = formData.customerId;
+    if (!code || customerId === '' || customerId == null) return 0;
+    const fy = fyRange(formData.date);
+    return (db?.invoices || [])
+      .filter(
+        (i) =>
+          i.companyId === currentCompany.id &&
+          String(i.customerId) === String(customerId) &&
+          String(i.tdsSection || '') === code &&
+          String(i.status || '').toLowerCase() !== 'cancelled' &&
+          String(i.id) !== String(initialData?.id ?? '') &&
+          String(i.date || '') >= fy.from &&
+          String(i.date || '') <= fy.to
+      )
+      .reduce((sum, i) => sum + (Number(i.taxableValue) || Number(i.subtotal) || 0), 0);
+  }, [db?.invoices, currentCompany.id, formData.customerId, formData.tdsSection, formData.date, initialData?.id]);
+
+  const tdsState = formData.tdsSection ? tdsThresholdState(formData.tdsSection, tdsBase, tdsPriorValue) : null;
+  const tdsAmount = tdsState?.crossed ? tdsAmountOn(tdsState.base, tdsRateValue) : 0;
   const netReceivable = Math.max(0, Number(computed.total || 0) - tdsAmount);
 
   /**
@@ -3517,6 +3550,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       // Stated on the document, never netted off the total: the receivable is
       // the total, and the deduction is tax the customer pays on our behalf.
       tdsSection: formData.tdsSection || '',
+      tdsDeducteeType: formData.tdsSection ? formData.tdsDeducteeType || 'COMPANY' : '',
       tdsRate: formData.tdsSection ? tdsRateValue : 0,
       tdsAmount,
     };
@@ -4883,7 +4917,11 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                     setFormData((p) => ({
                       ...p,
                       tdsSection: code,
-                      tdsRate: code ? (p.tdsSection === code && p.tdsRate !== '' ? p.tdsRate : tdsDefaultRate(code)) : '',
+                      tdsRate: code
+                        ? p.tdsSection === code && p.tdsRate !== ''
+                          ? p.tdsRate
+                          : tdsDefaultRate(code, p.tdsDeducteeType)
+                        : '',
                     }));
                   }}
                 >
@@ -4910,6 +4948,53 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   </div>
                 ) : null}
               </div>
+
+              {/*
+                The payee's own status changes the rate under 194C — 1% for an
+                individual or a HUF, 2% for everyone else — so it is asked
+                where it changes something and nowhere else.
+              */}
+              {tdsVariesByDeductee(formData.tdsSection) ? (
+                <div className="mt-2">
+                  <label className="ui-label" htmlFor="invoice-tds-deductee">
+                    Payee is
+                  </label>
+                  <select
+                    id="invoice-tds-deductee"
+                    className="ui-select w-full"
+                    value={formData.tdsDeducteeType || 'COMPANY'}
+                    onChange={(e) => {
+                      const type = e.target.value;
+                      setFormData((p) => ({
+                        ...p,
+                        tdsDeducteeType: type,
+                        tdsRate: tdsDefaultRate(p.tdsSection, type),
+                      }));
+                    }}
+                  >
+                    {DEDUCTEE_TYPES.map((d) => (
+                      <option key={d.key} value={d.key}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+
+              {/*
+                Whether the threshold has been reached, and why. Without this
+                the figure simply appears or does not, and a user whose bill is
+                under the limit cannot tell a working feature from a broken one.
+              */}
+              {tdsState ? (
+                <p className="ui-caption mt-1.5">
+                  {tdsState.crossed
+                    ? `${tdsState.reason}. Deducted on ${formatMoney(tdsState.base, currentCompany)}${
+                        tdsPriorValue > 0 ? ` — this bill plus ${formatMoney(tdsPriorValue, currentCompany)} billed earlier this year` : ''
+                      }.`
+                    : `No deduction yet. ${tdsState.reason}.`}
+                </p>
+              ) : null}
             </div>
 
             {tdsAmount > 0 ? (
