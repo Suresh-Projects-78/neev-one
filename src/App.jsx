@@ -144,6 +144,7 @@ import { usePermissions } from './permissions/usePermissions';
 import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
+import ModulePicker from './features/settings/ModulePicker';
 import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
@@ -11772,6 +11773,13 @@ const AppShell = () => {
           { key: 'settingsCurrencies', label: 'Currency', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
 
           { type: 'subgroup', label: 'Business' },
+          /*
+            Modules sits above Preferences on purpose. It is the same settings
+            asked at the level a business thinks in — do you hold stock — and it
+            is where somebody goes to turn a part of the product on. Preferences
+            is the forty individual switches, for tuning what is already running.
+          */
+          { key: 'settingsModules', label: 'Modules', icon: Boxes, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsFeatures', label: 'Preferences', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
           { key: 'settingsSales', label: 'Sales', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsPurchases', label: 'Purchases', icon: ShoppingCart, perm: 'SETTINGS::Company Profile::VIEW' },
@@ -13239,6 +13247,16 @@ const AppShell = () => {
             pane="custom"
             onBack={() => setActive(lastScreenRef.current || 'invoices')}
           />
+        );
+      case 'settingsModules':
+        return (
+          <div className="space-y-6">
+            <PageHeader
+              title="Modules"
+              description="What this business uses. Anything switched off is hidden from menus and forms."
+            />
+            <ModulePicker submitLabel="Save modules" />
+          </div>
         );
       case 'settingsFeatures':
         return <FeatureSettings />;

@@ -8,6 +8,7 @@ import { PermissionAction } from '../constants/enums.js';
 import { isKnownFeature } from '../constants/featureCatalog.js';
 import { getFeatureCatalogWithValues, getFeatures } from '../services/features.js';
 import { entitlementFor, upgradeHintFor } from '../services/entitlements.js';
+import { MODULE_PACKS } from '../constants/planCatalog.js';
 
 export const featuresRouter = Router();
 featuresRouter.use(requireAuth, requireTenantContext);
@@ -57,9 +58,22 @@ featuresRouter.get('/orgs/:orgId/entitlement', async (req, res) => {
     prisma.org.count({ where: { accountId } }),
     prisma.user.count({ where: { accountId, isActive: true } }),
   ]);
+  /*
+   * Packs go out with the entitlement because they are the same question asked
+   * at the level a business thinks in. A shop owner cannot answer "do you want
+   * batchSerial"; they can answer "do you hold stock".
+   */
+  const packs = MODULE_PACKS.map((p) => ({
+    ...p,
+    entitled: p.features.some((k) => e.features.has(k)),
+    fullyEntitled: p.features.every((k) => e.features.has(k)),
+    upgradeHint: p.features.every((k) => e.features.has(k)) ? null : upgradeHintFor(p.features[0]),
+  }));
+
   res.json({
     plan: { key: e.planKey, name: e.planName, status: e.status, inGoodStanding: e.inGoodStanding },
     features: [...e.features],
+    packs,
     limits: e.limits,
     usage: { companies, users },
   });

@@ -172,7 +172,15 @@ export const FeatureSettings = ({ pane = '' }) => {
             {byCategory.get(category).map((f, idx) => {
               const parent = f.dependsOn ? catalog.find((x) => x.key === f.dependsOn) : null;
               const blockedByParent = Boolean(parent && values[parent.key] === false);
-              const disabled = f.locked || blockedByParent;
+              /*
+               * A feature the plan does not carry is shown locked with the plan
+               * that carries it, not hidden. A module that is simply absent
+               * reads as a product that cannot do the thing; one that looks
+               * ordinary and then fails on save is worse. `entitled` is absent
+               * on an older response, so undefined counts as entitled.
+               */
+              const notEntitled = f.entitled === false;
+              const disabled = f.locked || blockedByParent || notEntitled;
 
               return (
                 <label
@@ -194,6 +202,11 @@ export const FeatureSettings = ({ pane = '' }) => {
                       {f.locked ? (
                         <span className="ui-pill ui-pill-neutral">
                           <Lock size={10} aria-hidden="true" /> Always on
+                        </span>
+                      ) : null}
+                      {notEntitled ? (
+                        <span className="ui-pill ui-pill-neutral">
+                          <Lock size={10} aria-hidden="true" /> {f.upgradeHint || 'Not on your plan'}
                         </span>
                       ) : null}
                       {blockedByParent ? (

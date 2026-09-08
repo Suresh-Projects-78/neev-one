@@ -18,3 +18,11 @@ export const setFeatures = (features) =>
     body: { features },
     skipWarehouseHeader: true,
   });
+
+/**
+ * The plan, what it entitles, the module packs and what the account has spent
+ * of its limits. Read by the module picker and by anything that has to say
+ * "on the Growth plan" rather than hiding a module outright.
+ */
+export const getEntitlement = () =>
+  apiFetch(`/orgs/${encodeURIComponent(orgId())}/entitlement`, { skipWarehouseHeader: true });
