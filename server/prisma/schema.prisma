@@ -26,6 +26,11 @@ model Org {
   id              String   @id @default(cuid())
   accountId       String
   name            String
+  /// The public handle: the `agc` in agc.books.neevone.com. Separate from `id`
+  /// on purpose — the id is what foreign keys and authorisation use and never
+  /// changes, the slug is what a person reads and may one day need to change.
+  /// Nullable so existing rows are valid before the backfill.
+  slug            String?  @unique
   legalName       String?
   pan             String?
 

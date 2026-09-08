@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma.js';
 import { companyLimitReason } from '../services/entitlements.js';
+import { suggestSlug } from '../services/slug.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
 import { ensureLedgerSetup } from '../services/ledger.js';
 import { ensurePermissionCatalog } from './permissions.js';
@@ -485,14 +486,23 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
     return res.status(403).json({ error: overLimit, code: 'COMPANY_LIMIT' });
   }
 
+  /*
+   * The public handle, derived from the name and free at the moment of
+   * creation. Offered for editing later rather than fixed here: `agc-traders-2`
+   * is a URL somebody has to live with, and only they can say whether it is the
+   * one they want.
+   */
+  const slug = await suggestSlug(body.companyName);
+
   const org = await prisma.org.create({
     data: {
       accountId: auth.accountId,
       name: body.companyName.trim(),
       legalName: body.companyName.trim(),
+      slug,
       createdByUserId: auth.userId,
     },
-    select: { id: true, name: true },
+    select: { id: true, name: true, slug: true },
   });
 
   const branch = await prisma.branch.create({
@@ -566,7 +576,7 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
 
   // Frontend expects { company: { id, name, orgId }, branch: { id } }
   return res.json({
-    company: { id: org.id, name: org.name, orgId: org.id },
+    company: { id: org.id, name: org.name, orgId: org.id, slug: org.slug },
     branch: { id: branch.id },
   });
 });
