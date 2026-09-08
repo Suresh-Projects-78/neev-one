@@ -181,7 +181,13 @@ model User {
 
   auditCreated AuditLog[] @relation("AuditCreatedBy")
 
-  @@unique([accountId, email])
+  /// Globally unique, not per account. Login resolves a user by email across
+  /// every account, so two accounts sharing one would make it non-deterministic
+  /// — and a person invited into a second company must be the SAME login, not a
+  /// second identity with the same address. The route already refused a
+  /// duplicate; this makes it structural rather than a rule one handler happens
+  /// to keep.
+  @@unique([email])
   @@index([accountId])
 }
 

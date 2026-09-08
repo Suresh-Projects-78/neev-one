@@ -28,21 +28,41 @@ declare module 'express-serve-static-core' {
 // This implementation uses headers so user can switch org/branch without re-login:
 //   x-org-id, x-branch-id
 export async function requireTenantContext(req: Request, res: Response, next: NextFunction) {
-  const accountId = String(req.auth?.accountId || '').trim();
+  /*
+   * The account comes from the MEMBERSHIP, not from the token.
+   *
+   * A user signs up once and may then be given access to a company owned by
+   * somebody else — a client invites their accountant, a group invites an
+   * auditor. The token carries the account the person signed up under, which is
+   * their home, not a boundary on what they may reach. Matching membership on
+   * the token's account made a membership in anyone else's organisation
+   * unmatchable by construction, so the invitation could be written and would
+   * never work.
+   *
+   * Everything downstream reads `req.tenant.accountId`, which is now the
+   * account that owns the organisation being worked in — which is the account
+   * every row of that organisation's data actually carries. For a user working
+   * in their own company the two are the same value, which is why this changes
+   * nothing for anybody who exists today.
+   */
+  const homeAccountId = String(req.auth?.accountId || '').trim();
   const userId = String(req.auth?.userId || '').trim();
   const orgId = String(req.headers['x-org-id'] || '').trim();
   const branchId = String(req.headers['x-branch-id'] || '').trim();
   const warehouseId = String(req.headers['x-warehouse-id'] || '').trim();
 
-  if (!accountId || !userId) return res.status(401).json({ error: 'Missing auth context' });
+  if (!homeAccountId || !userId) return res.status(401).json({ error: 'Missing auth context' });
   if (!orgId) return res.status(400).json({ error: 'Missing x-org-id' });
   if (!branchId) return res.status(400).json({ error: 'Missing x-branch-id' });
 
   const orgMember = await prisma.userOrgMembership.findFirst({
-    where: { accountId, orgId, userId },
-    select: { id: true },
+    where: { orgId, userId },
+    select: { accountId: true },
   });
   if (!orgMember) return res.status(403).json({ error: 'No access to org' });
+
+  // The owning account, established by the membership that just authorised it.
+  const accountId = orgMember.accountId;
 
   const branchMember = await prisma.userBranchMembership.findFirst({
     where: { accountId, orgId, branchId, userId },

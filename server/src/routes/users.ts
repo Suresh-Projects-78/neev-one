@@ -214,22 +214,48 @@ usersRouter.post('/users', requirePermission('SETTINGS', PermissionAction.CREATE
   const body = createUserSchema.parse(req.body);
   const email = body.email.toLowerCase();
 
-  // Email must be unique GLOBALLY, not per account: /api/auth/login resolves a
-  // user by email across all accounts, so two accounts sharing an email would
-  // make login non-deterministic. Only expose the existing row when it belongs
-  // to the caller's own account, otherwise this leaks other tenants' users.
+  /*
+   * An email is one person, everywhere.
+   *
+   * A person already registered is INVITED into this company rather than
+   * refused: the accountant a client brings in, or a colleague who already has
+   * a login from another business, should not need a second identity with the
+   * same address. Their existing login is given a membership here.
+   *
+   * This used to answer 409 for an email registered under another account, so
+   * the only person who could ever be added to a company was somebody who had
+   * never used the product before.
+   *
+   * The reply deliberately does NOT echo the existing user's details when they
+   * come from elsewhere. Confirming that an address is registered is a small
+   * leak, and returning the name attached to it is a larger one.
+   */
   const existing = await prisma.user.findFirst({
     where: { email },
-    select: { id: true, email: true, fullName: true, accountId: true },
+    select: { id: true, email: true, fullName: true, accountId: true, isActive: true },
   });
+
+  let invited: { id: string; email: string; fullName: string | null; accountId: string } | null = null;
   if (existing) {
-    if (existing.accountId === accountId) {
-      return res.status(409).json({ error: 'User already exists (email must be unique)', user: existing });
+    if (!existing.isActive) {
+      return res.status(409).json({ error: 'That email address belongs to a deactivated user.' });
     }
-    return res.status(409).json({ error: 'That email address is already registered' });
+    const already = await prisma.userOrgMembership.findFirst({
+      where: { orgId: req.tenant!.orgId, userId: existing.id },
+      select: { id: true },
+    });
+    if (already) {
+      return res.status(409).json({ error: 'That person already has access to this company.' });
+    }
+    invited = {
+      id: existing.id,
+      email: existing.email,
+      fullName: existing.accountId === accountId ? existing.fullName : null,
+      accountId: existing.accountId,
+    };
   }
 
-  if (body.username) {
+  if (!invited && body.username) {
     const usernameTaken = await prisma.user.findFirst({
       where: { username: body.username.trim() },
       select: { id: true },
@@ -237,19 +263,23 @@ usersRouter.post('/users', requirePermission('SETTINGS', PermissionAction.CREATE
     if (usernameTaken) return res.status(409).json({ error: 'That username is already taken' });
   }
 
-  const rounds = Number(process.env.BCRYPT_ROUNDS || 12);
-  const passwordHash = await bcrypt.hash(body.password, rounds);
-
-  const user = await prisma.user.create({
-    data: {
-      accountId,
-      email,
-      username: body.username ? body.username.trim() : null,
-      fullName: body.fullName,
-      passwordHash,
-    },
-    select: { id: true, email: true, fullName: true, accountId: true },
-  });
+  /*
+   * An invited person keeps the login they already have. Setting a password for
+   * somebody else's existing identity would be an account takeover dressed as
+   * an invitation.
+   */
+  const user =
+    invited ??
+    (await prisma.user.create({
+      data: {
+        accountId,
+        email,
+        username: body.username ? body.username.trim() : null,
+        fullName: body.fullName,
+        passwordHash: await bcrypt.hash(body.password, Number(process.env.BCRYPT_ROUNDS || 12)),
+      },
+      select: { id: true, email: true, fullName: true, accountId: true },
+    }));
 
   // memberships
   const orgIds = body.orgIds.length ? Array.from(new Set(body.orgIds)) : [req.tenant!.orgId];
@@ -315,7 +345,7 @@ usersRouter.post('/users', requirePermission('SETTINGS', PermissionAction.CREATE
   await sendTemplate({
     templateKey: 'auth.user_invited',
     to: user.email,
-    toName: user.fullName,
+    toName: user.fullName ?? undefined,
     accountId,
     orgId: req.tenant!.orgId,
     transactional: true,

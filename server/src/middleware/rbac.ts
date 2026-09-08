@@ -148,7 +148,21 @@ export function requirePermission(module: string, action: PermissionActionType, 
   const sm = String(subModule || '').trim();
 
   return async (req: Request, res: Response, next: NextFunction) => {
-    const accountId = String(req.auth?.accountId || '').trim();
+    /*
+     * The account comes from the tenant context, not from the token.
+     *
+     * `req.tenant.accountId` is the account that owns the organisation being
+     * worked in, established by the membership that authorised the request.
+     * `req.auth.accountId` is where the person signed up, which for anyone
+     * invited into somebody else's company is a different account entirely —
+     * so roles were being looked for in the visitor's own account and never
+     * found, and a correctly invited user with a correctly assigned role was
+     * told "No roles assigned".
+     *
+     * For a person working in their own company the two are equal, which is
+     * why this was invisible until invitations crossed an account.
+     */
+    const accountId = String(req.tenant?.accountId || '').trim();
     const userId = String(req.auth?.userId || '').trim();
     const orgId = String(req.tenant?.orgId || '').trim();
     const branchId = String(req.tenant?.branchId || '').trim();
