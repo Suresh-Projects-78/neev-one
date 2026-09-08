@@ -7,6 +7,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { isKnownFeature } from '../constants/featureCatalog.js';
 import { getFeatureCatalogWithValues, getFeatures } from '../services/features.js';
+import { entitlementFor, upgradeHintFor } from '../services/entitlements.js';
 
 export const featuresRouter = Router();
 featuresRouter.use(requireAuth, requireTenantContext);
@@ -41,6 +42,29 @@ featuresRouter.get(
   }
 );
 
+/**
+ * What this account is entitled to, and what it has spent of its limits.
+ *
+ * Readable by any member: the client needs it to decide whether a sidebar
+ * entry offers "turn on" or "on the Growth plan", and knowing which plan you
+ * are on is not privileged.
+ */
+featuresRouter.get('/orgs/:orgId/entitlement', async (req, res) => {
+  if (!orgOk(req, res)) return;
+  const { accountId } = req.tenant!;
+  const e = await entitlementFor(accountId);
+  const [companies, users] = await Promise.all([
+    prisma.org.count({ where: { accountId } }),
+    prisma.user.count({ where: { accountId, isActive: true } }),
+  ]);
+  res.json({
+    plan: { key: e.planKey, name: e.planName, status: e.status, inGoodStanding: e.inGoodStanding },
+    features: [...e.features],
+    limits: e.limits,
+    usage: { companies, users },
+  });
+});
+
 const putSchema = z.object({ features: z.record(z.boolean()) });
 
 featuresRouter.put(
@@ -53,6 +77,26 @@ featuresRouter.put(
 
     for (const key of Object.keys(body.features)) {
       if (!isKnownFeature(key)) return res.status(400).json({ error: `Unknown feature: ${key}` });
+    }
+
+    /*
+     * The ceiling is enforced here as well as when features are read. Reading
+     * alone would let a switch be stored for something the account cannot have,
+     * which then turns itself on the moment anyone upgrades — a surprise, and
+     * not the one they paid for.
+     *
+     * Turning something OFF is always allowed, whatever the plan says.
+     */
+    const entitlement = await entitlementFor(accountId);
+    for (const [key, enabled] of Object.entries(body.features)) {
+      if (enabled && !entitlement.features.has(key)) {
+        return res.status(403).json({
+          error: `${key} is not included in the ${entitlement.planName} plan.`,
+          code: 'NOT_ENTITLED',
+          feature: key,
+          upgradeHint: upgradeHintFor(key),
+        });
+      }
     }
 
     for (const [key, enabled] of Object.entries(body.features)) {

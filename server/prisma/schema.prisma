@@ -18,6 +18,8 @@ model Account {
 
   orgs  Org[]
   users User[]
+
+  entitlement AccountEntitlement?
 }
 
 model Org {
@@ -1173,6 +1175,43 @@ model UserPermission {
 // ----------------------------
 // Feature toggles, per organisation
 // ----------------------------
+/// Which plan an account is on, and anything sold to it beyond the plan.
+///
+/// Only the assignment is data; the plans themselves live in planCatalog.ts,
+/// because a plan is a product decision that should be reviewable in a diff.
+///
+/// An account with no row here is on the default plan, which entitles
+/// everything — so this table taking effect never removes something a customer
+/// already had. A restriction is assigned, never inflicted by a deploy.
+model AccountEntitlement {
+  id        String @id @default(cuid())
+  accountId String @unique
+
+  planKey String
+
+  /// ACTIVE | TRIAL | PAST_DUE | CANCELLED. Anything but the first two closes
+  /// the ceiling to the plan's own features and nothing extra.
+  status String @default("ACTIVE")
+
+  /// Feature keys sold on top of the plan, comma-separated.
+  extraFeatures String @default("")
+
+  /// Null falls back to the plan's own limit.
+  maxCompanies Int?
+  maxUsers     Int?
+
+  /// When a trial or term ends. Null is open-ended.
+  validUntil DateTime?
+
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
 model FeatureSetting {
   id        String @id @default(cuid())
   accountId String

@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../utils/prisma.js';
+import { companyLimitReason } from '../services/entitlements.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
 import { ensureLedgerSetup } from '../services/ledger.js';
 import { ensurePermissionCatalog } from './permissions.js';
@@ -473,6 +474,17 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
   const now = new Date();
 
   // Create org + head-office branch, assign memberships
+  /*
+   * The plan's company allowance, checked before anything is created.
+   *
+   * An account with no entitlement row is on the default plan, which is
+   * unlimited — so this refuses nobody until a plan is deliberately assigned.
+   */
+  const overLimit = await companyLimitReason(auth.accountId);
+  if (overLimit) {
+    return res.status(403).json({ error: overLimit, code: 'COMPANY_LIMIT' });
+  }
+
   const org = await prisma.org.create({
     data: {
       accountId: auth.accountId,
