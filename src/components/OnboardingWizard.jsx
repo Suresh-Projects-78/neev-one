@@ -3,6 +3,7 @@ import { ArrowRight, Building2, Check, UserPlus } from 'lucide-react';
 
 import { notify } from './ui/notify';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../utils/gst';
+import ModulePicker from '../features/settings/ModulePicker';
 
 /**
  * State is a list, not a sentence.
@@ -120,7 +121,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
   const saveCustomer = () => {
     const name = customerName.trim();
     if (!name) {
-      setStep(2); // an empty customer is a skip, not an error
+      setStep(3); // an empty customer is a skip, not an error
       return;
     }
     setDb((prev) => {
@@ -154,10 +155,16 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
         ],
       };
     });
-    setStep(2);
+    setStep(3);
   };
 
-  const STEPS = ['Company', 'First customer', 'First invoice'];
+  /*
+   * Modules sits second on purpose. It comes after the company because the
+   * answers depend on knowing whose books these are, and before the first
+   * customer because a wizard that walks somebody through a document in a part
+   * of the product they never switched on has taught them the wrong thing.
+   */
+  const STEPS = ['Company', 'Modules', 'First customer', 'First invoice'];
 
   return (
     <div className="fixed inset-0 z-[125] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="onboard-title">
@@ -247,6 +254,24 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
 
         {step === 1 ? (
           <div>
+            <h2 id="onboard-title" className="ui-t-sec">What does this business use?</h2>
+            <p className="ui-muted mt-1 text-sm">
+              Switch off what you do not need and it disappears from the menus and the forms. Nothing here is permanent —
+              Settings &rsaquo; Modules changes it at any time.
+            </p>
+            <div className="mt-4">
+              <ModulePicker onDone={() => setStep(2)} submitLabel="Continue" />
+            </div>
+            <div className="mt-3 flex justify-start">
+              <button type="button" onClick={() => setStep(2)} className="ui-btn ui-btn-ghost">
+                Skip
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {step === 2 ? (
+          <div>
             <h2 id="onboard-title" className="ui-t-sec flex items-center gap-2">
               <UserPlus size={18} style={{ color: 'rgb(var(--brand))' }} aria-hidden="true" /> Who do you bill first?
             </h2>
@@ -283,7 +308,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
               </div>
             </div>
             <div className="mt-5 flex justify-between">
-              <button type="button" onClick={() => setStep(2)} className="ui-btn ui-btn-ghost">
+              <button type="button" onClick={() => setStep(3)} className="ui-btn ui-btn-ghost">
                 Skip
               </button>
               <button type="button" onClick={saveCustomer} className="ui-btn ui-btn-primary">
@@ -293,7 +318,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
           </div>
         ) : null}
 
-        {step === 2 ? (
+        {step === 3 ? (
           <div>
             <h2 id="onboard-title" className="ui-t-sec">Books begin with a document</h2>
             <p className="ui-muted mt-1 text-sm">
