@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcrypt';
 import { prisma } from '../utils/prisma.js';
+import { userLimitReason } from '../services/entitlements.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -213,6 +214,17 @@ usersRouter.post('/users', requirePermission('SETTINGS', PermissionAction.CREATE
 
   const body = createUserSchema.parse(req.body);
   const email = body.email.toLowerCase();
+
+  /*
+   * The plan's seat allowance. Checked before anything is written, and before
+   * the invitation branch below, so an account at its limit is told so rather
+   * than being allowed to add a person and discover it later.
+   *
+   * An account with no entitlement row is on the default plan, which is
+   * unlimited, so this refuses nobody until a plan is deliberately assigned.
+   */
+  const seatsFull = await userLimitReason(accountId);
+  if (seatsFull) return res.status(403).json({ error: seatsFull, code: 'USER_LIMIT' });
 
   /*
    * An email is one person, everywhere.

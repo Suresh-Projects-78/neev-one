@@ -195,3 +195,46 @@ describe('billing state', () => {
     expect(res.body.features).not.toContain('warehouses');
   });
 });
+
+describe('seat limits', () => {
+  /*
+   * `userLimitReason` was written when the plan layer went in and then never
+   * called, so the seat allowance existed in the catalogue, was returned by the
+   * entitlement endpoint, and enforced nothing. An account on a three-seat plan
+   * could add a hundred people.
+   */
+  it('refuses a new user once the plan\'s seats are used up', async () => {
+    const ctx = await newOwner();
+    await setPlan(ctx.accountId, 'STARTER', { maxUsers: 1 }); // the owner is the one
+
+    const res = await request(app)
+      .post('/api/users')
+      .set(auth(ctx))
+      .send({
+        email: `seat.${Date.now()}.${rnd()}@example.com`,
+        fullName: 'One Too Many',
+        password: 'Passw0rd!23',
+        orgIds: [ctx.orgId],
+        branchIdsByOrg: { [ctx.orgId]: [ctx.branchId] },
+      })
+      .expect(403);
+    expect(res.body.code).toBe('USER_LIMIT');
+    expect(String(res.body.error)).toMatch(/Starter/);
+  });
+
+  it('allows it while seats remain', async () => {
+    const ctx = await newOwner();
+    await setPlan(ctx.accountId, 'GROWTH'); // 10 seats
+    await request(app)
+      .post('/api/users')
+      .set(auth(ctx))
+      .send({
+        email: `seat.${Date.now()}.${rnd()}@example.com`,
+        fullName: 'Second Person',
+        password: 'Passw0rd!23',
+        orgIds: [ctx.orgId],
+        branchIdsByOrg: { [ctx.orgId]: [ctx.branchId] },
+      })
+      .expect(201);
+  });
+});
