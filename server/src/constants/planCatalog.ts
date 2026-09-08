@@ -46,7 +46,7 @@ export const MODULE_PACKS: { key: string; label: string; description: string; fe
     key: 'sales',
     label: 'Sales & Receivables',
     description: 'Invoices, quotations, sales orders, credit notes and collections.',
-    features: ['quotations', 'salesOrders', 'deliveryChallans', 'creditNotes', 'paymentTerms', 'recurringInvoices'],
+    features: ['estimates', 'salesOrders', 'deliveryChallans', 'creditNotes', 'paymentTerms', 'recurringInvoices'],
   },
   {
     key: 'purchases',
@@ -58,13 +58,19 @@ export const MODULE_PACKS: { key: string; label: string; description: string; fe
     key: 'inventory',
     label: 'Inventory',
     description: 'Stock, warehouses, transfers, batches and serial numbers.',
-    features: ['warehouses', 'stockTransfers', 'batchSerial', 'stockAdjustments'],
+    features: ['inventory', 'warehouses', 'stockTransfers', 'batchSerial', 'reorderAlerts'],
   },
   {
     key: 'compliance',
-    label: 'GST & Compliance',
-    description: 'e-invoicing, e-way bills, GSTR export and TDS.',
-    features: ['einvoice', 'ewayBill', 'gstr', 'tds'],
+    label: 'e-Invoicing & Controls',
+    description: 'Registering invoices with the IRP, approvals, and locking a filed period.',
+    /*
+     * Only the switchable ones. GSTR export, e-way bills and TDS are part of
+     * the product rather than options — naming them here made the pack look
+     * richer and made it permanently un-entitled, because a pack is only fully
+     * entitled when every key under it is real.
+     */
+    features: ['einvoice', 'approvals', 'periodLock'],
   },
   {
     key: 'multiLocation',
@@ -92,16 +98,15 @@ export const PLAN_CATALOG: PlanDef[] = [
       'creditNotes',
       'debitNotes',
       'paymentTerms',
-      'quotations',
+      'estimates',
       'salesOrders',
       'deliveryChallans',
       'purchaseOrders',
+      'inventory',
       'warehouses',
       'stockTransfers',
-      'stockAdjustments',
       'branches',
-      'gstr',
-      'tds',
+      'bankReconciliation',
     ],
     limits: { maxCompanies: 3, maxUsers: 10 },
     order: 2,

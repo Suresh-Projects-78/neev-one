@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+
+import ModulePicker from '../features/settings/ModulePicker';
 import LandingPage from '../features/marketing/LandingPage';
 import AuthIllustration from './AuthIllustration';
 import { useTilt } from './ui/useTilt';
@@ -45,6 +47,8 @@ const AuthGate = ({ onAuth }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [signupToken, setSignupToken] = useState('');
+  const [companyHandle, setCompanyHandle] = useState('');
+  const [signupCompany, setSignupCompany] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const { ref: illusRef, onPointerMove: illusMove, onPointerLeave: illusLeave } = useTilt({ maxDeg: 7, scale: 1.02 });
 
@@ -261,17 +265,22 @@ const AuthGate = ({ onAuth }) => {
         }
         setSuccess('Company created');
         localStorage.setItem('token', signupToken);
-        setTimeout(() => {
-          onAuth && onAuth({
-            token: signupToken,
-            onboarding: {
-              companyId: res.data.company.id,
-              companyName: res.data.company.name,
-              orgId: res.data.company.orgId,
-              branchId: res.data.branch?.id || null,
-            },
-          });
-        }, 1000);
+        setCompanyHandle(String(res.data.company?.slug || ''));
+        /*
+         * Modules are asked here rather than after the first sign-in, because
+         * this is the only moment the person is still answering questions about
+         * their business. Landing them in a product configured for everybody
+         * and asking later means they meet menus they will never use first.
+         */
+        setSignupCompany({
+          companyId: res.data.company.id,
+          companyName: res.data.company.name,
+          orgId: res.data.company.orgId,
+          branchId: res.data.branch?.id || null,
+        });
+        setLoading(false);
+        setSignupStep(3);
+        return;
       } else {
         const msg = res.data?.error || 'Company setup failed';
         setError(msg);
@@ -362,6 +371,7 @@ const AuthGate = ({ onAuth }) => {
     if (mode === 'login') return onLogin();
     if (mode === 'signup' && signupStep === 1) return onSignupAccount();
     if (mode === 'signup' && signupStep === 2) return onSignupCompany();
+    if (mode === 'signup' && signupStep === 3) return undefined;
     if (mode === 'forgot') return onForgotPassword();
     if (mode === 'reset') return onResetPassword();
   };
@@ -378,6 +388,7 @@ const AuthGate = ({ onAuth }) => {
     if (mode === 'login') return 'Welcome Back';
     if (mode === 'signup' && signupStep === 1) return 'Create Account';
     if (mode === 'signup' && signupStep === 2) return 'Setup Your Company';
+    if (mode === 'signup' && signupStep === 3) return 'What does this business use?';
     if (mode === 'forgot') return 'Reset Password';
     if (mode === 'reset') return 'Set New Password';
     return 'Welcome';
@@ -387,6 +398,8 @@ const AuthGate = ({ onAuth }) => {
     if (mode === 'login') return 'Sign in to access your account';
     if (mode === 'signup' && signupStep === 1) return 'Enter your details to get started';
     if (mode === 'signup' && signupStep === 2) return 'Create your first organization';
+    if (mode === 'signup' && signupStep === 3)
+      return companyHandle ? `${signupCompany?.companyName || 'Your company'} \u00b7 ${companyHandle}` : 'Switch off what you do not need';
     if (mode === 'forgot') return 'Enter your email to receive reset instructions';
     if (mode === 'reset') return 'Choose a strong password for your account';
     return '';
@@ -518,6 +531,44 @@ const AuthGate = ({ onAuth }) => {
               <div className="text-center mb-8">
                 <h2 className="ui-display text-[1.75rem]">{getTitle()}</h2>
                 <p className="ui-muted mt-2 text-sm">{getSubtitle()}</p>
+
+                {/*
+                  Three steps, named and numbered. Signing up used to move from
+                  a person to a company with nothing saying how much was left,
+                  which is the moment people abandon a form — not because it is
+                  long, but because they cannot tell whether it is.
+                */}
+                {mode === 'signup' ? (
+                  <ol className="mt-5 flex items-center gap-2" aria-label="Signup progress">
+                    {['Account', 'Company', 'Modules'].map((label, i) => {
+                      const n = i + 1;
+                      const done = signupStep > n;
+                      const here = signupStep === n;
+                      return (
+                        <li key={label} className="flex flex-1 items-center gap-2 min-w-0">
+                          <span
+                            aria-hidden="true"
+                            className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[0.6875rem]"
+                            style={
+                              done || here
+                                ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand, 255 255 255))' }
+                                : { backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--fg-subtle))' }
+                            }
+                          >
+                            {done ? '✓' : n}
+                          </span>
+                          <span
+                            className="truncate text-xs"
+                            style={{ color: here ? 'rgb(var(--fg))' : 'rgb(var(--fg-subtle))' }}
+                            aria-current={here ? 'step' : undefined}
+                          >
+                            {label}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : null}
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -779,6 +830,38 @@ const AuthGate = ({ onAuth }) => {
                   </>
                 )}
 
+                {/*
+                  Step three: the modules. Rendered here rather than as a screen
+                  after the first sign-in, because this is the last moment the
+                  person is still answering questions about their business —
+                  and because a product configured for everybody puts menus they
+                  will never use in front of them first.
+                */}
+                {mode === 'signup' && signupStep === 3 && (
+                  <div className="space-y-4">
+                    {companyHandle ? (
+                      <p className="ui-caption">
+                        Your workspace handle is <span className="ui-mono">{companyHandle}</span>. It can be changed later
+                        in Settings.
+                      </p>
+                    ) : null}
+                    <ModulePicker
+                      submitLabel="Finish setup"
+                      onDone={() =>
+                        onAuth &&
+                        onAuth({ token: signupToken, onboarding: signupCompany || undefined })
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="ui-btn ui-btn-ghost w-full"
+                      onClick={() => onAuth && onAuth({ token: signupToken, onboarding: signupCompany || undefined })}
+                    >
+                      Skip — decide later
+                    </button>
+                  </div>
+                )}
+
                 {/* Error Message */}
                 {error && (
                   <div className="bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg))]/30 rounded-xl p-4 flex items-start gap-3 max-h-28 overflow-auto">
@@ -799,7 +882,8 @@ const AuthGate = ({ onAuth }) => {
                   </div>
                 )}
 
-                {/* Submit Button */}
+                {/* Submit Button — step three carries its own. */}
+                {mode === 'signup' && signupStep === 3 ? null : (
                 <button
                   type="submit"
                   disabled={loading}
@@ -823,6 +907,7 @@ const AuthGate = ({ onAuth }) => {
                     </>
                   )}
                 </button>
+                )}
 
                 {/* Links */}
                 <div className="space-y-3 pt-2">
