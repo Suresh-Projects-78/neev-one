@@ -1271,6 +1271,7 @@ model Party {
   billingState   String?
   billingPincode String?
   billingCountry String? @default("India")
+  billingDistrict String?
 
   shippingSameAsBilling Boolean @default(true)
   shippingLine1         String?
@@ -1279,6 +1280,7 @@ model Party {
   shippingState         String?
   shippingPincode       String?
   shippingCountry       String?
+  shippingDistrict      String?
 
   // Drives the due date on documents so it cannot be bypassed in the browser.
   paymentTermDays Int      @default(0)
@@ -1287,6 +1289,18 @@ model Party {
 
   openingBalance     Decimal @default(0)
   openingBalanceType String  @default("DR") // DR | CR
+
+  /// Which group under Sundry Debtors / Creditors this party rolls up to.
+  partyGroup String?
+  /// The currency this party is billed in, when it is not the company's own.
+  currency   String?
+  priceListId String?
+
+  /// Statutory identifiers beyond GSTIN and PAN. `statutoryOther` is a free
+  /// field because the list of things a customer is asked to record — LUT,
+  /// IEC, a state licence — is longer than any schema should try to enumerate.
+  msmeNumber     String?
+  statutoryOther String?
 
   notes    String?
   isActive Boolean @default(true)
@@ -1299,10 +1313,75 @@ model Party {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  addresses PartyAddress[]
+  contacts  PartyContact[]
+
   @@unique([orgId, partyType, name])
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, partyType, isActive])
   @@index([accountId, orgId, gstin])
+}
+
+/// An address beyond the billing and shipping ones the party carries directly.
+///
+/// Billing and shipping stay as columns on Party. They are read by the document
+/// sync and by every invoice, and moving them would have been a migration with
+/// no user-visible gain. Everything past those two — a second shipping address,
+/// a site office, a warehouse — lives here with a name, which is what the
+/// customer master asks for.
+///
+/// The API returns all of them as one `addresses` array with billing and
+/// shipping synthesised at the front, so the split is invisible above the API
+/// and the form deals with a single list.
+model PartyAddress {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  partyId   String
+
+  /// "Shipping 2", "Site office" — the name of the place, as the user calls it.
+  label    String
+  line1    String?
+  line2    String?
+  city     String?
+  district String?
+  state    String?
+  pincode  String?
+  country  String? @default("India")
+
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  party Party @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, orgId, partyId])
+}
+
+/// A person at the party. One row per human, because `contactPerson` as a
+/// single string could not hold the accounts clerk and the person who signs off
+/// the order at the same time — and those are rarely the same person.
+model PartyContact {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  partyId   String
+
+  name     String
+  position String?
+  email    String?
+  mobile   String?
+
+  isPrimary Boolean  @default(false)
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  party Party @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, orgId, partyId])
 }
 
 // ----------------------------
