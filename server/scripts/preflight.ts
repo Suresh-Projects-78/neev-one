@@ -38,12 +38,30 @@ async function main() {
     console.log('                   Resolve these by hand before deploying. `db push` cannot.');
   }
 
-  /* 2. Additive, but the feature is dead for existing rows until backfilled. */
-  const noSlug = await prisma.org.findMany({
-    where: { OR: [{ slug: null }, { slug: '' }] },
-    select: { id: true, name: true },
-  });
-  if (noSlug.length === 0) {
+  /*
+   * 2. Additive, but the feature is dead for existing rows until backfilled.
+   *
+   * Guarded, because this script runs BEFORE the schema is pushed and the
+   * column does not exist yet at that point — the Prisma client on the server
+   * is still generated from the old schema, so asking for `slug` throws rather
+   * than returning nothing. Before the deploy that is the expected answer and
+   * not a problem; after it, re-run with --fix to allot the handles.
+   */
+  let noSlug: Array<{ id: string; name: string }> = [];
+  let slugColumnExists = true;
+  try {
+    noSlug = await prisma.org.findMany({
+      where: { OR: [{ slug: null }, { slug: '' }] },
+      select: { id: true, name: true },
+    });
+  } catch {
+    slugColumnExists = false;
+  }
+
+  if (!slugColumnExists) {
+    console.log('company handles    not applicable yet — the column arrives with this deploy. Re-run this');
+    console.log('                   script with --fix afterwards to allot handles to existing companies.');
+  } else if (noSlug.length === 0) {
     console.log('company handles    OK — every company already has one.');
   } else if (!FIX) {
     console.log(`company handles    ${noSlug.length} company(ies) have no handle. Not blocking — nothing breaks without`);
