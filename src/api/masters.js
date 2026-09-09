@@ -22,3 +22,16 @@ export const createItem = (item) => apiFetch(`${base()}/items`, { method: 'POST'
 
 export const nextNumber = (docType, date) =>
   apiFetch(`${base()}/number-series/next/${encodeURIComponent(docType)}${date ? `?date=${date}` : ''}`, opts);
+
+/**
+ * What a GSTIN says about itself, plus whatever a configured portal adds.
+ *
+ * The number is self-describing: the first two digits are the state code and
+ * characters 3–12 are the PAN. The server returns those without calling
+ * anywhere, so the button is useful even where no portal is configured.
+ */
+export const lookupGstin = (gstin) =>
+  apiFetch(`/gstin/${encodeURIComponent(String(gstin || '').trim().toUpperCase())}`, {
+    skipBranchHeader: true,
+    skipWarehouseHeader: true,
+  });

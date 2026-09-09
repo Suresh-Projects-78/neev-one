@@ -1,8 +1,10 @@
 import React from 'react';
+import { Search } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
+import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
 import Modal from '../ui/Modal';
-import { createCustomer, listCustomers } from '../../api/masters';
+import { createCustomer, listCustomers, lookupGstin } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getCustomerDisplayName } from '../../utils/contacts';
@@ -62,6 +64,15 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         creditLimit:
           initialData.creditLimit === undefined || initialData.creditLimit === null ? '' : String(initialData.creditLimit),
         shipToAddresses: Array.isArray(initialData.shipToAddresses) ? initialData.shipToAddresses : [],
+        contacts: Array.isArray(initialData.contacts) ? initialData.contacts : [],
+        currency: String(initialData.currency || 'INR'),
+        priceListId: String(initialData.priceListId || ''),
+        msmeNumber: String(initialData.msmeNumber || ''),
+        statutoryOther: String(initialData.statutoryOther || ''),
+        code: String(initialData.code || ''),
+        notes: String(initialData.notes || ''),
+        openingBalance: Number(initialData.openingBalance ?? 0),
+        openingBalanceType: String(initialData.openingBalanceType || 'Dr'),
         billingAddress: {
           ...billing,
           state: String(billing.state || ''),
@@ -88,12 +99,26 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       mobile: '',
       email: '',
       alternatePhone: '',
-      gstRegistration: 'Unregistered',
+      /*
+       * Registered is the default because most customers a GST business bills
+       * are, and because the field that follows — the GSTIN — decides how tax
+       * splits on every invoice they are ever sent. Adding an unregistered
+       * customer is the rarer and more deliberate act, so it is the one that
+       * takes a click.
+       */
+      gstRegistration: 'Registered',
       gstin: '',
       pan: '',
       paymentTermDays: '',
       creditLimit: '',
       shipToAddresses: [],
+      contacts: [],
+      currency: 'INR',
+      priceListId: '',
+      msmeNumber: '',
+      statutoryOther: '',
+      code: '',
+      notes: '',
       billingAddress: {
         ...emptyAddress,
         country: INDIA_COUNTRY,
@@ -212,27 +237,11 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
   const accountTypeById = new Map(accountTypes.map((t) => [String(t.id), t]));
 
-  const updateBilling = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      billingAddress: {
-        ...prev.billingAddress,
-        [field]: value,
-      },
-    }));
-  };
-
-  const updateShipping = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      shippingAddress: {
-        ...prev.shippingAddress,
-        [field]: value,
-      },
-    }));
-  };
-
-  const gstRegistrationRequiresGstinUi = ['Registered', 'Composition', 'SEZ'].includes(formData.gstRegistration);
+  /*
+   * The per-address updaters are gone. The address table edits rows through
+   * `updateAddressRow`, which knows row 0 is billing, row 1 is shipping and
+   * everything after is `shipToAddresses`.
+   */
   const gstStateAuto = getGstStateFromGstin(formData.gstin);
 
   const normalizeGstin = (v) => String(v || '').trim().toUpperCase();
@@ -245,12 +254,114 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
   const isValidGstin = (gstin) => /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(normalizeGstin(gstin));
   const getGstinState = (gstin) => getGstStateFromGstin(normalizeGstin(gstin));
 
-  const isIndiaBilling = String(formData.billingAddress?.country || '').trim() === INDIA_COUNTRY;
-  const isIndiaShipping = String(formData.shippingAddress?.country || '').trim() === INDIA_COUNTRY;
 
+  const [tab, setTab] = useState('address');
+  const [gstinFetching, setGstinFetching] = useState(false);
+
+  /*
+   * One list for the form, two stores underneath.
+   *
+   * Billing and shipping are columns on the party — every invoice reads them —
+   * and everything past those two is a row. The form should not have to know
+   * that, so the rows are assembled here in the order the master asks for and
+   * taken apart again on save.
+   */
+  const addressRows = useMemo(
+    () => [
+      { key: 'BILLING', label: 'Billing', builtIn: true, ...formData.billingAddress },
+      { key: 'SHIPPING', label: 'Shipping', builtIn: true, ...formData.shippingAddress },
+      ...(formData.shipToAddresses || []).map((a, i) => ({
+        key: `EXTRA-${i}`,
+        builtIn: false,
+        label: a.label || '',
+        line1: a.line1 || '',
+        line2: a.line2 || '',
+        city: a.city || '',
+        district: a.district || '',
+        state: a.state || '',
+        pincode: a.pincode || '',
+        country: a.country || INDIA_COUNTRY,
+      })),
+    ],
+    [formData.billingAddress, formData.shippingAddress, formData.shipToAddresses, INDIA_COUNTRY]
+  );
+
+  const updateAddressRow = (i, key, value) =>
+    setFormData((p) => {
+      if (i === 0) return { ...p, billingAddress: { ...p.billingAddress, [key]: value } };
+      if (i === 1) return { ...p, shippingAddress: { ...p.shippingAddress, [key]: value }, shippingSameAsBilling: false };
+      const idx = i - 2;
+      return { ...p, shipToAddresses: p.shipToAddresses.map((a, j) => (j === idx ? { ...a, [key]: value } : a)) };
+    });
+
+  const addAddressRow = () =>
+    setFormData((p) => ({
+      ...p,
+      shipToAddresses: [
+        ...(p.shipToAddresses || []),
+        {
+          label: `Shipping ${(p.shipToAddresses || []).length + 2}`,
+          line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: INDIA_COUNTRY,
+        },
+      ],
+    }));
+
+  const removeAddressRow = (i) =>
+    setFormData((p) => ({ ...p, shipToAddresses: (p.shipToAddresses || []).filter((_, j) => j !== i - 2) }));
+
+  const updateContactRow = (i, key, value) =>
+    setFormData((p) => ({ ...p, contacts: p.contacts.map((c, j) => (j === i ? { ...c, [key]: value } : c)) }));
+
+  const addContactRow = () =>
+    setFormData((p) => ({ ...p, contacts: [...(p.contacts || []), { name: '', position: '', email: '', mobile: '' }] }));
+
+  const removeContactRow = (i) => setFormData((p) => ({ ...p, contacts: p.contacts.filter((_, j) => j !== i) }));
+
+  /*
+   * What the GSTIN itself encodes is filled without asking anybody: the first
+   * two digits are the state and characters 3-12 are the PAN. A configured
+   * portal adds the legal name and address on top; without one the derived
+   * fields still land, which is most of what the button is for.
+   */
+  const fetchFromGstin = async () => {
+    const gstin = String(formData.gstin || '').trim().toUpperCase();
+    if (gstin.length !== 15) {
+      notify.error('Enter the 15-character GSTIN first.');
+      return;
+    }
+    setGstinFetching(true);
+    try {
+      const data = await lookupGstin(gstin);
+      setFormData((p) => ({
+        ...p,
+        gstin,
+        pan: data?.pan || p.pan,
+        displayName: p.displayName || data?.legalName || data?.tradeName || '',
+        billingAddress: {
+          ...p.billingAddress,
+          state: data?.state || p.billingAddress.state,
+          line1: p.billingAddress.line1 || data?.address?.line1 || '',
+          city: p.billingAddress.city || data?.address?.city || '',
+          pincode: p.billingAddress.pincode || data?.address?.pincode || '',
+        },
+      }));
+      notify.success(data?.source === 'derived' ? 'State and PAN filled from the GSTIN.' : 'Fetched from the GST portal.');
+    } catch (e) {
+      notify.error(String(e?.message || 'Could not fetch that GSTIN.'));
+    } finally {
+      setGstinFetching(false);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    /*
+     * Which button was pressed. "Save and New" clears the form and keeps it
+     * open, which is what somebody entering a list wants; Save closes. Read
+     * from the submitter rather than held in state, so the two buttons cannot
+     * disagree with what actually happened.
+     */
+    const saveAndNew = e.nativeEvent?.submitter?.value === 'saveAndNew';
 
     const selectedGroupIdRaw = String(formData.groupId || '').trim();
     const effectiveGroupId = selectedGroupIdRaw
@@ -347,6 +458,8 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       creditLimit:
         String(formData.creditLimit ?? '').trim() === '' ? undefined : Math.max(0, Number(formData.creditLimit) || 0),
       shipToAddresses: (formData.shipToAddresses || []).filter((a) => String(a.line1 || a.label || '').trim()),
+      // A contact row with no name is an empty row somebody added and left.
+      contacts: (formData.contacts || []).filter((c) => String(c.name || '').trim()),
       billingAddress: {
         ...formData.billingAddress,
         state: billingStateFinal,
@@ -484,6 +597,18 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     setDb({ ...db, chartOfAccounts: [...coa, ledger], customers: [...(db.customers || []), finalCustomer] });
 
     if (typeof onCreated === 'function') onCreated(finalCustomer);
+    if (saveAndNew) {
+      setFormData((p) => ({
+        ...p,
+        displayName: '', gstin: '', pan: '', code: '', openingBalance: 0,
+        contacts: [], shipToAddresses: [],
+        billingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: INDIA_COUNTRY },
+        shippingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: INDIA_COUNTRY },
+      }));
+      setTab('address');
+      notify.success('Customer created. Ready for the next one.');
+      return;
+    }
     if (typeof onClose === 'function') {
       onClose();
       return;
@@ -494,444 +619,308 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="ui-label">Company Name</label>
-        <input
-          type="text"
-          value={formData.displayName}
-          onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-          className="ui-input w-full"
-          required
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
+        {/*
+          The customer master, in the order the business asks for it: the six
+          things every customer needs, then the rest behind tabs. Addresses and
+          contacts are lists, because a customer with one delivery point and one
+          person at the other end is the exception, not the rule.
+        */}
+        <div className="space-y-4">
+          <h3 className="ui-t-sec">Basic Details</h3>
 
-      <div>
-        <PopupSelect
-          label="Group"
-          value={String(formData.groupId || '').trim()}
-          onChange={(val) => setFormData((p) => ({ ...p, groupId: String(val || '').trim() }))}
-          options={customerGroupOptions}
-          placeholder="Select group"
-          title="Select Group"
-          showValueSubtext={false}
-          allowCustom
-          customActionText="Create new Group"
-          onCustomAction={(typed) => {
-            setGroupDraftName(String(typed || '').trim());
-            setGroupCreateOpen(true);
-          }}
-        />
-      </div>
+          <FormRow label="GST Registration Type" hint="Decides whether a GSTIN is required, and whether input credit can be claimed on what you buy from them.">
+            <div className="flex items-center gap-6 pt-1.5">
+              {[
+                { v: 'Registered', l: 'Registered' },
+                { v: 'Unregistered', l: 'Unregistered' },
+              ].map((o) => (
+                <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="gstRegistration"
+                    className="ui-radio"
+                    checked={formData.gstRegistration === o.v}
+                    onChange={() => setFormData((p) => ({ ...p, gstRegistration: o.v }))}
+                  />
+                  {o.l}
+                </label>
+              ))}
+            </div>
+          </FormRow>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="ui-label">Opening Balance</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.openingBalance}
-            onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-            className="ui-input w-full"
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Dr / Cr</label>
-          <select
-            value={formData.openingBalanceType}
-            onChange={(e) => setFormData((p) => ({ ...p, openingBalanceType: e.target.value }))}
-            className="ui-select w-full"
-          >
-            <option value="Dr">Dr — they owe us</option>
-            <option value="Cr">Cr — we owe them</option>
-          </select>
-        </div>
-      </div>
+          {formData.gstRegistration === 'Registered' ? (
+            <FormRow label="GSTIN" hint="The first two digits are the state code and characters 3–12 are the PAN, so both are filled from the number.">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={formData.gstin}
+                  onChange={(e) => setFormData((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))}
+                  className="ui-input min-w-0 flex-1"
+                  placeholder="Enter 15 digit GSTIN"
+                  maxLength={15}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={fetchFromGstin}
+                  disabled={gstinFetching}
+                  className="ui-btn ui-btn-secondary shrink-0"
+                  style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
+                >
+                  <Search size={14} aria-hidden="true" />
+                  {gstinFetching ? 'Fetching…' : 'Fetch from GSTN'}
+                </button>
+              </div>
+            </FormRow>
+          ) : null}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">Contact Person</label>
-          <input
-            type="text"
-            value={formData.contactPerson}
-            onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Mobile</label>
-          <input
-            type="tel"
-            value={formData.mobile}
-            onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">Email</label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Alternate Phone</label>
-          <input
-            type="tel"
-            value={formData.alternatePhone}
-            onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-      </div>
-
-      <div className="border rounded-lg p-3 space-y-3">
-        <div className="font-semibold">GST Details</div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="ui-label">GST Registration</label>
-            <select
-              value={formData.gstRegistration}
-              onChange={(e) => {
-                const nextReg = e.target.value;
-                const requiresGstin = ['Registered', 'Composition', 'SEZ'].includes(nextReg);
-                setFormData((prev) => ({
-                  ...prev,
-                  gstRegistration: nextReg,
-                  gstin: requiresGstin ? prev.gstin : '',
-                  pan: requiresGstin ? prev.pan : '',
-                }));
-              }}
-              className="ui-select w-full"
-            >
-              <option value="Registered">Registered</option>
-              <option value="Unregistered">Unregistered</option>
-              <option value="Composition">Composition</option>
-              <option value="SEZ">SEZ</option>
-              <option value="Overseas">Overseas</option>
-            </select>
-          </div>
-          <div>
-            <label className="ui-label">GSTIN</label>
+          <FormRow label="Customer Name" required hint="The name that appears on the invoice.">
             <input
               type="text"
-              value={gstRegistrationRequiresGstinUi ? formData.gstin : ''}
-              onChange={(e) => {
-                if (!gstRegistrationRequiresGstinUi) return;
-                const nextGstin = e.target.value;
-                const nextAutoState = getGstStateFromGstin(nextGstin);
-                setFormData((prev) => ({
-                  ...prev,
-                  gstin: nextGstin,
-                  billingAddress: {
-                    ...prev.billingAddress,
-                    state: nextAutoState || prev.billingAddress.state,
-                  },
-                }));
-              }}
-              className={`w-full px-3 py-2 border rounded-lg ${gstRegistrationRequiresGstinUi ? '' : 'ui-sunken'}`}
-              placeholder={gstRegistrationRequiresGstinUi ? 'GSTIN (required)' : 'GSTIN (disabled)'}
-              disabled={!gstRegistrationRequiresGstinUi}
-              required={gstRegistrationRequiresGstinUi}
+              value={formData.displayName}
+              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+              className="ui-input w-full"
+              placeholder="Enter customer name"
+              required
             />
-          </div>
-        </div>
+          </FormRow>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="ui-label">PAN</label>
-            <input
-              type="text"
-              value={formData.pan}
-              onChange={(e) => setFormData({ ...formData, pan: e.target.value })}
-              className="ui-input w-full"
-              placeholder={gstRegistrationRequiresGstinUi ? 'PAN required' : 'Optional'}
+          <FormRow label="Customer Group" hint="Which group under Sundry Debtors this customer rolls up to in the balance sheet.">
+            <PopupSelect
+              label={null}
+              value={String(formData.groupId || '').trim()}
+              onChange={(val) => setFormData((p) => ({ ...p, groupId: String(val || '').trim() }))}
+              options={customerGroupOptions}
+              placeholder="Select customer group"
+              title="Select Customer Group"
+              showValueSubtext={false}
+              allowCustom
+              customActionText="Create new Group"
+              onCustomAction={(typed) => {
+                setGroupDraftName(String(typed || '').trim());
+                setGroupCreateOpen(true);
+              }}
             />
-          </div>
-          <div>
-            <label className="ui-label">Credit period (days)</label>
+          </FormRow>
+
+          <FormRow label="Currency" hint="The currency this customer is billed in. Their ledger is kept in it; your books stay in the company's own currency.">
+            <PopupSelect
+              label={null}
+              title="Select Currency"
+              value={formData.currency}
+              onChange={(v) => setFormData((p) => ({ ...p, currency: v }))}
+              options={CURRENCY_OPTIONS}
+              placeholder="Select currency"
+            />
+          </FormRow>
+
+          <FormRow label="Opening Balance" hint="What they already owed on the day the books begin. Leave at zero for a new customer.">
             <input
               type="number"
-              min="0"
-              max="365"
-              value={formData.paymentTermDays}
-              onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
-              className="ui-input w-full"
-              placeholder="30"
-            />
-            <p className="mt-1 text-xs ui-muted">
-              Sets the due date on this customer&apos;s invoices. Blank uses 30 days; 0 means due on receipt.
-            </p>
-          </div>
-          <div>
-            <label className="ui-label">Credit limit</label>
-            <input
-              type="number"
-              min="0"
               step="0.01"
-              value={formData.creditLimit}
-              onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-              className="ui-input w-full"
-              placeholder="0 = no limit"
+              value={formData.openingBalance}
+              onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
+              className="ui-input ui-money w-full"
+              placeholder="0.00"
             />
-            <p className="mt-1 text-xs ui-muted">New invoices warn when outstanding would cross this.</p>
-          </div>
-          <div>
-            <label className="ui-label">State</label>
-            <PopupSelect
-              label={null}
-              title="Select State"
-              value={formData.billingAddress.state}
-              onChange={(next) => {
-                if (gstStateAuto) return;
-                updateBilling('state', next);
-              }}
-              disabled={Boolean(gstStateAuto)}
-              options={
-                isIndiaBilling
-                  ? INDIA_STATES.map((s) => ({ value: s.name, label: s.name, code: s.code }))
-                  : []
-              }
-              placeholder={isIndiaBilling ? 'Select state' : 'Select / type state'}
-              // Typed values only where there is no list to pick from. An
-              // Indian state decides CGST + SGST against IGST by string match,
-              // so "Karntaka" silently charges the wrong tax; outside India
-              // there are no options at all and typing is the only way in.
-              allowCustom={!isIndiaBilling}
-            />
-          </div>
-        </div>
-      </div>
+          </FormRow>
 
-      <div className="border rounded-lg p-3 space-y-3">
-        <div className="font-semibold">Billing Address</div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="ui-label">Address Line 1</label>
-            <input
-              type="text"
-              value={formData.billingAddress.line1}
-              onChange={(e) => updateBilling('line1', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-          <div>
-            <label className="ui-label">Address Line 2</label>
-            <input
-              type="text"
-              value={formData.billingAddress.line2}
-              onChange={(e) => updateBilling('line2', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
+          <FormRow label="Opening Balance Type" hint="Dr means they owe you, which is the usual direction for a customer. Cr means you owe them — an advance they have already paid.">
+            <div className="flex items-center gap-6 pt-1.5">
+              {[
+                { v: 'Dr', l: 'Dr (Default)' },
+                { v: 'Cr', l: 'Cr' },
+              ].map((o) => (
+                <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="openingBalanceType"
+                    className="ui-radio"
+                    checked={formData.openingBalanceType === o.v}
+                    onChange={() => setFormData((p) => ({ ...p, openingBalanceType: o.v }))}
+                  />
+                  {o.l}
+                </label>
+              ))}
+            </div>
+          </FormRow>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="ui-label">City</label>
-            <input
-              type="text"
-              value={formData.billingAddress.city}
-              onChange={(e) => updateBilling('city', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-          <div>
-            <label className="ui-label">District</label>
-            <input
-              type="text"
-              value={formData.billingAddress.district}
-              onChange={(e) => updateBilling('district', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-          <div>
-            <label className="ui-label">Pincode</label>
-            <input
-              type="text"
-              value={formData.billingAddress.pincode}
-              onChange={(e) => updateBilling('pincode', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
+        <div className="ui-tabs mt-6" role="tablist" aria-label="Customer details">
+          {CUSTOMER_TABS.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.key}
+              onClick={() => setTab(t.key)}
+              className={`ui-tab ${tab === t.key ? 'is-active' : ''}`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        <div>
-          <label className="ui-label">Country</label>
-            <PopupSelect
-              label={null}
-              title="Select Country"
-              value={formData.billingAddress.country}
-              onChange={(next) => updateBilling('country', next)}
-              options={[
-                { value: INDIA_COUNTRY, label: INDIA_COUNTRY },
-                { value: 'Overseas', label: 'Overseas' },
-              ]}
-              placeholder="Select country"
+        <div className="min-h-0 flex-1 pt-5">
+          {tab === 'address' ? (
+            <AddressTab
+              rows={addressRows}
+              states={INDIA_STATES}
+              onChange={updateAddressRow}
+              onAdd={addAddressRow}
+              onRemove={removeAddressRow}
             />
-        </div>
-      </div>
+          ) : null}
 
-      <div className="border rounded-lg p-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="font-semibold">Shipping Address</div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={formData.shippingSameAsBilling}
-              onChange={(e) => setFormData((p) => ({ ...p, shippingSameAsBilling: e.target.checked }))}
+          {tab === 'contacts' ? (
+            <ContactsTab
+              rows={formData.contacts}
+              onChange={updateContactRow}
+              onAdd={addContactRow}
+              onRemove={removeContactRow}
             />
-            Same as Billing
-          </label>
-        </div>
+          ) : null}
 
-        {!formData.shippingSameAsBilling && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+          {tab === 'credit' ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="ui-label">Address Line 1</label>
+                <label className="ui-label" htmlFor="cust-credit-period">Credit Period (days)</label>
                 <input
-                  type="text"
-                  value={formData.shippingAddress.line1}
-                  onChange={(e) => updateShipping('line1', e.target.value)}
+                  id="cust-credit-period"
+                  type="number"
+                  min="0"
+                  value={formData.paymentTermDays}
+                  onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
                   className="ui-input w-full"
+                  placeholder="30"
+                />
+                <p className="ui-caption mt-1">Sets the due date on every invoice raised for them.</p>
+              </div>
+              <div>
+                <label className="ui-label" htmlFor="cust-credit-limit">Credit Limit</label>
+                <input
+                  id="cust-credit-limit"
+                  type="number"
+                  min="0"
+                  value={formData.creditLimit}
+                  onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
+                  className="ui-input ui-money w-full"
+                  placeholder="0.00"
                 />
               </div>
               <div>
-                <label className="ui-label">Address Line 2</label>
+                <label className="ui-label" htmlFor="cust-price-list">Price List</label>
                 <input
+                  id="cust-price-list"
                   type="text"
-                  value={formData.shippingAddress.line2}
-                  onChange={(e) => updateShipping('line2', e.target.value)}
+                  value={formData.priceListId}
+                  onChange={(e) => setFormData({ ...formData, priceListId: e.target.value })}
                   className="ui-input w-full"
+                  placeholder="Standard"
                 />
               </div>
             </div>
+          ) : null}
 
-            <div className="grid grid-cols-3 gap-4">
+          {tab === 'statutory' ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/*
+                GSTIN is shown here but not editable. The master asked for it in
+                both places; the same value in two editable fields on one form
+                is how two different values get saved.
+              */}
               <div>
-                <label className="ui-label">City</label>
+                <label className="ui-label" htmlFor="cust-stat-gstin">GSTIN</label>
                 <input
+                  id="cust-stat-gstin"
                   type="text"
-                  value={formData.shippingAddress.city}
-                  onChange={(e) => updateShipping('city', e.target.value)}
-                  className="ui-input w-full"
+                  value={formData.gstin || '—'}
+                  readOnly
+                  className="ui-input ui-mono w-full ui-sunken"
+                />
+                <p className="ui-caption mt-1">Entered under Basic Details.</p>
+              </div>
+              <div>
+                <label className="ui-label" htmlFor="cust-pan">PAN</label>
+                <input
+                  id="cust-pan"
+                  type="text"
+                  value={formData.pan}
+                  onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
+                  className="ui-input ui-mono w-full"
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
                 />
               </div>
               <div>
-                <label className="ui-label">District</label>
+                <label className="ui-label" htmlFor="cust-msme">MSME / Udyam</label>
                 <input
+                  id="cust-msme"
                   type="text"
-                  value={formData.shippingAddress.district}
-                  onChange={(e) => updateShipping('district', e.target.value)}
+                  value={formData.msmeNumber}
+                  onChange={(e) => setFormData({ ...formData, msmeNumber: e.target.value })}
                   className="ui-input w-full"
+                  placeholder="UDYAM-XX-00-0000000"
                 />
+                <p className="ui-caption mt-1">A registered micro or small supplier must be paid within 45 days.</p>
               </div>
               <div>
-                <label className="ui-label">State</label>
-                <PopupSelect
-                  label={null}
-                  title="Select State"
-                  value={formData.shippingAddress.state}
-                  onChange={(next) => updateShipping('state', next)}
-                  options={
-                    isIndiaShipping
-                      ? INDIA_STATES.map((s) => ({ value: s.name, label: s.name, code: s.code }))
-                      : []
-                  }
-                  placeholder={isIndiaShipping ? 'Select state' : 'Select / type state'}
-                  allowCustom={!isIndiaShipping}
-                />
-              </div>
-              <div>
-                <label className="ui-label">Pincode</label>
+                <label className="ui-label" htmlFor="cust-stat-other">Others</label>
                 <input
+                  id="cust-stat-other"
                   type="text"
-                  value={formData.shippingAddress.pincode}
-                  onChange={(e) => updateShipping('pincode', e.target.value)}
+                  value={formData.statutoryOther}
+                  onChange={(e) => setFormData({ ...formData, statutoryOther: e.target.value })}
                   className="ui-input w-full"
+                  placeholder="IEC, LUT, licence number…"
                 />
               </div>
             </div>
+          ) : null}
 
-            <div>
-              <label className="ui-label">Country</label>
-              <PopupSelect
-                label={null}
-                title="Select Country"
-                value={formData.shippingAddress.country}
-                onChange={(next) => updateShipping('country', next)}
-                options={[
-                  { value: INDIA_COUNTRY, label: INDIA_COUNTRY },
-                  { value: 'Overseas', label: 'Overseas' },
-                ]}
-                placeholder="Select country"
-              />
+          {tab === 'others' ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="ui-label" htmlFor="cust-code">Customer Code</label>
+                <input
+                  id="cust-code"
+                  type="text"
+                  value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  className="ui-input ui-mono w-full"
+                  placeholder="Generated on save"
+                />
+                <p className="ui-caption mt-1">Left blank, a code is allotted — CUS-0001 and upward.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="ui-label" htmlFor="cust-notes">Notes</label>
+                <textarea
+                  id="cust-notes"
+                  rows={3}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="ui-input w-full"
+                  placeholder="Anything the next person to open this record should know."
+                />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          ) : null}
+        </div>
 
-      <div className="border-t pt-4">
-        <div className="mb-2 flex items-center justify-between">
-          <div>
-            <div className="text-sm font-medium">Ship-to addresses</div>
-            <div className="text-xs ui-muted">Extra delivery addresses, each with its own code for tracking. Pick one on the invoice.</div>
-          </div>
-          <button
-            type="button"
-            onClick={() =>
-              setFormData((p) => ({
-                ...p,
-                shipToAddresses: [
-                  ...(p.shipToAddresses || []),
-                  { code: `SHIP-${(p.shipToAddresses || []).length + 1}`, label: '', line1: '', city: '', state: '', pincode: '' },
-                ],
-              }))
-            }
-            className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
-          >
-            + Add ship-to
+        <div className="mt-6 flex items-center justify-between gap-3 border-t pt-4 ui-border-c">
+          <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary">
+            Cancel
           </button>
+          <div className="flex items-center gap-2">
+            <button type="submit" name="intent" value="saveAndNew" className="ui-btn ui-btn-secondary">
+              Save and New
+            </button>
+            <button type="submit" className="ui-btn ui-btn-primary">
+              {isEdit ? 'Save changes' : 'Save'}
+            </button>
+          </div>
         </div>
-        {(formData.shipToAddresses || []).map((a, ai) => {
-          const upd = (k, v) =>
-            setFormData((p) => ({
-              ...p,
-              shipToAddresses: p.shipToAddresses.map((x, i) => (i === ai ? { ...x, [k]: v } : x)),
-            }));
-          return (
-            <div key={ai} className="mb-2 flex flex-wrap items-center gap-2">
-              <span className="ui-caption w-14 font-mono">{a.code}</span>
-              <input type="text" value={a.label} onChange={(e) => upd('label', e.target.value)} className="ui-input !h-9 w-32 px-2 text-sm" placeholder="Label (Godown)" />
-              <input type="text" value={a.line1} onChange={(e) => upd('line1', e.target.value)} className="ui-input !h-9 flex-1 min-w-40 px-2 text-sm" placeholder="Address" />
-              <input type="text" value={a.city} onChange={(e) => upd('city', e.target.value)} className="ui-input !h-9 w-28 px-2 text-sm" placeholder="City" />
-              <input type="text" value={a.state} onChange={(e) => upd('state', e.target.value)} className="ui-input !h-9 w-28 px-2 text-sm" placeholder="State" />
-              <input type="text" value={a.pincode} onChange={(e) => upd('pincode', e.target.value)} className="ui-input !h-9 w-20 px-2 text-sm" placeholder="PIN" />
-              <button
-                type="button"
-                onClick={() => setFormData((p) => ({ ...p, shipToAddresses: p.shipToAddresses.filter((_, i) => i !== ai) }))}
-                className="ui-icon-btn ui-btn-sm !w-8"
-                aria-label="Remove ship-to"
-              >
-                ×
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg">
-        {isEdit ? 'Update Customer' : 'Create Customer'}
-      </button>
       </form>
 
       {groupCreateOpen ? (

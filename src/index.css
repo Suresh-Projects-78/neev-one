@@ -1910,6 +1910,77 @@
      weights, and a hundred more amounts carried none of them and rendered in
      the sans face. They agree now: monospace, tabular, weight 400. Alignment is
      the only thing that varies, because only a column has digits to line up. */
+  /* A tab strip inside a form. The accent underline is the only colour spent
+     here: the label itself goes from muted to full ink, which is the same
+     hierarchy every other selected thing in the product uses. */
+  .ui-tabs {
+    display: flex;
+    gap: 1.5rem;
+    border-bottom: 1px solid rgb(var(--border));
+    overflow-x: auto;
+  }
+  .ui-tab {
+    position: relative;
+    padding: 0.5rem 0.125rem 0.75rem;
+    font-size: 0.875rem;
+    color: rgb(var(--fg-muted));
+    white-space: nowrap;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: color 120ms ease;
+  }
+  .ui-tab:hover { color: rgb(var(--fg)); }
+  .ui-tab.is-active { color: rgb(var(--fg)); }
+  .ui-tab.is-active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: rgb(var(--brand));
+    border-radius: 1px;
+  }
+  .ui-tab:focus-visible {
+    outline: 2px solid rgb(var(--brand));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* The radio the product did not have. Checkboxes were tokenized; radios were
+     left to the browser, so a Dr/Cr choice rendered in the system blue beside
+     controls that had all been brought onto the accent. */
+  .ui-radio {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 auto;
+    border: 1px solid rgb(var(--border-strong, var(--border)));
+    border-radius: 999px;
+    background: rgb(var(--surface));
+    display: grid;
+    place-content: center;
+    cursor: pointer;
+  }
+  .ui-radio::after {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 999px;
+    transform: scale(0);
+    transition: transform 120ms ease;
+    background: rgb(var(--brand));
+  }
+  .ui-radio:checked {
+    border-color: rgb(var(--brand));
+  }
+  .ui-radio:checked::after { transform: scale(1); }
+  .ui-radio:focus-visible {
+    outline: 2px solid rgb(var(--brand));
+    outline-offset: 2px;
+  }
+
   .ui-money,
   .ui-amount {
     font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
