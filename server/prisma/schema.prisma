@@ -37,6 +37,16 @@ model Org {
   /// The currency the books are kept in. Every ledger posting is in this
   /// currency, whatever currency the document was raised in.
   baseCurrency String @default("INR")
+
+  /// The rest of the company master, as JSON.
+  ///
+  /// Trade name, entity type, industries, the financial year, the contact
+  /// details and the registered address. A column each would be a dozen more
+  /// nullable columns nothing queries or reports on — these are read as a whole
+  /// on one screen and written as a whole from one form. Anything that later
+  /// needs filtering or a report earns its own column then.
+  profileJson String?
+
   createdByUserId String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

@@ -54,9 +54,9 @@ beforeEach(() => {
 });
 
 describe('the module picker', () => {
-  it('offers packs, not the forty switches underneath them', async () => {
+  it('offers packs as checkboxes, not the forty switches underneath them', async () => {
     render(<ModulePicker />);
-    expect(await screen.findByRole('switch', { name: 'Inventory' })).toBeInTheDocument();
+    expect(await screen.findByRole('checkbox', { name: /Inventory/ })).toBeInTheDocument();
     expect(screen.queryByText('warehouses')).toBeNull();
   });
 
@@ -64,7 +64,7 @@ describe('the module picker', () => {
   it('switches on every feature in the pack', async () => {
     const user = userEvent.setup();
     render(<ModulePicker />);
-    await user.click(await screen.findByRole('switch', { name: 'Inventory' }));
+    await user.click(await screen.findByRole('checkbox', { name: /Inventory/ }));
     await user.click(screen.getByRole('button', { name: /save/i }));
 
     await waitFor(() => expect(setFeaturesApi).toHaveBeenCalledTimes(1));
@@ -82,7 +82,7 @@ describe('the module picker', () => {
    */
   it('shows an unentitled pack, locked, naming the plan that carries it', async () => {
     render(<ModulePicker />);
-    const locked = await screen.findByRole('switch', { name: 'GST & Compliance' });
+    const locked = await screen.findByRole('checkbox', { name: /GST & Compliance/ });
     expect(locked).toBeDisabled();
     expect(screen.getByText('Available on the Growth plan')).toBeInTheDocument();
   });
@@ -90,7 +90,7 @@ describe('the module picker', () => {
   it('will not send an unentitled feature even if the control is reached', async () => {
     const user = userEvent.setup();
     render(<ModulePicker />);
-    await user.click(await screen.findByRole('switch', { name: 'GST & Compliance' }));
+    await user.click(await screen.findByRole('checkbox', { name: /GST & Compliance/ }));
     await user.click(screen.getByRole('button', { name: /save/i }));
 
     await waitFor(() => expect(setFeaturesApi).toHaveBeenCalled());
@@ -103,7 +103,7 @@ describe('the module picker', () => {
       catalogWith({ warehouses: true, stockTransfers: false, einvoice: false, gstr: false })
     );
     render(<ModulePicker />);
-    expect(await screen.findByRole('switch', { name: 'Inventory' })).toHaveAttribute('aria-checked', 'false');
+    expect(await screen.findByRole('checkbox', { name: /Inventory/ })).not.toBeChecked();
   });
 
   it('tells the wizard when it is done, so onboarding can advance', async () => {

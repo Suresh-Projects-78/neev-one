@@ -459,6 +459,12 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
        */
       state: z.string().min(1),
       gstin: z.string().trim().toUpperCase().optional().nullable(),
+      /*
+       * The rest of the company master. Optional so an older client that sends
+       * only a name and a state still works, and unvalidated beyond its shape
+       * because nothing branches on it — it is read back onto one screen.
+       */
+      profile: z.record(z.any()).optional(),
     })
     .parse(req.body);
 

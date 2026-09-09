@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 
 import { getEntitlement, getFeatureCatalog, setFeatures } from '../../api/features';
 
@@ -18,42 +18,44 @@ import { getEntitlement, getFeatureCatalog, setFeatures } from '../../api/featur
  * fails is worse.
  */
 
-const PackCard = ({ pack, on, disabled, onToggle }) => {
+/*
+ * A checkbox, not a card that behaves like one.
+ *
+ * The tick-in-a-circle read as decoration and left people unsure whether a pack
+ * was on. A checkbox is the control everybody already knows means "include
+ * this", which is exactly the question being asked.
+ */
+const PackRow = ({ pack, on, disabled, onToggle }) => {
   const locked = !pack.fullyEntitled;
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={pack.label}
-      disabled={disabled || locked}
-      onClick={() => onToggle(!on)}
-      className={`ui-card ui-in w-full p-4 text-left transition-colors ${
+    <label
+      className={`ui-card ui-in flex items-start gap-3 p-4 ${
         locked ? 'opacity-70 cursor-not-allowed' : 'ui-hover-sunken cursor-pointer'
       }`}
       style={on && !locked ? { borderColor: 'rgb(var(--brand))' } : undefined}
     >
-      <span className="flex items-start justify-between gap-3">
-        <span className="min-w-0">
-          <span className="block font-medium">{pack.label}</span>
-          <span className="ui-caption mt-0.5 block">{pack.description}</span>
+      <input
+        type="checkbox"
+        className="ui-checkbox mt-0.5"
+        checked={on}
+        disabled={disabled || locked}
+        onChange={(e) => onToggle(e.target.checked)}
+        aria-describedby={`pack-${pack.key}-desc`}
+      />
+      <span className="min-w-0">
+        <span className="flex flex-wrap items-center gap-2">
+          <span className="font-medium">{pack.label}</span>
+          {locked ? (
+            <span className="ui-pill ui-pill-neutral">
+              <Lock size={10} aria-hidden="true" /> {pack.upgradeHint || 'Not on your plan'}
+            </span>
+          ) : null}
         </span>
-        <span
-          aria-hidden="true"
-          className="grid h-6 w-6 shrink-0 place-items-center rounded-full border"
-          style={
-            locked
-              ? undefined
-              : on
-                ? { backgroundColor: 'rgb(var(--brand))', borderColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand, 255 255 255))' }
-                : undefined
-          }
-        >
-          {locked ? <Lock size={12} /> : on ? <Check size={14} /> : null}
+        <span id={`pack-${pack.key}-desc`} className="ui-caption mt-0.5 block">
+          {pack.description}
         </span>
       </span>
-      {locked && pack.upgradeHint ? <span className="ui-caption mt-2 block">{pack.upgradeHint}</span> : null}
-    </button>
+    </label>
   );
 };
 
@@ -133,11 +135,14 @@ export const ModulePicker = ({ onDone = null, submitLabel = 'Save' }) => {
 
       <div className="grid gap-3 sm:grid-cols-2">
         {packs.map((p) => (
-          <PackCard key={p.key} pack={p} on={Boolean(packOn[p.key])} disabled={saving} onToggle={(next) => toggle(p, next)} />
+          <PackRow key={p.key} pack={p} on={Boolean(packOn[p.key])} disabled={saving} onToggle={(next) => toggle(p, next)} />
         ))}
       </div>
 
-      <p className="ui-caption">Anything switched off is hidden from menus and forms. You can change this at any time in Settings.</p>
+      <p className="ui-caption">
+        Anything unticked is hidden from the menus and the forms. Master Data and Settings stay whatever you choose, and
+        you can change this at any time in Settings &rsaquo; Modules.
+      </p>
 
       <div className="flex justify-end">
         <button type="button" onClick={save} disabled={saving} className="ui-btn ui-btn-primary">
