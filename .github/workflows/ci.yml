@@ -120,7 +120,17 @@ jobs:
             # build fails with "tsc: not found".
             npm ci --include=dev --no-audit --no-fund
             npx prisma generate
-            npx prisma db push --skip-generate
+            # The pre-deploy check earns the --accept-data-loss below.
+            #
+            # Prisma refuses to add a unique constraint without that flag,
+            # because it cannot know whether the column already holds
+            # duplicates. Passing it blindly would mean every future deploy
+            # silently accepts real loss, so the check runs first and exits 1
+            # when anything would actually be lost; `set -e` then stops the
+            # deploy before the schema is touched. The flag says "verified",
+            # not "ignore".
+            npx tsx scripts/preflight.ts
+            npx prisma db push --skip-generate --accept-data-loss
             npm run build
             sudo systemctl restart neev-api'
 

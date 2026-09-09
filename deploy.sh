@@ -58,7 +58,11 @@ if [ "${1:-}" = "--api" ]; then
     # which makes npm skip devDependencies, and tsc is one of them.
     npm ci --include=dev --no-audit --no-fund >/dev/null 2>&1
     npx prisma generate >/dev/null 2>&1
-    npx prisma db push --skip-generate
+    # See the CI workflow: the check earns the flag rather than the flag being
+    # passed blindly. It exits 1 when something would really be lost, and
+    # `set -e` stops the deploy before the schema is touched.
+    npx tsx scripts/preflight.ts
+    npx prisma db push --skip-generate --accept-data-loss
     npm run build >/dev/null 2>&1
     sudo systemctl restart neev-api'
 fi
