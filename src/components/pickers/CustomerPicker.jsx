@@ -2,7 +2,8 @@ import React from 'react';
 import { Search } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
-import { DocFormActions } from '../DocumentForm';
+import PartyFormLayout from './PartyFormLayout';
+import { CUSTOMER_CFG } from './partyFormConfig';
 import { useFeatures } from '../../permissions/useFeatures';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
 import Modal from '../ui/Modal';
@@ -677,346 +678,34 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           single bottom: the page ends wherever the open tab ends, so a bar down
           there moved as you switched between Address and Others.
         */}
-        <DocFormActions
-          sticky
-          title={isEdit ? 'Edit Customer' : 'New Customer'}
+        <PartyFormLayout
+          cfg={CUSTOMER_CFG}
+          formData={formData}
+          setFormData={setFormData}
+          isEdit={isEdit}
           subtitle={isEdit ? getCustomerDisplayName(initialData) || '' : ''}
-          onBack={onClose}
-          backLabel="Back"
-          secondaryLabel="Cancel"
-          onSecondary={onClose}
-          primaryLabel={isEdit ? 'Save changes' : 'Save'}
-          primaryType="submit"
-          menu={[
-            {
-              key: 'saveAndNew',
-              label: 'Save and add another',
-              submit: true,
-              /*
-                A ref, not state: the menu item submits the form in the same
-                click, and a state update would not have landed by the time the
-                submit handler reads it.
-              */
-              onSelect: () => {
-                saveAndNewRef.current = true;
-              },
-            },
-            {
-              key: 'toggleActive',
-              label: formData.isActive === false ? 'Mark active' : 'Mark inactive',
-              onSelect: () => setFormData((p) => ({ ...p, isActive: !(p.isActive !== false) })),
-            },
-            { key: 'clear', label: 'Clear the form', onSelect: resetForm },
-          ]}
+          onClose={onClose}
+          resetForm={resetForm}
+          saveAndNewRef={saveAndNewRef}
+          tab={tab}
+          setTab={setTab}
+          tabs={CUSTOMER_TABS}
+          groupOptions={customerGroupOptions}
+          onCreateGroup={(typed) => {
+            setGroupDraftName(typed);
+            setGroupCreateOpen(true);
+          }}
+          codesEnabled={codesEnabled}
+          gstinFetching={gstinFetching}
+          fetchFromGstin={fetchFromGstin}
+          addressRows={addressRows}
+          updateAddressRow={updateAddressRow}
+          addAddressRow={addAddressRow}
+          removeAddressRow={removeAddressRow}
+          updateContactRow={updateContactRow}
+          addContactRow={addContactRow}
+          removeContactRow={removeContactRow}
         />
-
-        <div className="space-y-4">
-          <h3 className="ui-t-sec">Basic Details</h3>
-
-          <FormRow label="GST Registration Type" hint="Decides whether a GSTIN is required, and whether input credit can be claimed on what you buy from them.">
-            <div className="flex items-center gap-6 pt-1.5">
-              {[
-                { v: 'Registered', l: 'Registered' },
-                { v: 'Unregistered', l: 'Unregistered' },
-              ].map((o) => (
-                <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="gstRegistration"
-                    className="ui-radio"
-                    checked={formData.gstRegistration === o.v}
-                    onChange={() => setFormData((p) => ({ ...p, gstRegistration: o.v }))}
-                  />
-                  {o.l}
-                </label>
-              ))}
-            </div>
-          </FormRow>
-
-          {formData.gstRegistration === 'Registered' ? (
-            <FormRow label="GSTIN" hint="The first two digits are the state code and characters 3–12 are the PAN, so both are filled from the number.">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={formData.gstin}
-                  onChange={(e) => setFormData((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))}
-                  className="ui-input min-w-0 flex-1"
-                  placeholder="Enter 15 digit GSTIN"
-                  maxLength={15}
-                  autoComplete="off"
-                />
-                <button
-                  type="button"
-                  onClick={fetchFromGstin}
-                  disabled={gstinFetching}
-                  className="ui-btn ui-btn-secondary shrink-0"
-                  style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
-                >
-                  <Search size={14} aria-hidden="true" />
-                  {gstinFetching ? 'Fetching…' : 'Fetch from GSTN'}
-                </button>
-              </div>
-            </FormRow>
-          ) : null}
-
-          <FormRow label="Customer Name" required hint="The name that appears on the invoice.">
-            <input
-              type="text"
-              value={formData.displayName}
-              onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-              className="ui-input w-full"
-              placeholder="Enter customer name"
-              required
-            />
-          </FormRow>
-
-          <FormRow label="Customer Group" hint="Which group under Sundry Debtors this customer rolls up to in the balance sheet.">
-            <PopupSelect
-              label={null}
-              value={String(formData.groupId || '').trim()}
-              onChange={(val) => setFormData((p) => ({ ...p, groupId: String(val || '').trim() }))}
-              options={customerGroupOptions}
-              placeholder="Select customer group"
-              title="Select Customer Group"
-              showValueSubtext={false}
-              allowCustom
-              customActionText="Create new Group"
-              onCustomAction={(typed) => {
-                setGroupDraftName(String(typed || '').trim());
-                setGroupCreateOpen(true);
-              }}
-            />
-          </FormRow>
-
-          <FormRow label="Currency" hint="The currency this customer is billed in. Their ledger is kept in it; your books stay in the company's own currency.">
-            <PopupSelect
-              label={null}
-              title="Select Currency"
-              value={formData.currency}
-              onChange={(v) => setFormData((p) => ({ ...p, currency: v }))}
-              options={CURRENCY_OPTIONS}
-              placeholder="Select currency"
-            />
-          </FormRow>
-
-          <FormRow label="Opening Balance" hint="What they already owed on the day the books begin. Leave at zero for a new customer.">
-            <input
-              type="number"
-              step="0.01"
-              value={formData.openingBalance}
-              onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-              className="ui-input ui-money w-full"
-              placeholder="0.00"
-            />
-          </FormRow>
-
-          <FormRow label="Opening Balance Type" hint="Dr means they owe you, which is the usual direction for a customer. Cr means you owe them — an advance they have already paid.">
-            <div className="flex items-center gap-6 pt-1.5">
-              {[
-                { v: 'Dr', l: 'Dr (Default)' },
-                { v: 'Cr', l: 'Cr' },
-              ].map((o) => (
-                <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="openingBalanceType"
-                    className="ui-radio"
-                    checked={formData.openingBalanceType === o.v}
-                    onChange={() => setFormData((p) => ({ ...p, openingBalanceType: o.v }))}
-                  />
-                  {o.l}
-                </label>
-              ))}
-            </div>
-          </FormRow>
-        </div>
-
-        <div className="ui-tabs mt-6" role="tablist" aria-label="Customer details">
-          {CUSTOMER_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.key}
-              onClick={() => setTab(t.key)}
-              className={`ui-tab ${tab === t.key ? 'is-active' : ''}`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="min-h-0 flex-1 pt-5">
-          {tab === 'address' ? (
-            <AddressTab
-              rows={addressRows}
-              states={INDIA_STATES}
-              onChange={updateAddressRow}
-              onAdd={addAddressRow}
-              onRemove={removeAddressRow}
-            />
-          ) : null}
-
-          {tab === 'contacts' ? (
-            <ContactsTab
-              rows={formData.contacts}
-              onChange={updateContactRow}
-              onAdd={addContactRow}
-              onRemove={removeContactRow}
-            />
-          ) : null}
-
-          {tab === 'credit' ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="ui-label" htmlFor="cust-credit-period">Credit Period (days)</label>
-                <input
-                  id="cust-credit-period"
-                  type="number"
-                  min="0"
-                  value={formData.paymentTermDays}
-                  onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
-                  className="ui-input w-full"
-                  placeholder="30"
-                />
-                <p className="ui-caption mt-1">Sets the due date on every invoice raised for them.</p>
-              </div>
-              <div>
-                <label className="ui-label" htmlFor="cust-credit-limit">Credit Limit</label>
-                <input
-                  id="cust-credit-limit"
-                  type="number"
-                  min="0"
-                  value={formData.creditLimit}
-                  onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-                  className="ui-input ui-money w-full"
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <label className="ui-label" htmlFor="cust-price-list">Price List</label>
-                <input
-                  id="cust-price-list"
-                  type="text"
-                  value={formData.priceListId}
-                  onChange={(e) => setFormData({ ...formData, priceListId: e.target.value })}
-                  className="ui-input w-full"
-                  placeholder="Standard"
-                />
-              </div>
-            </div>
-          ) : null}
-
-          {tab === 'statutory' ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {/*
-                GSTIN is shown here but not editable. The master asked for it in
-                both places; the same value in two editable fields on one form
-                is how two different values get saved.
-              */}
-              <div>
-                <label className="ui-label" htmlFor="cust-stat-gstin">GSTIN</label>
-                <input
-                  id="cust-stat-gstin"
-                  type="text"
-                  value={formData.gstin || '—'}
-                  readOnly
-                  className="ui-input ui-mono w-full ui-sunken"
-                />
-                <p className="ui-caption mt-1">Entered under Basic Details.</p>
-              </div>
-              <div>
-                <label className="ui-label" htmlFor="cust-pan">PAN</label>
-                <input
-                  id="cust-pan"
-                  type="text"
-                  value={formData.pan}
-                  onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                  className="ui-input ui-mono w-full"
-                  placeholder="ABCDE1234F"
-                  maxLength={10}
-                />
-              </div>
-              <div>
-                <label className="ui-label" htmlFor="cust-gst-treatment">GST Registration / Treatment</label>
-                <input
-                  id="cust-gst-treatment"
-                  type="text"
-                  value={formData.gstRegistration || 'Unregistered'}
-                  readOnly
-                  className="ui-input w-full ui-sunken"
-                />
-                <p className="ui-caption mt-1">Chosen under Basic Details.</p>
-              </div>
-              <div>
-                <label className="ui-label" htmlFor="cust-msme">MSME / Udyam</label>
-                <input
-                  id="cust-msme"
-                  type="text"
-                  value={formData.msmeNumber}
-                  onChange={(e) => setFormData({ ...formData, msmeNumber: e.target.value })}
-                  className="ui-input w-full"
-                  placeholder="UDYAM-XX-00-0000000"
-                />
-                <p className="ui-caption mt-1">A registered micro or small supplier must be paid within 45 days.</p>
-              </div>
-              <div>
-                <label className="ui-label" htmlFor="cust-stat-other">Others</label>
-                <input
-                  id="cust-stat-other"
-                  type="text"
-                  value={formData.statutoryOther}
-                  onChange={(e) => setFormData({ ...formData, statutoryOther: e.target.value })}
-                  className="ui-input w-full"
-                  placeholder="IEC, LUT, licence number…"
-                />
-              </div>
-            </div>
-          ) : null}
-
-          {tab === 'others' ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {/*
-                Only where the business uses codes. Off, the field is not asked
-                for and the server allots nothing — a code nobody uses is still
-                a column somebody has to explain.
-              */}
-              {codesEnabled ? (
-              <div>
-                <label className="ui-label" htmlFor="cust-code">Customer Code</label>
-                <input
-                  id="cust-code"
-                  type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="ui-input ui-mono w-full"
-                  placeholder="Generated on save"
-                />
-                <p className="ui-caption mt-1">Left blank, a code is allotted in the format set under Settings.</p>
-              </div>
-              ) : null}
-              {/*
-                Active rather than delete. A customer with invoices against them
-                cannot be removed without orphaning the history, so the master
-                carries a state instead — which is also what the spec asks for.
-              */}
-              <div>
-                <span className="ui-label block">Status</span>
-                <label className="mt-1 inline-flex cursor-pointer items-center gap-2.5 text-sm">
-                  <input
-                    type="checkbox"
-                    className="ui-checkbox"
-                    checked={formData.isActive !== false}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  />
-                  Active
-                </label>
-                <p className="ui-caption mt-1">Inactive keeps every past transaction and stops the customer appearing on new documents.</p>
-              </div>
-            </div>
-          ) : null}
-        </div>
-
       </form>
 
       {groupCreateOpen ? (

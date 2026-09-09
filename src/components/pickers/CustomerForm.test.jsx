@@ -313,6 +313,19 @@ describe('Others tab', () => {
 });
 
 describe('Statutory tab', () => {
+  /*
+   * TDS is deducted FROM a vendor, not from a customer, so the configuration
+   * belongs on the vendor master alone. Asserted here because the two forms now
+   * share a layout, and a flag flipped in the shared config would otherwise put
+   * a vendor's field on the customer form with nothing to catch it.
+   */
+  it('does not carry the vendor-only TDS configuration', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
+    expect(screen.queryByLabelText('TDS Configuration')).toBeNull();
+  });
+
   /* One place to set it, another to read it — never two places to set it. */
   it('states the GST treatment without letting it be set twice', async () => {
     const user = userEvent.setup();

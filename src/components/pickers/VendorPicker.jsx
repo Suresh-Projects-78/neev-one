@@ -8,6 +8,10 @@ import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
+import PartyFormLayout from './PartyFormLayout';
+import { VENDOR_CFG } from './partyFormConfig';
+import { CUSTOMER_TABS } from './customerFormParts';
+import { useFeatures } from '../../permissions/useFeatures';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
@@ -60,6 +64,17 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         gstStatus: String(initialData.gstStatus || ''),
         gstTaxpayerType: String(initialData.gstTaxpayerType || ''),
         gstRegistrationDate: String(initialData.gstRegistrationDate || ''),
+        currency: String(initialData.currency || 'INR'),
+        priceListId: String(initialData.priceListId || ''),
+        msmeNumber: String(initialData.msmeNumber || ''),
+        statutoryOther: String(initialData.statutoryOther || ''),
+        tdsSection: String(initialData.tdsSection || ''),
+        code: String(initialData.code || ''),
+        isActive: initialData.isActive !== false,
+        contacts: Array.isArray(initialData.contacts) && initialData.contacts.length
+          ? initialData.contacts
+          : [{ name: '', position: '', email: '', mobile: '' }],
+        shipToAddresses: Array.isArray(initialData.shipToAddresses) ? initialData.shipToAddresses : [],
         paymentTermDays:
           initialData.paymentTermDays === undefined || initialData.paymentTermDays === null
             ? ''
@@ -86,6 +101,16 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       groupId: sundryCreditorsGroup?.id ? String(sundryCreditorsGroup.id) : '',
       openingBalance: isEdit ? Number(initialData?.openingBalance ?? 0) : 0,
       openingBalanceType: isEdit ? (initialData?.openingBalanceType || 'Cr') : 'Cr',
+      currency: 'INR',
+      priceListId: '',
+      msmeNumber: '',
+      statutoryOther: '',
+      tdsSection: '',
+      code: '',
+      isActive: true,
+      // One line ready to type into, as on the customer form.
+      contacts: [{ name: '', position: '', email: '', mobile: '' }],
+      shipToAddresses: [],
       contactPerson: '',
       mobile: '',
       email: '',
@@ -216,21 +241,87 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
     .slice();
   const accountTypeById = new Map(accountTypes.map((t) => [String(t.id), t]));
 
-  const gstRegistrationRequiresGstinUi = ['Registered', 'Composition', 'SEZ'].includes(formData.gstRegistration);
-
   // Fetch from the GST portal. What comes back is a starting point, not a
   // verdict: everything it fills stays editable, because the portal's idea of
   // a trade name is often not what you call this vendor.
   const [gstFetching, setGstFetching] = useState(false);
-  const [gstFetchNote, setGstFetchNote] = useState('');
-  const fetchFromGstPortal = async () => {
+  const [tab, setTab] = useState('address');
+  const saveAndNewRef = useRef(false);
+  const { isEnabled: featureOn } = useFeatures();
+  const codesEnabled = featureOn('partyCodes');
+
+  /*
+   * The same row model the customer form uses: billing and shipping are the two
+   * built-in places and everything after them is an extra. Written here rather
+   * than shared because the two forms keep their own state — the layout is
+   * shared, the state is not.
+   */
+  const VENDOR_COUNTRY = 'India';
+  const addressRows = useMemo(
+    () => [
+      { key: 'BILLING', label: 'Billing', builtIn: true, ...formData.billingAddress },
+      { key: 'SHIPPING', label: 'Shipping', builtIn: true, ...formData.shippingAddress },
+      ...(formData.shipToAddresses || []).map((a, i) => ({
+        key: `EXTRA-${i}`,
+        builtIn: false,
+        label: a.label || '',
+        line1: a.line1 || '',
+        line2: a.line2 || '',
+        city: a.city || '',
+        district: a.district || '',
+        state: a.state || '',
+        pincode: a.pincode || '',
+        country: a.country || VENDOR_COUNTRY,
+      })),
+    ],
+    [formData.billingAddress, formData.shippingAddress, formData.shipToAddresses]
+  );
+
+  const updateAddressRow = (i, key, value) =>
+    setFormData((p) => {
+      if (i === 0) return { ...p, billingAddress: { ...p.billingAddress, [key]: value } };
+      if (i === 1) return { ...p, shippingAddress: { ...p.shippingAddress, [key]: value }, shippingSameAsBilling: false };
+      const idx = i - 2;
+      return { ...p, shipToAddresses: (p.shipToAddresses || []).map((a, j) => (j === idx ? { ...a, [key]: value } : a)) };
+    });
+
+  const addAddressRow = () =>
+    setFormData((p) => ({
+      ...p,
+      shipToAddresses: [
+        ...(p.shipToAddresses || []),
+        { label: `Address ${(p.shipToAddresses || []).length + 3}`, line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: VENDOR_COUNTRY },
+      ],
+    }));
+
+  const removeAddressRow = (i) =>
+    setFormData((p) => ({ ...p, shipToAddresses: (p.shipToAddresses || []).filter((_, j) => j !== i - 2) }));
+
+  const updateContactRow = (i, key, value) =>
+    setFormData((p) => ({ ...p, contacts: (p.contacts || []).map((c, j) => (j === i ? { ...c, [key]: value } : c)) }));
+
+  const addContactRow = () =>
+    setFormData((p) => ({ ...p, contacts: [...(p.contacts || []), { name: '', position: '', email: '', mobile: '' }] }));
+
+  const removeContactRow = (i) => setFormData((p) => ({ ...p, contacts: (p.contacts || []).filter((_, j) => j !== i) }));
+
+  const resetForm = () =>
+    setFormData((p) => ({
+      ...p,
+      displayName: '', gstin: '', pan: '', code: '', openingBalance: 0,
+      msmeNumber: '', statutoryOther: '', priceListId: '', tdsSection: '',
+      contacts: [{ name: '', position: '', email: '', mobile: '' }],
+      shipToAddresses: [],
+      billingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: VENDOR_COUNTRY },
+      shippingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: VENDOR_COUNTRY },
+    }));
+  const fetchFromGstin = async () => {
     const gstin = normalizeGstin(formData.gstin);
     if (!isValidGstin(gstin)) {
       notify.error('Enter the full 15-character GSTIN first.');
       return;
     }
     setGstFetching(true);
-    setGstFetchNote('');
     try {
       const data = await apiFetch(`/gstin/${gstin}`, { skipWarehouseHeader: true });
       setFormData((prev) => {
@@ -264,31 +355,19 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       });
       if (data.source === 'portal') {
         notify.success('Fetched from the GST portal — check the details and edit anything that is off.');
-        setGstFetchNote('Filled from the GST portal. Everything here is editable.');
       } else {
         const why = String(data.note || data.error || '').trim();
-        notify.info('Filled the state and PAN the GSTIN itself encodes.');
-        setGstFetchNote(why || 'Portal lookup is not configured, so only the state and PAN were filled.');
+        notify.info(why || 'Filled the state and PAN the GSTIN itself encodes.');
       }
     } catch (err) {
       const msg = String(err?.message || 'Could not reach the GST lookup service.');
       notify.error(msg);
-      setGstFetchNote(msg);
     } finally {
       setGstFetching(false);
     }
   };
   const gstStateAuto = getGstStateFromGstin(formData.gstin);
 
-  const updateBilling = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      billingAddress: {
-        ...prev.billingAddress,
-        [field]: value,
-      },
-    }));
-  };
 
   const normalizeGstin = (v) => String(v || '').trim().toUpperCase();
   const normalizePan = (v) => String(v || '').trim().toUpperCase();
@@ -299,15 +378,6 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   const isValidPan = (pan) => /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(normalizePan(pan));
   const isValidGstin = (gstin) => /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(normalizeGstin(gstin));
   const getGstinState = (gstin) => getGstStateFromGstin(normalizeGstin(gstin));
-
-  const isIndiaBilling = String(formData.billingAddress?.country || '').trim() === INDIA_COUNTRY;
-
-  const billingStateFromDropdown = (codeOrName) => {
-    const trimmed = String(codeOrName || '').trim();
-    if (!trimmed) return '';
-    const byCode = GST_STATE_BY_CODE[trimmed];
-    return byCode || trimmed;
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -547,325 +617,35 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="border rounded-lg p-3 space-y-3">
-        <div className="font-semibold">Is this vendor GST registered?</div>
-
-        <div>
-          <label className="ui-label">GST Registration</label>
-          <select
-            value={formData.gstRegistration}
-            onChange={(e) => {
-              const nextReg = e.target.value;
-              const requiresGstin = ['Registered', 'Composition', 'SEZ'].includes(nextReg);
-              setGstFetchNote('');
-              setFormData((prev) => ({
-                ...prev,
-                gstRegistration: nextReg,
-                gstin: requiresGstin ? prev.gstin : '',
-                pan: requiresGstin ? prev.pan : '',
-              }));
-            }}
-            className="ui-select w-full"
-          >
-            <option value="Registered">Registered</option>
-            <option value="Unregistered">Unregistered</option>
-            <option value="Composition">Composition</option>
-            <option value="SEZ">SEZ</option>
-            <option value="Overseas">Overseas</option>
-          </select>
-          {!gstRegistrationRequiresGstinUi ? (
-            <div className="text-xs ui-muted mt-1">
-              No GSTIN is asked for, and purchases from this vendor carry no input tax credit.
-            </div>
-          ) : null}
-        </div>
-
-        {gstRegistrationRequiresGstinUi ? (
-          <div>
-            <label className="ui-label">GSTIN *</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={formData.gstin}
-                onChange={(e) => {
-                  const nextGstin = e.target.value.toUpperCase();
-                  const nextAutoState = getGstStateFromGstin(nextGstin);
-                  setGstFetchNote('');
-                  setFormData((prev) => ({
-                    ...prev,
-                    gstin: nextGstin,
-                    billingAddress: {
-                      ...prev.billingAddress,
-                      state: nextAutoState || prev.billingAddress.state,
-                    },
-                  }));
-                }}
-                className="ui-input flex-1 font-mono"
-                placeholder="29ABCDE1234F1Z5"
-                maxLength={15}
-                required
-              />
-              <button
-                type="button"
-                onClick={fetchFromGstPortal}
-                disabled={gstFetching || !isValidGstin(formData.gstin)}
-                className="ui-btn ui-btn-secondary whitespace-nowrap"
-                title={isValidGstin(formData.gstin) ? 'Fetch this vendor from the GST portal' : 'Enter the full GSTIN first'}
-              >
-                {gstFetching ? 'Fetching…' : 'Fetch'}
-              </button>
-            </div>
-            <div className="text-xs ui-muted mt-1">
-              {gstFetchNote || 'Fetch pulls the vendor from the GST portal. Everything it fills stays editable.'}
-            </div>
-
-            {formData.gstStatus || formData.gstTaxpayerType || formData.gstRegistrationDate ? (
-              <div className="mt-2 text-xs ui-muted flex flex-wrap gap-x-4 gap-y-1">
-                {formData.gstStatus ? <span>Status: {formData.gstStatus}</span> : null}
-                {formData.gstTaxpayerType ? <span>Taxpayer: {formData.gstTaxpayerType}</span> : null}
-                {formData.gstRegistrationDate ? <span>Registered: {formData.gstRegistrationDate}</span> : null}
-              </div>
-            ) : null}
-
-            {formData.tradeName ? (
-              <div className="mt-2">
-                <label className="ui-label">Trade name (from the portal)</label>
-                <input
-                  type="text"
-                  value={formData.tradeName}
-                  onChange={(e) => setFormData((p) => ({ ...p, tradeName: e.target.value }))}
-                  className="ui-input w-full"
-                />
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      <div>
-        <label className="ui-label">Company Name</label>
-        <input
-          type="text"
-          value={formData.displayName}
-          onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-          className="ui-input w-full"
-          required
-        />
-      </div>
-
-      <div>
-        <PopupSelect
-          label="Group"
-          value={String(formData.groupId || '').trim()}
-          onChange={(val) => setFormData((p) => ({ ...p, groupId: String(val || '').trim() }))}
-          options={vendorGroupOptions}
-          placeholder="Select group"
-          title="Select Group"
-          showValueSubtext={false}
-          allowCustom
-          customActionText="Create new Group"
-          onCustomAction={(typed) => {
-            setGroupDraftName(String(typed || '').trim());
+      <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
+        <PartyFormLayout
+          cfg={VENDOR_CFG}
+          formData={formData}
+          setFormData={setFormData}
+          isEdit={isEdit}
+          subtitle={isEdit ? String(initialData?.displayName || initialData?.name || '') : ''}
+          onClose={onClose}
+          resetForm={resetForm}
+          saveAndNewRef={saveAndNewRef}
+          tab={tab}
+          setTab={setTab}
+          tabs={CUSTOMER_TABS}
+          groupOptions={vendorGroupOptions}
+          onCreateGroup={(typed) => {
+            setGroupDraftName(typed);
             setGroupCreateOpen(true);
           }}
+          codesEnabled={codesEnabled}
+          gstinFetching={gstFetching}
+          fetchFromGstin={fetchFromGstin}
+          addressRows={addressRows}
+          updateAddressRow={updateAddressRow}
+          addAddressRow={addAddressRow}
+          removeAddressRow={removeAddressRow}
+          updateContactRow={updateContactRow}
+          addContactRow={addContactRow}
+          removeContactRow={removeContactRow}
         />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="ui-label">Opening Balance</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={formData.openingBalance}
-            onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-            className="ui-input w-full"
-            placeholder="0.00"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Dr / Cr</label>
-          <select
-            value={formData.openingBalanceType}
-            onChange={(e) => setFormData((p) => ({ ...p, openingBalanceType: e.target.value }))}
-            className="ui-select w-full"
-          >
-            <option value="Dr">Dr — they owe us</option>
-            <option value="Cr">Cr — we owe them</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">Contact Person</label>
-          <input
-            type="text"
-            value={formData.contactPerson}
-            onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Mobile</label>
-          <input
-            type="tel"
-            value={formData.mobile}
-            onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">Email</label>
-          <input
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Alternate Phone</label>
-          <input
-            type="tel"
-            value={formData.alternatePhone}
-            onChange={(e) => setFormData({ ...formData, alternatePhone: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-      </div>
-
-      <div className="border rounded-lg p-3 space-y-3">
-        <div className="font-semibold">Tax & terms</div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="ui-label">PAN</label>
-            <input
-              type="text"
-              value={formData.pan}
-              onChange={(e) => setFormData({ ...formData, pan: e.target.value })}
-              className="ui-input w-full"
-              placeholder={gstRegistrationRequiresGstinUi ? 'PAN required' : 'Optional'}
-            />
-          </div>
-          <div>
-            <label className="ui-label">Credit period (days)</label>
-            <input
-              type="number"
-              min="0"
-              max="365"
-              value={formData.paymentTermDays}
-              onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
-              className="ui-input w-full"
-              placeholder="30"
-            />
-            <p className="mt-1 text-xs ui-muted">
-              Sets the due date on this vendor&apos;s bills. Blank uses 30 days; 0 means due on receipt.
-            </p>
-          </div>
-          <div>
-            <label className="ui-label">State</label>
-            <PopupSelect
-              label={null}
-              title="Select State"
-              value={formData.billingAddress.state}
-              onChange={(next) => {
-                if (gstStateAuto) return;
-                updateBilling('state', billingStateFromDropdown(next));
-              }}
-              disabled={Boolean(gstStateAuto)}
-              options={
-                isIndiaBilling
-                  ? INDIA_STATES.map((s) => ({ value: s.name, label: s.name, code: s.code }))
-                  : []
-              }
-              placeholder={isIndiaBilling ? 'Select state' : 'Select / type state'}
-              // See CustomerPicker: a typed Indian state breaks the tax split.
-              allowCustom={!isIndiaBilling}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="border rounded-lg p-3 space-y-3">
-        <div className="font-semibold">Address</div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="ui-label">Address Line 1</label>
-            <input
-              type="text"
-              value={formData.billingAddress.line1}
-              onChange={(e) => updateBilling('line1', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-          <div>
-            <label className="ui-label">Address Line 2</label>
-            <input
-              type="text"
-              value={formData.billingAddress.line2}
-              onChange={(e) => updateBilling('line2', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="ui-label">City</label>
-            <input
-              type="text"
-              value={formData.billingAddress.city}
-              onChange={(e) => updateBilling('city', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-          <div>
-            <label className="ui-label">District</label>
-            <input
-              type="text"
-              value={formData.billingAddress.district}
-              onChange={(e) => updateBilling('district', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-          <div>
-            <label className="ui-label">Pincode</label>
-            <input
-              type="text"
-              value={formData.billingAddress.pincode}
-              onChange={(e) => updateBilling('pincode', e.target.value)}
-              className="ui-input w-full"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="ui-label">Country</label>
-          <PopupSelect
-            label={null}
-            title="Select Country"
-            value={formData.billingAddress.country}
-            onChange={(next) => updateBilling('country', next)}
-            options={[
-              { value: INDIA_COUNTRY, label: INDIA_COUNTRY },
-              { value: 'Overseas', label: 'Overseas' },
-            ]}
-            placeholder="Select country"
-          />
-        </div>
-      </div>
-
-      <button type="submit" className="w-full px-4 py-2 ui-primary-bg rounded-lg">
-        {isEdit ? 'Update Vendor' : 'Create Vendor'}
-      </button>
       </form>
 
       {groupCreateOpen ? (
