@@ -3,6 +3,7 @@ import { Plus, Truck } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import Modal from '../../components/ui/Modal';
 import { notify } from '../../components/ui/notify';
+import { createDeliveryChallan, updateDeliveryChallan } from '../../api/masters';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import EwbTransportForm from '../../components/EwbTransportForm';
@@ -80,7 +81,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
     });
   };
 
-  const save = () => {
+  const save = async () => {
     if (!form.customerId) {
       notify.error('Customer is required');
       return;
@@ -116,7 +117,39 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
       warehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
       createdAt: new Date().toISOString(),
     };
-    setDb((prev) => ({ ...prev, deliveryChallans: [...(prev.deliveryChallans || []), challan] }));
+    /*
+     * Write through to the server, then keep the id it gives back.
+     *
+     * A challan is a document under Rule 55 — it travels with the goods, an
+     * e-way bill is raised against it, and it may have to be produced. Holding
+     * it in one browser meant it did not exist anywhere else, and the guard
+     * that stops a consignment being billed twice went with it.
+     *
+     * A refused write is not fatal: the challan stays on this device so the
+     * goods can leave, and the message says the server did not take it.
+     */
+    let serverPatch = {};
+    try {
+      const created = await createDeliveryChallan({
+        date: challan.date,
+        partyId: challan.customerId ? String(challan.customerId) : undefined,
+        partyName: challan.customerName || 'Customer',
+        purpose: String(challan.purpose || 'SUPPLY').toUpperCase().replace(/[^A-Z]+/g, '_'),
+        warehouseId: challan.warehouseId || undefined,
+        subtotal: challan.value,
+        total: challan.value,
+        status: 'Open',
+        notes: challan.notes || undefined,
+        items: challan.items,
+        vehicleNo: challan.vehicleNo || undefined,
+      });
+      const doc = created?.doc || created?.document;
+      if (doc?.id) serverPatch = { backendDocId: String(doc.id), number: doc.number || challan.number };
+    } catch (e) {
+      notify.error(`Saved on this device only — the server refused it: ${String(e?.message || e)}`);
+    }
+
+    setDb((prev) => ({ ...prev, deliveryChallans: [...(prev.deliveryChallans || []), { ...challan, ...serverPatch }] }));
     setOpen(false);
     setForm({ date: new Date().toISOString().slice(0, 10), customerId: '', purpose: 'Job Work', vehicleNo: '', notes: '', items: [emptyLine] });
     notify.success(`Delivery challan ${challan.number} created.`);
@@ -172,6 +205,10 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
         subSupplyType: challan.purpose === 'Job Work' ? '4' : '8',
       })
     );
+    if (challan.backendDocId) {
+      // The e-way bill number belongs on the record, not only on this device.
+      updateDeliveryChallan(challan.backendDocId, { ewayBillNo: transport?.ewbNo || undefined }).catch(() => {});
+    }
     setDb((prev) => ({
       ...prev,
       deliveryChallans: (prev.deliveryChallans || []).map((c) => (c.id === challan.id ? { ...c, ewbTransport: transport } : c)),

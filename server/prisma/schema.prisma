@@ -702,6 +702,125 @@ model SalesOrderDoc {
   @@index([accountId, orgId, branchId, date])
 }
 
+/// A delivery challan — goods moved without an invoice.
+///
+/// A real document under Rule 55, not a convenience: it accompanies a
+/// consignment, an e-way bill is raised against it, and it is a record a
+/// business may have to produce. It lived only in the browser until now, which
+/// meant a challan raised on one machine did not exist on any other.
+model DeliveryChallan {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  number      String
+  date        String
+  partyId     String?
+  partyName   String
+  partyGstin  String?
+  warehouseId String?
+
+  /// Why the goods are moving, which decides what the challan has to say:
+  /// SUPPLY | JOB_WORK | SKD_CKD | LINE_SALE | EXHIBITION | OTHER
+  purpose String @default("SUPPLY")
+
+  subtotal Decimal @default(0)
+  gstTotal Decimal @default(0)
+  total    Decimal @default(0)
+
+  /// Open | Converted | Cancelled. A converted challan cannot be billed twice.
+  status String @default("Open")
+  /// The invoice it became, so the double-billing guard survives a new device.
+  convertedInvoiceId String?
+
+  itemsJson String
+  /// Form-collected fields with no column of their own (see Invoice.extrasJson).
+  extrasJson String?
+  notes      String?
+
+  ewayBillNo String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, number])
+  @@index([accountId, orgId, branchId, date])
+}
+
+/// A capital asset, and what is left of its value.
+///
+/// On the balance sheet, so holding it in one browser meant the same company
+/// showed different assets on different machines — not a missing feature but a
+/// wrong statement.
+model FixedAsset {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  code     String?
+  name     String
+  category String?
+
+  purchaseDate String
+  cost         Decimal @default(0)
+  salvageValue Decimal @default(0)
+
+  /// SLM (straight line) | WDV (written down value) — the two the Companies
+  /// Act and the Income-tax Act respectively expect.
+  depreciationMethod String  @default("SLM")
+  depreciationRate   Decimal @default(0)
+  usefulLifeYears    Int?
+
+  /// Depreciation charged to date. Kept as a figure rather than recomputed on
+  /// read, because the rate can change and past years must not move with it.
+  accumulatedDepreciation Decimal @default(0)
+
+  /// ACTIVE | DISPOSED | WRITTEN_OFF
+  status       String  @default("ACTIVE")
+  disposalDate String?
+  disposalValue Decimal?
+
+  notes String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([accountId, orgId, status])
+}
+
+/// A salesperson a document can be attributed to.
+///
+/// Sales by Salesman reports on this, so browser-only made the report differ by
+/// machine for the same books.
+model Salesman {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  code  String?
+  name  String
+  email String?
+  phone String?
+
+  /// Percent of the document value, when commission is tracked.
+  commissionRate Decimal @default(0)
+
+  isActive Boolean @default(true)
+  notes    String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, name])
+  @@index([accountId, orgId, isActive])
+}
+
 /// An expense voucher — money out that is not a stock purchase: rent, travel,
 /// utilities. Posts Dr Indirect Expenses (+ input GST) / Cr Accounts Payable,
 /// so unpaid expenses sit in the same payable book as bills.

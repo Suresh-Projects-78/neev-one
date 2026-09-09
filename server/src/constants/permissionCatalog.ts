@@ -126,6 +126,7 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
       { key: 'Items', label: 'Items', actions: MASTER },
       { key: 'GST Rates', label: 'GST Rates', actions: MASTER },
       { key: 'Units of Measure', label: 'Units of Measure', actions: MASTER },
+      { key: 'Salesmen', label: 'Salesmen', actions: MASTER },
       {
         key: 'Company/Branch setup',
         label: 'Company, Branch & Warehouse',

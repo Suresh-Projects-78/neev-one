@@ -22,11 +22,17 @@ export const quoteDocsRouter = Router();
 // after purchaseDocs (whose router-level requireAuth ran first on /api).
 quoteDocsRouter.use(requireAuth, requireTenantContext);
 
-type QuoteKind = 'ESTIMATE' | 'PURCHASE_ORDER' | 'SALES_ORDER';
+type QuoteKind = 'ESTIMATE' | 'PURCHASE_ORDER' | 'SALES_ORDER' | 'DELIVERY_CHALLAN';
 
 const CONFIG: Record<
   QuoteKind,
-  { path: string; model: 'estimate' | 'purchaseOrderDoc' | 'salesOrderDoc'; module: string; resource: string; feature: string }
+  {
+    path: string;
+    model: 'estimate' | 'purchaseOrderDoc' | 'salesOrderDoc' | 'deliveryChallan';
+    module: string;
+    resource: string;
+    feature: string;
+  }
 > = {
   ESTIMATE: { path: 'estimates', model: 'estimate', module: 'SALES', resource: 'Estimates', feature: 'estimates' },
   PURCHASE_ORDER: {
@@ -42,6 +48,19 @@ const CONFIG: Record<
     module: 'SALES',
     resource: 'Sales Orders',
     feature: 'salesOrders',
+  },
+  /*
+   * A challan is not really a quote-stage document, but it is the same shape —
+   * a numbered header, a party, lines, and a status that says whether it has
+   * been billed. Giving it its own file would have duplicated the numbering,
+   * the permission wiring and the extras handling to no end.
+   */
+  DELIVERY_CHALLAN: {
+    path: 'delivery-challans',
+    model: 'deliveryChallan',
+    module: 'SALES',
+    resource: 'Delivery Challans',
+    feature: 'deliveryChallans',
   },
 };
 
@@ -60,6 +79,10 @@ const bodySchema = z.object({
   status: z.string().optional(),
   notes: z.string().optional().nullable(),
   items: z.array(z.any()).default([]),
+  /* Challan only. */
+  purpose: z.string().max(30).optional().nullable(),
+  ewayBillNo: z.string().max(40).optional().nullable(),
+  convertedInvoiceId: z.string().optional().nullable(),
 });
 
 const num = (v: any) => {
@@ -175,13 +198,21 @@ function register(kind: QuoteKind) {
             ...(kind === 'PURCHASE_ORDER' || kind === 'SALES_ORDER'
               ? { expectedDate: body.expectedDate ?? null, warehouseId: body.warehouseId ?? null }
               : {}),
+            ...(kind === 'DELIVERY_CHALLAN'
+              ? {
+                  warehouseId: body.warehouseId ?? null,
+                  purpose: body.purpose || 'SUPPLY',
+                  ewayBillNo: body.ewayBillNo ?? null,
+                  convertedInvoiceId: body.convertedInvoiceId ?? null,
+                }
+              : {}),
             partyId: body.partyId ?? null,
             partyName: body.partyName,
             partyGstin: body.partyGstin ?? null,
             subtotal: new Prisma.Decimal(num(body.subtotal).toFixed(2)),
             gstTotal: new Prisma.Decimal(num(body.gstTotal).toFixed(2)),
             total: new Prisma.Decimal(num(body.total).toFixed(2)),
-            status: body.status || 'Draft',
+            status: body.status || (kind === 'DELIVERY_CHALLAN' ? 'Open' : 'Draft'),
             notes: body.notes ?? null,
             itemsJson: JSON.stringify(body.items || []),
             extrasJson: extrasOf(req.body),
@@ -215,6 +246,20 @@ function register(kind: QuoteKind) {
           ...(body.gstTotal !== undefined ? { gstTotal: new Prisma.Decimal(num(body.gstTotal).toFixed(2)) } : {}),
           ...(body.total !== undefined ? { total: new Prisma.Decimal(num(body.total).toFixed(2)) } : {}),
           ...(body.items !== undefined ? { itemsJson: JSON.stringify(body.items || []) } : {}),
+          /*
+           * The challan's own fields. `convertedInvoiceId` matters most: it is
+           * what stops the same consignment being billed twice, and holding it
+           * only in the browser meant the guard vanished on another device.
+           */
+          ...(kind === 'DELIVERY_CHALLAN'
+            ? {
+                ...(body.purpose !== undefined ? { purpose: body.purpose || 'SUPPLY' } : {}),
+                ...(body.ewayBillNo !== undefined ? { ewayBillNo: body.ewayBillNo ?? null } : {}),
+                ...(body.convertedInvoiceId !== undefined
+                  ? { convertedInvoiceId: body.convertedInvoiceId ?? null }
+                  : {}),
+              }
+            : {}),
           extrasJson: extrasOf(req.body),
         },
       });
@@ -236,4 +281,4 @@ function register(kind: QuoteKind) {
   );
 }
 
-(['ESTIMATE', 'PURCHASE_ORDER', 'SALES_ORDER'] as QuoteKind[]).forEach(register);
+(['ESTIMATE', 'PURCHASE_ORDER', 'SALES_ORDER', 'DELIVERY_CHALLAN'] as QuoteKind[]).forEach(register);

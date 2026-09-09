@@ -105,3 +105,28 @@ export const toServerCustomer = (c) => ({
       mobile: p.mobile || undefined,
     })),
 });
+
+/*
+ * Three collections that used to live only in the browser.
+ *
+ * A delivery challan is a document under Rule 55, a fixed asset is on the
+ * balance sheet, and a salesman is the axis of a report — so each of them, held
+ * in one machine's localStorage, made the same company show different records
+ * on different machines.
+ */
+export const listDeliveryChallans = () => apiFetch(`${base()}/delivery-challans`, opts);
+export const createDeliveryChallan = (doc) =>
+  apiFetch(`${base()}/delivery-challans`, { method: 'POST', body: doc, ...opts });
+export const updateDeliveryChallan = (id, patch) =>
+  apiFetch(`${base()}/delivery-challans/${id}`, { method: 'PATCH', body: patch, ...opts });
+
+export const listSalesmen = () => apiFetch(`${base()}/salesmen`, opts);
+export const createSalesman = (s) => apiFetch(`${base()}/salesmen`, { method: 'POST', body: s, ...opts });
+export const updateSalesman = (id, patch) =>
+  apiFetch(`${base()}/salesmen/${id}`, { method: 'PATCH', body: patch, ...opts });
+export const deactivateSalesman = (id) => apiFetch(`${base()}/salesmen/${id}`, { method: 'DELETE', ...opts });
+
+export const listFixedAssets = () => apiFetch(`${base()}/fixed-assets`, opts);
+export const createFixedAsset = (a) => apiFetch(`${base()}/fixed-assets`, { method: 'POST', body: a, ...opts });
+export const updateFixedAsset = (id, patch) =>
+  apiFetch(`${base()}/fixed-assets/${id}`, { method: 'PATCH', body: patch, ...opts });

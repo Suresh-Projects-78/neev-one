@@ -3,6 +3,7 @@ import { Plus, Trash2, Building2 } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
+import { createFixedAsset, updateFixedAsset } from '../../api/masters';
 import { formatMoney } from '../../utils/money';
 import { fyRange } from '../../utils/tdsTcs';
 import { ASSET_BLOCKS, assetRows } from '../../utils/fixedAssets';
@@ -26,7 +27,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
   const [form, setForm] = useState({ name: '', block: ASSET_BLOCKS[0].name, cost: '', purchaseDate: '', depRate: String(ASSET_BLOCKS[0].rate), accumulatedDep: '' });
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  const add = () => {
+  const add = async () => {
     if (!form.name.trim()) {
       notify.error('Asset name is required');
       return;
@@ -40,11 +41,34 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
       return;
     }
     const nextId = (db.fixedAssets || []).reduce((m, a) => Math.max(m, Number(a.id) || 0), 0) + 1;
+
+    /*
+     * An asset is on the balance sheet, so holding it in one browser meant the
+     * same company showed different assets on different machines. Written
+     * through; a refusal keeps the row here rather than losing the entry.
+     */
+    let serverPatch = {};
+    try {
+      const created = await createFixedAsset({
+        name: form.name.trim(),
+        category: form.block || undefined,
+        purchaseDate: form.purchaseDate,
+        cost: Number(form.cost),
+        depreciationMethod: 'WDV',
+        depreciationRate: Number(form.depRate) || 0,
+        accumulatedDepreciation: Number(form.accumulatedDep) || 0,
+      });
+      if (created?.asset?.id) serverPatch = { backendAssetId: String(created.asset.id) };
+    } catch (e) {
+      notify.error(`Saved on this device only — the server refused it: ${String(e?.message || e)}`);
+    }
+
     setDb((prev) => ({
       ...prev,
       fixedAssets: [
         ...(prev.fixedAssets || []),
         {
+          ...serverPatch,
           id: nextId,
           companyId,
           name: form.name.trim(),
@@ -66,6 +90,17 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
   const remove = async (asset) => {
     const ok = await confirmDialog({ title: 'Remove asset', message: `Remove "${asset.name}" from the register?`, confirmLabel: 'Remove' });
     if (!ok) return;
+    /*
+     * Marked written off rather than deleted: an asset that was on the balance
+     * sheet last year has to stay explainable this year.
+     */
+    if (asset.backendAssetId) {
+      try {
+        await updateFixedAsset(asset.backendAssetId, { status: 'WRITTEN_OFF' });
+      } catch (e) {
+        notify.error(`Removed here, but the server refused: ${String(e?.message || e)}`);
+      }
+    }
     setDb((prev) => ({ ...prev, fixedAssets: (prev.fixedAssets || []).filter((a) => a.id !== asset.id) }));
   };
 

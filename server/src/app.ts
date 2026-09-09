@@ -21,6 +21,7 @@ import { securityRouter } from './routes/security.js';
 import { itemsRouter } from './routes/items.js';
 import { purchaseDocsRouter } from './routes/purchaseDocs.js';
 import { quoteDocsRouter } from './routes/quoteDocs.js';
+import { orgMastersRouter } from './routes/orgMasters.js';
 import { einvoiceRouter } from './routes/einvoice.js';
 import { revaluationRouter } from './routes/revaluation.js';
 import { currenciesRouter } from './routes/currencies.js';
@@ -106,6 +107,7 @@ export function buildApp() {
   app.use('/api', rolesRouter);
   app.use('/api', usersRouter);
   app.use('/api', transfersRouter);
+  app.use('/api', orgMastersRouter);
   app.use('/api', inventoryAdjustmentsRouter);
   app.use('/api', invoicesRouter);
   app.use('/api', ledgerRouter);

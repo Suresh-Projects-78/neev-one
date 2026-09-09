@@ -3,6 +3,7 @@ import { Plus, Trash2, UserCheck } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
+import { createSalesman, deactivateSalesman } from '../../api/masters';
 import { MoneyValue } from '../../components/docs';
 
 /**
@@ -20,13 +21,28 @@ export default function Salesmen({ db, setDb, currentCompany }) {
 
   const [form, setForm] = useState({ name: '', phone: '', commissionPct: '' });
 
-  const add = () => {
+  const add = async () => {
     const name = form.name.trim();
     if (!name) {
       notify.error('Salesman name is required');
       return;
     }
     const nextId = (db.salesmen || []).reduce((m, s) => Math.max(m, Number(s.id) || 0), 0) + 1;
+    const pct = Math.max(0, Math.min(100, Number(form.commissionPct) || 0));
+
+    /*
+     * Sales by Salesman reports on this, so a salesman held in one browser made
+     * the same books report differently on different machines. Written through
+     * to the server; a refusal keeps the row here so entry is not lost.
+     */
+    let serverPatch = {};
+    try {
+      const created = await createSalesman({ name, phone: form.phone.trim() || undefined, commissionRate: pct });
+      if (created?.salesman?.id) serverPatch = { backendSalesmanId: String(created.salesman.id) };
+    } catch (e) {
+      notify.error(`Saved on this device only — the server refused it: ${String(e?.message || e)}`);
+    }
+
     setDb((prev) => ({
       ...prev,
       salesmen: [
@@ -36,8 +52,9 @@ export default function Salesmen({ db, setDb, currentCompany }) {
           companyId,
           name,
           phone: form.phone.trim(),
-          commissionPct: Math.max(0, Math.min(100, Number(form.commissionPct) || 0)),
+          commissionPct: pct,
           createdAt: new Date().toISOString(),
+          ...serverPatch,
         },
       ],
     }));
@@ -48,6 +65,17 @@ export default function Salesmen({ db, setDb, currentCompany }) {
   const remove = async (s) => {
     const ok = await confirmDialog({ title: 'Remove salesman', message: `Remove ${s.name}? Past invoices keep his name.`, confirmLabel: 'Remove' });
     if (!ok) return;
+    /*
+     * Deactivated on the server, not deleted: past invoices carry the name and
+     * the commission history has to stay explainable.
+     */
+    if (s.backendSalesmanId) {
+      try {
+        await deactivateSalesman(s.backendSalesmanId);
+      } catch (e) {
+        notify.error(`Removed here, but the server refused: ${String(e?.message || e)}`);
+      }
+    }
     setDb((prev) => ({ ...prev, salesmen: (prev.salesmen || []).filter((x) => Number(x.id) !== Number(s.id)) }));
   };
 

@@ -32,6 +32,7 @@ const DEFAULT_PREFIX: Record<string, string> = {
   CREDIT_NOTE: 'CN-',
   DEBIT_NOTE: 'DN-',
   TRANSFER: 'TRF-',
+  DELIVERY_CHALLAN: 'DC-',
 };
 
 /** The period a number belongs to, for series that reset. */
