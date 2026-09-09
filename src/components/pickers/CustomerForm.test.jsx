@@ -2,7 +2,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-vi.mock('../../api/masters', () => ({
+vi.mock('../../api/masters', async (importOriginal) => ({
+  ...(await importOriginal()),
   createCustomer: vi.fn(),
   listCustomers: vi.fn(async () => ({ customers: [] })),
   lookupGstin: vi.fn(),
@@ -32,6 +33,16 @@ beforeEach(() => {
   notify.error.mockReset();
   lookupGstin.mockReset();
 });
+
+/*
+ * Billing state is required, and rightly: it decides whether a sale splits into
+ * CGST + SGST or leaves as IGST. Set through the picker the form actually uses.
+ */
+const setBillingState = async (user, name = 'Karnataka') => {
+  const trigger = screen.getAllByRole('combobox').filter((c) => (c.getAttribute('aria-label') || c.textContent).includes('Select'))[0];
+  await user.click(trigger);
+  await user.click((await screen.findAllByRole('option')).find((o) => o.textContent.includes(name)));
+};
 
 describe('basic details', () => {
   it('asks the six things every customer needs, in order', () => {
@@ -161,5 +172,75 @@ describe('the remaining tabs', () => {
     const shown = screen.getByLabelText('GSTIN');
     expect(shown).toHaveValue('29AABCU9603R1ZJ');
     expect(shown).toHaveAttribute('readonly');
+  });
+});
+
+describe('the record reaches the server', () => {
+  /*
+   * The gap this closes: the Customers screen wrote the customer to the browser
+   * and stopped. The server write only ever happened when a customer was
+   * created from inside an invoice, and even there it sent six fields. So the
+   * contacts, the extra addresses, the group, the MSME number and the rest
+   * reached nothing — and the customer code the server allots, which the master
+   * asks to be auto generated, was never asked for.
+   */
+  it('sends the whole master, and keeps the code the server allotted', async () => {
+    const { createCustomer } = await import('../../api/masters');
+    createCustomer.mockResolvedValue({ party: { id: 'srv_1', code: 'CUS-0007' } });
+
+    const rows = [];
+    const user = userEvent.setup();
+    render(
+      <CustomerForm
+        db={db}
+        setDb={(next) => rows.push(typeof next === 'function' ? next({ customers: [] }) : next)}
+        currentCompany={company}
+        onClose={() => {}}
+      />
+    );
+
+    await user.click(screen.getByRole('radio', { name: 'Unregistered' }));
+    await user.type(screen.getByPlaceholderText('Enter customer name'), 'Acme Traders');
+    await setBillingState(user);
+
+    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
+    await user.click(screen.getByRole('button', { name: /Add Contact/i }));
+    await user.type(screen.getByLabelText('Contact name, row 1'), 'Priya Nair');
+    await user.type(screen.getByLabelText('Position, row 1'), 'Accounts');
+
+    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
+    await user.type(screen.getByLabelText('MSME / Udyam'), 'UDYAM-KR-03-0001234');
+
+    await user.click(screen.getByRole('button', { name: /^Save$/ }));
+
+    expect(createCustomer).toHaveBeenCalledTimes(1);
+    const sent = createCustomer.mock.calls[0][0];
+    expect(sent.name).toBe('Acme Traders');
+    expect(sent.msmeNumber).toBe('UDYAM-KR-03-0001234');
+    expect(sent.contacts).toEqual([{ name: 'Priya Nair', position: 'Accounts', email: undefined, mobile: undefined }]);
+
+    // The allotted code comes back onto the local row — this is the master's
+    // "auto generated", which previously stayed blank.
+    const written = rows.at(-1);
+    expect(written.customers.at(-1).code).toBe('CUS-0007');
+    expect(written.customers.at(-1).backendPartyId).toBe('srv_1');
+  });
+
+  /* A refused write must not lose the entry. */
+  it('keeps the customer on this device when the server refuses', async () => {
+    const { createCustomer } = await import('../../api/masters');
+    createCustomer.mockRejectedValue(new Error('offline'));
+
+    const rows = [];
+    const user = userEvent.setup();
+    render(<CustomerForm db={db} setDb={(n) => rows.push(n)} currentCompany={company} onClose={() => {}} />);
+
+    await user.click(screen.getByRole('radio', { name: 'Unregistered' }));
+    await user.type(screen.getByPlaceholderText('Enter customer name'), 'Offline Co');
+    await setBillingState(user);
+    await user.click(screen.getByRole('button', { name: /^Save$/ }));
+
+    expect(rows.at(-1).customers.at(-1).name).toBe('Offline Co');
+    expect(notify.error).toHaveBeenCalled();
   });
 });

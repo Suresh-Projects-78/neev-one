@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
 import Modal from '../ui/Modal';
-import { createCustomer, listCustomers, lookupGstin } from '../../api/masters';
+import { createCustomer, listCustomers, lookupGstin, toServerCustomer } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getCustomerDisplayName } from '../../utils/contacts';
@@ -353,7 +353,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     /*
      * Which button was pressed. "Save and New" clears the form and keeps it
@@ -594,9 +594,33 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
     const finalCustomer = { ...newCustomer, accountId: ledger.id };
 
-    setDb({ ...db, chartOfAccounts: [...coa, ledger], customers: [...(db.customers || []), finalCustomer] });
+    /*
+     * Write through to the server, then keep what it allotted.
+     *
+     * This used to happen only when a customer was created from inside an
+     * invoice, and even there it sent six fields. Created from the Customers
+     * screen it never happened at all: the record lived in one browser, the
+     * contacts and extra addresses reached nothing, and the customer code the
+     * server allots — the "auto generated" the master asks for — was never
+     * asked for, so it stayed blank.
+     *
+     * Failure is not fatal. A customer entered offline stays local and usable;
+     * losing the whole entry because the network went would be the worse
+     * trade.
+     */
+    let serverPatch = {};
+    try {
+      const created = await createCustomer(toServerCustomer(finalCustomer));
+      const party = created?.party;
+      if (party?.id) serverPatch = { backendPartyId: String(party.id), code: party.code || finalCustomer.code || '' };
+    } catch (e) {
+      notify.error(`Saved on this device only — the server refused it: ${String(e?.message || e)}`);
+    }
 
-    if (typeof onCreated === 'function') onCreated(finalCustomer);
+    const storedCustomer = { ...finalCustomer, ...serverPatch };
+    setDb({ ...db, chartOfAccounts: [...coa, ledger], customers: [...(db.customers || []), storedCustomer] });
+
+    if (typeof onCreated === 'function') onCreated(storedCustomer);
     if (saveAndNew) {
       setFormData((p) => ({
         ...p,
@@ -1294,34 +1318,15 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
                 // the local numeric id as the selection and carrying
                 // backendPartyId alongside satisfies both the local lookups and
                 // the API calls that need a real server party.
-                try {
-                  const created = await createCustomer({
-                    name: getCustomerDisplayName(customer) || customer.name || 'Customer',
-                    gstin: customer.gstin || undefined,
-                    phone: customer.mobile || customer.phone || undefined,
-                    email: customer.email || undefined,
-                    billingState: customer.billingAddress?.state || undefined,
-                    // The server recomputes invoice due dates from this, so it
-                    // has to travel with the record rather than staying a
-                    // browser-only field.
-                    paymentTermDays:
-                      customer.paymentTermDays === undefined || customer.paymentTermDays === null
-                        ? undefined
-                        : Number(customer.paymentTermDays),
-                  });
+                /*
+                 * The form has already written the customer to the server and
+                 * carries the id it came back with. This used to do its own
+                 * create with six of the fields, which — now that the form does
+                 * it properly — would have made a second, thinner row for the
+                 * same customer.
+                 */
+                if (customer?.backendPartyId) {
                   await serverCustomers.reload();
-
-                  const serverId = String(created?.party?.id || '').trim();
-                  if (serverId && typeof setDb === 'function') {
-                    setDb((prev) => ({
-                      ...prev,
-                      customers: (Array.isArray(prev?.customers) ? prev.customers : []).map((c) =>
-                        String(c.id) === String(customer.id) ? { ...c, backendPartyId: serverId } : c
-                      ),
-                    }));
-                  }
-                } catch {
-                  // Offline or refused: keep the local record so entry continues.
                 }
                 onChange(String(customer.id));
               }}

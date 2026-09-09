@@ -35,3 +35,73 @@ export const lookupGstin = (gstin) =>
     skipBranchHeader: true,
     skipWarehouseHeader: true,
   });
+
+/**
+ * The whole customer master, in the shape the server takes.
+ *
+ * Built in one place because there were two callers sending two different
+ * subsets: the picker sent six fields and the Customers screen sent nothing at
+ * all — it wrote to the browser and stopped. So contacts, extra addresses,
+ * group, currency, MSME and the rest reached the database from neither, and the
+ * customer code the server allots was never asked for.
+ */
+export const toServerCustomer = (c) => ({
+  name: String(c?.displayName || c?.name || '').trim() || 'Customer',
+  code: String(c?.code || '').trim() || undefined,
+  gstin: c?.gstin || undefined,
+  gstRegistrationType:
+    c?.gstRegistration === 'Registered' ? 'REGULAR' : c?.gstRegistration === 'Composition' ? 'COMPOSITION' : 'UNREGISTERED',
+  pan: c?.pan || undefined,
+  email: c?.email || undefined,
+  phone: c?.mobile || c?.phone || undefined,
+  contactPerson: c?.contactPerson || undefined,
+  partyGroup: c?.groupName || undefined,
+  currency: c?.currency || undefined,
+  priceListId: c?.priceListId || undefined,
+  msmeNumber: c?.msmeNumber || undefined,
+  statutoryOther: c?.statutoryOther || undefined,
+  notes: c?.notes || undefined,
+  openingBalance: Number(c?.openingBalance || 0),
+  openingBalanceType: String(c?.openingBalanceType || 'Dr').toUpperCase() === 'CR' ? 'CR' : 'DR',
+  paymentTermDays:
+    c?.paymentTermDays === undefined || c?.paymentTermDays === null ? undefined : Number(c.paymentTermDays),
+  creditLimit: c?.creditLimit === undefined || c?.creditLimit === null ? undefined : Number(c.creditLimit),
+
+  billingLine1: c?.billingAddress?.line1 || undefined,
+  billingLine2: c?.billingAddress?.line2 || undefined,
+  billingCity: c?.billingAddress?.city || undefined,
+  billingDistrict: c?.billingAddress?.district || undefined,
+  billingState: c?.billingAddress?.state || undefined,
+  billingPincode: c?.billingAddress?.pincode || undefined,
+  billingCountry: c?.billingAddress?.country || undefined,
+
+  shippingSameAsBilling: c?.shippingSameAsBilling !== false,
+  shippingLine1: c?.shippingAddress?.line1 || undefined,
+  shippingLine2: c?.shippingAddress?.line2 || undefined,
+  shippingCity: c?.shippingAddress?.city || undefined,
+  shippingDistrict: c?.shippingAddress?.district || undefined,
+  shippingState: c?.shippingAddress?.state || undefined,
+  shippingPincode: c?.shippingAddress?.pincode || undefined,
+  shippingCountry: c?.shippingAddress?.country || undefined,
+
+  extraAddresses: (Array.isArray(c?.shipToAddresses) ? c.shipToAddresses : [])
+    .filter((a) => String(a?.label || '').trim())
+    .map((a) => ({
+      label: String(a.label).trim(),
+      line1: a.line1 || undefined,
+      line2: a.line2 || undefined,
+      city: a.city || undefined,
+      district: a.district || undefined,
+      state: a.state || undefined,
+      pincode: a.pincode || undefined,
+      country: a.country || undefined,
+    })),
+  contacts: (Array.isArray(c?.contacts) ? c.contacts : [])
+    .filter((p) => String(p?.name || '').trim())
+    .map((p) => ({
+      name: String(p.name).trim(),
+      position: p.position || undefined,
+      email: p.email || undefined,
+      mobile: p.mobile || undefined,
+    })),
+});
