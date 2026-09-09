@@ -30,10 +30,18 @@ export const nextNumber = (docType, date) =>
  * characters 3–12 are the PAN. The server returns those without calling
  * anywhere, so the button is useful even where no portal is configured.
  */
-export const lookupGstin = (gstin) =>
+export const lookupGstin = (gstin, token = '') =>
   apiFetch(`/gstin/${encodeURIComponent(String(gstin || '').trim().toUpperCase())}`, {
     skipBranchHeader: true,
     skipWarehouseHeader: true,
+    /*
+     * The token is passed explicitly during signup. At the company step the
+     * account exists and its session is valid, but nothing has been written to
+     * localStorage yet — that happens once the company is created — so the
+     * default header would have been absent and the lookup would have answered
+     * 401 at exactly the moment it is most useful.
+     */
+    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
   });
 
 /**

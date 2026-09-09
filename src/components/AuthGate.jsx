@@ -730,7 +730,7 @@ const AuthGate = ({ onAuth }) => {
 
                 {/* Signup Step 2 Form */}
                 {mode === 'signup' && signupStep === 2 && (
-                  <CompanyFormFields form={companyForm} setForm={setCompanyForm} disabled={loading} />
+                  <CompanyFormFields form={companyForm} setForm={setCompanyForm} disabled={loading} authToken={signupToken} />
                 )}
 
                 {/*

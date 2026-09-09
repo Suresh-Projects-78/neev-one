@@ -1,7 +1,10 @@
 import { useState } from 'react';
+import { Search } from 'lucide-react';
 
 import { FormRow } from '../../components/pickers/customerFormParts';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
+import { lookupGstin } from '../../api/masters';
+import { notify } from '../../components/ui/notify';
 
 /**
  * The company, asked the way the customer master is asked.
@@ -19,7 +22,33 @@ import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
  */
 
 export const ENTITY_TYPES = ['Proprietorship', 'Partnership', 'Pvt Ltd', 'Ltd', 'LLP'];
-export const INDUSTRIES = ['Retail', 'Manufacturing', 'Services'];
+/*
+ * Broad enough that most businesses find themselves, short enough to read.
+ * Three was not a list, it was a guess — a logistics company, a hospital and a
+ * software firm all had to call themselves "Services".
+ */
+export const INDUSTRIES = [
+  'Retail',
+  'Wholesale & Distribution',
+  'Manufacturing',
+  'Construction & Real Estate',
+  'Transport & Logistics',
+  'Information Technology',
+  'Professional Services',
+  'Healthcare & Pharma',
+  'Education & Training',
+  'Hospitality & Food',
+  'Agriculture & Allied',
+  'Textiles & Apparel',
+  'Automotive',
+  'Electronics & Electricals',
+  'Chemicals & Plastics',
+  'Financial Services',
+  'Media & Advertising',
+  'E-commerce',
+  'Jewellery & Precious Metals',
+  'Other Services',
+];
 export const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'];
 
 export const COMPANY_TABS = [
@@ -53,8 +82,9 @@ export const emptyCompanyForm = () => ({
 
 const STATES = Object.values(GST_STATE_BY_CODE).sort((a, b) => a.localeCompare(b));
 
-export function CompanyFormFields({ form, setForm, disabled = false }) {
+export function CompanyFormFields({ form, setForm, disabled = false, authToken = '' }) {
   const [tab, setTab] = useState('basic');
+  const [fetching, setFetching] = useState(false);
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
   /*
@@ -64,6 +94,39 @@ export function CompanyFormFields({ form, setForm, disabled = false }) {
    */
   const stateFromGstin = getGstStateFromGstin(form.gstin);
   const stateLocked = Boolean(stateFromGstin);
+
+  /*
+   * What the number itself says is filled without asking: the state from its
+   * first two digits, the PAN from characters 3-12, and the legal name and
+   * address where a portal is configured. Nothing already typed is overwritten
+   * — somebody who filled the address by hand should not lose it to a lookup.
+   */
+  const fetchFromGstin = async () => {
+    const gstin = String(form.gstin || '').trim().toUpperCase();
+    if (gstin.length !== 15) {
+      notify.error('Enter the 15-character GSTIN first.');
+      return;
+    }
+    setFetching(true);
+    try {
+      const data = await lookupGstin(gstin, authToken);
+      setForm((p) => ({
+        ...p,
+        gstin,
+        state: data?.state || p.state,
+        legalName: p.legalName || data?.legalName || '',
+        tradeName: p.tradeName || data?.tradeName || '',
+        regAddress1: p.regAddress1 || data?.address?.line1 || '',
+        regCity: p.regCity || data?.address?.city || '',
+        regPincode: p.regPincode || data?.address?.pincode || '',
+      }));
+      notify.success(data?.source === 'derived' ? 'State filled from the GSTIN.' : 'Fetched from the GST portal.');
+    } catch (e) {
+      notify.error(String(e?.message || 'Could not fetch that GSTIN.'));
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const toggleIndustry = (name) =>
     setForm((p) => ({
@@ -107,14 +170,26 @@ export function CompanyFormFields({ form, setForm, disabled = false }) {
             </FormRow>
 
             <FormRow label="GSTIN" hint="Optional. Its first two digits are the state, and characters 3–12 are the PAN.">
-              <input
-                value={form.gstin}
-                onChange={(e) => setForm((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))}
-                className="ui-input ui-mono w-full"
-                placeholder="29AABCU9603R1ZJ"
-                maxLength={15}
-                disabled={disabled}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  value={form.gstin}
+                  onChange={(e) => setForm((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))}
+                  className="ui-input ui-mono min-w-0 flex-1"
+                  placeholder="Enter 15 digit GSTIN"
+                  maxLength={15}
+                  disabled={disabled}
+                />
+                <button
+                  type="button"
+                  onClick={fetchFromGstin}
+                  disabled={disabled || fetching}
+                  className="ui-btn ui-btn-secondary shrink-0"
+                  style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
+                >
+                  <Search size={14} aria-hidden="true" />
+                  {fetching ? 'Fetching…' : 'Fetch from GSTN'}
+                </button>
+              </div>
             </FormRow>
 
             <FormRow
@@ -147,7 +222,7 @@ export function CompanyFormFields({ form, setForm, disabled = false }) {
             </FormRow>
 
             <FormRow label="Industry" hint="Select one or more. Used to suggest sensible defaults.">
-              <div className="ui-card ui-in p-3 space-y-1.5">
+              <div className="ui-card ui-in grid max-h-44 grid-cols-1 gap-x-4 gap-y-1.5 overflow-y-auto p-3 sm:grid-cols-2">
                 {INDUSTRIES.map((name) => (
                   <label key={name} className="flex cursor-pointer items-center gap-2.5 text-sm">
                     <input
