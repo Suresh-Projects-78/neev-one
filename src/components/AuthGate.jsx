@@ -535,7 +535,14 @@ const AuthGate = ({ onAuth }) => {
         <div className="relative flex-1 flex items-center justify-center px-6 py-10">
           {/* Ambient brand light behind the card; base colour stays --app-bg. */}
           <div className="ui-ambient ui-ambient-quiet" aria-hidden="true" />
-          <div className="relative w-full max-w-md">
+          {/*
+            The card is sized to what it holds. A sign-in box wants to be narrow
+            — a wide one makes three short fields look lost. The company form is
+            two columns of label and control, and at 28rem that left roughly
+            200px for every input, so the form read as cramped while the page
+            around it sat empty.
+          */}
+          <div className={`relative w-full ${mode === 'signup' && signupStep >= 2 ? 'max-w-3xl' : 'max-w-md'}`}>
             {/* Mobile logo */}
             <div className="lg:hidden mb-8 text-center">
               <div className="inline-flex items-center gap-2">

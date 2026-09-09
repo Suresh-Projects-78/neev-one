@@ -37,7 +37,7 @@ export const CURRENCY_OPTIONS = [
  * for the twentieth time is not reading any of it.
  */
 export const FormRow = ({ label, hint = '', required = false, children }) => (
-  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[13rem_minmax(0,1fr)] sm:items-start sm:gap-4">
+  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[minmax(8rem,12rem)_minmax(16rem,1fr)] sm:items-start sm:gap-5">
     <div className="flex items-center gap-1.5 sm:pt-2">
       <span className="text-sm">
         {label}
@@ -49,7 +49,7 @@ export const FormRow = ({ label, hint = '', required = false, children }) => (
         </span>
       ) : null}
     </div>
-    <div className="min-w-0 sm:max-w-xl">{children}</div>
+    <div className="min-w-0">{children}</div>
   </div>
 );
 
