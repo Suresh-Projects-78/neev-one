@@ -118,6 +118,7 @@ export function CompanyFormFields({ form, setForm, disabled = false, authToken =
         tradeName: p.tradeName || data?.tradeName || '',
         regAddress1: p.regAddress1 || data?.address?.line1 || '',
         regCity: p.regCity || data?.address?.city || '',
+        regDistrict: p.regDistrict || data?.address?.district || '',
         regPincode: p.regPincode || data?.address?.pincode || '',
       }));
       notify.success(data?.source === 'derived' ? 'State filled from the GSTIN.' : 'Fetched from the GST portal.');

@@ -55,6 +55,12 @@ const mapProviderResponse = (raw: any) => {
     .filter(Boolean)
     .join(', ');
 
+  const line1 = line || pick(addr, ['adr', 'fullAddress']);
+  const city = pick(addr, ['city', 'dst', 'district']);
+  const district = pick(addr, ['dst', 'district']);
+  const state = pick(addr, ['stcd', 'state', 'stateName']);
+  const pincode = pick(addr, ['pncd', 'pincode', 'zip']);
+
   return {
     legalName: pick(row, ['lgnm', 'legalName', 'legal_name', 'name']),
     tradeName: pick(row, ['tradeNam', 'tradeName', 'trade_name']),
@@ -62,11 +68,42 @@ const mapProviderResponse = (raw: any) => {
     taxpayerType: pick(row, ['dty', 'taxpayerType', 'dealerType']),
     registrationDate: pick(row, ['rgdt', 'registrationDate', 'regDate']),
     constitution: pick(row, ['ctb', 'constitutionOfBusiness', 'businessConstitution']),
-    addressLine: line || pick(addr, ['adr', 'fullAddress']),
-    city: pick(addr, ['dst', 'city', 'district']),
-    state: pick(addr, ['stcd', 'state', 'stateName']),
-    pincode: pick(addr, ['pncd', 'pincode', 'zip']),
+
+    /*
+     * The address, nested, and the same flat fields kept beside it.
+     *
+     * Three forms read this and two of them read a nested `address` that was
+     * never returned, so the portal fill silently did nothing on the company
+     * and customer forms while working on vendors. Nested is the shape they now
+     * agree on; the flat keys stay so nothing that already reads them breaks.
+     */
+    address: { line1, line2: '', city, district, state, pincode },
+    addressLine: line1,
+    city,
+    district,
+    state,
+    pincode,
   };
+};
+
+/*
+ * A short cache in front of the provider.
+ *
+ * These lookups are usually billed per call, and a person correcting a typo in
+ * a form will press the button three times in a minute. A GSTIN's registered
+ * details do not change on that timescale.
+ */
+const CACHE_TTL_MS = 10 * 60 * 1000;
+const cache = new Map<string, { at: number; body: unknown }>();
+
+const cached = (gstin: string) => {
+  const hit = cache.get(gstin);
+  if (!hit) return null;
+  if (Date.now() - hit.at > CACHE_TTL_MS) {
+    cache.delete(gstin);
+    return null;
+  }
+  return hit.body;
 };
 
 export const gstinRouter = Router();
@@ -88,6 +125,9 @@ gstinRouter.get('/gstin/:gstin', requireAuth, async (req, res) => {
     state: STATE_BY_CODE[stateCode] || '',
     stateCode,
   };
+
+  const fromCache = cached(gstin);
+  if (fromCache) return res.json(fromCache);
 
   const url = String(process.env.GSTIN_LOOKUP_URL || '').trim();
   if (!url) {
@@ -119,7 +159,20 @@ gstinRouter.get('/gstin/:gstin', requireAuth, async (req, res) => {
 
     const raw = await upstream.json();
     const mapped = mapProviderResponse(raw);
-    return res.json({ ...derived, ...mapped, state: mapped.state || derived.state, source: 'portal' });
+    const body = {
+      ...derived,
+      ...mapped,
+      /*
+       * The state the NUMBER encodes wins over the one the provider reports.
+       * They should agree; where they do not, the first two digits are the
+       * fact and everything downstream — CGST/SGST against IGST — is decided
+       * by them.
+       */
+      state: derived.state || mapped.state,
+      source: 'portal',
+    };
+    cache.set(gstin, { at: Date.now(), body });
+    return res.json(body);
   } catch (err: any) {
     const aborted = String(err?.name || '') === 'AbortError';
     return res.status(502).json({

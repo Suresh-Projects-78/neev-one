@@ -235,10 +235,18 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       const data = await apiFetch(`/gstin/${gstin}`, { skipWarehouseHeader: true });
       setFormData((prev) => {
         const addr = { ...prev.billingAddress };
-        if (data.addressLine) addr.line1 = data.addressLine;
-        if (data.city) addr.city = data.city;
-        if (data.state) addr.state = data.state;
-        if (data.pincode) addr.pincode = String(data.pincode);
+        /*
+         * The nested shape, which is what the company and customer forms read
+         * too. The flat keys still come back, but three forms reading a lookup
+         * two different ways is how two of them ended up reading a shape that
+         * was never returned.
+         */
+        const a = data.address || {};
+        if (a.line1) addr.line1 = a.line1;
+        if (a.city) addr.city = a.city;
+        if (a.district) addr.district = a.district;
+        if (a.state) addr.state = a.state;
+        if (a.pincode) addr.pincode = String(a.pincode);
         if (!String(addr.country || '').trim()) addr.country = INDIA_COUNTRY;
         const legal = String(data.legalName || data.tradeName || '').trim();
         return {

@@ -102,6 +102,21 @@ export function buildApp() {
   app.get('/health', (_req, res) => res.json({ ok: true }));
 
   app.use('/api/auth', authRouter);
+
+  /*
+   * Mounted before every tenant-scoped router, and that position is the point.
+   *
+   * Those routers call `router.use(requireAuth, requireTenantContext)`, and a
+   * router mounted at '/api' runs its own middleware for EVERY '/api' request
+   * that passes through it — not only the paths it defines. So with this router
+   * further down, a GSTIN lookup was answered "Missing x-org-id" by a router
+   * that has nothing to do with GSTINs.
+   *
+   * That mattered most where the lookup is most useful: at signup, deciding a
+   * company's state, there is no org yet and never will be until the company is
+   * created. The button could not have worked there at all.
+   */
+  app.use('/api', gstinRouter);
   app.use('/api', branchesRouter);
   app.use('/api', warehousesRouter);
   app.use('/api', rolesRouter);
@@ -115,7 +130,6 @@ export function buildApp() {
   app.use('/api', governanceRouter);
   app.use('/api', featuresRouter);
   app.use('/api', partiesRouter);
-  app.use('/api', gstinRouter);
   app.use('/api', emailRouter);
   app.use('/api', securityRouter);
   app.use('/api', itemsRouter);

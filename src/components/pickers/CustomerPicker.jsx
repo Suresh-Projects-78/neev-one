@@ -342,6 +342,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           state: data?.state || p.billingAddress.state,
           line1: p.billingAddress.line1 || data?.address?.line1 || '',
           city: p.billingAddress.city || data?.address?.city || '',
+          district: p.billingAddress.district || data?.address?.district || '',
           pincode: p.billingAddress.pincode || data?.address?.pincode || '',
         },
       }));
