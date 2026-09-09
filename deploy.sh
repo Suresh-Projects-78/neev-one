@@ -42,8 +42,15 @@ if [ "${1:-}" = "--api" ]; then
     -e "ssh -i $KEY" server/ "ubuntu@$HOST:/opt/neev/server/"
 
   step "Installing, migrating and rebuilding on the server"
-  # db push is safe to repeat: it only applies what the schema needs, and
-  # leaves the data alone.
+  # db push applies what the schema needs. It is safe to repeat for an ADDITIVE
+  # change — a new table, a new nullable column — and it is not safe for one
+  # that tightens a constraint, which can refuse or take rows with it. Run
+  # `npx tsx scripts/preflight.ts` against the live database before deploying a
+  # schema change; it names anything that would be lost.
+  #
+  # Its output is kept, unlike the other steps. `set -e` already aborts the
+  # deploy when push fails, but silencing it meant the failure arrived with no
+  # reason attached and the schema half applied.
   "${SSH[@]}" 'set -e
     cd /opt/neev/server
     set -a; . /opt/neev/.env; set +a
@@ -51,7 +58,7 @@ if [ "${1:-}" = "--api" ]; then
     # which makes npm skip devDependencies, and tsc is one of them.
     npm ci --include=dev --no-audit --no-fund >/dev/null 2>&1
     npx prisma generate >/dev/null 2>&1
-    npx prisma db push --skip-generate >/dev/null 2>&1
+    npx prisma db push --skip-generate
     npm run build >/dev/null 2>&1
     sudo systemctl restart neev-api'
 fi
