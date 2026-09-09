@@ -126,16 +126,26 @@ describe('addresses', () => {
 });
 
 describe('contacts', () => {
-  it('holds more than one person, each with a position', async () => {
+  /*
+   * A line is already there. An empty state with an Add button is one click
+   * before anybody can start, and the commonest customer has exactly one
+   * contact.
+   */
+  it('opens with one line ready to type into', async () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole('tab', { name: 'Contacts' }));
 
-    expect(screen.getByText('No contacts yet.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /Add Contact/i }));
+    expect(screen.getByLabelText('Contact name, row 1')).toBeInTheDocument();
+    expect(screen.queryByText('No contacts yet.')).toBeNull();
+  });
+
+  it('takes more people when asked', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
     await user.click(screen.getByRole('button', { name: /Add Contact/i }));
 
-    expect(screen.getByLabelText('Contact name, row 1')).toBeInTheDocument();
     expect(screen.getByLabelText('Position, row 2')).toBeInTheDocument();
   });
 });
@@ -264,18 +274,29 @@ describe('header actions', () => {
     // And there is exactly one of each, so the old bar is gone rather than duplicated.
     expect(screen.getAllByRole('button', { name: /^Save$/ })).toHaveLength(1);
     expect(container.querySelectorAll('button[value="saveAndNew"]')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /Save and New/i })).toBeNull();
   });
 
-  /* Secondary actions only — the two decisions everybody makes stay in the open. */
-  it('keeps Save and add another behind the three-dot menu', async () => {
+  /*
+   * The same header the invoice uses, not a second one that looks like it:
+   * Back, Cancel, Save, and a three-dot menu for the rest.
+   */
+  it('uses the shared document header, with Back beside the way out', () => {
+    renderForm();
+    expect(screen.getByRole('button', { name: /^Back$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Cancel$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Save$/ })).toBeInTheDocument();
+  });
+
+  it('keeps the secondary actions behind the three-dot menu', async () => {
     const user = userEvent.setup();
     renderForm();
-    expect(screen.queryByRole('menuitem', { name: /Save and add another/i })).toBeNull();
+    expect(screen.queryByText(/Save and add another/i)).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: /More actions/i }));
-    expect(screen.getByRole('menuitem', { name: /Save and add another/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /Mark inactive/i })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /Clear the form/i })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /More options/i }));
+    expect(screen.getByText(/Save and add another/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mark inactive/i)).toBeInTheDocument();
+    expect(screen.getByText(/Clear the form/i)).toBeInTheDocument();
   });
 });
 

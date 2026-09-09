@@ -57,14 +57,9 @@ const COLS = ['Name of Place', 'Address Line 1', 'Address Line 2', 'Country', 'S
 
 export const AddressTab = ({ rows, states, onChange, onAdd, onRemove }) => (
   <section className="space-y-3">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h4 className="ui-t-sec">Address</h4>
-        <p className="ui-caption mt-0.5">Add billing and shipping addresses for this customer.</p>
-      </div>
-      <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary">
-        <Plus size={15} aria-hidden="true" /> Add Address
-      </button>
+    <div>
+      <h4 className="ui-t-sec">Address</h4>
+      <p className="ui-caption mt-0.5">Billing and shipping are here by default. Add more places below if you need them.</p>
     </div>
 
     <div className="overflow-x-auto">
@@ -161,25 +156,33 @@ export const AddressTab = ({ rows, states, onChange, onAdd, onRemove }) => (
         </tbody>
       </table>
     </div>
+
+    {/*
+      Below the rows, not above them. The button adds a row to the end of the
+      table, so it belongs where that row will appear — put at the top it reads
+      as a heading action and you lose sight of what it did.
+    */}
+    <div>
+      <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary">
+        <Plus size={15} aria-hidden="true" /> Add Address
+      </button>
+    </div>
   </section>
 );
 
 export const ContactsTab = ({ rows, onChange, onAdd, onRemove }) => (
   <section className="space-y-3">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h4 className="ui-t-sec">Contacts</h4>
-        <p className="ui-caption mt-0.5">The people at this customer. The first is who documents are addressed to.</p>
-      </div>
-      <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary">
-        <Plus size={15} aria-hidden="true" /> Add Contact
-      </button>
+    <div>
+      <h4 className="ui-t-sec">Contacts</h4>
+      <p className="ui-caption mt-0.5">The people at this customer. The first is who documents are addressed to.</p>
     </div>
 
-    {rows.length === 0 ? (
-      <p className="ui-caption">No contacts yet.</p>
-    ) : (
-      <div className="overflow-x-auto">
+    {/*
+      A row is already there to type into. An empty state with an Add button is
+      one click before anybody can start, and the commonest case by far is a
+      customer with exactly one contact.
+    */}
+    <div className="overflow-x-auto">
         <table className="w-full min-w-[42rem] border-collapse text-sm">
           <thead>
             <tr>
@@ -215,7 +218,12 @@ export const ContactsTab = ({ rows, onChange, onAdd, onRemove }) => (
             ))}
           </tbody>
         </table>
-      </div>
-    )}
+    </div>
+
+    <div>
+      <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary">
+        <Plus size={15} aria-hidden="true" /> Add Contact
+      </button>
+    </div>
   </section>
 );

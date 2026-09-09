@@ -136,3 +136,48 @@ describe('the rest of the master', () => {
     expect(c.body.party.code).toBe('LEGACY-77');
   });
 });
+
+describe('the customer code is a feature, in a format the business sets', () => {
+  /*
+   * Some books identify a customer by a code and some only ever by name. A code
+   * nobody uses is still a column somebody has to explain, so it is a switch —
+   * and where it is on, the shape of it belongs to the business rather than to
+   * whoever wrote the default.
+   */
+  const setPartyCodes = (orgId: string, cfg: Record<string, unknown> | null) =>
+    prisma.org.update({
+      where: { id: orgId },
+      data: { profileJson: cfg ? JSON.stringify({ partyCodes: cfg }) : null },
+    });
+
+  const setFeature = (accountId: string, orgId: string, enabled: boolean) =>
+    prisma.featureSetting.upsert({
+      where: { orgId_key: { orgId, key: 'partyCodes' } },
+      update: { enabled },
+      create: { accountId, orgId, key: 'partyCodes', enabled, updatedByUserId: 'test' },
+    });
+
+  it('allots nothing when the feature is off', async () => {
+    const org = await prisma.org.findUnique({ where: { id: owner.orgId }, select: { accountId: true } });
+    await setFeature(org!.accountId, owner.orgId, false);
+
+    const res = await create({ name: `NoCode ${rnd()}` }).expect(201);
+    expect(res.body.party.code).toBeNull();
+
+    await setFeature(org!.accountId, owner.orgId, true);
+  });
+
+  it('follows the prefix and padding the business set', async () => {
+    await setPartyCodes(owner.orgId, { customerPrefix: 'ACME/C/', padding: 6 });
+    const res = await create({ name: `Custom ${rnd()}` }).expect(201);
+    expect(res.body.party.code).toMatch(/^ACME\/C\/\d{6}$/);
+    await setPartyCodes(owner.orgId, null);
+  });
+
+  it('still keeps a code that was typed, whatever the format says', async () => {
+    await setPartyCodes(owner.orgId, { customerPrefix: 'ACME/C/', padding: 6 });
+    const res = await create({ name: `Typed ${rnd()}`, code: 'LEGACY-9' }).expect(201);
+    expect(res.body.party.code).toBe('LEGACY-9');
+    await setPartyCodes(owner.orgId, null);
+  });
+});

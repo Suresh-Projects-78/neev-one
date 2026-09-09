@@ -93,6 +93,18 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     category: 'Operations',
   },
   {
+    /*
+     * Some books identify a customer by a code and some only ever by name.
+     * Off, the field is not asked for and nothing is allotted — a code nobody
+     * uses is still a column somebody has to explain.
+     */
+    key: 'partyCodes',
+    label: 'Customer and vendor codes',
+    description: 'Allot a code to each customer and vendor, in a format you set.',
+    defaultEnabled: true,
+    category: 'Operations',
+  },
+  {
     key: 'salesmen',
     label: 'Salesman tracking',
     description: 'Map invoices to salesmen and compute commission.',

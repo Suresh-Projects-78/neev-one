@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
+import { isFeatureEnabled } from '../services/features.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -116,15 +117,38 @@ const partySchema = z.object({
  * an identifier, not a document number, and it must never consume from the same
  * counter a GST return is reconciled against.
  */
+/*
+ * The code format, which the business sets rather than inherits.
+ *
+ * `prefix` and `padding` come from the org's party-code settings; the defaults
+ * are CUS-0001 and VEN-0001. Deliberately NOT a NumberSeries: a party code
+ * identifies a record, and it must never draw from the counter a GST return is
+ * reconciled against.
+ */
+async function partyCodeFormat(accountId: string, orgId: string, kind: string) {
+  const org = await prisma.org.findFirst({ where: { accountId, id: orgId }, select: { profileJson: true } });
+  let cfg: any = {};
+  try {
+    cfg = JSON.parse(String(org?.profileJson || '{}'))?.partyCodes || {};
+  } catch {
+    cfg = {};
+  }
+  const isVendor = kind === 'VENDOR';
+  const prefix = String((isVendor ? cfg.vendorPrefix : cfg.customerPrefix) || (isVendor ? 'VEN-' : 'CUS-'));
+  const padding = Math.min(10, Math.max(1, Number(cfg.padding) || 4));
+  return { prefix, padding };
+}
+
 async function nextPartyCode(accountId: string, orgId: string, kind: string) {
-  const prefix = kind === 'VENDOR' ? 'VEN' : 'CUS';
+  const { prefix, padding } = await partyCodeFormat(accountId, orgId, kind);
   const last = await prisma.party.findFirst({
-    where: { accountId, orgId, code: { startsWith: `${prefix}-` } },
+    where: { accountId, orgId, code: { startsWith: prefix } },
     orderBy: { code: 'desc' },
     select: { code: true },
   });
-  const n = Number(String(last?.code || '').split('-')[1] || 0) + 1;
-  return `${prefix}-${String(n).padStart(4, '0')}`;
+  const tail = String(last?.code || '').slice(prefix.length).replace(/\D/g, '');
+  const n = (Number(tail) || 0) + 1;
+  return `${prefix}${String(n).padStart(padding, '0')}`;
 }
 
 /** The scalar columns added for the customer master. */
@@ -321,7 +345,11 @@ function register(kind: PartyKind, basePath: string) {
           accountId,
           orgId,
           partyType,
-          code: body.code?.trim() || (await nextPartyCode(accountId, orgId, kind)),
+          /*
+           * Nothing is allotted when the feature is off. A code the business
+           * does not use is still a column somebody has to explain later.
+           */
+          code: body.code?.trim() || ((await isFeatureEnabled(accountId, orgId, 'partyCodes')) ? await nextPartyCode(accountId, orgId, kind) : null),
           name: body.name.trim(),
           legalName: body.legalName ?? null,
           gstin: body.gstin ? body.gstin.trim().toUpperCase() : null,

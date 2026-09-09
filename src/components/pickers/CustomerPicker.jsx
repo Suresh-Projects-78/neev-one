@@ -1,7 +1,9 @@
 import React from 'react';
-import { MoreVertical, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
+import { DocFormActions } from '../DocumentForm';
+import { useFeatures } from '../../permissions/useFeatures';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
 import Modal from '../ui/Modal';
 import { createCustomer, listCustomers, lookupGstin, toServerCustomer } from '../../api/masters';
@@ -64,7 +66,9 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         creditLimit:
           initialData.creditLimit === undefined || initialData.creditLimit === null ? '' : String(initialData.creditLimit),
         shipToAddresses: Array.isArray(initialData.shipToAddresses) ? initialData.shipToAddresses : [],
-        contacts: Array.isArray(initialData.contacts) ? initialData.contacts : [],
+        contacts: Array.isArray(initialData.contacts) && initialData.contacts.length
+          ? initialData.contacts
+          : [{ name: '', position: '', email: '', mobile: '' }],
         currency: String(initialData.currency || 'INR'),
         priceListId: String(initialData.priceListId || ''),
         msmeNumber: String(initialData.msmeNumber || ''),
@@ -113,7 +117,8 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       paymentTermDays: '',
       creditLimit: '',
       shipToAddresses: [],
-      contacts: [],
+      // One line ready to type into: the commonest customer has exactly one contact.
+      contacts: [{ name: '', position: '', email: '', mobile: '' }],
       currency: 'INR',
       priceListId: '',
       msmeNumber: '',
@@ -258,7 +263,9 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
 
   const [tab, setTab] = useState('address');
-  const [moreOpen, setMoreOpen] = useState(false);
+  const saveAndNewRef = useRef(false);
+  const { isEnabled: featureOn } = useFeatures();
+  const codesEnabled = featureOn('partyCodes');
 
   /* Shared by "Clear the form" and by Save and add another. */
   const resetForm = () =>
@@ -376,7 +383,8 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
      * from the submitter rather than held in state, so the two buttons cannot
      * disagree with what actually happened.
      */
-    const saveAndNew = e.nativeEvent?.submitter?.value === 'saveAndNew';
+    const saveAndNew = saveAndNewRef.current;
+    saveAndNewRef.current = false;
 
     const selectedGroupIdRaw = String(formData.groupId || '').trim();
     const effectiveGroupId = selectedGroupIdRaw
@@ -640,7 +648,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       setFormData((p) => ({
         ...p,
         displayName: '', gstin: '', pan: '', code: '', openingBalance: 0,
-        contacts: [], shipToAddresses: [],
+        contacts: [{ name: '', position: '', email: '', mobile: '' }], shipToAddresses: [],
         billingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: INDIA_COUNTRY },
         shippingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: INDIA_COUNTRY },
       }));
@@ -660,85 +668,48 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     <>
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
         {/*
-          The actions sit at the top, not the bottom.
-          
-          A form with tabs has no single bottom: the page ends wherever the
-          selected tab happens to end, so a bar down there moves as you switch
-          between Address and Others. At the top it is in the same place
-          whichever tab is open, and it is visible without scrolling a long
-          address table first.
-          
-          Save and Cancel stay in the open. The three-dot menu is only for the
-          secondary actions, which is why Save and New moved into it — it is a
-          convenience for somebody entering a list, not one of the two decisions
-          every person using this form has to make.
-        */}
-        <div className="mb-5 flex items-center justify-end gap-2 border-b pb-4 ui-border-c">
-          <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary">
-            Cancel
-          </button>
-          <button type="submit" className="ui-btn ui-btn-primary">
-            {isEdit ? 'Save changes' : 'Save'}
-          </button>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setMoreOpen((v) => !v)}
-              aria-haspopup="menu"
-              aria-expanded={moreOpen}
-              aria-label="More actions"
-              className="ui-icon-btn !w-9"
-            >
-              <MoreVertical size={16} aria-hidden="true" />
-            </button>
-            {moreOpen ? (
-              <>
-                <button type="button" className="fixed inset-0 z-10 cursor-default" aria-hidden="true" tabIndex={-1} onClick={() => setMoreOpen(false)} />
-                <div role="menu" className="ui-card absolute right-0 z-20 mt-1 w-52 overflow-hidden p-1 shadow-lg">
-                  <button
-                    type="submit"
-                    name="intent"
-                    value="saveAndNew"
-                    role="menuitem"
-                    onClick={() => setMoreOpen(false)}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm ui-hover-sunken"
-                  >
-                    Save and add another
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      setFormData((p) => ({ ...p, isActive: !(p.isActive !== false) }));
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm ui-hover-sunken"
-                  >
-                    {formData.isActive === false ? 'Mark active' : 'Mark inactive'}
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      resetForm();
-                    }}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm ui-hover-sunken"
-                  >
-                    Clear the form
-                  </button>
-                </div>
-              </>
-            ) : null}
-          </div>
-        </div>
+          The same header the invoice uses, not a second one that looks like
+          it. Title on the left, every way out of the screen on the right —
+          Back, Cancel, Save, and a three-dot menu for the rest. Sticky, so Save
+          is reachable from the bottom of a long address table.
 
-        {/*
-          The customer master, in the order the business asks for it: the six
-          things every customer needs, then the rest behind tabs. Addresses and
-          contacts are lists, because a customer with one delivery point and one
-          person at the other end is the exception, not the rule.
+          At the top rather than the bottom because a form with tabs has no
+          single bottom: the page ends wherever the open tab ends, so a bar down
+          there moved as you switched between Address and Others.
         */}
+        <DocFormActions
+          sticky
+          title={isEdit ? 'Edit Customer' : 'New Customer'}
+          subtitle={isEdit ? getCustomerDisplayName(initialData) || '' : ''}
+          onBack={onClose}
+          backLabel="Back"
+          secondaryLabel="Cancel"
+          onSecondary={onClose}
+          primaryLabel={isEdit ? 'Save changes' : 'Save'}
+          primaryType="submit"
+          menu={[
+            {
+              key: 'saveAndNew',
+              label: 'Save and add another',
+              submit: true,
+              /*
+                A ref, not state: the menu item submits the form in the same
+                click, and a state update would not have landed by the time the
+                submit handler reads it.
+              */
+              onSelect: () => {
+                saveAndNewRef.current = true;
+              },
+            },
+            {
+              key: 'toggleActive',
+              label: formData.isActive === false ? 'Mark active' : 'Mark inactive',
+              onSelect: () => setFormData((p) => ({ ...p, isActive: !(p.isActive !== false) })),
+            },
+            { key: 'clear', label: 'Clear the form', onSelect: resetForm },
+          ]}
+        />
+
         <div className="space-y-4">
           <h3 className="ui-t-sec">Basic Details</h3>
 
@@ -1005,6 +976,12 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
           {tab === 'others' ? (
             <div className="grid gap-4 sm:grid-cols-2">
+              {/*
+                Only where the business uses codes. Off, the field is not asked
+                for and the server allots nothing — a code nobody uses is still
+                a column somebody has to explain.
+              */}
+              {codesEnabled ? (
               <div>
                 <label className="ui-label" htmlFor="cust-code">Customer Code</label>
                 <input
@@ -1015,8 +992,9 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                   className="ui-input ui-mono w-full"
                   placeholder="Generated on save"
                 />
-                <p className="ui-caption mt-1">Left blank, a code is allotted — CUS-0001 and upward.</p>
+                <p className="ui-caption mt-1">Left blank, a code is allotted in the format set under Settings.</p>
               </div>
+              ) : null}
               {/*
                 Active rather than delete. A customer with invoices against them
                 cannot be removed without orphaning the history, so the master
@@ -1267,7 +1245,14 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
         <Modal
           onClose={() => closePopup()}
           title={customerPopupMode === 'create' ? 'Create Customer' : 'Select Customer'}
-          maxWidthClass="max-w-lg"
+          /*
+            The picker is a short list and wants a small box; the creation form
+            is the full customer master with tabs and an eight-column address
+            table, and at max-w-lg it was the same cramped form the standalone
+            screen had already outgrown. Same form, same room, wherever it is
+            opened from.
+          */
+          maxWidthClass={customerPopupMode === 'create' ? 'max-w-[80vw]' : 'max-w-lg'}
         >
           {customerPopupMode === 'select' ? (
             <div className="space-y-3">
