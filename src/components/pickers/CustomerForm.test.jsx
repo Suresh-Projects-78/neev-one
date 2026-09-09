@@ -244,3 +244,61 @@ describe('the record reaches the server', () => {
     expect(notify.error).toHaveBeenCalled();
   });
 });
+
+describe('header actions', () => {
+  /*
+   * A form with tabs has no single bottom — the page ends wherever the selected
+   * tab ends — so a bottom bar moves as you switch between Address and Others.
+   * The spec puts the actions at the top, where they sit in one place whichever
+   * tab is open.
+   */
+  it('puts Save and Cancel at the top and leaves no bottom bar', () => {
+    const { container } = renderForm();
+    const save = screen.getByRole('button', { name: /^Save$/ });
+    const cancel = screen.getByRole('button', { name: /^Cancel$/ });
+    const tabs = screen.getByRole('tab', { name: 'Address' });
+
+    // Both actions come before the tab strip in the document.
+    expect(save.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cancel.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // And there is exactly one of each, so the old bar is gone rather than duplicated.
+    expect(screen.getAllByRole('button', { name: /^Save$/ })).toHaveLength(1);
+    expect(container.querySelectorAll('button[value="saveAndNew"]')).toHaveLength(0);
+  });
+
+  /* Secondary actions only — the two decisions everybody makes stay in the open. */
+  it('keeps Save and add another behind the three-dot menu', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    expect(screen.queryByRole('menuitem', { name: /Save and add another/i })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /More actions/i }));
+    expect(screen.getByRole('menuitem', { name: /Save and add another/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Mark inactive/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Clear the form/i })).toBeInTheDocument();
+  });
+});
+
+describe('Others tab', () => {
+  it('offers Active rather than a delete, and carries no remarks field', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole('tab', { name: 'Others' }));
+
+    expect(screen.getByRole('checkbox', { name: 'Active' })).toBeChecked();
+    // The spec excludes remarks; a Notes box was there before.
+    expect(screen.queryByLabelText(/Notes/i)).toBeNull();
+  });
+});
+
+describe('Statutory tab', () => {
+  /* One place to set it, another to read it — never two places to set it. */
+  it('states the GST treatment without letting it be set twice', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
+    const shown = screen.getByLabelText('GST Registration / Treatment');
+    expect(shown).toHaveValue('Registered');
+    expect(shown).toHaveAttribute('readonly');
+  });
+});

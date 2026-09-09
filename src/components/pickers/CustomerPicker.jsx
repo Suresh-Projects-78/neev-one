@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { MoreVertical, Search } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
@@ -71,6 +71,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         statutoryOther: String(initialData.statutoryOther || ''),
         code: String(initialData.code || ''),
         notes: String(initialData.notes || ''),
+        isActive: initialData.isActive !== false,
         openingBalance: Number(initialData.openingBalance ?? 0),
         openingBalanceType: String(initialData.openingBalanceType || 'Dr'),
         billingAddress: {
@@ -119,6 +120,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
       statutoryOther: '',
       code: '',
       notes: '',
+      isActive: true,
       billingAddress: {
         ...emptyAddress,
         country: INDIA_COUNTRY,
@@ -256,6 +258,18 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
 
   const [tab, setTab] = useState('address');
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  /* Shared by "Clear the form" and by Save and add another. */
+  const resetForm = () =>
+    setFormData((p) => ({
+      ...p,
+      displayName: '', gstin: '', pan: '', code: '', openingBalance: 0,
+      msmeNumber: '', statutoryOther: '', priceListId: '',
+      contacts: [], shipToAddresses: [],
+      billingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: INDIA_COUNTRY },
+      shippingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: INDIA_COUNTRY },
+    }));
   const [gstinFetching, setGstinFetching] = useState(false);
 
   /*
@@ -646,6 +660,80 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     <>
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-col">
         {/*
+          The actions sit at the top, not the bottom.
+          
+          A form with tabs has no single bottom: the page ends wherever the
+          selected tab happens to end, so a bar down there moves as you switch
+          between Address and Others. At the top it is in the same place
+          whichever tab is open, and it is visible without scrolling a long
+          address table first.
+          
+          Save and Cancel stay in the open. The three-dot menu is only for the
+          secondary actions, which is why Save and New moved into it — it is a
+          convenience for somebody entering a list, not one of the two decisions
+          every person using this form has to make.
+        */}
+        <div className="mb-5 flex items-center justify-end gap-2 border-b pb-4 ui-border-c">
+          <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary">
+            Cancel
+          </button>
+          <button type="submit" className="ui-btn ui-btn-primary">
+            {isEdit ? 'Save changes' : 'Save'}
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={moreOpen}
+              aria-label="More actions"
+              className="ui-icon-btn !w-9"
+            >
+              <MoreVertical size={16} aria-hidden="true" />
+            </button>
+            {moreOpen ? (
+              <>
+                <button type="button" className="fixed inset-0 z-10 cursor-default" aria-hidden="true" tabIndex={-1} onClick={() => setMoreOpen(false)} />
+                <div role="menu" className="ui-card absolute right-0 z-20 mt-1 w-52 overflow-hidden p-1 shadow-lg">
+                  <button
+                    type="submit"
+                    name="intent"
+                    value="saveAndNew"
+                    role="menuitem"
+                    onClick={() => setMoreOpen(false)}
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm ui-hover-sunken"
+                  >
+                    Save and add another
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      setFormData((p) => ({ ...p, isActive: !(p.isActive !== false) }));
+                    }}
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm ui-hover-sunken"
+                  >
+                    {formData.isActive === false ? 'Mark active' : 'Mark inactive'}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMoreOpen(false);
+                      resetForm();
+                    }}
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm ui-hover-sunken"
+                  >
+                    Clear the form
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+
+        {/*
           The customer master, in the order the business asks for it: the six
           things every customer needs, then the rest behind tabs. Addresses and
           contacts are lists, because a customer with one delivery point and one
@@ -879,6 +967,17 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 />
               </div>
               <div>
+                <label className="ui-label" htmlFor="cust-gst-treatment">GST Registration / Treatment</label>
+                <input
+                  id="cust-gst-treatment"
+                  type="text"
+                  value={formData.gstRegistration || 'Unregistered'}
+                  readOnly
+                  className="ui-input w-full ui-sunken"
+                />
+                <p className="ui-caption mt-1">Chosen under Basic Details.</p>
+              </div>
+              <div>
                 <label className="ui-label" htmlFor="cust-msme">MSME / Udyam</label>
                 <input
                   id="cust-msme"
@@ -918,34 +1017,28 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
                 />
                 <p className="ui-caption mt-1">Left blank, a code is allotted — CUS-0001 and upward.</p>
               </div>
-              <div className="sm:col-span-2">
-                <label className="ui-label" htmlFor="cust-notes">Notes</label>
-                <textarea
-                  id="cust-notes"
-                  rows={3}
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="ui-input w-full"
-                  placeholder="Anything the next person to open this record should know."
-                />
+              {/*
+                Active rather than delete. A customer with invoices against them
+                cannot be removed without orphaning the history, so the master
+                carries a state instead — which is also what the spec asks for.
+              */}
+              <div>
+                <span className="ui-label block">Status</span>
+                <label className="mt-1 inline-flex cursor-pointer items-center gap-2.5 text-sm">
+                  <input
+                    type="checkbox"
+                    className="ui-checkbox"
+                    checked={formData.isActive !== false}
+                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                  />
+                  Active
+                </label>
+                <p className="ui-caption mt-1">Inactive keeps every past transaction and stops the customer appearing on new documents.</p>
               </div>
             </div>
           ) : null}
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-3 border-t pt-4 ui-border-c">
-          <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary">
-            Cancel
-          </button>
-          <div className="flex items-center gap-2">
-            <button type="submit" name="intent" value="saveAndNew" className="ui-btn ui-btn-secondary">
-              Save and New
-            </button>
-            <button type="submit" className="ui-btn ui-btn-primary">
-              {isEdit ? 'Save changes' : 'Save'}
-            </button>
-          </div>
-        </div>
       </form>
 
       {groupCreateOpen ? (

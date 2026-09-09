@@ -32,6 +32,7 @@ import {
   RefreshCw,
   Landmark,
   LogOut,
+  Search,
   Settings,
   UserRound,
   Shield,
@@ -145,6 +146,14 @@ import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
+import { AddressTab, ContactsTab } from './components/pickers/customerFormParts';
+import { TDS_SECTIONS, tdsDefaultRate } from './utils/tds';
+import { lookupGstin } from './api/masters';
+
+/* The state list the ledger address table offers, same source as everywhere. */
+const LEDGER_STATES = Object.entries(GST_STATE_BY_CODE)
+  .map(([code, name]) => ({ code, name }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
@@ -3388,7 +3397,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   );
 };
 
-const ChartAccountForm = ({
+export const ChartAccountForm = ({
   db,
   setDb,
   currentCompany,
@@ -3505,7 +3514,29 @@ const ChartAccountForm = ({
     bankBranch: isEdit ? String(initialData?.bankDetails?.branch || '').trim() : '',
     bankIfsc: isEdit ? String(initialData?.bankDetails?.ifsc || '').trim() : '',
     gstRate: isEdit ? String(initialData?.gstRate ?? '') : '',
+
+    /*
+     * The rest of the ledger master. Everything here is optional and none of it
+     * changes how a ledger posts — the group still decides that. It is the
+     * information a bank ledger, a TDS ledger or a statutory ledger needs
+     * carried with it, which previously had nowhere to live.
+     */
+    currency: isEdit ? String(initialData?.currency || 'INR') : 'INR',
+    openingBalanceType: isEdit ? String(initialData?.openingBalanceType || 'Dr') : 'Dr',
+    bankAccountType: isEdit ? String(initialData?.bankDetails?.accountType || 'Current Account') : 'Current Account',
+    bankHolderName: isEdit ? String(initialData?.bankDetails?.holderName || '') : '',
+    bankUpiId: isEdit ? String(initialData?.bankDetails?.upiId || '') : '',
+    bankBranchAddress: isEdit ? String(initialData?.bankDetails?.branchAddress || '') : '',
+    pan: isEdit ? String(initialData?.pan || '') : '',
+    gstin: isEdit ? String(initialData?.gstin || '') : '',
+    tdsSection: isEdit ? String(initialData?.tdsSection || '') : '',
+    tdsRate: isEdit ? String(initialData?.tdsRate ?? '') : '',
+    addresses: Array.isArray(initialData?.addresses) ? initialData.addresses : [],
+    contacts: Array.isArray(initialData?.contacts) ? initialData.contacts : [],
   });
+
+  const [ledgerTab, setLedgerTab] = useState('');
+  const [gstinFetching, setGstinFetching] = useState(false);
 
   const isBankGroupSelected = useMemo(() => {
     const gid = String(formData.groupId || '').trim();
@@ -3525,6 +3556,48 @@ const ChartAccountForm = ({
     const g = groupById.get(String(formData.groupId || '').trim());
     return String(g?.groupCategory || '').trim() === 'Expense';
   }, [formData.groupId, groupById]);
+
+  /*
+   * Which tabs this ledger shows, decided by the group it is under.
+   *
+   * "One form, dynamic behaviour": the group is the accounting context, so it
+   * is the group that says whether a ledger needs bank fields, a TDS section or
+   * a statutory identifier. A tab the group does not call for is not shown —
+   * an Indirect Expenses ledger should not offer somewhere to type an IFSC.
+   */
+  const isTdsGroupSelected = useMemo(() => {
+    const gid = String(formData.groupId || '').trim();
+    if (!gid) return false;
+    const name = String(groupById.get(gid)?.name || '').toLowerCase();
+    return /\btds\b/.test(name) || isUnderNamedRoot(gid, 'duties & taxes') && /\btds\b/.test(name);
+  }, [formData.groupId, groupById, isUnderNamedRoot]);
+
+  const isTcsGroupSelected = useMemo(() => {
+    const gid = String(formData.groupId || '').trim();
+    if (!gid) return false;
+    return /\btcs\b/.test(String(groupById.get(gid)?.name || '').toLowerCase());
+  }, [formData.groupId, groupById]);
+
+  const isDutiesGroupSelected = useMemo(() => {
+    const gid = String(formData.groupId || '').trim();
+    return gid ? isUnderNamedRoot(gid, 'duties & taxes') : false;
+  }, [formData.groupId, isUnderNamedRoot]);
+
+  const ledgerTabs = useMemo(() => {
+    const tabs = [];
+    if (isBankGroupSelected) tabs.push({ key: 'bank', label: 'Bank Details' });
+    if (isTdsGroupSelected) tabs.push({ key: 'tds', label: 'TDS Details' });
+    if (isTcsGroupSelected) tabs.push({ key: 'tcs', label: 'TCS Details' });
+    if (isDutiesGroupSelected && !isTdsGroupSelected && !isTcsGroupSelected) tabs.push({ key: 'gst', label: 'GST Details' });
+    if (isExpenseGroupSelected) tabs.push({ key: 'gst', label: 'GST Details' });
+    tabs.push({ key: 'statutory', label: 'Statutory Details' });
+    tabs.push({ key: 'address', label: 'Address' });
+    tabs.push({ key: 'contacts', label: 'Contact Persons' });
+    return tabs;
+  }, [isBankGroupSelected, isTdsGroupSelected, isTcsGroupSelected, isDutiesGroupSelected, isExpenseGroupSelected]);
+
+  /* Changing the group can remove the tab that was open. */
+  const activeLedgerTab = ledgerTabs.some((t) => t.key === ledgerTab) ? ledgerTab : ledgerTabs[0]?.key || '';
 
   // A cash/bank chart ledger must also exist as a server ledger account —
   // that is what the receipt/payment "mode" dropdown and GL postings use.
@@ -3629,8 +3702,28 @@ const ChartAccountForm = ({
         accountNumber,
         branch,
         ifsc,
+        accountType: String(formData.bankAccountType || '').trim() || undefined,
+        holderName: String(formData.bankHolderName || '').trim() || undefined,
+        upiId: String(formData.bankUpiId || '').trim() || undefined,
+        branchAddress: String(formData.bankBranchAddress || '').trim() || undefined,
       };
     }
+
+    /*
+     * The rest of the master, carried on the ledger. None of it changes how the
+     * ledger posts — the group still decides that — so it is assembled here and
+     * spread onto the row rather than threaded through the posting logic.
+     */
+    const ledgerExtras = {
+      currency: String(formData.currency || 'INR'),
+      openingBalanceType: String(formData.openingBalanceType || 'Dr'),
+      pan: String(formData.pan || '').trim().toUpperCase() || undefined,
+      gstin: String(formData.gstin || '').trim().toUpperCase() || undefined,
+      tdsSection: String(formData.tdsSection || '').trim() || undefined,
+      tdsRate: String(formData.tdsRate ?? '').trim() === '' ? undefined : Number(formData.tdsRate),
+      addresses: (formData.addresses || []).filter((a) => String(a?.label || '').trim()),
+      contacts: (formData.contacts || []).filter((c) => String(c?.name || '').trim()),
+    };
 
     const existingCodes = new Set(
       (Array.isArray(db.chartOfAccounts) ? db.chartOfAccounts : [])
@@ -3658,6 +3751,7 @@ const ChartAccountForm = ({
         openingBalance: Number.isFinite(openingBalance) ? openingBalance : 0,
         balance: Number.isFinite(openingBalance) ? openingBalance : 0,
         bankDetails,
+        ...ledgerExtras,
         gstRate: isExpenseGroupSelected && String(formData.gstRate || '').trim() !== '' ? Number(formData.gstRate) : null,
         updatedAt: new Date().toISOString(),
       };
@@ -3705,6 +3799,7 @@ const ChartAccountForm = ({
       openingBalance: Number.isFinite(openingBalance) ? openingBalance : 0,
       balance: Number.isFinite(openingBalance) ? openingBalance : 0,
       bankDetails,
+      ...ledgerExtras,
       gstRate: isExpenseGroupSelected && String(formData.gstRate || '').trim() !== '' ? Number(formData.gstRate) : null,
       createdAt: new Date().toISOString(),
     };
@@ -3769,82 +3864,247 @@ const ChartAccountForm = ({
         />
       </div>
 
-      <div>
-        <label className="ui-label">Opening Balance</label>
-        <input
-          type="number"
-          value={formData.openingBalance}
-          onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-          className="ui-input w-full"
-          step="0.01"
-        />
-      </div>
-
-      {isExpenseGroupSelected ? (
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="ui-label">Default GST rate</label>
+          <label className="ui-label" htmlFor="ledger-currency">Currency</label>
           <select
-            value={String(formData.gstRate ?? '')}
-            onChange={(e) => setFormData((p) => ({ ...p, gstRate: e.target.value }))}
+            id="ledger-currency"
+            value={formData.currency}
+            onChange={(e) => setFormData((p) => ({ ...p, currency: e.target.value }))}
             className="ui-select w-full"
           >
-            <option value="">— none —</option>
-            {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
-              <option key={r} value={String(r)}>{r}%</option>
+            {['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'].map((c) => (
+              <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <div className="text-xs ui-muted mt-1">Expense booking fills this rate when the ledger is picked.</div>
         </div>
-      ) : null}
 
-      {isBankGroupSelected ? (
-        <div className="border rounded-xl p-4 ui-sunken space-y-4">
-          <div className="font-semibold">Bank Details</div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="ui-label">Bank Name</label>
-              <input
-                type="text"
-                value={formData.bankName}
-                onChange={(e) => setFormData((p) => ({ ...p, bankName: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="e.g., HDFC Bank"
-                required
-              />
-            </div>
-            <div>
-              <label className="ui-label">Account Number</label>
-              <input
-                type="text"
-                value={formData.bankAccountNumber}
-                onChange={(e) => setFormData((p) => ({ ...p, bankAccountNumber: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="e.g., 1234567890"
-                required
-              />
-            </div>
-            <div>
-              <label className="ui-label">Branch</label>
-              <input
-                type="text"
-                value={formData.bankBranch}
-                onChange={(e) => setFormData((p) => ({ ...p, bankBranch: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="e.g., Andheri"
-              />
-            </div>
-            <div>
-              <label className="ui-label">IFSC</label>
-              <input
-                type="text"
-                value={formData.bankIfsc}
-                onChange={(e) => setFormData((p) => ({ ...p, bankIfsc: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="e.g., HDFC0000123"
-              />
-            </div>
-          </div>
+        <div>
+          <label className="ui-label" htmlFor="ledger-opening">Opening Balance</label>
+          <input
+            id="ledger-opening"
+            type="number"
+            value={formData.openingBalance}
+            onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
+            className="ui-input ui-money w-full"
+            step="0.01"
+          />
         </div>
+      </div>
+
+      <div>
+        <span className="ui-label block">Opening Balance Type</span>
+        <div className="flex items-center gap-6 pt-1.5">
+          {[{ v: 'Dr', l: 'Dr (Default)' }, { v: 'Cr', l: 'Cr' }].map((o) => (
+            <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="ledgerOpeningType"
+                className="ui-radio"
+                checked={formData.openingBalanceType === o.v}
+                onChange={() => setFormData((p) => ({ ...p, openingBalanceType: o.v }))}
+              />
+              {o.l}
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/*
+        One form, dynamic behaviour. The group is the accounting context, so it
+        decides which tabs exist — a bank ledger gets Bank Details, a ledger
+        under a TDS group gets TDS Details, and an Indirect Expenses ledger gets
+        neither. Statutory, Address and Contact Persons apply to any ledger.
+      */}
+      {ledgerTabs.length ? (
+        <>
+          <div className="ui-tabs" role="tablist" aria-label="Ledger details">
+            {ledgerTabs.map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                role="tab"
+                aria-selected={activeLedgerTab === t.key}
+                onClick={() => setLedgerTab(t.key)}
+                className={`ui-tab ${activeLedgerTab === t.key ? 'is-active' : ''}`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="pt-2">
+            {activeLedgerTab === 'bank' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="ui-label" htmlFor="ledger-bank-name">Bank Name *</label>
+                  <input id="ledger-bank-name" value={formData.bankName} onChange={(e) => setFormData((p) => ({ ...p, bankName: e.target.value }))} className="ui-input w-full" />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-bank-holder">Account Holder Name</label>
+                  <input id="ledger-bank-holder" value={formData.bankHolderName} onChange={(e) => setFormData((p) => ({ ...p, bankHolderName: e.target.value }))} className="ui-input w-full" />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-bank-acct">Account Number *</label>
+                  <input id="ledger-bank-acct" value={formData.bankAccountNumber} onChange={(e) => setFormData((p) => ({ ...p, bankAccountNumber: e.target.value }))} className="ui-input ui-mono w-full" />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-bank-upi">UPI ID</label>
+                  <input id="ledger-bank-upi" value={formData.bankUpiId} onChange={(e) => setFormData((p) => ({ ...p, bankUpiId: e.target.value }))} className="ui-input w-full" placeholder="Enter UPI ID (optional)" />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-bank-type">Account Type</label>
+                  <select id="ledger-bank-type" value={formData.bankAccountType} onChange={(e) => setFormData((p) => ({ ...p, bankAccountType: e.target.value }))} className="ui-select w-full">
+                    {['Current Account', 'Savings Account', 'Overdraft', 'Cash Credit', 'Other'].map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:row-span-2">
+                  <label className="ui-label" htmlFor="ledger-bank-braddr">Branch Address</label>
+                  <textarea id="ledger-bank-braddr" rows={3} maxLength={250} value={formData.bankBranchAddress} onChange={(e) => setFormData((p) => ({ ...p, bankBranchAddress: e.target.value }))} className="ui-input w-full" />
+                  <p className="ui-caption mt-1 text-right">{String(formData.bankBranchAddress || '').length}/250</p>
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-bank-ifsc">IFSC Code *</label>
+                  <input id="ledger-bank-ifsc" value={formData.bankIfsc} onChange={(e) => setFormData((p) => ({ ...p, bankIfsc: e.target.value.toUpperCase() }))} className="ui-input ui-mono w-full" maxLength={11} />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-bank-branch">Branch Name</label>
+                  <input id="ledger-bank-branch" value={formData.bankBranch} onChange={(e) => setFormData((p) => ({ ...p, bankBranch: e.target.value }))} className="ui-input w-full" />
+                </div>
+              </div>
+            ) : null}
+
+            {activeLedgerTab === 'statutory' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="ui-label" htmlFor="ledger-pan">PAN</label>
+                  <input id="ledger-pan" value={formData.pan} onChange={(e) => setFormData((p) => ({ ...p, pan: e.target.value.toUpperCase() }))} className="ui-input ui-mono w-full" maxLength={10} />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-gstin">GSTIN</label>
+                  <div className="flex items-center gap-2">
+                    <input id="ledger-gstin" value={formData.gstin} onChange={(e) => setFormData((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))} className="ui-input ui-mono min-w-0 flex-1" maxLength={15} placeholder="Enter 15 digit GSTIN" />
+                    <button
+                      type="button"
+                      disabled={gstinFetching}
+                      onClick={async () => {
+                        const g = String(formData.gstin || '').trim().toUpperCase();
+                        if (g.length !== 15) {
+                          notify.error('Enter the 15-character GSTIN first.');
+                          return;
+                        }
+                        setGstinFetching(true);
+                        try {
+                          const data = await lookupGstin(g);
+                          setFormData((p) => ({ ...p, gstin: g, pan: p.pan || data?.pan || '' }));
+                          notify.success(data?.source === 'derived' ? 'PAN filled from the GSTIN.' : 'Fetched from the GST portal.');
+                        } catch (err) {
+                          notify.error(String(err?.message || 'Could not fetch that GSTIN.'));
+                        } finally {
+                          setGstinFetching(false);
+                        }
+                      }}
+                      className="ui-btn ui-btn-secondary shrink-0"
+                      style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
+                    >
+                      <Search size={14} aria-hidden="true" />
+                      {gstinFetching ? 'Fetching…' : 'Fetch from GSTN'}
+                    </button>
+                  </div>
+                  <p className="ui-caption mt-1">Optional. A bank ledger does not need one — GST registration is not implied by the group.</p>
+                </div>
+              </div>
+            ) : null}
+
+            {activeLedgerTab === 'tds' ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="ui-label" htmlFor="ledger-tds-section">TDS Section</label>
+                  <select
+                    id="ledger-tds-section"
+                    value={formData.tdsSection}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setFormData((p) => ({ ...p, tdsSection: code, tdsRate: code ? String(tdsDefaultRate(code)) : '' }));
+                    }}
+                    className="ui-select w-full"
+                  >
+                    <option value="">— none —</option>
+                    {TDS_SECTIONS.map((t) => (
+                      <option key={t.code} value={t.code}>{t.code} — {t.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="ledger-tds-rate">Rate (%)</label>
+                  <input id="ledger-tds-rate" type="number" step="0.01" value={formData.tdsRate} onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))} className="ui-input ui-money w-full" />
+                </div>
+                {/*
+                  The ledger is the accounting destination, not the calculator.
+                  Thresholds, deductee-type rates and the effective-date rules
+                  live in the TDS section master the engine already reads; this
+                  only says which section this ledger belongs to.
+                */}
+                <p className="ui-caption sm:col-span-2">
+                  {formData.tdsSection
+                    ? `Threshold and rate rules come from the ${formData.tdsSection} master; the TDS engine does the calculation.`
+                    : 'Choose the section this ledger accumulates. The rate and threshold follow from the section master.'}
+                </p>
+              </div>
+            ) : null}
+
+            {activeLedgerTab === 'tcs' ? (
+              <p className="ui-caption">
+                TCS on the sale of goods under 206C(1H) has not applied since 1 April 2025, so there is nothing to configure
+                here. The ledger still accumulates whatever the TCS engine posts to it.
+              </p>
+            ) : null}
+
+            {activeLedgerTab === 'gst' ? (
+              <div className="max-w-sm">
+                <label className="ui-label" htmlFor="ledger-gst-rate">Default GST rate</label>
+                <select
+                  id="ledger-gst-rate"
+                  value={String(formData.gstRate ?? '')}
+                  onChange={(e) => setFormData((p) => ({ ...p, gstRate: e.target.value }))}
+                  className="ui-select w-full"
+                >
+                  <option value="">— none —</option>
+                  {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
+                    <option key={r} value={String(r)}>{r}%</option>
+                  ))}
+                </select>
+                <p className="ui-caption mt-1">Expense booking fills this rate when the ledger is picked.</p>
+              </div>
+            ) : null}
+
+            {activeLedgerTab === 'address' ? (
+              <AddressTab
+                rows={formData.addresses}
+                states={LEDGER_STATES}
+                onChange={(i, key, value) => setFormData((p) => ({ ...p, addresses: p.addresses.map((a, j) => (j === i ? { ...a, [key]: value } : a)) }))}
+                onAdd={() =>
+                  setFormData((p) => ({
+                    ...p,
+                    addresses: [...(p.addresses || []), { label: p.addresses.length ? `Address ${p.addresses.length + 1}` : 'Registered Office', line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: 'India' }],
+                  }))
+                }
+                onRemove={(i) => setFormData((p) => ({ ...p, addresses: p.addresses.filter((_, j) => j !== i) }))}
+              />
+            ) : null}
+
+            {activeLedgerTab === 'contacts' ? (
+              <ContactsTab
+                rows={formData.contacts}
+                onChange={(i, key, value) => setFormData((p) => ({ ...p, contacts: p.contacts.map((c, j) => (j === i ? { ...c, [key]: value } : c)) }))}
+                onAdd={() => setFormData((p) => ({ ...p, contacts: [...(p.contacts || []), { name: '', position: '', email: '', mobile: '' }] }))}
+                onRemove={(i) => setFormData((p) => ({ ...p, contacts: p.contacts.filter((_, j) => j !== i) }))}
+              />
+            ) : null}
+          </div>
+        </>
       ) : null}
 
       <div className="flex justify-end gap-2">
