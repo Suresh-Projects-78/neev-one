@@ -29,11 +29,15 @@ const sources = () =>
 
 /**
  * A printed invoice is black on white whatever theme the app is in, so these
- * three are exempt by design — see the Decisions Log in DESIGN.md.
+ * are exempt by design — see the Decisions Log in DESIGN.md.
  */
 const PRINT_SURFACES = [
   'features/sales/InvoicePreview.jsx',
   'features/expenses/ExpenseVoucher.jsx',
+  // The paper every document other than the invoice is printed on. Same
+  // reason, same exemption: a challan handed to a lorry driver does not follow
+  // the operator's dark mode.
+  'components/DocumentPrintView.jsx',
   // Every literal in App.jsx lives inside TemplatePreview, which previews the
   // printed sheet rather than dressing the app.
   'App.jsx',

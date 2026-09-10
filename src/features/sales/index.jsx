@@ -40,10 +40,10 @@ import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '..
 import { getInvoicePrefs, isInvoicePrefOn, getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { getNextNumericId } from '../../utils/ids';
-import { formatMoney } from '../../utils/money';
+import { amountInWordsInr, formatMoney } from '../../utils/money';
 import { consumeSearchSeed } from '../../utils/searchSeed';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
-import InvoicePreview, { amountInWordsInr } from './InvoicePreview';
+import InvoicePreview from './InvoicePreview';
 import {
   canDetermineSupplyType,
   computeGstForLine,

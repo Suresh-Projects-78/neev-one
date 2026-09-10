@@ -10,12 +10,12 @@ Measured 2026-09-10. Fixed one form at a time, worst first, each its own commit.
 | Form | Grid | Keyboard | Custom fields | Print | State |
 |---|---|---|---|---|---|
 | Invoice | yes | yes | yes | yes | reference |
-| Sales Order | — | — | — | — | **1st** |
-| Delivery Challan | — | — | — | — | **2nd** |
-| Debit Note | — | yes | — | — | **3rd** |
-| Purchase Order | — | yes | — | — | **4th** |
-| Estimate | yes | yes | — | — | **5th** |
-| Credit Note | yes | yes | — | — | **6th** |
+| Sales Order | yes | yes | yes | yes | **done** |
+| Delivery Challan | yes | yes | yes | yes | **done** |
+| Debit Note | — | yes | — | — | **next** |
+| Purchase Order | — | yes | — | — | 4th |
+| Estimate | yes | yes | — | — | 5th |
+| Credit Note | yes | yes | — | — | 6th |
 
 A first pass read four of these as having a preview. They do not. The grep
 matched `originalPreviewOpen` and `BillPreview` — a credit note showing the
@@ -59,3 +59,27 @@ it is not what "one by one" asks for; each form is brought up to the reference
 on its own so nothing else moves while it happens. If the shared shell is wanted
 later, six forms that already agree are a much easier starting point than six
 that do not.
+
+## What the first two cost, and what came out of it
+
+Three things were pulled out of the invoice rather than copied:
+
+- `DocumentCustomFields` — the fields a company invents, and `getCustomFields`
+  now takes a document type and falls back to the invoice's list, so one
+  definition serves every sales document.
+- `PrintDownloadFrame` — Print and Download. Nothing in it was ever
+  invoice-specific; it only lived there.
+- `DocumentPrintView` — new. One honest layout for every document that is not
+  an invoice. Columns earn their place from the lines, so a challan does not
+  print five empty tax columns.
+
+That is why the first form took the longest. The four that follow reuse all
+three.
+
+`amountInWordsInr` moved from `InvoicePreview` to `utils/money`, so a print view
+no longer drags the QR code library in behind it.
+
+The design tests caught the new print surface on their first run and were right
+to: `DocumentPrintView` is black on white and uses raw palette classes. It is
+now exempt alongside `InvoicePreview` and `ExpenseVoucher`, which is the
+exemption DESIGN.md already grants printed documents.

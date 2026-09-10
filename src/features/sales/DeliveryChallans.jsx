@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Plus, Truck } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Plus, Truck, Printer, Trash2 } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import Modal from '../../components/ui/Modal';
 import { notify } from '../../components/ui/notify';
@@ -15,6 +15,11 @@ import { nextFreeVoucherNumber } from '../../utils/docSettings';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
+import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
+import DocumentPrintView from '../../components/DocumentPrintView';
+import PrintDownloadFrame from '../../components/PrintDownloadFrame';
+import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
+import { getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 
 /**
@@ -55,14 +60,45 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
   );
 
   const [open, setOpen] = useState(false);
-  const emptyLine = { itemId: '', description: '', quantity: 1, rate: 0 };
+  const [previewChallan, setPreviewChallan] = useState(null);
+  const emptyLine = { itemId: '', description: '', quantity: 1, rate: 0, unit: '' };
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     customerId: '',
     purpose: 'Job Work',
     vehicleNo: '',
     notes: '',
+    customFields: {},
     items: [emptyLine],
+  });
+
+  const customFields = useMemo(() => getVisibleCustomFields(currentCompany, 'deliveryChallan'), [currentCompany]);
+  const setCustomField = (key, value) =>
+    setForm((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
+
+  const formRef = useRef(null);
+  const addLine = () => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }));
+  const duplicateLine = (idx) =>
+    setForm((p) => {
+      const items = [...p.items];
+      items.splice(idx + 1, 0, { ...items[idx] });
+      return { ...p, items };
+    });
+  const removeLine = (idx) =>
+    setForm((p) => (p.items.length > 1 ? { ...p, items: p.items.filter((_, i) => i !== idx) } : p));
+
+  /*
+   * The same keyboard as the invoice. A challan is typed at a loading bay
+   * against a lorry that is waiting, which is the worst place to discover that
+   * Enter submits the document.
+   */
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: form.items.length,
+    addLine,
+    duplicateLine,
+    removeLine,
+    autoFocus: 'input[type="date"]',
   });
 
   const customers = (db.customers || []).filter((c) => c.companyId === companyId);
@@ -73,7 +109,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
       const items = [...p.items];
       if (field === 'itemId') {
         const item = picked || itemsMaster.find((i) => i.id === parseInt(value));
-        if (item) items[idx] = { ...items[idx], itemId: value, description: item.name, rate: Number(item.salePrice || 0) };
+        if (item) items[idx] = { ...items[idx], itemId: value, description: item.name, rate: Number(item.salePrice || 0), unit: item.unit || '', hsnSac: item.hsnSac || '' };
       } else {
         items[idx] = { ...items[idx], [field]: value };
       }
@@ -109,6 +145,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
       purpose: form.purpose,
       vehicleNo: form.vehicleNo.trim(),
       notes: form.notes.trim(),
+      customFields: { ...(form.customFields || {}) },
       items: lines,
       value: lines.reduce((s, l) => s + l.quantity * l.rate, 0),
       status: 'Open',
@@ -151,7 +188,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
 
     setDb((prev) => ({ ...prev, deliveryChallans: [...(prev.deliveryChallans || []), { ...challan, ...serverPatch }] }));
     setOpen(false);
-    setForm({ date: new Date().toISOString().slice(0, 10), customerId: '', purpose: 'Job Work', vehicleNo: '', notes: '', items: [emptyLine] });
+    setForm({ date: new Date().toISOString().slice(0, 10), customerId: '', purpose: 'Job Work', vehicleNo: '', notes: '', customFields: {}, items: [emptyLine] });
     notify.success(`Delivery challan ${challan.number} created.`);
   };
 
@@ -227,10 +264,18 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
       </div>
 
       {open ? (
-        <div className="ui-card p-5 space-y-4">
+        <form
+          ref={formRef}
+          onKeyDown={onFormKeyDown}
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+          className="ui-card p-5 space-y-4"
+        >
           <DocFormActions
+            title="New Delivery Challan"
             primaryLabel="Create Challan"
-            primaryType="button"
             onPrimary={save}
             secondaryLabel="Cancel"
             onSecondary={() => setOpen(false)}
@@ -257,38 +302,87 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
               <label className="ui-label">Vehicle No</label>
               <input type="text" value={form.vehicleNo} onChange={(e) => setForm((p) => ({ ...p, vehicleNo: e.target.value }))} className="ui-input w-full" placeholder="KA01AB1234" />
             </div>
+            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="header" />
+            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="reference" />
           </div>
 
-          <table className="w-full text-sm">
-            <thead className="ui-sunken">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate (for value)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {form.items.map((l, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
-                    <ItemPicker db={db} setDb={setDb} currentCompany={currentCompany} value={l.itemId} onChange={(id, picked) => updateLine(idx, 'itemId', id, picked)} label={null} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input type="number" min="1" value={l.quantity} onChange={(e) => updateLine(idx, 'quantity', e.target.value)} className="ui-input w-20 px-2 py-1" />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input type="number" min="0" step="0.01" value={l.rate} onChange={(e) => updateLine(idx, 'rate', e.target.value)} className="ui-input w-24 px-2 py-1" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <button type="button" onClick={() => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }))} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-            + Add line
-          </button>
+          <div>
+            <div className="mb-2">
+              <label className="ui-label">Line Items</label>
+            </div>
+            <div className="border rounded-lg overflow-hidden">
+              <table className="ui-table ui-grid-dense w-full ui-table-wide">
+                <thead className="ui-sunken">
+                  <tr>
+                    <th className="ui-th text-left w-[30%]">Item</th>
+                    <th className="ui-th text-left w-[26%]">Description</th>
+                    <th className="ui-th ui-num w-[10%]">
+                      Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
+                    </th>
+                    <th className="ui-th text-left w-[9%]">Unit</th>
+                    <th className="ui-th ui-num w-[12%]">Rate (₹)</th>
+                    <th className="ui-th ui-num w-[13%]">Value (₹)</th>
+                    <th className="px-3 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.items.map((l, idx) => (
+                    <tr key={idx} className="border-t" data-line-row={idx}>
+                      <td className="ui-col-meta px-3 py-2">
+                        <ItemPicker db={db} setDb={setDb} currentCompany={currentCompany} value={l.itemId} onChange={(id, picked) => updateLine(idx, 'itemId', id, picked)} label={null} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="text" value={l.description || ''} onChange={(e) => updateLine(idx, 'description', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" min="1" value={l.quantity} onChange={(e) => updateLine(idx, 'quantity', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="text" value={l.unit || ''} onChange={(e) => updateLine(idx, 'unit', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" min="0" step="0.01" value={l.rate} onChange={(e) => updateLine(idx, 'rate', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" />
+                      </td>
+                      <td className="ui-col-amount px-3 py-2 text-right">
+                        {formatMoney((Number(l.quantity) || 0) * (Number(l.rate) || 0), currentCompany)}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => removeLine(idx)}
+                          disabled={form.items.length === 1}
+                          aria-label={`Remove line ${idx + 1}`}
+                          className="ui-btn ui-btn-ghost ui-btn-sm disabled:opacity-40"
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
+              + Add line
+            </button>
+            {/* Not a tax total. A challan states the value of the goods so the
+                consignment can be insured and an e-way bill raised against it. */}
+            <div className="text-sm font-semibold">
+              Goods value: {formatMoney(form.items.reduce((t, l) => t + (Number(l.quantity) || 0) * (Number(l.rate) || 0), 0), currentCompany)}
+            </div>
+          </div>
+
+          {hasCustomFieldsAt(customFields, 'notes') ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="notes" />
+            </div>
+          ) : null}
 
           <DocFormFootnote />
-        </div>
+        </form>
       ) : null}
 
       <ListToolbar
@@ -363,6 +457,14 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                   <td className="px-4 py-2.5"><StatusPill status={c.status} /></td>
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewChallan(c)}
+                        aria-label={`Print challan ${c.number}`}
+                        className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
+                      >
+                        <Printer size={13} aria-hidden="true" /> Print
+                      </button>
                       <button type="button" onClick={() => setEwbFor(c)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                         e-Way Bill
                       </button>
@@ -385,6 +487,34 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           />
         </div>
       )}
+
+      {previewChallan ? (
+        <Modal
+          title={`Delivery Challan ${previewChallan.number || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+          onClose={() => setPreviewChallan(null)}
+        >
+          <PrintDownloadFrame
+            title={`Delivery Challan ${previewChallan.number || ''}`.trim()}
+            fileBase={previewChallan.number || 'delivery-challan'}
+          >
+            <DocumentPrintView
+              db={db}
+              currentCompany={currentCompany}
+              docTitle="DELIVERY CHALLAN"
+              doc={{ ...previewChallan, subtotal: previewChallan.value, total: previewChallan.value }}
+              party={customers.find((c) => String(c.id) === String(previewChallan.customerId)) || null}
+              partyLabel="Consignee"
+              metaRows={[{ label: 'Purpose', value: previewChallan.purpose }]}
+              sideRows={[
+                { label: 'Vehicle no.', value: previewChallan.vehicleNo },
+                { label: 'E-way bill', value: previewChallan.ewbTransport?.ewbNo },
+              ]}
+              footNote="Delivery challan under Rule 55 of the CGST Rules. Not a tax invoice — no GST is charged on this document."
+            />
+          </PrintDownloadFrame>
+        </Modal>
+      ) : null}
 
       {ewbFor ? (
         <Modal onClose={() => setEwbFor(null)} title={`e-Way Bill — ${ewbFor.number}`} maxWidthClass="max-w-2xl">

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
-import { amountInWordsInr } from '../sales/InvoicePreview';
+
 import { createPortal } from 'react-dom';
 import { returnableLines, returnStatusLabel } from '../../utils/returns';
 import BillPreview from './BillPreview';
@@ -26,7 +26,7 @@ import ItemPicker from '../../components/pickers/ItemPicker';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getVendorDisplayName } from '../../utils/contacts';
-import { formatMoney, round2 } from '../../utils/money';
+import { amountInWordsInr, formatMoney, round2 } from '../../utils/money';
 import {
   computeGstForLine,
   computeGstForLines,

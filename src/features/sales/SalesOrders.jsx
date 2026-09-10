@@ -1,16 +1,22 @@
-import React, { useMemo, useState } from 'react';
-import { Plus, ClipboardList } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { Plus, ClipboardList, Printer, Trash2 } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
-import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
+import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '../../components/DocumentForm';
+import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
+import DocumentPrintView from '../../components/DocumentPrintView';
+import PrintDownloadFrame from '../../components/PrintDownloadFrame';
+import Modal from '../../components/ui/Modal';
+import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
+import { getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getCustomerDisplayName } from '../../utils/contacts';
-import { formatMoney } from '../../utils/money';
+import { amountInWordsInr, formatMoney } from '../../utils/money';
 import { computeGstForLines } from '../../utils/gst';
 import { getCompanyGstProfile, getPartyGstProfile, isIntraStateSupply } from '../../utils/gst';
 import { resolveSaleRate } from '../../utils/pricing';
@@ -40,15 +46,37 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
 
   const [open, setOpen] = useState(false);
   const [showPending, setShowPending] = useState(false);
-  const emptyLine = { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0 };
+  const [previewOrder, setPreviewOrder] = useState(null);
+  const emptyLine = { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, discountPct: 0, unit: '', hsnSac: '' };
   const [form, setForm] = useState({
     date: new Date().toISOString().slice(0, 10),
     expectedDate: '',
     customerId: '',
     salesmanId: '',
     notes: '',
+    customFields: {},
     items: [emptyLine],
   });
+
+  /*
+   * The fields this company invented. An order is where a customer's PO
+   * reference first arrives, so it is the document that needs them most, and
+   * until now it was the one document that could not carry them.
+   */
+  const customFields = useMemo(() => getVisibleCustomFields(currentCompany, 'salesOrder'), [currentCompany]);
+  const setCustomField = (key, value) =>
+    setForm((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
+
+  const formRef = useRef(null);
+  const addLine = () => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }));
+  const duplicateLine = (idx) =>
+    setForm((p) => {
+      const items = [...p.items];
+      items.splice(idx + 1, 0, { ...items[idx] });
+      return { ...p, items };
+    });
+  const removeLine = (idx) =>
+    setForm((p) => (p.items.length > 1 ? { ...p, items: p.items.filter((_, i) => i !== idx) } : p));
 
   const branchIdForNumbering = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   // Where this was entered from, so the header's scope can find it later.
@@ -57,6 +85,24 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
   const { state: companyState } = getCompanyGstProfile(currentCompany);
   const { state: customerState } = getPartyGstProfile(selectedCustomer);
   const isIntra = isIntraStateSupply({ companyState, partyState: customerState });
+
+  /*
+   * The keyboard the invoice form has had all along.
+   *
+   * An order was typed with the browser's defaults: Enter submitted a
+   * half-filled document from the customer field, the arrows did nothing, and
+   * Tab out of the last rate went to the Create button instead of opening the
+   * next line. Nothing here is specific to an order — it is the same hook,
+   * which this form simply never called.
+   */
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: form.items.length,
+    addLine,
+    duplicateLine,
+    removeLine,
+    autoFocus: 'input[type="date"]',
+  });
 
   const updateLine = (idx, field, value, picked = null) => {
     setForm((p) => {
@@ -74,6 +120,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             rate: resolved.rate,
             gstRate: Number(item.gstRate ?? 0),
             hsnSac: item.hsnSac || '',
+            unit: item.unit || '',
           };
         }
       } else {
@@ -167,11 +214,15 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       customerName: getCustomerDisplayName(customer),
       items: computed.lines.filter((l) => String(l.itemId || '').trim()),
       subtotal: computed.subtotal,
+      cgstTotal: computed.cgstTotal,
+      sgstTotal: computed.sgstTotal,
+      igstTotal: computed.igstTotal,
       gstTotal: computed.gstTotal,
       total: computed.total,
       status: 'Open',
       salesmanId: form.salesmanId || '',
       notes: form.notes,
+      customFields: { ...(form.customFields || {}) },
       branchId: branchIdForNumbering || '',
       warehouseId: warehouseIdForEntry || '',
       createdAt: new Date().toISOString(),
@@ -188,7 +239,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       }),
     }));
     setOpen(false);
-    setForm({ date: new Date().toISOString().slice(0, 10), expectedDate: '', customerId: '', salesmanId: '', notes: '', items: [emptyLine] });
+    setForm({ date: new Date().toISOString().slice(0, 10), expectedDate: '', customerId: '', salesmanId: '', notes: '', customFields: {}, items: [emptyLine] });
     notify.success(`Sales order ${order.number} created.`);
   };
 
@@ -259,7 +310,15 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       </div>
 
       {open ? (
-        <div className="ui-card space-y-4 p-5">
+        <form
+          ref={formRef}
+          onKeyDown={onFormKeyDown}
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+          className="ui-card space-y-4 p-5"
+        >
           {/* The same bar an invoice carries: the document's name on the left,
               every way out of it on the right, pinned so Create stays reachable
               from the last line. */}
@@ -268,7 +327,6 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             onBack={() => setOpen(false)}
             sticky
             primaryLabel="Create Sales Order"
-            primaryType="button"
             onPrimary={save}
           />
           <div className="grid gap-3 sm:grid-cols-4">
@@ -303,43 +361,126 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                 </select>
               </div>
             ) : null}
+            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="header" />
+            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="reference" />
           </div>
 
-          <table className="w-full text-sm">
-            <thead className="ui-sunken">
-              <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {form.items.map((l, idx) => (
-                <tr key={idx} className="border-t">
-                  <td className="px-3 py-2">
-                    <ItemPicker db={db} setDb={setDb} currentCompany={currentCompany} value={l.itemId} onChange={(id, picked) => updateLine(idx, 'itemId', id, picked)} label={null} />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input type="number" min="1" value={l.quantity} onChange={(e) => updateLine(idx, 'quantity', e.target.value)} className="ui-input w-20 px-2 py-1" />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input type="number" min="0" step="0.01" value={l.rate} onChange={(e) => updateLine(idx, 'rate', e.target.value)} className="ui-input w-24 px-2 py-1" />
-                  </td>
-                  <td className="ui-col-amount px-3 py-2">{formatMoney(computed.lines[idx]?.lineTotal || 0, currentCompany)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="flex items-center justify-between">
-            <button type="button" onClick={() => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }))} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
+          <div>
+            <div className="mb-2">
+              <label className="ui-label">Line Items</label>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="ui-table ui-grid-dense w-full ui-table-wide">
+                <thead className="ui-sunken">
+                  <tr>
+                    <th className="ui-th text-left w-[28%]">Item</th>
+                    <th className="ui-th text-left w-[22%]">Description</th>
+                    <th className="ui-th ui-num w-[8%]">
+                      Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
+                    </th>
+                    <th className="ui-th text-left w-[7%]">Unit</th>
+                    <th className="ui-th ui-num w-[12%]">
+                      Rate (₹) <span className="text-[rgb(var(--neg-ink))]">*</span>
+                    </th>
+                    <th className="ui-th ui-num w-[8%]">Disc %</th>
+                    <th className="ui-th ui-num w-[8%]">Tax %</th>
+                    <th className="ui-th ui-num w-[13%]">Amount (₹)</th>
+                    <th className="px-3 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {form.items.map((l, idx) => (
+                    <tr key={idx} className="border-t" data-line-row={idx}>
+                      <td className="ui-col-meta px-3 py-2">
+                        <ItemPicker db={db} setDb={setDb} currentCompany={currentCompany} value={l.itemId} onChange={(id, picked) => updateLine(idx, 'itemId', id, picked)} label={null} />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="text"
+                          value={l.description}
+                          onChange={(e) => updateLine(idx, 'description', e.target.value)}
+                          className="ui-input w-full min-w-0 px-2 py-1"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" min="1" value={l.quantity} onChange={(e) => updateLine(idx, 'quantity', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="text" value={l.unit || ''} onChange={(e) => updateLine(idx, 'unit', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" min="0" step="0.01" value={l.rate} onChange={(e) => updateLine(idx, 'rate', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" min="0" max="100" step="0.01" value={l.discountPct ?? 0} onChange={(e) => updateLine(idx, 'discountPct', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" min="0" step="0.01" value={l.gstRate ?? 0} onChange={(e) => updateLine(idx, 'gstRate', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" />
+                      </td>
+                      <td className="ui-col-amount px-3 py-2 text-right">{formatMoney(computed.lines[idx]?.lineTotal || 0, currentCompany)}</td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => removeLine(idx)}
+                          disabled={form.items.length === 1}
+                          aria-label={`Remove line ${idx + 1}`}
+                          className="ui-btn ui-btn-ghost ui-btn-sm disabled:opacity-40"
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="flex items-start justify-between gap-4">
+            <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
               + Add line
             </button>
-            <div className="text-sm font-semibold">Total: {formatMoney(computed.total, currentCompany)}</div>
+            <div className="w-64 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Taxable value</span>
+                <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
+              </div>
+              {computed.cgstTotal > 0 ? (
+                <div className="flex justify-between">
+                  <span>CGST</span>
+                  <span className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                </div>
+              ) : null}
+              {computed.sgstTotal > 0 ? (
+                <div className="flex justify-between">
+                  <span>SGST</span>
+                  <span className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</span>
+                </div>
+              ) : null}
+              {computed.igstTotal > 0 ? (
+                <div className="flex justify-between">
+                  <span>IGST</span>
+                  <span className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</span>
+                </div>
+              ) : null}
+              <div className="flex justify-between border-t pt-1 font-semibold">
+                <span>Total</span>
+                <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
+              </div>
+            </div>
           </div>
 
+          <AmountInWordsBand words={amountInWordsInr(computed.total)} />
+
+          {hasCustomFieldsAt(customFields, 'notes') ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="notes" />
+            </div>
+          ) : null}
+
           <DocFormFootnote />
-        </div>
+        </form>
       ) : null}
 
       <ListToolbar
@@ -420,6 +561,14 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                     <td className="px-4 py-2.5"><StatusPill status={prog.status} /></td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPreviewOrder(o)}
+                          aria-label={`Print sales order ${o.number}`}
+                          className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
+                        >
+                          <Printer size={13} aria-hidden="true" /> Print
+                        </button>
                         {prog.delivered < prog.ordered ? (
                           <button type="button" onClick={() => toChallan(o)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                             → Challan
@@ -445,6 +594,36 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           />
         </div>
       )}
+
+      {previewOrder ? (
+        <Modal
+          title={`Sales Order ${previewOrder.number || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+          onClose={() => setPreviewOrder(null)}
+        >
+          <PrintDownloadFrame
+            title={`Sales Order ${previewOrder.number || ''}`.trim()}
+            fileBase={previewOrder.number || 'sales-order'}
+          >
+            <DocumentPrintView
+              db={db}
+              currentCompany={currentCompany}
+              docTitle="SALES ORDER"
+              doc={previewOrder}
+              party={customers.find((c) => String(c.id) === String(previewOrder.customerId)) || null}
+              partyLabel="Customer"
+              metaRows={[{ label: 'Expected delivery', value: previewOrder.expectedDate }]}
+              sideRows={[
+                { label: 'Status', value: progressOf(previewOrder).status },
+                { label: 'Ordered', value: String(progressOf(previewOrder).ordered) },
+                { label: 'Delivered', value: String(progressOf(previewOrder).delivered) },
+                { label: 'Billed', value: String(progressOf(previewOrder).billed) },
+              ]}
+              footNote="This is a confirmed order, not a tax invoice. Goods will be despatched against a delivery challan."
+            />
+          </PrintDownloadFrame>
+        </Modal>
+      ) : null}
     </div>
   );
 }

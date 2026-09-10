@@ -60,3 +60,40 @@ export const formatMoneyCompact = (amount, company) => {
   if (abs >= 1000) return `${sign}${symbol}${trim(abs / 1000, 1)}K`;
   return `${sign}${symbol}${trim(abs, 0)}`;
 };
+
+/**
+ * Indian numbering, because "One Lakh Twenty One Thousand" is what a customer
+ * here reads back to check the figure — "One Hundred Twenty One Thousand" is
+ * the same number written for somebody else.
+ */
+const WORD_ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven',
+  'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const WORD_TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+const wordsUnder100 = (n) => (n < 20 ? WORD_ONES[n] : `${WORD_TENS[Math.floor(n / 10)]}${n % 10 ? ` ${WORD_ONES[n % 10]}` : ''}`);
+const wordsUnder1000 = (n) =>
+  `${n > 99 ? `${WORD_ONES[Math.floor(n / 100)]} Hundred${n % 100 ? ' ' : ''}` : ''}${wordsUnder100(n % 100)}`;
+
+export const amountInWordsInr = (value) => {
+  const total = Number(value);
+  if (!Number.isFinite(total)) return '';
+  const negative = total < 0;
+  // Work in paise from the start. Deriving them by subtracting the rupees
+  // loses a half-paisa to floating point — 1.005 came out as "One Only".
+  const paiseTotal = Math.round(Math.abs(total) * 100);
+  let rupees = Math.floor(paiseTotal / 100);
+  const paise = paiseTotal % 100;
+
+  const parts = [];
+  [[10000000, 'Crore'], [100000, 'Lakh'], [1000, 'Thousand']].forEach(([size, name]) => {
+    if (rupees >= size) {
+      parts.push(`${wordsUnder1000(Math.floor(rupees / size))} ${name}`);
+      rupees %= size;
+    }
+  });
+  if (rupees) parts.push(wordsUnder1000(rupees));
+
+  const body = parts.join(' ').replace(/\s+/g, ' ').trim() || 'Zero';
+  const paiseText = paise ? ` and ${wordsUnder100(paise)} Paise` : '';
+  return `${negative ? 'Minus ' : ''}Rupees ${body}${paiseText} Only`;
+};
