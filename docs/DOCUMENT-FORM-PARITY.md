@@ -13,8 +13,8 @@ Measured 2026-09-10. Fixed one form at a time, worst first, each its own commit.
 | Sales Order | yes | yes | yes | yes | **done** |
 | Delivery Challan | yes | yes | yes | yes | **done** |
 | Debit Note | yes | yes | yes | yes | **done** |
-| Purchase Order | — | yes | — | — | **next** |
-| Estimate | yes | yes | — | — | 5th |
+| Purchase Order | yes | yes | yes | yes | **done** |
+| Estimate | yes | yes | — | — | **next** |
 | Credit Note | yes | yes | — | — | 6th |
 
 A first pass read four of these as having a preview. They do not. The grep
@@ -91,3 +91,34 @@ replaced appeared three times in `purchase/index.jsx` and the match landed on
 the first one, which belongs to the bill. Caught by checking which component the
 new class had landed in, reverted, and every later edit to that file was scoped
 to the text of `DebitNoteForm` itself rather than to a string that repeats.
+
+## Found on the way through: four lists with their toolbars unwired
+
+Adding a Print entry to the purchase order's row menu meant reading the markup
+around it, which is how this surfaced: the toolbar props for four lists —
+purchase orders, debit notes, quotations, credit notes — had been spliced into
+an unrelated element. A row's actions button, a Knock off button, a table row.
+
+React put them on the DOM node as stray attributes and warned about each one on
+every render. The visible effect: those four toolbars lost their date-range
+filter and their entire export configuration — columns, sheet name, title, rows
+— while still rendering a search box and an export button that looked fine.
+
+Repaired, with `src/test/list-toolbar-wiring.test.js` to keep it repaired. The
+same scan cleared a fifth suspect: the stock transfer toolbar legitimately wraps
+a status `<select>` as a child, and `FiltersButton` legitimately takes the period
+props, so both are allowed.
+
+## The purchase order's tax
+
+The PO form never asked for a tax rate, so converting one to a bill had to guess
+the rate from the item master — a rate agreed with the vendor that differed from
+the master's was lost. The line now carries `gstRate` and the conversion already
+prefers it.
+
+The order's stored value is unchanged. A purchase order posts nothing — no
+ledger entry, no return — and rewriting what `total` means on every historical
+order to make it tax-inclusive would be a change to stored data for a display
+gain. The tax is computed from the lines and shown under the total as a memo,
+labelled as ordered and expected, so the buyer sees the figure the bill will
+carry without the record changing underneath them.

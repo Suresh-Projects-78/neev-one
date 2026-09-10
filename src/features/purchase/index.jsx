@@ -682,6 +682,7 @@ export const PurchaseOrdersList = ({
    * already make.
    */
   const [poMenu, setPoMenu] = useState(null);
+  const [previewPo, setPreviewPo] = useState(null);
 
   const PO_MENU_WIDTH = 208;
   const PO_MENU_HEIGHT = 150;
@@ -863,6 +864,23 @@ export const PurchaseOrdersList = ({
             rows: purchaseOrders,
           })
         }
+        period={poPeriod.period}
+        onPeriodChange={poPeriod.setPeriod}
+        dateFrom={poPeriod.dateFrom}
+        dateTo={poPeriod.dateTo}
+        onDateFromChange={poPeriod.setDateFrom}
+        onDateToChange={poPeriod.setDateTo}
+        exportTitle="Purchase Orders — {currentCompany?.name || 'Company'}"
+        exportFileName={`PurchaseOrders_${currentCompany?.name || 'company'}`}
+        exportSheetName="Purchase Orders"
+        exportColumns={[
+              { key: 'number', label: 'PO #' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={purchaseOrders}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
@@ -934,25 +952,7 @@ export const PurchaseOrdersList = ({
                         className="p-2 rounded-lg ui-hover-sunken"
                         aria-haspopup="menu"
                         aria-label={`Actions for ${po.number}`}
-                
-        period={poPeriod.period}
-        onPeriodChange={poPeriod.setPeriod}
-        dateFrom={poPeriod.dateFrom}
-        dateTo={poPeriod.dateTo}
-        onDateFromChange={poPeriod.setDateFrom}
-        onDateToChange={poPeriod.setDateTo}
-        exportTitle="Purchase Orders — {currentCompany?.name || 'Company'}"
-        exportFileName={`PurchaseOrders_${currentCompany?.name || 'company'}`}
-        exportSheetName="Purchase Orders"
-        exportColumns={[
-              { key: 'number', label: 'PO #' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={purchaseOrders}
-      >
+                      >
                         <MoreVertical size={18} />
                       </button>
 
@@ -974,6 +974,18 @@ export const PurchaseOrdersList = ({
                             }`}
                           >
                             <Pencil size={15} /> Edit
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPoMenu(null);
+                              setPreviewPo(po);
+                            }}
+                            aria-label={`Print purchase order ${po.number}`}
+                            className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken"
+                          >
+                            <Printer size={15} /> Print
                           </button>
 
                           <button
@@ -1037,6 +1049,30 @@ export const PurchaseOrdersList = ({
           figures={poTotals}
         />
       </div>
+
+      {previewPo ? (
+        <Modal
+          title={`Purchase Order ${previewPo.number || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+          onClose={() => setPreviewPo(null)}
+        >
+          <PrintDownloadFrame
+            title={`Purchase Order ${previewPo.number || ''}`.trim()}
+            fileBase={previewPo.number || 'purchase-order'}
+          >
+            <DocumentPrintView
+              db={db}
+              currentCompany={currentCompany}
+              docTitle="PURCHASE ORDER"
+              doc={previewPo}
+              party={(db.vendors || []).find((v) => String(v.id) === String(previewPo.vendorId)) || null}
+              partyLabel="Vendor"
+              sideRows={[{ label: 'Status', value: previewPo.status }]}
+              footNote="Please quote this order number on your invoice and delivery documents. Goods remain subject to inspection on receipt."
+            />
+          </PrintDownloadFrame>
+        </Modal>
+      ) : null}
     </div>
   );
 };
@@ -1061,6 +1097,10 @@ export const PurchaseOrderForm = ({
   const isPoAuto = String(poNumbering?.mode || '').toLowerCase() === 'auto';
   const lockPoNumber = isPoAuto && !poNumbering?.allowManualOverride;
   const generatedPoNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
+
+  const customFields = React.useMemo(() => getVisibleCustomFields(currentCompany, 'purchaseOrder'), [currentCompany]);
+  const setCustomField = (key, value) =>
+    setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
 
   const [formData, setFormData] = useState(() => {
     if (initialData) {
@@ -1116,13 +1156,26 @@ export const PurchaseOrderForm = ({
         if (item) {
           next.description = item.name;
           next.rate = Number(item.purchasePrice ?? 0);
+          next.unit = item.unit || '';
+          next.hsnSac = item.hsnSac || '';
+          /*
+           * The tax rate the order is placed at.
+           *
+           * A purchase order never asked for one, so converting it to a bill
+           * had to guess the rate from the item master — and a rate agreed with
+           * the vendor that differs from the master's was simply lost. Stored
+           * on the line, the bill uses what was ordered.
+           */
+          next.gstRate = Number(item.gstRate ?? 0);
         }
       }
 
-      if (field === 'quantity' || field === 'rate' || field === 'itemId') {
+      if (field === 'quantity' || field === 'rate' || field === 'itemId' || field === 'discountPct') {
         const qty = Number(next.quantity ?? 1);
         const rate = Number(next.rate ?? 0);
-        next.amount = round2((Number.isFinite(qty) ? qty : 1) * (Number.isFinite(rate) ? rate : 0));
+        const pct = Number(next.discountPct ?? 0);
+        const gross = (Number.isFinite(qty) ? qty : 1) * (Number.isFinite(rate) ? rate : 0);
+        next.amount = round2(gross - (Number.isFinite(pct) && pct > 0 ? gross * (Math.min(pct, 100) / 100) : 0));
       }
 
       nextItems[index] = next;
@@ -1131,6 +1184,23 @@ export const PurchaseOrderForm = ({
   };
 
   const subtotal = round2((formData.items || []).reduce((sum, l) => sum + Number(l.amount || 0), 0));
+
+  /*
+   * What the vendor will invoice, shown but not stored.
+   *
+   * A purchase order posts nothing — no ledger entry, no GST return — so its
+   * stored value stays the taxable value it has always been. The buyer still
+   * needs to see the figure that will arrive on the bill, so the tax is
+   * computed from the lines and shown under the total as a memo.
+   */
+  const poVendor = vendors.find((v) => String(v.id) === String(formData.vendorId)) || null;
+  const poTax = computeGstForLines({
+    lines: formData.items || [],
+    isIntra: isIntraStateSupply({
+      companyState: getCompanyGstProfile(currentCompany).state,
+      partyState: getPartyGstProfile(poVendor).state,
+    }),
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1210,6 +1280,7 @@ export const PurchaseOrderForm = ({
                 subtotal,
                 total: subtotal,
                 notes: formData.notes,
+                customFields: { ...(formData.customFields || {}) },
                 updatedAt: new Date().toISOString(),
               }
             : x
@@ -1239,6 +1310,7 @@ export const PurchaseOrderForm = ({
       subtotal,
       total: subtotal,
       notes: formData.notes,
+      customFields: { ...(formData.customFields || {}) },
       // A raised order is pending until a bill answers it.
       status: 'Pending',
       createdAt: new Date().toISOString(),
@@ -1321,15 +1393,18 @@ export const PurchaseOrderForm = ({
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="ui-table w-full ui-table-wide">
+          <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Amount</th>
-                <th className="px-3 py-2"></th>
+                <th className="ui-th text-left w-[26%]">Item</th>
+                <th className="ui-th text-left w-[22%]">Description</th>
+                <th className="ui-th ui-num w-[8%]">Qty</th>
+                <th className="ui-th text-left w-[7%]">Unit</th>
+                <th className="ui-th ui-num w-[12%]">Rate (₹)</th>
+                <th className="ui-th ui-num w-[8%]">Disc %</th>
+                <th className="ui-th ui-num w-[8%]">Tax %</th>
+                <th className="ui-th ui-num w-[13%]">Amount (₹)</th>
+                <th className="px-3 py-2 w-10"></th>
               </tr>
             </thead>
             <tbody>
@@ -1350,26 +1425,56 @@ export const PurchaseOrderForm = ({
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="ui-input w-full px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="ui-input w-20 px-2 py-1" min="1" />
+                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" min="1" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input type="text" value={item.unit || ''} onChange={(e) => updateItem(idx, 'unit', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1" />
                   </td>
                   <td className="px-3 py-2">
                     <input
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="ui-input w-28 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1 text-right"
                       min="0"
                       step="0.01"
                     />
                   </td>
-                  <td className="ui-col-amount px-3 py-2">{formatMoney(item.amount || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
-                      <Trash2 size={16} />
+                    <input
+                      type="number"
+                      value={item.discountPct ?? 0}
+                      onChange={(e) => updateItem(idx, 'discountPct', e.target.value)}
+                      className="ui-input w-full min-w-0 px-2 py-1 text-right"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      value={item.gstRate ?? 0}
+                      onChange={(e) => updateItem(idx, 'gstRate', e.target.value)}
+                      className="ui-input w-full min-w-0 px-2 py-1 text-right"
+                      min="0"
+                      step="0.01"
+                    />
+                  </td>
+                  <td className="ui-col-amount px-3 py-2 text-right">{formatMoney(item.amount || 0, currentCompany)}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => removeItem(idx)}
+                      disabled={formData.items.length === 1}
+                      aria-label={`Remove line ${idx + 1}`}
+                      className="ui-btn ui-btn-ghost ui-btn-sm disabled:opacity-40"
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </td>
                 </tr>
@@ -1384,6 +1489,18 @@ export const PurchaseOrderForm = ({
               <span>Total:</span>
               <span className="ui-money">{formatMoney(subtotal, currentCompany)}</span>
             </div>
+            {poTax.gstTotal > 0 ? (
+              <div className="ui-caption space-y-1 border-t pt-2">
+                <div className="flex justify-between">
+                  <span>GST as ordered</span>
+                  <span className="ui-money">{formatMoney(poTax.gstTotal, currentCompany)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Expected bill value</span>
+                  <span className="ui-money">{formatMoney(poTax.total, currentCompany)}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
@@ -1392,6 +1509,14 @@ export const PurchaseOrderForm = ({
         <label className="ui-label">Notes</label>
         <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full" rows={3} />
       </div>
+
+      {hasCustomFieldsAt(customFields, 'header', 'reference', 'notes') ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
+        </div>
+      ) : null}
 
       <DocFormFootnote />
     </form>
@@ -3064,6 +3189,24 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
             rows: debitNotes,
           })
         }
+        period={dnPeriod.period}
+        onPeriodChange={dnPeriod.setPeriod}
+        dateFrom={dnPeriod.dateFrom}
+        dateTo={dnPeriod.dateTo}
+        onDateFromChange={dnPeriod.setDateFrom}
+        onDateToChange={dnPeriod.setDateTo}
+        exportTitle="Debit Notes — {currentCompany?.name || 'Company'}"
+        exportFileName={`DebitNotes_${currentCompany?.name || 'company'}`}
+        exportSheetName="Debit Notes"
+        exportColumns={[
+              { key: 'number', label: 'Debit Note #' },
+              { key: 'originalBillNumber', label: 'Original Bill' },
+              { key: 'vendorName', label: 'Vendor' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={debitNotes}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
@@ -3142,26 +3285,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                             onClick={() => openKnockOff(dn)}
                             className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                             title="Knock this off against the vendor's open bills"
-                    
-        period={dnPeriod.period}
-        onPeriodChange={dnPeriod.setPeriod}
-        dateFrom={dnPeriod.dateFrom}
-        dateTo={dnPeriod.dateTo}
-        onDateFromChange={dnPeriod.setDateFrom}
-        onDateToChange={dnPeriod.setDateTo}
-        exportTitle="Debit Notes — {currentCompany?.name || 'Company'}"
-        exportFileName={`DebitNotes_${currentCompany?.name || 'company'}`}
-        exportSheetName="Debit Notes"
-        exportColumns={[
-              { key: 'number', label: 'Debit Note #' },
-              { key: 'originalBillNumber', label: 'Original Bill' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={debitNotes}
-      >
+                          >
                             Knock off {formatMoney(noteBalance(dn).unsettled, currentCompany)}
                           </button>
                         ) : (

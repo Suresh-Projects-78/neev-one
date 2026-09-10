@@ -1915,6 +1915,26 @@ export const EstimatesList = ({
             rows: estimates,
           })
         }
+        period={estPeriod.period}
+        onPeriodChange={estPeriod.setPeriod}
+        dateFrom={estPeriod.dateFrom}
+        dateTo={estPeriod.dateTo}
+        onDateFromChange={estPeriod.setDateFrom}
+        onDateToChange={estPeriod.setDateTo}
+        exportTitle="Quotations — {currentCompany?.name || 'Company'}"
+        exportFileName={`Quotations_${currentCompany?.name || 'company'}`}
+        exportSheetName="Quotations"
+        exportColumns={[
+              { key: 'number', label: 'Quotation #' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'date', label: 'Date' },
+              { key: 'dueDate', label: 'Due' },
+              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+              { key: 'status', label: 'Status' },
+        ]}
+        exportRows={estimates}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
@@ -1977,28 +1997,7 @@ export const EstimatesList = ({
                     if (el?.closest?.('[data-estimate-menu]')) return;
                     openEditEstimate(est);
                   }}
-          
-        period={estPeriod.period}
-        onPeriodChange={estPeriod.setPeriod}
-        dateFrom={estPeriod.dateFrom}
-        dateTo={estPeriod.dateTo}
-        onDateFromChange={estPeriod.setDateFrom}
-        onDateToChange={estPeriod.setDateTo}
-        exportTitle="Quotations — {currentCompany?.name || 'Company'}"
-        exportFileName={`Quotations_${currentCompany?.name || 'company'}`}
-        exportSheetName="Quotations"
-        exportColumns={[
-              { key: 'number', label: 'Quotation #' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'date', label: 'Date' },
-              { key: 'dueDate', label: 'Due' },
-              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={estimates}
-      >
+                >
                   <td className="ui-col-id px-4 py-2.5"><InvoiceIdentifier value={est.number} label="quotation" /></td>
                   <td className="ui-col-entity px-4 py-2.5">{est.customerName || '-'}</td>
                   <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
@@ -2296,6 +2295,23 @@ export const CreditNotesList = ({
             rows: creditNotes,
           })
         }
+        period={cnPeriod.period}
+        onPeriodChange={cnPeriod.setPeriod}
+        dateFrom={cnPeriod.dateFrom}
+        dateTo={cnPeriod.dateTo}
+        onDateFromChange={cnPeriod.setDateFrom}
+        onDateToChange={cnPeriod.setDateTo}
+        exportTitle="Credit Notes — {currentCompany?.name || 'Company'}"
+        exportFileName={`CreditNotes_${currentCompany?.name || 'company'}`}
+        exportSheetName="Credit Notes"
+        exportColumns={[
+              { key: 'number', label: 'Credit #' },
+              { key: 'originalInvoiceNumber', label: 'Original Invoice' },
+              { key: 'customerName', label: 'Customer' },
+              { key: 'date', label: 'Date' },
+              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+        ]}
+        exportRows={creditNotes}
       />
 
       <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
@@ -2375,25 +2391,7 @@ export const CreditNotesList = ({
                             onClick={() => openKnockOff(cn)}
                             className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                             title="Knock this off against the customer's open invoices"
-                    
-        period={cnPeriod.period}
-        onPeriodChange={cnPeriod.setPeriod}
-        dateFrom={cnPeriod.dateFrom}
-        dateTo={cnPeriod.dateTo}
-        onDateFromChange={cnPeriod.setDateFrom}
-        onDateToChange={cnPeriod.setDateTo}
-        exportTitle="Credit Notes — {currentCompany?.name || 'Company'}"
-        exportFileName={`CreditNotes_${currentCompany?.name || 'company'}`}
-        exportSheetName="Credit Notes"
-        exportColumns={[
-              { key: 'number', label: 'Credit #' },
-              { key: 'originalInvoiceNumber', label: 'Original Invoice' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-        ]}
-        exportRows={creditNotes}
-      >
+                          >
                             Knock off {formatMoney(noteBalance(cn).unsettled, currentCompany)}
                           </button>
                         ) : (
