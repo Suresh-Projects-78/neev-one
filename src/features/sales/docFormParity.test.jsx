@@ -203,3 +203,29 @@ describe('the delivery challan wears the invoice layout', () => {
     expect(bar.textContent).toMatch(/not a tax total/i);
   });
 });
+
+
+describe('a document form is a screen, not a panel above the list', () => {
+  /*
+   * Sales orders, challans and recurring schedules used to open inside the
+   * list: cards, status tabs and every row still on screen under a half-typed
+   * document, with the list's primary action sitting beside the form's. An
+   * invoice and a quotation replace the list; these now do too.
+   */
+  const opensAlone = async (Component, buttonName, listMarker) => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    render(<Component db={baseDb()} setDb={() => {}} currentCompany={COMPANY} />);
+    expect(screen.getAllByText(listMarker).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: buttonName }));
+    expect(screen.queryAllByText(listMarker)).toHaveLength(0);
+  };
+
+  it('the sales order form replaces the list', async () => {
+    await opensAlone(SalesOrders, /New Sales Order/i, 'Still to deliver');
+  });
+
+  it('the delivery challan form replaces the list', async () => {
+    await opensAlone(DeliveryChallans, /New Challan|New Delivery Challan/i, 'Out, not billed');
+  });
+});

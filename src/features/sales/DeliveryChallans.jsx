@@ -307,46 +307,17 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
     notify.success(`e-Way Bill JSON for ${challan.number} downloaded — upload via the e-way bill bulk tool.`);
   };
 
-  return (
-    <DocumentListShell
-      title="Delivery Challans"
-      description="Goods out without an invoice — job work, approval, own use. Convert to invoice when it becomes a sale."
-      company={currentCompany}
-      search={{
-        value: dcSearch.query,
-        onChange: dcSearch.setQuery,
-        placeholder: 'Search challans…',
-        label: 'Search challans',
-      }}
-      moreItems={[{ key: 'export', label: 'Export challans', Icon: Download }]}
-      onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
-          fileName: `DeliveryChallans_${currentCompany?.name || 'company'}`,
-          label: 'challan(s)',
-          columns: dcExportColumns,
-          rows: challansShown,
-        });
-      }}
-      primary={
-        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
-          <Plus size={16} aria-hidden="true" /> New Challan
-        </button>
-      }
-      cards={[
-        { label: 'Total challans', value: dcHeadline.count, count: true, tone: 'draft', Icon: Truck },
-        { label: 'Goods sent out', value: dcHeadline.value, tone: 'sent', Icon: Package },
-        { label: 'Out, not billed', value: dcHeadline.unbilled, tone: 'outstanding', Icon: FileText },
-        { label: 'Invoiced', value: dcHeadline.invoiced, tone: 'paid', Icon: Receipt },
-        { label: 'On job work', value: dcHeadline.jobWork, tone: 'partial', Icon: Wrench },
-      ]}
-      tabs={DC_STATUS_TABS}
-      tabsLabel="Challan status"
-      statusValue={dcStatus}
-      statusCounts={dcStatusCounts}
-      onStatusChange={setDcStatus}
-      above={
-        <>
+  /*
+   * The form is a screen, not a panel above the list.
+   *
+   * It used to render inside the list — cards, tabs and every row still
+   * on screen under a half-typed document — which is not how an invoice or
+   * a quotation opens, and left the primary action of the list sitting
+   * beside the primary action of the form.
+   */
+  if (open) {
+    return (
+      <div className="space-y-6">
       {open ? (
         <form
           ref={formRef}
@@ -494,8 +465,48 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           </div>
         </form>
       ) : null}
-        </>
+      </div>
+    );
+  }
+
+  return (
+    <DocumentListShell
+      title="Delivery Challans"
+      description="Goods out without an invoice — job work, approval, own use. Convert to invoice when it becomes a sale."
+      company={currentCompany}
+      search={{
+        value: dcSearch.query,
+        onChange: dcSearch.setQuery,
+        placeholder: 'Search challans…',
+        label: 'Search challans',
+      }}
+      moreItems={[{ key: 'export', label: 'Export challans', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `DeliveryChallans_${currentCompany?.name || 'company'}`,
+          label: 'challan(s)',
+          columns: dcExportColumns,
+          rows: challansShown,
+        });
+      }}
+      primary={
+        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Challan
+        </button>
       }
+      cards={[
+        { label: 'Total challans', value: dcHeadline.count, count: true, tone: 'draft', Icon: Truck },
+        { label: 'Goods sent out', value: dcHeadline.value, tone: 'sent', Icon: Package },
+        { label: 'Out, not billed', value: dcHeadline.unbilled, tone: 'outstanding', Icon: FileText },
+        { label: 'Invoiced', value: dcHeadline.invoiced, tone: 'paid', Icon: Receipt },
+        { label: 'On job work', value: dcHeadline.jobWork, tone: 'partial', Icon: Wrench },
+      ]}
+      tabs={DC_STATUS_TABS}
+      tabsLabel="Challan status"
+      statusValue={dcStatus}
+      statusCounts={dcStatusCounts}
+      onStatusChange={setDcStatus}
       tip={{
         storageKey: 'neev.tip.deliveryChallans',
         text: 'Goods that left on a challan are still yours to bill — "Out, not billed" is the list to work through.',

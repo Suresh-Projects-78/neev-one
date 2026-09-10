@@ -490,85 +490,17 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     }
     return [...seen.entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
   }, [templates]);
-  return (
-    <DocumentListShell
-      title="Recurring Invoices"
-      description="Schedules live on the server and raise their drafts hourly, whether or not anyone is signed in. You review and send."
-      company={currentCompany}
-      search={{
-        value: recSearch.query,
-        onChange: (v) => {
-          recSearch.setQuery(v);
-          setPage(1);
-        },
-        placeholder: 'Search schedules…',
-        label: 'Search schedules',
-      }}
-      headerExtras={
-        /*
-          The server raises these hourly on its own. This is for somebody who
-          does not want to wait for the hour — and it is safe to press twice,
-          because a period that has already been billed is claimed and cannot
-          be billed again.
-        */
-        <button
-          type="button"
-          onClick={async () => {
-            try {
-              const r = await runSchedulesNow();
-              notify.success(
-                r?.raised
-                  ? `${r.raised} draft invoice${r.raised === 1 ? '' : 's'} raised — review and save to post.`
-                  : 'Nothing is due right now.'
-              );
-            } catch (e) {
-              notify.error(`Could not run the schedules: ${String(e?.message || e)}`);
-            }
-          }}
-          className="ui-btn ui-btn-secondary"
-        >
-          Run now
-        </button>
-      }
-      moreItems={[
-        { key: 'export', label: 'Export schedules', Icon: Download },
-        { sep: true },
-        { key: 'settingsInvoiceFields', label: 'Invoice settings', Icon: Settings, group: 'Configure — every invoice' },
-      ]}
-      onMoreSelect={(k) => {
-        if (k === 'export') {
-          exportSchedules();
-          return;
-        }
-        if (typeof onNavigate === 'function') onNavigate(k);
-      }}
-      primary={
-        <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
-          <Plus size={16} aria-hidden="true" /> New Schedule
-        </button>
-      }
-      cards={[
-        { label: 'Total schedules', value: recHeadline.count, count: true, tone: 'draft', Icon: RefreshCw },
-        { label: 'Active schedules', value: recHeadline.active, count: true, tone: 'paid', Icon: CalendarClock },
-        { label: 'Billing per month', value: recHeadline.monthly, tone: 'sent', Icon: FileText },
-        { label: 'Due this month', value: recHeadline.dueThisMonth, tone: 'outstanding', Icon: Receipt },
-        { label: 'Paused per month', value: recHeadline.paused, tone: 'cancelled', Icon: PauseCircle },
-      ]}
-      tabs={REC_STATUS_TABS}
-      tabsLabel="Schedule status"
-      statusValue={statusFilter}
-      statusCounts={recStatusCounts}
-      onStatusChange={(v) => {
-        setStatusFilter(v);
-        setPage(1);
-      }}
-      tip={{
-        storageKey: 'neev.tip.recurringSchedules',
-        text: 'A schedule bills its period once. Pressing Run now twice cannot raise the same month again.',
-        Icon: RefreshCw,
-      }}
-      above={
-        <>
+  /*
+   * The form is a screen, not a panel above the list.
+   *
+   * It used to render inside the list — cards, tabs and every row still
+   * on screen under a half-typed document — which is not how an invoice or
+   * a quotation opens, and left the primary action of the list sitting
+   * beside the primary action of the form.
+   */
+  if (creatorOpen) {
+    return (
+      <div className="space-y-6">
       {creatorOpen ? (
         <div className="ui-card space-y-4 p-5">
           <div>
@@ -865,8 +797,87 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </div>
       ) : null}
 
-        </>
+      </div>
+    );
+  }
+
+  return (
+    <DocumentListShell
+      title="Recurring Invoices"
+      description="Schedules live on the server and raise their drafts hourly, whether or not anyone is signed in. You review and send."
+      company={currentCompany}
+      search={{
+        value: recSearch.query,
+        onChange: (v) => {
+          recSearch.setQuery(v);
+          setPage(1);
+        },
+        placeholder: 'Search schedules…',
+        label: 'Search schedules',
+      }}
+      headerExtras={
+        /*
+          The server raises these hourly on its own. This is for somebody who
+          does not want to wait for the hour — and it is safe to press twice,
+          because a period that has already been billed is claimed and cannot
+          be billed again.
+        */
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const r = await runSchedulesNow();
+              notify.success(
+                r?.raised
+                  ? `${r.raised} draft invoice${r.raised === 1 ? '' : 's'} raised — review and save to post.`
+                  : 'Nothing is due right now.'
+              );
+            } catch (e) {
+              notify.error(`Could not run the schedules: ${String(e?.message || e)}`);
+            }
+          }}
+          className="ui-btn ui-btn-secondary"
+        >
+          Run now
+        </button>
       }
+      moreItems={[
+        { key: 'export', label: 'Export schedules', Icon: Download },
+        { sep: true },
+        { key: 'settingsInvoiceFields', label: 'Invoice settings', Icon: Settings, group: 'Configure — every invoice' },
+      ]}
+      onMoreSelect={(k) => {
+        if (k === 'export') {
+          exportSchedules();
+          return;
+        }
+        if (typeof onNavigate === 'function') onNavigate(k);
+      }}
+      primary={
+        <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Schedule
+        </button>
+      }
+      cards={[
+        { label: 'Total schedules', value: recHeadline.count, count: true, tone: 'draft', Icon: RefreshCw },
+        { label: 'Active schedules', value: recHeadline.active, count: true, tone: 'paid', Icon: CalendarClock },
+        { label: 'Billing per month', value: recHeadline.monthly, tone: 'sent', Icon: FileText },
+        { label: 'Due this month', value: recHeadline.dueThisMonth, tone: 'outstanding', Icon: Receipt },
+        { label: 'Paused per month', value: recHeadline.paused, tone: 'cancelled', Icon: PauseCircle },
+      ]}
+      tabs={REC_STATUS_TABS}
+      tabsLabel="Schedule status"
+      statusValue={statusFilter}
+      statusCounts={recStatusCounts}
+      onStatusChange={(v) => {
+        setStatusFilter(v);
+        setPage(1);
+      }}
+      tip={{
+        storageKey: 'neev.tip.recurringSchedules',
+        text: 'A schedule bills its period once. Pressing Run now twice cannot raise the same month again.',
+        Icon: RefreshCw,
+      }}
     >
       {/* Customer, frequency and the date window. Search and status moved to
           the header and the tabs, where every other list keeps them; what is

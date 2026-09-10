@@ -155,7 +155,7 @@ import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
-import { AddressTab, ContactsTab, CURRENCY_OPTIONS } from './components/pickers/customerFormParts';
+import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsDefaultRate, tdsSection } from './utils/tds';
 import {
   ledgerHasPostings,
@@ -1023,7 +1023,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         }}
         onClose={() => openModal(null)}
       />,
-      { title: 'New Expense Ledger', maxWidthClass: 'max-w-2xl' }
+      { title: 'New Expense Ledger', maxWidthClass: 'max-w-4xl' }
     );
   };
 
@@ -2400,7 +2400,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
           excludeGroupCategories={['Customer', 'Vendor']}
           onClose={() => openModal(null)}
         />,
-        { title: 'New Ledger', maxWidthClass: 'max-w-2xl' }
+        { title: 'New Ledger', maxWidthClass: 'max-w-4xl' }
       );
     };
 
@@ -2609,7 +2609,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
         initialData={ledger}
         onClose={() => openModal(null)}
       />,
-      { title: 'Edit Ledger', maxWidthClass: 'max-w-2xl' }
+      { title: 'Edit Ledger', maxWidthClass: 'max-w-4xl' }
     );
   };
 
@@ -3588,10 +3588,7 @@ export const ChartAccountForm = ({
     <form onSubmit={handleSubmit} className="space-y-4">
       <h4 className="ui-t-sec">Basic Details</h4>
 
-      <div>
-        <label className="ui-label" htmlFor="ledger-name">
-          Ledger Name<span style={{ color: 'rgb(var(--neg))' }}> *</span>
-        </label>
+      <PartyFormRow label="Ledger Name" required htmlFor="ledger-name" hint="What this ledger is called in the books and on every posting to it.">
         <input
           id="ledger-name"
           type="text"
@@ -3601,11 +3598,12 @@ export const ChartAccountForm = ({
           placeholder="e.g., HDFC Bank - Current Account"
           required
         />
-      </div>
+      </PartyFormRow>
 
-      <div>
+      <PartyFormRow label="Ledger Group" required hint="The group decides which statement this ledger lands on, and which tabs the form offers.">
         <PopupSelect
-          label="Ledger Group *"
+          label={null}
+          ariaLabel="Ledger Group *"
           value={formData.groupId}
           disabled={groupLocked}
           onChange={(val) => {
@@ -3638,41 +3636,33 @@ export const ChartAccountForm = ({
             Entries have been posted to this ledger, so its group is fixed — moving it would move those figures onto another statement.
           </p>
         ) : null}
-      </div>
+      </PartyFormRow>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <label className="ui-label" htmlFor="ledger-currency">
-            Currency<span style={{ color: 'rgb(var(--neg))' }}> *</span>
-          </label>
-          <select
-            id="ledger-currency"
-            value={formData.currency}
-            onChange={(e) => setFormData((p) => ({ ...p, currency: e.target.value }))}
-            className="ui-select w-full"
-            title="The currency this ledger is kept in. The books are reported in the company's base currency."
-          >
-            {CURRENCY_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
-        </div>
+      <PartyFormRow label="Currency" required htmlFor="ledger-currency" hint="The currency this ledger is kept in. The books are reported in the company's base currency.">
+        <select
+          id="ledger-currency"
+          value={formData.currency}
+          onChange={(e) => setFormData((p) => ({ ...p, currency: e.target.value }))}
+          className="ui-select w-full"
+        >
+          {CURRENCY_OPTIONS.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
+          ))}
+        </select>
+      </PartyFormRow>
 
-        <div>
-          <label className="ui-label" htmlFor="ledger-opening">Opening Balance</label>
-          <input
-            id="ledger-opening"
-            type="number"
-            value={formData.openingBalance}
-            onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-            className="ui-input ui-money w-full"
-            step="0.01"
-          />
-        </div>
-      </div>
+      <PartyFormRow label="Opening Balance" htmlFor="ledger-opening" hint="What this ledger already held on the day the books begin.">
+        <input
+          id="ledger-opening"
+          type="number"
+          value={formData.openingBalance}
+          onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
+          className="ui-input ui-money w-full"
+          step="0.01"
+        />
+      </PartyFormRow>
 
-      <div>
-        <span className="ui-label block">Opening Balance Type</span>
+      <PartyFormRow label="Opening Balance Type" hint="Which side the balance opens on. It follows the group's nature until you choose otherwise.">
         <div className="flex items-center gap-6 pt-1.5">
           {[{ v: 'Dr', l: 'Dr (Default)' }, { v: 'Cr', l: 'Cr' }].map((o) => (
             <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
@@ -3690,7 +3680,7 @@ export const ChartAccountForm = ({
             </label>
           ))}
         </div>
-      </div>
+      </PartyFormRow>
 
       {/*
         One form, dynamic behaviour. The group is the accounting context, so it
@@ -3717,55 +3707,50 @@ export const ChartAccountForm = ({
 
           <div className="pt-2">
             {activeLedgerTab === 'bank' ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="ui-label" htmlFor="ledger-bank-name">Bank Name *</label>
-                  <input id="ledger-bank-name" value={formData.bankName} onChange={(e) => setFormData((p) => ({ ...p, bankName: e.target.value }))} className="ui-input w-full" />
+              <>
+                <h4 className="ui-t-sec mb-3">Bank Details</h4>
+                <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
+                  <PartyFormRow label="Bank Name" required htmlFor="ledger-bank-name">
+                    <input id="ledger-bank-name" value={formData.bankName} onChange={(e) => setFormData((p) => ({ ...p, bankName: e.target.value }))} className="ui-input w-full" />
+                  </PartyFormRow>
+                  <PartyFormRow label="Account Holder Name" htmlFor="ledger-bank-holder">
+                    <input id="ledger-bank-holder" value={formData.bankHolderName} onChange={(e) => setFormData((p) => ({ ...p, bankHolderName: e.target.value }))} className="ui-input w-full" />
+                  </PartyFormRow>
+                  <PartyFormRow label="Account Number" required htmlFor="ledger-bank-acct">
+                    <input id="ledger-bank-acct" value={formData.bankAccountNumber} onChange={(e) => setFormData((p) => ({ ...p, bankAccountNumber: e.target.value }))} className="ui-input ui-mono w-full" />
+                  </PartyFormRow>
+                  <PartyFormRow label="UPI ID" htmlFor="ledger-bank-upi">
+                    <input id="ledger-bank-upi" value={formData.bankUpiId} onChange={(e) => setFormData((p) => ({ ...p, bankUpiId: e.target.value }))} className="ui-input w-full" placeholder="Enter UPI ID (optional)" />
+                  </PartyFormRow>
+                  <PartyFormRow label="Account Type" htmlFor="ledger-bank-type">
+                    <select id="ledger-bank-type" value={formData.bankAccountType} onChange={(e) => setFormData((p) => ({ ...p, bankAccountType: e.target.value }))} className="ui-select w-full">
+                      {['Current Account', 'Savings Account', 'Overdraft', 'Cash Credit', 'Other'].map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </PartyFormRow>
+                  <PartyFormRow label="Branch Address" htmlFor="ledger-bank-braddr">
+                    <textarea id="ledger-bank-braddr" rows={3} maxLength={250} value={formData.bankBranchAddress} onChange={(e) => setFormData((p) => ({ ...p, bankBranchAddress: e.target.value }))} className="ui-input w-full" />
+                    <p className="ui-caption mt-1 text-right">{String(formData.bankBranchAddress || '').length}/250</p>
+                  </PartyFormRow>
+                  <PartyFormRow label="IFSC Code" required htmlFor="ledger-bank-ifsc" hint="Four letters, a zero, then six characters — HDFC0001234.">
+                    <input id="ledger-bank-ifsc" value={formData.bankIfsc} onChange={(e) => setFormData((p) => ({ ...p, bankIfsc: e.target.value.toUpperCase() }))} className="ui-input ui-mono w-full" maxLength={11} />
+                  </PartyFormRow>
+                  <PartyFormRow label="Branch Name" htmlFor="ledger-bank-branch">
+                    <input id="ledger-bank-branch" value={formData.bankBranch} onChange={(e) => setFormData((p) => ({ ...p, bankBranch: e.target.value }))} className="ui-input w-full" />
+                  </PartyFormRow>
                 </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-bank-holder">Account Holder Name</label>
-                  <input id="ledger-bank-holder" value={formData.bankHolderName} onChange={(e) => setFormData((p) => ({ ...p, bankHolderName: e.target.value }))} className="ui-input w-full" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-bank-acct">Account Number *</label>
-                  <input id="ledger-bank-acct" value={formData.bankAccountNumber} onChange={(e) => setFormData((p) => ({ ...p, bankAccountNumber: e.target.value }))} className="ui-input ui-mono w-full" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-bank-upi">UPI ID</label>
-                  <input id="ledger-bank-upi" value={formData.bankUpiId} onChange={(e) => setFormData((p) => ({ ...p, bankUpiId: e.target.value }))} className="ui-input w-full" placeholder="Enter UPI ID (optional)" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-bank-type">Account Type</label>
-                  <select id="ledger-bank-type" value={formData.bankAccountType} onChange={(e) => setFormData((p) => ({ ...p, bankAccountType: e.target.value }))} className="ui-select w-full">
-                    {['Current Account', 'Savings Account', 'Overdraft', 'Cash Credit', 'Other'].map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="sm:row-span-2">
-                  <label className="ui-label" htmlFor="ledger-bank-braddr">Branch Address</label>
-                  <textarea id="ledger-bank-braddr" rows={3} maxLength={250} value={formData.bankBranchAddress} onChange={(e) => setFormData((p) => ({ ...p, bankBranchAddress: e.target.value }))} className="ui-input w-full" />
-                  <p className="ui-caption mt-1 text-right">{String(formData.bankBranchAddress || '').length}/250</p>
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-bank-ifsc">IFSC Code *</label>
-                  <input id="ledger-bank-ifsc" value={formData.bankIfsc} onChange={(e) => setFormData((p) => ({ ...p, bankIfsc: e.target.value.toUpperCase() }))} className="ui-input ui-mono w-full" maxLength={11} />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-bank-branch">Branch Name</label>
-                  <input id="ledger-bank-branch" value={formData.bankBranch} onChange={(e) => setFormData((p) => ({ ...p, bankBranch: e.target.value }))} className="ui-input w-full" />
-                </div>
-              </div>
+              </>
             ) : null}
 
             {activeLedgerTab === 'statutory' ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="ui-label" htmlFor="ledger-pan">PAN</label>
+              <>
+                <h4 className="ui-t-sec mb-3">Statutory Details</h4>
+                <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
+                <PartyFormRow label="PAN" htmlFor="ledger-pan" hint="Five letters, four digits, one letter — AABCU9603R.">
                   <input id="ledger-pan" value={formData.pan} onChange={(e) => setFormData((p) => ({ ...p, pan: e.target.value.toUpperCase() }))} className="ui-input ui-mono w-full" maxLength={10} />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-gstin">GSTIN</label>
+                </PartyFormRow>
+                <PartyFormRow label="GSTIN" htmlFor="ledger-gstin">
                   <div className="flex items-center gap-2">
                     <input id="ledger-gstin" value={formData.gstin} onChange={(e) => setFormData((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))} className="ui-input ui-mono min-w-0 flex-1" maxLength={15} placeholder="Enter 15 digit GSTIN" />
                     <button
@@ -3796,14 +3781,16 @@ export const ChartAccountForm = ({
                     </button>
                   </div>
                   <p className="ui-caption mt-1">Optional. A bank ledger does not need one — GST registration is not implied by the group.</p>
+                </PartyFormRow>
                 </div>
-              </div>
+              </>
             ) : null}
 
             {activeLedgerTab === 'tds' ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="ui-label" htmlFor="ledger-tds-section">TDS Section</label>
+              <>
+                <h4 className="ui-t-sec mb-3">TDS Details</h4>
+                <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
+                <PartyFormRow label="TDS Section" htmlFor="ledger-tds-section" hint="Which section this ledger accumulates. The rate and threshold follow from the section master.">
                   <select
                     id="ledger-tds-section"
                     value={formData.tdsSection}
@@ -3818,11 +3805,10 @@ export const ChartAccountForm = ({
                       <option key={t.code} value={t.code}>{t.code} — {t.label}</option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="ledger-tds-rate">Rate (%)</label>
+                </PartyFormRow>
+                <PartyFormRow label="Rate (%)" htmlFor="ledger-tds-rate">
                   <input id="ledger-tds-rate" type="number" step="0.01" value={formData.tdsRate} onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))} className="ui-input ui-money w-full" />
-                </div>
+                </PartyFormRow>
                 {/*
                   The ledger is the accounting destination, not the calculator.
                   Thresholds, deductee-type rates and the effective-date rules
@@ -3859,7 +3845,8 @@ export const ChartAccountForm = ({
                     ? `Threshold and rate rules come from the ${formData.tdsSection} master; the TDS engine does the calculation.`
                     : 'Choose the section this ledger accumulates. The rate and threshold follow from the section master.'}
                 </p>
-              </div>
+                </div>
+              </>
             ) : null}
 
             {activeLedgerTab === 'tcs' ? (
@@ -3870,8 +3857,9 @@ export const ChartAccountForm = ({
             ) : null}
 
             {activeLedgerTab === 'gst' ? (
-              <div className="max-w-sm">
-                <label className="ui-label" htmlFor="ledger-gst-rate">Default GST rate</label>
+              <>
+                <h4 className="ui-t-sec mb-3">GST Details</h4>
+                <PartyFormRow label="Default GST rate" htmlFor="ledger-gst-rate" hint="Expense booking fills this rate when the ledger is picked.">
                 <select
                   id="ledger-gst-rate"
                   value={String(formData.gstRate ?? '')}
@@ -3883,8 +3871,8 @@ export const ChartAccountForm = ({
                     <option key={r} value={String(r)}>{r}%</option>
                   ))}
                 </select>
-                <p className="ui-caption mt-1">Expense booking fills this rate when the ledger is picked.</p>
-              </div>
+                </PartyFormRow>
+              </>
             ) : null}
 
             {activeLedgerTab === 'address' ? (
@@ -4165,7 +4153,7 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
         }}
         onClose={() => openModal(null)}
       />,
-      { title: 'New Ledger', maxWidthClass: 'max-w-2xl' }
+      { title: 'New Ledger', maxWidthClass: 'max-w-4xl' }
     );
   };
 
@@ -12941,7 +12929,7 @@ const AppShell = () => {
               onCreated={onCreated}
               onClose={() => openModal(null)}
             />,
-            { title: 'New Ledger', maxWidthClass: 'max-w-2xl' }
+            { title: 'New Ledger', maxWidthClass: 'max-w-4xl' }
           );
         };
 

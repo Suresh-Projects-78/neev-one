@@ -355,58 +355,17 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     { key: 'notes', label: 'Notes' },
   ];
 
-  return (
-    <DocumentListShell
-      title="Sales Orders"
-      description="Quote → SO → Challan → Invoice. Delivered and billed track against each order."
-      company={currentCompany}
-      search={{
-        value: soSearch.query,
-        onChange: soSearch.setQuery,
-        placeholder: 'Search sales orders…',
-        label: 'Search sales orders',
-      }}
-      headerExtras={
-        /* Not a filter tab: pending is "still owing the customer something",
-           which cuts across every status tab beside it. */
-        <button
-          type="button"
-          onClick={() => setShowPending((v) => !v)}
-          aria-pressed={showPending}
-          className={`ui-btn ${showPending ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
-        >
-          Pending orders ({pendingRows.length})
-        </button>
-      }
-      moreItems={[{ key: 'export', label: 'Export sales orders', Icon: Download }]}
-      onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
-          fileName: `SalesOrders_${currentCompany?.name || 'company'}`,
-          label: 'sales order(s)',
-          columns: soExportColumns,
-          rows: shown,
-        });
-      }}
-      primary={
-        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
-          <Plus size={16} aria-hidden="true" /> New Sales Order
-        </button>
-      }
-      cards={[
-        { label: 'Total orders', value: soHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
-        { label: 'Order value', value: soHeadline.value, tone: 'sent', Icon: FileText },
-        { label: 'Still to deliver', value: soHeadline.open, tone: 'outstanding', Icon: Package },
-        { label: 'Delivered, to bill', value: soHeadline.toBill, tone: 'partial', Icon: Truck },
-        { label: 'Billed', value: soHeadline.billed, tone: 'paid', Icon: Receipt },
-      ]}
-      tabs={SO_STATUS_TABS}
-      tabsLabel="Sales order status"
-      statusValue={soStatus}
-      statusCounts={soStatusCounts}
-      onStatusChange={setSoStatus}
-      above={
-        <>
+  /*
+   * The form is a screen, not a panel above the list.
+   *
+   * It used to render inside the list — cards, tabs and every row still
+   * on screen under a half-typed document — which is not how an invoice or
+   * a quotation opens, and left the primary action of the list sitting
+   * beside the primary action of the form.
+   */
+  if (open) {
+    return (
+      <div className="space-y-6">
       {open ? (
         <form
           ref={formRef}
@@ -616,8 +575,60 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           </div>
         </form>
       ) : null}
-        </>
+      </div>
+    );
+  }
+
+  return (
+    <DocumentListShell
+      title="Sales Orders"
+      description="Quote → SO → Challan → Invoice. Delivered and billed track against each order."
+      company={currentCompany}
+      search={{
+        value: soSearch.query,
+        onChange: soSearch.setQuery,
+        placeholder: 'Search sales orders…',
+        label: 'Search sales orders',
+      }}
+      headerExtras={
+        /* Not a filter tab: pending is "still owing the customer something",
+           which cuts across every status tab beside it. */
+        <button
+          type="button"
+          onClick={() => setShowPending((v) => !v)}
+          aria-pressed={showPending}
+          className={`ui-btn ${showPending ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
+        >
+          Pending orders ({pendingRows.length})
+        </button>
       }
+      moreItems={[{ key: 'export', label: 'Export sales orders', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `SalesOrders_${currentCompany?.name || 'company'}`,
+          label: 'sales order(s)',
+          columns: soExportColumns,
+          rows: shown,
+        });
+      }}
+      primary={
+        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Sales Order
+        </button>
+      }
+      cards={[
+        { label: 'Total orders', value: soHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Order value', value: soHeadline.value, tone: 'sent', Icon: FileText },
+        { label: 'Still to deliver', value: soHeadline.open, tone: 'outstanding', Icon: Package },
+        { label: 'Delivered, to bill', value: soHeadline.toBill, tone: 'partial', Icon: Truck },
+        { label: 'Billed', value: soHeadline.billed, tone: 'paid', Icon: Receipt },
+      ]}
+      tabs={SO_STATUS_TABS}
+      tabsLabel="Sales order status"
+      statusValue={soStatus}
+      statusCounts={soStatusCounts}
+      onStatusChange={setSoStatus}
       tip={{
         storageKey: 'neev.tip.salesOrders',
         text: 'Delivered and billed are counted from the challans and invoices raised against each order — never typed.',
