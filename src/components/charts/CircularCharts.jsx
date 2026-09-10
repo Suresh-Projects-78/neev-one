@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 
-import { prefersReducedMotion, tooltipStyle, useChartTheme } from './useChartTheme';
+import { prefersReducedMotion, resolveTokenColor, tooltipStyle, useChartTheme } from './useChartTheme';
 
 /**
  * Circular charts for the dashboard.
@@ -50,7 +50,11 @@ export function DonutChart({ data = [], centerLabel, centerValue, height = 230, 
             scaleSize: 6,
             itemStyle: { shadowBlur: 14, shadowColor: 'rgba(17,24,39,0.18)' },
           },
-          data: data.map((d) => ({ name: d.name, value: d.value, itemStyle: { color: d.color } })),
+          data: data.map((d) => ({
+            name: d.name,
+            value: d.value,
+            itemStyle: { color: resolveTokenColor(d.color, t.subtle) },
+          })),
         },
       ],
     }),
@@ -188,7 +192,7 @@ export function CompositionPie({ data = [], height = 230, maxSlices = 5, palette
           label: { show: false },
           labelLine: { show: false },
           emphasis: { scale: true, scaleSize: 5 },
-          data: rows.map((d) => ({ name: d.name, value: d.value, itemStyle: { color: d.color } })),
+          data: rows.map((d) => ({ name: d.name, value: d.value, itemStyle: { color: resolveTokenColor(d.color, t.subtle) } })),
         },
       ],
     }),
@@ -369,6 +373,15 @@ export function SeriesBars({
   height = 300,
   formatter,
   series = { bar1: 'Invoiced', bar2: 'Received', line: 'Outstanding' },
+  /*
+   * Which field on a row feeds each series.
+   *
+   * The keys used to be hard-coded to the sales words, so the purchase page
+   * handed it rows of `billed` / `paid` / `payable` and got a chart of three
+   * empty series and an axis running to ₹1 — a chart that looks broken rather
+   * than one that says nothing was bought.
+   */
+  keys = { bar1: 'invoiced', bar2: 'received', line: 'outstanding' },
 }) {
   const t = useChartTheme();
 
@@ -405,21 +418,21 @@ export function SeriesBars({
         {
           name: series.bar1,
           type: 'bar',
-          data: data.map((d) => Number(d.invoiced || 0)),
+          data: data.map((d) => Number(d[keys.bar1] || 0)),
           barMaxWidth: 18,
           itemStyle: { color: t.ovBlue, borderRadius: [4, 4, 0, 0] },
         },
         {
           name: series.bar2,
           type: 'bar',
-          data: data.map((d) => Number(d.received || 0)),
+          data: data.map((d) => Number(d[keys.bar2] || 0)),
           barMaxWidth: 18,
           itemStyle: { color: t.ovGreen, borderRadius: [4, 4, 0, 0] },
         },
         {
           name: series.line,
           type: 'line',
-          data: data.map((d) => Number(d.outstanding || 0)),
+          data: data.map((d) => Number(d[keys.line] || 0)),
           smooth: false,
           symbol: 'circle',
           symbolSize: 7,
@@ -428,7 +441,7 @@ export function SeriesBars({
         },
       ],
     }),
-    [t, data, formatter, series]
+    [t, data, formatter, series, keys]
   );
 
   return <ReactECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} notMerge />;

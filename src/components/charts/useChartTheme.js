@@ -41,6 +41,23 @@ const build = () => ({
   ovOrange: readVar('--ov-orange', '#EA580C'),
 });
 
+/**
+ * A colour ECharts can actually paint.
+ *
+ * Pages hand the charts palette entries like `rgb(var(--ov-blue))`, which is a
+ * valid colour in CSS and meaningless as an SVG `fill` attribute — ECharts
+ * wrote it through verbatim and the donut on every module overview rendered
+ * its centre label over an invisible ring. Anything without a `var()` is
+ * already a colour and passes through untouched.
+ */
+export const resolveTokenColor = (value, fallback = '#94A3B8') => {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+  const m = raw.match(/var\(\s*(--[\w-]+)\s*\)/);
+  if (!m) return raw;
+  return readVar(m[1], fallback);
+};
+
 export function useChartTheme() {
   const [theme, setTheme] = useState(build);
 

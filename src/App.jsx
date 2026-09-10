@@ -12844,7 +12844,14 @@ const AppShell = () => {
           />
         );
       case 'purchaseOverview':
-        return <PurchaseOverview db={dbForUser} currentCompany={currentCompany} />;
+        return (
+          <PurchaseOverview
+            db={dbForUser}
+            currentCompany={currentCompany}
+            onNavigate={(screen) => setActive(screen)}
+            onNewBill={() => setBillEditor({ open: true, initial: null })}
+          />
+        );
       case 'purchaseOrders':
         if (poEditor.open) {
           // Entered on its own page, the way a bill is — same shape of work,

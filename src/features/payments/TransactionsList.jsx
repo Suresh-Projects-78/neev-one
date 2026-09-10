@@ -9,6 +9,7 @@ import { ListToolbar, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { StatCards, ListSearch, FiltersButton, MoreButton, ExportButton, Pagination, usePaged } from '../../components/list/ListPageParts';
 import { PageHeader } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import { CreditCard, FileText, Landmark, Receipt, Undo2 } from 'lucide-react';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
@@ -330,7 +331,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
   const [perPage, setPerPage] = useState(10);
   const search = useListSearch(rows, ['documentNumber', 'partyName', 'mode', 'reference', 'typeLabel', 'date']);
   const colFilters = useColumnFilters();
-  const shown = colFilters.applyFilters(search.filtered.filter((r) => period.inRange(r?.date)), {
+  const shownAll = colFilters.applyFilters(search.filtered.filter((r) => period.inRange(r?.date)), {
     date: (r) => r.date,
     typeLabel: (r) => r.typeLabel,
     documentNumber: (r) => r.documentNumber,
@@ -360,6 +361,34 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
     });
     notify.success(`${shown.length} ${title.toLowerCase()} exported.`);
   };
+
+  /*
+   * A receipt or payment either settles documents or it does not. The second
+   * group is what somebody comes here to find: money taken or sent that is
+   * still sitting on account against nothing in particular.
+   */
+  const [txStatus, setTxStatus] = useState('');
+  const TX_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Allocated', label: 'Against documents', tone: 'paid' },
+    { value: 'OnAccount', label: 'On account', tone: 'outstanding' },
+  ];
+  const txMatches = (r, tab) => {
+    if (tab === 'Allocated') return (r.allocations || []).length > 0;
+    if (tab === 'OnAccount') return Number(r.advanceAmount || 0) > 0 || (r.allocations || []).length === 0;
+    return true;
+  };
+  const shown = txStatus ? shownAll.filter((r) => txMatches(r, txStatus)) : shownAll;
+
+  const txStatusCounts = useMemo(() => {
+    const counts = { '': shownAll.length };
+    for (const t of TX_STATUS_TABS) {
+      if (!t.value) continue;
+      counts[t.value] = shownAll.filter((r) => txMatches(r, t.value)).length;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownAll]);
 
   const { pageCount, safePage, pageRows } = usePaged(shown, perPage, page);
 
@@ -395,78 +424,55 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
   }, [shown]);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={title}
-        description={`View and manage all ${title.toLowerCase()}`}
-        actions={
-          <>
-            <ListSearch
-              value={search.query}
-              onChange={(v) => {
-                search.setQuery(v);
-                setPage(1);
-              }}
-              placeholder={`Search ${title.toLowerCase()}…`}
-              label={`Search ${title.toLowerCase()}`}
-            />
-            <FiltersButton
-              period={period.period}
-              onPeriodChange={(k) => {
-                period.setPeriod(k);
-                setPage(1);
-              }}
-              dateFrom={period.dateFrom}
-              dateTo={period.dateTo}
-              onDateFromChange={period.setDateFrom}
-              onDateToChange={period.setDateTo}
-              onClear={() => {
-                search.setQuery('');
-                period.clear();
-                colFilters.clearAll();
-                setPage(1);
-              }}
-              activeCount={(search.query.trim() ? 1 : 0) + (period.period !== 'all' ? 1 : 0) + Object.keys(colFilters.filters || {}).length}
-            />
-            <MoreButton
-              items={[{ key: 'export', label: 'Export as CSV', Icon: Download }]}
-              onSelect={(k) => {
-                if (k === 'export') exportRows();
-              }}
-            />
-            {rightActions ? <>{rightActions}</> : null}
-          </>
-        }
-      />
-
-      <StatCards
-        company={currentCompany}
-        cards={[
-          { label: `Total ${title.toLowerCase()}`, value: headline.count, count: true, tone: 'draft', Icon: FileText },
-          { label: 'Total value', value: headline.total, tone: 'sent', Icon: Receipt },
-          { label: 'This month', value: headline.thisMonth, tone: 'paid', Icon: CreditCard },
-          { label: 'Against documents', value: headline.allocated, tone: 'partial', Icon: Landmark, hint: 'Allocated to invoices or bills' },
-          headline.topMode
-            ? { label: `Most used — ${headline.topMode.name}`, value: headline.topMode.value, tone: 'outstanding', Icon: Undo2, hint: 'By value' }
-            : null,
-        ]}
-      />
-
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full ui-table-sticky">
-          <thead className="ui-sunken border-b">
+    <DocumentListShell
+      title={title}
+      description={`View and manage all ${title.toLowerCase()}`}
+      company={currentCompany}
+      search={{
+        value: search.query,
+        onChange: (v) => {
+          search.setQuery(v);
+          setPage(1);
+        },
+        placeholder: `Search ${title.toLowerCase()}…`,
+        label: `Search ${title.toLowerCase()}`,
+      }}
+      headerExtras={rightActions ? <>{rightActions}</> : null}
+      moreItems={[{ key: 'export', label: 'Export as CSV', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k === 'export') exportRows();
+      }}
+      cards={[
+        { label: `Total ${title.toLowerCase()}`, value: headline.count, count: true, tone: 'draft', Icon: FileText },
+        { label: 'Total value', value: headline.total, tone: 'sent', Icon: Receipt },
+        { label: 'This month', value: headline.thisMonth, tone: 'paid', Icon: CreditCard },
+        { label: 'Against documents', value: headline.allocated, tone: 'partial', Icon: Landmark, hint: 'Allocated to invoices or bills' },
+        headline.topMode
+          ? { label: `Most used — ${headline.topMode.name}`, value: headline.topMode.value, tone: 'outstanding', Icon: Undo2, hint: 'By value' }
+          : { label: 'On account', value: headline.unallocated, tone: 'outstanding', Icon: Undo2, hint: 'Not settled against anything' },
+      ]}
+      tabs={TX_STATUS_TABS}
+      tabsLabel={`${title} filter`}
+      statusValue={txStatus}
+      statusCounts={txStatusCounts}
+      onStatusChange={(v) => {
+        setTxStatus(v);
+        setPage(1);
+      }}
+    >
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
             <tr>
-              <ColumnHeader label="Date" col="date" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Type" col="typeLabel" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Document #" col="documentNumber" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Party" col="partyName" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Mode" col="mode" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Reference" col="reference" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Amount" col="amount" state={colFilters} className="ui-th ui-num" align="right" />
+              <ColumnHeader label="Date" col="date" state={colFilters} />
+              <ColumnHeader label="Type" col="typeLabel" state={colFilters} />
+              <ColumnHeader label="Document #" col="documentNumber" state={colFilters} />
+              <ColumnHeader label="Party" col="partyName" state={colFilters} />
+              <ColumnHeader label="Mode" col="mode" state={colFilters} />
+              <ColumnHeader label="Reference" col="reference" state={colFilters} />
+              <ColumnHeader label="Amount" col="amount" state={colFilters} className="ui-num" align="right" />
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="ui-rows">
             {shown.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-6 py-12 text-center ui-muted">
@@ -482,14 +488,14 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
                     if (typeof onView === 'function') onView(r);
                   }}
                 >
-                  <td className="ui-col-date px-4 py-2.5"><SalesDate value={r.date} /></td>
-                  <td className="ui-col-meta px-4 py-2.5">{r.typeLabel}</td>
-                  <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={r.documentNumber} label="receipt" /></td>
-                  <td className="ui-col-entity px-4 py-2.5">{r.partyName || '-'}</td>
-                  <td className="ui-col-meta px-4 py-2.5">{r.mode || '-'}</td>
-                  <td className="ui-col-meta px-4 py-2.5">{r.reference || '-'}</td>
+                  <td className="ui-col-date"><SalesDate value={r.date} /></td>
+                  <td className="ui-col-meta">{r.typeLabel}</td>
+                  <td className="ui-col-id"><DocumentNumber value={r.documentNumber} label="receipt" /></td>
+                  <td className="ui-col-entity">{r.partyName || '-'}</td>
+                  <td className="ui-col-meta">{r.mode || '-'}</td>
+                  <td className="ui-col-meta">{r.reference || '-'}</td>
                   {/* Money that has arrived. */}
-                  <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={r.amount} company={currentCompany} kind="paid" /></td>
+                  <td className="ui-col-amount"><MoneyValue value={r.amount} company={currentCompany} kind="paid" /></td>
                 </tr>
               ))
             )}
@@ -514,8 +520,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
           }}
           noun={title.toLowerCase()}
         />
-      </div>
-    </div>
+    </DocumentListShell>
   );
 };
 

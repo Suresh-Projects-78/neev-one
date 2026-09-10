@@ -102,3 +102,52 @@ tested on its own, and both were 350-line components inside a 14,000-line file.
 
 `src/features/crm/crmLayoutParity.test.jsx` holds these four to the contract and
 to the money.
+
+## Purchases
+
+Bills, Purchase Orders, Purchase Returns and the two transaction lists
+(Receipts, Payments) now use the shell. Bills was closest already — it had the
+figures and tabs — but wore the older grey pills, a Filters popover that
+duplicated the column filters, and an Export button beside the tabs instead of
+in More.
+
+| Page | Figures | Tabs |
+|---|---|---|
+| Purchase Invoices | count · billed · paid · unpaid · overdue | Draft · Received · Partially paid · Paid · Overdue · Cancelled |
+| Purchase Orders | count · ordered · awaiting the goods · billed · cancelled | Awaiting the goods · Billed · Cancelled |
+| Purchase Returns | count · returned · against bills · on account · draft | Draft · Issued · On account · Settled |
+| Receipts / Payments | count · value · this month · against documents · on account | Against documents · On account |
+
+A purchase order's status is derived, like a sales order's: it closes when a
+bill names it, either by `sourcePurchaseOrderId` or by quoting its number as
+the reference.
+
+## Purchase Overview
+
+It shipped as a placeholder — "statistics will appear here" — beside a Sales
+overview with six figures, two charts and the recent documents of each kind.
+Someone who had learnt to read one module could not read the other.
+
+The furniture moved to `src/features/overview/OverviewParts.jsx` (period model
+with its previous-period comparison, the tinted figure card, panels, the empty
+panel, segmented control) and both pages use it. The figures stay separate: a
+bill is a liability and an invoice is not, so Sales asks what came in and how
+much has been collected, Purchases asks what went out and how much has been
+paid.
+
+### Mistakes made
+
+- `SeriesBars` read fixed field names (`invoiced` / `received` / `outstanding`),
+  so the purchase chart handed it `billed` / `paid` / `payable` and drew three
+  empty series on an axis running to ₹1 — a chart that looks broken rather than
+  one saying nothing was bought. It takes a `keys` prop now.
+- **The donut was invisible on every module overview, including Sales.** The
+  pages pass palette entries like `rgb(var(--ov-blue))`; ECharts wrote that
+  straight into the SVG `fill`, where a CSS variable means nothing. The centre
+  label and the legend rendered, which is what made it read as a layout problem.
+  `resolveTokenColor` resolves the token against the document, and the chart
+  falls back to a real colour rather than painting nothing.
+- The Bills columns were reordered to match the invoice list and the row cells
+  were not, so the Date column showed a dash while Ref Date showed the bill's
+  date. The parity test now checks every list's row has as many cells as the
+  header has columns.

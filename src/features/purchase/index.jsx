@@ -15,7 +15,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, ClipboardList, Copy, CreditCard, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Printer, Receipt, RefreshCw, Trash2, X } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -55,6 +55,7 @@ import {
   usePaged,
 } from '../../components/list/ListPageParts';
 import { PageHeader } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import { blockIfClosed } from '../../utils/bookClose';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 
@@ -825,6 +826,56 @@ export const PurchaseOrdersList = ({
   }, [purchaseOrders, currentCompany]);
 
 
+  const [poStatus, setPoStatus] = useState('');
+  const PO_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Pending', label: 'Awaiting the goods', tone: 'outstanding' },
+    { value: 'Closed', label: 'Billed', tone: 'paid' },
+    { value: 'Cancelled', label: 'Cancelled', tone: 'cancelled' },
+  ];
+  const poShown = poStatus ? purchaseOrders.filter((po) => poStatusOf(po) === poStatus) : purchaseOrders;
+
+  const poStatusCounts = useMemo(() => {
+    const counts = { '': purchaseOrders.length };
+    for (const po of purchaseOrders) {
+      const st = poStatusOf(po);
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+  }, [purchaseOrders, poStatusOf]);
+
+  /*
+   * An order is a commitment, not a liability: nothing is owed until the bill
+   * arrives. The figure that matters is what has been ordered and not yet
+   * billed — goods somebody is still waiting for, money already promised.
+   */
+  const poHeadline = useMemo(() => {
+    let ordered = 0;
+    let open = 0;
+    let billed = 0;
+    let cancelled = 0;
+    for (const po of purchaseOrders) {
+      const amt = Number(po.total || 0);
+      const st = poStatusOf(po);
+      if (st === 'Cancelled') {
+        cancelled += amt;
+        continue;
+      }
+      ordered += amt;
+      if (st === 'Closed') billed += amt;
+      else open += amt;
+    }
+    return { count: purchaseOrders.length, ordered, open, billed, cancelled };
+  }, [purchaseOrders, poStatusOf]);
+
+  const poExportColumns = [
+    { key: 'number', label: 'PO #' },
+    { key: 'vendorName', label: 'Vendor' },
+    { key: 'date', label: 'Date' },
+    { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+    { key: 'status', label: 'Status', value: (r) => poStatusOf(r) },
+  ];
+
   const createPo = () => {
     // A purchase order is entered the same way a bill is: its own page, not a
     // popup, because the two forms hold the same kind of work.
@@ -836,69 +887,64 @@ export const PurchaseOrdersList = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Purchase Orders</h3>
-        <button onClick={createPo} className="ui-btn ui-btn-primary">
-          <Plus size={20} /> New PO
+    <DocumentListShell
+      title="Purchase Orders"
+      description="What you have committed to buy, until the bill arrives against it"
+      company={currentCompany}
+      search={{
+        value: poSearch.query,
+        onChange: poSearch.setQuery,
+        placeholder: 'Search purchase orders…',
+        label: 'Search purchase orders',
+      }}
+      moreItems={[{ key: 'export', label: 'Export purchase orders', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `PurchaseOrders_${currentCompany?.name || 'company'}`,
+          label: 'purchase order(s)',
+          columns: poExportColumns,
+          rows: poShown,
+        });
+      }}
+      primary={
+        <button type="button" onClick={createPo} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New PO
         </button>
-      </div>
-
-      <ListToolbar
-        search={poSearch.query}
-        onSearch={poSearch.setQuery}
-        placeholder="Search purchase orders (number, vendor, status)"
-        count={purchaseOrders.length}
-        countLabel="orders"
-        onExport={() =>
-          exportRows({
-            fileName: `PurchaseOrders_${currentCompany?.name || 'company'}`,
-            label: 'purchase order(s)',
-            columns: [
-              { key: 'number', label: 'PO #' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-            ],
-            rows: purchaseOrders,
-          })
-        }
-        period={poPeriod.period}
-        onPeriodChange={poPeriod.setPeriod}
-        dateFrom={poPeriod.dateFrom}
-        dateTo={poPeriod.dateTo}
-        onDateFromChange={poPeriod.setDateFrom}
-        onDateToChange={poPeriod.setDateTo}
-        exportTitle="Purchase Orders — {currentCompany?.name || 'Company'}"
-        exportFileName={`PurchaseOrders_${currentCompany?.name || 'company'}`}
-        exportSheetName="Purchase Orders"
-        exportColumns={[
-              { key: 'number', label: 'PO #' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={purchaseOrders}
-      />
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
+      }
+      cards={[
+        { label: 'Total orders', value: poHeadline.count, count: true, tone: 'draft', Icon: ShoppingCart },
+        { label: 'Ordered', value: poHeadline.ordered, tone: 'sent', Icon: FileText },
+        { label: 'Awaiting the goods', value: poHeadline.open, tone: 'outstanding', Icon: ClipboardList },
+        { label: 'Billed', value: poHeadline.billed, tone: 'paid', Icon: Receipt },
+        { label: 'Cancelled', value: poHeadline.cancelled, tone: 'cancelled', Icon: Ban },
+      ]}
+      tabs={PO_STATUS_TABS}
+      tabsLabel="Purchase order status"
+      statusValue={poStatus}
+      statusCounts={poStatusCounts}
+      onStatusChange={setPoStatus}
+      tip={{
+        storageKey: 'neev.tip.purchaseOrders',
+        Icon: ShoppingCart,
+        text: 'An order closes itself when a bill names it — nothing here has to be ticked off by hand.',
+      }}
+    >
         <div className="ui-table-scroll">
-        <table className="ui-table w-full ui-table-sticky">
-          <thead className="ui-sunken border-b">
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
             <tr>
-              <ColumnHeader label="PO #" col="number" state={poFilters} className="ui-th" />
-              <ColumnHeader label="Vendor" col="vendor" state={poFilters} className="ui-th" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={poFilters} className="ui-th" />
-              <ColumnHeader label="Date" col="date" state={poFilters} className="ui-th" />
-              <ColumnHeader label="Amount" col="amount" state={poFilters} className="ui-th" />
-              <ColumnHeader label="Status" col="status" state={poFilters} className="ui-th" />
-              <th className="ui-th ui-num"><span className="sr-only">Actions</span></th>
+              <ColumnHeader label="PO #" col="number" state={poFilters} />
+              <ColumnHeader label="Vendor" col="vendor" state={poFilters} />
+              <ColumnHeader label="Date" col="date" state={poFilters} />
+              <ColumnHeader label="Amount" col="amount" state={poFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Status" col="status" state={poFilters} />
+              <ColumnHeader label="Warehouse" col="warehouse" state={poFilters} />
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[rgb(var(--border))]">
-            {purchaseOrders.length === 0 ? (
+          <tbody className="ui-rows">
+            {poShown.length === 0 ? (
               <tr>
                 <td colSpan="7">
                   {db.purchaseOrders.filter((x) => x.companyId === currentCompany.id).length === 0 ? (
@@ -907,11 +953,18 @@ export const PurchaseOrdersList = ({
                       kind="new"
                       title="Nothing ordered yet"
                       description="A purchase order records what you asked a vendor for, so the bill that arrives can be checked against it."
-                      action={
-                        <button type="button" onClick={createPo} className="ui-btn ui-btn-primary">
-                          + New PO
-                        </button>
-                      }
+                      routes={[
+                        {
+                          label: 'Raise one now',
+                          description: 'Pick a vendor and list what you are asking for.',
+                          onSelect: () => createPo(),
+                        },
+                        {
+                          label: 'From a sales order',
+                          description: 'Buy in what a customer has already ordered.',
+                          onSelect: () => createPo(),
+                        },
+                      ]}
                     />
                   ) : (
                     <EmptyState
@@ -925,22 +978,22 @@ export const PurchaseOrdersList = ({
                 </td>
               </tr>
             ) : (
-              purchaseOrders.map((po) => {
+              poShown.map((po) => {
                 const whId = String(po?.warehouseId || '').trim();
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 const status = poStatusOf(po);
                 return (
                   <tr key={po.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={po.number} label="purchase order" /></td>
-                    <td className="ui-col-entity px-4 py-2.5">{po.vendorName}</td>
-                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5"><DocDate value={po.date} /></td>
-                    <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={po.total || 0} company={currentCompany} /></td>
-                    <td className="ui-col-meta px-4 py-2.5">
+                    <td className="ui-col-id"><DocumentNumber value={po.number} label="purchase order" /></td>
+                    <td className="ui-col-entity">{po.vendorName}</td>
+                    <td className="ui-col-date"><DocDate value={po.date} /></td>
+                    <td className="ui-col-amount"><MoneyValue value={po.total || 0} company={currentCompany} /></td>
+                    <td>
                       <StatusPill status={status} />
                     </td>
-                    <td className="px-4 py-2.5 text-right relative">
+                    <td className="ui-col-meta">{whLabel}</td>
+                    <td className="relative w-10 text-right">
                       <button
                         type="button"
                         data-po-menu-button={po.id}
@@ -1043,12 +1096,11 @@ export const PurchaseOrdersList = ({
         </table>
         </div>
         <TableTotals
-          count={purchaseOrders.length}
+          count={poShown.length}
           totalCount={poSearch.filtered.length}
           noun="purchase orders"
           figures={poTotals}
         />
-      </div>
 
       {previewPo ? (
         <Modal
@@ -1073,7 +1125,7 @@ export const PurchaseOrdersList = ({
           </PrintDownloadFrame>
         </Modal>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 };
 
@@ -1930,58 +1982,42 @@ const billStatusReason = (doc, status, company, nowMs) => {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Purchase Invoices"
-        description="Create, view and manage all your vendor bills"
-        actions={
-          <>
-            <ListSearch
-              value={billSearch.query}
-              onChange={(v) => {
-                billSearch.setQuery(v);
-                setPage(1);
-              }}
-              placeholder="Search bills…"
-              label="Search bills"
-            />
-            <FiltersButton
-              period={billPeriod.period}
-              onPeriodChange={(k) => {
-                billPeriod.setPeriod(k);
-                setPage(1);
-              }}
-              dateFrom={billPeriod.dateFrom}
-              dateTo={billPeriod.dateTo}
-              onDateFromChange={billPeriod.setDateFrom}
-              onDateToChange={billPeriod.setDateTo}
-              onClear={() => {
-                billSearch.setQuery('');
-                setStatusFilter('All');
-                billPeriod.clear();
-                colFilters.clearAll();
-                setPage(1);
-              }}
-              activeCount={
-                (billSearch.query.trim() ? 1 : 0) +
-                (statusFilter !== 'All' ? 1 : 0) +
-                (billPeriod.period !== 'all' ? 1 : 0) +
-                Object.keys(colFilters.filters || {}).length
-              }
-            />
-            <MoreButton
-              items={[
-                { key: 'dataImport', label: 'Import bills' },
-                { key: 'purchaseOrders', label: 'Purchase orders' },
-                { key: 'debitNotes', label: 'Debit notes' },
-              ]}
-              onSelect={(k) => {
-                if (typeof onNavigate === 'function') onNavigate(k);
-              }}
-            />
-            <PermissionButton
-              permission="PURCHASE::Bills::CREATE"
-              onClick={() => {
+    <DocumentListShell
+      title="Purchase Invoices"
+      description="Create, view and manage all your vendor bills"
+      company={currentCompany}
+      search={{
+        value: billSearch.query,
+        onChange: (v) => {
+          billSearch.setQuery(v);
+          setPage(1);
+        },
+        placeholder: 'Search bills…',
+        label: 'Search bills',
+      }}
+      moreItems={[
+        { key: 'export', label: 'Export bills', Icon: Download },
+        { key: 'dataImport', label: 'Import bills', Icon: Download },
+        { sep: true },
+        { key: 'purchaseOrders', label: 'Purchase orders', Icon: ShoppingCart, group: 'Elsewhere in purchases' },
+        { key: 'debitNotes', label: 'Purchase returns', Icon: Receipt },
+      ]}
+      onMoreSelect={(k) => {
+        if (k === 'export') {
+          exportRows({
+            fileName: `Bills_${currentCompany?.name || 'company'}`,
+            label: 'bill(s)',
+            columns: billExportColumns,
+            rows: filteredBills,
+          });
+          return;
+        }
+        if (typeof onNavigate === 'function') onNavigate(k);
+      }}
+      primary={
+        <PermissionButton
+          permission="PURCHASE::Bills::CREATE"
+          onClick={() => {
             if (typeof onNewBill === 'function') {
               onNewBill();
               return;
@@ -1997,76 +2033,60 @@ const billStatusReason = (doc, status, company, nowMs) => {
               />
             );
           }}
-              className="ui-btn ui-btn-primary"
-            >
-              <Plus size={16} aria-hidden="true" /> New Bill
-            </PermissionButton>
-          </>
-        }
-      />
-
-      <StatCards
-        company={currentCompany}
-        cards={[
-          { label: 'Total bills', value: billHeadline.count, count: true, tone: 'info', Icon: FileText },
-          { label: 'Total bill amount', value: billHeadline.billed, tone: 'party', Icon: Receipt },
-          { label: 'Paid amount', value: billHeadline.paid, tone: 'pos', Icon: CreditCard },
-          { label: 'Unpaid amount', value: billHeadline.unpaid, tone: 'warn', Icon: ClipboardList },
-          { label: 'Overdue bills', value: billHeadline.overdue, tone: 'neg', Icon: Ban },
-        ]}
-      />
-
-      <StatusTabs
-        value={statusFilter}
-        counts={{ ...billStatusCounts, All: billsExStatus.length }}
-        onChange={(v) => {
-          setStatusFilter(v);
-          setPage(1);
-        }}
-        tabs={[
-          { value: 'All', label: 'All' },
-          { value: 'Draft', label: 'Draft' },
-          { value: 'Unpaid', label: 'Received' },
-          { value: 'Partial', label: 'Partially paid' },
-          { value: 'Paid', label: 'Paid' },
-          { value: 'Over due', label: 'Overdue' },
-          { value: 'Cancelled', label: 'Cancelled' },
-        ]}
-      >
-        <ExportButton
-          title={`Purchase invoices — ${currentCompany?.name || 'Company'}`}
-          fileName={`Bills_${currentCompany?.name || 'company'}`}
-          sheetName="Bills"
-          columns={billExportColumns}
-          rows={filteredBills}
-          subtitleParts={{
-            period: billPeriod.period,
-            dateFrom: billPeriod.dateFrom,
-            dateTo: billPeriod.dateTo,
-            status: statusFilter === 'All' ? '' : statusFilter,
-            search: billSearch.query,
-          }}
-        />
-      </StatusTabs>
-
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
+          className="ui-btn ui-btn-primary"
+        >
+          <Plus size={16} aria-hidden="true" /> New Bill
+        </PermissionButton>
+      }
+      cards={[
+        { label: 'Total bills', value: billHeadline.count, count: true, tone: 'draft', Icon: FileText },
+        { label: 'Total bill amount', value: billHeadline.billed, tone: 'sent', Icon: Receipt },
+        { label: 'Paid amount', value: billHeadline.paid, tone: 'paid', Icon: CreditCard },
+        { label: 'Unpaid amount', value: billHeadline.unpaid, tone: 'outstanding', Icon: ClipboardList },
+        { label: 'Overdue bills', value: billHeadline.overdue, tone: 'overdue', Icon: Ban },
+      ]}
+      tabs={[
+        { value: 'All', label: 'All', tone: 'all' },
+        { value: 'Draft', label: 'Draft', tone: 'draft' },
+        { value: 'Unpaid', label: 'Received', tone: 'sent' },
+        { value: 'Partial', label: 'Partially paid', tone: 'partial' },
+        { value: 'Paid', label: 'Paid', tone: 'paid' },
+        { value: 'Over due', label: 'Overdue', tone: 'overdue' },
+        { value: 'Cancelled', label: 'Cancelled', tone: 'cancelled' },
+      ]}
+      tabsLabel="Bill status"
+      statusValue={statusFilter}
+      statusCounts={{ ...billStatusCounts, All: billsExStatus.length }}
+      onStatusChange={(v) => {
+        setStatusFilter(v);
+        setPage(1);
+      }}
+      tip={{
+        storageKey: 'neev:tip:recurringBills',
+        Icon: RefreshCw,
+        text: 'Bills that repeat every month — rent, AMC, subscriptions — can be scheduled rather than retyped.',
+        actionLabel: 'Set one up',
+        onAction: () => {
+          if (typeof onNavigate === 'function') onNavigate('recurringInvoices');
+        },
+      }}
+    >
         <div className="ui-table-scroll">
-        <table className="ui-table w-full ui-table-sticky">
-          <thead className="ui-sunken border-b">
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
             <tr>
-              <ColumnHeader label="Bill #" col="number" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Vendor" col="vendor" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Date" col="date" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Ref No" col="refNo" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Ref Date" col="refDate" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Total" col="total" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Status" col="status" state={colFilters} className="ui-th" />
-              <th className="ui-th">Actions</th>
+              <ColumnHeader label="Bill #" col="number" state={colFilters} />
+              <ColumnHeader label="Vendor" col="vendor" state={colFilters} />
+              <ColumnHeader label="Date" col="date" state={colFilters} />
+              <ColumnHeader label="Ref No" col="refNo" state={colFilters} />
+              <ColumnHeader label="Ref Date" col="refDate" state={colFilters} />
+              <ColumnHeader label="Amount" col="total" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Status" col="status" state={colFilters} />
+              <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} />
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="ui-rows">
             {filteredBills.length === 0 ? (
               <tr>
                 <td colSpan="9">
@@ -2114,14 +2134,13 @@ const billStatusReason = (doc, status, company, nowMs) => {
                     onClick={() => openBillDocument(b)}
                     title="Open this bill as a document"
                   >
-                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={b.number} label="bill" /></td>
-                    <td className="ui-col-entity px-4 py-2.5">{b.vendorName}</td>
-                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5"><DocDate value={b.date} /></td>
-                    <td className="ui-col-meta px-4 py-2.5">{b.refNo || '-'}</td>
-                    <td className="ui-col-date px-4 py-2.5"><DocDate value={b.refDate || '-'} /></td>
-                    <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={b.total || 0} company={currentCompany} /></td>
-                    <td className="ui-col-meta px-4 py-2.5">
+                    <td className="ui-col-id"><DocumentNumber value={b.number} label="bill" /></td>
+                    <td className="ui-col-entity">{b.vendorName}</td>
+                    <td className="ui-col-date"><DocDate value={b.date} /></td>
+                    <td className="ui-col-meta">{b.refNo || '-'}</td>
+                    <td className="ui-col-date"><DocDate value={b.refDate || '-'} /></td>
+                    <td className="ui-col-amount"><MoneyValue value={b.total || 0} company={currentCompany} /></td>
+                    <td>
                       <StatusPill status={derived} reason={billStatusReason(b, derived, currentCompany, nowMs)} />
                       {returnMark ? (
                         <span
@@ -2132,8 +2151,9 @@ const billStatusReason = (doc, status, company, nowMs) => {
                         </span>
                       ) : null}
                     </td>
+                    <td className="ui-col-meta">{whLabel}</td>
                     <td
-                      className="px-6 py-4"
+                      className="relative w-10"
                       onMouseDown={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
@@ -2183,17 +2203,6 @@ const billStatusReason = (doc, status, company, nowMs) => {
           }}
           noun="bills"
         />
-      </div>
-
-      <ListTip
-        storageKey="neev:tip:recurringBills"
-        Icon={RefreshCw}
-        text="Bills that repeat every month — rent, AMC, subscriptions — can be scheduled rather than retyped."
-        actionLabel="Set one up"
-        onAction={() => {
-          if (typeof onNavigate === 'function') onNavigate('recurringInvoices');
-        }}
-      />
 
       {openMenu?.id ? (
         <div
@@ -2304,7 +2313,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
           })()}
         </div>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 };
 
@@ -3141,97 +3150,159 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
     }
   );
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Debit Notes</h3>
-        <button
-          onClick={() => {
-            if (typeof onNewDebitNote === 'function') {
-              onNewDebitNote();
-              return;
-            }
-            openModal(
-              <DebitNoteForm
-                db={db}
-                setDb={setDb}
-                currentCompany={currentCompany}
-                warehouses={warehouses}
-                defaultWarehouseId={defaultWarehouseId}
-                onClose={() => openModal(null)}
-              />
-            );
-          }}
-          className="ui-btn ui-btn-primary"
-        >
-          <Plus size={20} /> New Debit Note
-        </button>
-      </div>
+  /*
+   * A debit note is money the vendor owes back. Like the sales side, the one
+   * that matters is on account and unsettled: raised against no particular
+   * bill and not yet knocked off anything.
+   */
+  const [dnStatus, setDnStatus] = useState('');
+  const dnStatusOf = (dn) => {
+    const st = String(dn?.status || 'Draft');
+    if (st === 'Draft' || st === 'Cancelled') return st;
+    if (isOnAccount(dn)) return noteBalance(dn).unsettled > 0.0001 ? 'On account' : 'Settled';
+    return 'Open';
+  };
+  const DN_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Draft', label: 'Draft', tone: 'draft' },
+    { value: 'Open', label: 'Issued', tone: 'sent' },
+    { value: 'On account', label: 'On account', tone: 'outstanding' },
+    { value: 'Settled', label: 'Settled', tone: 'paid' },
+  ];
+  const dnShown = dnStatus ? debitNotes.filter((dn) => dnStatusOf(dn) === dnStatus) : debitNotes;
 
-      <ListToolbar
-        search={dnSearch.query}
-        onSearch={dnSearch.setQuery}
-        placeholder="Search debit notes (number, vendor, bill)"
-        count={debitNotes.length}
-        countLabel="debit notes"
-        onExport={() =>
-          exportRows({
-            fileName: `DebitNotes_${currentCompany?.name || 'company'}`,
-            label: 'debit note(s)',
-            columns: [
-              { key: 'number', label: 'Debit Note #' },
-              { key: 'originalBillNumber', label: 'Original Bill' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-            ],
-            rows: debitNotes,
-          })
-        }
-        period={dnPeriod.period}
-        onPeriodChange={dnPeriod.setPeriod}
-        dateFrom={dnPeriod.dateFrom}
-        dateTo={dnPeriod.dateTo}
-        onDateFromChange={dnPeriod.setDateFrom}
-        onDateToChange={dnPeriod.setDateTo}
-        exportTitle="Debit Notes — {currentCompany?.name || 'Company'}"
-        exportFileName={`DebitNotes_${currentCompany?.name || 'company'}`}
-        exportSheetName="Debit Notes"
-        exportColumns={[
-              { key: 'number', label: 'Debit Note #' },
-              { key: 'originalBillNumber', label: 'Original Bill' },
-              { key: 'vendorName', label: 'Vendor' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={debitNotes}
+  const dnStatusCounts = useMemo(() => {
+    const counts = { '': debitNotes.length };
+    for (const dn of debitNotes) {
+      const st = dnStatusOf(dn);
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debitNotes]);
+
+  const dnHeadline = useMemo(() => {
+    let value = 0;
+    let onAccount = 0;
+    let drafted = 0;
+    let againstBill = 0;
+    for (const dn of debitNotes) {
+      const amt = Number(dn.total || 0);
+      value += amt;
+      if (dnStatusOf(dn) === 'Draft') drafted += amt;
+      else if (isOnAccount(dn)) onAccount += noteBalance(dn).unsettled;
+      else againstBill += amt;
+    }
+    return { count: debitNotes.length, value, onAccount, drafted, againstBill };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debitNotes]);
+
+  const dnExportColumns = [
+    { key: 'number', label: 'Debit note #' },
+    { key: 'originalBillNumber', label: 'Original bill' },
+    { key: 'vendorName', label: 'Vendor' },
+    { key: 'date', label: 'Date' },
+    { key: 'total', label: 'Amount', value: (r) => Number(r.total || 0) },
+    { key: 'status', label: 'Status', value: (r) => dnStatusOf(r) },
+  ];
+
+  const openNewDebitNote = () => {
+    if (typeof onNewDebitNote === 'function') {
+      onNewDebitNote();
+      return;
+    }
+    openModal(
+      <DebitNoteForm
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        warehouses={warehouses}
+        defaultWarehouseId={defaultWarehouseId}
+        onClose={() => openModal(null)}
       />
+    );
+  };
 
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
-        <table className="ui-table w-full ui-table-sticky">
+  return (
+    <DocumentListShell
+      title="Purchase Returns"
+      description="A debit note reduces what you owe when goods go back to the vendor"
+      company={currentCompany}
+      search={{
+        value: dnSearch.query,
+        onChange: dnSearch.setQuery,
+        placeholder: 'Search debit notes…',
+        label: 'Search debit notes',
+      }}
+      moreItems={[{ key: 'export', label: 'Export debit notes', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `DebitNotes_${currentCompany?.name || 'company'}`,
+          label: 'debit note(s)',
+          columns: dnExportColumns,
+          rows: dnShown,
+        });
+      }}
+      primary={
+        <button type="button" onClick={openNewDebitNote} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Debit Note
+        </button>
+      }
+      cards={[
+        { label: 'Total debit notes', value: dnHeadline.count, count: true, tone: 'draft', Icon: NotebookPen },
+        { label: 'Total returned', value: dnHeadline.value, tone: 'refund', Icon: FileText },
+        { label: 'Against bills', value: dnHeadline.againstBill, tone: 'paid', Icon: CreditCard },
+        { label: 'On account, unused', value: dnHeadline.onAccount, tone: 'outstanding', Icon: ClipboardList },
+        { label: 'Still in draft', value: dnHeadline.drafted, tone: 'cancelled', Icon: Ban },
+      ]}
+      tabs={DN_STATUS_TABS}
+      tabsLabel="Debit note status"
+      statusValue={dnStatus}
+      statusCounts={dnStatusCounts}
+      onStatusChange={setDnStatus}
+      tip={{
+        storageKey: 'neev.tip.debitNotes',
+        Icon: NotebookPen,
+        text: 'A debit note on account is money the vendor owes you until it is knocked off a bill — the row says how much is left.',
+      }}
+    >
+      <div className="ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
           <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Debit Note #" col="number" state={dnFilters} className="ui-th" />
-              <ColumnHeader label="Original Bill" col="original" state={dnFilters} className="ui-th" />
-              <ColumnHeader label="Vendor" col="vendor" state={dnFilters} className="ui-th" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={dnFilters} className="ui-th" />
-              <ColumnHeader label="Date" col="date" state={dnFilters} className="ui-th" />
-              <ColumnHeader label="Amount" col="amount" state={dnFilters} className="ui-th" />
-              <ColumnHeader label="Status" col="status" state={dnFilters} className="ui-th" />
-              <th className="ui-th ui-num">On account</th>
+              <ColumnHeader label="Debit note #" col="number" state={dnFilters} />
+              <ColumnHeader label="Original bill" col="original" state={dnFilters} />
+              <ColumnHeader label="Vendor" col="vendor" state={dnFilters} />
+              <ColumnHeader label="Date" col="date" state={dnFilters} />
+              <ColumnHeader label="Amount" col="amount" state={dnFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Status" col="status" state={dnFilters} />
+              <ColumnHeader label="Warehouse" col="warehouse" state={dnFilters} />
+              <th scope="col" className="ui-num"><span className="sr-only">On account</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[rgb(var(--border))]">
-            {debitNotes.length === 0 ? (
+          <tbody className="ui-rows">
+            {dnShown.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-0 py-0">
-                  {dnFilterChips.length === 0 ? (
+                <td colSpan="8">
+                  {dnFilterChips.length === 0 && !dnStatus ? (
                     <EmptyState
                       icon={NotebookPen}
+                      kind="new"
                       title="No purchase returns yet"
-                      description="A debit note reduces what you owe when goods go back to the vendor."
+                      description="A debit note is what the vendor owes you back — goods returned, an overcharge, a discount agreed after the bill."
+                      routes={[
+                        {
+                          label: 'Return against a bill',
+                          description: 'Pick the bill, choose the lines going back.',
+                          onSelect: () => openNewDebitNote(),
+                        },
+                        {
+                          label: 'Debit on account',
+                          description: 'Record what they owe now, knock it off later.',
+                          onSelect: () => openNewDebitNote(),
+                        },
+                      ]}
                     />
                   ) : (
                     <EmptyState
@@ -3248,28 +3319,28 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                 </td>
               </tr>
             ) : (
-              debitNotes.map((dn) => {
+              dnShown.map((dn) => {
                 const whId = String(dn?.warehouseId || '').trim();
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
                   <tr key={dn.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={dn.number} label="debit note" /></td>
-                    <td className="ui-col-meta px-4 py-2.5">
+                    <td className="ui-col-id"><DocumentNumber value={dn.number} label="debit note" /></td>
+                    <td className="ui-col-meta">
                       {dn.originalBillNumber || (
                         <span className="ui-muted">
                           {(dn.billIds || []).length ? `${(dn.billIds || []).length} bills · on account` : '—'}
                         </span>
                       )}
                     </td>
-                    <td className="ui-col-entity px-4 py-2.5">{dn.vendorName}</td>
-                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5"><DocDate value={dn.date} /></td>
-                    <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={dn.total || 0} company={currentCompany} /></td>
-                    <td className="ui-col-meta px-4 py-2.5">
-                      <StatusPill status={dn.status || 'Draft'} />
+                    <td className="ui-col-entity">{dn.vendorName}</td>
+                    <td className="ui-col-date"><DocDate value={dn.date} /></td>
+                    <td className="ui-col-amount"><MoneyValue value={dn.total || 0} company={currentCompany} kind="refund" /></td>
+                    <td>
+                      <StatusPill status={dnStatusOf(dn)} />
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="ui-col-meta">{whLabel}</td>
+                    <td className="text-right">
                       <button
                         type="button"
                         onClick={() => setPreviewNote(dn)}
@@ -3300,11 +3371,11 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
           </tbody>
         </table>
         <TableTotals
-          count={debitNotes.length}
+          count={dnShown.length}
           totalCount={(db.debitNotes || []).filter((d) => d.companyId === currentCompany.id).length}
           noun="debit notes"
           figures={[
-            { label: 'Value', value: formatMoney(debitNotes.reduce((t, d) => t + Number(d.total || 0), 0), currentCompany) },
+            { label: 'Value', value: formatMoney(dnShown.reduce((t, d) => t + Number(d.total || 0), 0), currentCompany) },
           ]}
         />
       </div>
@@ -3336,6 +3407,6 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
           </PrintDownloadFrame>
         </Modal>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 };
