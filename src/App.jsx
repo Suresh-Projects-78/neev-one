@@ -40,7 +40,10 @@ import {
   Shield,
   ShoppingCart,
   Tags,
+  FolderTree,
   Trash2,
+  TrendingDown,
+  TrendingUp,
   Undo2,
   Truck,
   Users,
@@ -1522,99 +1525,171 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
     });
   };
 
+  /*
+   * What the item master is for: how many things you sell, how many of them
+   * are stock you have to count, and whether the tax details a GST invoice
+   * needs are actually filled in. A missing HSN is not a cosmetic gap — the
+   * invoice carrying it is the one that gets rejected.
+   */
+  const itemHeadline = useMemo(() => {
+    let stockItems = 0;
+    let services = 0;
+    let noHsn = 0;
+    let zeroPrice = 0;
+    for (const it of items) {
+      if (String(it.type || '').toLowerCase() === 'service') services += 1;
+      else stockItems += 1;
+      if (!String(it.hsnSac || '').trim()) noHsn += 1;
+      if (!Number(it.salePrice || 0)) zeroPrice += 1;
+    }
+    return { count: items.length, stockItems, services, noHsn, zeroPrice };
+  }, [items]);
+
+  const [itemFilter, setItemFilter] = useState('ALL');
+  const ITEM_TABS = [
+    { value: 'ALL', label: 'All', tone: 'all' },
+    { value: 'GOODS', label: 'Goods', tone: 'paid' },
+    { value: 'SERVICE', label: 'Services', tone: 'sent' },
+    { value: 'NOHSN', label: 'No HSN/SAC', tone: 'overdue' },
+    { value: 'NOPRICE', label: 'No sale price', tone: 'outstanding' },
+  ];
+  const itemMatches = (it, tab) => {
+    const isService = String(it.type || '').toLowerCase() === 'service';
+    if (tab === 'GOODS') return !isService;
+    if (tab === 'SERVICE') return isService;
+    if (tab === 'NOHSN') return !String(it.hsnSac || '').trim();
+    if (tab === 'NOPRICE') return !Number(it.salePrice || 0);
+    return true;
+  };
+  const visibleItems = itemFilter === 'ALL' ? shownItems : shownItems.filter((it) => itemMatches(it, itemFilter));
+
+  const itemStatusCounts = useMemo(() => {
+    const counts = { ALL: shownItems.length };
+    for (const t of ITEM_TABS) {
+      if (t.value === 'ALL') continue;
+      counts[t.value] = shownItems.filter((it) => itemMatches(it, t.value)).length;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownItems]);
+
+  const itemExportColumns = [
+    { key: 'code', label: 'Code' },
+    { key: 'name', label: 'Name' },
+    { key: 'type', label: 'Type' },
+    { key: 'category', label: 'Category' },
+    { key: 'hsnSac', label: 'HSN/SAC' },
+    { key: 'gstRate', label: 'GST %', value: (r) => Number(r.gstRate || 0) },
+    { key: 'salePrice', label: 'Sale Price', value: (r) => Number(r.salePrice || 0) },
+    { key: 'purchasePrice', label: 'Purchase Price', value: (r) => Number(r.purchasePrice || 0) },
+  ];
+
+  const openNewItem = () =>
+    openModal(
+      <ItemForm db={db} setDb={setDb} currentCompany={currentCompany} warehouses={warehouses} onClose={() => openModal(null)} />,
+      { title: 'New Item', maxWidthClass: 'max-w-3xl' }
+    );
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Items</h3>
-        <button
-          onClick={() =>
-            openModal(
-              <ItemForm
-                db={db}
-                setDb={setDb}
-                currentCompany={currentCompany}
-                warehouses={warehouses}
-                onClose={() => openModal(null)}
-              />,
-              { title: 'New Item', maxWidthClass: 'max-w-3xl' }
-            )
-          }
-          className="ui-btn ui-btn-primary"
-        >
-          <Plus size={20} /> New Item
+    <DocumentListShell
+      title="Items"
+      description="What you buy and sell — with the HSN, tax rate and price every invoice reads"
+      company={currentCompany}
+      search={{
+        value: itemSearch.query,
+        onChange: itemSearch.setQuery,
+        placeholder: 'Search items…',
+        label: 'Search items',
+      }}
+      moreItems={[{ key: 'export', label: 'Export items', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `Items_${currentCompany?.name || 'company'}`,
+          label: 'item(s)',
+          columns: itemExportColumns,
+          rows: visibleItems,
+        });
+      }}
+      primary={
+        <button type="button" onClick={openNewItem} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Item
         </button>
-      </div>
-
-      <ListToolbar
-        search={itemSearch.query}
-        onSearch={itemSearch.setQuery}
-        placeholder="Search items (code, name, HSN, category, barcode)"
-        count={shownItems.length}
-        countLabel="items"
-        onExport={() =>
-          exportRows({
-            fileName: `Items_${currentCompany?.name || 'company'}`,
-            label: 'item(s)',
-            columns: [
-              { key: 'code', label: 'Code' },
-              { key: 'name', label: 'Name' },
-              { key: 'type', label: 'Type' },
-              { key: 'category', label: 'Category' },
-              { key: 'hsnSac', label: 'HSN/SAC' },
-              { key: 'gstRate', label: 'GST %', value: (r) => Number(r.gstRate || 0) },
-              { key: 'salePrice', label: 'Sale Price', value: (r) => Number(r.salePrice || 0) },
-              { key: 'purchasePrice', label: 'Purchase Price', value: (r) => Number(r.purchasePrice || 0) },
-            ],
-            rows: shownItems,
-          })
-        }
-        exportTitle="Items — {currentCompany?.name || 'Company'}"
-        exportFileName={`Items_${currentCompany?.name || 'company'}`}
-        exportSheetName="Items"
-        exportColumns={[
-              { key: 'code', label: 'Code' },
-              { key: 'name', label: 'Name' },
-              { key: 'type', label: 'Type' },
-              { key: 'category', label: 'Category' },
-              { key: 'hsnSac', label: 'HSN/SAC' },
-              { key: 'gstRate', label: 'GST %', value: (r) => Number(r.gstRate || 0) },
-              { key: 'salePrice', label: 'Sale Price', value: (r) => Number(r.salePrice || 0) },
-              { key: 'purchasePrice', label: 'Purchase Price', value: (r) => Number(r.purchasePrice || 0) },
-        ]}
-        exportRows={shownItems}
-      />
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full">
-          <thead className="ui-sunken border-b">
+      }
+      cards={[
+        { label: 'Items', value: itemHeadline.count, count: true, tone: 'draft', Icon: Package },
+        { label: 'Goods', value: itemHeadline.stockItems, count: true, tone: 'paid', Icon: Boxes },
+        { label: 'Services', value: itemHeadline.services, count: true, tone: 'sent', Icon: ClipboardList },
+        { label: 'Without HSN/SAC', value: itemHeadline.noHsn, count: true, tone: 'overdue', Icon: Ban },
+        { label: 'Without a price', value: itemHeadline.zeroPrice, count: true, tone: 'outstanding', Icon: BadgePercent },
+      ]}
+      tabs={ITEM_TABS}
+      tabsLabel="Item filter"
+      statusValue={itemFilter}
+      statusCounts={itemStatusCounts}
+      onStatusChange={setItemFilter}
+      tip={{
+        storageKey: 'neev.tip.items',
+        Icon: Package,
+        text: 'An item without an HSN or SAC can still be sold — and the GST return that carries it is the one that comes back.',
+      }}
+    >
+      <div className="ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
             <tr>
-              <ColumnHeader label="Code" col="code" state={itemSearchFilters} className="ui-th" />
-              <ColumnHeader label="Name" col="name" state={itemSearchFilters} className="ui-th" />
-              <ColumnHeader label="Type" col="type" state={itemSearchFilters} className="ui-th" />
-              <ColumnHeader label="HSN/SAC" col="hsn" state={itemSearchFilters} className="ui-th" />
-              <ColumnHeader label="GST %" col="gst" state={itemSearchFilters} className="ui-th" />
-              <ColumnHeader label="Sale Price" col="price" state={itemSearchFilters} className="ui-th" />
-              <th className="ui-th">Stock</th>
-              <th className="ui-th ui-num">Actions</th>
+              <ColumnHeader label="Code" col="code" state={itemSearchFilters} />
+              <ColumnHeader label="Name" col="name" state={itemSearchFilters} />
+              <ColumnHeader label="Type" col="type" state={itemSearchFilters} />
+              <ColumnHeader label="HSN/SAC" col="hsn" state={itemSearchFilters} />
+              <ColumnHeader label="GST %" col="gst" state={itemSearchFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Sale price" col="price" state={itemSearchFilters} className="ui-num" align="right" />
+              <th scope="col">Stock</th>
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
-            {shownItems.length === 0 ? (
+          <tbody className="ui-rows">
+            {visibleItems.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-10 text-center ui-muted">
-                  No items yet
+                <td colSpan={8}>
+                  <EmptyState
+                    icon={Package}
+                    kind="new"
+                    title={items.length ? 'No items match' : 'No items yet'}
+                    description={
+                      items.length
+                        ? 'Nothing in this company matches that filter.'
+                        : 'An item is what a document line points at — its HSN, its tax rate and its price come from here.'
+                    }
+                    routes={
+                      items.length
+                        ? undefined
+                        : [
+                            {
+                              label: 'Add one now',
+                              description: 'Name, HSN or SAC, tax rate, price.',
+                              onSelect: () => openNewItem(),
+                            },
+                            {
+                              label: 'Import your list',
+                              description: 'Bring across the catalogue you already keep.',
+                              onSelect: () => openNewItem(),
+                            },
+                          ]
+                    }
+                  />
                 </td>
               </tr>
             ) : null}
-            {shownItems.map((item) => (
-              <tr key={item.id} className="ui-hover-sunken">
-                <td className="px-4 py-2.5 ui-col-entity">{item.code}</td>
-                <td className="px-4 py-2.5 ui-col-meta">{item.name}</td>
-                <td className="px-4 py-2.5 ui-col-meta">{item.type}</td>
-                <td className="px-4 py-2.5 ui-col-id">{item.hsnSac || '-'}</td>
-                <td className="px-4 py-2.5 ui-col-meta">{Number.isFinite(Number(item.gstRate)) ? Number(item.gstRate) : 0}</td>
-                <td className="ui-money px-4 py-2.5 ui-col-meta">{formatMoney(item.salePrice || 0, currentCompany)}</td>
-                <td className="px-4 py-2.5 ui-col-meta">
+            {visibleItems.map((item) => (
+              <tr key={item.id}>
+                <td className="ui-col-id">{item.code}</td>
+                <td className="ui-col-entity">{item.name}</td>
+                <td className="ui-col-meta">{item.type}</td>
+                <td className="ui-col-id">{item.hsnSac || '-'}</td>
+                <td className="ui-col-amount ui-mono">{Number.isFinite(Number(item.gstRate)) ? Number(item.gstRate) : 0}</td>
+                <td className="ui-col-amount">{formatMoney(item.salePrice || 0, currentCompany)}</td>
+                <td className="ui-col-meta">
                   {isStockItem(item) ? (
                     <>
                       {(inventoryByItemId.get(String(item.id))?.closingQty ?? 0)} {item.unit}
@@ -1648,7 +1723,8 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
           </tbody>
         </table>
       </div>
-    </div>
+      <TableTotals count={visibleItems.length} totalCount={items.length} noun="items" />
+    </DocumentListShell>
   );
 };
 
@@ -2609,124 +2685,158 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     });
   };
 
+  /*
+   * What the chart is worth, and where it is unfinished.
+   *
+   * A chart of accounts is read for two things: whether the ledgers somebody
+   * needs exist, and whether anything is sitting where it should not be. The
+   * suspense balance is the second one — money posted against no real account
+   * is money nobody has explained yet.
+   */
+  const coaHeadline = useMemo(() => {
+    let debit = 0;
+    let credit = 0;
+    let suspense = 0;
+    let unposted = 0;
+    for (const a of ledgerRows) {
+      const bal = Number(a.balance || 0);
+      if (bal > 0) debit += bal;
+      else credit += Math.abs(bal);
+      if (/suspense|uncategorised|uncategorized/i.test(String(a.name || ''))) suspense += Math.abs(bal);
+      if (!String(a.serverLedgerAccountId || '').trim()) unposted += 1;
+    }
+    return { ledgers: ledgerRows.length, groups: groupRows.length, debit, credit, suspense, unposted };
+  }, [ledgerRows, groupRows]);
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Chart of Accounts</h3>
-        <div className="flex gap-2">
-          {coaView === 'ledgers' ? (
-            <button
-              type="button"
-              onClick={openNewLedger}
-              className="ui-btn ui-btn-primary"
-            >
-              <Plus size={20} /> New Ledger
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={openNewGroup}
-              className="ui-btn ui-btn-primary"
-            >
-              <Plus size={20} /> New Group
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            setOpenMenu(null);
-            setCoaView('ledgers');
-          }}
-          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'ledgers' ? 'ui-btn ui-btn-primary ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
-          }`}
-        >
-          Ledgers
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setOpenMenu(null);
-            setCoaView('groups');
-          }}
-          className={`px-4 py-2 rounded-lg border text-sm ${ coaView === 'groups' ? 'ui-btn ui-btn-primary ui-border-strong-c' : 'ui-surface ui-hover-sunken ui-border-c'
-          }`}
-        >
-          Groups
-        </button>
-      </div>
-
+    <DocumentListShell
+      title="Chart of Accounts"
+      description="Every ledger the books post to, and the groups they roll up through"
+      company={currentCompany}
+      search={
+        coaView === 'ledgers'
+          ? { value: ledgerSearch, onChange: setLedgerSearch, placeholder: 'Search ledgers…', label: 'Search ledgers' }
+          : { value: groupSearch, onChange: setGroupSearch, placeholder: 'Search groups…', label: 'Search groups' }
+      }
+      moreItems={[{ key: 'export', label: coaView === 'ledgers' ? 'Export ledgers' : 'Export groups', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        if (coaView === 'ledgers') {
+          exportRows({
+            fileName: `ChartOfAccounts_${currentCompany?.name || 'company'}`,
+            label: 'ledger(s)',
+            columns: [
+              { key: 'code', label: 'Code' },
+              { key: 'name', label: 'Ledger' },
+              { key: 'group', label: 'Group', value: (r) => r._groupName || r.groupName || '' },
+              { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
+              { key: 'openingBalance', label: 'Opening', value: (r) => Number(r.openingBalance || 0) },
+              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance || 0) },
+            ],
+            rows: visibleLedgerRows,
+          });
+          return;
+        }
+        exportRows({
+          fileName: `AccountGroups_${currentCompany?.name || 'company'}`,
+          label: 'group(s)',
+          columns: [
+            { key: 'name', label: 'Group' },
+            { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
+            { key: 'groupCategory', label: 'Category' },
+          ],
+          rows: visibleGroupRows,
+        });
+      }}
+      primary={
+        coaView === 'ledgers' ? (
+          <button type="button" onClick={openNewLedger} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> New Ledger
+          </button>
+        ) : (
+          <button type="button" onClick={openNewGroup} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> New Group
+          </button>
+        )
+      }
+      cards={[
+        { label: 'Ledgers', value: coaHeadline.ledgers, count: true, tone: 'draft', Icon: BookOpen },
+        { label: 'Groups', value: coaHeadline.groups, count: true, tone: 'sent', Icon: FolderTree },
+        { label: 'Debit balances', value: coaHeadline.debit, tone: 'paid', Icon: TrendingUp },
+        { label: 'Credit balances', value: coaHeadline.credit, tone: 'outstanding', Icon: TrendingDown },
+        { label: 'In suspense', value: coaHeadline.suspense, tone: 'overdue', Icon: Ban },
+      ]}
+      /* Ledgers and Groups are two views of one chart, not two statuses — but
+         they are the choice this screen is built around, so they take the place
+         the status tabs hold everywhere else. */
+      tabs={[
+        { value: 'ledgers', label: 'Ledgers', tone: 'all' },
+        { value: 'groups', label: 'Groups', tone: 'sent' },
+      ]}
+      tabsLabel="Chart view"
+      statusValue={coaView}
+      statusCounts={{ ledgers: ledgerRows.length, groups: groupRows.length }}
+      onStatusChange={(v) => {
+        setOpenMenu(null);
+        setCoaView(v);
+      }}
+      tip={{
+        storageKey: 'neev.tip.chartOfAccounts',
+        Icon: BookOpen,
+        text: 'A ledger belongs to a group, and the group decides which statement it lands on — the chart is what makes the reports add up.',
+      }}
+    >
       <div className="space-y-6">
         {coaView === 'ledgers' ? (
-          <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-            <div className="ui-sunken px-6 py-3 border-b">
-              <div className="font-bold ui-fg">Ledgers</div>
-              <div className="text-xs ui-muted">View: Ledger → Group → Parent</div>
-              <div className="mt-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <input
-                    type="text"
-                    value={ledgerSearch}
-                    onChange={(e) => setLedgerSearch(e.target.value)}
-                    className="ui-input flex-1 min-w-[220px] ui-surface"
-                    placeholder="Search ledgers (name, code, group)"
-                  />
-                  <span className="text-xs ui-muted">{visibleLedgerRows.length} ledgers</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      exportRows({
-                        fileName: `ChartOfAccounts_${currentCompany?.name || 'company'}`,
-                        label: 'ledger(s)',
-                        columns: [
-                          { key: 'code', label: 'Code' },
-                          { key: 'name', label: 'Ledger' },
-                          { key: 'group', label: 'Group', value: (r) => r._group || r.groupName || '' },
-                          { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
-                          { key: 'openingBalance', label: 'Opening', value: (r) => Number(r.openingBalance || 0) },
-                          { key: 'balance', label: 'Balance', value: (r) => Number(r.balance || 0) },
-                        ],
-                        rows: visibleLedgerRows,
-                      })
-                    }
-                    className="ui-btn ui-btn-secondary"
-                  >
-                    <Download size={15} aria-hidden="true" /> Export
-                  </button>
-                </div>
-              </div>
-            </div>
-            <table className="ui-table w-full">
-              <thead className="ui-sunken border-b">
+          <div className="ui-table-scroll">
+            <table className="ui-table ui-table-wide ui-table-sticky">
+              <thead>
                 <tr>
-                  <th className="ui-th">Ledger</th>
-                  <th className="ui-th">Group</th>
-                  <th className="ui-th">Parent</th>
-                  <th className="ui-th ui-num">Balance</th>
-                  <th className="ui-th ui-num">Actions</th>
+                  <th scope="col">Ledger</th>
+                  <th scope="col">Group</th>
+                  <th scope="col">Parent</th>
+                  <th scope="col" className="ui-num">Balance</th>
+                  <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="ui-rows">
                 {visibleLedgerRows.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-sm ui-muted">
-                      No ledgers found
+                    <td colSpan="5">
+                      <EmptyState
+                        icon={BookOpen}
+                        kind="new"
+                        title={ledgerRows.length ? 'No ledgers match' : 'No ledgers yet'}
+                        description={
+                          ledgerRows.length
+                            ? 'Nothing in this chart matches that search.'
+                            : 'A ledger is what a posting lands in. Setting up the company creates the usual ones; add the rest as you need them.'
+                        }
+                        routes={
+                          ledgerRows.length
+                            ? undefined
+                            : [
+                                {
+                                  label: 'Add a ledger',
+                                  description: 'Name it and put it in the group it reports under.',
+                                  onSelect: () => openNewLedger(),
+                                },
+                              ]
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
                   visibleLedgerRows.map((a) => {
                     const buttonKey = `ledger:${String(a.id)}`;
                     return (
-                      <tr key={a.id} className="ui-hover-sunken">
-                        <td className="px-4 py-2.5 ui-col-entity">{a.name}</td>
-                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{a._groupName || '-'}</td>
-                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{a._parent || '-'}</td>
-                        <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(a.balance || 0, currentCompany)}</td>
+                      <tr key={a.id}>
+                        <td className="ui-col-entity">{a.name}</td>
+                        <td className="ui-col-meta ui-fg">{a._groupName || '-'}</td>
+                        <td className="ui-col-meta ui-fg">{a._parent || '-'}</td>
+                        <td className="ui-col-amount">{formatMoney(a.balance || 0, currentCompany)}</td>
                         <td
-                          className="px-4 py-2.5 text-right"
+                          className="text-right"
                           onMouseDown={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => e.stopPropagation()}
@@ -2758,64 +2868,53 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             </table>
           </div>
         ) : (
-          <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-            <div className="ui-sunken px-6 py-3 border-b">
-              <div className="font-bold ui-fg">Groups</div>
-              <div className="text-xs ui-muted">All groups under Parents</div>
-              <div className="mt-3">
-                <input
-                  type="text"
-                  value={groupSearch}
-                  onChange={(e) => setGroupSearch(e.target.value)}
-                  className="ui-input w-full ui-surface"
-                  placeholder="Search groups (name, category)"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    exportRows({
-                      fileName: `AccountGroups_${currentCompany?.name || 'company'}`,
-                      label: 'group(s)',
-                      columns: [
-                        { key: 'name', label: 'Group' },
-                        { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
-                        { key: 'groupCategory', label: 'Category' },
-                      ],
-                      rows: visibleGroupRows,
-                    })
-                  }
-                  className="ui-btn ui-btn-secondary mt-2"
-                >
-                  <Download size={15} aria-hidden="true" /> Export
-                </button>
-              </div>
-            </div>
-            <table className="ui-table w-full">
-              <thead className="ui-sunken border-b">
+          <div className="ui-table-scroll">
+            <table className="ui-table ui-table-wide ui-table-sticky">
+              <thead>
                 <tr>
-                  <th className="ui-th">Group</th>
-                  <th className="ui-th">Parent</th>
-                  <th className="ui-th">Category</th>
-                  <th className="ui-th ui-num">Actions</th>
+                  <th scope="col">Group</th>
+                  <th scope="col">Parent</th>
+                  <th scope="col">Category</th>
+                  <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="ui-rows">
                 {visibleGroupRows.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="px-6 py-8 text-center text-sm ui-muted">
-                      No groups found
+                    <td colSpan="4">
+                      <EmptyState
+                        icon={FolderTree}
+                        kind="new"
+                        title={groupRows.length ? 'No groups match' : 'No groups yet'}
+                        description={
+                          groupRows.length
+                            ? 'Nothing in this chart matches that search.'
+                            : 'A group decides which statement its ledgers land on — Sundry Debtors on the balance sheet, Indirect Expenses on the P&L.'
+                        }
+                        routes={
+                          groupRows.length
+                            ? undefined
+                            : [
+                                {
+                                  label: 'Add a group',
+                                  description: 'Name it and say which parent it rolls up to.',
+                                  onSelect: () => openNewGroup(),
+                                },
+                              ]
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
                   visibleGroupRows.map((g) => {
                     const buttonKey = `group:${String(g.id)}`;
                     return (
-                      <tr key={g.id} className="ui-hover-sunken">
-                        <td className="px-4 py-2.5 ui-col-entity">{g.name}</td>
-                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{g._parent || '-'}</td>
-                        <td className="ui-col-meta px-4 py-2.5 ui-fg">{String(g.groupCategory || 'General')}</td>
+                      <tr key={g.id}>
+                        <td className="ui-col-entity">{g.name}</td>
+                        <td className="ui-col-meta ui-fg">{g._parent || '-'}</td>
+                        <td className="ui-col-meta ui-fg">{String(g.groupCategory || 'General')}</td>
                         <td
-                          className="px-4 py-2.5 text-right"
+                          className="text-right"
                           onMouseDown={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => e.stopPropagation()}
@@ -2930,7 +3029,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
           })()}
         </div>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 };
 
@@ -6873,92 +6972,136 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
     setDb({ ...db, itemCategories: (db.itemCategories || []).filter((c) => Number(c.id) !== Number(cat.id)) });
   };
 
+  /*
+   * A category master is read for whether it matches the items. The orphan
+   * count is the figure that matters: a category typed straight onto an item
+   * and never added here is one a discount rule will never match.
+   */
+  const catHeadline = useMemo(() => {
+    let used = 0;
+    let unused = 0;
+    let items = 0;
+    for (const c of rows) {
+      const n = countFor(c.name);
+      items += n;
+      if (n) used += 1;
+      else unused += 1;
+    }
+    return { count: rows.length, used, unused, items, orphans: orphans.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, orphans]);
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center gap-3 flex-wrap">
-        <div>
-          <h3 className="ui-t-sec">Item Categories</h3>
-          <div className="text-sm ui-muted">The list every item picks its category from.</div>
+    <DocumentListShell
+      title="Item Categories"
+      description="The list every item picks its category from — and what discount rules match on"
+      company={currentCompany}
+      search={{
+        value: catSearch.query,
+        onChange: catSearch.setQuery,
+        placeholder: 'Search categories…',
+        label: 'Search categories',
+      }}
+      moreItems={[{ key: 'export', label: 'Export categories', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `ItemCategories_${currentCompany?.name || 'company'}`,
+          label: 'categor(y/ies)',
+          columns: [
+            { key: 'name', label: 'Category' },
+            { key: 'description', label: 'Description' },
+            { key: 'items', label: 'Items', value: (c) => countFor(c.name) },
+          ],
+          rows,
+        });
+      }}
+      primary={
+        <button type="button" onClick={addCategory} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> Add category
+        </button>
+      }
+      cards={[
+        { label: 'Categories', value: catHeadline.count, count: true, tone: 'draft', Icon: Tags },
+        { label: 'In use', value: catHeadline.used, count: true, tone: 'paid', Icon: Package },
+        { label: 'Unused', value: catHeadline.unused, count: true, tone: 'outstanding', Icon: ClipboardList },
+        { label: 'Items categorised', value: catHeadline.items, count: true, tone: 'sent', Icon: Boxes },
+        { label: 'Typed but not listed', value: catHeadline.orphans, count: true, tone: 'overdue', Icon: Ban },
+      ]}
+      above={
+        <>
+          {orphans.length ? (
+            <div className="rounded-xl border p-4 bg-[rgb(var(--warn-soft))] flex items-center justify-between gap-3 flex-wrap">
+              <div className="text-sm text-[rgb(var(--warn-ink))]">
+                {orphans.length} categor{orphans.length === 1 ? 'y is' : 'ies are'} typed on items but not in this master:{' '}
+                {orphans.slice(0, 5).join(', ')}
+                {orphans.length > 5 ? '…' : ''}
+              </div>
+              <button type="button" onClick={importOrphans} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
+                Import them
+              </button>
+            </div>
+          ) : null}
+        </>
+      }
+      tip={{
+        storageKey: 'neev.tip.itemCategories',
+        Icon: Tags,
+        text: 'A category typed straight onto an item is not in this master — and a discount rule matching on category will never see it.',
+      }}
+    >
+      {/* Adding one is two fields and a button, so it lives at the top of the
+          list it adds to rather than behind a form somewhere else. */}
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+        <div className="md:col-span-2">
+          <label className="ui-label" htmlFor="cat-name">Category name</label>
+          <input
+            id="cat-name"
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="ui-input w-full"
+            placeholder="e.g. Beverages, Spare Parts"
+          />
+        </div>
+        <div className="md:col-span-3">
+          <label className="ui-label" htmlFor="cat-description">Description</label>
+          <input
+            id="cat-description"
+            type="text"
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            className="ui-input w-full"
+            placeholder="Optional"
+          />
+        </div>
+        <div className="flex items-end">
+          <button type="button" onClick={addCategory} className="ui-btn ui-btn-secondary w-full">
+            Add
+          </button>
         </div>
       </div>
 
-      {orphans.length ? (
-        <div className="rounded-xl border p-4 bg-[rgb(var(--warn-soft))] flex items-center justify-between gap-3 flex-wrap">
-          <div className="text-sm text-[rgb(var(--warn-ink))]">
-            {orphans.length} categor{orphans.length === 1 ? 'y is' : 'ies are'} typed on items but not in this master:{' '}
-            {orphans.slice(0, 5).join(', ')}
-            {orphans.length > 5 ? '…' : ''}
-          </div>
-          <button type="button" onClick={importOrphans} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
-            Import them
-          </button>
-        </div>
-      ) : null}
-
-      <div className="ui-surface rounded-xl shadow-sm p-6 border space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-          <div className="md:col-span-2">
-            <label className="ui-label">Category name</label>
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              className="ui-input w-full"
-              placeholder="e.g. Beverages, Spare Parts"
-            />
-          </div>
-          <div className="md:col-span-3">
-            <label className="ui-label">Description</label>
-            <input
-              type="text"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              className="ui-input w-full"
-              placeholder="Optional"
-            />
-          </div>
-          <div className="flex items-end">
-            <button type="button" onClick={addCategory} className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg">
-              Add
-            </button>
-          </div>
-        </div>
-
-        <ListToolbar
-          search={catSearch.query}
-          onSearch={catSearch.setQuery}
-          placeholder="Search categories (name, description)"
-          count={rows.length}
-          countLabel="categories"
-          onExport={() =>
-            exportRows({
-              fileName: `ItemCategories_${currentCompany?.name || 'company'}`,
-              label: 'categor(y/ies)',
-              columns: [
-                { key: 'name', label: 'Category' },
-                { key: 'description', label: 'Description' },
-                { key: 'items', label: 'Items', value: (c) => countFor(c.name) },
-              ],
-              rows,
-            })
-          }
-        />
-
-        <div className="border rounded-lg overflow-hidden">
-          <table className="ui-table w-full">
-            <thead className="ui-sunken border-b">
+        <div className="ui-table-scroll">
+          <table className="ui-table ui-table-wide ui-table-sticky">
+            <thead>
               <tr>
-                <ColumnHeader label="Category" col="name" state={catFilters} className="ui-th" />
-                <ColumnHeader label="Description" col="description" state={catFilters} className="ui-th" />
-                <ColumnHeader label="Items" col="items" state={catFilters} className="ui-th ui-num" align="right" />
-                <th className="px-4 py-2.5"></th>
+                <ColumnHeader label="Category" col="name" state={catFilters} />
+                <ColumnHeader label="Description" col="description" state={catFilters} />
+                <ColumnHeader label="Items" col="items" state={catFilters} className="ui-num" align="right" />
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[rgb(var(--border))]">
+            <tbody className="ui-rows">
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-10 text-center ui-muted">
-                    No categories yet
+                  <td colSpan="4">
+                    <EmptyState
+                      icon={Tags}
+                      kind="new"
+                      title="No categories yet"
+                      description="Name the groups you sort your catalogue into — items pick from this list, and discount rules match on it."
+                    />
                   </td>
                 </tr>
               ) : (
@@ -7029,10 +7172,8 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
             </tbody>
           </table>
         </div>
-
-        <div className="text-sm ui-muted">Items pick their Category from this master, and discount rules match on it.</div>
-      </div>
-    </div>
+      <TableTotals count={rows.length} totalCount={rows.length} noun="categories" />
+    </DocumentListShell>
   );
 };
 

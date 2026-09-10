@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Ban, CheckCircle2, MoreVertical, Pencil, Plus, Tags, Trash2 } from 'lucide-react';
+import { ArrowLeft, BadgeIndianRupee, Ban, CalendarX, CheckCircle2, Download, ListChecks, MoreVertical, Pencil, Plus, Tags, Trash2 } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
-import { ListSearch, StatusTabs, ExportButton, Pagination, usePaged } from '../../components/list/ListPageParts';
-import { useListSearch } from '../../components/ListToolbar';
+import { Pagination, usePaged } from '../../components/list/ListPageParts';
+import DocumentListShell from '../../components/list/DocumentListShell';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { pushMaster, removeMaster, saveMaster } from '../../utils/masterSync';
 import { formatMoney } from '../../utils/money';
@@ -233,6 +234,24 @@ export default function PriceLists({ db, setDb, currentCompany }) {
 
   const { pageCount, safePage, pageRows } = usePaged(filtered, perPage, page);
 
+  /*
+   * What the rate cards actually cover. A list that prices nothing is the one
+   * worth seeing: it was created, named, and never given a rate, so every
+   * invoice quietly falls back to the item's own price.
+   */
+  const plHeadline = useMemo(() => {
+    let priced = 0;
+    let empty = 0;
+    let expired = 0;
+    for (const p of lists) {
+      const n = Object.keys(p.rates || {}).length;
+      priced += n;
+      if (!n) empty += 1;
+      if (statusOf(p, today) === 'expired') expired += 1;
+    }
+    return { lists: lists.length, priced, empty, expired, active: counts.Active };
+  }, [lists, counts.Active, today]);
+
   const exportColumns = [
     { key: 'name', label: 'Price list' },
     { key: 'applyTo', label: 'Apply to', value: (r) => (r.applyTo === 'selected' ? 'Selected items' : 'All items') },
@@ -246,117 +265,126 @@ export default function PriceLists({ db, setDb, currentCompany }) {
 
   if (!editing) {
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Price Lists"
-          description="Rate cards per customer segment — Retail, Wholesale, key accounts. Invoicing picks the customer's list first."
-          actions={
-            <>
-              <ListSearch
-                value={plSearch.query}
-                onChange={(v) => {
-                  plSearch.setQuery(v);
-                  setPage(1);
-                }}
-                placeholder="Search by price list name…"
-                label="Search price lists"
-              />
-              {creating ? (
-                <>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        createList();
-                      }
-                      if (e.key === 'Escape') {
-                        setCreating(false);
-                        setNewName('');
-                      }
-                    }}
-                    className="ui-input !h-9 w-44 px-2 text-sm"
-                    placeholder="Retail, Wholesale…"
-                    aria-label="New price list name"
-                  />
-                  <button type="button" onClick={createList} className="ui-btn ui-btn-primary">
-                    Create
-                  </button>
-                </>
-              ) : (
-                <button type="button" onClick={() => setCreating(true)} className="ui-btn ui-btn-primary">
-                  <Plus size={15} aria-hidden="true" /> New price list
-                </button>
-              )}
-            </>
-          }
-        />
-
-        <StatusTabs
-          value={statusFilter}
-          counts={counts}
-          onChange={(v) => {
-            setStatusFilter(v);
+      <DocumentListShell
+        title="Price Lists"
+        description="Rate cards per customer segment — invoicing reads the customer's list before the item's own price"
+        company={currentCompany}
+        search={{
+          value: plSearch.query,
+          onChange: (v) => {
+            plSearch.setQuery(v);
             setPage(1);
-          }}
-          tabs={[
-            { value: 'All', label: 'All' },
-            { value: 'Active', label: 'Active' },
-            { value: 'Inactive', label: 'Inactive' },
-            { value: 'Expired', label: 'Expired' },
-          ]}
-        >
-          <ExportButton
-            title={`Price lists — ${currentCompany?.name || 'Company'}`}
-            fileName={`PriceLists_${currentCompany?.name || 'company'}`}
-            sheetName="Price Lists"
-            columns={exportColumns}
-            rows={filtered}
-            subtitleParts={{ status: statusFilter === 'All' ? '' : statusFilter, search: plSearch.query }}
-          />
-        </StatusTabs>
-
-        {lists.length === 0 ? (
-          <div className="ui-card">
-            <EmptyState
-              icon={Tags}
-              kind="new"
-              title="No price lists yet"
-              description="A price list is a rate card — Retail, Wholesale, a key account. Invoicing reads the customer's list before the item's own price."
-              action={
-                <button type="button" onClick={() => setCreating(true)} className="ui-btn ui-btn-primary">
-                  <Plus size={15} aria-hidden="true" /> New price list
-                </button>
-              }
-            />
-          </div>
-        ) : (
-          <>
-            <div className="ui-table-scroll">
-              <table className="ui-table w-full">
+          },
+          placeholder: 'Search price lists…',
+          label: 'Search price lists',
+        }}
+        headerExtras={
+          creating ? (
+            <>
+              <input
+                type="text"
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    createList();
+                  }
+                  if (e.key === 'Escape') {
+                    setCreating(false);
+                    setNewName('');
+                  }
+                }}
+                className="ui-input !h-9 w-44 px-2 text-sm"
+                placeholder="Retail, Wholesale…"
+                aria-label="New price list name"
+              />
+              <button type="button" onClick={createList} className="ui-btn ui-btn-secondary">
+                Create
+              </button>
+            </>
+          ) : null
+        }
+        moreItems={[{ key: 'export', label: 'Export price lists', Icon: Download }]}
+        onMoreSelect={(k) => {
+          if (k !== 'export') return;
+          exportRows({
+            fileName: `PriceLists_${currentCompany?.name || 'company'}`,
+            label: 'price list(s)',
+            columns: exportColumns,
+            rows: filtered,
+          });
+        }}
+        primary={
+          <button type="button" onClick={() => setCreating(true)} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> New price list
+          </button>
+        }
+        cards={[
+          { label: 'Price lists', value: plHeadline.lists, count: true, tone: 'draft', Icon: Tags },
+          { label: 'Active', value: plHeadline.active, count: true, tone: 'paid', Icon: BadgeIndianRupee },
+          { label: 'Rates set', value: plHeadline.priced, count: true, tone: 'sent', Icon: ListChecks },
+          { label: 'Pricing nothing', value: plHeadline.empty, count: true, tone: 'outstanding', Icon: Ban },
+          { label: 'Expired', value: plHeadline.expired, count: true, tone: 'overdue', Icon: CalendarX },
+        ]}
+        tabs={[
+          { value: 'All', label: 'All', tone: 'all' },
+          { value: 'Active', label: 'Active', tone: 'paid' },
+          { value: 'Inactive', label: 'Inactive', tone: 'draft' },
+          { value: 'Expired', label: 'Expired', tone: 'overdue' },
+        ]}
+        tabsLabel="Price list status"
+        statusValue={statusFilter}
+        statusCounts={counts}
+        onStatusChange={(v) => {
+          setStatusFilter(v);
+          setPage(1);
+        }}
+        tip={{
+          storageKey: 'neev.tip.priceLists',
+          Icon: Tags,
+          text: 'A list with no rates on it prices nothing — the invoice falls back to the item’s own price and says nothing about it.',
+        }}
+      >
+        <div className="ui-table-scroll">
+              <table className="ui-table ui-table-wide ui-table-sticky">
                 <thead>
                   <tr>
-                    <th className="ui-th">Price list name</th>
-                    <th className="ui-th">Apply to</th>
-                    <th className="ui-th">From</th>
-                    <th className="ui-th">To</th>
-                    <th className="ui-th">Created on</th>
-                    <th className="ui-th">Status</th>
-                    <th className="ui-th">Description</th>
-                    <th className="ui-th"><span className="sr-only">Actions</span></th>
+                    <th scope="col">Price list name</th>
+                    <th scope="col">Apply to</th>
+                    <th scope="col">From</th>
+                    <th scope="col">To</th>
+                    <th scope="col">Created on</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Description</th>
+                    <th scope="col"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="ui-rows">
                   {pageRows.length === 0 ? (
                     <tr>
                       <td colSpan="8">
                         <EmptyState
                           icon={Tags}
-                          title="Nothing matches"
-                          description="No price list matches the search or the status filter."
+                          kind="new"
+                          title={lists.length ? 'Nothing matches' : 'No price lists yet'}
+                          description={
+                            lists.length
+                              ? 'No price list matches the search or the status filter.'
+                              : "A price list is a rate card — Retail, Wholesale, a key account. Invoicing reads the customer's list before the item's own price."
+                          }
+                          routes={
+                            lists.length
+                              ? undefined
+                              : [
+                                  {
+                                    label: 'Make one now',
+                                    description: 'Name the card, then set the rates that beat the item price.',
+                                    onSelect: () => setCreating(true),
+                                  },
+                                ]
+                          }
                         />
                       </td>
                     </tr>
@@ -411,22 +439,20 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                   )}
                 </tbody>
               </table>
-            </div>
+        </div>
 
-            <Pagination
-              total={filtered.length}
-              page={safePage}
-              perPage={perPage}
-              pageCount={pageCount}
-              onPage={setPage}
-              onPerPage={(n) => {
-                setPerPage(n);
-                setPage(1);
-              }}
-              noun="price lists"
-            />
-          </>
-        )}
+        <Pagination
+          total={filtered.length}
+          page={safePage}
+          perPage={perPage}
+          pageCount={pageCount}
+          onPage={setPage}
+          onPerPage={(n) => {
+            setPerPage(n);
+            setPage(1);
+          }}
+          noun="price lists"
+        />
 
         {openMenu?.id ? (
           <div
@@ -482,7 +508,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
             </div>
           </div>
         ) : null}
-      </div>
+      </DocumentListShell>
     );
   }
 

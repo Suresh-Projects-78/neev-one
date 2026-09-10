@@ -233,3 +233,33 @@ subject is whether the books balance, that is the wrong thing to leave out.
 Moved out of `App.jsx` into `src/features/accounting/JournalEntriesList.jsx`,
 for the same reason Customers and Vendors were: a screen that cannot be
 rendered on its own cannot be tested on its own.
+
+## Masters — Chart of Accounts, Items, Item Categories, Price Lists
+
+| Page | Figures | Tabs |
+|---|---|---|
+| Chart of Accounts | ledgers · groups · debit balances · credit balances · in suspense | Ledgers · Groups |
+| Items | items · goods · services · without HSN/SAC · without a price | Goods · Services · No HSN/SAC · No sale price |
+| Item Categories | categories · in use · unused · items categorised · typed but not listed | — |
+| Price Lists | lists · active · rates set · pricing nothing · expired | Active · Inactive · Expired |
+
+Each of those fifth figures is the one the screen exists to surface:
+
+- **In suspense** — money posted against no real account is money nobody has
+  explained yet.
+- **Without HSN/SAC** — an item missing one can still be sold, and the GST
+  return carrying it is the one that comes back.
+- **Typed but not listed** — a category typed straight onto an item is not in
+  the master, so a discount rule matching on category will never see it.
+- **Pricing nothing** — a price list with no rates on it was named and never
+  filled in; every invoice falls back to the item's own price and says nothing.
+
+Chart of Accounts keeps Ledgers and Groups as its tabs. They are two views of
+one chart rather than two statuses, but they are the choice the screen is built
+around, so they take the place the status tabs hold everywhere else — and the
+counts belong there for the same reason.
+
+Item Categories keeps its two-field add row at the top of the table it adds to.
+Price Lists had the tabs and search already; what it lacked was the figures,
+and its export was a lone download icon parked beside the tabs where no other
+list keeps one.
