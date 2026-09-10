@@ -187,6 +187,7 @@ const SharedInvoice = lazy(() => import('./features/sales/SharedInvoice'));
 const BankReconciliation = lazy(() => import('./features/cashBank/BankReconciliation'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
+const DataBackup = lazy(() => import('./features/account/DataBackup'));
 const SsoSettings = lazy(() => import('./features/account/SsoSettings'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
@@ -12103,6 +12104,7 @@ const AppShell = () => {
           { type: 'subgroup', label: 'Account' },
           { key: 'settingsAccount', label: 'Overview', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
           { key: 'settingsBilling', label: 'Billing', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsDataBackup', label: 'Data Backup', icon: Building2, perm: 'SETTINGS::Company data::VIEW' },
 
           { type: 'subgroup', label: 'Users & Access' },
           { key: 'settingsUsers', label: 'Users', icon: Users, perm: 'SETTINGS::Users::VIEW' },
@@ -13782,6 +13784,8 @@ const AppShell = () => {
         );
       case 'settingsBilling':
         return <BillingPreview currentCompany={currentCompany} />;
+      case 'settingsDataBackup':
+        return <DataBackup currentCompany={currentCompany} />;
       case 'settingsSso':
         return <SsoSettings />;
       case 'bankReco':

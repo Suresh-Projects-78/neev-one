@@ -175,6 +175,14 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
       { key: 'Document Numbering', label: 'Document Numbering', actions: SETTING },
       { key: 'Document Templates', label: 'Document Templates', actions: SETTING },
       {
+        key: 'Company data',
+        label: 'Company Data Export',
+        description:
+          'Take a copy of everything this company holds. Deliberately separate from Company Profile: ' +
+          'somebody who may correct an address should not thereby be able to walk out with the customer list.',
+        actions: [A.VIEW, A.EXPORT],
+      },
+      {
         key: 'Audit trail',
         label: 'Audit Trail',
         description: 'Read who changed what. There is nothing to grant beyond viewing: the trail cannot be edited.',

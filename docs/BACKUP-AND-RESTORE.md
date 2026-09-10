@@ -1,5 +1,21 @@
 # Backup and restore
 
+There are two different things here and conflating them would be a serious
+mistake.
+
+| | Whose | What it holds | Where |
+|---|---|---|---|
+| **System backup** | The operator's | The whole database — *every* customer's books in one file | `deploy/backup.sh`, cron, `/var/backups` |
+| **Company data backup** | The customer's | One company's own records | Settings → Account → Data Backup |
+
+A customer must never be handed a system backup: it is other people's books. An
+operator's backup is not a substitute for the customer's either — it cannot be
+read without the server, and a customer who cannot get their data out is a
+customer who is locked in.
+
+The rest of this file is the **system** backup. The company export is described
+in `docs/COMPANY-DATA-EXPORT.md`.
+
 ## What was found
 
 On 10 September 2026 the production box had **no backups of any kind**:

@@ -132,11 +132,28 @@ const hasStatedReason = (text: string, at: number) =>
   // Either comment style: what matters is that a reason is written down.
   /(\/\/|\*)\s*bounded:/.test(text.slice(Math.max(0, at - 600), at));
 
+/*
+ * A whole file may be exempt, but only where the file is one operation.
+ *
+ * `bounded-file:` at the top of dataExport.ts covers the twenty-six reads that
+ * make up a company's export — they are one act, no ceiling on any of them
+ * would be right, and marking each line would be noise nobody reads.
+ *
+ * This is the per-file exemption I argued against elsewhere, and the difference
+ * is worth stating: the objection to exempting a file is that it quietly covers
+ * whatever gets added later. Here, whatever gets added later IS part of the
+ * same export. Use it only where that is true — a file that does one thing —
+ * and never as a way to silence a file that has several jobs.
+ */
+const fileIsOneBoundedOperation = (text: string) =>
+  /(\/\/|\*)\s*bounded-file:/.test(text.slice(0, 2500));
+
 describe('reads of things that grow with trading', () => {
   it('ask the database for a bounded number of rows', () => {
     const unbounded: string[] = [];
     for (const file of readdirSync(ROUTES).filter((f) => f.endsWith('.ts'))) {
       const text = readFileSync(join(ROUTES, file), 'utf8');
+      if (fileIsOneBoundedOperation(text)) continue;
       for (const { body, at } of growingFindManys(text)) {
         // A spread page (…pageParams) counts: the take is inside it.
         if (/\btake\b/.test(body) || /\.\.\.page\b/.test(body)) continue;

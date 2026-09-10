@@ -26,15 +26,35 @@ const catalogued = new Set(
   PERMISSION_CATALOG.flatMap((m) => m.resources.map((r) => `${m.key}::${r.key}`))
 );
 
+/*
+ * And the action, not only the resource.
+ *
+ * A route guarding SETTINGS::Company Profile::EXPORT passed the resource check
+ * and could never be granted to anybody: Company Profile carries VIEW and EDIT
+ * and no EXPORT, so the permission it asked for did not exist. Checking that
+ * the resource is listed says nothing about whether the action is.
+ */
+const cataloguedActions = new Set(
+  PERMISSION_CATALOG.flatMap((m) =>
+    m.resources.flatMap((r) => r.actions.map((a) => `${m.key}::${r.key}::${a}`))
+  )
+);
+
+const actionsUsed = new Map<string, string>();
+
 const guardsInRoutes = () => {
   const found = new Map<string, string>();
+  actionsUsed.clear();
   for (const file of readdirSync(ROUTES).filter((f) => f.endsWith('.ts'))) {
     const text = readFileSync(join(ROUTES, file), 'utf8');
 
     // The direct form: requirePermission('MODULE', PermissionAction.X, 'Resource')
-    const direct = /requirePermission\(\s*'([A-Z_]+)'\s*,[^,]+,\s*'([^']+)'/g;
+    const direct = /requirePermission\(\s*'([A-Z_]+)'\s*,\s*PermissionAction\.(\w+)\s*,\s*'([^']+)'/g;
     let m: RegExpExecArray | null;
-    while ((m = direct.exec(text))) found.set(`${m[1]}::${m[2]}`, file);
+    while ((m = direct.exec(text))) {
+      found.set(`${m[1]}::${m[3]}`, file);
+      actionsUsed.set(`${m[1]}::${m[3]}::${m[2]}`, file);
+    }
 
     /*
      * And the config form. quoteDocs.ts guards five document types from a table
@@ -58,7 +78,17 @@ describe('the permission catalogue', () => {
     expect(missing).toEqual([]);
   });
 
+  it('covers the action each route asks for, not only the resource', () => {
+    guardsInRoutes();
+    const missing: string[] = [];
+    for (const [key, file] of actionsUsed) {
+      if (!cataloguedActions.has(key)) missing.push(`${key}  (${file})`);
+    }
+    expect(missing).toEqual([]);
+  });
+
   it('finds the guards at all, so an empty pass cannot look like a pass', () => {
     expect(guardsInRoutes().size).toBeGreaterThan(10);
+    expect(actionsUsed.size).toBeGreaterThan(10);
   });
 });
