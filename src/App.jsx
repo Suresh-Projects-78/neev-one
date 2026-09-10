@@ -77,7 +77,7 @@ import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, norma
 import { nextFreeVoucherNumber } from './utils/docSettings';
 import { dueDateFor, termDaysFor, termsLabel } from './utils/paymentTerms';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
-import { formatMoney, formatMoneyCompact, round2 } from './utils/money';
+import { formatMoney, round2 } from './utils/money';
 import { downloadCsv, downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
 import { useColumnFilters, ColumnHeader } from './components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from './components/ListToolbar';
@@ -257,6 +257,9 @@ const resolveServerOrgId = (company) => {
 
 const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   const expenses = db.expenses.filter((e) => e.companyId === currentCompany.id);
+  // This screen had no search at all — the only way to find a voucher was to
+  // scroll, or to know its date and narrow the period around it.
+  const expenseSearch = useListSearch(expenses, ['number', 'vendorName', 'description', 'refNo', 'date']);
   const [statusFilter, setStatusFilter] = useState('All');
   const [isCreating, setIsCreating] = useState(false);
   const [fromDate, setFromDate] = useState('');
@@ -294,7 +297,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   };
 
   const filteredExpenses = expenseColFilters.applyFilters(
-    expenses
+    expenseSearch.filtered
       .filter((e) => {
         const derived = getDerivedStatus(e);
         if (statusFilter !== 'All' && derived !== statusFilter) return false;
@@ -314,6 +317,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       description: (r) => r.description,
       vendor: (r) => r.vendorName,
       refNo: (r) => r.refNo,
+      refDate: (r) => r.refDate,
       amount: (r) => r.total,
       status: (r) => getDerivedStatus(r),
     }
@@ -557,6 +561,33 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     );
   };
 
+  /*
+   * The status counts the tabs carry.
+   *
+   * Counted over the period and the search, not the whole book: a strip of
+   * counts describing rows the table is not showing is two sets of figures on
+   * one screen with nothing saying so.
+   */
+  const expenseStatusCounts = useMemo(() => {
+    const inScope = expenseSearch.filtered.filter((e) => inPeriod(e));
+    const counts = { All: inScope.length };
+    for (const e of inScope) {
+      const st = getDerivedStatus(e);
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expenseSearch.filtered, fromDate, toDate]);
+
+  const EXPENSE_STATUS_TABS = [
+    { value: 'All', label: 'All', tone: 'all' },
+    { value: 'Draft', label: 'Draft', tone: 'draft' },
+    { value: 'Unpaid', label: 'Unpaid', tone: 'sent' },
+    { value: 'Partial', label: 'Partly paid', tone: 'partial' },
+    { value: 'Paid', label: 'Paid', tone: 'paid' },
+    { value: 'Over due', label: 'Overdue', tone: 'overdue' },
+  ];
+
   if (isCreating) {
     return (
       <div className="space-y-6">
@@ -580,6 +611,7 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     );
   }
 
+
   const expenseFlow = (() => {
     const active = expenses.filter((e) => String(e?.status || '') !== 'Draft');
     const total = active.reduce((sum, e) => sum + Number(e?.total || 0), 0);
@@ -587,128 +619,126 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     return { total, paid, unpaid: Math.max(0, total - paid), count: active.length };
   })();
 
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Expenses</h3>
+    <DocumentListShell
+      title="Expenses"
+      description="What the business spent, and the input GST you can claim against it"
+      company={currentCompany}
+      search={{
+        value: expenseSearch.query,
+        onChange: expenseSearch.setQuery,
+        placeholder: 'Search expenses…',
+        label: 'Search expenses',
+      }}
+      moreItems={[
+        { key: 'export', label: 'Export expenses', Icon: Download },
+        { key: 'template', label: 'Download import template', Icon: FileText },
+        { key: 'import', label: 'Import expenses', Icon: Upload },
+      ]}
+      onMoreSelect={(k) => {
+        if (k === 'export') exportExpenses();
+        else if (k === 'template') downloadImportTemplate();
+        else if (k === 'import') importInputRef.current?.click();
+      }}
+      primary={
         <PermissionButton
           permission="EXPENSES::Expenses::CREATE"
           onClick={() => setIsCreating(true)}
           className="ui-btn ui-btn-primary"
         >
-          <Plus size={20} /> New Expense
+          <Plus size={16} aria-hidden="true" /> New Expense
         </PermissionButton>
-      </div>
-
-      {expenseFlow.count > 0 ? (
-        <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatTile
-            label="Spent"
-            amount={expenseFlow.total}
-            format={(v) => formatMoneyCompact(v, currentCompany)}
-            title={formatMoney(expenseFlow.total, currentCompany)}
-            hint={`Across ${expenseFlow.count} voucher${expenseFlow.count === 1 ? '' : 's'}`}
-            icon={Receipt}
-          />
-          <StatTile
-            label="Paid"
-            amount={expenseFlow.paid}
-            format={(v) => formatMoneyCompact(v, currentCompany)}
-            title={formatMoney(expenseFlow.paid, currentCompany)}
-            hint={expenseFlow.total > 0 ? `${Math.round((expenseFlow.paid / expenseFlow.total) * 100)}% of spend` : 'Nothing yet'}
-            tone="pos"
-            icon={Check}
-          />
-          <StatTile
-            label="Unpaid"
-            amount={expenseFlow.unpaid}
-            format={(v) => formatMoneyCompact(v, currentCompany)}
-            title={formatMoney(expenseFlow.unpaid, currentCompany)}
-            tone={expenseFlow.unpaid > 0 ? 'neg' : 'neutral'}
-            hint="Awaiting payment"
-            icon={FileText}
-          />
-          <StatTile
-            label="Average voucher"
-            amount={expenseFlow.count ? expenseFlow.total / expenseFlow.count : 0}
-            format={(v) => formatMoneyCompact(v, currentCompany)}
-            title={formatMoney(expenseFlow.count ? expenseFlow.total / expenseFlow.count : 0, currentCompany)}
-            hint="Spend per voucher"
-            icon={ClipboardList}
+      }
+      cards={[
+        { label: 'Vouchers', value: expenseFlow.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Spent', value: expenseFlow.total, tone: 'sent', Icon: Receipt },
+        { label: 'Paid', value: expenseFlow.paid, tone: 'paid', Icon: Check },
+        { label: 'Unpaid', value: expenseFlow.unpaid, tone: 'outstanding', Icon: FileText },
+        {
+          label: 'Average voucher',
+          value: expenseFlow.count ? expenseFlow.total / expenseFlow.count : 0,
+          tone: 'partial',
+          Icon: BadgePercent,
+        },
+      ]}
+      tabs={EXPENSE_STATUS_TABS}
+      tabsLabel="Expense status"
+      statusValue={statusFilter}
+      statusCounts={expenseStatusCounts}
+      onStatusChange={setStatusFilter}
+      above={
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="sr-only"
+          onChange={(e) => {
+            const f = e.target.files?.[0] || null;
+            e.target.value = '';
+            if (f) importExpenses(f);
+          }}
+        />
+      }
+    >
+      {/* The period, at the top of the table it governs. It used to be a card
+          of its own between the tabs and the rows, carrying three export
+          buttons that belong with the other page-level actions. */}
+      <div className="flex flex-wrap items-end gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+        <div>
+          <label className="ui-label" htmlFor="expense-from">From</label>
+          <input
+            id="expense-from"
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="ui-input !h-9 text-sm"
           />
         </div>
-      ) : null}
-
-      <div className="flex items-center gap-2 flex-wrap">
-        {['All', 'Paid', 'Unpaid', 'Partial', 'Over due', 'Draft'].map((s) => (
-          <button
-            key={s}
-            type="button"
-            onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1 rounded-full text-sm border ${ statusFilter === s ? 'ui-sunken ui-border-c ui-fg' : 'ui-surface ui-border-c ui-fg'
-            }`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-
-      <div className="ui-card p-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="ui-label">From</label>
-          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="ui-input" />
-        </div>
-        <div>
-          <label className="ui-label">To</label>
-          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="ui-input" />
+          <label className="ui-label" htmlFor="expense-to">To</label>
+          <input
+            id="expense-to"
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="ui-input !h-9 text-sm"
+          />
         </div>
         {fromDate || toDate ? (
-          <button type="button" onClick={() => { setFromDate(''); setToDate(''); }} className="ui-btn ui-btn-secondary !h-10">
+          <button
+            type="button"
+            onClick={() => {
+              setFromDate('');
+              setToDate('');
+            }}
+            className="ui-btn ui-btn-secondary"
+          >
             Clear period
           </button>
         ) : null}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button type="button" onClick={exportExpenses} className="ui-btn ui-btn-secondary !h-10">
-            <Download size={15} aria-hidden="true" /> Export
-          </button>
-          <button type="button" onClick={downloadImportTemplate} className="ui-btn ui-btn-secondary !h-10">
-            Import template
-          </button>
-          <button type="button" onClick={() => importInputRef.current?.click()} className="ui-btn ui-btn-secondary !h-10">
-            <Upload size={15} aria-hidden="true" /> Import
-          </button>
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0] || null;
-              e.target.value = '';
-              if (f) importExpenses(f);
-            }}
-          />
-        </div>
       </div>
 
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <div className="ui-table-scroll">
-        <table className="ui-table w-full ui-table-wide ui-table-sticky">
-          <thead className="ui-sunken border-b">
+      <div className="ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
             <tr>
-              <ColumnHeader label="Voucher #" col="number" state={expenseColFilters} className="ui-th" />
-              <ColumnHeader label="Date" col="date" state={expenseColFilters} className="ui-th" />
-              <ColumnHeader label="Due Date" col="dueDate" state={expenseColFilters} className="ui-th" />
-              <ColumnHeader label="Narration" col="description" state={expenseColFilters} className="ui-th" />
-              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} className="ui-th" />
-              <ColumnHeader label="Ref No" col="refNo" state={expenseColFilters} className="ui-th" />
-              <th className="ui-th">Ref Date</th>
-              <ColumnHeader label="Amount" col="amount" state={expenseColFilters} className="ui-th" />
-              <ColumnHeader label="Status" col="status" state={expenseColFilters} className="ui-th" />
-              <th className="ui-th">Actions</th>
+              <ColumnHeader label="Voucher #" col="number" state={expenseColFilters} />
+              <ColumnHeader label="Date" col="date" state={expenseColFilters} />
+              <ColumnHeader label="Due date" col="dueDate" state={expenseColFilters} />
+              <ColumnHeader label="Narration" col="description" state={expenseColFilters} />
+              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} />
+              <ColumnHeader label="Ref no" col="refNo" state={expenseColFilters} />
+              {/* Filterable like every column beside it. Left as a plain
+                  heading it also wore the table's uppercase, so one column in
+                  the row read in a different case from the rest. */}
+              <ColumnHeader label="Ref date" col="refDate" state={expenseColFilters} />
+              <ColumnHeader label="Amount" col="amount" state={expenseColFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Status" col="status" state={expenseColFilters} />
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="ui-rows">
             {filteredExpenses.length === 0 ? (
               <tr>
                 <td colSpan="10" className="p-0">
@@ -785,15 +815,14 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             )}
           </tbody>
         </table>
-        </div>
-        <TableTotals
-          count={filteredExpenses.length}
-          totalCount={expenses.length}
-          noun="vouchers"
-          figures={expenseTotals}
-        />
       </div>
-    </div>
+      <TableTotals
+        count={filteredExpenses.length}
+        totalCount={expenses.length}
+        noun="vouchers"
+        figures={expenseTotals}
+      />
+    </DocumentListShell>
   );
 };
 

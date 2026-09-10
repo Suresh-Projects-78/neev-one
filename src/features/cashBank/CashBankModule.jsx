@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { MoreVertical, Pencil, Trash2 , Link2, CheckCircle2} from 'lucide-react';
+import { CheckCircle2, Download, FileSpreadsheet, Link2, MoreVertical, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
-import { formatMoney, formatMoneyCompact, round2 } from '../../utils/money';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { formatMoney, round2 } from '../../utils/money';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
-import { StatTile, TableTotals, StatusPill } from '../../components/ui/Primitives';
+import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 import { csvSafeValue } from '../../utils/csv';
@@ -1873,199 +1874,226 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     setOpenActionId(null);
   };
 
+  const txnExportColumns = [
+    { key: 'date', label: 'Date' },
+    { key: 'description', label: 'Description' },
+    { key: 'ledger', label: 'Ledger', value: (t) => (t.ledgerId ? ledgerById.get(String(t.ledgerId))?.name || '' : '') },
+    { key: 'narration', label: 'Narration' },
+    { key: 'payment', label: 'Payment', value: (t) => (t.direction === 'OUT' ? Number(t.amount || 0) : '') },
+    { key: 'receipt', label: 'Receipt', value: (t) => (t.direction === 'OUT' ? '' : Number(t.amount || 0)) },
+    { key: 'status', label: 'Status', value: (t) => (t.readOnly ? 'Recorded' : t.ledgerId ? 'Categorised' : 'Uncategorised') },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h3 className="ui-t-sec">Cash & Bank</h3>
-          <div className="text-sm ui-muted">Reconcile bank/cash transactions with receipts and payments.</div>
-        </div>
-
-        {/*
-          One primary action, and it has to be the one you can actually take.
-          This header carried five buttons of equal weight, and the only one
-          styled as primary — Add Transaction — is disabled until a cash or bank
-          account exists. So the first thing a new company saw here was five
-          grey buttons and nothing to press, with the real starting point (New
-          Account) dressed as a secondary.
-
-          The primary now follows the state: New Account until there is one,
-          Add Transaction after. Delete Selected is gone from the header until
-          something is selected, rather than sitting there permanently dead.
-        */}
-        <div className="flex items-center gap-2">
+    <DocumentListShell
+      title="Cash & Bank"
+      description="Reconcile bank and cash transactions against receipts and payments"
+      company={currentCompany}
+      search={{
+        value: txnSearch.query,
+        onChange: txnSearch.setQuery,
+        placeholder: 'Search transactions…',
+        label: 'Search transactions',
+      }}
+      headerExtras={
+        <>
+          {/*
+            The account governs every figure and every row below it, so it sits
+            with the controls that do, not in a panel of its own halfway down
+            the page.
+          */}
+          <label className="sr-only" htmlFor="cashbank-account">
+            Cash/bank account
+          </label>
+          <select
+            id="cashbank-account"
+            value={selectedAccountId}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
+            className="ui-select !h-9 w-44 text-sm"
+          >
+            <option value="">Select account</option>
+            {cashBankAccounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          {/* Only when there is a selection to act on. It used to sit here
+              permanently dead, which teaches people to ignore the row. */}
           {anySelected ? (
             <button
               type="button"
               onClick={deleteSelectedTxns}
               className="ui-btn ui-btn-secondary text-[rgb(var(--neg))]"
             >
-              Delete Selected
+              Delete selected
             </button>
           ) : null}
-          <button
-            type="button"
-            onClick={downloadUploadTemplate}
-            className="ui-btn ui-btn-secondary"
-          >
-            Download Template
-          </button>
-          <button
-            type="button"
-            onClick={openUpload}
-            disabled={accountsEmpty}
-            title={accountsEmpty ? 'Add a cash or bank account first.' : undefined}
-            className="ui-btn ui-btn-secondary disabled:opacity-50"
-          >
-            Upload Statement
-          </button>
-          <button
-            type="button"
-            onClick={openCreateAccount}
-            className={accountsEmpty ? 'ui-btn ui-btn-primary' : 'ui-btn ui-btn-secondary'}
-          >
-            New Account
-          </button>
-          {accountsEmpty ? null : (
-            <button type="button" onClick={openAddTxn} className="ui-btn ui-btn-primary">
-              Add Transaction
-            </button>
-          )}
-        </div>
-      </div>
-
-      {allTxns.length > 0 ? (
-        <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatTile
-            label="Money in"
-            amount={flow.moneyIn}
-            format={(v) => formatMoneyCompact(v, currentCompany)}
-            title={formatMoney(flow.moneyIn, currentCompany)}
-            hint={selectedAccount ? selectedAccount.name : 'All accounts'}
-            tone="pos"
-            icon={ArrowDownLeft}
-          />
-          <StatTile
-            label="Money out"
-            amount={flow.moneyOut}
-            format={(v) => formatMoneyCompact(v, currentCompany)}
-            title={formatMoney(flow.moneyOut, currentCompany)}
-            hint={`${allTxns.length} transaction${allTxns.length === 1 ? '' : 's'}`}
-            tone="neg"
-            icon={ArrowUpRight}
-          />
-          <StatTile
-            label="Net movement"
-            amount={flow.net}
-            format={(v) => formatMoneyCompact(v, currentCompany)}
-            title={formatMoney(flow.net, currentCompany)}
-            hint="In less out, this account"
-            icon={Landmark}
-          />
-          <StatTile
-            label="To categorise"
-            value={String(uncategorisedCount)}
-            hint={uncategorisedCount ? 'Lines awaiting a ledger' : 'Everything categorised'}
-            icon={ListTodo}
-          />
-        </div>
-      ) : null}
-
-      <input
-        ref={uploadInputRef}
-        type="file"
-        accept=".csv,text/csv"
-        className="ui-input sr-only"
-        onChange={(e) => {
-          const f = e.target.files?.[0] || null;
-          e.target.value = '';
-          if (f) onUploadStatement(f);
-        }}
-      />
-
-      <div className="ui-surface border rounded-xl p-4 space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="md:col-span-2">
-            <label className="ui-label">Cash/Bank Account</label>
-            <select
-              value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-              className="ui-select w-full"
-            >
-              <option value="">Select</option>
-              {cashBankAccounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="ui-label">View</label>
-            <select value={view} onChange={(e) => setView(e.target.value)} className="ui-select w-full">
-              <option value="uncategorised">Uncategorised ({uncategorisedCount})</option>
-              <option value="categorised">Categorised ({categorisedCount})</option>
-              <option value="all">All ({allTxns.length})</option>
-            </select>
-          </div>
-        </div>
-
-        <ListToolbar
-          search={txnSearch.query}
-          onSearch={txnSearch.setQuery}
-          placeholder="Search transactions (description, narration, date)"
-          count={txns.length}
-          countLabel="transactions"
-          onExport={() =>
-            exportRows({
-              fileName: `CashBank_${selectedAccount?.name || 'account'}`,
-              label: 'transaction(s)',
-              columns: [
-                { key: 'date', label: 'Date' },
-                { key: 'description', label: 'Description' },
-                { key: 'ledger', label: 'Ledger', value: (t) => (t.ledgerId ? ledgerById.get(String(t.ledgerId))?.name || '' : '') },
-                { key: 'narration', label: 'Narration' },
-                { key: 'payment', label: 'Payment', value: (t) => (t.direction === 'OUT' ? Number(t.amount || 0) : '') },
-                { key: 'receipt', label: 'Receipt', value: (t) => (t.direction === 'OUT' ? '' : Number(t.amount || 0)) },
-                { key: 'status', label: 'Status', value: (t) => (t.readOnly ? 'Recorded' : t.ledgerId ? 'Categorised' : 'Uncategorised') },
-              ],
-              rows: txns,
-            })
+        </>
+      }
+      moreItems={[
+        { key: 'export', label: 'Export transactions', Icon: Download },
+        { key: 'template', label: 'Download statement template', Icon: FileSpreadsheet },
+        { key: 'upload', label: 'Upload statement', Icon: Upload },
+        { sep: true },
+        { key: 'newAccount', label: 'New cash or bank account', Icon: Landmark, group: 'Accounts' },
+      ]}
+      onMoreSelect={(k) => {
+        if (k === 'export') {
+          exportRows({
+            fileName: `CashBank_${selectedAccount?.name || 'account'}`,
+            label: 'transaction(s)',
+            columns: txnExportColumns,
+            rows: txns,
+          });
+          return;
+        }
+        if (k === 'template') {
+          downloadUploadTemplate();
+          return;
+        }
+        if (k === 'upload') {
+          if (accountsEmpty) {
+            notify.error('Add a cash or bank account first.');
+            return;
           }
-        />
-
-        {!selectedAccount ? (
-          <div className="text-sm ui-muted">Select an account to see its transactions.</div>
+          openUpload();
+          return;
+        }
+        if (k === 'newAccount') openCreateAccount();
+      }}
+      primary={
+        /*
+          One primary, and it has to be the one you can actually take. The
+          header carried five buttons of equal weight and the only one styled
+          as primary — Add Transaction — is disabled until an account exists,
+          so a new company saw a row of grey buttons and nothing to press.
+        */
+        accountsEmpty ? (
+          <button type="button" onClick={openCreateAccount} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> New Account
+          </button>
         ) : (
-          <div className="border rounded-xl overflow-hidden">
-            <div className="ui-table-scroll">
-            <table className="ui-table w-full ui-table-sticky">
-              <thead className="ui-sunken border-b">
+          <button type="button" onClick={openAddTxn} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> Add Transaction
+          </button>
+        )
+      }
+      cards={[
+        { label: 'Transactions', value: allTxns.length, count: true, tone: 'draft', Icon: Landmark },
+        { label: 'Money in', value: flow.moneyIn, tone: 'paid', Icon: ArrowDownLeft },
+        { label: 'Money out', value: flow.moneyOut, tone: 'overdue', Icon: ArrowUpRight },
+        { label: 'Net movement', value: flow.net, tone: 'sent', Icon: Landmark },
+        { label: 'To categorise', value: uncategorisedCount, count: true, tone: 'outstanding', Icon: ListTodo },
+      ]}
+      tabs={[
+        { value: 'uncategorised', label: 'Uncategorised', tone: 'outstanding' },
+        { value: 'categorised', label: 'Categorised', tone: 'paid' },
+        { value: 'all', label: 'All', tone: 'all' },
+      ]}
+      tabsLabel="Transaction view"
+      statusValue={view}
+      statusCounts={{ uncategorised: uncategorisedCount, categorised: categorisedCount, all: allTxns.length }}
+      onStatusChange={setView}
+      above={
+        <input
+          ref={uploadInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="ui-input sr-only"
+          onChange={(e) => {
+            const f = e.target.files?.[0] || null;
+            e.target.value = '';
+            if (f) onUploadStatement(f);
+          }}
+        />
+      }
+      tip={{
+        storageKey: 'neev.tip.cashBank',
+        Icon: ListTodo,
+        text: 'A statement line becomes a book entry when you give it a ledger — until then it sits under Uncategorised.',
+      }}
+    >
+      <div className="ui-table-scroll">
+            <table className="ui-table ui-table-wide ui-table-sticky">
+              <thead>
                 <tr>
-                  <th className="ui-th">
+                  <th scope="col" className="w-8">
                     <input
                       type="checkbox"
+                      className="ui-checkbox"
+                      aria-label="Select every transaction in view"
                       checked={allVisibleSelected}
                       onChange={(e) => toggleSelectAllVisible(e.target.checked)}
                       disabled={txns.length === 0}
                     />
                   </th>
-                  <ColumnHeader label="Date" col="date" state={txnFilters} className="ui-th" />
-                  <ColumnHeader label="Description" col="description" state={txnFilters} className="ui-th" />
-                  <ColumnHeader label="Ledger" col="ledger" state={txnFilters} className="ui-th" />
-                  <ColumnHeader label="Narration" col="narration" state={txnFilters} className="ui-th" />
-                  <ColumnHeader label="Payment" col="payment" state={txnFilters} className="ui-th ui-num" align="right" />
-                  <ColumnHeader label="Receipts" col="receipt" state={txnFilters} className="ui-th ui-num" align="right" />
-                  <ColumnHeader label="Status" col="status" state={txnFilters} className="ui-th" />
-                  <th className="ui-th ui-num">Action</th>
+                  <ColumnHeader label="Date" col="date" state={txnFilters} />
+                  <ColumnHeader label="Description" col="description" state={txnFilters} />
+                  <ColumnHeader label="Ledger" col="ledger" state={txnFilters} />
+                  <ColumnHeader label="Narration" col="narration" state={txnFilters} />
+                  <ColumnHeader label="Payment" col="payment" state={txnFilters} className="ui-num" align="right" />
+                  <ColumnHeader label="Receipts" col="receipt" state={txnFilters} className="ui-num" align="right" />
+                  <ColumnHeader label="Status" col="status" state={txnFilters} />
+                  <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
-                {txns.length === 0 ? (
+              <tbody className="ui-rows">
+                {!selectedAccount ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-10 text-center text-sm ui-muted">
-                      No transactions.
+                    <td colSpan={9}>
+                      <EmptyState
+                        icon={Landmark}
+                        kind="new"
+                        title={accountsEmpty ? 'No cash or bank account yet' : 'Pick an account'}
+                        description={
+                          accountsEmpty
+                            ? 'Every payment and receipt moves through one of these. Name the cash box or the bank account and its book starts here.'
+                            : 'Choose the account whose book you want to see, from the header.'
+                        }
+                        routes={
+                          accountsEmpty
+                            ? [
+                                {
+                                  label: 'Add an account',
+                                  description: 'Cash in hand, or a bank account with its number.',
+                                  onSelect: () => openCreateAccount(),
+                                },
+                              ]
+                            : undefined
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : txns.length === 0 ? (
+                  <tr>
+                    <td colSpan={9}>
+                      <EmptyState
+                        icon={ListTodo}
+                        kind="new"
+                        title={view === 'uncategorised' && allTxns.length ? 'Nothing left to categorise' : 'No transactions'}
+                        description={
+                          view === 'uncategorised' && allTxns.length
+                            ? 'Every line in this account has a ledger against it.'
+                            : 'Money moving through this account — a bank charge, interest, a transfer — is recorded here.'
+                        }
+                        routes={
+                          allTxns.length
+                            ? undefined
+                            : [
+                                {
+                                  label: 'Add one now',
+                                  description: 'Date, amount, which way the money went.',
+                                  onSelect: () => openAddTxn(),
+                                },
+                                {
+                                  label: 'Upload a statement',
+                                  description: 'Bring the bank’s own CSV across and categorise it here.',
+                                  onSelect: () => (accountsEmpty ? openCreateAccount() : openUpload()),
+                                },
+                              ]
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -2182,17 +2210,14 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                 )}
               </tbody>
             </table>
-            </div>
-            <TableTotals
-              count={txns.length}
-              totalCount={txnSearch.filtered.length}
-              noun="transactions"
-              figures={txnTotals}
-            />
-          </div>
-        )}
       </div>
-    </div>
+      <TableTotals
+        count={txns.length}
+        totalCount={txnSearch.filtered.length}
+        noun="transactions"
+        figures={txnTotals}
+      />
+    </DocumentListShell>
   );
 };
 

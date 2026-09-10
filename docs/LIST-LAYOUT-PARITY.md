@@ -151,3 +151,36 @@ paid.
   were not, so the Date column showed a dash while Ref Date showed the bill's
   date. The parity test now checks every list's row has as many cells as the
   header has columns.
+
+## Cash & Bank, and Expenses
+
+**Cash & Bank** carried four header buttons of equal weight — and the only one
+styled as primary, Add Transaction, is disabled until a cash or bank account
+exists, so a new company saw a row of grey buttons and nothing to press. The
+account picker and the view select sat in a panel of their own between the
+header and the rows: a second toolbar for controls that belong with the first.
+
+- The primary follows the state: **New Account** until there is one, **Add
+  Transaction** after.
+- The account picker moved into the header, beside search — it governs every
+  figure and every row below it.
+- Download template, Upload statement, Export and New account moved into More.
+- The view select became tabs with counts: Uncategorised · Categorised · All.
+- Figures: transactions · money in · money out · net movement · to categorise.
+- "No transactions." became a real empty state that tells the three cases apart:
+  no account yet, no account chosen, nothing left to categorise.
+
+**Expenses** had no search at all — the only way to find a voucher was to
+scroll, or to know its date and narrow the period around it. It also had six
+plain pill filters with no counts, and a card holding two date inputs and three
+export buttons between the tabs and the table.
+
+- Search in the header; Export, Import template and Import behind More.
+- Status pills became tabs with counts (over the period and the search, not the
+  whole book — a strip of counts describing rows the table is not showing is
+  two sets of figures on one screen with nothing saying so).
+- Figures: vouchers · spent · paid · unpaid · average voucher.
+- The period moved to the top of the table it governs.
+- Ref date became a filterable column like the ones beside it; as a plain
+  heading it also wore the table's uppercase, so one column read in a different
+  case from the rest.
