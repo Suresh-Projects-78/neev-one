@@ -3729,7 +3729,7 @@ export const ChartAccountForm = ({
                       ))}
                     </select>
                   </PartyFormRow>
-                  <PartyFormRow label="Branch Address" htmlFor="ledger-bank-braddr">
+                  <PartyFormRow label="Branch Address" htmlFor="ledger-bank-braddr" className="lg:col-span-2">
                     <textarea id="ledger-bank-braddr" rows={3} maxLength={250} value={formData.bankBranchAddress} onChange={(e) => setFormData((p) => ({ ...p, bankBranchAddress: e.target.value }))} className="ui-input w-full" />
                     <p className="ui-caption mt-1 text-right">{String(formData.bankBranchAddress || '').length}/250</p>
                   </PartyFormRow>
@@ -3750,7 +3750,7 @@ export const ChartAccountForm = ({
                 <PartyFormRow label="PAN" htmlFor="ledger-pan" hint="Five letters, four digits, one letter — AABCU9603R.">
                   <input id="ledger-pan" value={formData.pan} onChange={(e) => setFormData((p) => ({ ...p, pan: e.target.value.toUpperCase() }))} className="ui-input ui-mono w-full" maxLength={10} />
                 </PartyFormRow>
-                <PartyFormRow label="GSTIN" htmlFor="ledger-gstin">
+                <PartyFormRow label="GSTIN" htmlFor="ledger-gstin" className="lg:col-span-2">
                   <div className="flex items-center gap-2">
                     <input id="ledger-gstin" value={formData.gstin} onChange={(e) => setFormData((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))} className="ui-input ui-mono min-w-0 flex-1" maxLength={15} placeholder="Enter 15 digit GSTIN" />
                     <button
@@ -3829,7 +3829,7 @@ export const ChartAccountForm = ({
                     ['TDS ledger nature', tdsLedgerNature(groupById.get(String(formData.groupId || '').trim()))],
                   ];
                   return (
-                    <dl className="sm:col-span-2 grid gap-x-5 gap-y-1.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
+                    <dl className="lg:col-span-2 grid gap-x-5 gap-y-1.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
                       {rows.map(([k, v]) => (
                         <Fragment key={k}>
                           <dt className="ui-t-label">{k}</dt>
@@ -3840,7 +3840,7 @@ export const ChartAccountForm = ({
                   );
                 })()}
 
-                <p className="ui-caption sm:col-span-2">
+                <p className="ui-caption lg:col-span-2">
                   {formData.tdsSection
                     ? `Threshold and rate rules come from the ${formData.tdsSection} master; the TDS engine does the calculation.`
                     : 'Choose the section this ledger accumulates. The rate and threshold follow from the section master.'}

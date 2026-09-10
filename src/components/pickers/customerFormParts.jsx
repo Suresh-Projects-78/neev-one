@@ -36,8 +36,8 @@ export const CURRENCY_OPTIONS = [
  * prose under every field is longer than the form, and the person filling it in
  * for the twentieth time is not reading any of it.
  */
-export const FormRow = ({ label, hint = '', required = false, htmlFor = '', children }) => (
-  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[minmax(8rem,12rem)_minmax(16rem,1fr)] sm:items-start sm:gap-5">
+export const FormRow = ({ label, hint = '', required = false, htmlFor = '', className = '', children }) => (
+  <div className={`grid grid-cols-1 gap-1.5 sm:grid-cols-[minmax(8rem,12rem)_minmax(16rem,1fr)] sm:items-start sm:gap-5 ${className}`}>
     <div className="flex items-center gap-1.5 sm:pt-2">
       {/* A real <label> where the control has an id: a bare <span> beside a
           field names it for a sighted reader and for nobody else. */}
