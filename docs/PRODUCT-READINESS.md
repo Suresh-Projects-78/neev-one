@@ -8,8 +8,8 @@ starts — the same way the six document forms were done.
 | 1 | Six masters reach the server | Clear the browser and they are gone | **done** |
 | 2 | CSV formula injection | An export runs code on the accountant's machine | **done** |
 | 3 | Audit trail can be read | Written in 7 places, readable in none | **done** |
-| 4 | Bank reconciliation | The largest genuinely missing module | **next** |
-| 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | 5th |
+| 4 | Bank reconciliation | The largest genuinely missing module | **done** |
+| 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | **next** |
 | 6 | Per-user module assignment | Waiting on one decision | 6th |
 | 7 | The deferred shells, built for real | Admin area, dashboard, billing, SSO, subdomains | 7th |
 
@@ -146,3 +146,30 @@ passed while a query scoped by account alone leaked one company's trail to
 another company in the same account. On an audit trail that is the worse leak —
 it is a list of everything a client has ever changed, and the CA firm case puts
 two clients side by side. The facets endpoint had it too.
+
+## 4 — done
+
+The screen an accountant signs: balance per the books, less what the bank has
+not seen, plus what the books have not recorded, against the balance per the
+statement — and the difference, stated rather than rounded away.
+
+What was already there was an **import**, and it was the wrong operation. It
+turned statement rows into new transactions, warned that some looked like
+duplicates, and imported them anyway. On a book that already records its
+receipts and payments — which is the point of the product — that doubles the
+money. The import is untouched; reconciliation sits beside it and creates
+nothing.
+
+The matching rules are in `utils/bankReco.js` with the reasoning in the file.
+The one that matters most is **one to one**: without it a single payment quietly
+reconciles three statement lines, the difference still comes to zero, and two of
+the three are money nobody ever recorded.
+
+Rejecting a suggested match puts **both** of its sides back among the leftovers.
+Dropping them instead leaves the difference wrong while the screen still claims
+the account reconciles, which is worse than not offering the match at all.
+
+The statement parser moved out of the cash-book screen so importing and
+reconciling read the same file the same way. Two parsers for one format is two
+sets of rules about what a date looks like, and the reconciler would have
+disagreed with the importer about the very rows it was meant to match.

@@ -184,6 +184,7 @@ const FixedAssets = lazy(() => import('./features/accounting/FixedAssets'));
 const YearEndClose = lazy(() => import('./features/accounting/YearEndClose'));
 const CostCenters = lazy(() => import('./features/accounting/CostCenters'));
 const AuditTrail = lazy(() => import('./features/audit/AuditTrail'));
+const BankReconciliation = lazy(() => import('./features/cashBank/BankReconciliation'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -11988,6 +11989,7 @@ const AppShell = () => {
         ],
       },
       { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW' },
+      { type: 'item', key: 'bankReco', label: 'Bank Reconciliation', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW' },
       // A group of one is a menu that opens onto itself. With the duplicate
       // Payments entry gone, Expenses is a destination, not a section.
       { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, tone: 'expenses', perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
@@ -13723,6 +13725,8 @@ const AppShell = () => {
         return <ApprovalsInbox currentCompany={currentCompany} />;
       case 'settingsAudit':
         return <AuditTrail />;
+      case 'bankReco':
+        return <BankReconciliation db={db} currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':
         return <LedgerTrialBalance currentCompany={currentCompany} />;
       case 'settingsUsersRoles': {
