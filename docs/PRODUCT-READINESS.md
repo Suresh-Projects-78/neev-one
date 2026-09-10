@@ -433,3 +433,20 @@ deliberately.
 
 Still browser-only after this: `fyLocks`, `gstRates`, `posDayCloses`. None is
 ledger data.
+
+### The period lock, same day
+
+A closed year was closed in one browser. The server already refuses to post
+into a locked period (`fiscalYear.lockedThrough`) and nothing ever set it, so a
+year the accountant had closed stayed open to every other user and every other
+machine.
+
+- Closing, partial-closing and reopening now write the lock through
+  `POST /ledger/fiscal-years/:name/lock` first, and change nothing locally if
+  the server refuses — the screen never shows a year as closed that the server
+  would still accept postings into.
+- Reopening still has to name a year, so the year comes from the existing
+  lock's date, not from the value being written. Passing no name reopened
+  nothing.
+- Hydration takes the furthest `lockedThrough` across the org's fiscal years
+  and replaces the local row, rather than appending beside it.

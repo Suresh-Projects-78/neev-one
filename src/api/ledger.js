@@ -75,3 +75,20 @@ export const reverseJournalEntry = (entryId, narration) =>
     body: { narration: narration || undefined },
     ...opts,
   });
+
+/** The fiscal years the server knows about, and how far each is locked. */
+export const getFiscalYears = () => apiFetch(`${base()}/fiscal-years`, opts);
+
+/**
+ * Locking (or unlocking) a fiscal year on the server.
+ *
+ * The server refuses to post into a locked period, so this is what makes a
+ * closed year actually closed. A lock held only in the browser stops the
+ * machine that set it and nothing else.
+ */
+export const lockFiscalYear = (name, lockedThrough) =>
+  apiFetch(`${base()}/fiscal-years/${encodeURIComponent(name)}/lock`, {
+    method: 'POST',
+    body: { lockedThrough: lockedThrough || null },
+    ...opts,
+  });

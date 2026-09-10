@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui/Primitives';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { fyRange } from '../../utils/tdsTcs';
+import { setBookLockOnServer } from '../../utils/bookLockSync';
 
 /**
  * Year-end close: the clean cut-over every April.
@@ -100,6 +101,13 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
       confirmLabel: 'Lock the year',
     });
     if (!ok) return;
+
+    /*
+     * The server is what refuses a posting into a closed year. Locked here
+     * alone, the year is closed for this browser and open to everybody else.
+     */
+    if (!(await setBookLockOnServer({ fyDate: fy.to, lockedThrough: fy.to })).ok) return;
+
     setDb((prev) => {
       const next = {
         ...prev,
@@ -184,6 +192,7 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
       confirmLabel: 'Close the books',
     });
     if (!ok) return;
+    if (!(await setBookLockOnServer({ fyDate: upTo, lockedThrough: upTo })).ok) return;
     setDb((prev) => ({
       ...prev,
       fyLocks: [
@@ -197,6 +206,9 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
   const unlockYear = async () => {
     const ok = await confirmDialog({ title: 'Unlock books', message: `Remove the lock at ${lock.upTo}?`, confirmLabel: 'Unlock' });
     if (!ok) return;
+    // Reopened on the server first, for the same reason: a year the server
+    // still holds shut is shut whatever this screen says.
+    if (!(await setBookLockOnServer({ fyDate: lock.upTo, lockedThrough: null })).ok) return;
     setDb((prev) => ({ ...prev, fyLocks: (prev.fyLocks || []).filter((l) => l.companyId !== companyId) }));
     notify.success('Books unlocked.');
   };

@@ -15,7 +15,7 @@ import {
 import { listPayments } from '../api/payments';
 import { listBankBook } from '../api/bankBook';
 import { listSchedules } from '../api/recurring';
-import { getJournalEntries } from '../api/ledger';
+import { getFiscalYears, getJournalEntries } from '../api/ledger';
 
 /**
  * Pull-hydration: documents saved to the server come BACK on a fresh browser.
@@ -406,6 +406,26 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
 
       try {
         /*
+         * How far the books are closed, as the server holds it.
+         *
+         * The server is what refuses a posting into a closed period, so its
+         * answer is the real one. Without this, a year closed on one machine
+         * looked open on every other — the screen would offer to close it
+         * again and the postings would be refused with no explanation.
+         */
+        const years = (await getFiscalYears())?.fiscalYears || [];
+        const lockedThrough = years
+          .map((y) => String(y?.lockedThrough || '').slice(0, 10))
+          .filter(Boolean)
+          .sort()
+          .pop();
+        if (lockedThrough) collected.fyLocks = [{ companyId: currentCompanyId, upTo: lockedThrough }];
+      } catch {
+        /* same rule: what does not arrive hydrates nothing */
+      }
+
+      try {
+        /*
          * Manual journals only. Everything else in the ledger was posted by a
          * document that is hydrated in its own right, so pulling those across
          * would list the same transaction twice.
@@ -499,6 +519,22 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
             )
             .map((d) => ({ ...d, id: ++nextId }));
           if (fresh.length) next[collection] = [...existing, ...fresh];
+        }
+
+        /*
+         * The lock is one row per company and the server's answer wins: it is
+         * the book that actually refuses the posting. Appending it the way
+         * documents are appended would leave a stale local lock beside it and
+         * two different answers to "how far are the books closed".
+         */
+        if (collected.fyLocks) {
+          const others = (Array.isArray(prev.fyLocks) ? prev.fyLocks : []).filter(
+            (l) => l.companyId !== currentCompanyId
+          );
+          const mine = (Array.isArray(prev.fyLocks) ? prev.fyLocks : []).find(
+            (l) => l.companyId === currentCompanyId
+          );
+          next.fyLocks = [...others, { ...(mine || {}), ...collected.fyLocks[0] }];
         }
 
         for (const [, collection, idKey] of [

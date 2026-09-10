@@ -15,6 +15,7 @@ const listPayments = vi.fn();
 const listDocsApi = vi.fn();
 const listInvoicesApi = vi.fn();
 const getJournalEntries = vi.fn();
+const getFiscalYears = vi.fn();
 
 vi.mock('../api/masters', () => ({
   COLLECTION_FOR_KIND: { UOM: 'uoms', PRICE_LIST: 'priceLists' },
@@ -29,7 +30,10 @@ vi.mock('../api/masters', () => ({
 vi.mock('../api/payments', () => ({ listPayments: (...a) => listPayments(...a) }));
 vi.mock('../api/bankBook', () => ({ listBankBook: async () => ({ entries: [] }) }));
 vi.mock('../api/recurring', () => ({ listSchedules: (...a) => api.listSchedules(...a) }));
-vi.mock('../api/ledger', () => ({ getJournalEntries: (...a) => getJournalEntries(...a) }));
+vi.mock('../api/ledger', () => ({
+  getJournalEntries: (...a) => getJournalEntries(...a),
+  getFiscalYears: (...a) => getFiscalYears(...a),
+}));
 vi.mock('../api/purchaseDocs', () => ({
   hasApiSession: () => true,
   listDocsApi: (...a) => listDocsApi(...a),
@@ -60,6 +64,7 @@ beforeEach(() => {
   listDocsApi.mockReset().mockResolvedValue([]);
   listInvoicesApi.mockReset().mockResolvedValue([]);
   getJournalEntries.mockReset().mockResolvedValue({ entries: [] });
+  getFiscalYears.mockReset().mockResolvedValue({ fiscalYears: [] });
   api.listOrgMasters.mockResolvedValue({ masters: [] });
   api.listSchedules.mockResolvedValue({ schedules: [] });
 });
@@ -270,5 +275,31 @@ describe('journal entries', () => {
     });
 
     expect(book.journalEntries).toHaveLength(1);
+  });
+});
+
+describe('how far the books are closed', () => {
+  it('takes the server\'s answer, since that is what refuses a posting', async () => {
+    getFiscalYears.mockResolvedValue({
+      fiscalYears: [
+        // Newest first, the way the route orders them — so the answer has to
+        // be the furthest date, not whichever row happens to come last.
+        { name: '2027-28', lockedThrough: null },
+        { name: '2026-27', lockedThrough: '2026-09-30' },
+        { name: '2025-26', lockedThrough: '2026-03-31' },
+      ],
+    });
+
+    const book = await hydrate({ fyLocks: [{ companyId: 1, upTo: '2026-03-31' }, { companyId: 2, upTo: '2020-03-31' }] });
+
+    expect(book.fyLocks).toEqual([
+      { companyId: 2, upTo: '2020-03-31' },
+      { companyId: 1, upTo: '2026-09-30' },
+    ]);
+  });
+
+  it('leaves the lock alone when the server has none', async () => {
+    const book = await hydrate({ fyLocks: [{ companyId: 1, upTo: '2026-03-31' }] });
+    expect(book.fyLocks).toEqual([{ companyId: 1, upTo: '2026-03-31' }]);
   });
 });
