@@ -63,6 +63,7 @@ model Org {
   @@unique([accountId, name])
   @@index([accountId])
   orgMasters       OrgMaster[]
+  shareLinks       DocumentShareLink[]
 }
 
 model Branch {
@@ -2184,4 +2185,39 @@ model OrgMaster {
 
   @@unique([accountId, orgId, kind, name])
   @@index([accountId, orgId, kind])
+}
+
+// A read-only link to one document, for the person it is addressed to.
+//
+// A payment reminder carried "View invoice: …/?invoiceId=123", which only ever
+// worked for somebody already signed in with that company open — that is, for
+// the business itself, never for the customer being chased. The customer landed
+// on a login page, which reads as a broken link sent by their supplier.
+//
+// A token rather than a widened Invoice row, because the interesting operations
+// are revoking one and knowing when it was made — and because the next document
+// that needs sharing should not mean another nullable column somewhere else.
+model DocumentShareLink {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+
+  /// INVOICE for now. The column exists so the next one is not a migration.
+  docType String
+  docId   String
+
+  /// The secret. Long, random, and the only thing standing between a URL and
+  /// somebody else's invoice, so it is unique and indexed rather than scanned.
+  token String @unique
+
+  revokedAt DateTime?
+  expiresAt DateTime?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, docType, docId])
+  @@index([accountId, orgId])
 }

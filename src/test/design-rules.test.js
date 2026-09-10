@@ -38,6 +38,9 @@ const PRINT_SURFACES = [
   // reason, same exemption: a challan handed to a lorry driver does not follow
   // the operator's dark mode.
   'components/DocumentPrintView.jsx',
+  // The invoice as a customer sees it, having followed a shared link. It is
+  // the printed copy rendered in their browser, and they have no theme here.
+  'features/sales/SharedInvoice.jsx',
   // Every literal in App.jsx lives inside TemplatePreview, which previews the
   // printed sheet rather than dressing the app.
   'App.jsx',

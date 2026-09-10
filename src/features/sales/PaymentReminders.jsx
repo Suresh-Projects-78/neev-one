@@ -4,6 +4,7 @@ import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitiv
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
+import { createInvoiceShareLink } from '../../api/share';
 import {
   collectiblesList,
   buildReminderMessage,
@@ -68,22 +69,47 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
     return r ? r.stage : 1;
   };
 
-  const messageFor = (invoice) => {
+  /**
+   * The link the customer follows.
+   *
+   * It used to be `?invoiceId=123`, which only ever worked for somebody already
+   * signed in with this company open — the business itself, never the customer
+   * being chased. They landed on a login page, which reads as a broken link
+   * sent by their supplier.
+   *
+   * Now a token, minted on the server and good for one invoice. The same
+   * invoice always gives the same address, so a reminder sent three times is
+   * three messages pointing at one page rather than two dead links and a live
+   * one.
+   *
+   * A link that cannot be minted is left out of the message entirely. Sending
+   * the customer a URL that will not open is worse than sending them none.
+   */
+  const messageFor = async (invoice) => {
     const customer = customersById.get(String(invoice.customerId)) || null;
-    const shareUrl = invoice.id ? `${window.location.origin}/?invoiceId=${invoice.id}` : '';
+    let shareUrl = '';
+    const backendId = String(invoice.backendInvoiceId || '').trim();
+    if (backendId) {
+      try {
+        const res = await createInvoiceShareLink(backendId);
+        if (res?.token) shareUrl = `${window.location.origin}/?share=${encodeURIComponent(res.token)}`;
+      } catch {
+        shareUrl = '';
+      }
+    }
     return { customer, message: buildReminderMessage({ invoice, customer, company: currentCompany, shareUrl }) };
   };
 
-  const sendWhatsApp = (invoice) => {
-    const { customer, message } = messageFor(invoice);
+  const sendWhatsApp = async (invoice) => {
+    const { customer, message } = await messageFor(invoice);
     const phone = customer?.mobile || customer?.phone || '';
     window.open(waLink(phone, message), '_blank', 'noopener');
     markSent(invoice, 'whatsapp');
     notify.success(`WhatsApp reminder opened for ${invoice.number}${phone ? '' : ' (no mobile on the customer — pick the contact in WhatsApp)'}`);
   };
 
-  const sendEmail = (invoice) => {
-    const { customer, message } = messageFor(invoice);
+  const sendEmail = async (invoice) => {
+    const { customer, message } = await messageFor(invoice);
     const email = customer?.email || '';
     window.open(mailtoLink(email, `Payment reminder — Invoice ${invoice.number}`, message), '_self');
     markSent(invoice, 'email');
@@ -91,7 +117,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
   };
 
   const copyMessage = async (invoice) => {
-    const { message } = messageFor(invoice);
+    const { message } = await messageFor(invoice);
     try {
       await navigator.clipboard.writeText(message);
       markSent(invoice, 'copy');

@@ -110,7 +110,7 @@ import { readdirSync, statSync } from 'node:fs';
 const SRC = dirname(dirname(fileURLToPath(import.meta.url)));
 
 /* The printed document is black on white and outside the app's type rules. */
-const PRINT_SURFACES = new Set(['InvoicePreview.jsx', 'ExpenseVoucher.jsx', 'DocumentPrintView.jsx']);
+const PRINT_SURFACES = new Set(['InvoicePreview.jsx', 'ExpenseVoucher.jsx', 'DocumentPrintView.jsx', 'SharedInvoice.jsx']);
 
 const jsxFiles = (dir) =>
   readdirSync(dir).flatMap((name) => {

@@ -24,6 +24,7 @@ import { quoteDocsRouter } from './routes/quoteDocs.js';
 import { orgMastersRouter } from './routes/orgMasters.js';
 import { auditRouter } from './routes/audit.js';
 import { accountRouter } from './routes/account.js';
+import { shareAdminRouter, sharePublicRouter } from './routes/share.js';
 import { einvoiceRouter } from './routes/einvoice.js';
 import { revaluationRouter } from './routes/revaluation.js';
 import { currenciesRouter } from './routes/currencies.js';
@@ -105,6 +106,11 @@ export function buildApp() {
 
   app.use('/api/auth', authRouter);
 
+  /* No auth and no tenant headers: the customer has no account here. Mounted
+     with authRouter for the same reason gstinRouter is — a router at '/api'
+     runs its middleware for every '/api' request that reaches it. */
+  app.use('/api', sharePublicRouter);
+
   /*
    * Mounted before every tenant-scoped router, and that position is the point.
    *
@@ -127,6 +133,7 @@ export function buildApp() {
   app.use('/api', orgMastersRouter);
   app.use('/api', auditRouter);
   app.use('/api', accountRouter);
+  app.use('/api', shareAdminRouter);
   app.use('/api', inventoryAdjustmentsRouter);
   app.use('/api', invoicesRouter);
   app.use('/api', ledgerRouter);

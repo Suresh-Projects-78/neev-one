@@ -184,6 +184,7 @@ const FixedAssets = lazy(() => import('./features/accounting/FixedAssets'));
 const YearEndClose = lazy(() => import('./features/accounting/YearEndClose'));
 const CostCenters = lazy(() => import('./features/accounting/CostCenters'));
 const AuditTrail = lazy(() => import('./features/audit/AuditTrail'));
+const SharedInvoice = lazy(() => import('./features/sales/SharedInvoice'));
 const BankReconciliation = lazy(() => import('./features/cashBank/BankReconciliation'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
@@ -14580,7 +14581,38 @@ const AppShell = () => {
  * `enabled` keeps the request from firing before there is a token and an org to
  * ask about, and the session key remounts the provider when either changes.
  */
+/** The token in `?share=…`, if this is somebody following a shared link. */
+const shareTokenFromUrl = () => {
+  try {
+    return String(new URLSearchParams(window.location.search).get('share') || '').trim();
+  } catch {
+    return '';
+  }
+};
+
 const App = () => {
+  /*
+   * A shared invoice is answered before anything else in the application.
+   *
+   * The person following the link is the customer being chased for payment.
+   * They have no account here, so the providers below — which fetch
+   * permissions and features for a session — must not run at all, and a stale
+   * session in that browser must not turn their read-only copy into a signed-in
+   * view of somebody's books.
+   */
+  const shareToken = useMemo(() => shareTokenFromUrl(), []);
+  if (shareToken) {
+    return (
+      <Suspense fallback={null}>
+        <SharedInvoice token={shareToken} />
+      </Suspense>
+    );
+  }
+
+  return <AuthedApp />;
+};
+
+const AuthedApp = () => {
   const [sessionKey, setSessionKey] = useState(() => {
     const token = String(localStorage.getItem('token') || '').trim();
     const org = String(localStorage.getItem('activeOrgId') || '').trim();

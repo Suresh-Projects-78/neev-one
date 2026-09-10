@@ -116,10 +116,19 @@ export async function apiFetch(
     headers,
     skipBranchHeader = false,
     skipWarehouseHeader = false,
+    /*
+     * For the routes a customer follows rather than a user calls.
+     *
+     * A shared invoice link is opened by somebody with no account here, and the
+     * one thing that must not happen is a stale session in that browser turning
+     * a public request into an authenticated one against a company they are
+     * not in.
+     */
+    skipAuth = false,
     isRetry = false,
   } = {}
 ) {
-  const token = getToken();
+  const token = skipAuth ? '' : getToken();
   const orgId = getOrgId();
   const branchId = getBranchId();
   const warehouseId = getWarehouseId();
@@ -131,9 +140,9 @@ export async function apiFetch(
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(orgId ? { 'x-org-id': orgId } : {}),
-        ...(!skipBranchHeader && branchId ? { 'x-branch-id': branchId } : {}),
-        ...(!skipWarehouseHeader && warehouseId ? { 'x-warehouse-id': warehouseId } : {}),
+        ...(!skipAuth && orgId ? { 'x-org-id': orgId } : {}),
+        ...(!skipAuth && !skipBranchHeader && branchId ? { 'x-branch-id': branchId } : {}),
+        ...(!skipAuth && !skipWarehouseHeader && warehouseId ? { 'x-warehouse-id': warehouseId } : {}),
         ...(headers || {}),
       },
       body: body ? JSON.stringify(body) : undefined,
