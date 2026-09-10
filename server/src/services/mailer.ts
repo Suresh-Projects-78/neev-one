@@ -1,5 +1,8 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import nodemailer from 'nodemailer';
+// Nodemailer 10 no longer exposes its types under the default export's
+// namespace, so the transporter type is imported by name.
+import type { Transporter } from 'nodemailer';
 import { prisma } from '../utils/prisma.js';
 import { TEMPLATE_BY_KEY, render } from '../constants/emailTemplates.js';
 
@@ -62,7 +65,7 @@ export function decryptSecret(payload: string) {
 // ---------------------------------------------------------------------------
 
 export type ResolvedTransport =
-  | { kind: 'smtp'; transporter: nodemailer.Transporter; from: string; replyTo?: string }
+  | { kind: 'smtp'; transporter: Transporter; from: string; replyTo?: string }
   | { kind: 'capture'; from: string; replyTo?: string };
 
 const captureFrom = () => `${APP_NAME} <no-reply@localhost>`;
