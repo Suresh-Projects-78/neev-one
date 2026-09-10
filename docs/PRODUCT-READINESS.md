@@ -7,8 +7,8 @@ starts — the same way the six document forms were done.
 |---|---|---|---|
 | 1 | Six masters reach the server | Clear the browser and they are gone | **done** |
 | 2 | CSV formula injection | An export runs code on the accountant's machine | **done** |
-| 3 | Audit trail can be read | Written in 7 places, readable in none | **next** |
-| 4 | Bank reconciliation | The largest genuinely missing module | 4th |
+| 3 | Audit trail can be read | Written in 7 places, readable in none | **done** |
+| 4 | Bank reconciliation | The largest genuinely missing module | **next** |
 | 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | 5th |
 | 6 | Per-user module assignment | Waiting on one decision | 6th |
 | 7 | The deferred shells, built for real | Admin area, dashboard, billing, SSO, subdomains | 7th |
@@ -119,3 +119,30 @@ only where the value is not a number to begin with, which still catches `+91
 
 A test walks the source and fails if any file that writes a CSV does not use the
 guard, so the eighth export cannot quietly arrive without it.
+
+## 3 — done
+
+A read route, a screen under Users & Access, and the entry that was never
+written: **CREATE**. The trail carried edits, status changes and deletions, so a
+document appearing out of nowhere — the first thing an auditor asks about — had
+no record at all.
+
+Three things the screen does that a plain list would not:
+
+- **The per-field diff is shown, not the word "edited".** `total 1,180 → 118` is
+  an audit entry; "Invoice edited" is a row in a table.
+- **Grouped by day, newest first, paged by cursor.** The trail only grows, and a
+  count query over it would get slower every month.
+- **`to` covers the whole closing day.** Filtering to today with a midnight
+  bound returns nothing that happened today, which reads as a missing entry
+  rather than a filter — the classic version of this bug.
+
+**Read-only is the feature, not an omission.** There is no route that writes,
+changes or deletes an entry, and a test asserts that POST, PATCH and DELETE all
+404. A trail its own product can rewrite is evidence of nothing.
+
+Isolation caught the same gap as item 1, in the same way: the cross-account test
+passed while a query scoped by account alone leaked one company's trail to
+another company in the same account. On an audit trail that is the worse leak —
+it is a list of everything a client has ever changed, and the CA firm case puts
+two clients side by side. The facets endpoint had it too.

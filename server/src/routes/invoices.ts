@@ -189,6 +189,42 @@ const AUDITED_FIELDS = [
   'warehouseId', 'itemsJson',
 ] as const;
 
+/**
+ * An invoice that was raised, recorded.
+ *
+ * The trail carried edits, status changes and deletions and not the creation
+ * itself — so a document appearing out of nowhere, which is the first thing an
+ * auditor asks about, had no entry at all. There is nothing to diff on a
+ * create, so this records what the document was raised as.
+ */
+async function auditInvoiceCreated(req: Request, row: any) {
+  try {
+    await prisma.auditLog.create({
+      data: {
+        accountId: req.tenant!.accountId,
+        orgId: req.tenant!.orgId,
+        branchId: req.tenant!.branchId,
+        entity: 'INVOICE',
+        entityId: String(row?.id || ''),
+        action: 'CREATE',
+        message: `Invoice ${row?.number || ''} raised for ${row?.customerName || 'a customer'} (total ${toNumber(row?.total)})`,
+        metadata: JSON.stringify({
+          number: row?.number,
+          date: row?.date,
+          customerName: row?.customerName,
+          total: toNumber(row?.total),
+          status: row?.status,
+        }),
+        createdByUserId: req.auth!.userId,
+      },
+    });
+  } catch {
+    // Same rule as every other write here: the trail never fails the request.
+    // An invoice that saved and went unlogged is bad; an invoice refused
+    // because the log was busy is worse.
+  }
+}
+
 /** Write a per-field diff of an invoice mutation. Never fails the request. */
 async function auditInvoiceChange(
   req: Request,
@@ -380,6 +416,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   if (approval.required) {
     await prisma.$executeRawUnsafe(`UPDATE Invoice SET status = ? WHERE id = ?`, 'Pending Approval', id);
     const held = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, id);
+    await auditInvoiceCreated(req, held[0]);
     return res.status(201).json({
       invoice: normalizeInvoiceResponse(held[0]),
       approval: { required: true, rule: approval.ruleName },
@@ -438,6 +475,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
     return res.status(status).json({ error: `Invoice not saved: ${String(e?.message || e)}` });
   }
 
+  await auditInvoiceCreated(req, row);
   res.status(201).json({ invoice: normalizeInvoiceResponse(row), strippedFields: stripped });
 });
 

@@ -183,6 +183,7 @@ const SalesBySalesman = lazy(() => import('./features/reports/SalesBySalesman'))
 const FixedAssets = lazy(() => import('./features/accounting/FixedAssets'));
 const YearEndClose = lazy(() => import('./features/accounting/YearEndClose'));
 const CostCenters = lazy(() => import('./features/accounting/CostCenters'));
+const AuditTrail = lazy(() => import('./features/audit/AuditTrail'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -12092,6 +12093,7 @@ const AppShell = () => {
           { key: 'settingsPermissions', label: 'Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsGovernance', label: 'Approval Workflows', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsSecurity', label: 'Login & Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
+          { key: 'settingsAudit', label: 'Audit Trail', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
 
           { type: 'subgroup', label: 'Communication' },
           { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications', state: emailStateLabel },
@@ -13719,6 +13721,8 @@ const AppShell = () => {
         );
       case 'approvals':
         return <ApprovalsInbox currentCompany={currentCompany} />;
+      case 'settingsAudit':
+        return <AuditTrail />;
       case 'ledgerTrialBalance':
         return <LedgerTrialBalance currentCompany={currentCompany} />;
       case 'settingsUsersRoles': {
