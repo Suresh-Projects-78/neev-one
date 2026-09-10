@@ -16,6 +16,7 @@ const listDocsApi = vi.fn();
 const listInvoicesApi = vi.fn();
 const getJournalEntries = vi.fn();
 const getFiscalYears = vi.fn();
+const listPosDayCloses = vi.fn();
 
 vi.mock('../api/masters', () => ({
   COLLECTION_FOR_KIND: { UOM: 'uoms', PRICE_LIST: 'priceLists' },
@@ -29,6 +30,7 @@ vi.mock('../api/masters', () => ({
 }));
 vi.mock('../api/payments', () => ({ listPayments: (...a) => listPayments(...a) }));
 vi.mock('../api/bankBook', () => ({ listBankBook: async () => ({ entries: [] }) }));
+vi.mock('../api/posDayClose', () => ({ listPosDayCloses: (...a) => listPosDayCloses(...a) }));
 vi.mock('../api/recurring', () => ({ listSchedules: (...a) => api.listSchedules(...a) }));
 vi.mock('../api/ledger', () => ({
   getJournalEntries: (...a) => getJournalEntries(...a),
@@ -65,6 +67,7 @@ beforeEach(() => {
   listInvoicesApi.mockReset().mockResolvedValue([]);
   getJournalEntries.mockReset().mockResolvedValue({ entries: [] });
   getFiscalYears.mockReset().mockResolvedValue({ fiscalYears: [] });
+  listPosDayCloses.mockReset().mockResolvedValue({ dayCloses: [] });
   api.listOrgMasters.mockResolvedValue({ masters: [] });
   api.listSchedules.mockResolvedValue({ schedules: [] });
 });
@@ -301,5 +304,48 @@ describe('how far the books are closed', () => {
   it('leaves the lock alone when the server has none', async () => {
     const book = await hydrate({ fyLocks: [{ companyId: 1, upTo: '2026-03-31' }] });
     expect(book.fyLocks).toEqual([{ companyId: 1, upTo: '2026-03-31' }]);
+  });
+});
+
+describe('till counts', () => {
+  const close = {
+    id: 'srv-z-1',
+    date: '2026-09-09',
+    invoices: 12,
+    cash: 4300.5,
+    upi: 1200,
+    card: 800,
+    total: 6300.5,
+    countedCash: 4250.5,
+    overShort: -50,
+    denomCounts: { 500: 8 },
+  };
+
+  it('brings a day closed at the counter to the back office', async () => {
+    listPosDayCloses.mockResolvedValue({ dayCloses: [close] });
+
+    const book = await hydrate();
+
+    expect(book.posDayCloses).toHaveLength(1);
+    expect(book.posDayCloses[0]).toMatchObject({
+      backendDayCloseId: 'srv-z-1',
+      date: '2026-09-09',
+      overShort: -50,
+      countedCash: 4250.5,
+      denomCounts: { 500: 8 },
+    });
+    expect(book.posDayCloses[0].id).toBeGreaterThan(0);
+  });
+
+  it('does not close the same day twice when the count comes back', async () => {
+    // The till that made the close has it already. Arriving again would show
+    // the day counted twice and double the takings on any total over them.
+    listPosDayCloses.mockResolvedValue({ dayCloses: [close] });
+
+    const book = await hydrate({
+      posDayCloses: [{ id: 3, companyId: 1, date: '2026-09-09', cash: 4300.5, overShort: -50 }],
+    });
+
+    expect(book.posDayCloses).toHaveLength(1);
   });
 });

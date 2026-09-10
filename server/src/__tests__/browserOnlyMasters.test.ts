@@ -282,6 +282,24 @@ describe('the six reference masters', () => {
     expect(listed.body.masters.every((m: any) => m.kind === 'UOM')).toBe(true);
   });
 
+  it('stores a GST rate, with the rate itself in the payload', async () => {
+    // A rate a company added was known only to the browser that added it, so
+    // an invoice raised anywhere else could not charge it.
+    const name = `GST 18% ${rnd()}`;
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'GST_RATE', name, data: { rate: 18 } })
+      .expect(201);
+    expect(created.body.master.data.rate).toBe(18);
+
+    const listed = await request(app)
+      .get(`/api/orgs/${owner.orgId}/masters?kind=GST_RATE`)
+      .set(auth(owner))
+      .expect(200);
+    expect(listed.body.masters.find((m: any) => m.name === name).data.rate).toBe(18);
+  });
+
   it('rejects a kind it does not know', async () => {
     await request(app)
       .post(`/api/orgs/${owner.orgId}/masters`)

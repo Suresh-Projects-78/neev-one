@@ -65,6 +65,7 @@ model Org {
   orgMasters       OrgMaster[]
   shareLinks       DocumentShareLink[]
   bankBookEntries  BankBookEntry[]
+  posDayCloses     PosDayClose[]
   recurringSchedules RecurringSchedule[]
 }
 
@@ -2168,7 +2169,7 @@ model OrgMaster {
   accountId String
   orgId     String
 
-  /// UOM | ITEM_CATEGORY | PRICE_LIST | DISCOUNT_RULE | COST_CENTER | ACCOUNT_GROUP
+  /// UOM | ITEM_CATEGORY | PRICE_LIST | DISCOUNT_RULE | COST_CENTER | ACCOUNT_GROUP | GST_RATE
   kind      String
   name      String
   isActive  Boolean  @default(true)
@@ -2276,6 +2277,51 @@ model BankBookEntry {
 
   @@index([accountId, orgId, ledgerAccountId])
   @@index([accountId, orgId, reconciled])
+}
+
+// The till count at the end of a POS day — the Z report.
+//
+// It lived in the browser, which is the one place a cash control cannot live:
+// the over/short figure is what the owner reviews and the cashier cannot be
+// the only person holding it. On a second machine the day looked never closed,
+// and clearing site data erased the count entirely.
+//
+// One row per branch per day, enforced by the database rather than by the
+// screen: closing a day twice would double-count the till.
+model PosDayClose {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  /// The trading day being closed, as YYYY-MM-DD.
+  date      String
+
+  /// What the day's POS invoices came to, split by how they were tendered.
+  invoices  Int     @default(0)
+  cash      Decimal @default(0)
+  upi       Decimal @default(0)
+  card      Decimal @default(0)
+  total     Decimal @default(0)
+
+  /// What was actually in the drawer, and the difference. Stored rather than
+  /// derived: the count is evidence of what somebody saw, not a calculation to
+  /// be redone later against figures that may since have changed.
+  countedCash Decimal @default(0)
+  overShort   Decimal @default(0)
+
+  /// How the counted cash was made up: note or coin value to how many of them.
+  /// JSON in a string column, as every other payload in this schema is.
+  denomJson String @default("{}")
+
+  closedByUserId String?
+  closedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, branchId, date])
+  @@index([accountId, orgId, date])
 }
 
 // A schedule that raises an invoice every period.

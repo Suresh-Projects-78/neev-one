@@ -3,11 +3,11 @@ import { hasApiSession } from '../api/purchaseDocs';
 import { notify } from '../components/ui/notify';
 
 /**
- * Write-through for the six reference lists.
+ * Write-through for the reference lists.
  *
- * Units, item categories, price lists, discount rules, cost centres and account
- * groups were held in one browser while every document that uses them lived on
- * the server. Six screens now need the same three lines, and the rule they all
+ * Units, item categories, price lists, discount rules, cost centres, account
+ * groups and GST rates were held in one browser while every document that uses
+ * them lived on the server. Each screen needs the same three lines, and the rule they all
  * follow is the one the salesman master already set: the row is kept locally
  * whatever the server says, so nothing typed is ever lost, and a refusal is
  * reported rather than swallowed.

@@ -74,6 +74,10 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
        */
       { key: 'Sales Orders', label: 'Sales Orders', actions: DOCUMENT_APPROVAL },
       { key: 'Delivery Challans', label: 'Delivery Challans', actions: DOCUMENT },
+      // The till count at the end of a POS day. Viewing it and doing it are
+      // separate rights on purpose: the owner reads the over/short figure that
+      // the cashier produces.
+      { key: 'POS Day Close', label: 'POS Day Close', actions: [A.VIEW, A.CREATE, A.EXPORT] },
     ],
   },
   {

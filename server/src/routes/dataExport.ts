@@ -121,7 +121,7 @@ dataExportRouter.get('/orgs/:orgId/export', EXPORT, async (req, res) => {
       parties, partyAddresses, partyContacts, items,
       invoices, bills, estimates, salesOrders, purchaseOrders, deliveryChallans,
       creditNotes, debitNotes, expenses, payments, paymentAllocations,
-      journals, journalEntries, journalLines, salesmen, fixedAssets, bankBook,
+      journals, journalEntries, journalLines, salesmen, fixedAssets, bankBook, posDayCloses,
     ] = await Promise.all([
       prisma.party.findMany({ where: scope }),
       prisma.partyAddress.findMany({ where: scope }),
@@ -144,12 +144,15 @@ dataExportRouter.get('/orgs/:orgId/export', EXPORT, async (req, res) => {
       prisma.salesman.findMany({ where: scope }),
       prisma.fixedAsset.findMany({ where: scope }),
       prisma.bankBookEntry.findMany({ where: scope }),
+      // The till counts. A backup that leaves out the cash controls is not a
+      // backup of the business's books.
+      prisma.posDayClose.findMany({ where: scope }),
     ]);
     Object.assign(data, {
       parties, partyAddresses, partyContacts, items,
       invoices, bills, estimates, salesOrders, purchaseOrders, deliveryChallans,
       creditNotes, debitNotes, expenses, payments, paymentAllocations,
-      journals, journalEntries, journalLines, salesmen, fixedAssets, bankBook,
+      journals, journalEntries, journalLines, salesmen, fixedAssets, bankBook, posDayCloses,
     });
   }
 

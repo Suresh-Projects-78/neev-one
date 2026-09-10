@@ -450,3 +450,22 @@ machine.
   nothing.
 - Hydration takes the furthest `lockedThrough` across the org's fiscal years
   and replaces the local row, rather than appending beside it.
+
+### The last two browser-only collections (10 Sep 2026)
+
+**GST rates** became a seventh org master (`GST_RATE`). A rate a company added
+was known only to the browser that added it, so an invoice raised anywhere else
+could not charge it. The kind list is asserted against the real map in
+`src/api/masterKinds.test.js` — every other test of the reference lists mocks
+that module and supplies its own map, so a missing collection passed all of
+them while `saveMaster` returned early and quietly.
+
+**POS day closes** got their own table, route and screen. The over/short figure
+is a cash control: the cashier cannot be the only person holding it, and on any
+other machine the day looked never closed. One row per branch per day, enforced
+by the database — a second close of the same day is answered with the one that
+stands rather than an error, because the cashier pressed the button twice.
+The counts are now listed back on the POS screen (a control nobody can read is
+a number typed into a form) and are carried in the tenant data export.
+
+With this, nothing that belongs on the server is written only to the browser.

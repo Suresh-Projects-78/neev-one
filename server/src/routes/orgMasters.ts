@@ -222,8 +222,8 @@ orgMastersRouter.patch('/orgs/:orgId/fixed-assets/:id', ASSET_EDIT, async (req, 
 /* ---------------------------------------------------- the six reference lists */
 
 /**
- * Units, item categories, price lists, discount rules, cost centres and account
- * groups, through one endpoint.
+ * Units, item categories, price lists, discount rules, cost centres, account
+ * groups and GST rates, through one endpoint.
  *
  * They share a table because they share a life: small lists, read whole, whose
  * only difference is the shape of what hangs off a name. Pricing an invoice
@@ -231,7 +231,7 @@ orgMastersRouter.patch('/orgs/:orgId/fixed-assets/:id', ASSET_EDIT, async (req, 
  * giving each of them columns, and six near-identical routes would have to be
  * kept in step by hand.
  */
-const MASTER_KINDS = ['UOM', 'ITEM_CATEGORY', 'PRICE_LIST', 'DISCOUNT_RULE', 'COST_CENTER', 'ACCOUNT_GROUP'] as const;
+const MASTER_KINDS = ['UOM', 'ITEM_CATEGORY', 'PRICE_LIST', 'DISCOUNT_RULE', 'COST_CENTER', 'ACCOUNT_GROUP', 'GST_RATE'] as const;
 type MasterKind = (typeof MASTER_KINDS)[number];
 
 const masterSchema = z.object({

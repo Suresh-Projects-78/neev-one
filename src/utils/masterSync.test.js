@@ -13,6 +13,7 @@ vi.mock('../api/masters', () => ({
     discountRules: 'DISCOUNT_RULE',
     costCenters: 'COST_CENTER',
     accountGroups: 'ACCOUNT_GROUP',
+    gstRates: 'GST_RATE',
   },
   createOrgMaster: (...a) => created(...a),
   deleteOrgMaster: (...a) => deleted(...a),
@@ -99,5 +100,16 @@ describe('removal', () => {
   it('is silent for a row that only ever existed here', async () => {
     await removeMaster({ id: 2, name: 'Scrap' });
     expect(deleted).not.toHaveBeenCalled();
+  });
+});
+
+describe('GST rates are a reference list like the rest', () => {
+  it('writes a new rate through, carrying the rate in the payload', async () => {
+    // A rate added on one machine used to be unknown everywhere else, so an
+    // invoice raised elsewhere could not charge it.
+    const patch = await saveMaster('gstRates', 'GST 18%', { rate: 18 });
+
+    expect(created).toHaveBeenCalledWith('GST_RATE', 'GST 18%', { rate: 18 });
+    expect(patch).toEqual({ backendMasterId: 'srv-1' });
   });
 });

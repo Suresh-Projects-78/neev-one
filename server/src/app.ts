@@ -27,6 +27,7 @@ import { auditRouter } from './routes/audit.js';
 import { accountRouter } from './routes/account.js';
 import { shareAdminRouter, sharePublicRouter } from './routes/share.js';
 import { bankBookRouter } from './routes/bankBook.js';
+import { posDayCloseRouter } from './routes/posDayClose.js';
 import { recurringRouter } from './routes/recurring.js';
 import { dataExportRouter } from './routes/dataExport.js';
 import { einvoiceRouter } from './routes/einvoice.js';
@@ -147,6 +148,7 @@ export function buildApp() {
   app.use('/api', accountRouter);
   app.use('/api', shareAdminRouter);
   app.use('/api', bankBookRouter);
+  app.use('/api', posDayCloseRouter);
   app.use('/api', recurringRouter);
   app.use('/api', dataExportRouter);
   app.use('/api', inventoryAdjustmentsRouter);

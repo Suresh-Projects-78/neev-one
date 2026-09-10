@@ -5,6 +5,8 @@ import { notify } from '../../components/ui/notify';
 import { computeGstForLines } from '../../utils/gst';
 import { formatMoney } from '../../utils/money';
 import { createInvoiceApi } from '../../api/invoices';
+import { createPosDayClose } from '../../api/posDayClose';
+import { hasApiSession } from '../../api/purchaseDocs';
 import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
 
 /**
@@ -39,10 +41,20 @@ export default function PosScreen({ db, setDb, currentCompany }) {
     for (const s of todaysSales) m[s.tender || 'Cash'] = (m[s.tender || 'Cash'] || 0) + Number(s.total || 0);
     return m;
   }, [todaysSales]);
+  const recentCloses = useMemo(
+    () =>
+      (db.posDayCloses || [])
+        .filter((r) => r.companyId === companyId)
+        .slice()
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+        .slice(0, 14),
+    [db.posDayCloses, companyId]
+  );
+
   const countedCash = DENOMS.reduce((s, d) => s + d * (Number(denomCounts[d]) || 0), 0);
   const overShort = Math.round((countedCash - byTender.Cash) * 100) / 100;
 
-  const saveDayClose = () => {
+  const saveDayClose = async () => {
     const nextId = (db.posDayCloses || []).reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1;
     const record = {
       id: nextId,
@@ -58,7 +70,36 @@ export default function PosScreen({ db, setDb, currentCompany }) {
       denomCounts: { ...denomCounts },
       closedAt: new Date().toISOString(),
     };
-    setDb((prev) => ({ ...prev, posDayCloses: [...(prev.posDayCloses || []), record] }));
+    /*
+     * Sent to the server, because the over/short figure is a cash control: the
+     * owner reviews it, and the cashier cannot be the only person holding it.
+     * A day already closed comes back as the close that stands rather than a
+     * second one, so a double press does not count the till twice.
+     */
+    let serverPatch = {};
+    if (hasApiSession()) {
+      try {
+        const saved = await createPosDayClose({
+          date: today,
+          invoices: record.invoices,
+          cash: record.cash,
+          upi: record.upi,
+          card: record.card,
+          total: record.total,
+          countedCash: record.countedCash,
+          overShort: record.overShort,
+          denomCounts: Object.fromEntries(
+            Object.entries(denomCounts).map(([d, n]) => [d, Number(n) || 0])
+          ),
+        });
+        if (saved?.dayClose?.id) serverPatch = { backendDayCloseId: String(saved.dayClose.id) };
+        if (saved?.alreadyClosed) notify.error(`${today} was already closed — showing the count that stands.`);
+      } catch (e) {
+        notify.error(`Closed on this till only — the server refused it: ${String(e?.message || e)}`);
+      }
+    }
+
+    setDb((prev) => ({ ...prev, posDayCloses: [...(prev.posDayCloses || []), { ...record, ...serverPatch }] }));
 
     const w = window.open('', '_blank', 'width=380,height=640');
     if (w) {
@@ -312,6 +353,47 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             <button type="button" onClick={() => setDayCloseOpen(false)} className="ui-btn ui-btn-secondary">Cancel</button>
             <button type="button" onClick={saveDayClose} className="ui-btn ui-btn-primary">Close day & print Z report</button>
           </div>
+        </div>
+      ) : null}
+
+      {recentCloses.length ? (
+        <div className="space-y-2">
+          {/*
+            * The counts, where somebody other than the till can read them. A
+            * cash control nobody reviews is a number typed into a form: the
+            * over/short is the whole point of counting the drawer.
+            */}
+          <h3 className="ui-t-sec">Recent day closes</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="ui-caption text-left">
+                <th className="px-3 py-2">Day</th>
+                <th className="px-3 py-2 text-right">Invoices</th>
+                <th className="px-3 py-2 text-right">Takings</th>
+                <th className="px-3 py-2 text-right">Counted cash</th>
+                <th className="px-3 py-2 text-right">Over / short</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentCloses.map((r) => (
+                <tr key={r.id} className="ui-hover-sunken border-t ui-border-c">
+                  <td className="px-3 py-2 ui-col-meta">{r.date}</td>
+                  <td className="px-3 py-2 ui-mono text-right tabular-nums">{r.invoices || 0}</td>
+                  <td className="px-3 py-2 ui-money text-right">{formatMoney(r.total || 0, currentCompany)}</td>
+                  <td className="px-3 py-2 ui-money text-right">{formatMoney(r.countedCash || 0, currentCompany)}</td>
+                  <td className="px-3 py-2 ui-money text-right">
+                    {Number(r.overShort || 0) === 0 ? (
+                      <span className="ui-amount-pos">Tallied</span>
+                    ) : Number(r.overShort) > 0 ? (
+                      <span>Over {formatMoney(Number(r.overShort), currentCompany)}</span>
+                    ) : (
+                      <span className="ui-amount-neg">Short {formatMoney(-Number(r.overShort), currentCompany)}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       ) : null}
 

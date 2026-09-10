@@ -154,6 +154,7 @@ export const MASTER_KIND = {
   discountRules: 'DISCOUNT_RULE',
   costCenters: 'COST_CENTER',
   accountGroups: 'ACCOUNT_GROUP',
+  gstRates: 'GST_RATE',
 };
 
 /** The db collection each server kind belongs to — MASTER_KIND, reversed. */

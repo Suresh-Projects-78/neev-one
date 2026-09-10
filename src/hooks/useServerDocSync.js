@@ -14,6 +14,7 @@ import {
 } from '../api/masters';
 import { listPayments } from '../api/payments';
 import { listBankBook } from '../api/bankBook';
+import { listPosDayCloses } from '../api/posDayClose';
 import { listSchedules } from '../api/recurring';
 import { getFiscalYears, getJournalEntries } from '../api/ledger';
 
@@ -406,6 +407,34 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
 
       try {
         /*
+         * The till counts, so the owner can review them anywhere.
+         *
+         * A day closed at the counter looked never closed on the back-office
+         * machine, and the over/short figure — the point of the exercise — was
+         * only ever on the till that produced it.
+         */
+        const closes = (await listPosDayCloses())?.dayCloses || [];
+        collected.posDayCloses = closes.map((d) => ({
+          companyId: currentCompanyId,
+          backendDayCloseId: String(d.id),
+          date: String(d.date || '').slice(0, 10),
+          invoices: num(d.invoices),
+          cash: num(d.cash),
+          upi: num(d.upi),
+          card: num(d.card),
+          total: num(d.total),
+          countedCash: num(d.countedCash),
+          overShort: num(d.overShort),
+          denomCounts: d.denomCounts && typeof d.denomCounts === 'object' ? d.denomCounts : {},
+          closedAt: d.closedAt,
+          hydratedFromServer: true,
+        }));
+      } catch {
+        /* same rule: what does not arrive hydrates nothing */
+      }
+
+      try {
+        /*
          * How far the books are closed, as the server holds it.
          *
          * The server is what refuses a posting into a closed period, so its
@@ -519,6 +548,27 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
             )
             .map((d) => ({ ...d, id: ++nextId }));
           if (fresh.length) next[collection] = [...existing, ...fresh];
+        }
+
+        /*
+         * A day close is identified by the day it closes.
+         *
+         * It has no number of its own, and the server allows one per day, so
+         * matching on the date is what keeps a close made at the counter from
+         * arriving again as a second close of the same day.
+         */
+        if (collected.posDayCloses?.length) {
+          const existing = Array.isArray(prev.posDayCloses) ? prev.posDayCloses : [];
+          const mine = new Set(
+            existing
+              .filter((r) => r.companyId === currentCompanyId)
+              .map((r) => String(r.date || '').slice(0, 10))
+          );
+          let nextId = existing.reduce((m, r) => Math.max(m, Number(r?.id || 0)), 0);
+          const fresh = collected.posDayCloses
+            .filter((r) => !mine.has(r.date))
+            .map((r) => ({ ...r, id: ++nextId }));
+          if (fresh.length) next.posDayCloses = [...existing, ...fresh];
         }
 
         /*

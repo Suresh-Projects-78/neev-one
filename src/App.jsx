@@ -7705,7 +7705,7 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
   const [newRate, setNewRate] = useState('');
   const [newRateName, setNewRateName] = useState('');
 
-  const addRate = () => {
+  const addRate = async () => {
     const rate = Number(newRate);
     if (!Number.isFinite(rate) || rate < 0 || rate > 100) {
       notify.error('Please enter a valid GST rate (0 to 100).');
@@ -7755,9 +7755,13 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
           createdAt: new Date().toISOString(),
         };
 
+    // The rate is a reference list like any other: an invoice raised on
+    // another machine has to be able to charge a rate this company added.
+    const patch = await saveMaster('gstRates', name, { rate });
+
     setDb({
       ...db,
-      gstRates: [...(db.gstRates || []), next],
+      gstRates: [...(db.gstRates || []), { ...next, ...patch }],
       ...(rateLedger ? { chartOfAccounts: [...coa, rateLedger] } : {}),
     });
     setNewRate('');
@@ -7765,7 +7769,8 @@ const GstRatesList = ({ db, setDb, currentCompany }) => {
     notify.success(rateLedger ? `${name} added — ledger created under Duties & Taxes.` : `${name} added.`);
   };
 
-  const deleteRate = (id) => {
+  const deleteRate = async (id) => {
+    await removeMaster((db.gstRates || []).find((r) => r.id === id));
     setDb({
       ...db,
       gstRates: (db.gstRates || []).filter((r) => r.id !== id),

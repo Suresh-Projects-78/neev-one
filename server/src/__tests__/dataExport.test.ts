@@ -124,6 +124,23 @@ describe('exporting a company', () => {
     expect(res.body.data.sessions).toBeUndefined();
   });
 
+  it('carries the till counts, which are the cash controls', async () => {
+    // A day close held only by the till it was counted on is lost with that
+    // machine; leaving it out of the export loses it again on purpose.
+    await request(app)
+      .post(`/api/orgs/${mine.orgId}/pos-day-closes`)
+      .set(auth(mine))
+      .send({ date: '2026-09-05', cash: 1234.5, total: 1234.5, countedCash: 1200, overShort: -34.5 })
+      .expect(201);
+
+    const listed = await request(app)
+      .get(`/api/orgs/${mine.orgId}/export?scope=data`)
+      .set(auth(mine))
+      .expect(200);
+    const close = listed.body.data.posDayCloses.find((d: any) => d.date === '2026-09-05');
+    expect(Number(close.overShort)).toBe(-34.5);
+  });
+
   it('refuses an org the caller is not in', async () => {
     const stranger = await makeOwner('stranger');
     await request(app).get(`/api/orgs/${stranger.orgId}/export`).set(auth(mine)).expect(403);
