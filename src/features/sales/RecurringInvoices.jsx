@@ -815,7 +815,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             <span className="ui-t-label">Each run</span>
             <span className="ui-money-lg">{formatMoney(draftTotals.total || 0, currentCompany)}</span>
             <span className="ui-caption">
-              {formatMoney(draftTotals.subtotal || 0, currentCompany)} + {formatMoney(draftTotals.gstTotal || 0, currentCompany)} GST
+              <span className="ui-money fig">{formatMoney(draftTotals.subtotal || 0, currentCompany)}</span> +{' '}
+              <span className="ui-money fig">{formatMoney(draftTotals.gstTotal || 0, currentCompany)}</span> GST
             </span>
           </div>
         </div>

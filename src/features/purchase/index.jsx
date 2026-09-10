@@ -191,11 +191,12 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         }
       }
 
-      if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId') {
+      if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId' || field === 'discountPct') {
         const computed = computeGstForLine({
           quantity: Number(next.quantity ?? 1),
           rate: Number(next.rate ?? 0),
           gstRate: Number(next.gstRate ?? 0),
+          discountPct: Number(next.discountPct ?? 0),
           isIntra,
         });
         next.amount = computed.taxableAmount;
@@ -395,24 +396,13 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           Save Draft
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">Bill Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => {
-              fieldErrors.clearField('number');
-              setFormData({ ...formData, number: e.target.value });
-            }}
-            className={`w-full px-3 py-2 border rounded-lg ${lockBillNumber ? 'ui-sunken' : ''}`}
-            disabled={lockBillNumber}
-            required
-            {...fieldErrors.props('number')}
-          />
-          <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
-        </div>
-
+      {/*
+        The head of the document, in the invoice's two columns: who it came from
+        and where the goods landed on the left, the paperwork that identifies it
+        on the right, ruled off between them.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-6 space-y-4">
         <div
           ref={(el) => fieldErrors.register('vendorId', el)}
           data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
@@ -457,74 +447,112 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
         </div>
 
-        <div>
-          <label className="ui-label">Bill Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => {
-              fieldErrors.clearField('date');
-              setFormData({ ...formData, date: e.target.value });
-            }}
-            className="ui-input w-full"
-            required
-            {...fieldErrors.props('date')}
-          />
         </div>
 
+        <div
+          className="lg:col-span-6 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr] gap-3">
         <div>
-          <label className="ui-label">Due Date</label>
-          <input
-            type="date"
-            value={formData.dueDate}
-            onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-            className="ui-input w-full"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="ui-label">Ref No</label>
+          <label className="ui-label">Bill Number</label>
           <input
             type="text"
-            value={formData.refNo}
-            onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
-            className="ui-input w-full"
-            placeholder="Customer invoice no"
+            value={formData.number}
+            onChange={(e) => {
+              fieldErrors.clearField('number');
+              setFormData({ ...formData, number: e.target.value });
+            }}
+            className={`w-full px-3 py-2 border rounded-lg ${lockBillNumber ? 'ui-sunken' : ''}`}
+            disabled={lockBillNumber}
+            required
+            {...fieldErrors.props('number')}
           />
+          <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
         </div>
 
-        <div>
-          <label className="ui-label">Ref Date</label>
-          <input
-            type="date"
-            value={formData.refDate}
-            onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="ui-input w-full"
-          />
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="bill-date">
+                Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="bill-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => {
+                  fieldErrors.clearField('date');
+                  setFormData({ ...formData, date: e.target.value });
+                }}
+                className="ui-input w-full"
+                required
+                {...fieldErrors.props('date')}
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="bill-due">
+                Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="bill-due"
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                className="ui-input w-full"
+                required
+              />
+            </div>
+          </div>
+
+          {/* The supplier's own number and date for this bill — what the
+              invoice calls Ref No. and Ref Date. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="bill-ref">Ref No.</label>
+              <input
+                id="bill-ref"
+                type="text"
+                value={formData.refNo}
+                onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+                className="ui-input w-full"
+                placeholder="Supplier bill no"
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="bill-ref-date">Ref Date</label>
+              <input
+                id="bill-ref-date"
+                type="date"
+                value={formData.refDate}
+                onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+                className="ui-input w-full"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-2">
+        <div className="mb-2">
           <label className="ui-label">Line Items</label>
-          <span className="flex items-center gap-3">
-            <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
-            <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-              <Plus size={16} /> Add Item
-            </button>
-          </span>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="ui-table w-full ui-table-wide">
+          <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
+                <th className="ui-th text-left w-[28%]">Item</th>
+                <th className="ui-th text-left w-[20%]">Description</th>
+                <th className="ui-th ui-num w-[7%]">
+                  Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
+                </th>
+                <th className="ui-th text-left w-[6%]">Unit</th>
+                <th className="ui-th ui-num w-[11%]">
+                  Rate (₹) <span className="text-[rgb(var(--neg-ink))]">*</span>
+                </th>
+                <th className="ui-th ui-num w-[7%]">Disc %</th>
+                <th className="ui-th ui-num w-[8%]">Tax %</th>
+                <th className="ui-th ui-num w-[13%]">Amount (₹)</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
@@ -564,14 +592,39 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                         />
                       </td>
                       <td className="px-3 py-2">
+                        {/* The unit belongs to the item, so it is shown rather
+                            than asked for. */}
+                        <span className="text-[0.8125rem] ui-muted">{String(master?.unit || '').trim() || '—'}</span>
+                      </td>
+                      <td className="px-3 py-2">
                         <input
                           type="number"
                           value={item.rate}
                           onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                          className="ui-input w-full px-2 py-1"
+                          className="ui-input w-full min-w-0 px-2 py-1"
                           min="0"
                           step="0.01"
                         />
+                      </td>
+                      <td className="px-3 py-2">
+                        {/* A supplier's discount is on the bill, and without a
+                            column for it the rate had to be back-worked by
+                            hand — which is how a bill stops matching the
+                            purchase order it came from. */}
+                        <input
+                          type="number"
+                          value={item.discountPct || ''}
+                          onChange={(e) => updateItem(idx, 'discountPct', e.target.value)}
+                          className="ui-input w-full min-w-0 px-2 py-1"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          placeholder="0"
+                          aria-label={`Discount percent for line ${idx + 1}`}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="ui-num block text-[0.8125rem]">{Number(item.gstRate ?? 0)}%</span>
                       </td>
                       <td className="ui-col-amount px-3 py-2">{formatMoney(item.lineTotal || 0, currentCompany)}</td>
                       <td className="px-3 py-2">
@@ -582,7 +635,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                     </tr>
                     {tracked ? (
                       <tr className="border-t-0">
-                        <td colSpan={6} className="px-3 pb-2 pt-0">
+                        <td colSpan={9} className="px-3 pb-2 pt-0">
                           <div className="flex flex-wrap items-center gap-2 text-xs">
                             <span className="ui-muted font-medium">Batch:</span>
                             <input
@@ -621,6 +674,14 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           </table>
         </div>
 
+        <div className="mt-2 flex items-center gap-3">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+            <Plus size={15} aria-hidden="true" /> Add Item
+          </button>
+          <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
+          <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
+        </div>
+
         <div className="mt-4 flex justify-end">
           <div className="w-80 space-y-2">
             <div className="flex justify-between">
@@ -656,7 +717,13 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
       <DocFormFootnote />
 
-      <div className="flex justify-end items-center gap-3">
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Total</span>
+        <span className="ui-money-lg">{formatMoney(computed.total, currentCompany)}</span>
+        <span className="ui-caption">
+          {formData.items.filter((l) => String(l.itemId || '').trim()).length} line(s)
+          {computed.gstTotal > 0 ? ` · ${formatMoney(computed.gstTotal, currentCompany)} GST` : ''}
+        </span>
         <FieldErrorSummary errors={fieldErrors.errors} />
       </div>
     </form>
@@ -1441,11 +1508,8 @@ export const PurchaseOrderForm = ({
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-2">
+        <div className="mb-2">
           <label className="ui-label">Line Items</label>
-          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-            <Plus size={16} /> Add Item
-          </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -1539,6 +1603,13 @@ export const PurchaseOrderForm = ({
           </table>
         </div>
 
+        <div className="mt-2 flex items-center gap-3">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+            <Plus size={15} aria-hidden="true" /> Add Item
+          </button>
+          <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
+        </div>
+
         <div className="mt-4 flex justify-end">
           <div className="w-64 space-y-2">
             <div className="ui-total-row border-t pt-2">
@@ -1575,6 +1646,17 @@ export const PurchaseOrderForm = ({
       ) : null}
 
       <DocFormFootnote />
+
+      {/* The figure and the line count, kept on screen while the lines are
+          typed — the same running total the invoice carries. */}
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Total</span>
+        <span className="ui-money-lg">{formatMoney(poTax.total ?? subtotal, currentCompany)}</span>
+        <span className="ui-caption">
+          {formData.items.filter((l) => String(l.itemId || '').trim()).length} line(s)
+          {poTax.gstTotal > 0 ? ` · ${formatMoney(poTax.gstTotal, currentCompany)} GST` : ''}
+        </span>
+      </div>
     </form>
   );
 };
@@ -2918,11 +3000,8 @@ export const DebitNoteForm = ({
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-2">
+        <div className="mb-2">
           <label className="ui-label">Line Items</label>
-          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-            <Plus size={16} /> Add Item
-          </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -3016,6 +3095,13 @@ export const DebitNoteForm = ({
           </table>
         </div>
 
+        <div className="mt-2 flex items-center gap-3">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+            <Plus size={15} aria-hidden="true" /> Add Item
+          </button>
+          <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
+        </div>
+
         <div className="mt-4 flex justify-end">
           <div className="w-64 space-y-2">
             <div className="flex justify-between">
@@ -3056,6 +3142,15 @@ export const DebitNoteForm = ({
       <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
+
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Total</span>
+        <span className="ui-money-lg">{formatMoney(computed.total, currentCompany)}</span>
+        <span className="ui-caption">
+          {formData.items.filter((l) => String(l.itemId || '').trim()).length} line(s)
+          {computed.gstTotal > 0 ? ` · ${formatMoney(computed.gstTotal, currentCompany)} GST` : ''}
+        </span>
+      </div>
     </form>
   );
 };

@@ -14,6 +14,7 @@ vi.mock('../../api/ledger', () => ({
 }));
 
 import { CreditNoteForm, EstimateForm } from './index';
+import { BillForm, DebitNoteForm } from '../purchase/index';
 import SalesOrders from './SalesOrders';
 import DeliveryChallans from './DeliveryChallans';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
@@ -227,5 +228,35 @@ describe('a document form is a screen, not a panel above the list', () => {
 
   it('the delivery challan form replaces the list', async () => {
     await opensAlone(DeliveryChallans, /New Challan|New Delivery Challan/i, 'Out, not billed');
+  });
+});
+
+
+describe('the purchase module wears the invoice layout', () => {
+  const purchaseDb = () => ({ ...baseDb(), vendors: [{ id: 9, companyId: 1, name: 'Umbrella Chemicals', displayName: 'Umbrella Chemicals' }], bills: [], debitNotes: [], purchaseOrders: [] });
+
+  it('the bill carries every line column the invoice has', () => {
+    render(<BillForm db={purchaseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+    expect(lineHeaders()).toEqual(LINE_COLUMNS);
+  });
+
+  /* A supplier's discount is on the bill; without a column the rate had to be
+     back-worked by hand, which is how a bill stops matching its order. */
+  it('the bill can discount a line', () => {
+    render(<BillForm db={purchaseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+    expect(screen.getByLabelText('Discount percent for line 1')).toBeInTheDocument();
+  });
+
+  it('the bill adds lines the way the invoice does and keeps a running total', () => {
+    render(<BillForm db={purchaseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+    expect(screen.getByRole('button', { name: /Add Item/i })).toBeInTheDocument();
+    expect(screen.getByText(/press Tab in the last field of the last row/i)).toBeInTheDocument();
+    expect(screen.getByText(/line\(s\)/)).toBeInTheDocument();
+  });
+
+  it('the purchase return keeps a running total too', () => {
+    render(<DebitNoteForm db={purchaseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+    expect(screen.getByText(/line\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/press Tab in the last field of the last row/i)).toBeInTheDocument();
   });
 });

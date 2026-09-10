@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
-import { DocFormActions } from '../../components/DocumentForm';
+import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -30,7 +30,7 @@ const canPayDoc = (doc, notes) => {
   return getDocBalance(doc, notes) > 0.0001;
 };
 
-const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
+const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitle = '', onBack = null, initialData = null, onSaved, hideMode = false }) => {
   const formRef = useRef(null);
   const fieldErrors = useFieldErrors('payment');
   const companyId = currentCompany.id;
@@ -415,44 +415,27 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
+      {/* The bar every document form carries: the name on the left, every way
+          out of it on the right, pinned so Record stays reachable from the
+          bottom of a long list of open bills. */}
       <DocFormActions
+        title={screenTitle}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
         primaryLabel={saving ? 'Recording…' : 'Record Payment'}
         disabled={saving}
         secondaryLabel="Cancel"
         onSecondary={onClose}
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">Payment Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="ui-input w-full"
-            required
-          />
-        </div>
-        <div>
-          <label className="ui-label">Amount Paid</label>
-          <input
-            type="number"
-            value={formData.amount}
-            onChange={(e) => {
-              fieldErrors.clearField('amount');
-              setFormData((p) => ({ ...p, amount: e.target.value }));
-            }}
-            className="ui-input w-full"
-            min="0"
-            step="0.01"
-            required
-            {...fieldErrors.props('amount')}
-          />
-          <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
-        </div>
-
+      {/*
+        The head of the document, in the invoice's two columns: who was paid and
+        where the money left from on the left, the paperwork — date and amount —
+        on the right, ruled off between them.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-6 space-y-4">
         <div
-          className="col-span-2"
           ref={(el) => fieldErrors.register('vendorId', el)}
           data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
         >
@@ -504,6 +487,48 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
             ) : null}
           </div>
         ) : null}
+        </div>
+
+        <div
+          className="lg:col-span-6 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="pay-date">
+                Payment Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="pay-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
+                className="ui-input w-full"
+                required
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="pay-amount">
+                Amount Paid <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="pay-amount"
+                type="number"
+                value={formData.amount}
+                onChange={(e) => {
+                  fieldErrors.clearField('amount');
+                  setFormData((p) => ({ ...p, amount: e.target.value }));
+                }}
+                className="ui-input ui-money w-full"
+                min="0"
+                step="0.01"
+                required
+                {...fieldErrors.props('amount')}
+              />
+              <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
+            </div>
+          </div>
+
         <div>
           <label className="ui-label">Reference</label>
           <input
@@ -513,6 +538,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
             className="ui-input w-full"
             placeholder="Txn / UTR / Cheque no"
           />
+        </div>
         </div>
       </div>
 
@@ -610,7 +636,15 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, initialDat
         />
       </div>
 
-      <div className="flex justify-end items-center gap-2">
+      <DocFormFootnote />
+
+      {/* What actually leaves the account, kept on screen while bills are
+          ticked off — the invoice form's running total, for the figure that has
+          to match the bank statement. */}
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Paid from the account</span>
+        <span className="ui-money-lg">{formatMoney(computed.totalAmount ?? computed.allocated, currentCompany)}</span>
+        <span className="ui-caption">{selectedCount} bill(s) allocated</span>
         <FieldErrorSummary errors={fieldErrors.errors} />
       </div>
     </form>

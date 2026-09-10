@@ -12860,21 +12860,15 @@ const AppShell = () => {
         if (paymentEditor.open) {
           return (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="ui-t-sec">Record Payment</h3>
-                <button
-                  type="button"
-                  onClick={() => setPaymentEditor({ open: false })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
+              {/* Title, Back and the primary action in one bar inside the card,
+                  as every other document screen has them. */}
               <div className="ui-surface border rounded-xl p-4">
                 <RecordDisbursementForm
                   db={dbForUser}
                   setDb={setDb}
                   currentCompany={currentCompany}
+                  screenTitle="Record Payment"
+                  onBack={() => setPaymentEditor({ open: false })}
                   onClose={() => setPaymentEditor({ open: false })}
                 />
               </div>
