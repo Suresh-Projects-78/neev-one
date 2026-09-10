@@ -33,6 +33,19 @@ npx vite build >/dev/null
 du -sh dist | awk '{print "  " $1 " of static files"}'
 
 step "Uploading frontend"
+# Two passes, and the order is the point.
+#
+# One rsync with --delete removes the old hashed bundle in the same breath as
+# it writes the new index.html, so anybody whose browser fetched the page a
+# second earlier asks for a file that no longer exists: a blank screen and a
+# 404 on a bundle nobody can explain. Uploading the new assets first means the
+# old page still works while the swap happens, and the stale files go only
+# after the new index.html is in place and pointing elsewhere.
+# 1. New assets alongside the old ones — nothing is removed yet.
+rsync -az -e "ssh -i $KEY" dist/assets/ "ubuntu@$HOST:/opt/neev/web/assets/"
+# 2. index.html and the rest, now that what it points at is already there.
+rsync -az --exclude assets -e "ssh -i $KEY" dist/ "ubuntu@$HOST:/opt/neev/web/"
+# 3. Only now sweep what the new build no longer references.
 rsync -az --delete -e "ssh -i $KEY" dist/ "ubuntu@$HOST:/opt/neev/web/"
 
 if [ "${1:-}" = "--api" ]; then
