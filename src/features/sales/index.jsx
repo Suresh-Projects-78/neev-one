@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, ChevronDown, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, Search, Settings2, SlidersHorizontal, Table2, Trash2, Tag, RefreshCw, X } from 'lucide-react';
+import { Ban, ChevronDown, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, RefreshCw, Search, Settings2, SlidersHorizontal, Table2, Tag, Trash2, Upload, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -2299,6 +2299,7 @@ export const CreditNotesList = ({
   onNewCreditNote,
   warehouses = [],
   defaultWarehouseId = '',
+  onNavigate = null,
 }) => {
   const warehouseById = useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
@@ -2479,8 +2480,15 @@ export const CreditNotesList = ({
         placeholder: 'Search credit notes…',
         label: 'Search credit notes',
       }}
-      moreItems={[exportMenuItem('Export credit notes')]}
+      moreItems={[
+        exportMenuItem('Export credit notes'),
+        ...(onNavigate ? [{ key: 'dataImport', label: 'Import credit notes', Icon: Upload }] : []),
+      ]}
       onMoreSelect={(k) => {
+        if (k === 'dataImport') {
+          onNavigate?.('dataImport', 'CREDIT_NOTE');
+          return;
+        }
         const format = exportFormatFromKey(k);
         if (!format) return;
         runListExport({

@@ -11577,6 +11577,8 @@ const AppShell = () => {
    */
   const [returnTo, setReturnTo] = useState(null);
   const lastScreenRef = useRef('invoices');
+  /* Which kind the import screen should open on, set by the menu that opens it. */
+  const [importKind, setImportKind] = useState('');
   const prevScreenRef = useRef(active);
   useEffect(() => {
     if (prevScreenRef.current !== active) {
@@ -12655,7 +12657,10 @@ const AppShell = () => {
             onNewInvoice={() => setInvoiceEditor({ open: true, initial: null })}
             onEditInvoice={(inv) => setInvoiceEditor({ open: true, initial: inv })}
             onOpenRecurring={() => setActive('recurringInvoices')}
-            onNavigate={(screen) => setActive(screen)}
+            onNavigate={(screen, kind = '') => {
+              if (screen === 'dataImport') setImportKind(kind);
+              setActive(screen);
+            }}
             onRaiseCreditNote={(inv) => {
               setActive('creditNotes');
               setCreditNoteEditor({ open: true, initialOriginalInvoiceId: inv?.id ?? null });
@@ -12717,7 +12722,10 @@ const AppShell = () => {
             setDb={setDb}
             openModal={openModal}
             currentCompany={currentCompany}
-            onNavigate={(screen) => setActive(screen)}
+            onNavigate={(screen, kind = '') => {
+              if (screen === 'dataImport') setImportKind(kind);
+              setActive(screen);
+            }}
             warehouses={warehousesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewEstimate={() => setEstimateEditor({ open: true, initial: null })}
@@ -12787,6 +12795,10 @@ const AppShell = () => {
             currentCompany={currentCompany}
             onNewJournal={() => setJournalEditor({ open: true, initial: null })}
             onEditJournal={(jv) => setJournalEditor({ open: true, initial: jv })}
+            onNavigate={(screen, kind = '') => {
+              if (screen === 'dataImport') setImportKind(kind);
+              setActive(screen);
+            }}
           />
         );
       case 'creditNotes':
@@ -12822,6 +12834,10 @@ const AppShell = () => {
             warehouses={warehousesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewCreditNote={() => setCreditNoteEditor({ open: true, initialOriginalInvoiceId: null })}
+            onNavigate={(screen, kind = '') => {
+              if (screen === 'dataImport') setImportKind(kind);
+              setActive(screen);
+            }}
           />
         );
       case 'receipts':
@@ -13041,7 +13057,10 @@ const AppShell = () => {
           <PurchaseOverview
             db={dbForUser}
             currentCompany={currentCompany}
-            onNavigate={(screen) => setActive(screen)}
+            onNavigate={(screen, kind = '') => {
+              if (screen === 'dataImport') setImportKind(kind);
+              setActive(screen);
+            }}
             onNewBill={() => setBillEditor({ open: true, initial: null })}
           />
         );
@@ -13180,7 +13199,10 @@ const AppShell = () => {
             warehouses={warehousesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewBill={() => setBillEditor({ open: true, initial: null })}
-            onNavigate={(screen) => setActive(screen)}
+            onNavigate={(screen, kind = '') => {
+              if (screen === 'dataImport') setImportKind(kind);
+              setActive(screen);
+            }}
             onDuplicateBill={(initial) => setBillEditor({ open: true, initial })}
             onEditBill={(bill) => setBillEditor({ open: true, initial: bill })}
             onRaiseDebitNote={(bill) => {
@@ -13226,6 +13248,10 @@ const AppShell = () => {
             warehouses={warehousesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewDebitNote={() => setDebitNoteEditor({ open: true, initialOriginalBillId: null })}
+            onNavigate={(screen, kind = '') => {
+              if (screen === 'dataImport') setImportKind(kind);
+              setActive(screen);
+            }}
           />
         );
       case 'expenses':
@@ -13399,8 +13425,15 @@ const AppShell = () => {
         return <CurrencySettings />;
       case 'dataImport':
         // Back to wherever the More menu was opened from, defaulting to the
-        // invoices list because that is where import is offered.
-        return <ImportCenter onBack={() => setActive(lastScreenRef.current || 'invoices')} />;
+        // invoices list because that is where import is offered. The kind is
+        // taken from the menu that opened it, so somebody importing journals
+        // does not land on invoices and have to say so again.
+        return (
+          <ImportCenter
+            initialDocType={importKind}
+            onBack={() => setActive(lastScreenRef.current || 'invoices')}
+          />
+        );
       case 'batchSerial':
         return <BatchSerialManager />;
       case 'stockAdjustments':

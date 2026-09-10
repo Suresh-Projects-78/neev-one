@@ -9,6 +9,7 @@ import {
   validateImport,
 } from '../../api/imports';
 import { PageHeader, Spinner } from '../../components/ui/Primitives';
+import { csvSafeValue } from '../../utils/csv';
 
 /**
  * Document import — requirements 15 and 16.
@@ -30,10 +31,49 @@ const saveTextAsFile = (text, filename) => {
   URL.revokeObjectURL(url);
 };
 
-export default function ImportCenter({ onBack = null }) {
+/**
+ * Keep only the columns that were asked for, in the template's own order.
+ *
+ * Required columns stay whatever the choice was: a file without them cannot be
+ * checked, let alone imported, so offering to leave them out would be offering
+ * a file that fails.
+ */
+export const narrowTemplate = (text, keys) => {
+  const wanted = new Set((Array.isArray(keys) ? keys : []).map(String));
+  if (!wanted.size) return text;
+
+  const lines = String(text || '').split(/\r?\n/);
+  if (!lines.length) return text;
+
+  const split = (line) => line.split(',');
+  const header = split(lines[0]);
+  const keepAt = header.map((h, i) => (wanted.has(h.trim()) ? i : -1)).filter((i) => i >= 0);
+  if (!keepAt.length || keepAt.length === header.length) return text;
+
+  return lines
+    .map((line, i) => {
+      if (i > 0 && !line.trim()) return line;
+      const cells = split(line);
+      /* Rebuilt cells go back through the guard, the same as any other CSV this
+         product writes — a template is a file a spreadsheet will open. */
+      return keepAt.map((at) => csvSafeValue(cells[at] ?? '')).join(',');
+    })
+    .join('\n');
+};
+
+export default function ImportCenter({ onBack = null, initialDocType = '' }) {
   const [specs, setSpecs] = useState([]);
   const [unsupported, setUnsupported] = useState([]);
   const [docType, setDocType] = useState('');
+  /*
+   * Which columns the template carries.
+   *
+   * A template with every column on it is a spreadsheet somebody has to prune
+   * before they can start, and the columns they do not need are the ones they
+   * fill in wrongly. Required columns are always in it — a file without them
+   * cannot be checked, let alone imported.
+   */
+  const [chosenColumns, setChosenColumns] = useState([]);
   const [csv, setCsv] = useState('');
   const [fileName, setFileName] = useState('');
 
@@ -47,6 +87,22 @@ export default function ImportCenter({ onBack = null }) {
 
   const spec = useMemo(() => specs.find((s) => s.docType === docType) || null, [specs, docType]);
 
+  /* A new document type brings its own columns; start with all of them. */
+  useEffect(() => {
+    setChosenColumns((spec?.columns || []).map((c) => c.key));
+  }, [spec]);
+
+  const required = useMemo(
+    () => new Set((spec?.columns || []).filter((c) => c.required).map((c) => c.key)),
+    [spec]
+  );
+
+  const toggleColumn = (key) =>
+    setChosenColumns((prev) => {
+      if (required.has(key)) return prev;
+      return prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+    });
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -55,7 +111,9 @@ export default function ImportCenter({ onBack = null }) {
         if (cancelled) return;
         setSpecs(data?.specs || []);
         setUnsupported(data?.unsupported || []);
-        setDocType(data?.specs?.[0]?.docType || '');
+        const wanted = String(initialDocType || '').toUpperCase();
+        const known = (data?.specs || []).some((sp) => String(sp.docType).toUpperCase() === wanted);
+        setDocType(known ? wanted : data?.specs?.[0]?.docType || '');
         setError('');
       } catch (e) {
         if (!cancelled) setError(String(e?.message || 'Could not load import types.'));
@@ -87,7 +145,13 @@ export default function ImportCenter({ onBack = null }) {
     setBusy(true);
     try {
       const text = await downloadTemplate(docType);
-      saveTextAsFile(text, `${docType.toLowerCase()}-template.csv`);
+      /*
+       * The server writes every column; the person asked for some of them. The
+       * file is narrowed here rather than by a second server route, because
+       * which columns somebody wants is a property of the moment, not of the
+       * document type.
+       */
+      saveTextAsFile(narrowTemplate(text, chosenColumns), `${docType.toLowerCase()}-template.csv`);
       setError('');
     } catch (e) {
       setError(String(e?.message || 'Could not download the template.'));
@@ -187,15 +251,52 @@ export default function ImportCenter({ onBack = null }) {
 
         {spec ? (
           <details className="text-sm">
-            <summary className="cursor-pointer ui-muted">Columns this file needs</summary>
-            <ul className="mt-2 space-y-1">
+            <summary className="cursor-pointer ui-muted">
+              Columns this file needs — {chosenColumns.length} of {spec.columns.length} in the template
+            </summary>
+            {/*
+              Tick what the template should carry. A template with every column
+              on it is a spreadsheet somebody has to prune before they can
+              start, and the columns they do not need are the ones they fill in
+              wrongly. The required ones cannot be turned off: a file without
+              them cannot be checked, let alone imported.
+            */}
+            <ul className="mt-2 grid gap-1 sm:grid-cols-2">
               {spec.columns.map((c) => (
                 <li key={c.key}>
-                  <code className="font-mono">{c.key}</code>
-                  {c.required ? <span className="text-[rgb(var(--neg))]"> *</span> : null} — {c.hint}
+                  <label className="flex cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="ui-checkbox mt-0.5"
+                      checked={required.has(c.key) || chosenColumns.includes(c.key)}
+                      disabled={required.has(c.key)}
+                      onChange={() => toggleColumn(c.key)}
+                      aria-label={`Include ${c.key} in the template`}
+                    />
+                    <span>
+                      <code className="font-mono">{c.key}</code>
+                      {c.required ? <span className="text-[rgb(var(--neg))]"> *</span> : null} — {c.hint}
+                    </span>
+                  </label>
                 </li>
               ))}
             </ul>
+            <div className="mt-2 flex gap-3">
+              <button
+                type="button"
+                className="ui-btn ui-btn-ghost ui-btn-sm"
+                onClick={() => setChosenColumns(spec.columns.map((c) => c.key))}
+              >
+                Select all
+              </button>
+              <button
+                type="button"
+                className="ui-btn ui-btn-ghost ui-btn-sm"
+                onClick={() => setChosenColumns(spec.columns.filter((c) => c.required).map((c) => c.key))}
+              >
+                Required only
+              </button>
+            </div>
           </details>
         ) : null}
 

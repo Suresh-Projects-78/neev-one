@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Ban, BookOpen, ClipboardList, Download, Pencil, Plus, Receipt, Trash2, Undo2 } from 'lucide-react';
+import { Ban, BookOpen, ClipboardList, Download, Pencil, Plus, Receipt, Trash2, Undo2, Upload } from 'lucide-react';
 
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import { usePeriodFilter } from '../../components/ListControls';
@@ -17,7 +17,7 @@ import { exportFormatFromKey, exportMenuItem, runListExport } from '../../compon
  * Lifted out of App.jsx when it moved onto the shared list layout — a screen
  * that cannot be rendered on its own cannot be tested on its own either.
  */
-export default function JournalEntriesList({ db, setDb, currentCompany, onNewJournal, onEditJournal }) {
+export default function JournalEntriesList({ db, setDb, currentCompany, onNewJournal, onEditJournal, onNavigate = null }) {
   const jvPeriod = usePeriodFilter();
   const jvSearch = useListSearch(
     db.journalEntries.filter((j) => j.companyId === currentCompany.id),
@@ -144,8 +144,17 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
         placeholder: 'Search journal entries…',
         label: 'Search journal entries',
       }}
-      moreItems={[exportMenuItem('Export journal entries')]}
+      moreItems={[
+        exportMenuItem('Export journal entries'),
+        /* An opening trial balance arrives as a spreadsheet, not as
+           four hundred vouchers somebody types. */
+        ...(onNavigate ? [{ key: 'dataImport', label: 'Import journal entries', Icon: Upload }] : []),
+      ]}
       onMoreSelect={(k) => {
+        if (k === 'dataImport') {
+          onNavigate?.('dataImport', 'JOURNAL');
+          return;
+        }
         const format = exportFormatFromKey(k);
         if (!format) return;
         runListExport({

@@ -15,7 +15,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, X } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Upload, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -3155,7 +3155,7 @@ export const DebitNoteForm = ({
   );
 };
 
-export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebitNote, warehouses = [], defaultWarehouseId = '' }) => {
+export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebitNote, warehouses = [], defaultWarehouseId = '', onNavigate = null }) => {
   const warehouseById = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
@@ -3336,8 +3336,15 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
         placeholder: 'Search debit notes…',
         label: 'Search debit notes',
       }}
-      moreItems={[exportMenuItem('Export debit notes')]}
+      moreItems={[
+        exportMenuItem('Export debit notes'),
+        ...(onNavigate ? [{ key: 'dataImport', label: 'Import purchase returns', Icon: Upload }] : []),
+      ]}
       onMoreSelect={(k) => {
+        if (k === 'dataImport') {
+          onNavigate?.('dataImport', 'DEBIT_NOTE');
+          return;
+        }
         const format = exportFormatFromKey(k);
         if (!format) return;
         runListExport({
