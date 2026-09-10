@@ -1,11 +1,12 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Link2, Link2Off, Scale, Upload } from 'lucide-react';
+import { CheckCircle2, Link2, Link2Off, Lock, Scale, Upload } from 'lucide-react';
 
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
 import { formatMoney, round2 } from '../../utils/money';
 import { readStatement } from '../../utils/statementImport';
 import { DEFAULT_DATE_WINDOW_DAYS, matchStatement, reconciliationSummary } from '../../utils/bankReco';
+import { reconcilePayment } from '../../api/payments';
 
 /**
  * Reconciling a bank account.
@@ -47,7 +48,7 @@ const Row = ({ row, company, right = null }) => (
   </div>
 );
 
-export default function BankReconciliation({ db, currentCompany }) {
+export default function BankReconciliation({ db, setDb, currentCompany }) {
   const companyId = currentCompany?.id;
   const fileRef = useRef(null);
 
@@ -65,6 +66,7 @@ export default function BankReconciliation({ db, currentCompany }) {
   const [closingBalance, setClosingBalance] = useState('');
   const [windowDays, setWindowDays] = useState(String(DEFAULT_DATE_WINDOW_DAYS));
   const [rejected, setRejected] = useState(() => new Set());
+  const [saving, setSaving] = useState(false);
 
   /*
    * The book side: what this account already holds. Receipts and payments
@@ -77,7 +79,14 @@ export default function BankReconciliation({ db, currentCompany }) {
     const payments = safeArray(db?.payments)
       .filter((p) => p.companyId === companyId)
       .filter((p) => (serverLedgerId ? String(p.ledgerAccountId || '') === serverLedgerId : false))
+      /*
+       * Already reconciled in an earlier session, so it is not outstanding and
+       * must not be offered again. Without this every statement a business ever
+       * loads re-proposes every payment it has ever made.
+       */
+      .filter((p) => p.reconciled !== true)
       .map((p) => ({
+        paymentId: String(p.id),
         id: `pay-${p.id}`,
         date: String(p.date || '').slice(0, 10),
         direction: p.voucherType === 'receipt' ? 'IN' : 'OUT',
@@ -161,6 +170,67 @@ export default function BankReconciliation({ db, currentCompany }) {
     if (last && !closingBalance) setClosingBalance(String(last.balance));
     notify.success(`${rows.length} statement line(s) read.`);
   }, [closingBalance]);
+
+  /**
+   * Tying the matched pairs off, for good.
+   *
+   * Until this existed the screen worked out the answer and then forgot it: the
+   * matching, the confirming and the unmatching all lived in this component's
+   * state, so closing the tab threw away the reconciliation and the next
+   * statement re-proposed every payment again.
+   *
+   * Only a receipt or payment can be marked. A row entered straight into the
+   * bank book has no server record to mark yet — that is the next thing to fix,
+   * and it is stated below rather than hidden, because a reconciliation that
+   * silently ties off half of what is on screen is worse than one that does
+   * less and says so.
+   */
+  const markable = useMemo(() => view.matched.filter((m) => m.book.paymentId), [view.matched]);
+  const unmarkable = view.matched.length - markable.length;
+
+  const reconcileMatched = async () => {
+    if (!markable.length || saving) return;
+    setSaving(true);
+    const done = [];
+    const failed = [];
+
+    for (const m of markable) {
+      try {
+        // One at a time on purpose: a refusal on one payment must not take the
+        // rest of the reconciliation down with it.
+        await reconcilePayment(m.book.paymentId, {
+          reconciled: true,
+          bankDate: m.statement.date || null,
+          // What the bank called it. The point of keeping this is that a query
+          // six months later is answered from the statement's own wording.
+          statementRef: `${statementName} · ${m.statement.narration || m.statement.date}`.slice(0, 120),
+        });
+        done.push(m.book.paymentId);
+      } catch (e) {
+        failed.push(String(e?.message || e));
+      }
+    }
+
+    /*
+     * Mirrored into the local book so the screen agrees with the server without
+     * a reload — and so a row that was tied off does not come back as
+     * outstanding the moment somebody loads the next statement.
+     */
+    if (done.length && typeof setDb === 'function') {
+      const marked = new Set(done);
+      setDb((prev) => ({
+        ...prev,
+        payments: safeArray(prev.payments).map((p) => (marked.has(String(p.id)) ? { ...p, reconciled: true } : p)),
+      }));
+    }
+
+    setSaving(false);
+    if (failed.length) {
+      notify.error(`${done.length} reconciled. ${failed.length} could not be saved: ${failed[0]}`);
+      return;
+    }
+    notify.success(`${done.length} entr${done.length === 1 ? 'y' : 'ies'} reconciled.`);
+  };
 
   const toggleReject = (id) =>
     setRejected((prev) => {
@@ -301,8 +371,28 @@ export default function BankReconciliation({ db, currentCompany }) {
           </div>
 
           <div>
-            <div className="ui-label mb-2">
-              Matched ({view.matched.length}) — the same money on both sides
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div className="ui-label">
+                Matched ({view.matched.length}) — the same money on both sides
+              </div>
+              {view.matched.length ? (
+                <div className="flex items-center gap-3">
+                  {unmarkable ? (
+                    <span className="ui-caption ui-muted">
+                      {unmarkable} entered straight into the bank book — not yet savable
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={reconcileMatched}
+                    disabled={saving || !markable.length}
+                    className="ui-btn ui-btn-primary ui-btn-sm"
+                  >
+                    <Lock size={14} aria-hidden="true" />{' '}
+                    {saving ? 'Saving…' : `Reconcile ${markable.length} matched`}
+                  </button>
+                </div>
+              ) : null}
             </div>
             <div className="ui-card divide-y">
               {view.matched.length === 0 ? (

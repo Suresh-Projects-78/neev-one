@@ -13777,7 +13777,7 @@ const AppShell = () => {
       case 'settingsSso':
         return <SsoSettings />;
       case 'bankReco':
-        return <BankReconciliation db={db} currentCompany={currentCompany} />;
+        return <BankReconciliation db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':
         return <LedgerTrialBalance currentCompany={currentCompany} />;
       case 'settingsUsersRoles': {

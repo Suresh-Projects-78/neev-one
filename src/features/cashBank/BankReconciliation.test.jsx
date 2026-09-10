@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
+
+const reconcilePayment = vi.fn();
+vi.mock('../../api/payments', () => ({ reconcilePayment: (...a) => reconcilePayment(...a) }));
 
 const notifyError = vi.fn();
 vi.mock('../../components/ui/notify', () => ({
@@ -39,6 +42,11 @@ const loadStatement = async (csv = STATEMENT) => {
   fireEvent.change(input, { target: { files: [file] } });
   await waitFor(() => expect(document.body.textContent).toContain('Reconciliation'));
 };
+
+beforeEach(() => {
+  reconcilePayment.mockReset().mockResolvedValue({});
+  notifyError.mockClear();
+});
 
 const paid = (id, date, amount, narration) => ({
   id,
@@ -169,5 +177,88 @@ describe('reconciling a bank account', () => {
   it('asks for an account before anything else', () => {
     render(<BankReconciliation db={dbWith({ chartOfAccounts: [] })} currentCompany={COMPANY} />);
     expect(screen.getByText('No bank or cash account yet')).toBeInTheDocument();
+  });
+});
+
+/*
+ * Until this existed the screen worked out the answer and then forgot it. The
+ * matching, the confirming and the unmatching all lived in component state, so
+ * closing the tab threw the reconciliation away and the next statement
+ * re-proposed every payment again.
+ */
+describe('tying the reconciliation off', () => {
+  const withMatch = (over = {}) =>
+    dbWith({ payments: [received(1, '2026-09-01', 5000, 'Acme Traders')], ...over });
+
+  it('saves each matched pair against its payment', async () => {
+    const setDb = vi.fn();
+    /*
+     * A cheque written on the 1st and cleared on the 2nd, deliberately: with
+     * both dates the same, sending the book's date instead of the bank's is
+     * indistinguishable and the assertion below proves nothing.
+     */
+    const db = dbWith({ payments: [paid(4, '2026-09-01', 12000, 'Cheque 400122 rent')] });
+    render(<BankReconciliation db={db} setDb={setDb} currentCompany={COMPANY} />);
+    await loadStatement();
+    fireEvent.click(screen.getByRole('button', { name: /Reconcile 1 matched/ }));
+
+    await waitFor(() => expect(reconcilePayment).toHaveBeenCalledTimes(1));
+    const [id, payload] = reconcilePayment.mock.calls[0];
+    expect(id).toBe('4');
+    expect(payload.reconciled).toBe(true);
+    // The bank's date, not the book's — that is the point of the column.
+    expect(payload.bankDate).toBe('2026-09-02');
+    // And what the bank called it, so a query six months later is answerable.
+    expect(payload.statementRef).toContain('CHQ 400122 RENT');
+  });
+
+  it('marks the local book so the row does not come back as outstanding', async () => {
+    const setDb = vi.fn();
+    render(<BankReconciliation db={withMatch()} setDb={setDb} currentCompany={COMPANY} />);
+    await loadStatement();
+    fireEvent.click(screen.getByRole('button', { name: /Reconcile 1 matched/ }));
+
+    await waitFor(() => expect(setDb).toHaveBeenCalled());
+    const next = setDb.mock.calls[0][0]({ payments: [received(1, '2026-09-01', 5000, 'Acme')] });
+    expect(next.payments[0].reconciled).toBe(true);
+  });
+
+  /*
+   * A payment tied off in an earlier session is not outstanding. Without this
+   * every statement a business ever loads re-proposes every payment it has
+   * ever made.
+   */
+  it('leaves an already-reconciled payment out of the book side', async () => {
+    const db = dbWith({ payments: [{ ...received(1, '2026-09-01', 5000, 'Acme Traders'), reconciled: true }] });
+    render(<BankReconciliation db={db} setDb={() => {}} currentCompany={COMPANY} />);
+    await loadStatement();
+    expect(screen.getByText(/Matched \(0\)/)).toBeInTheDocument();
+    expect(screen.getByText(/In the books, not on the statement \(0\)/)).toBeInTheDocument();
+  });
+
+  /*
+   * A row entered straight into the bank book has no server record to mark. The
+   * screen says so rather than quietly tying off half of what is on it.
+   */
+  it('says which matches it cannot save yet', async () => {
+    const db = dbWith({
+      bankTransactions: [
+        { id: 9, companyId: 1, cashBankAccountId: 7, date: '2026-09-01', direction: 'IN', amount: 5000, narration: 'Acme Traders' },
+      ],
+    });
+    render(<BankReconciliation db={db} setDb={() => {}} currentCompany={COMPANY} />);
+    await loadStatement();
+    expect(screen.getByText(/1 entered straight into the bank book — not yet savable/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Reconcile 0 matched/ })).toBeDisabled();
+  });
+
+  /* A refusal on one payment must not take the rest down with it. */
+  it('reports what could not be saved', async () => {
+    reconcilePayment.mockRejectedValue(new Error('reconciliation is switched off'));
+    render(<BankReconciliation db={withMatch()} setDb={vi.fn()} currentCompany={COMPANY} />);
+    await loadStatement();
+    fireEvent.click(screen.getByRole('button', { name: /Reconcile 1 matched/ }));
+    await waitFor(() => expect(notifyError).toHaveBeenCalled());
+    expect(String(notifyError.mock.calls[0][0])).toMatch(/could not be saved/);
   });
 });
