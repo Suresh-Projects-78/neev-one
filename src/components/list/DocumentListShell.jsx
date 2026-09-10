@@ -40,6 +40,13 @@ export default function DocumentListShell({
   onStatusChange = null,
   tabsLabel = 'Status',
   above = null,
+  /*
+   * Where the rows sit. Almost every list is a table and takes the card;
+   * `plain` is for a page whose rows are cards in their own right — a company
+   * switcher, say — because a card inside a card is the one thing DESIGN.md
+   * says a list may not be.
+   */
+  surface = 'card',
   tip = null,
   children,
 }) {
@@ -107,7 +114,7 @@ export default function DocumentListShell({
 
       {/* One card, not two: the filters belong to the table they filter, and a
           separate floating box above it reads as an unrelated control panel. */}
-      <div className="ui-card overflow-hidden">{children}</div>
+      {surface === 'plain' ? children : <div className="ui-card overflow-hidden">{children}</div>}
 
       {tip ? <ListTip {...tip} /> : null}
     </div>

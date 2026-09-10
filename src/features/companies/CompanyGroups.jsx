@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, ChevronRight, CornerDownRight, Pencil, Plus } from 'lucide-react';
+import { Ban, Building2, ChevronRight, CornerDownRight, Download, FileText, Landmark, Pencil, Plus, Receipt } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
-import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { EmptyState, StatusPill } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
+import { exportRows } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { GST_STATE_BY_CODE } from '../../utils/gst';
 import { createCompany } from '../../api/auth';
@@ -89,6 +91,54 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
       { ...own }
     );
   };
+
+  /*
+   * The group's own figures.
+   *
+   * A page that lists companies is opened to answer a question about the
+   * group, not about any one of them: what the whole thing has billed, what is
+   * still owed to it, and how many of its companies are actually registered —
+   * an unregistered company cannot raise a tax invoice, which is the sort of
+   * thing that should not need looking up company by company.
+   */
+  const groupTotals = useMemo(() => {
+    let billed = 0;
+    let outstanding = 0;
+    let registered = 0;
+    let docs = 0;
+    for (const c of companies) {
+      const act = activityById.get(c.id) || { billed: 0, outstanding: 0, docs: 0 };
+      billed += act.billed;
+      outstanding += act.outstanding;
+      docs += act.docs;
+      if (String(c.gstin || '').trim()) registered += 1;
+    }
+    return { companies: companies.length, billed, outstanding, registered, unregistered: companies.length - registered, docs };
+  }, [companies, activityById]);
+
+  /*
+   * Search is here for the group that has grown — a CA firm's twenty clients,
+   * a proprietor's four firms. It matches the name, the GSTIN and the state,
+   * which is how somebody actually looks for a company.
+   */
+  const [query, setQuery] = useState('');
+  /*
+   * The tree, narrowed by the search — a parent stays when one of its
+   * subsidiaries matches, because dropping it would leave the child floating
+   * with no indication of what it belongs to.
+   */
+  const visibleTree = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return tree;
+    const keep = (node) => {
+      const kids = node.children.map(keep).filter(Boolean);
+      const hit = [node.company.name, node.company.gstin, node.company.state].some((v) =>
+        String(v || '').toLowerCase().includes(q)
+      );
+      return hit || kids.length ? { ...node, children: kids } : null;
+    };
+    return tree.map(keep).filter(Boolean);
+  }, [tree, query]);
 
   const wouldCycle = (companyId, candidateParentId) => {
     let cur = candidateParentId;
@@ -256,27 +306,51 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
               ) : null}
             </div>
             <div className="ui-caption mt-0.5">
-              {[c.gstin ? `GSTIN ${c.gstin}` : null, c.state || null].filter(Boolean).join(' · ') || 'No GST details yet'}
+              {c.gstin ? (
+                [`GSTIN ${c.gstin}`, c.state].filter(Boolean).join(' · ')
+              ) : (
+                /*
+                 * Said whether or not the state is known. A company with no
+                 * GSTIN cannot raise a tax invoice at all, and the old line
+                 * only mentioned it when the state was missing too — so the
+                 * company that had one but not the other looked complete.
+                 */
+                <>
+                  <span style={{ color: 'rgb(var(--warn-ink))' }}>No GSTIN — cannot raise a tax invoice</span>
+                  {c.state ? <span> · {c.state}</span> : null}
+                </>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-6 text-sm">
-            <span className="text-right">
+          {/*
+            The figures, right-aligned in fixed columns so a row of companies
+            reads down as well as across. They were three loose spans that
+            moved with the length of the name beside them, which is unreadable
+            the moment there are four companies.
+          */}
+          <div className="flex items-center gap-5 text-sm">
+            <span className="w-24 text-right">
               <span className="ui-caption block">Billed</span>
-              <span className="ui-col-amount" title={formatMoney(act.billed, c)}>
+              <span className="ui-col-amount tabular-nums" title={formatMoney(act.billed, c)}>
                 {formatMoneyCompact(act.billed, c)}
               </span>
             </span>
-            <span className="text-right">
+            <span className="w-24 text-right">
               <span className="ui-caption block">Outstanding</span>
-              <span className="ui-col-amount" title={formatMoney(act.outstanding, c)}>
+              <span
+                className={`ui-col-amount tabular-nums ${act.outstanding > 0 ? 'ui-amount-neg' : ''}`}
+                title={formatMoney(act.outstanding, c)}
+              >
                 {formatMoneyCompact(act.outstanding, c)}
               </span>
             </span>
+            {/* Only where it says something the row does not: a company with
+                subsidiaries carries their money too. */}
             {roll ? (
-              <span className="text-right">
-                <span className="ui-caption block">Group billed</span>
-                <span className="ui-col-amount" title={formatMoney(roll.billed, c)}>
+              <span className="w-24 text-right">
+                <span className="ui-caption block whitespace-nowrap">Group total</span>
+                <span className="ui-col-amount tabular-nums" title={formatMoney(roll.billed, c)}>
                   {formatMoneyCompact(roll.billed, c)}
                 </span>
               </span>
@@ -309,24 +383,63 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Companies"
-        description="The group at a glance — switch the active company and see who owes what."
-        actions={
-          /*
-            Hidden while the editor is open: the form already carries the
-            Add company button, and two controls with the same name doing
-            different things is the one-primary-action rule broken twice over.
-          */
-          editing ? null : (
-            <button type="button" onClick={openCreate} className="ui-btn ui-btn-primary">
-              <Plus size={15} aria-hidden="true" /> Add company
-            </button>
-          )
-        }
-      />
-
+    <DocumentListShell
+      title="Companies"
+      description="The group at a glance — switch the active company and see who owes what"
+      company={currentCompany}
+      surface="plain"
+      search={{
+        value: query,
+        onChange: setQuery,
+        placeholder: 'Search companies…',
+        label: 'Search companies',
+      }}
+      moreItems={[{ key: 'export', label: 'Export companies', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: 'Companies',
+          label: 'company/companies',
+          columns: [
+            { key: 'name', label: 'Company' },
+            { key: 'gstin', label: 'GSTIN' },
+            { key: 'state', label: 'State' },
+            {
+              key: 'parent',
+              label: 'Parent',
+              value: (c) => (companies.find((x) => x.id === c.parentCompanyId) || {}).name || '',
+            },
+            { key: 'billed', label: 'Billed', value: (c) => (activityById.get(c.id) || {}).billed || 0 },
+            { key: 'outstanding', label: 'Outstanding', value: (c) => (activityById.get(c.id) || {}).outstanding || 0 },
+          ],
+          rows: companies,
+        });
+      }}
+      primary={
+        /*
+          Hidden while the editor is open: the form already carries the Add
+          company button, and two controls with the same name doing different
+          things is the one-primary-action rule broken twice over.
+        */
+        editing ? null : (
+          <button type="button" onClick={openCreate} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> Add company
+          </button>
+        )
+      }
+      cards={[
+        { label: 'Companies', value: groupTotals.companies, count: true, tone: 'draft', Icon: Building2 },
+        { label: 'GST registered', value: groupTotals.registered, count: true, tone: 'paid', Icon: Landmark },
+        { label: 'Not registered', value: groupTotals.unregistered, count: true, tone: 'cancelled', Icon: Ban },
+        { label: 'Billed by the group', value: groupTotals.billed, tone: 'sent', Icon: Receipt },
+        { label: 'Owed to the group', value: groupTotals.outstanding, tone: 'outstanding', Icon: FileText },
+      ]}
+      tip={{
+        storageKey: 'neev.tip.companies',
+        Icon: Building2,
+        text: 'Every screen in the product works on the active company — set it here, and the books, documents and reports follow.',
+      }}
+    >
       {/*
         What was just saved, in the shape branches and warehouses already use:
         the record's own details, with the way back and the way to edit it in
@@ -426,17 +539,37 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
         </div>
       ) : null}
 
-      {tree.length === 0 ? (
+      {visibleTree.length === 0 ? (
         <div className="ui-card">
-          <EmptyState icon={Building2} title="No companies yet" description="Add the first company to start the group." />
+          <EmptyState
+            icon={Building2}
+            kind="new"
+            title={companies.length ? 'No company matches' : 'No companies yet'}
+            description={
+              companies.length
+                ? 'Nothing in the group matches that search — try the name, the GSTIN or the state.'
+                : 'A company is a set of books: its own documents, its own ledger, its own GST returns. Add the first to start the group.'
+            }
+            routes={
+              companies.length
+                ? undefined
+                : [
+                    {
+                      label: 'Add a company',
+                      description: 'Name it, and give it a GSTIN if it has one.',
+                      onSelect: () => openCreate(),
+                    },
+                  ]
+            }
+          />
         </div>
       ) : (
         <div>
-          {tree.map((node) => (
+          {visibleTree.map((node) => (
             <CompanyCard key={node.company.id} node={node} depth={0} />
           ))}
         </div>
       )}
-    </div>
+    </DocumentListShell>
   );
 }

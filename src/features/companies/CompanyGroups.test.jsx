@@ -69,3 +69,80 @@ describe('Company Profile', () => {
     await waitFor(() => expect(screen.queryByLabelText('Company details')).toBeNull());
   });
 });
+
+/*
+ * The group page, on the shared list layout.
+ *
+ * It was a title, one button and a stack of rows: nothing said what the group
+ * as a whole had billed or was owed, and with more than a handful of companies
+ * there was no way to find one but to read the list.
+ */
+const groupSeed = {
+  activeCompanyId: 1,
+  companies: [
+    { id: 1, name: 'Neev Steels', state: 'Karnataka', gstin: '29ABCDE1234F1Z5', parentCompanyId: null },
+    { id: 2, name: 'Neev Fabrication', state: 'Karnataka', gstin: '29ZZZZZ1111Z1Z5', parentCompanyId: 1 },
+    { id: 3, name: 'Coastal Traders', state: 'Kerala', gstin: '', parentCompanyId: null },
+  ],
+  invoices: [
+    { id: 1, companyId: 1, total: 100000, paidAmount: 40000, status: 'Unpaid' },
+    { id: 2, companyId: 2, total: 50000, paidAmount: 50000, status: 'Paid' },
+    { id: 3, companyId: 3, total: 25000, paidAmount: 0, status: 'Draft' },
+  ],
+  customers: [], items: [], bills: [],
+};
+
+const GroupHost = () => {
+  const [db, setDb] = useState(groupSeed);
+  return <CompanyGroups db={db} setDb={setDb} currentCompany={db.companies[0]} />;
+};
+
+describe('the group at a glance', () => {
+  it('carries five figures across the top', () => {
+    render(<GroupHost />);
+    expect(screen.getByRole('region', { name: /Summary/i }).children).toHaveLength(5);
+  });
+
+  it('adds the group up, leaving drafts out', () => {
+    // 100,000 + 50,000 billed. The draft is an intention, not a receivable —
+    // counting it would say the group billed 175,000.
+    render(<GroupHost />);
+    const summary = screen.getByRole('region', { name: /Summary/i });
+    const billed = [...summary.children].find((c) => c.textContent.includes('Billed by the group'));
+    expect(billed.textContent).toMatch(/1,50,000/);
+    const owed = [...summary.children].find((c) => c.textContent.includes('Owed to the group'));
+    expect(owed.textContent).toMatch(/60,000/);
+  });
+
+  it('counts how many companies can actually raise a tax invoice', () => {
+    render(<GroupHost />);
+    const summary = screen.getByRole('region', { name: /Summary/i });
+    expect([...summary.children].find((c) => c.textContent.includes('GST registered')).textContent).toMatch(/2/);
+    expect([...summary.children].find((c) => c.textContent.includes('Not registered')).textContent).toMatch(/1/);
+  });
+
+  it('says what a missing GSTIN costs, on the row', () => {
+    // The old line only mentioned it when the state was missing too, so a
+    // company with a state and no GSTIN read as complete.
+    render(<GroupHost />);
+    const row = screen.getByText('Coastal Traders').closest('.ui-card');
+    expect(row.textContent).toMatch(/cannot raise a tax invoice/i);
+  });
+
+  it('finds a company by name, GSTIN or state', async () => {
+    const user = userEvent.setup();
+    render(<GroupHost />);
+    await user.type(screen.getByLabelText(/Search companies/i), 'kerala');
+    await waitFor(() => expect(screen.queryByText('Coastal Traders')).toBeInTheDocument());
+    expect(screen.queryByText('Neev Fabrication')).toBeNull();
+  });
+
+  it('keeps a parent whose subsidiary matches, so the child is not left floating', async () => {
+    const user = userEvent.setup();
+    render(<GroupHost />);
+    await user.type(screen.getByLabelText(/Search companies/i), 'Fabrication');
+    await waitFor(() => expect(screen.queryByText('Neev Fabrication')).toBeInTheDocument());
+    expect(screen.queryByText('Neev Steels')).toBeInTheDocument();
+    expect(screen.queryByText('Coastal Traders')).toBeNull();
+  });
+});

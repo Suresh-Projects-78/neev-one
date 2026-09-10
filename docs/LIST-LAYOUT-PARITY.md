@@ -263,3 +263,25 @@ Item Categories keeps its two-field add row at the top of the table it adds to.
 Price Lists had the tabs and search already; what it lacked was the figures,
 and its export was a lone download icon parked beside the tabs where no other
 list keeps one.
+
+## Companies
+
+Not a table, so it takes the shell's header and figures and keeps its own rows:
+`DocumentListShell` grew a `surface="plain"` for exactly this — a page whose
+rows are cards in their own right cannot sit inside another card.
+
+- **Figures:** companies · GST registered · not registered · billed by the
+  group · owed to the group. A page listing companies is opened to answer a
+  question about the group, not about any one of them.
+- **Search** matches name, GSTIN and state, and keeps a parent whose subsidiary
+  matches — dropping it would leave the child indented under nothing.
+- The row's figures sit in fixed-width right-aligned columns, so four companies
+  read down as well as across. They used to move with the length of the name.
+- A company with no GSTIN says **"No GSTIN — cannot raise a tax invoice"**
+  whether or not its state is known. The old line only mentioned it when the
+  state was missing too, so a company with one and not the other read as
+  complete.
+- The group rollup column is labelled **Group total** and only appears on a
+  company that has subsidiaries.
+
+Drafts are out of the group figures, the same rule every other total follows.
