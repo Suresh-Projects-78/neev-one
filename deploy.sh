@@ -62,7 +62,9 @@ if [ "${1:-}" = "--api" ]; then
     # passed blindly. It exits 1 when something would really be lost, and
     # `set -e` stops the deploy before the schema is touched.
     npx tsx scripts/preflight.ts
-    npx prisma db push --skip-generate --accept-data-loss
+    # Versioned migrations, and a one-time baseline for the database db push
+    # built. See server/prisma/migrations/README.md.
+    npx tsx scripts/migrate.ts
     npm run build >/dev/null 2>&1
     sudo systemctl restart neev-api'
 fi

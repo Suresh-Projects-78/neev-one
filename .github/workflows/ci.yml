@@ -130,7 +130,9 @@ jobs:
             # deploy before the schema is touched. The flag says "verified",
             # not "ignore".
             npx tsx scripts/preflight.ts
-            npx prisma db push --skip-generate --accept-data-loss
+            # Versioned migrations, and a one-time baseline for the database
+            # db push built. See server/prisma/migrations/README.md.
+            npx tsx scripts/migrate.ts
             npm run build
             sudo systemctl restart neev-api'
 
