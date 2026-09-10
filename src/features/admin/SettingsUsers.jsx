@@ -12,7 +12,9 @@ import { listUsers,
   changeUserPassword,
   listBranches,
   assignUserBranches,
-  getUserBranches, createRole } from '../../api/admin';
+  getUserBranches,
+  getUserCompanies,
+  setUserCompanies, createRole } from '../../api/admin';
 import Modal from '../../components/ui/Modal';
 import Popover from '../../components/ui/Popover';
 
@@ -51,6 +53,12 @@ export function SettingsUsers({ orgId }) {
   });
 
   const [createBranchIds, setCreateBranchIds] = useState([]);
+
+  const [companiesModalUser, setCompaniesModalUser] = useState(null);
+  const [companiesRows, setCompaniesRows] = useState([]);
+  const [companiesChecked, setCompaniesChecked] = useState([]);
+  const [companiesLoading, setCompaniesLoading] = useState(false);
+  const [companiesSaving, setCompaniesSaving] = useState(false);
 
   const [assignBranchesModalOpen, setAssignBranchesModalOpen] = useState(false);
   const [assignBranchesUser, setAssignBranchesUser] = useState(null);
@@ -182,6 +190,57 @@ export function SettingsUsers({ orgId }) {
       setError(err.message || 'Failed to create user');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /**
+   * Which companies this person can work in.
+   *
+   * Access was granted a company at a time — switch company, invite the same
+   * email, pick a role — so the answer to "what can this person see?" could
+   * only be found by visiting every company and looking. A CA firm putting ten
+   * clients on an intern made ten trips and had no way to check the result.
+   */
+  const openCompanies = async (u) => {
+    if (!u?.id) return;
+    setOpenMenuForUserId(null);
+    setCompaniesModalUser(u);
+    setCompaniesLoading(true);
+    setError('');
+    try {
+      const res = await getUserCompanies(u.id);
+      const rows = Array.isArray(res?.companies) ? res.companies : [];
+      setCompaniesRows(rows);
+      setCompaniesChecked(rows.filter((c) => c.hasAccess).map((c) => String(c.orgId)));
+    } catch (e) {
+      setCompaniesRows([]);
+      setCompaniesChecked([]);
+      setError(e?.message || String(e));
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
+
+  const closeCompanies = () => {
+    setCompaniesModalUser(null);
+    setCompaniesRows([]);
+    setCompaniesChecked([]);
+    setCompaniesLoading(false);
+    setCompaniesSaving(false);
+  };
+
+  const saveCompanies = async (e) => {
+    e.preventDefault();
+    if (!companiesModalUser?.id) return;
+    setCompaniesSaving(true);
+    setError('');
+    try {
+      await setUserCompanies(companiesModalUser.id, companiesChecked);
+      closeCompanies();
+    } catch (err) {
+      setError(err?.message || 'Failed to save company access');
+    } finally {
+      setCompaniesSaving(false);
     }
   };
 
@@ -575,6 +634,63 @@ export function SettingsUsers({ orgId }) {
         </Modal>
       ) : null}
 
+      {companiesModalUser ? (
+        <Modal
+          onClose={closeCompanies}
+          title={`Companies: ${companiesModalUser.fullName || companiesModalUser.name || companiesModalUser.email}`}
+          maxWidthClass="max-w-2xl"
+        >
+          <form onSubmit={saveCompanies} className="space-y-4">
+            <p className="text-sm ui-muted">
+              Every company in this account. Unticking one takes the access away, and the role that came with it.
+            </p>
+
+            {companiesLoading ? <div className="text-sm ui-muted">Loading…</div> : null}
+
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-72 overflow-y-auto divide-y">
+                {companiesRows.length === 0 && !companiesLoading ? (
+                  <div className="px-4 py-3 text-sm ui-muted">No companies in this account yet.</div>
+                ) : null}
+                {companiesRows.map((c) => {
+                  const id = String(c.orgId);
+                  const on = companiesChecked.includes(id);
+                  return (
+                    <label key={id} className="flex items-center gap-3 px-4 py-3 ui-hover-sunken cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        checked={on}
+                        onChange={(e) =>
+                          setCompaniesChecked((prev) =>
+                            e.target.checked ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)
+                          )
+                        }
+                      />
+                      <div className="min-w-0">
+                        <div className="font-medium ui-fg truncate">{c.name}</div>
+                        <div className="ui-caption ui-muted">
+                          {c.role?.name ? `Role: ${c.role.name}` : on ? 'No role set for this company yet' : 'No access'}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={closeCompanies} className="ui-btn ui-btn-secondary">
+                Cancel
+              </button>
+              <button type="submit" disabled={companiesSaving} className="ui-btn ui-btn-primary">
+                {companiesSaving ? 'Saving…' : 'Save access'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
       {assignBranchesModalOpen ? (
         <Modal
           onClose={closeAssignBranches}
@@ -784,6 +900,13 @@ export function SettingsUsers({ orgId }) {
                             className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
                           >
                             Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openCompanies(u)}
+                            className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
+                          >
+                            Companies
                           </button>
                           <button
                             type="button"

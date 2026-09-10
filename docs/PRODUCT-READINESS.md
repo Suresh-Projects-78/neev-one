@@ -10,8 +10,8 @@ starts — the same way the six document forms were done.
 | 3 | Audit trail can be read | Written in 7 places, readable in none | **done** |
 | 4 | Bank reconciliation | The largest genuinely missing module | **done** |
 | 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | **done** |
-| 6 | Per-user module assignment | Waiting on one decision | **next** |
-| 7 | The deferred shells, built for real | Admin area, dashboard, billing, SSO, subdomains | 7th |
+| 6 | Per-user module assignment | Waiting on one decision | **done** |
+| 7 | The deferred shells, built for real | Admin area, dashboard, billing, SSO, subdomains | **next** |
 
 ## 1 — Six masters that live only in the browser
 
@@ -191,3 +191,35 @@ account and the invoice it paid stays open.
 The dialog stays as the fallback where the list is rendered without a host that
 can navigate, so no entry point is lost. Both paths are tested, and removing
 either one fails a test.
+
+## 6 — done, and the question answered
+
+The open decision was whether **roles** carry modules or **users** do. The answer
+turned out to be already built and already right: a role carries permissions per
+module (`Permission { module, subModule, action }`), the sidebar hides what a
+role cannot VIEW, and modules themselves are switched on per company. Nothing
+needed inventing, and adding a second per-user layer on top would have given two
+places to look when somebody cannot see a screen.
+
+What was genuinely missing was the case that prompted the question in the first
+place — **a CA firm assigning several companies to one person.** Access was
+granted a company at a time: switch to that company, invite the same email
+again, pick a role. It worked, and it made "what can this person see?" a
+question you could only answer by visiting every company and looking. Ten
+clients on an intern meant ten trips and no way to check the result.
+
+There is now one dialog listing every company in the account with a tick each.
+
+Two things it does deliberately:
+
+- **The list is the complete set.** A company left unticked is access taken
+  away, so the dialog states what is true rather than only adding.
+- **Removing access removes the role with it.** A role assignment left behind on
+  a company the person can no longer open is a permission waiting to come back
+  the moment anybody re-adds them — silently, at whatever level they had before.
+
+The security test is asked of the database rather than of the listing. The
+listing is scoped by account, so a membership wrongly created against another
+account's company would be invisible there while being perfectly real — a row
+that lets somebody walk into a company nobody invited them to. The first version
+of that test passed against the broken code for exactly that reason.

@@ -120,3 +120,23 @@ export function assignUserWarehouses(orgId, userId, warehouseIds) {
     skipWarehouseHeader: true,
   });
 }
+
+/**
+ * Which companies one person can work in.
+ *
+ * Access used to be granted a company at a time — switch company, invite the
+ * same email, pick a role — which made "what can this person see?" a question
+ * you could only answer by visiting every company and looking.
+ */
+export function getUserCompanies(userId) {
+  return apiFetch(`/users/${encodeURIComponent(userId)}/companies`, { skipWarehouseHeader: true });
+}
+
+/** The complete set. A company left out of the list is access taken away. */
+export function setUserCompanies(userId, orgIds) {
+  return apiFetch(`/users/${encodeURIComponent(userId)}/companies`, {
+    method: 'PUT',
+    body: { orgIds },
+    skipWarehouseHeader: true,
+  });
+}

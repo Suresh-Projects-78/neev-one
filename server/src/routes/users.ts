@@ -120,6 +120,96 @@ usersRouter.patch('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', Pe
 });
 
 // Replace the user's org-wide (branchId null) role assignment.
+/* ------------------------------------------------- a person's companies */
+
+/**
+ * Which companies one person can work in, seen and set in one place.
+ *
+ * Access was granted a company at a time: switch to that company, invite the
+ * same email again, pick a role. It worked, and it made the answer to "what can
+ * this person see?" a thing you could only find by visiting every company and
+ * looking. For a CA firm assigning ten clients to an intern that is ten trips
+ * and no way to check the result.
+ *
+ * Scoped to the caller's own account throughout. A membership is a key to a
+ * company's books, and the one thing this must never do is hand out a key to a
+ * company the caller does not own.
+ */
+usersRouter.get('/users/:userId/companies', requirePermission('SETTINGS', PermissionAction.VIEW, 'Users'), async (req, res) => {
+  const accountId = req.tenant!.accountId;
+  const userId = String(req.params.userId);
+
+  const target = await prisma.user.findFirst({ where: { id: userId, accountId }, select: { id: true } });
+  if (!target) return res.status(404).json({ error: 'User not found' });
+
+  const [orgs, memberships, assignments] = await Promise.all([
+    prisma.org.findMany({ where: { accountId }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.userOrgMembership.findMany({ where: { accountId, userId }, select: { orgId: true } }),
+    prisma.userRoleAssignment.findMany({
+      where: { accountId, userId, branchId: null },
+      select: { orgId: true, roleId: true, role: { select: { id: true, name: true } } },
+    }),
+  ]);
+
+  const member = new Set(memberships.map((m) => m.orgId));
+  const roleByOrg = new Map(assignments.map((a) => [a.orgId, a.role]));
+
+  res.json({
+    companies: orgs.map((o) => ({
+      orgId: o.id,
+      name: o.name,
+      hasAccess: member.has(o.id),
+      role: roleByOrg.get(o.id) || null,
+    })),
+  });
+});
+
+const companyAccessSchema = z.object({
+  /** The complete set. A company left out is access taken away. */
+  orgIds: z.array(z.string().min(1)).max(500),
+});
+
+usersRouter.put('/users/:userId/companies', requirePermission('SETTINGS', PermissionAction.EDIT, 'Users'), async (req, res) => {
+  const accountId = req.tenant!.accountId;
+  const userId = String(req.params.userId);
+  const body = companyAccessSchema.parse(req.body);
+
+  const target = await prisma.user.findFirst({ where: { id: userId, accountId }, select: { id: true } });
+  if (!target) return res.status(404).json({ error: 'User not found' });
+
+  // Only companies in this account, and only ones that exist. Anything else in
+  // the request is dropped rather than trusted.
+  const owned = await prisma.org.findMany({ where: { accountId, id: { in: body.orgIds } }, select: { id: true } });
+  const wanted = new Set(owned.map((o) => o.id));
+
+  const current = await prisma.userOrgMembership.findMany({ where: { accountId, userId }, select: { orgId: true } });
+  const have = new Set(current.map((m) => m.orgId));
+
+  const toAdd = [...wanted].filter((id) => !have.has(id));
+  const toRemove = [...have].filter((id) => !wanted.has(id));
+
+  /*
+   * Removing access removes the role with it.
+   *
+   * A role assignment left behind on a company the person can no longer open is
+   * a permission waiting to come back the moment anybody re-adds them, silently
+   * and at whatever level they had before.
+   */
+  await prisma.$transaction([
+    ...(toRemove.length
+      ? [
+          prisma.userRoleAssignment.deleteMany({ where: { accountId, userId, orgId: { in: toRemove } } }),
+          prisma.userOrgMembership.deleteMany({ where: { accountId, userId, orgId: { in: toRemove } } }),
+        ]
+      : []),
+    ...toAdd.map((orgId) =>
+      prisma.userOrgMembership.create({ data: { accountId, orgId, userId } })
+    ),
+  ]);
+
+  res.json({ ok: true, added: toAdd.length, removed: toRemove.length });
+});
+
 usersRouter.put('/orgs/:orgId/users/:userId/role', requirePermission('SETTINGS', PermissionAction.EDIT, 'Users'), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
