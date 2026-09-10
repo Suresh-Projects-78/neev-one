@@ -629,7 +629,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
           they change what every column below means, so they belong to it. */}
       <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium" htmlFor="inv-view">View</label>
+          <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-view">View</label>
           <select
             id="inv-view"
             value={viewMode}
@@ -642,7 +642,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium" htmlFor="inv-warehouse">Warehouse</label>
+          <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-warehouse">Warehouse</label>
           <select
             id="inv-warehouse"
             value={warehouseId}
@@ -658,8 +658,16 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
           </select>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <label className="text-sm font-medium" htmlFor="inv-period">Period</label>
+        {/*
+          Label and control on one line, like the two beside it.
+          This group wrapped inside itself, so at most widths the word "Period"
+          sat on its own line and pushed its select a row lower than View and
+          Warehouse — three controls that do the same job, sitting at two
+          different heights. The custom dates are their own group now, free to
+          wrap onto the next line without taking the label with them.
+        */}
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-period">Period</label>
           <select
             id="inv-period"
             value={period}
@@ -672,26 +680,27 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
               </option>
             ))}
           </select>
-          {period === 'custom' ? (
-            <>
-              <input
-                type="date"
-                value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
-                className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
-                aria-label="From date"
-              />
-              <span className="ui-subtle">to</span>
-              <input
-                type="date"
-                value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
-                className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
-                aria-label="To date"
-              />
-            </>
-          ) : null}
         </div>
+
+        {period === 'custom' ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
+              aria-label="From date"
+            />
+            <span className="ui-subtle">to</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
+              aria-label="To date"
+            />
+          </div>
+        ) : null}
 
       </div>
 

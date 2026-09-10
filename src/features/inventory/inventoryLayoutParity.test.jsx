@@ -179,3 +179,35 @@ describe('what the inventory screens count', () => {
     expect(card.textContent).toMatch(/10/);
   });
 });
+
+describe('the inventory filter band', () => {
+  it('keeps its three controls on one line', () => {
+    /*
+     * View, Warehouse and Period do the same job and belong at the same
+     * height. The Period group wrapped inside itself, so at most widths the
+     * word "Period" took its own line and pushed its select a row below the
+     * other two — one control visibly lower than its neighbours.
+     *
+     * jsdom has no layout, so the check is structural: the label and its
+     * select share a parent that cannot wrap, and the custom dates are a
+     * sibling of that group rather than sitting inside it.
+     */
+    const { container } = render(<InventoryModule db={db} setDb={noop} currentCompany={COMPANY} warehouses={warehouses} />);
+    for (const id of ['inv-view', 'inv-warehouse', 'inv-period']) {
+      const group = container.querySelector(`#${id}`).parentElement;
+      expect(group.className).toContain('flex items-center');
+      expect(group.className).not.toContain('flex-wrap');
+      expect(group.querySelector('label')).toBeTruthy();
+    }
+  });
+
+  it('lets the custom dates wrap without taking the Period label with them', () => {
+    const { container } = render(<InventoryModule db={db} setDb={noop} currentCompany={COMPANY} warehouses={warehouses} />);
+    fireEvent.change(container.querySelector('#inv-period'), { target: { value: 'custom' } });
+
+    const periodGroup = container.querySelector('#inv-period').parentElement;
+    expect(periodGroup.querySelector('input[type="date"]')).toBeNull();
+    expect(screen.getByLabelText(/From date/i)).toBeTruthy();
+    expect(screen.getByLabelText(/To date/i)).toBeTruthy();
+  });
+});
