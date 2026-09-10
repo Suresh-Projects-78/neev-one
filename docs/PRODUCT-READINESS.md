@@ -469,3 +469,37 @@ The counts are now listed back on the POS screen (a control nobody can read is
 a number typed into a form) and are carried in the tenant data export.
 
 With this, nothing that belongs on the server is written only to the browser.
+
+## Two defects behind "why set the company up twice?" (10 Sep 2026)
+
+**Backup did not appear in Settings.** The nav entry is gated on
+`SETTINGS::Company data::VIEW`. That permission is seeded into the Owner role
+when an org is created — so every org created *before* the permission was added
+to the catalogue never received it. Four of six live orgs were short 92 grants
+between them, which is why a settings page added after somebody's signup simply
+never appeared in their menu. `scripts/backfillOwnerPermissions.ts` existed to
+fix this and was never wired to anything; `deploy.sh --api` now runs it after
+the migrations, and it prints "nothing to do" when the grants and the catalogue
+agree.
+
+**Signup collected a company master and threw most of it away.** The wizard
+asks eleven questions — trade name, entity type, industries, financial year,
+currency, registered address — and `setup-company` parsed them into a `profile`
+object that nothing read. Only the name, state and GSTIN survived, so the
+profile screen greeted the owner empty.
+
+**And the browser could not ask what company it was looking at.** `/auth/me`
+returned an org id and a name; nothing returned the master. A machine that had
+never seen these books started from an empty local store, fell back to the
+placeholder company the app invents (`{ id: 1, name: 'Company' }`) and offered
+to set the company up again — against books that were on the server the whole
+time. That is the screen the user was looking at when they asked what the point
+of creating a company at signup was.
+
+- `setup-company` stores the profile on `org.profileJson`, with the state and
+  GSTIN alongside it.
+- `/auth/me` returns each org's name, handle and parsed profile.
+- `src/hooks/useCompanyFromServer.js` rebuilds the local company record from
+  it. **Local edits win** — it fills blanks and replaces the placeholder, and
+  never overwrites something typed here, because a corrected trade name is an
+  answer rather than a gap.

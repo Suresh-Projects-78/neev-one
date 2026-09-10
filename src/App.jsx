@@ -5,6 +5,7 @@ import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { postJournalToLedger, reverseJournalOnLedger } from './utils/journalSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
+import { useCompanyFromServer } from './hooks/useCompanyFromServer';
 import OnboardingWizard, { shouldOnboard, markOnboardingSeen } from './components/OnboardingWizard';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExport';
 import Toaster from './components/ui/Toaster';
@@ -11170,6 +11171,21 @@ const AppShell = () => {
     const list = authCtx?.data?.orgs;
     return Array.isArray(list) ? list : [];
   }, [authCtx?.data]);
+
+  /*
+   * The company this account holds, from the server.
+   *
+   * Signing in on a machine that has never seen these books used to land on a
+   * placeholder called "Company" with no GSTIN and no state, offering to set
+   * up the company that signup had already created. This fills the record in
+   * from `/auth/me`; anything typed locally wins.
+   */
+  useCompanyFromServer({
+    enabled: isAuthenticated,
+    orgs: availableOrgs,
+    activeOrgId,
+    setDb,
+  });
 
   const activeOrgName = useMemo(() => {
     const match = availableOrgs.find((o) => String(o.orgId) === String(activeOrgId));

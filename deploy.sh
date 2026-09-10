@@ -65,6 +65,12 @@ if [ "${1:-}" = "--api" ]; then
     # Versioned migrations, and a one-time baseline for the database db push
     # built. See server/prisma/migrations/README.md.
     npx tsx scripts/migrate.ts
+    # Every addition to the permission catalogue leaves existing Owner roles
+    # short of it — the seed runs once, at org creation. Four of six live orgs
+    # were missing 92 grants between them, which is why a settings page added
+    # after their signup simply never appeared in their menu. Idempotent: it
+    # prints "nothing to do" when the catalogue and the grants agree.
+    npx tsx scripts/backfillOwnerPermissions.ts --fix
     npm run build >/dev/null 2>&1
     sudo systemctl restart neev-api'
 fi

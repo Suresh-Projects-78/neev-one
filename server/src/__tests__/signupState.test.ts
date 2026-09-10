@@ -94,3 +94,73 @@ describe('setup-company captures where the business is', () => {
     expect(branch?.gstRegistrationType).toBe('REGULAR');
   });
 });
+
+/**
+ * What signup collects, and what survives it.
+ *
+ * The wizard asks eleven questions about the business — trade name, entity
+ * type, industries, the financial year it starts, the currency, the registered
+ * address — and `setup-company` parsed all of them into a `profile` object
+ * that nothing ever read. Three answers were kept and the rest were dropped on
+ * the floor, so the profile screen greeted the owner empty and asked again.
+ *
+ * The second half is worse: the browser had no route that would tell it what
+ * company it was looking at, so signing in on a new machine showed a
+ * placeholder called "Company" with no GSTIN and no state, and offered to set
+ * the company up from scratch. The books were on the server the whole time.
+ */
+describe('the company master survives signup', () => {
+  it('keeps what the wizard asked for', async () => {
+    const token = await newOwner();
+    const res = await setup(token, {
+      companyName: `Profile Co ${Date.now()}-${rnd()}`,
+      state: 'Karnataka',
+      profile: {
+        tradeName: 'Profile Traders',
+        entityType: 'Private Limited',
+        industries: ['Manufacturing'],
+        financialYearStart: '04-01',
+        baseCurrency: 'INR',
+        regCity: 'Bengaluru',
+        phone: '9845000000',
+      },
+    }).expect(200);
+
+    const org = await prisma.org.findUnique({
+      where: { id: res.body.company.orgId },
+      select: { profileJson: true },
+    });
+    const stored = JSON.parse(String(org?.profileJson || '{}'));
+    expect(stored.tradeName).toBe('Profile Traders');
+    expect(stored.entityType).toBe('Private Limited');
+    expect(stored.industries).toEqual(['Manufacturing']);
+    expect(stored.regCity).toBe('Bengaluru');
+    // State and GSTIN are stored here as well as on the branch: the branch is
+    // what tax is computed from, this is what the browser reads.
+    expect(stored.state).toBe('Karnataka');
+  });
+
+  it('hands the company back on the next sign-in, so nothing is set up twice', async () => {
+    const token = await newOwner();
+    const name = `Recall Co ${Date.now()}-${rnd()}`;
+    const created = await setup(token, {
+      companyName: name,
+      state: 'Kerala',
+      gstin: null,
+      profile: { tradeName: 'Recall Traders', baseCurrency: 'INR' },
+    }).expect(200);
+
+    const me = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .set('x-org-id', created.body.company.orgId)
+      .expect(200);
+
+    const org = me.body.orgs.find((o: any) => o.orgId === created.body.company.orgId);
+    expect(org.org.name).toBe(name);
+    // Parsed, not a JSON string: a browser should not be doing that.
+    expect(org.org.profile.state).toBe('Kerala');
+    expect(org.org.profile.tradeName).toBe('Recall Traders');
+    expect(typeof org.org.slug).toBe('string');
+  });
+});

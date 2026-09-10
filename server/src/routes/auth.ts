@@ -368,7 +368,17 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     select: {
       orgId: true,
       accountId: true,
-      org: { select: { id: true, name: true } },
+      /*
+       * The company master, not only its name.
+       *
+       * A browser that has never seen this account has no company record at
+       * all, and there was no route that would give it one — so signing in on
+       * a new machine showed a placeholder called "Company" with no GSTIN and
+       * no state, and offered to set the company up again. The books were
+       * safe on the server the whole time; the browser simply had no way to
+       * ask what company it was looking at.
+       */
+      org: { select: { id: true, name: true, slug: true, profileJson: true } },
     },
     orderBy: { createdAt: 'asc' },
   });
@@ -416,9 +426,30 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     }
   }
 
+  /** The stored master, as an object — the browser should not parse JSON. */
+  const orgProfile = (raw: string | null | undefined) => {
+    try {
+      const parsed = JSON.parse(String(raw || '{}'));
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      // A profile that cannot be parsed still has a name and an id, and
+      // returning those beats failing the whole session.
+      return {};
+    }
+  };
+
   return res.json({
     user,
-    orgs: orgMemberships.map((m) => ({ orgId: m.orgId, org: m.org, accountId: m.accountId })),
+    orgs: orgMemberships.map((m) => ({
+      orgId: m.orgId,
+      accountId: m.accountId,
+      org: {
+        id: m.org.id,
+        name: m.org.name,
+        slug: m.org.slug || null,
+        profile: orgProfile(m.org.profileJson),
+      },
+    })),
     activeOrgId: activeOrgId || null,
     isOrgAdmin,
     allowedBranchIds,
@@ -559,12 +590,33 @@ authRouter.post('/setup-company', async (req: Request, res: Response) => {
    */
   const slug = await suggestSlug(body.companyName);
 
+  /*
+   * The company master, kept.
+   *
+   * Everything the signup wizard asks after the name — trade name, entity
+   * type, industries, the financial year it starts, the currency, the
+   * registered address — was parsed and thrown away: the schema accepted a
+   * `profile` object and nothing ever read it. Somebody answered eleven
+   * questions about their business and the app kept three of the answers, so
+   * the profile screen greeted them empty and asked again.
+   *
+   * State and GSTIN are stored here as well as on the head-office branch. The
+   * branch is where tax is computed from; this is what the browser reads to
+   * know which company it is looking at.
+   */
+  const profileJson = JSON.stringify({
+    ...(body.profile && typeof body.profile === 'object' ? body.profile : {}),
+    state: stateName,
+    gstin: gstin || null,
+  });
+
   const org = await prisma.org.create({
     data: {
       accountId: auth.accountId,
       name: body.companyName.trim(),
       legalName: body.companyName.trim(),
       slug,
+      profileJson,
       createdByUserId: auth.userId,
     },
     select: { id: true, name: true, slug: true },
