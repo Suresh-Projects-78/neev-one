@@ -18,6 +18,7 @@ const COMPANY = { id: 1, name: 'Neev Steels' };
 const PAYLOAD = {
   export: {
     format: 'neev-one/company-export',
+    scope: 'data',
     company: { id: 'o1', name: 'Neev Steels' },
     counts: { invoices: 8, journalEntries: 15, parties: 4 },
   },
@@ -50,16 +51,18 @@ describe('taking a copy of the company data', () => {
     });
 
     render(<DataBackup currentCompany={COMPANY} />);
-    fireEvent.click(screen.getByRole('button', { name: /Download backup/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Download data/i }));
 
     await waitFor(() => expect(clicks.length).toBe(1));
-    expect(clicks[0]).toMatch(/^Neev Steels-backup-\d{4}-\d{2}-\d{2}\.json$/);
+    // The scope is in the name: two files in a folder six months apart have to
+    // be tellable apart without opening them.
+    expect(clicks[0]).toMatch(/^Neev Steels-data-\d{4}-\d{2}-\d{2}\.json$/);
     document.createElement.mockRestore();
   });
 
   it('reports what it took, so the person can see it worked', async () => {
     render(<DataBackup currentCompany={COMPANY} />);
-    fireEvent.click(screen.getByRole('button', { name: /Download backup/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Download data/i }));
 
     // 8 + 15 + 4 across the counts the server reported.
     await waitFor(() => expect(notifySuccess).toHaveBeenCalled());
@@ -70,7 +73,7 @@ describe('taking a copy of the company data', () => {
   it('says so when it could not be taken', async () => {
     exportCompanyData.mockRejectedValue(new Error('permission denied'));
     render(<DataBackup currentCompany={COMPANY} />);
-    fireEvent.click(screen.getByRole('button', { name: /Download backup/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Download data/i }));
 
     await waitFor(() => expect(notifyError).toHaveBeenCalled());
     expect(String(notifyError.mock.calls[0][0])).toMatch(/permission denied/);
@@ -91,5 +94,46 @@ describe('taking a copy of the company data', () => {
   it('is honest that a restore is not offered', () => {
     render(<DataBackup currentCompany={COMPANY} />);
     expect(screen.getByText(/not offered yet/i)).toBeInTheDocument();
+  });
+});
+
+/*
+ * Two backups, because they answer two different questions: what the business
+ * did, and how the company is arranged.
+ */
+describe('the two kinds of backup', () => {
+  it('offers data and configuration separately', () => {
+    render(<DataBackup currentCompany={COMPANY} />);
+    expect(screen.getByRole('button', { name: /Download data/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Download configuration/i })).toBeInTheDocument();
+  });
+
+  it('asks the server for the scope that was pressed', async () => {
+    render(<DataBackup currentCompany={COMPANY} />);
+    fireEvent.click(screen.getByRole('button', { name: /Download configuration/i }));
+    await waitFor(() => expect(exportCompanyData).toHaveBeenCalledWith('configuration'));
+  });
+
+  it('names the configuration file for its scope', async () => {
+    const clicks = [];
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag) => {
+      const el = realCreate(tag);
+      if (tag === 'a') el.click = () => clicks.push(el.download);
+      return el;
+    });
+
+    render(<DataBackup currentCompany={COMPANY} />);
+    fireEvent.click(screen.getByRole('button', { name: /Download configuration/i }));
+    await waitFor(() => expect(clicks.length).toBe(1));
+    expect(clicks[0]).toMatch(/^Neev Steels-configuration-\d{4}-\d{2}-\d{2}\.json$/);
+    document.createElement.mockRestore();
+  });
+
+  /* Configuration is meant to be read and copied, so it must say that the
+     credentials are not in it. */
+  it('says the configuration carries no secrets', () => {
+    render(<DataBackup currentCompany={COMPANY} />);
+    expect(screen.getByText(/Passwords and API secrets are stripped out/i)).toBeInTheDocument();
   });
 });

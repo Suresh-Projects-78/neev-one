@@ -13,5 +13,13 @@ const orgId = () => {
  * whoever runs the service. This is one company's data, for the people whose
  * data it is.
  */
-export const exportCompanyData = () =>
-  apiFetch(`/orgs/${encodeURIComponent(orgId())}/export`, { skipWarehouseHeader: true });
+/**
+ * @param scope 'data' — what the business did: parties, documents, the ledger.
+ *              'configuration' — how the company is set up: branches, the chart
+ *              of accounts, numbering, roles, tax rates, the reference lists.
+ *              'all' — both.
+ */
+export const exportCompanyData = (scope = 'all') =>
+  apiFetch(`/orgs/${encodeURIComponent(orgId())}/export?scope=${encodeURIComponent(scope)}`, {
+    skipWarehouseHeader: true,
+  });

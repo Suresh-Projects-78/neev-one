@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Download, HardDriveDownload, Share2 } from 'lucide-react';
+import { Download, HardDriveDownload, Settings2, Share2 } from 'lucide-react';
 
 import { PageHeader } from '../../components/ui/Primitives';
 import NotConnected from '../../components/ui/NotConnected';
@@ -7,7 +7,15 @@ import { notify } from '../../components/ui/notify';
 import { exportCompanyData } from '../../api/dataExport';
 
 /**
- * Taking a copy of this company's books.
+ * Taking a copy of this company's books, and of how it is set up.
+ *
+ * Two backups, because they answer two different questions. Data is what the
+ * business did — it is large, it only grows, and it is what you would hand an
+ * accountant. Configuration is how the company is arranged: the chart of
+ * accounts, numbering, roles, tax rates, the reference lists. It is small, it
+ * changes rarely, and it is what you want when somebody has broken the invoice
+ * numbering or when a practice is setting up its eleventh client the way it set
+ * up the tenth.
  *
  * Deliberately not "system backup". The database backup is the operator's tool
  * — it is every customer's books in one file and no customer should ever hold
@@ -25,15 +33,55 @@ const Row = ({ label, value }) => (
   </div>
 );
 
+const BackupCard = ({ icon: Icon, title, blurb, action, scope, busy, last, onDownload, highlights, footnote }) => {
+  const kb = (n) => `${Math.max(1, Math.round(Number(n || 0) / 1024)).toLocaleString('en-IN')} KB`;
+  return (
+    <div className="ui-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <Icon size={18} aria-hidden="true" className="ui-muted mt-0.5" />
+          <div className="max-w-xl">
+            <div className="ui-label">{title}</div>
+            <p className="mt-1 text-sm ui-muted">{blurb}</p>
+            {footnote ? <p className="mt-2 text-sm ui-muted">{footnote}</p> : null}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onDownload(scope)}
+          disabled={Boolean(busy)}
+          className="ui-btn ui-btn-primary shrink-0"
+        >
+          <Download size={15} aria-hidden="true" /> {busy === scope ? 'Preparing…' : action}
+        </button>
+      </div>
+
+      {last ? (
+        <div className="mt-4 border-t pt-3">
+          <div className="ui-label mb-1">Last taken</div>
+          <div className="max-w-sm">
+            <Row label="When" value={last.at.toLocaleString()} />
+            <Row label="Records" value={last.rows.toLocaleString('en-IN')} />
+            <Row label="File size" value={kb(last.size)} />
+            {highlights.map(([label, key]) => (
+              <Row key={key} label={label} value={Number(last.counts[key] || 0).toLocaleString('en-IN')} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export default function DataBackup({ currentCompany }) {
   const [busy, setBusy] = useState(false);
   const [last, setLast] = useState(null);
 
-  const download = async () => {
+  const download = async (scope) => {
     if (busy) return;
-    setBusy(true);
+    setBusy(scope);
     try {
-      const payload = await exportCompanyData();
+      const payload = await exportCompanyData(scope);
       const counts = payload?.export?.counts || {};
       const rows = Object.values(counts).reduce((n, c) => n + Number(c || 0), 0);
 
@@ -43,13 +91,15 @@ export default function DataBackup({ currentCompany }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${name}-backup-${stamp}.json`;
+      // The scope is in the filename: two files in one folder, six months
+      // apart, have to be tellable apart without opening them.
+      a.download = `${name}-${scope}-${stamp}.json`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
 
-      setLast({ at: new Date(), rows, counts, size: blob.size });
+      setLast((prev) => ({ ...(prev || {}), [scope]: { at: new Date(), rows, counts, size: blob.size } }));
       notify.success(`${rows.toLocaleString('en-IN')} records downloaded.`);
     } catch (e) {
       notify.error(`Could not take the backup: ${String(e?.message || e)}`);
@@ -58,49 +108,45 @@ export default function DataBackup({ currentCompany }) {
     }
   };
 
-  const kb = (n) => `${Math.max(1, Math.round(Number(n || 0) / 1024)).toLocaleString('en-IN')} KB`;
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Data Backup"
-        description="A copy of this company's own books — masters, documents and the ledger — in a file you can keep."
+        description="Two copies you can keep: what this company has done, and how it is set up. Both are this company's alone."
       />
 
-      <div className="ui-card p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <HardDriveDownload size={18} aria-hidden="true" className="ui-muted mt-0.5" />
-            <div className="max-w-xl">
-              <div className="ui-label">Download a backup</div>
-              <p className="mt-1 text-sm ui-muted">
-                Everything belonging to {currentCompany?.name || 'this company'}: customers and vendors, items,
-                invoices, bills, receipts, payments, the chart of accounts and every journal entry behind them.
-                Readable JSON, so it can be opened and checked rather than taken on trust.
-              </p>
-              <p className="mt-2 text-sm ui-muted">
-                It holds no other company&apos;s data, and no passwords or sign-in details.
-              </p>
-            </div>
-          </div>
-          <button type="button" onClick={download} disabled={busy} className="ui-btn ui-btn-primary">
-            <Download size={15} aria-hidden="true" /> {busy ? 'Preparing…' : 'Download backup'}
-          </button>
-        </div>
+      <BackupCard
+        icon={HardDriveDownload}
+        title="Data"
+        blurb={`What ${currentCompany?.name || 'this company'} has done: customers and vendors, items, invoices, bills, receipts, payments, and every journal entry behind them. This is the copy you would hand an accountant.`}
+        action="Download data"
+        scope="data"
+        busy={busy}
+        last={last?.data}
+        onDownload={download}
+        highlights={[
+          ['Invoices', 'invoices'],
+          ['Journal entries', 'journalEntries'],
+          ['Customers & vendors', 'parties'],
+        ]}
+      />
 
-        {last ? (
-          <div className="mt-4 border-t pt-3">
-            <div className="ui-label mb-1">Last taken</div>
-            <div className="max-w-sm">
-              <Row label="When" value={last.at.toLocaleString()} />
-              <Row label="Records" value={last.rows.toLocaleString('en-IN')} />
-              <Row label="File size" value={kb(last.size)} />
-              <Row label="Invoices" value={Number(last.counts.invoices || 0).toLocaleString('en-IN')} />
-              <Row label="Journal entries" value={Number(last.counts.journalEntries || 0).toLocaleString('en-IN')} />
-            </div>
-          </div>
-        ) : null}
-      </div>
+      <BackupCard
+        icon={Settings2}
+        title="Configuration"
+        blurb="How this company is set up: branches and warehouses, the chart of accounts, numbering series, roles and their permissions, tax rates, approval rules and the reference lists. Small, rarely changed, and what you want when somebody has altered the numbering or when a new client company should be arranged like an existing one."
+        action="Download configuration"
+        scope="configuration"
+        busy={busy}
+        last={last?.configuration}
+        onDownload={download}
+        highlights={[
+          ['Ledger accounts', 'ledgerAccounts'],
+          ['Roles', 'roles'],
+          ['Numbering series', 'numberSeries'],
+        ]}
+        footnote="Passwords and API secrets are stripped out. A configuration file is meant to be read and copied, which is nowhere for a credential to be."
+      />
 
       <div className="ui-card p-4">
         <div className="flex items-start gap-3">

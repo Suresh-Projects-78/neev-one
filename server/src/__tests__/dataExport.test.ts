@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { buildApp } from '../app.js';
+import { prisma } from '../utils/prisma.js';
 
 /**
  * A company's own books, in a file its owner can keep.
@@ -66,8 +67,8 @@ describe('exporting a company', () => {
     expect(res.body.export.company.id).toBe(mine.orgId);
     expect(res.body.data.invoices.length).toBeGreaterThan(0);
     expect(res.body.data.invoices[0].customerName).toBe('My Customer');
-    // The branch created at setup is in there, so this is more than documents.
-    expect(res.body.data.branches.length).toBeGreaterThan(0);
+    // Branches are configuration, not data — and the default scope has both.
+    expect(res.body.configuration.branches.length).toBeGreaterThan(0);
   });
 
   it('says what it contains, so the file explains itself later', async () => {
@@ -126,5 +127,107 @@ describe('exporting a company', () => {
   it('refuses an org the caller is not in', async () => {
     const stranger = await makeOwner('stranger');
     await request(app).get(`/api/orgs/${stranger.orgId}/export`).set(auth(mine)).expect(403);
+  });
+});
+
+/*
+ * Two kinds of backup, because they answer two different questions.
+ *
+ * Data is what the business did and only grows. Configuration is how the
+ * company is set up — small, rarely changed, and the thing you want when
+ * somebody has broken the numbering or when a practice is setting up its
+ * eleventh client the way it set up the tenth.
+ */
+describe('the two scopes', () => {
+  it('gives data only when data is asked for', async () => {
+    const res = await request(app).get(`/api/orgs/${mine.orgId}/export?scope=data`).set(auth(mine)).expect(200);
+    expect(res.body.data.invoices.length).toBeGreaterThan(0);
+    expect(res.body.configuration).toBeUndefined();
+  });
+
+  it('gives configuration only when configuration is asked for', async () => {
+    const res = await request(app)
+      .get(`/api/orgs/${mine.orgId}/export?scope=configuration`)
+      .set(auth(mine))
+      .expect(200);
+    expect(res.body.data).toBeUndefined();
+    expect(res.body.configuration.branches.length).toBeGreaterThan(0);
+    expect(res.body.configuration.ledgerAccounts.length).toBeGreaterThan(0);
+    // Roles and their permissions, which is what "put the access back" needs.
+    expect(res.body.configuration.roles.length).toBeGreaterThan(0);
+    expect(res.body.configuration.companyProfile[0].name).toBeTruthy();
+  });
+
+  /*
+   * A configuration file is meant to be readable, copied between companies and
+   * kept where a customer keeps files. None of those is a place for a
+   * credential, even an encrypted one.
+   */
+  it('strips secrets out of the configuration', async () => {
+    /*
+     * A real secret has to exist for this to prove anything. Asserting that
+     * `passwordEnc` is absent from a company with no email settings passes
+     * whatever the code does — which it did, until this fixture was added.
+     */
+    const org = await prisma.org.findUniqueOrThrow({
+      where: { id: mine.orgId },
+      select: { accountId: true, createdByUserId: true },
+    });
+    await prisma.emailSetting.upsert({
+      where: { orgId: mine.orgId },
+      update: { passwordEnc: 'ENCRYPTED-SMTP-SECRET', username: 'smtp-user', host: 'smtp.example.com' },
+      create: {
+        accountId: org.accountId,
+        orgId: mine.orgId,
+        provider: 'SMTP',
+        host: 'smtp.example.com',
+        username: 'smtp-user',
+        passwordEnc: 'ENCRYPTED-SMTP-SECRET',
+        updatedByUserId: org.createdByUserId,
+      },
+    });
+
+    const res = await request(app)
+      .get(`/api/orgs/${mine.orgId}/export?scope=configuration`)
+      .set(auth(mine))
+      .expect(200);
+
+    // The setting is exported — a config backup that loses the SMTP host is
+    // not a config backup.
+    expect(res.body.configuration.emailSettings[0].host).toBe('smtp.example.com');
+    expect(res.body.configuration.emailSettings[0].username).toBe('smtp-user');
+
+    // The secret is not.
+    const body = JSON.stringify(res.body);
+    expect(body).not.toContain('ENCRYPTED-SMTP-SECRET');
+    for (const secret of ['passwordEnc', 'clientSecretEnc', 'publicKeyPem']) {
+      expect(body).not.toContain(secret);
+    }
+  });
+
+  it('keeps the ledger out of the configuration and the roles out of the data', async () => {
+    const cfg = await request(app)
+      .get(`/api/orgs/${mine.orgId}/export?scope=configuration`)
+      .set(auth(mine))
+      .expect(200);
+    // The chart of accounts is configuration; the entries posted to it are not.
+    expect(cfg.body.configuration.journalEntries).toBeUndefined();
+    expect(cfg.body.configuration.invoices).toBeUndefined();
+
+    const data = await request(app).get(`/api/orgs/${mine.orgId}/export?scope=data`).set(auth(mine)).expect(200);
+    expect(data.body.data.roles).toBeUndefined();
+    expect(data.body.data.numberSeries).toBeUndefined();
+  });
+
+  it('refuses a scope it does not know', async () => {
+    await request(app).get(`/api/orgs/${mine.orgId}/export?scope=everything`).set(auth(mine)).expect(400);
+  });
+
+  it('says which scope the file is, so it explains itself later', async () => {
+    const res = await request(app)
+      .get(`/api/orgs/${mine.orgId}/export?scope=configuration`)
+      .set(auth(mine))
+      .expect(200);
+    expect(res.body.export.scope).toBe('configuration');
   });
 });

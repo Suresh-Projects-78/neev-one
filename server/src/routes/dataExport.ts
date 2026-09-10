@@ -7,7 +7,22 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 
 /**
- * A company's own books, in a file its owner can keep.
+ * A company's own books and its own settings, in files its owner can keep.
+ *
+ * Two scopes, because they are two different things with two different uses.
+ *
+ * **Data** is what the business did: parties, documents, payments, the ledger.
+ * It is large, it only grows, and restoring it into a company that already has
+ * some is genuinely hard.
+ *
+ * **Configuration** is how the company is set up: branches, the chart of
+ * accounts, numbering series, roles and permissions, tax rates, approval rules,
+ * the reference lists. It is small, it changes rarely, and it is the thing you
+ * want when somebody has broken the invoice numbering, or when a practice is
+ * setting up its eleventh client company the way it set up the tenth.
+ *
+ * Asking for both in one file would mean a config restore had to carry a year
+ * of invoices with it, which is why they are separate.
  *
  * Not the same thing as the server backup, and the difference matters. The
  * SQLite backup is an operator's tool: it is the whole multi-tenant database,
@@ -65,57 +80,119 @@ dataExportRouter.get('/orgs/:orgId/export', EXPORT, async (req, res) => {
   const { accountId, orgId } = req.tenant!;
   const scope = { accountId, orgId };
 
-  const org = await prisma.org.findFirst({ where: { id: orgId, accountId }, select: { id: true, name: true, slug: true } });
+  /*
+   * `data`, `configuration`, or both. Defaulting to both keeps the plain
+   * /export URL meaning what it did before this was split.
+   */
+  const asked = String(req.query.scope || 'all').toLowerCase();
+  const wantData = asked === 'all' || asked === 'data';
+  const wantConfiguration = asked === 'all' || asked === 'configuration';
+  if (!wantData && !wantConfiguration) {
+    return res.status(400).json({ error: "scope must be 'data', 'configuration' or 'all'" });
+  }
+
+  const org = await prisma.org.findFirst({
+    where: { id: orgId, accountId },
+    select: { id: true, name: true, slug: true, profileJson: true },
+  });
   if (!org) return res.status(404).json({ error: 'Company not found' });
 
-  const [
-    branches, warehouses, parties, partyAddresses, partyContacts, items,
-    invoices, bills, estimates, salesOrders, purchaseOrders, deliveryChallans,
-    creditNotes, debitNotes, expenses, payments, paymentAllocations,
-    ledgerAccounts, journals, journalEntries, journalLines,
-    salesmen, fixedAssets, masters, bankBook, recurring,
-  ] = await Promise.all([
-    prisma.branch.findMany({ where: scope }),
-    prisma.warehouse.findMany({ where: scope }),
-    prisma.party.findMany({ where: scope }),
-    prisma.partyAddress.findMany({ where: scope }),
-    prisma.partyContact.findMany({ where: scope }),
-    prisma.itemMaster.findMany({ where: scope }),
-    prisma.invoice.findMany({ where: scope }),
-    prisma.bill.findMany({ where: scope }),
-    prisma.estimate.findMany({ where: scope }),
-    prisma.salesOrderDoc.findMany({ where: scope }),
-    prisma.purchaseOrderDoc.findMany({ where: scope }),
-    prisma.deliveryChallan.findMany({ where: scope }),
-    prisma.creditNote.findMany({ where: scope }),
-    prisma.debitNote.findMany({ where: scope }),
-    prisma.expense.findMany({ where: scope }),
-    prisma.payment.findMany({ where: scope }),
-    prisma.paymentAllocation.findMany({ where: scope }),
-    prisma.ledgerAccount.findMany({ where: scope }),
-    prisma.journal.findMany({ where: scope }),
-    prisma.journalEntry.findMany({ where: scope }),
-    prisma.journalLine.findMany({ where: { entry: scope } }),
-    prisma.salesman.findMany({ where: scope }),
-    prisma.fixedAsset.findMany({ where: scope }),
-    prisma.orgMaster.findMany({ where: scope }),
-    prisma.bankBookEntry.findMany({ where: scope }),
-    prisma.recurringSchedule.findMany({ where: scope }),
-  ]);
+  /*
+   * Secrets are stripped, not exported.
+   *
+   * The email and e-invoice settings carry encrypted passwords and client
+   * secrets. Configuration is meant to be readable, copied between companies
+   * and stored where a customer keeps files — none of which is anywhere a
+   * credential should be, even an encrypted one.
+   */
+  const SECRET_FIELDS = ['passwordEnc', 'clientSecretEnc', 'publicKeyPem'];
+  const withoutSecrets = (rows: any[]) =>
+    rows.map((r) => {
+      const out: Record<string, unknown> = { ...r };
+      for (const f of SECRET_FIELDS) delete out[f];
+      return out;
+    });
 
-  const data = {
-    branches, warehouses, parties, partyAddresses, partyContacts, items,
-    invoices, bills, estimates, salesOrders, purchaseOrders, deliveryChallans,
-    creditNotes, debitNotes, expenses, payments, paymentAllocations,
-    ledgerAccounts, journals, journalEntries, journalLines,
-    salesmen, fixedAssets, masters, bankBook, recurringSchedules: recurring,
-  } as Record<string, any[]>;
+  const data: Record<string, any[]> = {};
+  const configuration: Record<string, any[]> = {};
+
+  if (wantData) {
+    const [
+      parties, partyAddresses, partyContacts, items,
+      invoices, bills, estimates, salesOrders, purchaseOrders, deliveryChallans,
+      creditNotes, debitNotes, expenses, payments, paymentAllocations,
+      journals, journalEntries, journalLines, salesmen, fixedAssets, bankBook,
+    ] = await Promise.all([
+      prisma.party.findMany({ where: scope }),
+      prisma.partyAddress.findMany({ where: scope }),
+      prisma.partyContact.findMany({ where: scope }),
+      prisma.itemMaster.findMany({ where: scope }),
+      prisma.invoice.findMany({ where: scope }),
+      prisma.bill.findMany({ where: scope }),
+      prisma.estimate.findMany({ where: scope }),
+      prisma.salesOrderDoc.findMany({ where: scope }),
+      prisma.purchaseOrderDoc.findMany({ where: scope }),
+      prisma.deliveryChallan.findMany({ where: scope }),
+      prisma.creditNote.findMany({ where: scope }),
+      prisma.debitNote.findMany({ where: scope }),
+      prisma.expense.findMany({ where: scope }),
+      prisma.payment.findMany({ where: scope }),
+      prisma.paymentAllocation.findMany({ where: scope }),
+      prisma.journal.findMany({ where: scope }),
+      prisma.journalEntry.findMany({ where: scope }),
+      prisma.journalLine.findMany({ where: { entry: scope } }),
+      prisma.salesman.findMany({ where: scope }),
+      prisma.fixedAsset.findMany({ where: scope }),
+      prisma.bankBookEntry.findMany({ where: scope }),
+    ]);
+    Object.assign(data, {
+      parties, partyAddresses, partyContacts, items,
+      invoices, bills, estimates, salesOrders, purchaseOrders, deliveryChallans,
+      creditNotes, debitNotes, expenses, payments, paymentAllocations,
+      journals, journalEntries, journalLines, salesmen, fixedAssets, bankBook,
+    });
+  }
+
+  if (wantConfiguration) {
+    const [
+      branches, warehouses, ledgerAccounts, masters, numberSeries,
+      roles, rolePermissions, featureSettings, approvalRules,
+      fiscalYears, emailSettings, einvoiceSettings, recurring,
+    ] = await Promise.all([
+      prisma.branch.findMany({ where: scope }),
+      prisma.warehouse.findMany({ where: scope }),
+      prisma.ledgerAccount.findMany({ where: scope }),
+      prisma.orgMaster.findMany({ where: scope }),
+      prisma.numberSeries.findMany({ where: scope }),
+      prisma.role.findMany({ where: scope }),
+      prisma.rolePermission.findMany({ where: scope, include: { permission: true } }),
+      prisma.featureSetting.findMany({ where: scope }),
+      prisma.approvalRule.findMany({ where: scope }),
+      prisma.fiscalYear.findMany({ where: scope }),
+      prisma.emailSetting.findMany({ where: scope }),
+      prisma.eInvoiceSetting.findMany({ where: scope }),
+      prisma.recurringSchedule.findMany({ where: scope }),
+    ]);
+    Object.assign(configuration, {
+      companyProfile: [{ id: org.id, name: org.name, handle: org.slug || null, profileJson: org.profileJson || null }],
+      branches, warehouses, ledgerAccounts, masters, numberSeries,
+      roles, rolePermissions, featureSettings, approvalRules, fiscalYears,
+      emailSettings: withoutSecrets(emailSettings),
+      einvoiceSettings: withoutSecrets(einvoiceSettings),
+      recurringSchedules: recurring,
+    });
+  }
 
   const counts: Record<string, number> = {};
-  const out: Record<string, any[]> = {};
+  const outData: Record<string, any[]> = {};
+  const outConfig: Record<string, any[]> = {};
   for (const [name, rows] of Object.entries(data)) {
     counts[name] = rows.length;
-    out[name] = plain(rows);
+    outData[name] = plain(rows);
+  }
+  for (const [name, rows] of Object.entries(configuration)) {
+    counts[name] = rows.length;
+    outConfig[name] = plain(rows);
   }
 
   res.json({
@@ -126,14 +203,16 @@ dataExportRouter.get('/orgs/:orgId/export', EXPORT, async (req, res) => {
     export: {
       format: 'neev-one/company-export',
       version: 1,
+      scope: asked,
       company: { id: org.id, name: org.name, handle: org.slug || null },
       takenAt: new Date().toISOString(),
       counts,
       note:
-        'Every record belonging to this company. It contains no other company’s data, ' +
-        'and no passwords, sessions or API credentials.',
+        'Belongs to this company alone. It contains no other company’s records, ' +
+        'no users or sessions, and no passwords or API credentials.',
     },
-    data: out,
+    ...(wantData ? { data: outData } : {}),
+    ...(wantConfiguration ? { configuration: outConfig } : {}),
   });
 });
 
