@@ -216,3 +216,20 @@ places the business already owns, so nothing is bought or sold.
   into the search emptied the table.
 - Inventory's four figures sat above the page heading as small text, which is
   neither a heading nor a card; they are the standard five now.
+
+## Journal Entries
+
+A bare heading, one button and a filter band — no figures, and status was a
+column you could filter but not see the shape of. On a screen whose whole
+subject is whether the books balance, that is the wrong thing to leave out.
+
+- Figures: entries · posted value · lines posted · unbalanced · reversed.
+- Tabs: Balanced · Unbalanced · Reversed, with counts.
+- A reversed entry is left out of the posted value — it was undone, not
+  posted, and counting it would overstate what the books moved by.
+- The row still offers **Reverse** for an entry that reached the ledger and
+  **Delete** only for one that never left this browser.
+
+Moved out of `App.jsx` into `src/features/accounting/JournalEntriesList.jsx`,
+for the same reason Customers and Vendors were: a screen that cannot be
+rendered on its own cannot be tested on its own.

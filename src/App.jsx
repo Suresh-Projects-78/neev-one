@@ -41,6 +41,7 @@ import {
   ShoppingCart,
   Tags,
   Trash2,
+  Undo2,
   Truck,
   Users,
   Boxes,
@@ -160,7 +161,6 @@ const LEDGER_STATES = Object.entries(GST_STATE_BY_CODE)
 import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
-import { usePeriodFilter } from './components/ListControls';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
@@ -207,6 +207,7 @@ const ModuleChartFallback = ({ height = 220 }) => (
 import PurchaseOverview from './features/purchase/PurchaseOverview';
 import PartyDetail from './features/parties/PartyDetail';
 import CustomersList from './features/crm/CustomersList';
+import JournalEntriesList from './features/accounting/JournalEntriesList';
 import VendorsList from './features/crm/VendorsList';
 import CompanyGroups from './features/companies/CompanyGroups';
 import CommandPalette from './components/ui/CommandPalette';
@@ -3777,195 +3778,6 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
         </button>
       </div>
     </form>
-  );
-};
-
-const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJournal }) => {
-  const jvPeriod = usePeriodFilter();
-  const jvSearch = useListSearch(
-    db.journalEntries.filter((j) => j.companyId === currentCompany.id),
-    ['number', 'narration', 'date', 'status']
-  );
-  const jvFilters = useColumnFilters();
-  const journalEntries = jvFilters.applyFilters(jvSearch.filtered.filter((r) => jvPeriod.inRange(r?.date)), {
-    number: (r) => r.number,
-    date: (r) => r.date,
-    narration: (r) => r.narration,
-    status: (r) => r.status,
-  });
-
-  const deleteEntry = async (jv) => {
-    /*
-     * An entry that reached the ledger is reversed, not deleted. Erasing the
-     * row here while the server kept the posting is exactly the divergence
-     * this screen was fixed to stop, and a posting is undone by an equal and
-     * opposite entry so the trail shows both.
-     */
-    const posted = Boolean(String(jv?.backendEntryId || '').trim());
-    const ok = await confirmDialog({
-      title: 'Please confirm',
-      message: posted
-        ? `Entry "${String(jv?.number || '').trim() || 'this entry'}" is posted to the ledger. Reverse it with an opposite entry?`
-        : `Delete journal entry "${String(jv?.number || '').trim() || 'this entry'}"?`,
-      confirmLabel: posted ? 'Yes, reverse it' : 'Yes, continue',
-    });
-    if (!ok) return;
-
-    if (posted) {
-      const { reversed } = await reverseJournalOnLedger(jv);
-      if (!reversed) return;
-      setDb({
-        ...db,
-        journalEntries: (Array.isArray(db.journalEntries) ? db.journalEntries : []).map((x) =>
-          x.companyId === currentCompany.id && String(x.id) === String(jv.id) ? { ...x, status: 'REVERSED' } : x
-        ),
-      });
-      return;
-    }
-
-    setDb({
-      ...db,
-      journalEntries: (Array.isArray(db.journalEntries) ? db.journalEntries : []).filter(
-        (x) => !(x.companyId === currentCompany.id && String(x.id) === String(jv.id))
-      ),
-    });
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Journal Entries</h3>
-        <button
-          onClick={onNewJournal}
-          className="ui-btn ui-btn-primary"
-        >
-          <Plus size={20} /> New Entry
-        </button>
-      </div>
-
-      <ListToolbar
-        search={jvSearch.query}
-        onSearch={jvSearch.setQuery}
-        placeholder="Search journal entries (number, narration)"
-        count={journalEntries.length}
-        countLabel="entries"
-        onExport={() =>
-          exportRows({
-            fileName: `JournalEntries_${currentCompany?.name || 'company'}`,
-            label: 'entry/entries',
-            columns: [
-              { key: 'number', label: 'JV #' },
-              { key: 'date', label: 'Date' },
-              { key: 'narration', label: 'Narration' },
-              { key: 'debit', label: 'Debit', value: (r) => Number(r.totalDebit ?? r.debit ?? 0) },
-              { key: 'credit', label: 'Credit', value: (r) => Number(r.totalCredit ?? r.credit ?? 0) },
-              { key: 'status', label: 'Status' },
-            ],
-            rows: journalEntries,
-          })
-        }
-        period={jvPeriod.period}
-        onPeriodChange={jvPeriod.setPeriod}
-        dateFrom={jvPeriod.dateFrom}
-        dateTo={jvPeriod.dateTo}
-        onDateFromChange={jvPeriod.setDateFrom}
-        onDateToChange={jvPeriod.setDateTo}
-        exportTitle="Journal Entries — {currentCompany?.name || 'Company'}"
-        exportFileName={`JournalEntries_${currentCompany?.name || 'company'}`}
-        exportSheetName="Journal Entries"
-        exportColumns={[
-              { key: 'number', label: 'JV #' },
-              { key: 'date', label: 'Date' },
-              { key: 'narration', label: 'Narration' },
-              { key: 'debit', label: 'Debit', value: (r) => Number(r.totalDebit ?? r.debit ?? 0) },
-              { key: 'credit', label: 'Credit', value: (r) => Number(r.totalCredit ?? r.credit ?? 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={journalEntries}
-      />
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border ui-border-c">
-        <table className="ui-table w-full">
-          <thead className="ui-sunken border-b">
-            <tr>
-              <ColumnHeader label="JV #" col="number" state={jvFilters} className="ui-th" />
-              <ColumnHeader label="Date" col="date" state={jvFilters} className="ui-th" />
-              <ColumnHeader label="Narration" col="narration" state={jvFilters} className="ui-th" />
-              <th className="ui-th ui-num">Debit</th>
-              <th className="ui-th ui-num">Credit</th>
-              <ColumnHeader label="Status" col="status" state={jvFilters} className="ui-th" />
-              <th className="ui-th ui-num">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[rgb(var(--border))]">
-            {journalEntries.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="p-0">
-                  <EmptyState
-                    icon={BookOpen}
-                    title="No journal entries yet"
-                    description="A journal entry posts a debit and a matching credit directly to the ledger — for adjustments the documents do not cover."
-                    action={
-                      <button type="button" onClick={onNewJournal} className="ui-btn ui-btn-primary">
-                        <Plus size={16} /> New Entry
-                      </button>
-                    }
-                  />
-                </td>
-              </tr>
-            ) : (
-              journalEntries.map((jv) => (
-                <tr key={jv.id} className="ui-hover-sunken">
-                  <td className="px-4 py-2.5 ui-col-entity">{jv.number}</td>
-                  <td className="px-4 py-2.5 ui-col-meta">{jv.date}</td>
-                  <td className="px-4 py-2.5 ui-col-meta">
-                    <div>{jv.narration || '-'}</div>
-                    <div className="text-xs ui-muted">{(jv.lines || []).length} lines</div>
-                  </td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
-                  <td className="px-4 py-2.5 ui-col-meta">
-                    <StatusPill
-                      status={
-                        jv.status === 'REVERSED'
-                          ? 'Reversed'
-                          : (jv.totalDebit || 0) === (jv.totalCredit || 0)
-                            ? 'Balanced'
-                            : 'Unbalanced'
-                      }
-                    />
-                  </td>
-                  <td className="px-4 py-2.5 ui-col-meta">
-                    <div className="flex justify-end gap-2">
-                      {jv.status === 'REVERSED' ? (
-                        <span className="text-sm ui-muted">Reversed</span>
-                      ) : (
-                      <>
-                      <button
-                        type="button"
-                        onClick={() => onEditJournal?.(jv)}
-                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1"
-                      >
-                        <Pencil size={16} /> Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => deleteEntry(jv)}
-                        className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-[rgb(var(--neg))]"
-                      >
-                        <Trash2 size={16} /> {jv.backendEntryId ? 'Reverse' : 'Delete'}
-                      </button>
-                      </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 };
 
