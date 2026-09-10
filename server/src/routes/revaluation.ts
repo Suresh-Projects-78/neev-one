@@ -54,17 +54,16 @@ const featureOn = async (req: any, res: any) => {
 async function openForeignPositions(accountId: string, orgId: string, branchId: string, asOf: string) {
   const baseCurrency = await baseCurrencyFor(accountId, orgId);
 
-  const rows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT id, number, currency, exchangeRate, total, paidAmount, date
-       FROM Invoice
-      WHERE accountId = ? AND orgId = ? AND branchId = ?
-        AND currency <> ?
-        AND status <> 'Cancelled'`,
-    accountId,
-    orgId,
-    branchId,
-    baseCurrency
-  );
+  const rows = await prisma.invoice.findMany({
+    where: {
+      accountId,
+      orgId,
+      branchId,
+      currency: { not: baseCurrency },
+      status: { not: 'Cancelled' },
+    },
+    select: { id: true, number: true, currency: true, exchangeRate: true, total: true, paidAmount: true, date: true },
+  });
 
   const positions: Array<{
     invoiceId: string;

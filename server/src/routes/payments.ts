@@ -180,11 +180,13 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
   const invoiceIds = (body.allocations || []).filter((a) => a.docType === 'INVOICE').map((a) => a.docId);
   const bookedRates = new Map<string, number>();
   if (invoiceIds.length) {
-    const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT id, exchangeRate FROM Invoice WHERE orgId = ? AND id IN (${invoiceIds.map(() => '?').join(',')})`,
-      orgId,
-      ...invoiceIds
-    );
+    // An IN list built by hand needs one placeholder per id, and those
+    // placeholders are SQLite's. Prisma builds the list for whatever the
+    // datasource is.
+    const rows = await prisma.invoice.findMany({
+      where: { orgId, id: { in: invoiceIds } },
+      select: { id: true, exchangeRate: true },
+    });
     for (const r of rows) bookedRates.set(String(r.id), Number(r.exchangeRate) || 1);
   }
 

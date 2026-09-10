@@ -17,7 +17,11 @@ export default defineConfig({
       // connections to one file turn into "database is locked" retries and
       // occasional stale reads right after a write. One connection makes every
       // query strictly serial, which is exactly what a test suite wants.
-      DATABASE_URL: 'file:./test.db?connection_limit=1',
+      // Overridable so the same suite can be run against Postgres:
+      //   TEST_DATABASE_URL=postgresql://… npm test
+      // Nothing in the tests knows which one it is, which is the point — that
+      // is what makes it evidence rather than a guess.
+      DATABASE_URL: process.env.TEST_DATABASE_URL || 'file:./test.db?connection_limit=1',
       // Deterministic and fast: rate limiting is exercised by one test that
       // enables it explicitly, and 4 bcrypt rounds keep the suite quick.
       DISABLE_RATE_LIMIT: 'true',

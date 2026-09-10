@@ -289,7 +289,7 @@ governanceRouter.post('/orgs/:orgId/approvals/:requestId/decide', async (req, re
     // invoice existed as a row but had no journal entry.
     let posted = false;
     if (body.approve && decided.docType === 'INVOICE') {
-      const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, decided.docId);
+      const rows = await prisma.invoice.findMany({ where: { id: decided.docId } });
       const inv = rows[0];
       if (inv) {
         await ensureLedgerSetup(req.tenant!.accountId, req.tenant!.orgId, req.auth!.userId);
@@ -313,13 +313,13 @@ governanceRouter.post('/orgs/:orgId/approvals/:requestId/decide', async (req, re
             total: Number(inv.total),
           }),
         });
-        await prisma.$executeRawUnsafe(`UPDATE Invoice SET status = ? WHERE id = ?`, 'Unpaid', inv.id);
+        await prisma.invoice.update({ where: { id: inv.id }, data: { status: 'Unpaid' } });
         posted = true;
       }
     }
 
     if (!body.approve && decided.docType === 'INVOICE') {
-      await prisma.$executeRawUnsafe(`UPDATE Invoice SET status = ? WHERE id = ?`, 'Rejected', decided.docId);
+      await prisma.invoice.update({ where: { id: decided.docId }, data: { status: 'Rejected' } });
     }
 
     await notifyDecision({

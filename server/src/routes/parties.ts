@@ -454,13 +454,11 @@ function register(kind: PartyKind, basePath: string) {
     });
     if (!existing) return res.status(404).json({ error: 'Record not found' });
 
-    const used = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT COUNT(*) AS n FROM Invoice WHERE accountId = ? AND orgId = ? AND customerId = ?`,
-      accountId,
-      orgId,
-      existing.id
-    );
-    const inUse = Number(used?.[0]?.n || 0) > 0;
+    // Prisma's own count rather than raw SQL: the `?` placeholder is SQLite's
+    // and would have to change for Postgres, and there is nothing here Prisma
+    // cannot express.
+    const inUse =
+      (await prisma.invoice.count({ where: { accountId, orgId, customerId: existing.id } })) > 0;
 
     if (inUse) {
       const deactivated = await prisma.party.update({

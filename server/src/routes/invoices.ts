@@ -127,7 +127,13 @@ const statusSchema = z.object({
   paidAmount: z.number().optional(),
 });
 
-const toNumber = (v: number | string | null | undefined) => {
+/*
+ * Money arrives as a Prisma Decimal now that these rows are read through the
+ * client rather than as raw SQL. Decimal converts through Number cleanly; the
+ * signature is widened rather than the values cast, so the next Decimal that
+ * turns up here is handled rather than silently coerced at the call site.
+ */
+const toNumber = (v: number | string | { toString(): string } | null | undefined) => {
   const n = Number(v ?? 0);
   return Number.isFinite(n) ? n : 0;
 };
@@ -353,51 +359,57 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
 
   const id = randomUUID();
   try {
-    await prisma.$executeRawUnsafe(
-      `INSERT INTO Invoice (
-        id, accountId, orgId, branchId, warehouseId, number, date, dueDate, refNo, refDate,
-        customerId, customerName, customerGstin, placeOfSupplyState, taxType, reverseCharge,
-        subtotal, cgstTotal, sgstTotal, igstTotal, gstTotal, total, paidAmount,
-        status, sourceEstimateId, itemsJson, extrasJson, createdByUserId, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-      id,
-      accountId,
-      orgId,
-      branchId,
-      String(body.warehouseId || '').trim() || null,
-      invoiceNumber,
-      String(body.date).trim(),
-      resolvedDueDate,
-      String(body.refNo || '').trim() || null,
-      String(body.refDate || '').trim() || null,
-      String(body.customerId || '').trim() || null,
-      String(body.customerName || '').trim(),
-      String(body.customerGstin || '').trim() || null,
-      String(body.placeOfSupplyState || '').trim() || null,
-      String(body.taxType || '').trim() || null,
-      body.reverseCharge ? 1 : 0,
-      body.subtotal ?? 0,
-      body.cgstTotal ?? 0,
-      body.sgstTotal ?? 0,
-      body.igstTotal ?? 0,
-      body.gstTotal ?? 0,
-      body.total ?? 0,
-      body.paidAmount ?? 0,
-      String(body.status || 'Draft').trim() || 'Draft',
-      String(body.sourceEstimateId || '').trim() || null,
-      JSON.stringify(body.items || []),
-      extrasFrom(body),
-      userId
-    );
+    /*
+     * Prisma's own create rather than raw SQL.
+     *
+     * The placeholders below were SQLite's `?`, which Postgres does not accept,
+     * and the duplicate-number check read SQLite's error text. Prisma writes
+     * the right placeholder for whichever datasource is configured and reports
+     * a duplicate as P2002 either way, so this is the change that lets the
+     * provider move at all.
+     */
+    await prisma.invoice.create({
+      data: {
+        id,
+        accountId,
+        orgId,
+        branchId,
+        warehouseId: String(body.warehouseId || '').trim() || null,
+        number: invoiceNumber,
+        date: String(body.date).trim(),
+        dueDate: resolvedDueDate,
+        refNo: String(body.refNo || '').trim() || null,
+        refDate: String(body.refDate || '').trim() || null,
+        customerId: String(body.customerId || '').trim() || null,
+        customerName: String(body.customerName || '').trim(),
+        customerGstin: String(body.customerGstin || '').trim() || null,
+        placeOfSupplyState: String(body.placeOfSupplyState || '').trim() || null,
+        taxType: String(body.taxType || '').trim() || null,
+        reverseCharge: Boolean(body.reverseCharge),
+        subtotal: body.subtotal ?? 0,
+        cgstTotal: body.cgstTotal ?? 0,
+        sgstTotal: body.sgstTotal ?? 0,
+        igstTotal: body.igstTotal ?? 0,
+        gstTotal: body.gstTotal ?? 0,
+        total: body.total ?? 0,
+        paidAmount: body.paidAmount ?? 0,
+        status: String(body.status || 'Draft').trim() || 'Draft',
+        sourceEstimateId: String(body.sourceEstimateId || '').trim() || null,
+        itemsJson: JSON.stringify(body.items || []),
+        extrasJson: extrasFrom(body),
+        createdByUserId: userId,
+      },
+    });
   } catch (e: any) {
-    const msg = String(e?.message || '');
-    if (msg.includes('UNIQUE constraint failed')) {
+    // P2002 is Prisma's duplicate, whatever the database calls it. The string
+    // this used to match was SQLite's own wording.
+    if (String(e?.code) === 'P2002') {
       return res.status(409).json({ error: 'That invoice number is already used. Numbers are unique across every branch.' });
     }
     throw e;
   }
 
-  const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, id);
+  const rows = await prisma.invoice.findMany({ where: { id } });
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to create invoice' });
 
@@ -414,8 +426,8 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   });
 
   if (approval.required) {
-    await prisma.$executeRawUnsafe(`UPDATE Invoice SET status = ? WHERE id = ?`, 'Pending Approval', id);
-    const held = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, id);
+    await prisma.invoice.update({ where: { id }, data: { status: 'Pending Approval' } });
+    const held = await prisma.invoice.findMany({ where: { id } });
     await auditInvoiceCreated(req, held[0]);
     return res.status(201).json({
       invoice: normalizeInvoiceResponse(held[0]),
@@ -439,13 +451,10 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       ? 1
       : await rateFor({ accountId, orgId, currency: docCurrency, date: String(body.date).trim(), baseCurrency });
 
-    await prisma.$executeRawUnsafe(
-      `UPDATE Invoice SET currency = ?, exchangeRate = ?, baseTotal = ? WHERE id = ?`,
-      docCurrency,
-      fxRate,
-      toBase(Number(body.total ?? 0), fxRate),
-      id
-    );
+    await prisma.invoice.update({
+      where: { id },
+      data: { currency: docCurrency, exchangeRate: fxRate, baseTotal: toBase(Number(body.total ?? 0), fxRate) },
+    });
 
     await postEntry({
       accountId,
@@ -470,7 +479,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
       }),
     });
   } catch (e: any) {
-    await prisma.$executeRawUnsafe(`DELETE FROM Invoice WHERE id = ?`, id);
+    await prisma.invoice.delete({ where: { id } });
     const status = Number(e?.status || 400);
     return res.status(status).json({ error: `Invoice not saved: ${String(e?.message || e)}` });
   }
@@ -485,14 +494,9 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   const invoiceId = String(req.params.invoiceId);
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
-  const existingRows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT * FROM Invoice WHERE id = ? AND accountId = ? AND orgId = ? AND branchId = ?`,
-    invoiceId,
-    accountId,
-    orgId,
-    req.tenant!.branchId
-  );
-  const existing = existingRows[0];
+  const existing = await prisma.invoice.findFirst({
+    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId },
+  });
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
   const parsedPatch = invoiceUpsertSchema.parse(req.body);
@@ -508,38 +512,34 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   }
 
   try {
-    await prisma.$executeRawUnsafe(
-      `UPDATE Invoice SET
-        warehouseId = ?, number = ?, date = ?, dueDate = ?, refNo = ?, refDate = ?,
-        customerId = ?, customerName = ?, customerGstin = ?, placeOfSupplyState = ?, taxType = ?,
-        reverseCharge = ?, subtotal = ?, cgstTotal = ?, sgstTotal = ?, igstTotal = ?, gstTotal = ?, total = ?,
-        paidAmount = ?, status = ?, sourceEstimateId = ?, itemsJson = ?, extrasJson = ?, updatedAt = CURRENT_TIMESTAMP
-       WHERE id = ?`,
-      String(body.warehouseId || '').trim() || null,
-      String(body.number || existing.number).trim(),
-      String(body.date).trim(),
-      String(body.dueDate || '').trim() || null,
-      String(body.refNo || '').trim() || null,
-      String(body.refDate || '').trim() || null,
-      String(body.customerId || '').trim() || null,
-      String(body.customerName || '').trim(),
-      String(body.customerGstin || '').trim() || null,
-      String(body.placeOfSupplyState || '').trim() || null,
-      String(body.taxType || '').trim() || null,
-      body.reverseCharge ?? existing.reverseCharge ? 1 : 0,
-      body.subtotal ?? 0,
-      body.cgstTotal ?? 0,
-      body.sgstTotal ?? 0,
-      body.igstTotal ?? 0,
-      body.gstTotal ?? 0,
-      body.total ?? 0,
-      body.paidAmount ?? toNumber(existing.paidAmount),
-      String(body.status || existing.status || 'Draft').trim() || 'Draft',
-      String(body.sourceEstimateId || '').trim() || null,
-      JSON.stringify(body.items || []),
-      extrasFrom(body),
-      existing.id
-    );
+    await prisma.invoice.update({
+      where: { id: existing.id },
+      data: {
+        warehouseId: String(body.warehouseId || '').trim() || null,
+        number: String(body.number || existing.number).trim(),
+        date: String(body.date).trim(),
+        dueDate: String(body.dueDate || '').trim() || null,
+        refNo: String(body.refNo || '').trim() || null,
+        refDate: String(body.refDate || '').trim() || null,
+        customerId: String(body.customerId || '').trim() || null,
+        customerName: String(body.customerName || '').trim(),
+        customerGstin: String(body.customerGstin || '').trim() || null,
+        placeOfSupplyState: String(body.placeOfSupplyState || '').trim() || null,
+        taxType: String(body.taxType || '').trim() || null,
+        reverseCharge: Boolean(body.reverseCharge ?? existing.reverseCharge),
+        subtotal: body.subtotal ?? 0,
+        cgstTotal: body.cgstTotal ?? 0,
+        sgstTotal: body.sgstTotal ?? 0,
+        igstTotal: body.igstTotal ?? 0,
+        gstTotal: body.gstTotal ?? 0,
+        total: body.total ?? 0,
+        paidAmount: body.paidAmount ?? toNumber(existing.paidAmount),
+        status: String(body.status || existing.status || 'Draft').trim() || 'Draft',
+        sourceEstimateId: String(body.sourceEstimateId || '').trim() || null,
+        itemsJson: JSON.stringify(body.items || []),
+        extrasJson: extrasFrom(body),
+      },
+    });
   } catch (e: any) {
     const msg = String(e?.message || '');
     if (msg.includes('UNIQUE constraint failed')) {
@@ -548,7 +548,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
     throw e;
   }
 
-  const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, existing.id);
+  const rows = await prisma.invoice.findMany({ where: { id: existing.id } });
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to update invoice' });
 
@@ -563,14 +563,9 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
   const invoiceId = String(req.params.invoiceId);
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
-  const existingRows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT * FROM Invoice WHERE id = ? AND accountId = ? AND orgId = ? AND branchId = ?`,
-    invoiceId,
-    accountId,
-    orgId,
-    req.tenant!.branchId
-  );
-  const existing = existingRows[0];
+  const existing = await prisma.invoice.findFirst({
+    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId },
+  });
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
   const body = statusSchema.parse(req.body);
@@ -618,13 +613,11 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
     }
   }
 
-  await prisma.$executeRawUnsafe(
-    `UPDATE Invoice SET status = ?, paidAmount = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
-    nextStatus,
-    body.paidAmount ?? toNumber(existing.paidAmount),
-    existing.id
-  );
-  const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT * FROM Invoice WHERE id = ?`, existing.id);
+  await prisma.invoice.update({
+    where: { id: existing.id },
+    data: { status: nextStatus, paidAmount: body.paidAmount ?? toNumber(existing.paidAmount) },
+  });
+  const rows = await prisma.invoice.findMany({ where: { id: existing.id } });
   const row = rows[0];
   if (!row) return res.status(500).json({ error: 'Failed to update invoice status' });
 
@@ -639,14 +632,10 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
   const invoiceId = String(req.params.invoiceId);
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
-  const existingRows = await prisma.$queryRawUnsafe<any[]>(
-    `SELECT id, number, total, status FROM Invoice WHERE id = ? AND accountId = ? AND orgId = ? AND branchId = ?`,
-    invoiceId,
-    accountId,
-    orgId,
-    req.tenant!.branchId
-  );
-  const existing = existingRows[0];
+  const existing = await prisma.invoice.findFirst({
+    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId },
+    select: { id: true, number: true, total: true, status: true },
+  });
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
   /*
@@ -700,7 +689,7 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
     });
   }
 
-  await prisma.$executeRawUnsafe(`DELETE FROM Invoice WHERE id = ?`, existing.id);
+  await prisma.invoice.delete({ where: { id: existing.id } });
   await auditInvoiceChange(req, 'DELETE', existing, null);
   res.json({ ok: true, reversedEntries: posted.length });
 });

@@ -214,7 +214,7 @@ async function notifyApprovers(
 /** Best-effort human-readable reference for the notification body. */
 async function documentNumber(docType: string, docId: string) {
   if (docType !== 'INVOICE') return docId.slice(0, 8);
-  const rows = await prisma.$queryRawUnsafe<any[]>(`SELECT number FROM Invoice WHERE id = ?`, docId);
+  const rows = await prisma.invoice.findMany({ where: { id: docId }, select: { number: true } });
   return rows?.[0]?.number || docId.slice(0, 8);
 }
 
