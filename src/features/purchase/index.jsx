@@ -15,7 +15,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, ClipboardList, Copy, CreditCard, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Receipt, RefreshCw, Trash2, X } from 'lucide-react';
+import { Ban, ClipboardList, Copy, CreditCard, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Printer, Receipt, RefreshCw, Trash2, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -27,6 +27,11 @@ import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { getVendorDisplayName } from '../../utils/contacts';
 import { amountInWordsInr, formatMoney, round2 } from '../../utils/money';
+import Modal from '../../components/ui/Modal';
+import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
+import DocumentPrintView from '../../components/DocumentPrintView';
+import PrintDownloadFrame from '../../components/PrintDownloadFrame';
+import { getVisibleCustomFields } from '../../utils/invoicePrefs';
 import {
   computeGstForLine,
   computeGstForLines,
@@ -2215,6 +2220,10 @@ export const DebitNoteForm = ({
     return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
   }, [warehouses]);
 
+  const customFields = React.useMemo(() => getVisibleCustomFields(currentCompany, 'debitNote'), [currentCompany]);
+  const setCustomField = (key, value) =>
+    setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
+
   const [formData, setFormData] = useState(() => {
     const today = new Date().toISOString().split('T')[0];
 
@@ -2224,7 +2233,8 @@ export const DebitNoteForm = ({
       originalBillId: '',
       vendorId: '',
       warehouseId: String(defaultWarehouseId || '').trim(),
-      items: [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', amount: 0 }],
+      customFields: {},
+      items: [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '', unit: '', discountPct: 0, amount: 0 }],
     };
 
     if (!initialData) return base;
@@ -2604,6 +2614,7 @@ export const DebitNoteForm = ({
       vendorGstin: vendorGstin,
       placeOfSupplyState: vendorState,
       taxType: isIntra ? 'CGST_SGST' : 'IGST',
+      customFields: { ...(formData.customFields || {}) },
       items: computed.lines,
       subtotal: computed.subtotal,
       cgstTotal: computed.cgstTotal,
@@ -2760,6 +2771,9 @@ export const DebitNoteForm = ({
             disabledHint="Vendor comes from the original bill"
           />
         </div>
+
+        <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
+        <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
       </div>
 
       <div>
@@ -2771,15 +2785,18 @@ export const DebitNoteForm = ({
         </div>
 
         <div className="border rounded-lg overflow-hidden">
-          <table className="ui-table w-full ui-table-wide">
+          <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium">Item</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Description</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Qty</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Rate</th>
-                <th className="px-3 py-2 text-left text-xs font-medium">Line Total</th>
-                <th className="px-3 py-2"></th>
+                <th className="ui-th text-left w-[26%]">Item</th>
+                <th className="ui-th text-left w-[22%]">Description</th>
+                <th className="ui-th ui-num w-[8%]">Qty</th>
+                <th className="ui-th text-left w-[7%]">Unit</th>
+                <th className="ui-th ui-num w-[12%]">Rate (₹)</th>
+                <th className="ui-th ui-num w-[8%]">Disc %</th>
+                <th className="ui-th ui-num w-[8%]">Tax %</th>
+                <th className="ui-th ui-num w-[13%]">Amount (₹)</th>
+                <th className="px-3 py-2 w-10"></th>
               </tr>
             </thead>
             <tbody>
@@ -2800,26 +2817,56 @@ export const DebitNoteForm = ({
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="ui-input w-full px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="ui-input w-20 px-2 py-1" min="1" />
+                    <input type="number" value={item.quantity} onChange={(e) => updateItem(idx, 'quantity', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1 text-right" min="1" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input type="text" value={item.unit || ''} onChange={(e) => updateItem(idx, 'unit', e.target.value)} className="ui-input w-full min-w-0 px-2 py-1" />
                   </td>
                   <td className="px-3 py-2">
                     <input
                       type="number"
                       value={item.rate}
                       onChange={(e) => updateItem(idx, 'rate', e.target.value)}
-                      className="ui-input w-24 px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1 text-right"
                       min="0"
                       step="0.01"
                     />
                   </td>
-                  <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
-                      <Trash2 size={16} />
+                    <input
+                      type="number"
+                      value={item.discountPct ?? 0}
+                      onChange={(e) => updateItem(idx, 'discountPct', e.target.value)}
+                      className="ui-input w-full min-w-0 px-2 py-1 text-right"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      value={item.gstRate ?? 0}
+                      onChange={(e) => updateItem(idx, 'gstRate', e.target.value)}
+                      className="ui-input w-full min-w-0 px-2 py-1 text-right"
+                      min="0"
+                      step="0.01"
+                    />
+                  </td>
+                  <td className="ui-col-amount px-3 py-2 text-right">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => removeItem(idx)}
+                      disabled={formData.items.length === 1}
+                      aria-label={`Remove line ${idx + 1}`}
+                      className="ui-btn ui-btn-ghost ui-btn-sm disabled:opacity-40"
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </td>
                 </tr>
@@ -2859,6 +2906,12 @@ export const DebitNoteForm = ({
         </div>
       </div>
 
+      {hasCustomFieldsAt(customFields, 'notes') ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
+        </div>
+      ) : null}
+
       <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
@@ -2871,6 +2924,8 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
+
+  const [previewNote, setPreviewNote] = useState(null);
 
   /** Settle an on-account note against the vendor's open bills. */
   const openKnockOff = (note) => {
@@ -3072,6 +3127,14 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                       <StatusPill status={dn.status || 'Draft'} />
                     </td>
                     <td className="px-4 py-2.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewNote(dn)}
+                        aria-label={`Print debit note ${dn.number}`}
+                        className="ui-btn ui-btn-secondary ui-btn-sm text-xs mr-2"
+                      >
+                        <Printer size={13} aria-hidden="true" /> Print
+                      </button>
                       {isOnAccount(dn) ? (
                         noteBalance(dn).unsettled > 0.0001 ? (
                           <button
@@ -3121,6 +3184,34 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
           ]}
         />
       </div>
+
+      {previewNote ? (
+        <Modal
+          title={`Debit Note ${previewNote.number || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+          onClose={() => setPreviewNote(null)}
+        >
+          <PrintDownloadFrame
+            title={`Debit Note ${previewNote.number || ''}`.trim()}
+            fileBase={previewNote.number || 'debit-note'}
+          >
+            <DocumentPrintView
+              db={db}
+              currentCompany={currentCompany}
+              docTitle="DEBIT NOTE"
+              doc={previewNote}
+              party={(db.vendors || []).find((v) => String(v.id) === String(previewNote.vendorId)) || null}
+              partyLabel="Vendor"
+              metaRows={[{ label: 'Against bill', value: previewNote.originalBillNumber }]}
+              sideRows={[
+                { label: 'GSTIN', value: previewNote.vendorGstin },
+                { label: 'Place of supply', value: previewNote.placeOfSupplyState },
+              ]}
+              footNote="Debit note under section 34 of the CGST Act. The input tax credit claimed on the original bill is reduced by the tax shown above."
+            />
+          </PrintDownloadFrame>
+        </Modal>
+      ) : null}
     </div>
   );
 };

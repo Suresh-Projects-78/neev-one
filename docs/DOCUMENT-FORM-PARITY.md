@@ -12,8 +12,8 @@ Measured 2026-09-10. Fixed one form at a time, worst first, each its own commit.
 | Invoice | yes | yes | yes | yes | reference |
 | Sales Order | yes | yes | yes | yes | **done** |
 | Delivery Challan | yes | yes | yes | yes | **done** |
-| Debit Note | — | yes | — | — | **next** |
-| Purchase Order | — | yes | — | — | 4th |
+| Debit Note | yes | yes | yes | yes | **done** |
+| Purchase Order | — | yes | — | — | **next** |
 | Estimate | yes | yes | — | — | 5th |
 | Credit Note | yes | yes | — | — | 6th |
 
@@ -83,3 +83,11 @@ The design tests caught the new print surface on their first run and were right
 to: `DocumentPrintView` is black on white and uses raw palette classes. It is
 now exempt alongside `InvoicePreview` and `ExpenseVoucher`, which is the
 exemption DESIGN.md already grants printed documents.
+
+## A note on the debit note
+
+The first attempt at its grid edited `BillForm` instead. The markup being
+replaced appeared three times in `purchase/index.jsx` and the match landed on
+the first one, which belongs to the bill. Caught by checking which component the
+new class had landed in, reverted, and every later edit to that file was scoped
+to the text of `DebitNoteForm` itself rather than to a string that repeats.
