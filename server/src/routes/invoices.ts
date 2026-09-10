@@ -409,8 +409,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
     throw e;
   }
 
-  const rows = await prisma.invoice.findMany({ where: { id } });
-  const row = rows[0];
+  const row = await prisma.invoice.findUnique({ where: { id } });
   if (!row) return res.status(500).json({ error: 'Failed to create invoice' });
 
   // Approval thresholds are evaluated before anything reaches the ledger: an
@@ -427,10 +426,10 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
 
   if (approval.required) {
     await prisma.invoice.update({ where: { id }, data: { status: 'Pending Approval' } });
-    const held = await prisma.invoice.findMany({ where: { id } });
-    await auditInvoiceCreated(req, held[0]);
+    const held = await prisma.invoice.findUnique({ where: { id } });
+    await auditInvoiceCreated(req, held);
     return res.status(201).json({
-      invoice: normalizeInvoiceResponse(held[0]),
+      invoice: normalizeInvoiceResponse(held),
       approval: { required: true, rule: approval.ruleName },
       strippedFields: stripped,
     });
@@ -548,8 +547,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
     throw e;
   }
 
-  const rows = await prisma.invoice.findMany({ where: { id: existing.id } });
-  const row = rows[0];
+  const row = await prisma.invoice.findUnique({ where: { id: existing.id } });
   if (!row) return res.status(500).json({ error: 'Failed to update invoice' });
 
   await auditInvoiceChange(req, 'UPDATE', existing, row);
@@ -617,8 +615,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
     where: { id: existing.id },
     data: { status: nextStatus, paidAmount: body.paidAmount ?? toNumber(existing.paidAmount) },
   });
-  const rows = await prisma.invoice.findMany({ where: { id: existing.id } });
-  const row = rows[0];
+  const row = await prisma.invoice.findUnique({ where: { id: existing.id } });
   if (!row) return res.status(500).json({ error: 'Failed to update invoice status' });
 
   await auditInvoiceChange(req, 'STATUS', existing, row);

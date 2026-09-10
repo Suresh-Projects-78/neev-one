@@ -54,6 +54,14 @@ const featureOn = async (req: any, res: any) => {
 async function openForeignPositions(accountId: string, orgId: string, branchId: string, asOf: string) {
   const baseCurrency = await baseCurrencyFor(accountId, orgId);
 
+  /*
+   * bounded: every open foreign-currency position, deliberately.
+   *
+   * This is a revaluation, not a list — it restates what is outstanding at
+   * today's rate, so a page of it would be a wrong answer rather than a partial
+   * one. It is filtered to unsettled non-base-currency invoices on one branch,
+   * which is a small set even on large books.
+   */
   const rows = await prisma.invoice.findMany({
     where: {
       accountId,

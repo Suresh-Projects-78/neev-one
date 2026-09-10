@@ -354,3 +354,54 @@ not leave a hole in a consecutive series if it is discarded. A test found that
 the empty number it used to carry collided on `(orgId, number)` — the marker
 fixes the collision and turns that constraint into a second guarantee against
 double billing.
+
+
+## A correction on P0-4
+
+I reported that the backend suite failure "does not reproduce". That was too
+strong, and the way I checked was too weak: I ran it once, it passed, and I said
+so.
+
+Over roughly fifteen runs since, it has failed three times — `email.test.ts`,
+`entitlements.test.ts` and `branchAccess.test.ts`, a different file each time,
+always failing to *collect* rather than failing an assertion, and always passing
+when run alone or on the next attempt. So the suite is intermittently red at
+roughly one run in five.
+
+The audit was right that it fails. Its diagnosis — an absolute `file:` URL
+containing the space in "WEB new" — is still not what I observe, because the
+failure moves between files and clears on a retry, which a malformed connection
+string would not. The cause is more likely a race in test bootstrap.
+
+Recording it rather than fixing it here: it is a real defect, it is not what the
+audit says it is, and finding out what it actually is deserves its own attention
+rather than being tacked onto an unrelated change.
+
+## P1-5 was mostly wrong, and the checking was worse
+
+The audit says invoices, payments, parties, items and ledger entries use
+unbounded `findMany`. Four of those five already had ceilings. My own first scan
+agreed with the audit — because it only read the first 420 characters of each
+call and the `take` was further down.
+
+One real finding: the audit trail's filter dropdown used `findMany` with
+`distinct`, which on a table that only grows is a read of all of it. That is a
+`groupBy` now, answered by the database.
+
+`listsAreBounded.test.ts` guards it, scoped to the models that grow with trading
+rather than every `findMany` in the routes — a first version flagged sixty,
+nearly all reference reads, and a rule that fires that often is one people wave
+through.
+
+Writing that test took four attempts, each passing while the code was broken:
+
+1. It matched `id:` anywhere in the call, so a `select: { id: true }` exempted
+   the query.
+2. It sliced from the word `where` to the end of the call, so
+   `orderBy: [{ id: 'asc' }]` exempted it.
+3. It treated `ledgerAccountId` as a bounding record id. One account's journal
+   lines are every transaction it has ever carried.
+4. Only then did removing a real ceiling actually fail it.
+
+Each attempt was found by breaking the code and watching the test pass anyway.
+A guard that has not been shown to fail is not a guard.

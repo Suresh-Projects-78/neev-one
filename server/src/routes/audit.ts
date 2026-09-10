@@ -113,9 +113,17 @@ auditRouter.get('/orgs/:orgId/audit/facets', AUDIT_VIEW, async (req, res) => {
     return res.status(403).json({ error: 'orgId mismatch' });
   }
   const { accountId, orgId } = req.tenant!;
+  /*
+   * groupBy rather than findMany with `distinct`.
+   *
+   * The trail only grows, and a distinct read of it is a read of all of it —
+   * the filter dropdown would get slower every month and eventually be the
+   * heaviest query on the screen. A group-by is answered by the database
+   * rather than by fetching rows and reducing them here.
+   */
   const [entities, actions] = await Promise.all([
-    prisma.auditLog.findMany({ where: { accountId, orgId }, select: { entity: true }, distinct: ['entity'] }),
-    prisma.auditLog.findMany({ where: { accountId, orgId }, select: { action: true }, distinct: ['action'] }),
+    prisma.auditLog.groupBy({ by: ['entity'], where: { accountId, orgId } }),
+    prisma.auditLog.groupBy({ by: ['action'], where: { accountId, orgId } }),
   ]);
   res.json({
     entities: entities.map((e) => e.entity).sort(),
