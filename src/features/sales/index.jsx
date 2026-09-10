@@ -58,11 +58,12 @@ import { InvoiceIdentifier, DateCell, DueDateCell, Money, Balance } from '../../
 import { MoneyValue } from '../../components/docs';
 import { PageHeader, StatusPill, EmptyState, TableTotals, FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { ListSearch, StatCards } from '../../components/list/ListPageParts';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { PermissionButton } from '../../permissions/ActionGuard';
 import DocHeaderStrip from '../../components/ui/DocHeaderStrip';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter, LIST_PERIODS, describeView } from '../../components/ListControls';
 import { exportListPdf } from '../../utils/listPdf';
 import { exportListXlsx } from '../../utils/listXlsx';
@@ -1687,6 +1688,7 @@ export const EstimatesList = ({
   setDb,
   openModal,
   currentCompany,
+  onNavigate,
   onNewEstimate,
   onEditEstimate,
   onConvertToInvoice,
@@ -1723,7 +1725,35 @@ export const EstimatesList = ({
     }
     return chips;
   }, [estSearch, estFilters]);
-  const estimates = estFilters.applyFilters(
+  /*
+   * What a quotation is, right now.
+   *
+   * The stored status stops at what somebody last typed, so a quote whose
+   * expiry has passed still read as Sent — and a list of quotes exists to show
+   * which are live and which have lapsed. Converted wins over everything: once
+   * it is an invoice, nothing about the quote is open any more.
+   */
+  const [estStatus, setEstStatus] = useState('');
+  const estStatusOf = (e) => {
+    const converted = e?.convertedInvoiceId !== undefined && e?.convertedInvoiceId !== null && e?.convertedInvoiceId !== '';
+    if (converted || String(e?.status || '') === 'Converted') return 'Converted';
+    const stored = String(e?.status || 'Draft');
+    if (stored === 'Cancelled' || stored === 'Expired') return stored;
+    const expiry = String(e?.dueDate || e?.expiryDate || '').slice(0, 10);
+    if (expiry && expiry < todayIso() && stored !== 'Draft') return 'Expired';
+    return stored;
+  };
+
+  const EST_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Draft', label: 'Draft', tone: 'draft' },
+    { value: 'Sent', label: 'Sent', tone: 'sent' },
+    { value: 'Accepted', label: 'Accepted', tone: 'outstanding' },
+    { value: 'Converted', label: 'Converted', tone: 'paid' },
+    { value: 'Expired', label: 'Expired', tone: 'cancelled' },
+  ];
+
+  const estimatesAll = estFilters.applyFilters(
     estSearch.filtered
       .filter((r) => estPeriod.inRange(r?.date))
       .slice()
@@ -1742,6 +1772,43 @@ export const EstimatesList = ({
       total: (r) => r.total,
     }
   );
+
+  const estimates = estStatus ? estimatesAll.filter((e) => estStatusOf(e) === estStatus) : estimatesAll;
+
+  /* The counts are the point of the tabs: "Expired 6" says there is something
+     to chase before anything has been clicked. */
+  const estStatusCounts = useMemo(() => {
+    const counts = { '': estimatesAll.length };
+    for (const e of estimatesAll) {
+      const st = estStatusOf(e);
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimatesAll]);
+
+  /*
+   * Four figures, each answering a different question about the same book: how
+   * many quotes there are, what they add up to, how much of that is still live,
+   * and how much has already turned into invoices. A quote that expired is out
+   * of the open figure — it is not money anybody is waiting on.
+   */
+  const estHeadline = useMemo(() => {
+    let value = 0;
+    let open = 0;
+    let converted = 0;
+    let expired = 0;
+    for (const e of estimatesAll) {
+      const amt = Number(e.total || 0);
+      const st = estStatusOf(e);
+      value += amt;
+      if (st === 'Converted') converted += amt;
+      else if (st === 'Expired' || st === 'Cancelled') expired += amt;
+      else open += amt;
+    }
+    return { count: estimatesAll.length, value, open, converted, expired };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estimatesAll]);
 
   const MENU_WIDTH = 224; // w-56
   const MENU_HEIGHT_ESTIMATE = 240;
@@ -1899,94 +1966,112 @@ export const EstimatesList = ({
     setOpenMenu({ id: estimateId, left, top });
   };
 
+  const estExportColumns = [
+    { key: 'number', label: 'Quotation #' },
+    { key: 'customerName', label: 'Customer' },
+    { key: 'date', label: 'Date' },
+    { key: 'dueDate', label: 'Valid till' },
+    { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+    { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
+    { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+    { key: 'status', label: 'Status', value: (r) => estStatusOf(r) },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Quotations</h3>
-        <button
-          type="button"
+    <DocumentListShell
+      title="Quotations"
+      description="Quote a price, then turn the ones that land into invoices"
+      company={currentCompany}
+      search={{
+        value: estSearch.query,
+        onChange: estSearch.setQuery,
+        placeholder: 'Search quotations…',
+        label: 'Search quotations',
+      }}
+      moreItems={[
+        { key: 'export', label: 'Export quotations', Icon: Download },
+        { sep: true },
+        { key: 'settingsCustomFields', label: 'Custom fields', Icon: Plus, group: 'Configure — every quotation' },
+        { key: 'invoiceTemplates', label: 'Document template', Icon: Settings2 },
+      ]}
+      onMoreSelect={(k) => {
+        if (k === 'export') {
+          exportRows({
+            fileName: `Quotations_${currentCompany?.name || 'company'}`,
+            label: 'quotation(s)',
+            columns: estExportColumns,
+            rows: estimates,
+          });
+          return;
+        }
+        if (typeof onNavigate === 'function') onNavigate(k);
+      }}
+      primary={
+        <PermissionButton
+          permission="SALES::Estimates::CREATE"
           onClick={openNewEstimate}
           className="ui-btn ui-btn-primary"
         >
-          <Plus size={20} /> New Quotation
-        </button>
-      </div>
+          <Plus size={16} aria-hidden="true" /> New Quotation
+        </PermissionButton>
+      }
+      cards={[
+        { label: 'Total quotations', value: estHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Total quoted', value: estHeadline.value, tone: 'sent', Icon: FileText },
+        { label: 'Open value', value: estHeadline.open, tone: 'outstanding', Icon: Tag },
+        { label: 'Converted value', value: estHeadline.converted, tone: 'paid', Icon: Receipt },
+        { label: 'Expired value', value: estHeadline.expired, tone: 'cancelled', Icon: Ban },
+      ]}
+      tabs={EST_STATUS_TABS}
+      tabsLabel="Quotation status"
+      statusValue={estStatus}
+      statusCounts={estStatusCounts}
+      onStatusChange={setEstStatus}
+      tip={{
+        storageKey: 'neev.tip.quotations',
+        text: 'A quotation the customer accepts becomes an invoice without being typed twice — the row menu converts it.',
+        Icon: ClipboardList,
+      }}
+    >
+      <div className="overflow-x-auto ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
 
-      <ListToolbar
-        search={estSearch.query}
-        onSearch={estSearch.setQuery}
-        placeholder="Search estimates (number, customer, ref)"
-        count={estimates.length}
-        countLabel="estimates"
-        onExport={() =>
-          exportRows({
-            fileName: `Quotations_${currentCompany?.name || 'company'}`,
-            label: 'estimate(s)',
-            columns: [
-              { key: 'number', label: 'Quotation #' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'date', label: 'Date' },
-              { key: 'dueDate', label: 'Due' },
-              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-            ],
-            rows: estimates,
-          })
-        }
-        period={estPeriod.period}
-        onPeriodChange={estPeriod.setPeriod}
-        dateFrom={estPeriod.dateFrom}
-        dateTo={estPeriod.dateTo}
-        onDateFromChange={estPeriod.setDateFrom}
-        onDateToChange={estPeriod.setDateTo}
-        exportTitle="Quotations — {currentCompany?.name || 'Company'}"
-        exportFileName={`Quotations_${currentCompany?.name || 'company'}`}
-        exportSheetName="Quotations"
-        exportColumns={[
-              { key: 'number', label: 'Quotation #' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'date', label: 'Date' },
-              { key: 'dueDate', label: 'Due' },
-              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-              { key: 'gstTotal', label: 'GST', value: (r) => Number(r.gstTotal || 0) },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={estimates}
-      />
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full ui-table-sticky">
-          <thead className="ui-sunken border-b">
             <tr>
-              <ColumnHeader label="Quotation #" col="number" state={estFilters} className="ui-th" />
-              <ColumnHeader label="Customer" col="customer" state={estFilters} className="ui-th" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={estFilters} className="ui-th" />
-              <ColumnHeader label="Date" col="date" state={estFilters} className="ui-th" />
-              <ColumnHeader label="Due" col="due" state={estFilters} className="ui-th" />
-              <ColumnHeader label="Total" col="total" state={estFilters} className="ui-th" />
-              <ColumnHeader label="Status" col="status" state={estFilters} className="ui-th" />
-              <th className="ui-th">Actions</th>
-            </tr>
-            <tr className="hidden">
+              <ColumnHeader label="Quotation #" col="number" state={estFilters} />
+              <ColumnHeader label="Customer" col="customer" state={estFilters} />
+              <ColumnHeader label="Date" col="date" state={estFilters} />
+              {/* A quotation's "due" is the day the price stops standing, which
+                  is what the customer is being asked to beat. */}
+              <ColumnHeader label="Valid till" col="due" state={estFilters} />
+              <ColumnHeader label="Amount" col="total" state={estFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Status" col="status" state={estFilters} />
+              <ColumnHeader label="Warehouse" col="warehouse" state={estFilters} />
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="ui-rows">
             {estimates.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-0 py-0">
-                  {estFilterChips.length === 0 ? (
+                <td colSpan="8">
+                  {estFilterChips.length === 0 && !estStatus ? (
                     <EmptyState
                       icon={ClipboardList}
-                      title="No estimates yet"
-                      description="An estimate is a quote you can turn into an invoice once the customer agrees."
-                      action={
-                        <button type="button" onClick={openNewEstimate} className="ui-btn ui-btn-primary">
-                          <Plus size={16} /> New Quotation
-                        </button>
-                      }
+                      kind="new"
+                      title="No quotations yet"
+                      description="A quotation is a price you are standing behind until it expires — and an invoice waiting for a yes."
+                      routes={[
+                        {
+                          label: 'Quote one now',
+                          description: 'Pick a customer, add lines, set how long the price holds.',
+                          onSelect: () => openNewEstimate(),
+                        },
+                        {
+                          label: 'Start from an invoice',
+                          description: 'Quote what you have already billed this customer before.',
+                          onSelect: () => openNewEstimate(),
+                        },
+                      ]}
                     />
                   ) : (
                     <EmptyState
@@ -2010,7 +2095,7 @@ export const EstimatesList = ({
                 return (
                 <tr
                   key={est.id}
-                  className="ui-hover-sunken cursor-pointer"
+                  className="cursor-pointer"
                   onClick={(e) => {
                     const el = e.target;
                     if (el?.closest?.('[data-estimate-menu-button]')) return;
@@ -2018,16 +2103,15 @@ export const EstimatesList = ({
                     openEditEstimate(est);
                   }}
                 >
-                  <td className="ui-col-id px-4 py-2.5"><InvoiceIdentifier value={est.number} label="quotation" /></td>
-                  <td className="ui-col-entity px-4 py-2.5">{est.customerName || '-'}</td>
-                  <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                  <td className="ui-col-date px-4 py-2.5"><DateCell value={est.date} /></td>
+                  <td className="ui-col-id"><InvoiceIdentifier value={est.number} label="quotation" /></td>
+                  <td className="ui-col-entity">{est.customerName || '-'}</td>
+                  <td className="ui-col-date"><DateCell value={est.date} /></td>
                   {/* A quotation's "due" is its expiry: still open, so it is a
                       live commitment and reads as one. */}
-                  <td className="ui-col-date px-4 py-2.5">
+                  <td className="ui-col-date">
                     <DueDateCell value={est.dueDate} balance={est.total || 0} />
                   </td>
-                  <td className="ui-col-amount px-4 py-2.5"><MoneyValue value={est.total} company={currentCompany} /></td>
+                  <td className="ui-col-amount"><Money value={est.total} company={currentCompany} /></td>
                   {/*
                     An estimate that has already become an invoice looked
                     exactly like one still waiting on the customer. The only
@@ -2035,11 +2119,12 @@ export const EstimatesList = ({
                     to open the row menu to find, so a list of quotes could not
                     be read at a glance — which is the whole job of a list.
                   */}
-                  <td className="px-4 py-2.5">
-                    <StatusPill status={est.status || 'Draft'} />
+                  <td>
+                    <StatusPill status={estStatusOf(est)} />
                   </td>
+                  <td className="ui-col-meta">{whLabel}</td>
                   <td
-                    className="px-4 py-2.5 relative"
+                    className="relative w-10"
                     onMouseDown={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
@@ -2073,13 +2158,13 @@ export const EstimatesList = ({
             )}
           </tbody>
         </table>
-        <TableTotals
-          count={estimates.length}
-          totalCount={(db.estimates || []).filter((e) => e.companyId === currentCompany.id).length}
-          noun="estimates"
-          figures={[{ label: 'Value', value: formatMoney(estimates.reduce((t, e) => t + Number(e.total || 0), 0), currentCompany) }]}
-        />
       </div>
+      <TableTotals
+        count={estimates.length}
+        totalCount={(db.estimates || []).filter((e) => e.companyId === currentCompany.id).length}
+        noun="quotations"
+        figures={[{ label: 'Value', value: formatMoney(estimates.reduce((t, e) => t + Number(e.total || 0), 0), currentCompany) }]}
+      />
 
       {previewEstimate ? (
         <Modal
@@ -2198,7 +2283,7 @@ export const EstimatesList = ({
           })()}
         </div>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 };
 
@@ -2284,7 +2369,7 @@ export const CreditNotesList = ({
     }
     return chips;
   }, [cnSearch, cnFilters]);
-  const creditNotes = cnFilters.applyFilters(
+  const creditNotesAll = cnFilters.applyFilters(
     cnSearch.filtered
       .filter((r) => cnPeriod.inRange(r?.date))
       .slice()
@@ -2303,6 +2388,63 @@ export const CreditNotesList = ({
       total: (r) => r.total,
     }
   );
+
+  /*
+   * A credit note is money owed back. The list is read for two things: how much
+   * has been credited, and how much of it is sitting on account — issued
+   * against no particular invoice and not yet knocked off anything, which is a
+   * customer balance nobody has finished dealing with.
+   */
+  const [cnStatus, setCnStatus] = useState('');
+  const cnStatusOf = (cn) => {
+    const st = String(cn?.status || 'Open');
+    if (st === 'Draft' || st === 'Cancelled') return st;
+    if (isOnAccount(cn)) return noteBalance(cn).unsettled > 0.0001 ? 'On account' : 'Settled';
+    return st;
+  };
+  const CN_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Draft', label: 'Draft', tone: 'draft' },
+    { value: 'Open', label: 'Issued', tone: 'sent' },
+    { value: 'On account', label: 'On account', tone: 'outstanding' },
+    { value: 'Settled', label: 'Settled', tone: 'paid' },
+  ];
+  const creditNotes = cnStatus ? creditNotesAll.filter((c) => cnStatusOf(c) === cnStatus) : creditNotesAll;
+
+  const cnStatusCounts = useMemo(() => {
+    const counts = { '': creditNotesAll.length };
+    for (const c of creditNotesAll) {
+      const st = cnStatusOf(c);
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creditNotesAll]);
+
+  const cnHeadline = useMemo(() => {
+    let value = 0;
+    let onAccount = 0;
+    let drafted = 0;
+    let againstInvoice = 0;
+    for (const c of creditNotesAll) {
+      const amt = Number(c.total || 0);
+      value += amt;
+      if (cnStatusOf(c) === 'Draft') drafted += amt;
+      else if (isOnAccount(c)) onAccount += noteBalance(c).unsettled;
+      else againstInvoice += amt;
+    }
+    return { count: creditNotesAll.length, value, onAccount, drafted, againstInvoice };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creditNotesAll]);
+
+  const cnExportColumns = [
+    { key: 'number', label: 'Credit #' },
+    { key: 'originalInvoiceNumber', label: 'Original invoice' },
+    { key: 'customerName', label: 'Customer' },
+    { key: 'date', label: 'Date' },
+    { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+    { key: 'status', label: 'Status', value: (r) => cnStatusOf(r) },
+  ];
 
   const openNewCreditNote = () => {
     if (typeof onNewCreditNote === 'function') {
@@ -2323,80 +2465,89 @@ export const CreditNotesList = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="ui-t-sec">Credit Notes</h3>
-        <button
-          type="button"
+    <DocumentListShell
+      title="Sales Returns"
+      description="A credit note reverses part or all of an invoice when goods come back"
+      company={currentCompany}
+      search={{
+        value: cnSearch.query,
+        onChange: cnSearch.setQuery,
+        placeholder: 'Search credit notes…',
+        label: 'Search credit notes',
+      }}
+      moreItems={[{ key: 'export', label: 'Export credit notes', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `CreditNotes_${currentCompany?.name || 'company'}`,
+          label: 'credit note(s)',
+          columns: cnExportColumns,
+          rows: creditNotes,
+        });
+      }}
+      primary={
+        <PermissionButton
+          permission="SALES::Credit Notes::CREATE"
           onClick={openNewCreditNote}
           className="ui-btn ui-btn-primary"
         >
-          <Plus size={20} /> New Credit Note
-        </button>
-      </div>
-
-      <ListToolbar
-        search={cnSearch.query}
-        onSearch={cnSearch.setQuery}
-        placeholder="Search credit notes (number, customer, invoice)"
-        count={creditNotes.length}
-        countLabel="credit notes"
-        onExport={() =>
-          exportRows({
-            fileName: `CreditNotes_${currentCompany?.name || 'company'}`,
-            label: 'credit note(s)',
-            columns: [
-              { key: 'number', label: 'Credit #' },
-              { key: 'originalInvoiceNumber', label: 'Original Invoice' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-            ],
-            rows: creditNotes,
-          })
-        }
-        period={cnPeriod.period}
-        onPeriodChange={cnPeriod.setPeriod}
-        dateFrom={cnPeriod.dateFrom}
-        dateTo={cnPeriod.dateTo}
-        onDateFromChange={cnPeriod.setDateFrom}
-        onDateToChange={cnPeriod.setDateTo}
-        exportTitle="Credit Notes — {currentCompany?.name || 'Company'}"
-        exportFileName={`CreditNotes_${currentCompany?.name || 'company'}`}
-        exportSheetName="Credit Notes"
-        exportColumns={[
-              { key: 'number', label: 'Credit #' },
-              { key: 'originalInvoiceNumber', label: 'Original Invoice' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'date', label: 'Date' },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-        ]}
-        exportRows={creditNotes}
-      />
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full ui-table-sticky">
-          <thead className="ui-sunken border-b">
+          <Plus size={16} aria-hidden="true" /> New Credit Note
+        </PermissionButton>
+      }
+      cards={[
+        { label: 'Total credit notes', value: cnHeadline.count, count: true, tone: 'draft', Icon: Receipt },
+        { label: 'Total credited', value: cnHeadline.value, tone: 'refund', Icon: FileText },
+        { label: 'Against invoices', value: cnHeadline.againstInvoice, tone: 'paid', Icon: CreditCard },
+        { label: 'On account, unused', value: cnHeadline.onAccount, tone: 'outstanding', Icon: ClipboardList },
+        { label: 'Still in draft', value: cnHeadline.drafted, tone: 'cancelled', Icon: Ban },
+      ]}
+      tabs={CN_STATUS_TABS}
+      tabsLabel="Credit note status"
+      statusValue={cnStatus}
+      statusCounts={cnStatusCounts}
+      onStatusChange={setCnStatus}
+      tip={{
+        storageKey: 'neev.tip.creditNotes',
+        text: 'A credit raised on account is the customer’s money until it is knocked off an invoice — the row says how much is left.',
+        Icon: Receipt,
+      }}
+    >
+      <div className="overflow-x-auto ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
             <tr>
-              <ColumnHeader label="Credit #" col="number" state={cnFilters} className="ui-th" />
-              <ColumnHeader label="Original Invoice" col="original" state={cnFilters} className="ui-th" />
-              <ColumnHeader label="Customer" col="customer" state={cnFilters} className="ui-th" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} className="ui-th" />
-              <ColumnHeader label="Date" col="date" state={cnFilters} className="ui-th" />
-              <ColumnHeader label="Total" col="total" state={cnFilters} className="ui-th" />
-              <ColumnHeader label="Status" col="status" state={cnFilters} className="ui-th" />
-              <th className="ui-th ui-num">On account</th>
+              <ColumnHeader label="Credit #" col="number" state={cnFilters} />
+              <ColumnHeader label="Original invoice" col="original" state={cnFilters} />
+              <ColumnHeader label="Customer" col="customer" state={cnFilters} />
+              <ColumnHeader label="Date" col="date" state={cnFilters} />
+              <ColumnHeader label="Amount" col="total" state={cnFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Status" col="status" state={cnFilters} />
+              <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} />
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="ui-rows">
             {creditNotes.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-0 py-0">
-                  {cnFilterChips.length === 0 ? (
+                <td colSpan="8">
+                  {cnFilterChips.length === 0 && !cnStatus ? (
                     <EmptyState
                       icon={Receipt}
+                      kind="new"
                       title="No sales returns yet"
-                      description="A credit note reverses part or all of an invoice when goods come back."
+                      description="A credit note is what you owe a customer back — goods returned, an overcharge, a discount agreed after the invoice."
+                      routes={[
+                        {
+                          label: 'Credit an invoice',
+                          description: 'Pick the invoice, choose the lines coming back.',
+                          onSelect: () => openNewCreditNote(),
+                        },
+                        {
+                          label: 'Credit on account',
+                          description: 'Owe the customer a sum now, knock it off later.',
+                          onSelect: () => openNewCreditNote(),
+                        },
+                      ]}
                     />
                   ) : (
                     <EmptyState
@@ -2418,21 +2569,20 @@ export const CreditNotesList = ({
                 const wh = whId ? warehouseById.get(whId) : null;
                 const whLabel = wh ? String(wh?.name || `Warehouse ${wh?.id}`) : whId ? `Warehouse ${whId}` : '-';
                 return (
-                  <tr key={cn.id} className="ui-hover-sunken">
-                    <td className="ui-col-id px-4 py-2.5"><InvoiceIdentifier value={cn.number} label="credit note" /></td>
-                    <td className="ui-col-meta px-4 py-2.5">
+                  <tr key={cn.id}>
+                    <td className="ui-col-id"><InvoiceIdentifier value={cn.number} label="credit note" /></td>
+                    <td className="ui-col-meta">
                       {cn.originalInvoiceNumber || (
                         <span className="ui-muted">
                           {(cn.invoiceIds || []).length ? `${(cn.invoiceIds || []).length} invoices · on account` : '-'}
                         </span>
                       )}
                     </td>
-                    <td className="ui-col-entity px-4 py-2.5">{cn.customerName || '-'}</td>
-                    <td className="ui-col-meta px-4 py-2.5">{whLabel}</td>
-                    <td className="ui-col-date px-4 py-2.5"><DateCell value={cn.date} /></td>
+                    <td className="ui-col-entity">{cn.customerName || '-'}</td>
+                    <td className="ui-col-date"><DateCell value={cn.date} /></td>
                     {/* A credit note is money going back out, so it takes the
                         refund colour rather than reading as revenue. */}
-                    <td className="ui-col-amount px-4 py-2.5">
+                    <td className="ui-col-amount">
                       <MoneyValue value={cn.total} company={currentCompany} kind="refund" />
                     </td>
                     {/*
@@ -2440,10 +2590,11 @@ export const CreditNotesList = ({
                       draft does not post, and without this column there was
                       nothing on screen to say so.
                     */}
-                    <td className="px-4 py-2.5">
-                      <StatusPill status={cn.status || 'Open'} />
+                    <td>
+                      <StatusPill status={cnStatusOf(cn)} />
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="ui-col-meta">{whLabel}</td>
+                    <td className="text-right">
                       <button
                         type="button"
                         onClick={() => setPreviewCreditNote(cn)}
@@ -2473,15 +2624,15 @@ export const CreditNotesList = ({
             )}
           </tbody>
         </table>
-        <TableTotals
-          count={creditNotes.length}
-          totalCount={(db.creditNotes || []).filter((c) => c.companyId === currentCompany.id).length}
-          noun="credit notes"
-          figures={[
-            { label: 'Value', value: formatMoney(creditNotes.reduce((t, c) => t + Number(c.total || 0), 0), currentCompany) },
-          ]}
-        />
       </div>
+      <TableTotals
+        count={creditNotes.length}
+        totalCount={(db.creditNotes || []).filter((c) => c.companyId === currentCompany.id).length}
+        noun="credit notes"
+        figures={[
+          { label: 'Value', value: formatMoney(creditNotes.reduce((t, c) => t + Number(c.total || 0), 0), currentCompany) },
+        ]}
+      />
 
       {previewCreditNote ? (
         <Modal
@@ -2513,7 +2664,7 @@ export const CreditNotesList = ({
           </PrintDownloadFrame>
         </Modal>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 };
 

@@ -1,0 +1,115 @@
+import React from 'react';
+
+import { PageHeader } from '../ui/Primitives';
+import { ListSearch, ListTip, MoreButton, StatCards } from './ListPageParts';
+
+/**
+ * The shape of a document list page, in one place.
+ *
+ * Sales Invoices had it and its five siblings did not: a quotation list was a
+ * bare heading, one primary button and a filter band, so moving between the two
+ * screens meant learning the page again — search in a different place, export
+ * behind a different control, no figures at the top and no status tabs at all.
+ * The layout is the product's answer to "what is a list of documents", and it
+ * cannot be the answer on one screen out of six.
+ *
+ * A shell rather than a whole page component: the columns, the row and what a
+ * status means belong to the document, and forcing a challan through an invoice
+ * template is how a list ends up with a Balance column that is always blank.
+ * What is shared is where things sit and how they behave.
+ *
+ *   header  — title, description, search, page-level actions, one primary
+ *   figures — the row of cards
+ *   tabs    — status, with counts, as tinted pills
+ *   table   — one card holding the whole grid
+ *   tip     — one line under the table, dismissed for good
+ */
+export default function DocumentListShell({
+  title,
+  description = '',
+  search = null,
+  headerExtras = null,
+  moreItems = null,
+  onMoreSelect = null,
+  primary = null,
+  cards = null,
+  company = null,
+  tabs = null,
+  statusValue = '',
+  statusCounts = {},
+  onStatusChange = null,
+  tabsLabel = 'Status',
+  above = null,
+  tip = null,
+  children,
+}) {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={title}
+        description={description}
+        actions={
+          <>
+            {/* Search sits in the header rather than in a band of its own: a
+                filter panel spanning the page reads as a second toolbar and
+                costs eighty pixels above the rows somebody came to read. */}
+            {search ? (
+              <ListSearch
+                value={search.value}
+                onChange={search.onChange}
+                placeholder={search.placeholder}
+                label={search.label || search.placeholder}
+              />
+            ) : null}
+            {headerExtras}
+            {moreItems?.length ? <MoreButton items={moreItems} onSelect={onMoreSelect} /> : null}
+            {/* One primary, top right — the page's own verb. */}
+            {primary}
+          </>
+        }
+      />
+
+      {cards?.length ? <StatCards company={company} cards={cards} /> : null}
+
+      {tabs?.length ? (
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="ui-segmented" role="tablist" aria-label={tabsLabel}>
+            {tabs.map((t) => {
+              const on = statusValue === t.value;
+              const n = statusCounts[t.value] ?? 0;
+              return (
+                <button
+                  key={t.value || 'all'}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => onStatusChange?.(t.value)}
+                  className="ui-segment"
+                  data-tone={t.tone}
+                >
+                  {t.label}
+                  {/* The colour marks something that is there. A red 0 next to
+                      Overdue is an alarm about nothing; grey until it counts. */}
+                  <span className="ui-segment-count" data-on={n > 0 ? 'true' : undefined}>
+                    {n}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {/* An inline create form sits above the list it will add to, outside the
+          table's own card — a form inside the table card reads as a row being
+          edited in place, which is not what it is. */}
+      {above}
+
+      {/* One card, not two: the filters belong to the table they filter, and a
+          separate floating box above it reads as an unrelated control panel. */}
+      <div className="ui-card overflow-hidden">{children}</div>
+
+      {tip ? <ListTip {...tip} /> : null}
+    </div>
+  );
+}

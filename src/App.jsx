@@ -13014,6 +13014,7 @@ const AppShell = () => {
             setDb={setDb}
             openModal={openModal}
             currentCompany={currentCompany}
+            onNavigate={(screen) => setActive(screen)}
             warehouses={warehousesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewEstimate={() => setEstimateEditor({ open: true, initial: null })}

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Trash2, RefreshCw, MoreVertical, Download, Settings, Play, Pause, Search } from 'lucide-react';
-import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import { CalendarClock, Download, FileText, MoreVertical, Pause, PauseCircle, Play, Plus, Receipt, RefreshCw, Settings, Trash2 } from 'lucide-react';
+import { EmptyState, StatusPill } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
@@ -34,7 +35,6 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
   const invoices = useMemo(() => (db.invoices || []).filter((i) => i.companyId === companyId), [db.invoices, companyId]);
 
   const [creatorOpen, setCreatorOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [rowMenu, setRowMenu] = useState(null);
   // A schedule can copy an invoice that already exists, or be written from
   // scratch — a retainer that has never been billed once still needs to repeat.
@@ -432,6 +432,56 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
   const safePage = Math.min(page, pageCount);
   const pagedTemplates = shownTemplates.slice((safePage - 1) * perPage, safePage * perPage);
 
+  const REC_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Active', label: 'Active', tone: 'paid' },
+    { value: 'Paused', label: 'Paused', tone: 'draft' },
+    { value: 'Inactive', label: 'Finished', tone: 'cancelled' },
+  ];
+
+  const recStatusCounts = useMemo(() => {
+    const counts = { '': recSearch.filtered.length };
+    for (const t of recSearch.filtered) {
+      const st = scheduleStatus(t);
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recSearch.filtered]);
+
+  /*
+   * What a schedule list is read for: how much of the month's billing raises
+   * itself, and how much of it has stopped doing so. Amounts are normalised to
+   * a month — a quarterly retainer is a third of itself every month, and
+   * comparing a yearly AMC against a monthly rent at face value says nothing.
+   */
+  const recHeadline = useMemo(() => {
+    const PER_YEAR = { WEEKLY: 52, FORTNIGHTLY: 26, MONTHLY: 12, QUARTERLY: 4, HALF_YEARLY: 2, YEARLY: 1 };
+    let monthly = 0;
+    let paused = 0;
+    let active = 0;
+    let dueThisMonth = 0;
+    const monthEnd = new Date();
+    monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1, 0);
+    const monthEndIso = monthEnd.toISOString().slice(0, 10);
+    for (const t of shownTemplates) {
+      const amt = Number(t.amount ?? t.total ?? 0);
+      const perYear = PER_YEAR[String(t.frequency || 'MONTHLY').toUpperCase()] ?? 12;
+      const perMonth = (amt * perYear) / 12;
+      const st = scheduleStatus(t);
+      if (st === 'Active') {
+        active += 1;
+        monthly += perMonth;
+        const next = String(t.nextRunDate || '').slice(0, 10);
+        if (next && next <= monthEndIso) dueThisMonth += amt;
+      } else if (st === 'Paused') {
+        paused += perMonth;
+      }
+    }
+    return { count: shownTemplates.length, active, monthly, paused, dueThisMonth };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownTemplates]);
+
   const scheduleCustomers = useMemo(() => {
     const seen = new Map();
     for (const t of templates) {
@@ -441,81 +491,84 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     return [...seen.entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
   }, [templates]);
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Recurring Invoices"
-        description="Schedules live on the server and raise their drafts hourly, whether or not anyone is signed in. You review and send."
-        actions={
-          <>
-            {/*
-              The server raises these hourly on its own. This is for somebody
-              who does not want to wait for the hour — and it is safe to press
-              twice, because a period that has already been billed is claimed
-              and cannot be billed again.
-            */}
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const r = await runSchedulesNow();
-                  notify.success(
-                    r?.raised
-                      ? `${r.raised} draft invoice${r.raised === 1 ? '' : 's'} raised — review and save to post.`
-                      : 'Nothing is due right now.'
-                  );
-                } catch (e) {
-                  notify.error(`Could not run the schedules: ${String(e?.message || e)}`);
-                }
-              }}
-              className="ui-btn ui-btn-secondary"
-            >
-              Run now
-            </button>
-            <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
-              <Plus size={15} aria-hidden="true" /> New Schedule
-            </button>
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setMoreOpen((v) => !v)}
-                className="ui-btn ui-btn-secondary !px-2"
-                aria-haspopup="menu"
-                aria-expanded={moreOpen}
-                aria-label="More options"
-              >
-                <MoreVertical size={16} aria-hidden="true" />
-              </button>
-              {moreOpen ? (
-                <div className="absolute end-0 mt-1 z-30 ui-card p-1 min-w-[11rem]" role="menu">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      exportSchedules();
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
-                  >
-                    <Download size={15} aria-hidden="true" /> Export
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMoreOpen(false);
-                      if (typeof onNavigate === 'function') onNavigate('settingsInvoiceFields');
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
-                  >
-                    <Settings size={15} aria-hidden="true" /> Settings
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </>
+    <DocumentListShell
+      title="Recurring Invoices"
+      description="Schedules live on the server and raise their drafts hourly, whether or not anyone is signed in. You review and send."
+      company={currentCompany}
+      search={{
+        value: recSearch.query,
+        onChange: (v) => {
+          recSearch.setQuery(v);
+          setPage(1);
+        },
+        placeholder: 'Search schedules…',
+        label: 'Search schedules',
+      }}
+      headerExtras={
+        /*
+          The server raises these hourly on its own. This is for somebody who
+          does not want to wait for the hour — and it is safe to press twice,
+          because a period that has already been billed is claimed and cannot
+          be billed again.
+        */
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const r = await runSchedulesNow();
+              notify.success(
+                r?.raised
+                  ? `${r.raised} draft invoice${r.raised === 1 ? '' : 's'} raised — review and save to post.`
+                  : 'Nothing is due right now.'
+              );
+            } catch (e) {
+              notify.error(`Could not run the schedules: ${String(e?.message || e)}`);
+            }
+          }}
+          className="ui-btn ui-btn-secondary"
+        >
+          Run now
+        </button>
+      }
+      moreItems={[
+        { key: 'export', label: 'Export schedules', Icon: Download },
+        { sep: true },
+        { key: 'settingsInvoiceFields', label: 'Invoice settings', Icon: Settings, group: 'Configure — every invoice' },
+      ]}
+      onMoreSelect={(k) => {
+        if (k === 'export') {
+          exportSchedules();
+          return;
         }
-      />
-
+        if (typeof onNavigate === 'function') onNavigate(k);
+      }}
+      primary={
+        <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Schedule
+        </button>
+      }
+      cards={[
+        { label: 'Total schedules', value: recHeadline.count, count: true, tone: 'draft', Icon: RefreshCw },
+        { label: 'Active schedules', value: recHeadline.active, count: true, tone: 'paid', Icon: CalendarClock },
+        { label: 'Billing per month', value: recHeadline.monthly, tone: 'sent', Icon: FileText },
+        { label: 'Due this month', value: recHeadline.dueThisMonth, tone: 'outstanding', Icon: Receipt },
+        { label: 'Paused per month', value: recHeadline.paused, tone: 'cancelled', Icon: PauseCircle },
+      ]}
+      tabs={REC_STATUS_TABS}
+      tabsLabel="Schedule status"
+      statusValue={statusFilter}
+      statusCounts={recStatusCounts}
+      onStatusChange={(v) => {
+        setStatusFilter(v);
+        setPage(1);
+      }}
+      tip={{
+        storageKey: 'neev.tip.recurringSchedules',
+        text: 'A schedule bills its period once. Pressing Run now twice cannot raise the same month again.',
+        Icon: RefreshCw,
+      }}
+      above={
+        <>
       {creatorOpen ? (
         <div className="ui-card space-y-4 p-5">
           <div>
@@ -808,25 +861,13 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </div>
       ) : null}
 
-      {/* Search first, then the four narrowings, then the window. Each one
-          answers a different question and none of them is behind a popover:
-          this list is short and read at a glance. */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-[16rem]">
-          <Search size={15} aria-hidden="true" className="absolute start-3 top-1/2 -translate-y-1/2 ui-subtle" />
-          <input
-            type="search"
-            value={recSearch.query}
-            onChange={(e) => {
-              recSearch.setQuery(e.target.value);
-              setPage(1);
-            }}
-            className="ui-input w-full ps-9"
-            placeholder="Search by customer, schedule name, invoice no…"
-            aria-label="Search schedules"
-          />
-        </div>
-
+        </>
+      }
+    >
+      {/* Customer, frequency and the date window. Search and status moved to
+          the header and the tabs, where every other list keeps them; what is
+          left is what those two cannot say. */}
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
         <select
           className="ui-select w-auto"
           value={customerFilter}
@@ -851,18 +892,6 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
           ))}
         </select>
 
-        <select
-          className="ui-select w-auto"
-          value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-          aria-label="Status"
-        >
-          <option value="">All status</option>
-          {['Active', 'Paused', 'Inactive'].map((st) => (
-            <option key={st} value={st}>{st}</option>
-          ))}
-        </select>
-
         <div className="flex items-center gap-1">
           <input
             type="date"
@@ -882,40 +911,54 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </div>
       </div>
 
-      {templates.length === 0 ? (
-        <div className="ui-card">
-          <EmptyState
-            kind="new"
-            title="No recurring schedules"
-            description="Pick any invoice and set a cadence — ₹25,000 · Monthly · every 1st. Drafts appear on schedule; you review and send."
-          />
-        </div>
-      ) : (
-        <div className="ui-card">
-          <div className="overflow-x-auto">
-            <table className="ui-table w-full">
+      <div className="overflow-x-auto ui-table-scroll">
+            <table className="ui-table ui-table-wide ui-table-sticky">
               <thead>
                 <tr>
-                  <th className="ui-th w-10">#</th>
-                  <th className="ui-th">Schedule name</th>
-                  <th className="ui-th">Customer</th>
-                  <th className="ui-th">Frequency</th>
-                  <th className="ui-th ui-num">Amount</th>
-                  <th className="ui-th">Next invoice date</th>
-                  <th className="ui-th">Status</th>
-                  <th className="ui-th w-10"></th>
+                  <th scope="col" className="w-10">#</th>
+                  <th scope="col">Schedule name</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Frequency</th>
+                  <th scope="col" className="ui-num">Amount</th>
+                  <th scope="col">Next invoice date</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
-              <tbody>
-                {pagedTemplates.map((t, i) => {
+              <tbody className="ui-rows">
+                {pagedTemplates.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">
+                      <EmptyState
+                        icon={RefreshCw}
+                        kind="new"
+                        title="No recurring schedules"
+                        description="A schedule is an invoice that raises itself — rent on the 1st, an AMC every quarter, a retainer every month."
+                        routes={[
+                          {
+                            label: 'Write one now',
+                            description: 'Name it, pick a customer and a cadence.',
+                            onSelect: () => setCreatorOpen(true),
+                          },
+                          {
+                            label: 'Repeat an invoice',
+                            description: 'Take one you already raised and set it to come round again.',
+                            onSelect: () => setCreatorOpen(true),
+                          },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                pagedTemplates.map((t, i) => {
                   const { stage, count } = stageOf(t);
                   const status = scheduleStatus(t);
                   return (
-                    <tr key={t.id} className="border-t">
-                      <td className="ui-col-meta px-4 py-2.5 ui-mono ui-subtle">
+                    <tr key={t.id}>
+                      <td className="ui-col-meta ui-mono ui-subtle">
                         {(safePage - 1) * perPage + i + 1}
                       </td>
-                      <td className="ui-col-entity px-4 py-2.5">
+                      <td className="ui-col-entity">
                         {t.name || t.sourceNumber || '—'}
                         {/* Where the schedule has reached, kept under the name
                             rather than in a column of its own: it is context
@@ -924,16 +967,16 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                           {count ? `${count} raised · last ${String(stage).toLowerCase()}` : 'Nothing raised yet'}
                         </div>
                       </td>
-                      <td className="px-4 py-2.5">{t.customerName || '—'}</td>
-                      <td className="px-4 py-2.5">{FREQ_LABEL[t.frequency] || 'Monthly'}</td>
-                      <td className="ui-col-amount px-4 py-2.5 text-right">
+                      <td className="ui-col-entity">{t.customerName || '—'}</td>
+                      <td className="ui-col-meta">{FREQ_LABEL[t.frequency] || 'Monthly'}</td>
+                      <td className="ui-col-amount">
                         <MoneyValue value={t.total} company={currentCompany} />
                       </td>
-                      <td className="ui-col-date px-4 py-2.5">
+                      <td className="ui-col-date">
                         {status === 'Active' ? <SalesDate value={t.nextRunDate} /> : '—'}
                       </td>
-                      <td className="px-4 py-2.5"><StatusPill status={status} /></td>
-                      <td className="px-4 py-2.5 text-right">
+                      <td><StatusPill status={status} /></td>
+                      <td className="text-right">
                         <div className="relative inline-block">
                           <button
                             type="button"
@@ -981,10 +1024,11 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                       </td>
                     </tr>
                   );
-                })}
+                })
+                )}
               </tbody>
             </table>
-          </div>
+      </div>
 
           <div
             className="flex items-center justify-between gap-3 flex-wrap px-4 py-3"
@@ -1002,9 +1046,6 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               </div>
             ) : null}
           </div>
-        </div>
-      )}
-
-    </div>
+    </DocumentListShell>
   );
 }

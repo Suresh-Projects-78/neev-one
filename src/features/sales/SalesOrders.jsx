@@ -1,7 +1,8 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Plus, ClipboardList, Printer, Trash2 } from 'lucide-react';
-import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { Ban, ClipboardList, Download, FileText, Package, Plus, Printer, Receipt, Settings2, Trash2, Truck } from 'lucide-react';
+import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '../../components/DocumentForm';
 import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
@@ -287,7 +288,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     'notes',
   ]);
   const soFilters = useColumnFilters();
-  const shown = soFilters.applyFilters(soSearch.filtered.filter((r) => soPeriod.inRange(r?.date)), {
+  const shownAll = soFilters.applyFilters(soSearch.filtered.filter((r) => soPeriod.inRange(r?.date)), {
     number: (r) => r.number,
     date: (r) => r.date,
     customer: (r) => r.customerName,
@@ -295,20 +296,117 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     status: (r) => r.status,
   });
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Sales Orders" description="Quote → SO → Challan → Invoice. Delivered and billed track against each order." />
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setShowPending((v) => !v)} className={`ui-btn !h-9 text-sm ${showPending ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
-            Pending orders ({pendingRows.length})
-          </button>
-          <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
-            <Plus size={15} aria-hidden="true" /> New Sales Order
-          </button>
-        </div>
-      </div>
+  /*
+   * An order's status is what has actually happened to it, not what somebody
+   * typed: delivered and billed are counted from the challans and invoices
+   * raised against it. That is why the tabs filter on the derived value.
+   */
+  const [soStatus, setSoStatus] = useState('');
+  const SO_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Open', label: 'Open', tone: 'sent' },
+    { value: 'Partial', label: 'Partly done', tone: 'partial' },
+    { value: 'Delivered', label: 'Delivered', tone: 'outstanding' },
+    { value: 'Billed', label: 'Billed', tone: 'paid' },
+  ];
+  const shown = soStatus ? shownAll.filter((o) => progressOf(o).status === soStatus) : shownAll;
 
+  const soStatusCounts = useMemo(() => {
+    const counts = { '': shownAll.length };
+    for (const o of shownAll) {
+      const st = progressOf(o).status;
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownAll]);
+
+  /*
+   * Five figures about the same book: how many orders, what they are worth,
+   * what is still to go out of the door, what has been billed, and what is
+   * sitting delivered but not yet invoiced — which is the one that costs money
+   * to forget.
+   */
+  const soHeadline = useMemo(() => {
+    let value = 0;
+    let open = 0;
+    let billed = 0;
+    let toBill = 0;
+    for (const o of shownAll) {
+      const amt = Number(o.total || 0);
+      const prog = progressOf(o);
+      value += amt;
+      if (prog.status === 'Billed') billed += amt;
+      else if (prog.status === 'Delivered') toBill += amt;
+      else open += amt;
+    }
+    return { count: shownAll.length, value, open, billed, toBill };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shownAll]);
+
+  const soExportColumns = [
+    { key: 'number', label: 'SO #' },
+    { key: 'date', label: 'Date' },
+    { key: 'expectedDate', label: 'Expected' },
+    { key: 'customerName', label: 'Customer' },
+    { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
+    { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
+    { key: 'status', label: 'Status', value: (r) => progressOf(r).status },
+    { key: 'notes', label: 'Notes' },
+  ];
+
+  return (
+    <DocumentListShell
+      title="Sales Orders"
+      description="Quote → SO → Challan → Invoice. Delivered and billed track against each order."
+      company={currentCompany}
+      search={{
+        value: soSearch.query,
+        onChange: soSearch.setQuery,
+        placeholder: 'Search sales orders…',
+        label: 'Search sales orders',
+      }}
+      headerExtras={
+        /* Not a filter tab: pending is "still owing the customer something",
+           which cuts across every status tab beside it. */
+        <button
+          type="button"
+          onClick={() => setShowPending((v) => !v)}
+          aria-pressed={showPending}
+          className={`ui-btn ${showPending ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
+        >
+          Pending orders ({pendingRows.length})
+        </button>
+      }
+      moreItems={[{ key: 'export', label: 'Export sales orders', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `SalesOrders_${currentCompany?.name || 'company'}`,
+          label: 'sales order(s)',
+          columns: soExportColumns,
+          rows: shown,
+        });
+      }}
+      primary={
+        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Sales Order
+        </button>
+      }
+      cards={[
+        { label: 'Total orders', value: soHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Order value', value: soHeadline.value, tone: 'sent', Icon: FileText },
+        { label: 'Still to deliver', value: soHeadline.open, tone: 'outstanding', Icon: Package },
+        { label: 'Delivered, to bill', value: soHeadline.toBill, tone: 'partial', Icon: Truck },
+        { label: 'Billed', value: soHeadline.billed, tone: 'paid', Icon: Receipt },
+      ]}
+      tabs={SO_STATUS_TABS}
+      tabsLabel="Sales order status"
+      statusValue={soStatus}
+      statusCounts={soStatusCounts}
+      onStatusChange={setSoStatus}
+      above={
+        <>
       {open ? (
         <form
           ref={formRef}
@@ -482,84 +580,78 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           <DocFormFootnote />
         </form>
       ) : null}
+        </>
+      }
+      tip={{
+        storageKey: 'neev.tip.salesOrders',
+        text: 'Delivered and billed are counted from the challans and invoices raised against each order — never typed.',
+        Icon: Truck,
+      }}
+    >
 
-      <ListToolbar
-        search={soSearch.query}
-        onSearch={soSearch.setQuery}
-        placeholder="Search sales orders (number, customer, status)"
-        count={shown.length}
-        countLabel="orders"
-        onExport={() =>
-          exportRows({
-            fileName: `SalesOrders_${currentCompany?.name || 'company'}`,
-            label: 'sales order(s)',
-            columns: [
-              { key: 'number', label: 'SO #' },
-              { key: 'date', label: 'Date' },
-              { key: 'expectedDate', label: 'Expected' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-              { key: 'notes', label: 'Notes' },
-            ],
-            rows: shown,
-          })
-        }
-        period={soPeriod.period}
-        onPeriodChange={soPeriod.setPeriod}
-        dateFrom={soPeriod.dateFrom}
-        dateTo={soPeriod.dateTo}
-        onDateFromChange={soPeriod.setDateFrom}
-        onDateToChange={soPeriod.setDateTo}
-        exportTitle="Sales Orders — {currentCompany?.name || 'Company'}"
-        exportFileName={`SalesOrders_${currentCompany?.name || 'company'}`}
-        exportSheetName="Sales Orders"
-        exportColumns={[
-              { key: 'number', label: 'SO #' },
-              { key: 'date', label: 'Date' },
-              { key: 'expectedDate', label: 'Expected' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'subtotal', label: 'Taxable', value: (r) => Number(r.subtotal || 0) },
-              { key: 'total', label: 'Total', value: (r) => Number(r.total || 0) },
-              { key: 'status', label: 'Status' },
-              { key: 'notes', label: 'Notes' },
-        ]}
-        exportRows={shown}
-      />
 
-      {shown.length === 0 ? (
-        <div className="ui-card">
-          <EmptyState icon={ClipboardList} title={showPending ? 'No pending orders' : 'No sales orders'} description="Confirmed customer orders live here until delivered and billed." />
-        </div>
-      ) : (
-        <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full ui-table-sticky">
+      <div className="overflow-x-auto ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
             <thead>
               <tr>
-                <ColumnHeader label="SO #" col="number" state={soFilters} className="ui-th" />
-                <ColumnHeader label="Date" col="date" state={soFilters} className="ui-th" />
-                <ColumnHeader label="Customer" col="customer" state={soFilters} className="ui-th" />
-                <ColumnHeader label="Total" col="total" state={soFilters} className="ui-th ui-num" align="right" />
-                <th className="ui-th">Ordered / Delivered / Billed</th>
-                <ColumnHeader label="Status" col="status" state={soFilters} className="ui-th" />
-                <th className="px-4 py-2.5"></th>
+                <ColumnHeader label="SO #" col="number" state={soFilters} />
+                <ColumnHeader label="Date" col="date" state={soFilters} />
+                <ColumnHeader label="Customer" col="customer" state={soFilters} />
+                <ColumnHeader label="Amount" col="total" state={soFilters} className="ui-num" align="right" />
+                {/* Three numbers, one column: an order is read by how far along
+                    it is, and three separate columns of quantities read as
+                    three unrelated figures. */}
+                <th scope="col">Ordered / Delivered / Billed</th>
+                <ColumnHeader label="Status" col="status" state={soFilters} />
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody>
-              {shown.map((o) => {
+            <tbody className="ui-rows">
+              {shown.length === 0 ? (
+                <tr>
+                  <td colSpan="7">
+                    <EmptyState
+                      icon={ClipboardList}
+                      kind="new"
+                      title={showPending ? 'Nothing pending' : 'No sales orders'}
+                      description={
+                        showPending
+                          ? 'Every order here has been delivered and billed.'
+                          : 'A sales order is a customer’s yes — held here until the goods go out and the invoice follows.'
+                      }
+                      routes={
+                        showPending
+                          ? undefined
+                          : [
+                              {
+                                label: 'Take an order now',
+                                description: 'Pick a customer, enter what they ordered, set the expected date.',
+                                onSelect: () => setOpen(true),
+                              },
+                              {
+                                label: 'Start from a quotation',
+                                description: 'Convert a quote the customer has accepted.',
+                                onSelect: () => setOpen(true),
+                              },
+                            ]
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+                shown.map((o) => {
                 const prog = progressOf(o);
                 return (
-                  <tr key={o.id} className="border-t">
-                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={o.number} label="sales order" /></td>
-                    <td className="ui-col-date px-4 py-2.5"><SalesDate value={o.date} /></td>
-                    <td className="ui-col-entity px-4 py-2.5">{o.customerName}</td>
-                    <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={o.total} company={currentCompany} /></td>
-                    <td className="px-4 py-2.5">
+                  <tr key={o.id}>
+                    <td className="ui-col-id"><DocumentNumber value={o.number} label="sales order" /></td>
+                    <td className="ui-col-date"><SalesDate value={o.date} /></td>
+                    <td className="ui-col-entity">{o.customerName}</td>
+                    <td className="ui-col-amount"><MoneyValue value={o.total} company={currentCompany} /></td>
+                    <td className="ui-col-meta">
                       {prog.ordered} / {prog.delivered} / {prog.billed}
                     </td>
-                    <td className="px-4 py-2.5"><StatusPill status={prog.status} /></td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td><StatusPill status={prog.status} /></td>
+                    <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
@@ -583,17 +675,17 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                     </td>
                   </tr>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
-          <TableTotals
-            count={shown.length}
-            totalCount={orders.length}
-            noun="sales orders"
-            figures={[{ label: 'Value', value: formatMoney(shown.reduce((t, r) => t + Number(r.total || 0), 0), currentCompany) }]}
-          />
         </div>
-      )}
+        <TableTotals
+          count={shown.length}
+          totalCount={orders.length}
+          noun="sales orders"
+          figures={[{ label: 'Value', value: formatMoney(shown.reduce((t, r) => t + Number(r.total || 0), 0), currentCompany) }]}
+        />
 
       {previewOrder ? (
         <Modal
@@ -624,6 +716,6 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           </PrintDownloadFrame>
         </Modal>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 }

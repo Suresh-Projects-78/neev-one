@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Truck, Printer, Trash2 } from 'lucide-react';
-import { PageHeader, EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
+import { Download, FileText, Package, Plus, Printer, Receipt, Trash2, Truck, Wrench } from 'lucide-react';
+import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import Modal from '../../components/ui/Modal';
 import { notify } from '../../components/ui/notify';
 import { createDeliveryChallan, updateDeliveryChallan } from '../../api/masters';
@@ -12,7 +13,7 @@ import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { nextFreeVoucherNumber } from '../../utils/docSettings';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
@@ -58,6 +59,58 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dcSearch.filtered, dcFilters.applyFilters, dcPeriod.dateFrom, dcPeriod.dateTo]
   );
+
+  /*
+   * A challan is out, or it has become an invoice. Those are the only two
+   * things it can be, and the difference is the one somebody scans this list
+   * for: goods that left and were never billed.
+   */
+  const [dcStatus, setDcStatus] = useState('');
+  const DC_STATUS_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: 'Open', label: 'Out, not billed', tone: 'outstanding' },
+    { value: 'Invoiced', label: 'Invoiced', tone: 'paid' },
+  ];
+  const challansShown = dcStatus ? challans.filter((c) => String(c.status || 'Open') === dcStatus) : challans;
+
+  const dcStatusCounts = useMemo(() => {
+    const counts = { '': challans.length };
+    for (const c of challans) {
+      const st = String(c.status || 'Open');
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+  }, [challans]);
+
+  /*
+   * The figures a challan list is read for: how much has gone out of the door,
+   * how much of it is still unbilled — money the business has delivered and not
+   * yet asked for — and how much has become invoices.
+   */
+  const dcHeadline = useMemo(() => {
+    let value = 0;
+    let unbilled = 0;
+    let invoiced = 0;
+    let jobWork = 0;
+    for (const c of challans) {
+      const amt = Number(c.value || 0);
+      value += amt;
+      if (String(c.status || 'Open') === 'Invoiced') invoiced += amt;
+      else unbilled += amt;
+      if (String(c.purpose || '') === 'Job Work') jobWork += amt;
+    }
+    return { count: challans.length, value, unbilled, invoiced, jobWork };
+  }, [challans]);
+
+  const dcExportColumns = [
+    { key: 'number', label: 'DC #' },
+    { key: 'date', label: 'Date' },
+    { key: 'customerName', label: 'Customer' },
+    { key: 'purpose', label: 'Purpose' },
+    { key: 'vehicleNo', label: 'Vehicle' },
+    { key: 'value', label: 'Value', value: (r) => Number(r.value || 0) },
+    { key: 'status', label: 'Status' },
+  ];
 
   const [open, setOpen] = useState(false);
   const [previewChallan, setPreviewChallan] = useState(null);
@@ -255,14 +308,45 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Delivery Challans" description="Goods out without an invoice — job work, approval, own use. Convert to invoice when it becomes a sale." />
+    <DocumentListShell
+      title="Delivery Challans"
+      description="Goods out without an invoice — job work, approval, own use. Convert to invoice when it becomes a sale."
+      company={currentCompany}
+      search={{
+        value: dcSearch.query,
+        onChange: dcSearch.setQuery,
+        placeholder: 'Search challans…',
+        label: 'Search challans',
+      }}
+      moreItems={[{ key: 'export', label: 'Export challans', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `DeliveryChallans_${currentCompany?.name || 'company'}`,
+          label: 'challan(s)',
+          columns: dcExportColumns,
+          rows: challansShown,
+        });
+      }}
+      primary={
         <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
-          <Plus size={15} aria-hidden="true" /> New Challan
+          <Plus size={16} aria-hidden="true" /> New Challan
         </button>
-      </div>
-
+      }
+      cards={[
+        { label: 'Total challans', value: dcHeadline.count, count: true, tone: 'draft', Icon: Truck },
+        { label: 'Goods sent out', value: dcHeadline.value, tone: 'sent', Icon: Package },
+        { label: 'Out, not billed', value: dcHeadline.unbilled, tone: 'outstanding', Icon: FileText },
+        { label: 'Invoiced', value: dcHeadline.invoiced, tone: 'paid', Icon: Receipt },
+        { label: 'On job work', value: dcHeadline.jobWork, tone: 'partial', Icon: Wrench },
+      ]}
+      tabs={DC_STATUS_TABS}
+      tabsLabel="Challan status"
+      statusValue={dcStatus}
+      statusCounts={dcStatusCounts}
+      onStatusChange={setDcStatus}
+      above={
+        <>
       {open ? (
         <form
           ref={formRef}
@@ -384,78 +468,63 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           <DocFormFootnote />
         </form>
       ) : null}
+        </>
+      }
+      tip={{
+        storageKey: 'neev.tip.deliveryChallans',
+        text: 'Goods that left on a challan are still yours to bill — "Out, not billed" is the list to work through.',
+        Icon: Truck,
+      }}
 
-      <ListToolbar
-        search={dcSearch.query}
-        onSearch={dcSearch.setQuery}
-        placeholder="Search challans (number, customer, purpose, vehicle)"
-        count={challans.length}
-        countLabel="challans"
-        onExport={() =>
-          exportRows({
-            fileName: `DeliveryChallans_${currentCompany?.name || 'company'}`,
-            label: 'challan(s)',
-            columns: [
-              { key: 'number', label: 'DC #' },
-              { key: 'date', label: 'Date' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'purpose', label: 'Purpose' },
-              { key: 'vehicleNo', label: 'Vehicle' },
-              { key: 'value', label: 'Value', value: (r) => Number(r.value || 0) },
-              { key: 'status', label: 'Status' },
-            ],
-            rows: challans,
-          })
-        }
-        period={dcPeriod.period}
-        onPeriodChange={dcPeriod.setPeriod}
-        dateFrom={dcPeriod.dateFrom}
-        dateTo={dcPeriod.dateTo}
-        onDateFromChange={dcPeriod.setDateFrom}
-        onDateToChange={dcPeriod.setDateTo}
-        exportTitle="Delivery Challans — {currentCompany?.name || 'Company'}"
-        exportFileName={`DeliveryChallans_${currentCompany?.name || 'company'}`}
-        exportSheetName="Delivery Challans"
-        exportColumns={[
-              { key: 'number', label: 'DC #' },
-              { key: 'date', label: 'Date' },
-              { key: 'customerName', label: 'Customer' },
-              { key: 'purpose', label: 'Purpose' },
-              { key: 'vehicleNo', label: 'Vehicle' },
-              { key: 'value', label: 'Value', value: (r) => Number(r.value || 0) },
-              { key: 'status', label: 'Status' },
-        ]}
-        exportRows={challans}
-      />
 
-      {challans.length === 0 ? (
-        <div className="ui-card">
-          <EmptyState icon={Truck} title="No delivery challans" description="Send goods for job work or approval without raising an invoice." />
-        </div>
-      ) : (
-        <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full ui-table-sticky">
+    >
+      <div className="overflow-x-auto ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
             <thead>
               <tr>
-                <ColumnHeader label="DC #" col="number" state={dcFilters} className="ui-th" />
-                <ColumnHeader label="Date" col="date" state={dcFilters} className="ui-th" />
-                <ColumnHeader label="Customer" col="customer" state={dcFilters} className="ui-th" />
-                <ColumnHeader label="Purpose" col="purpose" state={dcFilters} className="ui-th" />
-                <ColumnHeader label="Value" col="value" state={dcFilters} className="ui-th ui-num" align="right" />
-                <ColumnHeader label="Status" col="status" state={dcFilters} className="ui-th" />
-                <th className="px-4 py-2.5"></th>
+                <ColumnHeader label="DC #" col="number" state={dcFilters} />
+                <ColumnHeader label="Date" col="date" state={dcFilters} />
+                <ColumnHeader label="Customer" col="customer" state={dcFilters} />
+                <ColumnHeader label="Purpose" col="purpose" state={dcFilters} />
+                <ColumnHeader label="Goods value" col="value" state={dcFilters} className="ui-num" align="right" />
+                <ColumnHeader label="Status" col="status" state={dcFilters} />
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody>
-              {challans.map((c) => (
-                <tr key={c.id} className="border-t">
-                  <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={c.number} label="challan" /></td>
-                  <td className="ui-col-date px-4 py-2.5"><SalesDate value={c.date} /></td>
-                  <td className="ui-col-entity px-4 py-2.5">{c.customerName}</td>
-                  <td className="ui-col-meta px-4 py-2.5">{c.purpose}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right"><MoneyValue value={c.value} company={currentCompany} /></td>
-                  <td className="px-4 py-2.5"><StatusPill status={c.status} /></td>
-                  <td className="px-4 py-2.5 text-right">
+            <tbody className="ui-rows">
+              {challansShown.length === 0 ? (
+                <tr>
+                  <td colSpan="7">
+                    <EmptyState
+                      icon={Truck}
+                      kind="new"
+                      title="No delivery challans"
+                      description="A challan is goods leaving the premises before there is an invoice — job work, approval, your own branch."
+                      routes={[
+                        {
+                          label: 'Send goods out now',
+                          description: 'Pick a customer, list what is going, note the vehicle.',
+                          onSelect: () => setOpen(true),
+                        },
+                        {
+                          label: 'Against a sales order',
+                          description: 'Despatch what a confirmed order still owes.',
+                          onSelect: () => setOpen(true),
+                        },
+                      ]}
+                    />
+                  </td>
+                </tr>
+              ) : (
+              challansShown.map((c) => (
+                <tr key={c.id}>
+                  <td className="ui-col-id"><DocumentNumber value={c.number} label="challan" /></td>
+                  <td className="ui-col-date"><SalesDate value={c.date} /></td>
+                  <td className="ui-col-entity">{c.customerName}</td>
+                  <td className="ui-col-meta">{c.purpose}</td>
+                  <td className="ui-col-amount"><MoneyValue value={c.value} company={currentCompany} /></td>
+                  <td><StatusPill status={c.status} /></td>
+                  <td className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
@@ -476,17 +545,17 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
-          </table>
-          <TableTotals
-            count={challans.length}
-            totalCount={dcSearch.filtered.length}
-            noun="challans"
-            figures={[{ label: 'Goods value', value: formatMoney(challans.reduce((t, r) => t + Number(r.value || 0), 0), currentCompany) }]}
-          />
-        </div>
-      )}
+        </table>
+      </div>
+      <TableTotals
+        count={challansShown.length}
+        totalCount={dcSearch.filtered.length}
+        noun="challans"
+        figures={[{ label: 'Goods value', value: formatMoney(challansShown.reduce((t, r) => t + Number(r.value || 0), 0), currentCompany) }]}
+      />
 
       {previewChallan ? (
         <Modal
@@ -525,6 +594,6 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           />
         </Modal>
       ) : null}
-    </div>
+    </DocumentListShell>
   );
 }
