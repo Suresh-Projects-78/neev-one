@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { PackageSearch } from 'lucide-react';
-import { PageHeader, EmptyState } from '../../components/ui/Primitives';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { AlertTriangle, Download, Package, PackageSearch, ShoppingCart, Truck } from 'lucide-react';
+import { EmptyState, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { formatMoney } from '../../utils/money';
 import { notify } from '../../components/ui/notify';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { createDocApi, hasApiSession } from '../../api/purchaseDocs';
@@ -122,94 +124,164 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
     }
   };
 
-  const raSearch = useListSearch(rows, ['name', 'lastVendorName']);
-  const raSearchRows = raSearch.filtered;
+  // Searched on what is actually on the row: the item's name and the vendor
+  // last bought from. The old fields did not exist on these rows at all, so
+  // typing anything emptied the table.
+  const raSearch = useListSearch(rows, [(r) => r.item?.name, (r) => r.last?.vendorName]);
+
+  /*
+   * How urgent each line is. Out of stock is not "low": the shelf is empty and
+   * something is unsellable today, which is a different call from a level that
+   * has merely been touched.
+   */
+  const [raFilter, setRaFilter] = useState('ALL');
+  const RA_TABS = [
+    { value: 'ALL', label: 'All', tone: 'all' },
+    { value: 'OUT', label: 'Out of stock', tone: 'overdue' },
+    { value: 'LOW', label: 'At or below level', tone: 'outstanding' },
+    { value: 'KNOWN', label: 'Vendor known', tone: 'paid' },
+  ];
+  const raMatches = (r, tab) => {
+    if (tab === 'OUT') return r.closing <= 0;
+    if (tab === 'LOW') return r.closing > 0;
+    if (tab === 'KNOWN') return Boolean(r.last?.vendorName);
+    return true;
+  };
+  const raSearchRows = raFilter === 'ALL' ? raSearch.filtered : raSearch.filtered.filter((r) => raMatches(r, raFilter));
+
+  const raCounts = useMemo(() => {
+    const counts = { ALL: raSearch.filtered.length };
+    for (const t of RA_TABS) {
+      if (t.value === 'ALL') continue;
+      counts[t.value] = raSearch.filtered.filter((r) => raMatches(r, t.value)).length;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [raSearch.filtered]);
+
+  /*
+   * What refilling the shelf would cost, at the last rate paid. An estimate on
+   * purpose: it is what the buyer needs to know before drafting six POs, and
+   * the real figure is whatever the vendor quotes.
+   */
+  const raHeadline = useMemo(() => {
+    let outOfStock = 0;
+    let suggested = 0;
+    let cost = 0;
+    let noVendor = 0;
+    for (const r of rows) {
+      if (r.closing <= 0) outOfStock += 1;
+      suggested += Number(r.suggestedQty || 0);
+      cost += Number(r.suggestedQty || 0) * Number(r.last?.rate || 0);
+      if (!r.last?.vendorName) noVendor += 1;
+    }
+    return { items: rows.length, outOfStock, suggested, cost, noVendor };
+  }, [rows]);
+
+  const raExportColumns = [
+    { key: 'name', label: 'Item', value: (r) => r.item?.name || '' },
+    { key: 'inStock', label: 'In stock', value: (r) => Number(r.closing || 0) },
+    { key: 'reorderLevel', label: 'Reorder level', value: (r) => Number(r.level || 0) },
+    { key: 'suggestedQty', label: 'Suggested qty', value: (r) => Number(r.suggestedQty || 0) },
+    { key: 'lastVendorName', label: 'Last vendor', value: (r) => r.last?.vendorName || '' },
+    { key: 'lastRate', label: 'Last rate', value: (r) => Number(r.last?.rate || 0) },
+  ];
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Reorder Alerts"
-        description="Stock items at or below their reorder level. Suggested order refills to 2× the level; one click drafts the PO to the last supplier."
-      />
-
-      <ListToolbar
-        search={raSearch.query}
-        onSearch={raSearch.setQuery}
-        placeholder="Search items (name, vendor)"
-        count={raSearchRows.length}
-        countLabel="items"
-        onExport={() =>
-          exportRows({
-            fileName: `ReorderAlerts_${currentCompany?.name || 'company'}`,
-            label: 'alert(s)',
-            columns: [
-              { key: 'name', label: 'Item' },
-              { key: 'inStock', label: 'In stock', value: (r) => Number(r.inStock ?? r.stock ?? 0) },
-              { key: 'reorderLevel', label: 'Reorder level', value: (r) => Number(r.reorderLevel || 0) },
-              { key: 'suggestedQty', label: 'Suggested qty', value: (r) => Number(r.suggestedQty || 0) },
-              { key: 'lastVendorName', label: 'Last vendor' },
-              { key: 'lastRate', label: 'Last rate', value: (r) => Number(r.lastRate || 0) },
-            ],
-            rows: raSearchRows,
-          })
-        }
-        exportTitle="Reorder Alerts"
-        exportFileName={`ReorderAlerts_${currentCompany?.name || 'company'}`}
-        exportSheetName="Reorder Alerts"
-        exportColumns={[
-              { key: 'name', label: 'Item' },
-              { key: 'inStock', label: 'In stock', value: (r) => Number(r.inStock ?? r.stock ?? 0) },
-              { key: 'reorderLevel', label: 'Reorder level', value: (r) => Number(r.reorderLevel || 0) },
-              { key: 'suggestedQty', label: 'Suggested qty', value: (r) => Number(r.suggestedQty || 0) },
-              { key: 'lastVendorName', label: 'Last vendor' },
-              { key: 'lastRate', label: 'Last rate', value: (r) => Number(r.lastRate || 0) },
-        ]}
-        exportRows={raSearchRows}
-      />
-
-      {rows.length === 0 ? (
-        <div className="ui-card">
-          <EmptyState
-            icon={PackageSearch}
-            title="Nothing below reorder level"
-            description="Set a reorder level on items (Items → Edit) — anything falling to it appears here."
-          />
-        </div>
-      ) : (
-        <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full">
+    <DocumentListShell
+      title="Reorder Alerts"
+      description="Stock at or below its reorder level. The suggested order refills to twice the level; one click drafts the PO to the last supplier."
+      company={currentCompany}
+      search={{
+        value: raSearch.query,
+        onChange: raSearch.setQuery,
+        placeholder: 'Search items…',
+        label: 'Search items',
+      }}
+      moreItems={[{ key: 'export', label: 'Export alerts', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `ReorderAlerts_${currentCompany?.name || 'company'}`,
+          label: 'alert(s)',
+          columns: raExportColumns,
+          rows: raSearchRows,
+        });
+      }}
+      cards={[
+        { label: 'Items to reorder', value: raHeadline.items, count: true, tone: 'draft', Icon: PackageSearch },
+        { label: 'Out of stock', value: raHeadline.outOfStock, count: true, tone: 'overdue', Icon: AlertTriangle },
+        { label: 'Suggested quantity', value: raHeadline.suggested, count: true, tone: 'outstanding', Icon: Package },
+        { label: 'At last rate paid', value: raHeadline.cost, tone: 'sent', Icon: ShoppingCart },
+        { label: 'No vendor on record', value: raHeadline.noVendor, count: true, tone: 'cancelled', Icon: Truck },
+      ]}
+      tabs={RA_TABS}
+      tabsLabel="Reorder filter"
+      statusValue={raFilter}
+      statusCounts={raCounts}
+      onStatusChange={setRaFilter}
+      tip={{
+        storageKey: 'neev.tip.reorderAlerts',
+        Icon: PackageSearch,
+        text: 'An item appears here once it has a reorder level and stock has fallen to it — set the level on the item itself.',
+      }}
+    >
+      <div className="ui-table-scroll">
+          <table className="ui-table ui-table-wide ui-table-sticky">
             <thead>
               <tr>
-                <th className="ui-th">Item</th>
-                <th className="ui-th ui-num">In stock</th>
-                <th className="ui-th ui-num">Reorder level</th>
-                <th className="ui-th ui-num">Suggested qty</th>
-                <th className="ui-th">Last vendor</th>
-                <th className="ui-th ui-num">Last rate</th>
-                <th className="px-4 py-2.5"></th>
+                <th scope="col">Item</th>
+                <th scope="col" className="ui-num">In stock</th>
+                <th scope="col" className="ui-num">Reorder level</th>
+                <th scope="col" className="ui-num">Suggested qty</th>
+                <th scope="col">Last vendor</th>
+                <th scope="col" className="ui-num">Last rate</th>
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody>
-              {raSearchRows.map((r) => (
-                <tr key={r.item.id} className="border-t">
-                  <td className="ui-col-entity px-4 py-2.5">{r.item.name}</td>
-                  <td className={`px-4 py-2.5 text-right font-semibold ${r.closing <= 0 ? 'ui-amount-neg' : ''}`}>{r.closing}</td>
-                  <td className="px-4 py-2.5 text-right">{r.level}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">{r.suggestedQty}</td>
-                  <td className="ui-col-entity px-4 py-2.5">{r.last?.vendorName || '—'}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">
+            <tbody className="ui-rows">
+              {raSearchRows.length === 0 ? (
+                <tr>
+                  <td colSpan="7">
+                    <EmptyState
+                      icon={PackageSearch}
+                      kind="new"
+                      title={rows.length ? 'Nothing matches' : 'Nothing below reorder level'}
+                      description={
+                        rows.length
+                          ? 'No item in this filter has fallen to its level.'
+                          : 'Give an item a reorder level and it appears here the moment stock falls to it — with how much to buy and who you last bought it from.'
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+              raSearchRows.map((r) => (
+                <tr key={r.item.id}>
+                  <td className="ui-col-entity">{r.item.name}</td>
+                  <td className={`ui-col-amount ui-mono ${r.closing <= 0 ? 'ui-amount-neg' : ''}`}>{r.closing}</td>
+                  <td className="ui-col-amount ui-mono">{r.level}</td>
+                  <td className="ui-col-amount ui-mono">{r.suggestedQty}</td>
+                  <td className="ui-col-entity">{r.last?.vendorName || '—'}</td>
+                  <td className="ui-col-amount">
                     {r.last ? <MoneyValue value={r.last.rate} company={currentCompany} /> : '—'}
                   </td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="text-right">
                     <button type="button" onClick={() => draftPo(r)} disabled={busyId === r.item.id} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                       {busyId === r.item.id ? 'Drafting…' : 'Draft PO'}
                     </button>
                   </td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
-        </div>
-      )}
-    </div>
+      </div>
+      <TableTotals
+        count={raSearchRows.length}
+        totalCount={rows.length}
+        noun="items"
+        figures={[{ label: 'At last rate paid', value: formatMoney(raHeadline.cost, currentCompany) }]}
+      />
+    </DocumentListShell>
   );
 }

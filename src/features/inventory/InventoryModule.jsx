@@ -1,11 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { notify } from '../../components/ui/notify';
 
-import { Download, Printer, Share2 } from 'lucide-react';
+import { AlertTriangle, Boxes, Download, Package, PackageCheck, PackageX, Printer, Share2 } from 'lucide-react';
 
 import { formatMoney, round2 } from '../../utils/money';
-import { PageHeader } from '../../components/ui/Primitives';
-import Popover from '../../components/ui/Popover';
+import { EmptyState, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import { useListSearch } from '../../components/ListToolbar';
 import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
@@ -296,8 +296,6 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
   const [warehouseId, setWarehouseId] = useState(''); // '' => All warehouses
-  const [exportOpen, setExportOpen] = useState(false);
-  const exportBtnRef = useRef(null);
   const colFilters = useColumnFilters();
 
   const { fromDate, toDate } = useMemo(() => {
@@ -543,6 +541,38 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
     w.print();
   };
 
+  /*
+   * What the shelf looks like, as tabs. Negative stock is not "low": it means
+   * more has been sold than was ever received, which is a data problem rather
+   * than a buying one, and it is the row somebody has to fix.
+   */
+  const [invFilter, setInvFilter] = useState('ALL');
+  const INV_TABS = [
+    { value: 'ALL', label: 'All', tone: 'all' },
+    { value: 'IN', label: 'In stock', tone: 'paid' },
+    { value: 'OUT', label: 'Out of stock', tone: 'outstanding' },
+    { value: 'NEG', label: 'Negative', tone: 'overdue' },
+  ];
+  const closingOf = (it) => Number(summaryByItemId.get(String(it.id))?.closingQty ?? 0);
+  const invMatches = (it, tab) => {
+    const closing = closingOf(it);
+    if (tab === 'IN') return closing > 0;
+    if (tab === 'OUT') return closing === 0;
+    if (tab === 'NEG') return closing < 0;
+    return true;
+  };
+  const shownItems = invFilter === 'ALL' ? items : items.filter((it) => invMatches(it, invFilter));
+
+  const invCounts = useMemo(() => {
+    const counts = { ALL: items.length };
+    for (const t of INV_TABS) {
+      if (t.value === 'ALL') continue;
+      counts[t.value] = items.filter((it) => invMatches(it, t.value)).length;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, summaryByItemId]);
+
   const stockKpis = useMemo(() => {
     let stockValue = 0;
     let outOfStock = 0;
@@ -559,87 +589,45 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
   }, [items, summaryByItemId]);
 
   return (
-    <div className="space-y-6">
-      {/*
-        The totals lead, above the heading and small.
-        They were four large cards between the title and the list, which
-        pushed the items — the thing the screen is for — most of the way down
-        the page. As one quiet strip they still say what the stock is worth
-        without taking the room.
-      */}
-      {items.length > 0 ? (
-        <div className="ui-in-fade flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-          <span className="ui-muted">
-            Stock value{' '}
-            <span className="ui-money ui-num ui-fg" title={formatMoney(stockKpis.stockValue, currentCompany)}>
-              {formatMoney(stockKpis.stockValue, currentCompany)}
-            </span>
-          </span>
-          <span className="ui-muted">
-            Items <span className="ui-num font-medium ui-fg">{items.length}</span>
-          </span>
-          <span className="ui-muted">
-            Out of stock{' '}
-            <span className={`ui-num font-semibold ${stockKpis.outOfStock ? 'ui-amount-neg' : 'ui-fg'}`}>
-              {stockKpis.outOfStock}
-            </span>
-          </span>
-          <span className="ui-muted">
-            Negative{' '}
-            <span className={`ui-num font-semibold ${stockKpis.negative ? 'ui-amount-neg' : 'ui-fg'}`}>
-              {stockKpis.negative}
-            </span>
-          </span>
-        </div>
-      ) : null}
-
-      <PageHeader
-        title="Inventory"
-        description="Opening, movement and closing stock for the period, by item."
-        actions={
-          <>
-            {/* One export. Which file it is, is a question, not two buttons. */}
-            <button
-              ref={exportBtnRef}
-              type="button"
-              onClick={() => setExportOpen((v) => !v)}
-              className="ui-btn ui-btn-secondary whitespace-nowrap"
-              aria-haspopup="menu"
-              aria-expanded={exportOpen}
-            >
-              <Download size={15} aria-hidden="true" /> Export
-            </button>
-            {exportOpen ? (
-              <Popover anchorRef={exportBtnRef} onClose={() => setExportOpen(false)} minWidth={180} maxWidth={220}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExportOpen(false);
-                    exportPdf();
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
-                >
-                  Download PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setExportOpen(false);
-                    exportCsv();
-                  }}
-                  className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
-                >
-                  Download Excel
-                </button>
-              </Popover>
-            ) : null}
-          </>
-        }
-      />
-
-      {/* View and warehouse sit under the heading, on the left, where the
-          screen is read from. */}
-      <div className="flex flex-wrap items-center gap-3">
+    <DocumentListShell
+      title="Inventory"
+      description="Opening, movement and closing stock for the period, by item"
+      company={currentCompany}
+      search={{
+        value: itemSearch.query,
+        onChange: itemSearch.setQuery,
+        placeholder: 'Search items…',
+        label: 'Search items',
+      }}
+      moreItems={[
+        { key: 'pdf', label: 'Export as PDF', Icon: Download },
+        { key: 'csv', label: 'Export as Excel', Icon: Download },
+      ]}
+      onMoreSelect={(k) => {
+        if (k === 'pdf') exportPdf();
+        else if (k === 'csv') exportCsv();
+      }}
+      cards={[
+        { label: 'Items', value: items.length, count: true, tone: 'draft', Icon: Package },
+        { label: 'Stock value', value: stockKpis.stockValue, tone: 'sent', Icon: Boxes },
+        { label: 'In stock', value: invCounts.IN ?? 0, count: true, tone: 'paid', Icon: PackageCheck },
+        { label: 'Out of stock', value: stockKpis.outOfStock, count: true, tone: 'outstanding', Icon: PackageX },
+        { label: 'Negative', value: stockKpis.negative, count: true, tone: 'overdue', Icon: AlertTriangle },
+      ]}
+      tabs={INV_TABS}
+      tabsLabel="Stock filter"
+      statusValue={invFilter}
+      statusCounts={invCounts}
+      onStatusChange={setInvFilter}
+      tip={{
+        storageKey: 'neev.tip.inventory',
+        Icon: Boxes,
+        text: 'Nothing here is stored — every column is worked out from the bills, invoices and adjustments in the period.',
+      }}
+    >
+      {/* View, warehouse and period at the top of the table they govern —
+          they change what every column below means, so they belong to it. */}
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium" htmlFor="inv-view">View</label>
           <select
@@ -705,47 +693,46 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
           ) : null}
         </div>
 
-        <div className="ms-auto flex items-center gap-2">
-          <input
-            type="text"
-            value={itemSearch.query}
-            onChange={(e) => itemSearch.setQuery(e.target.value)}
-            className="ui-input !h-9 !min-h-0 px-3 text-sm"
-            placeholder="Search items (name, code, HSN, barcode)"
-            aria-label="Search items"
-          />
-        </div>
       </div>
 
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full">
+      <div className="ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
           {/*
             Plain headings with the same filter control the invoice list uses.
             Each column used to carry its own total stacked above the label,
             which read as a second header row and repeated what the strip above
             the heading now says once.
           */}
-          <thead className="ui-sunken border-b">
+          <thead>
             <tr>
-              <ColumnHeader label="Item" col="item" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Opening" col="opening" state={colFilters} className="ui-th" align="right" />
-              <ColumnHeader label="Purchases" col="purchases" state={colFilters} className="ui-th" align="right" />
-              <ColumnHeader label="Sales" col="sales" state={colFilters} className="ui-th" align="right" />
-              <ColumnHeader label="DN (Return)" col="dn" state={colFilters} className="ui-th" align="right" />
-              <ColumnHeader label="CN (Return)" col="cn" state={colFilters} className="ui-th" align="right" />
-              <ColumnHeader label="Closing" col="closing" state={colFilters} className="ui-th" align="right" />
+              <ColumnHeader label="Item" col="item" state={colFilters} />
+              <ColumnHeader label="Opening" col="opening" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Purchases" col="purchases" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Sales" col="sales" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="DN (Return)" col="dn" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="CN (Return)" col="cn" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Closing" col="closing" state={colFilters} className="ui-num" align="right" />
             </tr>
           </thead>
-          <tbody className="divide-y">
-            {items.length === 0 ? (
+          <tbody className="ui-rows">
+            {shownItems.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-12 text-center ui-muted">
-                  No items yet
+                <td colSpan={7}>
+                  <EmptyState
+                    icon={Boxes}
+                    kind="new"
+                    title={items.length ? 'Nothing matches' : 'No stock items yet'}
+                    description={
+                      items.length
+                        ? 'No item in this filter for the chosen warehouse and period.'
+                        : 'An item marked as stock appears here with what it opened at, what moved, and what is left.'
+                    }
+                  />
                 </td>
               </tr>
             ) : null}
 
-            {items.map((it) => {
+            {shownItems.map((it) => {
               const row = summaryByItemId.get(String(it.id));
               const unit = String(it.unit || '').trim();
               const rate = Number(it.purchasePrice ?? 0);
@@ -766,28 +753,33 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
               return (
                 <tr
                   key={it.id}
-                  className="ui-hover-sunken cursor-pointer"
+                  className="cursor-pointer"
                   onClick={() => openLedger(it)}
                   title="Click to view ledger"
                 >
-                  <td className="ui-col-entity px-4 py-2.5">
+                  <td className="ui-col-entity">
                     <div>{it.name}</div>
                     <div className="text-xs ui-muted">{it.code || ''}</div>
                   </td>
-                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(opening)}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(purchases)}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(sales)}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(dn)}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-right">{fmt(cn)}</td>
-                  <td className="ui-col-meta px-4 py-2.5 text-right font-medium">{fmt(closing)}</td>
+                  <td className="ui-col-amount ui-mono">{fmt(opening)}</td>
+                  <td className="ui-col-amount ui-mono">{fmt(purchases)}</td>
+                  <td className="ui-col-amount ui-mono">{fmt(sales)}</td>
+                  <td className="ui-col-amount ui-mono">{fmt(dn)}</td>
+                  <td className="ui-col-amount ui-mono">{fmt(cn)}</td>
+                  <td className="ui-col-amount ui-mono font-medium">{fmt(closing)}</td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-
-    </div>
+      <TableTotals
+        count={shownItems.length}
+        totalCount={allStockItems.length}
+        noun="items"
+        figures={[{ label: 'Stock value', value: formatMoney(stockKpis.stockValue, currentCompany) }]}
+      />
+    </DocumentListShell>
   );
 };
 

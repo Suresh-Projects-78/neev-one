@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { Boxes } from 'lucide-react';
-import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { AlertTriangle, Boxes, CalendarClock, Download, Package, Timer } from 'lucide-react';
+import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { batchStockRows } from '../../utils/batches';
 import { DocDate } from '../../components/docs';
 
@@ -42,112 +43,156 @@ export default function BatchStock({ db, currentCompany }) {
     d90: rows.filter((b) => b.days != null && b.days >= 0 && b.days <= 90 && b.remaining > 0).length,
   };
 
-  const filters = [
-    ['ALL', `All (${rows.length})`],
-    ['INSTOCK', 'In stock'],
-    ['EXPIRED', `Expired (${counts.expired})`],
-    ['30', `≤30 days (${counts.d30})`],
-    ['60', `≤60 days (${counts.d60})`],
-    ['90', `≤90 days (${counts.d90})`],
+  /*
+   * The warehouse's own question, as tabs: what has to move first. Expired is
+   * an alarm, the three windows are a queue, and "in stock" is everything
+   * still on the shelf whatever its date.
+   */
+  const BATCH_TABS = [
+    { value: 'ALL', label: 'All', tone: 'all' },
+    { value: 'INSTOCK', label: 'In stock', tone: 'paid' },
+    { value: 'EXPIRED', label: 'Expired', tone: 'overdue' },
+    { value: '30', label: '≤30 days', tone: 'outstanding' },
+    { value: '60', label: '≤60 days', tone: 'partial' },
+    { value: '90', label: '≤90 days', tone: 'sent' },
+  ];
+  const batchCounts = {
+    ALL: rows.length,
+    INSTOCK: rows.filter((b) => b.remaining > 0).length,
+    EXPIRED: counts.expired,
+    30: counts.d30,
+    60: counts.d60,
+    90: counts.d90,
+  };
+
+  /*
+   * Batches are counted, not valued: a batch row carries quantity, and the
+   * money it cost lives on the bill that brought it in.
+   */
+  const batchHeadline = useMemo(() => {
+    let onShelf = 0;
+    let expiredQty = 0;
+    let soonQty = 0;
+    for (const b of rows) {
+      const left = Number(b.remaining || 0);
+      if (left <= 0) continue;
+      onShelf += left;
+      if (b.days != null && b.days < 0) expiredQty += left;
+      else if (b.days != null && b.days <= 30) soonQty += left;
+    }
+    return { batches: rows.length, onShelf, expiredQty, soonQty };
+  }, [rows]);
+
+  const batchExportColumns = [
+    { key: 'itemName', label: 'Item' },
+    { key: 'batchNo', label: 'Batch' },
+    { key: 'mfgDate', label: 'Mfg' },
+    { key: 'expiryDate', label: 'Expiry' },
+    { key: 'inQty', label: 'In', value: (r) => Number(r.qtyIn || 0) },
+    { key: 'outQty', label: 'Out', value: (r) => Number(r.qtyOut || 0) },
+    { key: 'balance', label: 'Balance', value: (r) => Number(r.remaining ?? 0) },
+    { key: 'source', label: 'Source', value: (r) => r.sourceBillNumber || '' },
   ];
 
   const bsSearch = useListSearch(shown, ['itemName', 'batchNo', 'expiryDate', 'source']);
   const bsSearchRows = bsSearch.filtered;
   return (
-    <div className="space-y-6">
-      <PageHeader title="Batch Stock & Expiry" description="Every batch received via bills, consumed by invoices — with what expires when." />
-
-      <div className="flex flex-wrap gap-2">
-        {filters.map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setFilter(key)}
-            className={`ui-btn ui-btn-sm ${filter === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <ListToolbar
-        search={bsSearch.query}
-        onSearch={bsSearch.setQuery}
-        placeholder="Search batches (item, batch no, expiry)"
-        count={bsSearchRows.length}
-        countLabel="batches"
-        onExport={() =>
-          exportRows({
-            fileName: `BatchStock_${currentCompany?.name || 'company'}`,
-            label: 'batch(es)',
-            columns: [
-              { key: 'itemName', label: 'Item' },
-              { key: 'batchNo', label: 'Batch' },
-              { key: 'mfgDate', label: 'Mfg' },
-              { key: 'expiryDate', label: 'Expiry' },
-              { key: 'inQty', label: 'In', value: (r) => Number(r.inQty || 0) },
-              { key: 'outQty', label: 'Out', value: (r) => Number(r.outQty || 0) },
-              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance ?? r.remaining ?? 0) },
-            ],
-            rows: bsSearchRows,
-          })
-        }
-        exportTitle="Batch Stock"
-        exportFileName={`BatchStock_${currentCompany?.name || 'company'}`}
-        exportSheetName="Batch Stock"
-        exportColumns={[
-              { key: 'itemName', label: 'Item' },
-              { key: 'batchNo', label: 'Batch' },
-              { key: 'mfgDate', label: 'Mfg' },
-              { key: 'expiryDate', label: 'Expiry' },
-              { key: 'inQty', label: 'In', value: (r) => Number(r.inQty || 0) },
-              { key: 'outQty', label: 'Out', value: (r) => Number(r.outQty || 0) },
-              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance ?? r.remaining ?? 0) },
-        ]}
-        exportRows={bsSearchRows}
-      />
-
-      {shown.length === 0 ? (
-        <div className="ui-card">
-          <EmptyState icon={Boxes} title="No batches" description="Receive a batch-tracked item through a purchase bill — the batch appears here." />
-        </div>
-      ) : (
-        <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full">
+    <DocumentListShell
+      title="Batch Stock & Expiry"
+      description="Every batch received on a bill and consumed by an invoice — with what expires when"
+      company={currentCompany}
+      search={{
+        value: bsSearch.query,
+        onChange: bsSearch.setQuery,
+        placeholder: 'Search batches…',
+        label: 'Search batches',
+      }}
+      moreItems={[{ key: 'export', label: 'Export batches', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `BatchStock_${currentCompany?.name || 'company'}`,
+          label: 'batch(es)',
+          columns: batchExportColumns,
+          rows: bsSearchRows,
+        });
+      }}
+      cards={[
+        { label: 'Batches', value: batchHeadline.batches, count: true, tone: 'draft', Icon: Boxes },
+        { label: 'On the shelf', value: batchHeadline.onShelf, count: true, tone: 'paid', Icon: Package },
+        { label: 'Expiring in 30 days', value: batchHeadline.soonQty, count: true, tone: 'outstanding', Icon: Timer },
+        { label: 'Expired, still held', value: batchHeadline.expiredQty, count: true, tone: 'overdue', Icon: AlertTriangle },
+        { label: 'Dated batches', value: rows.filter((b) => b.days != null).length, count: true, tone: 'sent', Icon: CalendarClock },
+      ]}
+      tabs={BATCH_TABS}
+      tabsLabel="Batch filter"
+      statusValue={filter}
+      statusCounts={batchCounts}
+      onStatusChange={setFilter}
+      tip={{
+        storageKey: 'neev.tip.batchStock',
+        Icon: Boxes,
+        text: 'Nothing here is stored — every row is worked out from the bill that brought the batch in and the invoices that took it out.',
+      }}
+    >
+      <div className="ui-table-scroll">
+          <table className="ui-table ui-table-wide ui-table-sticky">
             <thead>
               <tr>
-                <th className="ui-th">Item</th>
-                <th className="ui-th">Batch</th>
-                <th className="ui-th">Mfg</th>
-                <th className="ui-th">Expiry</th>
-                <th className="ui-th ui-num">In</th>
-                <th className="ui-th ui-num">Out</th>
-                <th className="ui-th ui-num">Balance</th>
-                <th className="ui-th">Source</th>
-                <th className="ui-th">Alert</th>
+                <th scope="col">Item</th>
+                <th scope="col">Batch</th>
+                <th scope="col">Mfg</th>
+                <th scope="col">Expiry</th>
+                <th scope="col" className="ui-num">In</th>
+                <th scope="col" className="ui-num">Out</th>
+                <th scope="col" className="ui-num">Balance</th>
+                <th scope="col">Source</th>
+                <th scope="col">Alert</th>
               </tr>
             </thead>
-            <tbody>
-              {bsSearchRows.map((b) => (
-                <tr key={b.id} className="border-t">
-                  <td className="ui-col-entity px-4 py-2.5">{b.itemName}</td>
-                  <td className="ui-col-id px-4 py-2.5 font-mono">{b.batchNo}</td>
-                  <td className="ui-col-date px-4 py-2.5"><DocDate value={b.mfgDate} /></td>
-                  <td className="ui-col-date px-4 py-2.5">
+            <tbody className="ui-rows">
+              {bsSearchRows.length === 0 ? (
+                <tr>
+                  <td colSpan="9">
+                    <EmptyState
+                      icon={Boxes}
+                      kind="new"
+                      title={rows.length ? 'No batches here' : 'No batches yet'}
+                      description={
+                        rows.length
+                          ? 'Nothing matches this filter — try All, or widen the expiry window.'
+                          : 'Receive a batch-tracked item on a purchase bill and its batch, its dates and what is left of it appear here.'
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+              bsSearchRows.map((b) => (
+                <tr key={b.id}>
+                  <td className="ui-col-entity">{b.itemName}</td>
+                  <td className="ui-col-id ui-mono">{b.batchNo}</td>
+                  <td className="ui-col-date"><DocDate value={b.mfgDate} /></td>
+                  <td className="ui-col-date">
                     {b.expiryDate || '—'}
                     {b.days != null ? <span className="ui-caption block">{b.days < 0 ? `${-b.days}d ago` : `in ${b.days}d`}</span> : null}
                   </td>
-                  <td className="px-4 py-2.5 text-right">{b.qtyIn}</td>
-                  <td className="px-4 py-2.5 text-right">{b.qtyOut}</td>
-                  <td className="ui-col-amount px-4 py-2.5 text-right">{b.remaining}</td>
-                  <td className="ui-col-meta px-4 py-2.5">{b.sourceBillNumber || '—'}</td>
-                  <td className="px-4 py-2.5">{chip(b) ? <StatusPill status={chip(b)} /> : null}</td>
+                  <td className="ui-col-amount ui-mono">{b.qtyIn}</td>
+                  <td className="ui-col-amount ui-mono">{b.qtyOut}</td>
+                  <td className="ui-col-amount ui-mono">{b.remaining}</td>
+                  <td className="ui-col-meta">{b.sourceBillNumber || '—'}</td>
+                  <td>{chip(b) ? <StatusPill status={chip(b)} /> : null}</td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
-        </div>
-      )}
-    </div>
+      </div>
+      <TableTotals
+        count={bsSearchRows.length}
+        totalCount={rows.length}
+        noun="batches"
+        figures={[{ label: 'On the shelf', value: String(batchHeadline.onShelf) }]}
+      />
+    </DocumentListShell>
   );
 }

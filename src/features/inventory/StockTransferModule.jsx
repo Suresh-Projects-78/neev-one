@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Check, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { StatusPill } from '../../components/ui/Primitives';
+import { AlertTriangle, Check, ClipboardCheck, Download, MoreVertical, Package, PackageCheck, Pencil, Plus, Trash2, Truck, X } from 'lucide-react';
+import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
 import { PermissionButton } from '../../permissions/ActionGuard';
 
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { isTracked, needsExpiry, batchesForItem } from '../../utils/batches';
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import ItemPicker from '../../components/pickers/ItemPicker';
-import { ListToolbar, exportRows } from '../../components/ListToolbar';
+import { exportRows } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { latestPurchaseRate } from '../../utils/pricing';
@@ -1401,6 +1402,18 @@ export const StockTransfersList = ({
       : String((which === 'source' ? t?.sourceWarehouseName : t?.targetWarehouseName) || '').trim() || 'that warehouse';
 
   const transferColFilters = useColumnFilters();
+
+  /*
+   * Everything this screen could show, before the status tabs narrow it — the
+   * counts on the tabs and the figures above them describe this, otherwise the
+   * "In transit 4" tab would read 0 the moment somebody clicked Draft.
+   */
+  const transfersInScope = useMemo(
+    () => transfers.filter((t) => transferPeriod.inRange(t?.date)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [transfers, transferPeriod.dateFrom, transferPeriod.dateTo]
+  );
+
   const filteredTransfers = useMemo(() => {
     const q = String(searchText || '').trim().toLowerCase();
     const wantStatus = String(statusFilter || '').trim();
@@ -1698,57 +1711,119 @@ export const StockTransfersList = ({
     setOpenMenu({ id, left, top });
   };
 
-  return (
-    <div className="space-y-6">
-        <div className="flex justify-between items-center gap-3 flex-wrap">
-          <div>
-          <h3 className="ui-t-sec">{mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}</h3>
-          <div className="text-sm ui-muted">
-            {mode === 'branch'
-              ? 'Transfer Out (Branch movement) → Transfer In (Branch movement)'
-              : 'Transfer Out (Warehouse movement) → Transfer In (Warehouse movement)'}
-          </div>
-          </div>
-          <button
-            type="button"
-            onClick={openCreate}
-            className="ui-btn ui-btn-primary"
-          >
-          <Plus size={18} /> New Transfer Out
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              exportRows({
-                fileName: `${mode === 'branch' ? 'BranchTransfers' : 'WarehouseTransfers'}_${currentCompany?.name || 'company'}`,
-                label: 'transfer(s)',
-                columns: [
-                  { key: 'number', label: 'Transfer #' },
-                  { key: 'date', label: 'Date' },
-                  { key: 'from', label: 'From', value: (r) => [r.sourceBranchName, r.sourceWarehouseName].filter(Boolean).join(' / ') },
-                  { key: 'to', label: 'To', value: (r) => [r.targetBranchName, r.targetWarehouseName].filter(Boolean).join(' / ') },
-                  { key: 'lines', label: 'Lines', value: (r) => safeArray(r.lines).length },
-                  { key: 'sentQty', label: 'Qty sent', value: (r) => safeArray(r.lines).reduce((t, l) => t + toNum(l?.qty || 0), 0) },
-                  {
-                    key: 'receivedQty',
-                    label: 'Qty received',
-                    value: (r) =>
-                      safeArray(r.lines).reduce((t, l) => t + (l?.receivedQty === undefined || l?.receivedQty === null ? 0 : toNum(l.receivedQty)), 0),
-                  },
-                  { key: 'status', label: 'Status' },
-                  { key: 'mismatchResolution', label: 'Resolution' },
-                  { key: 'reason', label: 'Reason' },
-                ],
-                rows: filteredTransfers,
-              })
-            }
-            className="ui-btn ui-btn-secondary"
-          >
-            Export
-          </button>
-        </div>
+  const transferExportColumns = [
+    { key: 'number', label: 'Transfer #' },
+    { key: 'date', label: 'Date' },
+    { key: 'from', label: 'From', value: (r) => [r.sourceBranchName, r.sourceWarehouseName].filter(Boolean).join(' / ') },
+    { key: 'to', label: 'To', value: (r) => [r.targetBranchName, r.targetWarehouseName].filter(Boolean).join(' / ') },
+    { key: 'lines', label: 'Lines', value: (r) => safeArray(r.lines).length },
+    { key: 'sentQty', label: 'Qty sent', value: (r) => safeArray(r.lines).reduce((t, l) => t + toNum(l?.qty || 0), 0) },
+    {
+      key: 'receivedQty',
+      label: 'Qty received',
+      value: (r) =>
+        safeArray(r.lines).reduce((t, l) => t + (l?.receivedQty === undefined || l?.receivedQty === null ? 0 : toNum(l.receivedQty)), 0),
+    },
+    { key: 'status', label: 'Status' },
+    { key: 'mismatchResolution', label: 'Resolution' },
+    { key: 'reason', label: 'Reason' },
+  ];
 
-        {pendingIn.length ? (
+  /*
+   * A transfer's life, as tabs. In transit is the one that matters: stock has
+   * left one place and not arrived anywhere, so it belongs to nobody's shelf
+   * until somebody at the far end confirms what turned up.
+   */
+  const TRANSFER_TABS = [
+    { value: '', label: 'All', tone: 'all' },
+    { value: TRANSFER_STATUS.DRAFT, label: 'Draft', tone: 'draft' },
+    { value: TRANSFER_STATUS.OUT, label: 'In transit', tone: 'outstanding' },
+    { value: TRANSFER_STATUS.IN, label: 'Received', tone: 'paid' },
+    { value: TRANSFER_STATUS.SHORT, label: 'Short received', tone: 'overdue' },
+    { value: TRANSFER_STATUS.CLOSED, label: 'Closed', tone: 'cancelled' },
+  ];
+  const transferCounts = useMemo(() => {
+    const counts = { '': transfersInScope.length };
+    for (const t of transfersInScope) {
+      const st = canonicalStatus(t);
+      counts[st] = (counts[st] || 0) + 1;
+    }
+    return counts;
+  }, [transfersInScope]);
+
+  /*
+   * Quantities, not money: a transfer moves stock between two places the
+   * business already owns, so nothing is bought or sold and no value changes
+   * hands. What somebody wants to know is how much is still in transit.
+   */
+  const transferHeadline = useMemo(() => {
+    let sent = 0;
+    let received = 0;
+    let inTransit = 0;
+    let shortLines = 0;
+    for (const t of transfersInScope) {
+      const st = canonicalStatus(t);
+      for (const l of safeArray(t.lines)) {
+        const q = toNum(l?.qty || 0);
+        const r = l?.receivedQty === undefined || l?.receivedQty === null ? 0 : toNum(l.receivedQty);
+        sent += q;
+        received += r;
+        if (st === TRANSFER_STATUS.OUT) inTransit += q;
+        if (st === TRANSFER_STATUS.SHORT && r < q) shortLines += 1;
+      }
+    }
+    return { count: transfersInScope.length, sent, received, inTransit, shortLines };
+  }, [transfersInScope]);
+
+  return (
+    <DocumentListShell
+      title={mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}
+      description={
+        mode === 'branch'
+          ? 'Transfer out of one branch, transfer in at the other — stock lands only for the quantities confirmed.'
+          : 'Transfer out of one warehouse, transfer in at the other — stock lands only for the quantities confirmed.'
+      }
+      company={currentCompany}
+      search={{
+        value: searchText,
+        onChange: setSearchText,
+        placeholder: 'Search transfers…',
+        label: 'Search transfers',
+      }}
+      moreItems={[{ key: 'export', label: 'Export transfers', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `${mode === 'branch' ? 'BranchTransfers' : 'WarehouseTransfers'}_${currentCompany?.name || 'company'}`,
+          label: 'transfer(s)',
+          columns: transferExportColumns,
+          rows: filteredTransfers,
+        });
+      }}
+      primary={
+        <button type="button" onClick={openCreate} className="ui-btn ui-btn-primary">
+          <Plus size={16} aria-hidden="true" /> New Transfer Out
+        </button>
+      }
+      cards={[
+        { label: 'Transfers', value: transferHeadline.count, count: true, tone: 'draft', Icon: Truck },
+        { label: 'Awaiting approval', value: pendingIn.length, count: true, tone: 'outstanding', Icon: ClipboardCheck },
+        { label: 'Units in transit', value: transferHeadline.inTransit, count: true, tone: 'partial', Icon: Package },
+        { label: 'Units received', value: transferHeadline.received, count: true, tone: 'paid', Icon: PackageCheck },
+        { label: 'Short-received lines', value: transferHeadline.shortLines, count: true, tone: 'overdue', Icon: AlertTriangle },
+      ]}
+      tabs={TRANSFER_TABS}
+      tabsLabel="Transfer status"
+      statusValue={statusFilter}
+      statusCounts={transferCounts}
+      onStatusChange={setStatusFilter}
+      tip={{
+        storageKey: `neev.tip.transfers.${mode}`,
+        Icon: Truck,
+        text: 'Stock in transit belongs to neither end until it is approved — approve for what actually turned up, not what was sent.',
+      }}
+      above={
+        pendingIn.length ? (
           <div className="rounded-xl border p-4 bg-[rgb(var(--warn-soft))]">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
@@ -1775,66 +1850,49 @@ export const StockTransfersList = ({
               ))}
             </div>
           </div>
-        ) : null}
-
-        <ListToolbar
-          search={searchText}
-          onSearch={setSearchText}
-          placeholder="Search transfers (number, branch, warehouse)"
-          count={filteredTransfers.length}
-          countLabel="transfers"
-          period={transferPeriod.period}
-          onPeriodChange={transferPeriod.setPeriod}
-          dateFrom={transferPeriod.dateFrom}
-          dateTo={transferPeriod.dateTo}
-          onDateFromChange={transferPeriod.setDateFrom}
-          onDateToChange={transferPeriod.setDateTo}
-          exportTitle={`${mode === 'branch' ? 'Branch' : 'Warehouse'} Transfers`}
-          exportFileName={`Transfers_${currentCompany?.name || 'company'}`}
-          exportSheetName="Transfers"
-          exportColumns={[
-            { key: 'number', label: 'Transfer No.' },
-            { key: 'date', label: 'Date' },
-            { key: 'from', label: 'From', value: (r) => locationLabel(r, 'source') },
-            { key: 'to', label: 'To', value: (r) => locationLabel(r, 'target') },
-            { key: 'status', label: 'Status' },
-          ]}
-          exportRows={filteredTransfers}
-        >
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="ui-select !h-10 w-56"
-            aria-label="Status"
-          >
-            <option value="">All statuses</option>
-            <option value={TRANSFER_STATUS.DRAFT}>Draft</option>
-            <option value={TRANSFER_STATUS.OUT}>Transferred Out / Pending approval</option>
-            <option value={TRANSFER_STATUS.IN}>Transfer In</option>
-            <option value={TRANSFER_STATUS.SHORT}>Short Received</option>
-            <option value={TRANSFER_STATUS.CLOSED}>Closed</option>
-            <option value={TRANSFER_STATUS.REJECTED}>Rejected</option>
-            <option value={TRANSFER_STATUS.CANCELLED}>Cancelled</option>
-          </select>
-        </ListToolbar>
-
-        <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-          <table className="ui-table w-full">
-            <thead className="ui-sunken border-b">
+        ) : null
+      }
+    >
+      <div className="ui-table-scroll">
+          <table className="ui-table ui-table-wide ui-table-sticky">
+            <thead>
               <tr>
-                <ColumnHeader label="Transfer #" col="number" state={transferColFilters} className="ui-th" />
-                <ColumnHeader label="From" col="date" state={transferColFilters} className="ui-th" />
-                <ColumnHeader label="To" col="from" state={transferColFilters} className="ui-th" />
-                <ColumnHeader label="Date" col="to" state={transferColFilters} className="ui-th" />
-                <ColumnHeader label="Status" col="status" state={transferColFilters} className="ui-th" />
-                <th className="ui-th">Actions</th>
+                {/* Each label over the column it actually filters. They were
+                    shifted by one — filtering "From" filtered by date, and the
+                    Date column filtered by destination. */}
+                <ColumnHeader label="Transfer #" col="number" state={transferColFilters} />
+                <ColumnHeader label="From" col="from" state={transferColFilters} />
+                <ColumnHeader label="To" col="to" state={transferColFilters} />
+                <ColumnHeader label="Date" col="date" state={transferColFilters} />
+                <ColumnHeader label="Status" col="status" state={transferColFilters} />
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="ui-rows">
               {filteredTransfers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center ui-muted">
-                    No stock transfers found
+                  <td colSpan={6}>
+                    <EmptyState
+                      icon={Truck}
+                      kind="new"
+                      title={transfersInScope.length ? 'No transfers match' : 'No stock transfers yet'}
+                      description={
+                        transfersInScope.length
+                          ? 'Nothing in this status for the chosen period.'
+                          : `Moving stock between two ${mode === 'branch' ? 'branches' : 'warehouses'} starts with a transfer out; the far end confirms what arrived.`
+                      }
+                      routes={
+                        transfersInScope.length
+                          ? undefined
+                          : [
+                              {
+                                label: 'Send stock out',
+                                description: 'Pick where it goes and what is on the vehicle.',
+                                onSelect: () => openCreate(),
+                              },
+                            ]
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
@@ -1905,7 +1963,13 @@ export const StockTransfersList = ({
               )}
             </tbody>
           </table>
-        </div>
+      </div>
+      <TableTotals
+        count={filteredTransfers.length}
+        totalCount={transfersInScope.length}
+        noun="transfers"
+        figures={[{ label: 'Units in transit', value: String(transferHeadline.inTransit) }]}
+      />
 
         {openMenu?.id ? (
           <div
@@ -2083,7 +2147,7 @@ export const StockTransfersList = ({
             })()}
           </div>
         ) : null}
-    </div>
+    </DocumentListShell>
   );
 };
 

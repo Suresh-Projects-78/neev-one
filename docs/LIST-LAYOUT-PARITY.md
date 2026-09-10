@@ -184,3 +184,35 @@ export buttons between the tabs and the table.
 - Ref date became a filterable column like the ones beside it; as a plain
   heading it also wore the table's uppercase, so one column read in a different
   case from the rest.
+
+## Inventory
+
+The least consistent group in the product before this: Inventory kept its
+figures as a line of small text above the heading and its search at the far
+right of a filter row; Stock Adjustments and Batch Stock had no search at all;
+the transfers list was a heading with two loose buttons beside it.
+
+| Page | Figures | Tabs |
+|---|---|---|
+| Inventory | items · stock value · in stock · out of stock · negative | In stock · Out of stock · Negative |
+| Stock Adjustments | count · units up · units down · value up · value off | Written up · Written off |
+| Reorder Alerts | items · out of stock · suggested qty · cost at last rate · no vendor | Out of stock · At or below level · Vendor known |
+| Batch Stock & Expiry | batches · on the shelf · expiring in 30d · expired still held · dated | In stock · Expired · ≤30/60/90 days |
+| Warehouse / Branch Transfers | transfers · awaiting approval · units in transit · units received · short lines | Draft · In transit · Received · Short received · Closed |
+
+Stock screens count units, not money — a transfer moves stock between two
+places the business already owns, so nothing is bought or sold.
+
+### Mistakes found
+
+- **The transfer table's column headers were shifted by one.** `From` was wired
+  to `col="date"`, `To` to `col="from"` and `Date` to `col="to"`, so filtering
+  the From column filtered by date and the Date column filtered by destination.
+  The labels were in the right order and each filtered its neighbour's data,
+  which is why reading the header row could not see it — the test opens the
+  From filter and checks the values it offers are places, not dates.
+- Reorder Alerts searched `name` and `lastVendorName`, neither of which exists
+  on its rows (they are `item.name` and `last.vendorName`), so typing anything
+  into the search emptied the table.
+- Inventory's four figures sat above the page heading as small text, which is
+  neither a heading nor a card; they are the standard five now.

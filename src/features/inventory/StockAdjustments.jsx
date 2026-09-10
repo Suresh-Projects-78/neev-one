@@ -1,8 +1,10 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, Upload } from 'lucide-react';
+import { ClipboardList, Download, Package, Plus, Trash2, TrendingDown, TrendingUp, Upload } from 'lucide-react';
 
 import { notify } from '../../components/ui/notify';
-import { PageHeader } from '../../components/ui/Primitives';
+import { EmptyState, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { formatMoney, round2 } from '../../utils/money';
@@ -369,36 +371,109 @@ const StockAdjustments = ({
     .slice()
     .sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
 
+  // The screen had no search: an adjustment could only be found by scrolling
+  // or by filtering a column one value at a time.
+  const adjSearch = useListSearch(shown, [
+    'number',
+    'reason',
+    'date',
+    (a) => itemById.get(normalizeId(a.itemId))?.name || '',
+    (a) => warehouseById.get(normalizeId(a.warehouseId))?.name || '',
+  ]);
+
+  /*
+   * An adjustment is either stock found or stock lost. That is the only split
+   * worth a tab: writing off is what a proprietor reviews, writing up is what
+   * an auditor asks about.
+   */
+  const [adjFilter, setAdjFilter] = useState('ALL');
+  const ADJ_TABS = [
+    { value: 'ALL', label: 'All', tone: 'all' },
+    { value: 'UP', label: 'Written up', tone: 'paid' },
+    { value: 'DOWN', label: 'Written off', tone: 'overdue' },
+  ];
+  const adjRows =
+    adjFilter === 'ALL'
+      ? adjSearch.filtered
+      : adjSearch.filtered.filter((a) => (adjFilter === 'UP' ? toNum(a.qtyDelta) >= 0 : toNum(a.qtyDelta) < 0));
+
+  const adjCounts = useMemo(
+    () => ({
+      ALL: adjSearch.filtered.length,
+      UP: adjSearch.filtered.filter((a) => toNum(a.qtyDelta) >= 0).length,
+      DOWN: adjSearch.filtered.filter((a) => toNum(a.qtyDelta) < 0).length,
+    }),
+    [adjSearch.filtered]
+  );
+
+  const adjHeadline = useMemo(() => {
+    let upQty = 0;
+    let downQty = 0;
+    for (const a of shown) {
+      const q = toNum(a.qtyDelta);
+      if (q >= 0) upQty += q;
+      else downQty += Math.abs(q);
+    }
+    return { count: shown.length, upQty, downQty };
+  }, [shown]);
+
+  const adjExportColumns = [
+    { key: 'date', label: 'Date' },
+    { key: 'number', label: 'Number' },
+    { key: 'warehouse', label: 'Warehouse', value: (a) => warehouseById.get(normalizeId(a.warehouseId))?.name || '' },
+    { key: 'item', label: 'Item', value: (a) => itemById.get(normalizeId(a.itemId))?.name || '' },
+    { key: 'qty', label: 'Qty', value: (a) => toNum(a.qtyDelta) },
+    { key: 'value', label: 'Value', value: (a) => toNum(a.valueDelta) },
+    { key: 'reason', label: 'Reason' },
+  ];
+
   return (
-    <div className="space-y-6">
-      {adjustments.length > 0 ? (
-        <div className="ui-in-fade flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-          <span className="ui-muted">
-            Written up <span className="ui-num font-medium ui-amount-pos">{formatMoney(totals.up, currentCompany)}</span>
-          </span>
-          <span className="ui-muted">
-            Written off{' '}
-            <span className="ui-num font-medium ui-amount-neg">{formatMoney(Math.abs(totals.down), currentCompany)}</span>
-          </span>
-          <span className="ui-muted">
-            Net effect on stock <span className="ui-money ui-num ui-fg">{formatMoney(totals.net, currentCompany)}</span>
-          </span>
-        </div>
-      ) : null}
-
-      <PageHeader
-        title="Stock Adjustments"
-        description="What a count found that the books did not. Each one moves stock, so the balance sheet and the P&L move with it."
-        actions={
-          creating ? null : (
-            <button type="button" onClick={() => setCreating(true)} className="ui-btn ui-btn-primary">
-              <Plus size={15} aria-hidden="true" /> New Adjustment
-            </button>
-          )
-        }
-      />
-
-      {creating ? (
+    <DocumentListShell
+      title="Stock Adjustments"
+      description="What a count found that the books did not. Each one moves stock, so the balance sheet and the P&L move with it."
+      company={currentCompany}
+      search={{
+        value: adjSearch.query,
+        onChange: adjSearch.setQuery,
+        placeholder: 'Search adjustments…',
+        label: 'Search adjustments',
+      }}
+      moreItems={[{ key: 'export', label: 'Export adjustments', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `StockAdjustments_${currentCompany?.name || 'company'}`,
+          label: 'adjustment(s)',
+          columns: adjExportColumns,
+          rows: adjRows,
+        });
+      }}
+      primary={
+        creating ? null : (
+          <button type="button" onClick={() => setCreating(true)} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> New Adjustment
+          </button>
+        )
+      }
+      cards={[
+        { label: 'Adjustments', value: adjHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Units written up', value: adjHeadline.upQty, count: true, tone: 'paid', Icon: TrendingUp },
+        { label: 'Units written off', value: adjHeadline.downQty, count: true, tone: 'overdue', Icon: TrendingDown },
+        { label: 'Value written up', value: totals.up, tone: 'sent', Icon: Package },
+        { label: 'Value written off', value: Math.abs(totals.down), tone: 'outstanding', Icon: Package },
+      ]}
+      tabs={ADJ_TABS}
+      tabsLabel="Adjustment filter"
+      statusValue={adjFilter}
+      statusCounts={adjCounts}
+      onStatusChange={setAdjFilter}
+      tip={{
+        storageKey: 'neev.tip.stockAdjustments',
+        Icon: ClipboardList,
+        text: 'An adjustment is a posting, not a note — removing one puts the stock it moved back.',
+      }}
+      above={
+        creating ? (
         <form onSubmit={saveForm} className="ui-card p-4 space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div>
@@ -550,53 +625,74 @@ const StockAdjustments = ({
             </div>
           </div>
         </form>
-      ) : null}
-
-      <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-        <table className="ui-table w-full">
-          <thead className="ui-sunken border-b">
+        ) : null
+      }
+    >
+      <div className="ui-table-scroll">
+        <table className="ui-table ui-table-wide ui-table-sticky">
+          <thead>
             <tr>
-              <ColumnHeader label="Date" col="date" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Number" col="number" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Branch" col="branch" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Item" col="item" state={colFilters} className="ui-th" />
-              <ColumnHeader label="Qty" col="qty" state={colFilters} className="ui-th" align="right" />
-              <ColumnHeader label="Value" col="value" state={colFilters} className="ui-th" align="right" />
-              <ColumnHeader label="Reason" col="reason" state={colFilters} className="ui-th" />
-              <th className="ui-th" />
+              <ColumnHeader label="Date" col="date" state={colFilters} />
+              <ColumnHeader label="Number" col="number" state={colFilters} />
+              <ColumnHeader label="Branch" col="branch" state={colFilters} />
+              <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} />
+              <ColumnHeader label="Item" col="item" state={colFilters} />
+              <ColumnHeader label="Qty" col="qty" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Value" col="value" state={colFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Reason" col="reason" state={colFilters} />
+              <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
-            {shown.length === 0 ? (
+          <tbody className="ui-rows">
+            {adjRows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-12 text-center ui-muted">
-                  No adjustments yet. Record one when a count disagrees with the books.
+                <td colSpan={9}>
+                  <EmptyState
+                    icon={ClipboardList}
+                    kind="new"
+                    title={shown.length ? 'Nothing matches' : 'No adjustments yet'}
+                    description={
+                      shown.length
+                        ? 'No adjustment in this filter.'
+                        : 'Record one when a count disagrees with the books — the difference moves stock and posts to the ledger.'
+                    }
+                    routes={
+                      shown.length
+                        ? undefined
+                        : [
+                            {
+                              label: 'Record one now',
+                              description: 'Warehouse, item, the quantity the count found.',
+                              onSelect: () => setCreating(true),
+                            },
+                          ]
+                    }
+                  />
                 </td>
               </tr>
             ) : (
-              shown.map((a) => {
+              adjRows.map((a) => {
                 const item = itemById.get(normalizeId(a.itemId));
                 const qty = toNum(a.qtyDelta);
                 const value = toNum(a.valueDelta);
                 return (
-                  <tr key={a.id} className="ui-hover-sunken">
-                    <td className="ui-col-date px-4 py-2.5"><DocDate value={a.date} /></td>
-                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={a.number} label="adjustment" /></td>
-                    <td className="ui-col-meta px-4 py-2.5">{branchLabel(a.branchId) || '—'}</td>
-                    <td className="ui-col-meta px-4 py-2.5">
+                  <tr key={a.id}>
+                    <td className="ui-col-date"><DocDate value={a.date} /></td>
+                    <td className="ui-col-id"><DocumentNumber value={a.number} label="adjustment" /></td>
+                    <td className="ui-col-meta">{branchLabel(a.branchId) || '—'}</td>
+                    <td className="ui-col-meta">
                       {warehouseById.get(normalizeId(a.warehouseId))?.name || '—'}
                     </td>
-                    <td className="ui-col-entity px-4 py-2.5">{item?.name || `Item ${a.itemId}`}</td>
-                    <td className={`ui-col-meta px-4 py-2.5 text-right ${qty < 0 ? 'ui-amount-neg' : 'ui-amount-pos'}`}>
+                    <td className="ui-col-entity">{item?.name || `Item ${a.itemId}`}</td>
+                    <td className={`ui-col-amount ui-mono ${qty < 0 ? 'ui-amount-neg' : 'ui-amount-pos'}`}>
                       {qty > 0 ? `+${qty}` : qty}
                       {item?.unit ? ` ${item.unit}` : ''}
                     </td>
-                    <td className={`ui-col-meta px-4 py-2.5 text-right ${value < 0 ? 'ui-amount-neg' : ''}`}>
+                    <td className={`ui-col-amount ${value < 0 ? 'ui-amount-neg' : ''}`}>
                       {formatMoney(value, currentCompany)}
                     </td>
-                    <td className="ui-col-meta px-4 py-2.5">{a.reason || '—'}</td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="ui-col-meta">{a.reason || '—'}</td>
+                    <td className="text-right">
                       <button
                         type="button"
                         onClick={() => removeAdjustment(a.id)}
@@ -613,7 +709,13 @@ const StockAdjustments = ({
           </tbody>
         </table>
       </div>
-    </div>
+      <TableTotals
+        count={adjRows.length}
+        totalCount={adjustments.length}
+        noun="adjustments"
+        figures={[{ label: 'Net effect on stock', value: formatMoney(totals.net, currentCompany) }]}
+      />
+    </DocumentListShell>
   );
 };
 
