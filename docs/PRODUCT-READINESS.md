@@ -9,8 +9,8 @@ starts — the same way the six document forms were done.
 | 2 | CSV formula injection | An export runs code on the accountant's machine | **done** |
 | 3 | Audit trail can be read | Written in 7 places, readable in none | **done** |
 | 4 | Bank reconciliation | The largest genuinely missing module | **done** |
-| 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | **next** |
-| 6 | Per-user module assignment | Waiting on one decision | 6th |
+| 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | **done** |
+| 6 | Per-user module assignment | Waiting on one decision | **next** |
 | 7 | The deferred shells, built for real | Admin area, dashboard, billing, SSO, subdomains | 7th |
 
 ## 1 — Six masters that live only in the browser
@@ -173,3 +173,21 @@ The statement parser moved out of the cash-book screen so importing and
 reconciling read the same file the same way. Two parsers for one format is two
 sets of rules about what a date looks like, and the reconciler would have
 disagreed with the importer about the very rows it was meant to match.
+
+## 5 — done, and smaller than it looked
+
+Row 52 — Record Receipt as a screen rather than a dialog — turned out to be
+already done: the Receipts screen renders the form inline with its own Back
+button. Only **row 49** was outstanding, and it was the one that mattered: the
+invoice list still opened the same form in a dialog over itself.
+
+A receipt is a document with a number that posts to the ledger, not a detail of
+the invoice it happens to settle. As a dialog it had no address of its own, the
+browser's Back button dismissed the list behind it, and there was nowhere to
+return to once the money was recorded. It now navigates to Receipts with the
+invoice carried across, ticked and allocated — without that the money lands on
+account and the invoice it paid stays open.
+
+The dialog stays as the fallback where the list is rendered without a host that
+can navigate, so no entry point is lost. Both paths are tested, and removing
+either one fails a test.

@@ -12861,6 +12861,30 @@ const AppShell = () => {
               setActive('creditNotes');
               setCreditNoteEditor({ open: true, initialOriginalInvoiceId: inv?.id ?? null });
             }}
+            /*
+             * Recording money against an invoice goes to the Receipts screen
+             * rather than opening a dialog over the list.
+             *
+             * A receipt is a document with a number that posts to the ledger,
+             * not a detail of the invoice it happens to settle. As a dialog it
+             * had no address, the browser's Back button dismissed the whole
+             * list behind it, and there was nowhere to return to afterwards.
+             */
+            onRecordReceipt={(inv) => {
+              setReturnTo({ from: 'invoices', to: 'receipts' });
+              setReceiptEditor({
+                open: true,
+                initial: {
+                  customerId: inv?.customerId,
+                  amount: Math.max(0, Number(inv?.total ?? 0) - Number(inv?.paidAmount ?? 0)),
+                  // Ticked and allocated, or the money lands on account and the
+                  // invoice it was paid against stays open.
+                  allocateInvoiceId: inv?.id,
+                  reference: inv?.number || '',
+                },
+              });
+              setActive('receipts');
+            }}
           />
         );
       case 'estimates':
@@ -13019,6 +13043,7 @@ const AppShell = () => {
                   db={dbForUser}
                   setDb={setDb}
                   currentCompany={currentCompany}
+                  initialData={receiptEditor.initial || null}
                   onClose={() => setReceiptEditor({ open: false })}
                 />
               </div>

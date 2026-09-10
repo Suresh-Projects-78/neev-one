@@ -105,6 +105,7 @@ export const InvoicesList = ({
   onNewInvoice,
   onEditInvoice,
   onRaiseCreditNote,
+  onRecordReceipt,
   onOpenRecurring = null,
   /**
    * One callback rather than a prop per destination: the More menu will grow,
@@ -536,23 +537,40 @@ const statusReason = (doc, status, company, nowMs) => {
     );
   };
 
+  /**
+   * Recording money against an invoice goes to the Receipts screen.
+   *
+   * It used to open the same form in a dialog over this list. A receipt is a
+   * document with a number that posts to the ledger, not a detail of the
+   * invoice it happens to settle: as a dialog it had no address of its own, the
+   * browser's Back button dismissed the list behind it, and there was nowhere
+   * to return to once the money was recorded.
+   *
+   * The invoice is carried across, ticked and allocated — without that the
+   * money lands on account and the invoice it paid stays open.
+   *
+   * The dialog remains the fallback where this screen is rendered without a
+   * host that can navigate, so no entry point is lost.
+   */
   const openRecordReceipt = (invoice) => {
-    // The same form the Receipts screen uses, so money recorded from an
-    // invoice row reaches the general ledger too. The old quick form wrote
-    // only to the local store: two entrances, and only one of them posted.
+    const initialData = {
+      customerId: invoice?.customerId,
+      amount: Math.max(0, Number(invoice?.total ?? 0) - Number(invoice?.paidAmount ?? 0)),
+      allocateInvoiceId: invoice?.id,
+      reference: invoice?.number || '',
+    };
+
+    if (typeof onRecordReceipt === 'function') {
+      onRecordReceipt(invoice);
+      return;
+    }
+
     openModal(
       <RecordReceiptForm
         db={db}
         setDb={setDb}
         currentCompany={currentCompany}
-        initialData={{
-          customerId: invoice?.customerId,
-          amount: Math.max(0, Number(invoice?.total ?? 0) - Number(invoice?.paidAmount ?? 0)),
-          // The invoice this was opened from, ticked and allocated. Without
-          // it the money landed on account and the invoice stayed open.
-          allocateInvoiceId: invoice?.id,
-          reference: invoice?.number || '',
-        }}
+        initialData={initialData}
         onClose={() => openModal(null)}
       />,
       { title: `Record Receipt ${invoice?.number || ''}`.trim(), maxWidthClass: 'max-w-4xl' }
