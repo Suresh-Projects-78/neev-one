@@ -4,6 +4,7 @@ import { BookOpen, Download, Printer, RefreshCw, X } from 'lucide-react';
 import { getAccountLedgerLines, getTrialBalance } from '../../api/ledger';
 import { EmptyState, PageHeader, Spinner, TableSkeleton } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
+import { csvSafeValue } from '../../utils/csv';
 
 /**
  * Trial balance from the general ledger.
@@ -251,7 +252,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                         className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                         onClick={() => {
                           const esc = (v) => {
-                            const t = String(v ?? '');
+                            const t = csvSafeValue(v);
                             return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
                           };
                           const head = ['Date', 'Entry', 'Narration', 'Debit', 'Credit', 'Running'];

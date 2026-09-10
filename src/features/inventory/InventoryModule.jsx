@@ -10,6 +10,7 @@ import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import { useListSearch } from '../../components/ListToolbar';
 import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { DocDate } from '../../components/docs';
+import { csvSafeValue } from '../../utils/csv';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -76,7 +77,9 @@ const openPrintWindow = (html) => {
 
 const downloadCsv = (filename, rows) => {
   const escape = (v) => {
-    const s = String(v ?? '');
+    // csvSafeValue first: a quoted field is still a formula once the
+    // spreadsheet strips the quotes.
+    const s = csvSafeValue(v);
     return s.includes(',') || s.includes('\n') || s.includes('"') ? `"${s.replaceAll('"', '""')}"` : s;
   };
   const csv = rows.map((r) => r.map(escape).join(',')).join('\n');

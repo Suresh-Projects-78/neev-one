@@ -10,6 +10,7 @@ import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { StatTile, TableTotals, StatusPill } from '../../components/ui/Primitives';
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
+import { csvSafeValue } from '../../utils/csv';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1666,7 +1667,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     const exampleAccount = String(selectedAccount?.name || cashBankAccounts[0]?.name || '');
     const example1 = [exampleAccount, today, 'Sample receipt narration', '', '1000.00'];
     const example2 = [exampleAccount, today, 'Sample payment narration', '750.00', ''];
-    const csv = `${header.join(',')}\n${example1.join(',')}\n${example2.join(',')}\n`;
+    // The account name is the user's own text and rides into this template.
+    const line = (cells) => cells.map(csvSafeValue).join(',');
+    const csv = `${line(header)}\n${line(example1)}\n${line(example2)}\n`;
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

@@ -5,6 +5,7 @@ import { ListToolbar, exportRows, useListSearch } from '../../components/ListToo
 import { notify } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { fyRange, getTdsConfig, tds194qRows, tcs206cRows } from '../../utils/tdsTcs';
+import { csvSafeValue } from '../../utils/csv';
 
 /**
  * TDS 194Q / TCS 206C(1H) — the payable report for challan filing.
@@ -44,7 +45,7 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
 
   const exportCsv = () => {
     const headers = ['Party', 'GSTIN', 'Docs', 'Cumulative', 'Excess over threshold', tab === 'tds' ? 'TDS 194Q' : 'TCS 206C'];
-    const lines = [headers.join(','), ...rows.map((r) => [r.party, r.gstin, r.docs, r.cumulative, r.excess, r.tax].map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))];
+    const lines = [headers.join(','), ...rows.map((r) => [r.party, r.gstin, r.docs, r.cumulative, r.excess, r.tax].map((v) => `"${csvSafeValue(v).replace(/"/g, '""')}"`).join(','))];
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -5,6 +5,7 @@ import { ListToolbar, useListSearch } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { parseGstr2b, reconcileGstr2b } from '../../utils/gstr2b';
+import { csvSafeValue } from '../../utils/csv';
 
 /**
  * GSTR-2B reconciliation — the monthly "can I claim this ITC" answer.
@@ -49,7 +50,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
   };
 
   const exportCsv = (rows, headers, mapRow, name) => {
-    const lines = [headers.join(','), ...rows.map((r) => mapRow(r).map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','))];
+    const lines = [headers.join(','), ...rows.map((r) => mapRow(r).map((v) => `"${csvSafeValue(v).replace(/"/g, '""')}"`).join(','))];
     const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

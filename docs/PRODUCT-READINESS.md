@@ -6,8 +6,8 @@ starts — the same way the six document forms were done.
 | # | Item | Why it is on the list | State |
 |---|---|---|---|
 | 1 | Six masters reach the server | Clear the browser and they are gone | **done** |
-| 2 | CSV formula injection | An export runs code on the accountant's machine | **next** |
-| 3 | Audit trail can be read | Written in 7 places, readable in none | 3rd |
+| 2 | CSV formula injection | An export runs code on the accountant's machine | **done** |
+| 3 | Audit trail can be read | Written in 7 places, readable in none | **next** |
 | 4 | Bank reconciliation | The largest genuinely missing module | 4th |
 | 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | 5th |
 | 6 | Per-user module assignment | Waiting on one decision | 6th |
@@ -99,3 +99,23 @@ case), and on the routes that change a row rather than only the one that lists
 them. That last pair is the worse half — one company editing another's price
 list changes what the other invoices at — and it took a surviving mutation to
 notice the test was missing.
+
+## 2 — done
+
+Not one export but seven. Two shared utilities and five hand-rolled inside
+feature screens: inventory, the trial balance drill-down, the TDS/TCS report,
+GSTR-2B reconciliation, the sales overview and the cash-book upload template.
+Fixing only the shared ones would have left six exports still running whatever
+somebody typed into a name field.
+
+Quoting was already there and is not the fix: `"=cmd|..."` becomes the cell
+value `=cmd|...` the moment the spreadsheet strips the quotes.
+
+The one nuance worth stating: **a number is left alone.** `-500` is a credit, not
+an injection, and prefixing it would turn every negative figure in the book into
+text that will not sum — a worse bug than the one being fixed. The guard applies
+only where the value is not a number to begin with, which still catches `+91
+98765 43210` and every formula payload.
+
+A test walks the source and fails if any file that writes a CSV does not use the
+guard, so the eighth export cannot quietly arrive without it.

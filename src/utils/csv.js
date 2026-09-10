@@ -6,9 +6,34 @@
  * nothing in CSV. A UTF-8 BOM keeps ₹ intact when Excel opens the file.
  */
 
-const cell = (v) => {
+/**
+ * A cell a spreadsheet will not execute.
+ *
+ * Excel, LibreOffice and Google Sheets treat a value beginning `=`, `+`, `-`,
+ * `@`, tab or carriage return as a formula, and this product's exports are
+ * files it hands to an accountant to open on their own machine. A customer
+ * saved as `=cmd|'/c calc'!A1` is a name in this app and a command on theirs —
+ * and the person who typed it is not the person who opens the file.
+ *
+ * Prefixed with an apostrophe, which every spreadsheet reads as "this is text"
+ * and does not display.
+ *
+ * A number is left alone. `-500` is a credit, not an injection, and quoting it
+ * would turn every negative figure in the book into text that will not sum —
+ * so the guard applies only where the value is not a number to begin with.
+ */
+const FORMULA_START = /^[=+\-@\t\r]/;
+
+export const csvSafeValue = (v) => {
   if (v === null || v === undefined) return '';
   const s = String(v);
+  if (!FORMULA_START.test(s)) return s;
+  if (s.trim() !== '' && Number.isFinite(Number(s))) return s;
+  return `'${s}`;
+};
+
+const cell = (v) => {
+  const s = csvSafeValue(v);
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 

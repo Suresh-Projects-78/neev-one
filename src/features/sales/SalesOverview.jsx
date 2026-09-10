@@ -24,6 +24,7 @@ import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { branchLabel } from '../../utils/branchLabel';
 import { MoneyValue } from '../../components/docs';
+import { csvSafeValue } from '../../utils/csv';
 
 const LazySeriesBars = lazy(() =>
   import('../../components/charts/CircularCharts').then((m) => ({ default: m.SeriesBars }))
@@ -673,7 +674,7 @@ const SalesOverview = ({
       derivedStatus(i),
     ]);
     const csv = [head, ...rows]
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .map((r) => r.map((c) => `"${csvSafeValue(c).replace(/"/g, '""')}"`).join(','))
       .join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');

@@ -1,3 +1,5 @@
+import { csvSafeValue } from './csv';
+
 /**
  * jsPDF loads on demand: it is ~100KB of gzip that only matters the moment
  * someone exports, and it was riding in the first-paint bundle.
@@ -74,8 +76,9 @@ const cellValue = (row, key) => {
 };
 
 /** Quotes a CSV cell only when it needs it. */
+/* The same guard the other export uses — see csvSafeValue. */
 const csvCell = (v) => {
-  const t = String(v ?? '');
+  const t = csvSafeValue(v);
   return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
 };
 
