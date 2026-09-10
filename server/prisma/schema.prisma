@@ -64,6 +64,7 @@ model Org {
   @@index([accountId])
   orgMasters       OrgMaster[]
   shareLinks       DocumentShareLink[]
+  bankBookEntries  BankBookEntry[]
 }
 
 model Branch {
@@ -2220,4 +2221,58 @@ model DocumentShareLink {
 
   @@unique([accountId, orgId, docType, docId])
   @@index([accountId, orgId])
+}
+
+// A line in the cash or bank book.
+//
+// The last collection that lived only in a browser. Money moving through a bank
+// account was recorded here and nowhere else, so clearing site data lost the
+// cash book — and the reconciliation screen, which reads these for the book
+// side, could match a statement line against one and then had nothing to mark.
+//
+// Separate from Payment on purpose. A payment is a voucher against a party with
+// allocations behind it; this is the account's own movement — a bank charge,
+// interest, a transfer between two of your own accounts — which has no party
+// and settles nothing. Forcing them into one table would have meant a Payment
+// with no payer.
+model BankBookEntry {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  /// The cash or bank ledger the money moved through.
+  ledgerAccountId String
+  /// What it was for, once somebody says: the expense or income ledger it is
+  /// posted against. Null until then - an uncategorised line is the normal
+  /// state of an imported statement row.
+  contraLedgerAccountId String?
+
+  /// IN takes money in, OUT sends it out. Same words as Payment.direction.
+  direction String
+  date      String
+  amount    Decimal @default(0)
+  narration String?
+  reference String?
+
+  /// MANUAL when somebody keyed it, STATEMENT when it came off an import.
+  source String @default("MANUAL")
+
+  /// Set when categorising the line raised a receipt or payment from it, so the
+  /// two are not counted twice.
+  linkedPaymentId String?
+
+  /// The same three the Payment carries, for the same reason.
+  reconciled   Boolean   @default(false)
+  bankDate     DateTime?
+  statementRef String?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, orgId, ledgerAccountId])
+  @@index([accountId, orgId, reconciled])
 }

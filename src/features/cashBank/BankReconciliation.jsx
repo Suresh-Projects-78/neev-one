@@ -7,6 +7,7 @@ import { formatMoney, round2 } from '../../utils/money';
 import { readStatement } from '../../utils/statementImport';
 import { DEFAULT_DATE_WINDOW_DAYS, matchStatement, reconciliationSummary } from '../../utils/bankReco';
 import { reconcilePayment } from '../../api/payments';
+import { reconcileBankBookEntry } from '../../api/bankBook';
 
 /**
  * Reconciling a bank account.
@@ -98,8 +99,11 @@ export default function BankReconciliation({ db, setDb, currentCompany }) {
     const entered = safeArray(db?.bankTransactions)
       .filter((t) => t.companyId === companyId)
       .filter((t) => String(t.cashBankAccountId) === String(accountId))
+      .filter((t) => t.reconciled !== true)
       .map((t) => ({
         id: `txn-${t.id}`,
+        bankEntryId: String(t.backendBankEntryId || ''),
+        localId: t.id,
         date: String(t.date || '').slice(0, 10),
         direction: String(t.direction || 'IN').toUpperCase(),
         amount: round2(Math.abs(Number(t.amount ?? 0))),
@@ -185,7 +189,15 @@ export default function BankReconciliation({ db, setDb, currentCompany }) {
    * silently ties off half of what is on screen is worse than one that does
    * less and says so.
    */
-  const markable = useMemo(() => view.matched.filter((m) => m.book.paymentId), [view.matched]);
+  const markable = useMemo(
+    () => view.matched.filter((m) => m.book.paymentId || m.book.bankEntryId),
+    [view.matched]
+  );
+  /*
+   * A line the server has never seen — written on this device before the cash
+   * book had a table, or written while offline. It can be matched on screen and
+   * not tied off, and the screen says so rather than quietly leaving it out.
+   */
   const unmarkable = view.matched.length - markable.length;
 
   const reconcileMatched = async () => {
@@ -194,18 +206,25 @@ export default function BankReconciliation({ db, setDb, currentCompany }) {
     const done = [];
     const failed = [];
 
+    const markedEntries = [];
     for (const m of markable) {
+      const mark = {
+        reconciled: true,
+        bankDate: m.statement.date || null,
+        // What the bank called it. The point of keeping this is that a query
+        // six months later is answered from the statement's own wording.
+        statementRef: `${statementName} · ${m.statement.narration || m.statement.date}`.slice(0, 120),
+      };
       try {
-        // One at a time on purpose: a refusal on one payment must not take the
-        // rest of the reconciliation down with it.
-        await reconcilePayment(m.book.paymentId, {
-          reconciled: true,
-          bankDate: m.statement.date || null,
-          // What the bank called it. The point of keeping this is that a query
-          // six months later is answered from the statement's own wording.
-          statementRef: `${statementName} · ${m.statement.narration || m.statement.date}`.slice(0, 120),
-        });
-        done.push(m.book.paymentId);
+        // One at a time on purpose: a refusal on one must not take the rest of
+        // the reconciliation down with it.
+        if (m.book.paymentId) {
+          await reconcilePayment(m.book.paymentId, mark);
+          done.push(m.book.paymentId);
+        } else {
+          await reconcileBankBookEntry(m.book.bankEntryId, mark);
+          markedEntries.push(m.book.localId);
+        }
       } catch (e) {
         failed.push(String(e?.message || e));
       }
@@ -216,20 +235,25 @@ export default function BankReconciliation({ db, setDb, currentCompany }) {
      * a reload — and so a row that was tied off does not come back as
      * outstanding the moment somebody loads the next statement.
      */
-    if (done.length && typeof setDb === 'function') {
+    if ((done.length || markedEntries.length) && typeof setDb === 'function') {
       const marked = new Set(done);
+      const markedTxns = new Set(markedEntries.map(String));
       setDb((prev) => ({
         ...prev,
         payments: safeArray(prev.payments).map((p) => (marked.has(String(p.id)) ? { ...p, reconciled: true } : p)),
+        bankTransactions: safeArray(prev.bankTransactions).map((t) =>
+          markedTxns.has(String(t.id)) ? { ...t, reconciled: true } : t
+        ),
       }));
     }
 
+    const total = done.length + markedEntries.length;
     setSaving(false);
     if (failed.length) {
-      notify.error(`${done.length} reconciled. ${failed.length} could not be saved: ${failed[0]}`);
+      notify.error(`${total} reconciled. ${failed.length} could not be saved: ${failed[0]}`);
       return;
     }
-    notify.success(`${done.length} entr${done.length === 1 ? 'y' : 'ies'} reconciled.`);
+    notify.success(`${total} entr${total === 1 ? 'y' : 'ies'} reconciled.`);
   };
 
   const toggleReject = (id) =>
@@ -379,7 +403,7 @@ export default function BankReconciliation({ db, setDb, currentCompany }) {
                 <div className="flex items-center gap-3">
                   {unmarkable ? (
                     <span className="ui-caption ui-muted">
-                      {unmarkable} entered straight into the bank book — not yet savable
+                      {unmarkable} not on the server yet — matched here, not tied off
                     </span>
                   ) : null}
                   <button

@@ -11,6 +11,7 @@ import { StatTile, TableTotals, StatusPill } from '../../components/ui/Primitive
 import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 import { csvSafeValue } from '../../utils/csv';
+import { patchBankEntry, removeBankEntry, saveBankEntry } from '../../utils/bankBookSync';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -802,7 +803,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         openModal(<LedgerPicker />, { title: 'Select Ledger', maxWidthClass: 'max-w-2xl' });
       };
 
-      const save = (e) => {
+      const save = async (e) => {
         e.preventDefault();
 
         const cashBankAccountId = String(form.cashBankAccountId || '').trim();
@@ -826,6 +827,23 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         const direction = form.direction === 'OUT' ? 'OUT' : 'IN';
 
         if (isEdit) {
+          const editing = safeArray(db.bankTransactions).find(
+            (t) => t.companyId === companyId && Number(t.id) === Number(initial?.editTxnId)
+          );
+          if (editing) {
+            await patchBankEntry({
+              chartRows: safeArray(db.chartOfAccounts).filter((c) => c.companyId === companyId),
+              row: editing,
+              patch: {
+                cashBankAccountId: Number(cashBankAccountId),
+                ledgerId: Number(ledgerId),
+                direction,
+                date: form.date,
+                amount: round2(amt),
+                narration: String(form.narration || '').trim(),
+              },
+            });
+          }
           setDb((prev) => {
             const list = safeArray(prev.bankTransactions);
             const editId = Number(initial?.editTxnId);
@@ -1070,6 +1088,18 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           createdAt: nowIso,
           updatedAt: nowIso,
         };
+
+        /*
+         * Written through to the server. This was the last collection that
+         * lived only in a browser: clearing site data lost the cash book, and
+         * the reconciliation screen had nothing to mark against a statement
+         * line it had matched.
+         */
+        const bankServerPatch = await saveBankEntry({
+          chartRows: safeArray(db.chartOfAccounts).filter((c) => c.companyId === companyId),
+          entry: bankTxnRecord,
+        });
+        Object.assign(bankTxnRecord, bankServerPatch);
 
         setDb((prev) => {
           const next = { ...prev };
@@ -1835,6 +1865,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     if (!txn) return;
     const ok = await confirmDialog({ title: 'Please confirm', message: 'Delete this transaction?', confirmLabel: 'Yes, continue' });
     if (!ok) return;
+    await removeBankEntry(txn);
     setDb((prev) => {
       const list = safeArray(prev.bankTransactions);
       return { ...prev, bankTransactions: list.filter((t) => !(t.companyId === companyId && String(t.id) === String(txn.id))) };

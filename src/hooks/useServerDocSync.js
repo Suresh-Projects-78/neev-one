@@ -13,6 +13,7 @@ import {
   listVendors,
 } from '../api/masters';
 import { listPayments } from '../api/payments';
+import { listBankBook } from '../api/bankBook';
 
 /**
  * Pull-hydration: documents saved to the server come BACK on a fresh browser.
@@ -198,6 +199,34 @@ const mapFixedAsset = (r, companyId) => ({
 });
 
 /**
+ * A cash or bank book line as the browser stores one.
+ *
+ * `cashBankAccountId` and `ledgerId` are the browser's own numeric chart ids
+ * and mean nothing on the server, so what comes back carries the server ledger
+ * ids and the cash-book screen resolves them against its chart. A line whose
+ * account cannot be resolved locally is still hydrated — losing it would be
+ * worse than showing it under an account the browser has not caught up with.
+ */
+const mapBankEntry = (r, companyId) => ({
+  companyId,
+  backendBankEntryId: r.id,
+  serverLedgerAccountId: r.ledgerAccountId,
+  serverContraLedgerAccountId: r.contraLedgerAccountId || null,
+  date: String(r.date || '').slice(0, 10),
+  direction: String(r.direction || 'IN').toUpperCase(),
+  amount: num(r.amount),
+  narration: r.narration || '',
+  description: r.narration || '',
+  reference: r.reference || '',
+  source: r.source || 'MANUAL',
+  reconciled: r.reconciled === true,
+  bankDate: r.bankDate || null,
+  statementRef: r.statementRef || '',
+  createdAt: r.createdAt,
+  hydratedFromServer: true,
+});
+
+/**
  * A payment as the browser's books store one.
  *
  * `reconciled` comes across because the reconciliation screen reads it: a
@@ -308,6 +337,13 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
       }
 
       try {
+        const entries = (await listBankBook())?.entries || [];
+        collected.bankTransactions = entries.map((r) => mapBankEntry(r, currentCompanyId));
+      } catch {
+        /* same rule: what does not arrive hydrates nothing */
+      }
+
+      try {
         /*
          * Both directions. `listPayments` defaults to receipts, so asking once
          * would have hydrated the money coming in and quietly left out the
@@ -390,6 +426,10 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
           // A payment's number is its voucher number, which is exactly what
           // makes two rows the same payment.
           ['payment', 'payments', 'backendPaymentId'],
+          // A bank book line has no number of its own, so the server id is the
+          // only test — which is right: two identical charges on one day are
+          // two charges, not one recorded twice.
+          ['bankBookEntry', 'bankTransactions', 'backendBankEntryId'],
         ]) {
           const incoming = collected[collection];
           if (!incoming || !incoming.length) continue;

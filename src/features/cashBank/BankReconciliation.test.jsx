@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
 
 const reconcilePayment = vi.fn();
+const reconcileBankBookEntry = vi.fn();
 vi.mock('../../api/payments', () => ({ reconcilePayment: (...a) => reconcilePayment(...a) }));
+vi.mock('../../api/bankBook', () => ({ reconcileBankBookEntry: (...a) => reconcileBankBookEntry(...a) }));
 
 const notifyError = vi.fn();
 vi.mock('../../components/ui/notify', () => ({
@@ -45,6 +47,7 @@ const loadStatement = async (csv = STATEMENT) => {
 
 beforeEach(() => {
   reconcilePayment.mockReset().mockResolvedValue({});
+  reconcileBankBookEntry.mockReset().mockResolvedValue({});
   notifyError.mockClear();
 });
 
@@ -236,9 +239,40 @@ describe('tying the reconciliation off', () => {
     expect(screen.getByText(/In the books, not on the statement \(0\)/)).toBeInTheDocument();
   });
 
+  /* A cash-book line is tied off the same way a payment is, now that it has a
+     server record of its own. */
+  it('ties off a bank book line too', async () => {
+    const setDb = vi.fn();
+    const db = dbWith({
+      bankTransactions: [
+        {
+          id: 9,
+          companyId: 1,
+          cashBankAccountId: 7,
+          backendBankEntryId: 'bbe-9',
+          date: '2026-09-30',
+          direction: 'OUT',
+          amount: 236,
+          narration: 'Bank charges',
+        },
+      ],
+    });
+    render(<BankReconciliation db={db} setDb={setDb} currentCompany={COMPANY} />);
+    await loadStatement();
+    fireEvent.click(screen.getByRole('button', { name: /Reconcile 1 matched/ }));
+
+    await waitFor(() => expect(reconcileBankBookEntry).toHaveBeenCalledTimes(1));
+    expect(reconcileBankBookEntry.mock.calls[0][0]).toBe('bbe-9');
+    expect(reconcileBankBookEntry.mock.calls[0][1].reconciled).toBe(true);
+
+    const next = setDb.mock.calls[0][0]({ payments: [], bankTransactions: [{ id: 9 }] });
+    expect(next.bankTransactions[0].reconciled).toBe(true);
+  });
+
   /*
-   * A row entered straight into the bank book has no server record to mark. The
-   * screen says so rather than quietly tying off half of what is on it.
+   * A line the server has never seen — written on this device before the cash
+   * book had a table, or written while offline. It can be matched on screen and
+   * not tied off, and the screen says so rather than quietly leaving it out.
    */
   it('says which matches it cannot save yet', async () => {
     const db = dbWith({
@@ -248,8 +282,30 @@ describe('tying the reconciliation off', () => {
     });
     render(<BankReconciliation db={db} setDb={() => {}} currentCompany={COMPANY} />);
     await loadStatement();
-    expect(screen.getByText(/1 entered straight into the bank book — not yet savable/)).toBeInTheDocument();
+    expect(screen.getByText(/1 not on the server yet — matched here, not tied off/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Reconcile 0 matched/ })).toBeDisabled();
+  });
+
+  /* An already-reconciled cash-book line is not outstanding either. */
+  it('leaves an already-reconciled bank book line out', async () => {
+    const db = dbWith({
+      bankTransactions: [
+        {
+          id: 9,
+          companyId: 1,
+          cashBankAccountId: 7,
+          backendBankEntryId: 'bbe-9',
+          date: '2026-09-30',
+          direction: 'OUT',
+          amount: 236,
+          narration: 'Bank charges',
+          reconciled: true,
+        },
+      ],
+    });
+    render(<BankReconciliation db={db} setDb={() => {}} currentCompany={COMPANY} />);
+    await loadStatement();
+    expect(screen.getByText(/Matched \(0\)/)).toBeInTheDocument();
   });
 
   /* A refusal on one payment must not take the rest down with it. */

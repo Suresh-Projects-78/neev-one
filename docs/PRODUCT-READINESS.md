@@ -268,3 +268,36 @@ permission filter strips it, because money is recorded by a receipt rather than
 by typing a number onto the document it settles. Found while writing a fixture,
 confirmed as deliberate, and recorded in the test that hit it so the next person
 does not spend the same twenty minutes.
+
+## The cash and bank book, last of the browser-only collections
+
+Money moving through a bank account was recorded in the browser and nowhere
+else. Clearing site data lost the cash book, and the reconciliation screen —
+which reads these for the book side — could match a statement line against one
+and then have nothing to mark, which it said on screen rather than quietly tying
+off half of what was in front of it.
+
+`BankBookEntry` is deliberately not `Payment`. A payment is a voucher against a
+party with allocations behind it; these are the account's own movements — a bank
+charge, interest, a transfer between two of your own accounts — which have no
+party and settle nothing. Forcing them into one table would have meant a Payment
+with no payer.
+
+The amount is stored as a magnitude and the direction carries the sign. A
+negative amount with direction OUT means money coming in, said twice and
+contradicting itself, and the reconciliation adds these up.
+
+A line can only be written through once its account has a
+`serverLedgerAccountId` — the browser's chart ids are its own and mean nothing on
+the server. Until then the line stays local and says so, rather than being posted
+against whatever id happened to be passed.
+
+With this the reconciliation ties off both sides of its list.
+
+### A mistake worth recording
+
+`prisma db push --force-reset` was run against the local dev database, and it
+emptied it. The push before it had already created the table, so the reset
+achieved nothing. Production is a separate machine and was not touched, and the
+test database is a separate file, so the loss was local development data only.
+The lesson is the obvious one: `--force-reset` is not a retry.
