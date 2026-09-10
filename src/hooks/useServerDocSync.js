@@ -14,6 +14,7 @@ import {
 } from '../api/masters';
 import { listPayments } from '../api/payments';
 import { listBankBook } from '../api/bankBook';
+import { listSchedules } from '../api/recurring';
 
 /**
  * Pull-hydration: documents saved to the server come BACK on a fresh browser.
@@ -199,6 +200,42 @@ const mapFixedAsset = (r, companyId) => ({
 });
 
 /**
+ * A recurring schedule as the browser's screen stores one.
+ *
+ * The server owns the schedule and raises its invoices; the local row exists so
+ * the screen keeps working. `active` rather than `isActive` because that is
+ * what the screen has always called it.
+ */
+const mapSchedule = (r, companyId) => ({
+  companyId,
+  backendScheduleId: r.id,
+  name: r.name || '',
+  customerId: r.partyId || '',
+  customerName: r.partyName || '',
+  branchId: r.branchId || '',
+  warehouseId: r.warehouseId || '',
+  frequency: r.frequency || 'MONTHLY',
+  interval: Number(r.interval) || 1,
+  nextRunDate: r.nextRunDate || '',
+  endDate: r.endDate || null,
+  maxOccurrences: r.maxOccurrences ?? null,
+  generatedCount: Number(r.generatedCount) || 0,
+  dueDays: Number.isFinite(Number(r.dueDays)) ? Number(r.dueDays) : 30,
+  active: r.isActive !== false,
+  notes: r.notes || '',
+  items: Array.isArray(r.template?.items) ? r.template.items : [],
+  subtotal: num(r.template?.subtotal),
+  cgstTotal: num(r.template?.cgstTotal),
+  sgstTotal: num(r.template?.sgstTotal),
+  igstTotal: num(r.template?.igstTotal),
+  gstTotal: num(r.template?.gstTotal),
+  total: num(r.template?.total),
+  lastRunAt: r.lastRunAt || null,
+  createdAt: r.createdAt,
+  hydratedFromServer: true,
+});
+
+/**
  * A cash or bank book line as the browser stores one.
  *
  * `cashBankAccountId` and `ledgerId` are the browser's own numeric chart ids
@@ -266,6 +303,7 @@ const WRITE_THROUGH_BY_NUMBER = [
 ];
 
 const WRITE_THROUGH_BY_NAME = [
+  ['recurringTemplates', 'backendScheduleId', listSchedules, (r) => r?.schedules, mapSchedule],
   ['salesmen', 'backendSalesmanId', listSalesmen, (r) => r?.salesmen, mapSalesman],
   ['fixedAssets', 'backendAssetId', listFixedAssets, (r) => r?.assets, mapFixedAsset],
 ];

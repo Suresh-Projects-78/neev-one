@@ -10,6 +10,8 @@ import CustomerPicker from '../../components/pickers/CustomerPicker';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { computeGstForLines } from '../../utils/gst';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
+import { patchSchedule, removeSchedule, saveSchedule } from '../../utils/recurringSync';
+import { runSchedulesNow } from '../../api/recurring';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
@@ -129,7 +131,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     return { lines: computed.lines || lines, ...computed, customer };
   }, [draft.items, draft.customerId, customers, currentCompany?.state]);
 
-  const createSchedule = () => {
+  const createSchedule = async () => {
     if (!startDate) {
       notify.error('Pick the first run date.');
       return;
@@ -146,6 +148,32 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       }
       const nextTemplateId = (db.recurringTemplates || []).reduce((m, t) => Math.max(m, Number(t.id) || 0), 0) + 1;
       const customerName = draftTotals.customer?.displayName || draftTotals.customer?.name || '';
+      /*
+       * The server keeps the schedule and raises its invoices. This screen used
+       * to do both, which meant a business that took a fortnight off billed
+       * nobody.
+       */
+      const scheduleServerPatch = await saveSchedule({
+        name: scheduleName.trim() || customerName,
+        customerId: draft.customerId,
+        customerName,
+        branchId: scheduleBranchId,
+        warehouseId: scheduleWarehouseId,
+        frequency,
+        interval,
+        nextRunDate: startDate,
+        endDate: endDate || null,
+        maxOccurrences: endMode === 'COUNT' ? maxOccurrences : null,
+        dueDays,
+        notes: draft.notes || '',
+        items: draftTotals.lines,
+        subtotal: draftTotals.subtotal,
+        cgstTotal: draftTotals.cgstTotal,
+        sgstTotal: draftTotals.sgstTotal,
+        igstTotal: draftTotals.igstTotal,
+        gstTotal: draftTotals.gstTotal,
+        total: draftTotals.total,
+      });
       setDb((prev) => ({
         ...prev,
         recurringTemplates: [
@@ -177,6 +205,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             endDate: endDate || null,
             active: true,
             createdAt: new Date().toISOString(),
+            ...scheduleServerPatch,
           },
         ],
       }));
@@ -193,6 +222,26 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       return;
     }
     const nextId = (db.recurringTemplates || []).reduce((m, t) => Math.max(m, Number(t.id) || 0), 0) + 1;
+    const scheduleServerPatch = await saveSchedule({
+      name: scheduleName.trim() || src.customerName,
+      customerId: src.customerId,
+      customerName: src.customerName,
+      branchId: scheduleBranchId,
+      warehouseId: scheduleWarehouseId,
+      frequency,
+      interval,
+      nextRunDate: startDate,
+      endDate: endDate || null,
+      maxOccurrences: endMode === 'COUNT' ? maxOccurrences : null,
+      dueDays,
+      items: src.items || [],
+      subtotal: src.subtotal,
+      cgstTotal: src.cgstTotal,
+      sgstTotal: src.sgstTotal,
+      igstTotal: src.igstTotal,
+      gstTotal: src.gstTotal,
+      total: src.total,
+    });
     setDb((prev) => ({
       ...prev,
       recurringTemplates: [
@@ -223,6 +272,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
           endDate: endDate || null,
           active: true,
           createdAt: new Date().toISOString(),
+          ...scheduleServerPatch,
         },
       ],
     }));
@@ -281,11 +331,15 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     }, 300);
   };
 
-  const toggle = (t) =>
+  const toggle = (t) => {
+    // Paused here means paused on the server too, or the hourly job keeps
+    // billing a customer somebody has just stopped billing.
+    patchSchedule(t, { isActive: t.active === false });
     setDb((prev) => ({
       ...prev,
       recurringTemplates: (prev.recurringTemplates || []).map((x) => (x.id === t.id ? { ...x, active: x.active === false } : x)),
     }));
+  };
 
   const remove = async (t) => {
     const ok = await confirmDialog({
@@ -294,6 +348,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       confirmLabel: 'Delete',
     });
     if (!ok) return;
+    await removeSchedule(t);
     setDb((prev) => ({ ...prev, recurringTemplates: (prev.recurringTemplates || []).filter((x) => x.id !== t.id) }));
   };
 
@@ -389,9 +444,33 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     <div className="space-y-6">
       <PageHeader
         title="Recurring Invoices"
-        description="Create and manage automatic invoices for your customers. Invoices are raised on the schedule; you review and send."
+        description="Schedules live on the server and raise their drafts hourly, whether or not anyone is signed in. You review and send."
         actions={
           <>
+            {/*
+              The server raises these hourly on its own. This is for somebody
+              who does not want to wait for the hour — and it is safe to press
+              twice, because a period that has already been billed is claimed
+              and cannot be billed again.
+            */}
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  const r = await runSchedulesNow();
+                  notify.success(
+                    r?.raised
+                      ? `${r.raised} draft invoice${r.raised === 1 ? '' : 's'} raised — review and save to post.`
+                      : 'Nothing is due right now.'
+                  );
+                } catch (e) {
+                  notify.error(`Could not run the schedules: ${String(e?.message || e)}`);
+                }
+              }}
+              className="ui-btn ui-btn-secondary"
+            >
+              Run now
+            </button>
             <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
               <Plus size={15} aria-hidden="true" /> New Schedule
             </button>

@@ -9,6 +9,7 @@ const api = {
   listSalesmen: vi.fn(),
   listFixedAssets: vi.fn(),
   listOrgMasters: vi.fn(),
+  listSchedules: vi.fn(),
 };
 const listPayments = vi.fn();
 const listDocsApi = vi.fn();
@@ -25,6 +26,8 @@ vi.mock('../api/masters', () => ({
   listOrgMasters: (...a) => api.listOrgMasters(...a),
 }));
 vi.mock('../api/payments', () => ({ listPayments: (...a) => listPayments(...a) }));
+vi.mock('../api/bankBook', () => ({ listBankBook: async () => ({ entries: [] }) }));
+vi.mock('../api/recurring', () => ({ listSchedules: (...a) => api.listSchedules(...a) }));
 vi.mock('../api/purchaseDocs', () => ({
   hasApiSession: () => true,
   listDocsApi: (...a) => listDocsApi(...a),
@@ -55,6 +58,7 @@ beforeEach(() => {
   listDocsApi.mockReset().mockResolvedValue([]);
   listInvoicesApi.mockReset().mockResolvedValue([]);
   api.listOrgMasters.mockResolvedValue({ masters: [] });
+  api.listSchedules.mockResolvedValue({ schedules: [] });
 });
 
 /*
@@ -167,5 +171,47 @@ describe('hydration never duplicates what the browser already has', () => {
     api.listSalesmen.mockResolvedValue({ salesmen: [{ id: 's1', name: 'Ravi', commissionRate: 2 }] });
     const book = await hydrate({ salesmen: [{ id: 1, companyId: 1, name: 'Only here' }] });
     expect(book.salesmen).toHaveLength(2);
+  });
+});
+
+/*
+ * Schedules used to live in localStorage and run only when somebody signed in.
+ * They are the server's now, so a second device has to see them — otherwise
+ * pausing a schedule on one machine leaves the other showing it as live.
+ */
+describe('recurring schedules', () => {
+  it('come back from the server', async () => {
+    api.listSchedules.mockResolvedValue({
+      schedules: [
+        {
+          id: 'sch1',
+          name: 'Monthly retainer',
+          partyName: 'Acme',
+          frequency: 'MONTHLY',
+          interval: 1,
+          nextRunDate: '2026-10-01',
+          dueDays: 15,
+          isActive: true,
+          generatedCount: 3,
+          template: { items: [{ description: 'Retainer' }], total: 11800 },
+        },
+      ],
+    });
+    const book = await hydrate();
+    const [t] = book.recurringTemplates;
+    expect(t.name).toBe('Monthly retainer');
+    expect(t.nextRunDate).toBe('2026-10-01');
+    expect(t.total).toBe(11800);
+    // The screen has always called it `active`.
+    expect(t.active).toBe(true);
+    expect(t.generatedCount).toBe(3);
+  });
+
+  it('carries a paused schedule across as paused', async () => {
+    api.listSchedules.mockResolvedValue({
+      schedules: [{ id: 'sch2', name: 'Paused', partyName: 'Acme', nextRunDate: '2026-10-01', isActive: false, template: {} }],
+    });
+    const book = await hydrate();
+    expect(book.recurringTemplates[0].active).toBe(false);
   });
 });

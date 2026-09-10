@@ -301,3 +301,56 @@ emptied it. The push before it had already created the table, so the reset
 achieved nothing. Production is a separate machine and was not touched, and the
 test database is a separate file, so the loss was local development data only.
 The lesson is the obvious one: `--force-reset` is not a retry.
+
+## Audit response — 10 September 2026
+
+Two audits arrived. The August one is stale: it predates three weeks of work and
+its headline items (no CI, GSTR-1 HSN summary missing, no audit-trail reader)
+are done. The September one is current and supersedes it. Worked from that.
+
+### Verified before acting
+
+| Finding | Verdict |
+|---|---|
+| **P0-1** invited users cannot discover foreign companies | **Real** — fixed |
+| **P0-2** browser is a second accounting database | Real — narrowed again, not closed |
+| **P0-3** no migration history | Real — next |
+| **P0-4** backend test gate red | **Does not reproduce** |
+| **P1-1** dependency advisories | **Real** — fixed |
+| **P1-4** no server scheduler for recurring | **Real** — fixed |
+
+**P0-4 does not reproduce.** The report says the server suite cannot bootstrap
+because `globalSetup` builds an absolute `file:` URL containing the workspace
+space. Running exactly what they ran — `npm --prefix server test`, same machine,
+same path with the space — gives 38 files and 353 tests passing. The
+space-in-URL diagnosis does not hold here; something was environmental on their
+side, and it should be re-run before it drives a release sequence.
+
+### P0-1 was the one worth having
+
+Login and `/auth/me` filtered memberships by the signed-in user's own accountId,
+while an invited membership carries the *inviting* account's. So an invited
+person was authorised to work in the company and could never see it — the CA-firm
+workflow the whole strategy rests on.
+
+The existing tests in `globalIdentity.test.ts` proved a known foreign orgId could
+be **used**. They said nothing about whether it could be **found**, which is
+exactly how this survived them. That is the lesson worth keeping: a test that
+starts from an id you already have cannot test discovery.
+
+### Recurring invoices are a service now
+
+`RecurringSchedule` holds the schedule, an hourly job in the API raises what is
+due, and `RecurringScheduleRun` is unique on (schedule, period). That uniqueness
+is the whole guarantee: a job that runs twice, runs late, or races another
+instance still bills one invoice per period.
+
+Drafts, still — nothing reaches the ledger until a person saves it, so a
+forgotten schedule cannot quietly bill somebody for a year.
+
+The draft's number is a provisional marker keyed to the schedule and period
+rather than a series number, because a draft is not an issued invoice and must
+not leave a hole in a consecutive series if it is discarded. A test found that
+the empty number it used to carry collided on `(orgId, number)` — the marker
+fixes the collision and turns that constraint into a second guarantee against
+double billing.

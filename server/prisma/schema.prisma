@@ -65,6 +65,7 @@ model Org {
   orgMasters       OrgMaster[]
   shareLinks       DocumentShareLink[]
   bankBookEntries  BankBookEntry[]
+  recurringSchedules RecurringSchedule[]
 }
 
 model Branch {
@@ -2275,4 +2276,82 @@ model BankBookEntry {
 
   @@index([accountId, orgId, ledgerAccountId])
   @@index([accountId, orgId, reconciled])
+}
+
+// A schedule that raises an invoice every period.
+//
+// It used to live in the browser: schedules were held in localStorage and ran
+// only while somebody had the app open. Clearing the browser lost them, nobody
+// signing in meant nobody was billed, and two browsers open at once could raise
+// the same month twice. That is not a billing system, it is a reminder that
+// happens to write invoices.
+//
+// The snapshot of the invoice is stored whole, because a schedule has to keep
+// billing what was agreed even after the item's price changes.
+model RecurringSchedule {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String?
+
+  name       String
+  partyId    String?
+  partyName  String
+  warehouseId String?
+
+  /// WEEKLY | MONTHLY | QUARTERLY | YEARLY
+  frequency String  @default("MONTHLY")
+  /// How many of those periods to skip. Every second month, every third week.
+  interval  Int     @default(1)
+
+  /// The next period due. Advanced only when that period is actually raised.
+  nextRunDate String
+  endDate     String?
+  /// "End after 12 invoices" — a different instruction from an end date.
+  maxOccurrences Int?
+  generatedCount Int     @default(0)
+  dueDays        Int     @default(30)
+  isActive       Boolean @default(true)
+
+  /// The invoice this raises: lines and totals, as agreed.
+  templateJson String
+  notes        String?
+
+  lastRunAt DateTime?
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  org  Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  runs RecurringScheduleRun[]
+
+  @@index([accountId, orgId, isActive])
+  @@index([nextRunDate])
+}
+
+// One period of one schedule, raised once and only once.
+//
+// This table is the whole guarantee. Without it, two browsers, two app
+// instances or a retried job each raise the same month again, and a customer
+// is invoiced three times for one period. The unique key is the schedule and
+// the period — not the moment the job ran — so a job that runs twice, or runs
+// late, still produces one invoice per period.
+model RecurringScheduleRun {
+  id         String @id @default(cuid())
+  accountId  String
+  orgId      String
+  scheduleId String
+
+  /// The period this covers, as the schedule's own run date.
+  periodDate String
+  /// The draft it raised, when it raised one.
+  invoiceId  String?
+
+  createdAt DateTime @default(now())
+
+  schedule RecurringSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@unique([scheduleId, periodDate])
+  @@index([accountId, orgId])
 }

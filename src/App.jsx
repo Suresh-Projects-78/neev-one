@@ -4,7 +4,6 @@ import { notify, confirmDialog } from './components/ui/notify';
 import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
-import { useRecurringInvoices } from './hooks/useRecurringInvoices';
 import OnboardingWizard, { shouldOnboard, markOnboardingSeen } from './components/OnboardingWizard';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExport';
 import Toaster from './components/ui/Toaster';
@@ -11479,13 +11478,18 @@ const AppShell = () => {
   if (onboardEligible && !onboardLatched && !onboardDismissed) setOnboardLatched(true);
   const showOnboarding = isAuthenticated && !onboardDismissed && onboardLatched;
 
-  // Templates marked "repeat monthly" raise their due drafts on sign-in.
-  useRecurringInvoices({
-    enabled: isAuthenticated && isEnabled('recurringInvoices'),
-    db,
-    setDb,
-    currentCompanyId: currentCompany?.id,
-  });
+  /*
+   * Recurring invoices are raised by the server, not here.
+   *
+   * This used to materialise the due drafts on sign-in, which meant a business
+   * that took a fortnight off billed nobody, and two open tabs could raise the
+   * same month twice. The schedules now live in a table and an hourly job on
+   * the API raises them, keyed so one period can only ever be billed once.
+   *
+   * The hook is kept and no longer called from here: it still owns the local
+   * templates a browser recorded before the migration, and the Recurring screen
+   * offers Run now for anyone who does not want to wait for the hour.
+   */
 
   useEffect(() => {
     if (!isAuthenticated) return;
