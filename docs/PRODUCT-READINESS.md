@@ -503,3 +503,33 @@ of creating a company at signup was.
   it. **Local edits win** — it fills blanks and replaces the placeholder, and
   never overwrites something typed here, because a corrected trade name is an
   answer rather than a gap.
+
+## What the live test pass found (10–11 Sep 2026)
+
+Driven against production with a signed-in session.
+
+**Every invoice was stored on the server as a Draft.** The catalogue puts an
+invoice's `status`, `discount` and `paidAmount` at field level 1, so a clerk can
+raise an invoice without settling it. Role grants are written at level 0 — the
+seeder has no reason to pick anything else — so `filterFieldsByLevel` stripped
+those three fields from **every** request, the account owner's included. Nothing
+was refused: the field was dropped and the server fell back to its default. The
+browser kept its own copy as Unpaid, so nothing looked wrong until a second
+device hydrated the books, or a server-side report counted only what it thought
+was live. Proven on the live site: the client sent `status: "Unpaid"`, the row
+came back `Draft`. An ADMIN role now carries the maximum field level rather than
+the level somebody remembered to type; restricted roles are untouched.
+
+**An item created from the Items screen never reached the server.** The same
+item created from the picker on an invoice line did. So whether a company's
+catalogue survived a change of machine depended on which screen it was typed
+into — and hydration matches on `backendItemId`, so a browser-only item is
+invisible to it.
+
+**The wizard's first customer never reached the server either.** The one
+customer the product itself walks somebody through creating was the one that
+could not survive a new device.
+
+Both now write through on the rule every other master follows: the row is kept
+locally whatever the server says, and a refusal is reported rather than
+swallowed.

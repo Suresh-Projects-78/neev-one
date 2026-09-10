@@ -3,6 +3,7 @@ import StockAdjustments from './features/inventory/StockAdjustments';
 import { notify, confirmDialog } from './components/ui/notify';
 import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { postJournalToLedger, reverseJournalOnLedger } from './utils/journalSync';
+import { saveItemToServer } from './utils/itemSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
 import { useCompanyFromServer } from './hooks/useCompanyFromServer';
@@ -1869,7 +1870,7 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
   const gstRateValues = gstRates.map((r) => String(Number(r.rate)));
   const gstRateValue = String(formData.gstRate ?? 0);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const code = String(formData.code || '').trim();
@@ -1956,9 +1957,19 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
       stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
     };
 
+    /*
+     * Written through, like the same item created from an invoice line.
+     *
+     * This screen used to save to the browser only, so whether a company's
+     * catalogue survived a change of machine depended on which screen the item
+     * was typed into. Hydration matches on `backendItemId`, so an item without
+     * one is invisible to it.
+     */
+    const serverPatch = await saveItemToServer(newItem);
+
     setDb({
       ...db,
-      items: [...db.items, newItem],
+      items: [...db.items, { ...newItem, ...serverPatch }],
       // Advance the series so the next item of this type does not offer the
       // number this one just took.
       companies: bumpItemCodeSeries(db, currentCompany, newItem.type, newItem.code),

@@ -36,3 +36,4 @@ describe('onboarding is asked once', () => {
     expect(shouldOnboard({ invoices: [], customers: [{ companyId: 1 }] }, company())).toBe(false);
   });
 });
+

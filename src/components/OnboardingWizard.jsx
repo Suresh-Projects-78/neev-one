@@ -2,8 +2,31 @@ import React, { useState } from 'react';
 import { ArrowRight, Building2, Check, UserPlus } from 'lucide-react';
 
 import { notify } from './ui/notify';
+import { createCustomer, toServerCustomer } from '../api/masters';
+import { hasApiSession } from '../api/purchaseDocs';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../utils/gst';
 import ModulePicker from '../features/settings/ModulePicker';
+
+/**
+ * The first customer, written through.
+ *
+ * Kept local-only this was the one customer a business could lose: created by
+ * the wizard the product opens with, absent from the server, and invisible to
+ * hydration — which matches on the server id it never had.
+ */
+export const saveOnboardingCustomer = async (customer) => {
+  if (!hasApiSession()) return {};
+  try {
+    const created = await createCustomer(toServerCustomer(customer));
+    // The key hydration matches on. Anything else and the same customer comes
+    // back a second time on the next device.
+    const id = created?.party?.id || created?.customer?.id;
+    return id ? { backendPartyId: String(id), code: created?.party?.code || undefined } : {};
+  } catch (e) {
+    notify.error(`Saved on this device only — the server refused it: ${String(e?.message || e)}`);
+    return {};
+  }
+};
 
 /**
  * State is a list, not a sentence.
@@ -118,12 +141,28 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
     setStep(1);
   };
 
-  const saveCustomer = () => {
+  const saveCustomer = async () => {
     const name = customerName.trim();
     if (!name) {
       setStep(3); // an empty customer is a skip, not an error
       return;
     }
+
+    /*
+     * Written through, like a customer added from the Customers screen.
+     *
+     * This step wrote to the browser and nowhere else, so the very first
+     * customer a business creates — through the wizard the product puts in
+     * front of them — was the one customer that never reached the server. It
+     * vanished on the next device, and hydration could not bring it back
+     * because it matches on the server id this record never had.
+     */
+    const serverPatch = await saveOnboardingCustomer({
+      name,
+      gstRegistration: 'Unregistered',
+      billingAddress: { state: customerState },
+    });
+
     setDb((prev) => {
       const customers = Array.isArray(prev.customers) ? prev.customers : [];
       const nextId = customers.reduce((m, c) => Math.max(m, Number(c?.id || 0)), 0) + 1;
@@ -151,6 +190,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
              */
             billingAddress: { state: customerState },
             createdAt: new Date().toISOString(),
+            ...serverPatch,
           },
         ],
       };
