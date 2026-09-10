@@ -964,7 +964,13 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
   });
 
   return (
-    <>
+    /*
+      One element, not a fragment.
+      Returned as `<><label/><button/></>` the two halves became two cells of
+      whatever grid the picker was dropped into — the label in one column and
+      the control in the next, which is what the recurring form was showing.
+    */
+    <div className="min-w-0">
       <label className="ui-label">{label}</label>
       <button
         ref={triggerRef}
@@ -1154,7 +1160,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
           )}
         </Modal>
       )}
-    </>
+    </div>
   );
 };
 

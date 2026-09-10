@@ -945,7 +945,9 @@ const VendorPicker = ({
   });
 
   return (
-    <>
+    /* One element, not a fragment: split across a grid, the label and the
+       control land in different columns. */
+    <div className="min-w-0">
       <label className="ui-label">{label}</label>
       <div className="flex items-center gap-2">
         <button
@@ -1148,7 +1150,7 @@ const VendorPicker = ({
           )}
         </Modal>
       )}
-    </>
+      </div>
   );
 };
 

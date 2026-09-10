@@ -254,7 +254,11 @@ export default function Salesmen({ db, setDb, currentCompany }) {
                 <th scope="col" className="ui-num">Invoices</th>
                 <th scope="col" className="ui-num">Sales (pre-GST)</th>
                 <th scope="col" className="ui-num">Commission due</th>
-                <th scope="col"><span className="sr-only">Actions</span></th>
+                {/* Narrow and pinned, so the one control on the row does not
+                    ride off the end of a wide table. */}
+                <th scope="col" className="sticky end-0 w-12" style={{ backgroundColor: 'rgb(var(--surface))' }}>
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="ui-rows">
@@ -294,7 +298,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
                   <td className="ui-col-amount"><MoneyValue value={sales} company={currentCompany} /></td>
                   {/* Commission is money the business owes out, not revenue. */}
                   <td className="ui-col-amount"><MoneyValue value={commission} company={currentCompany} kind="outstanding" /></td>
-                  <td className="text-right">
+                  <td className="sticky end-0 px-2 text-right" style={{ backgroundColor: 'rgb(var(--surface))' }}>
                     <button type="button" onClick={() => remove(s)} className="ui-icon-btn !h-8 !w-8" aria-label={`Remove ${s.name}`}>
                       <Trash2 size={14} />
                     </button>

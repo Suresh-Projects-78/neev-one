@@ -597,11 +597,13 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                 <table className="ui-table w-full">
                   <thead className="ui-sunken border-b">
                     <tr>
-                      <th className="ui-th">Item</th>
-                      <th className="ui-th ui-num w-24">Qty</th>
-                      <th className="ui-th ui-num w-32">Rate (₹)</th>
-                      <th className="ui-th ui-num w-20">Tax %</th>
-                      <th className="ui-th ui-num w-32">Amount (₹)</th>
+                      <th className="ui-th text-left w-[30%]">Item</th>
+                      <th className="ui-th text-left w-[24%]">Description</th>
+                      <th className="ui-th ui-num w-[8%]">Qty</th>
+                      <th className="ui-th text-left w-[7%]">Unit</th>
+                      <th className="ui-th ui-num w-[12%]">Rate (₹)</th>
+                      <th className="ui-th ui-num w-[8%]">Tax %</th>
+                      <th className="ui-th ui-num w-[13%]">Amount (₹)</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -615,6 +617,19 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                             currentCompany={currentCompany}
                             value={l.itemId}
                             onChange={(itemId, picked) => pickItem(idx, itemId, picked)}
+                            label={null}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          {/* What the invoice this raises will say on the line —
+                              a rent schedule bills "Office rent, March" rather
+                              than the item's own name twelve times. */}
+                          <input
+                            type="text"
+                            value={l.description || ''}
+                            onChange={(e) => setLine(idx, { description: e.target.value })}
+                            className="ui-input w-full min-w-0 px-2 py-1"
+                            aria-label={`Description, line ${idx + 1}`}
                           />
                         </td>
                         <td className="px-3 py-2">
@@ -626,6 +641,11 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                             onChange={(e) => setLine(idx, { quantity: e.target.value })}
                             className="ui-input w-full px-2 py-1 text-right"
                           />
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="text-[0.8125rem] ui-muted">
+                            {String(itemsMaster.find((i) => String(i.id) === String(l.itemId))?.unit || '').trim() || '—'}
+                          </span>
                         </td>
                         <td className="px-3 py-2">
                           <input
