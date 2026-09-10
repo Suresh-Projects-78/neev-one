@@ -14,8 +14,8 @@ Measured 2026-09-10. Fixed one form at a time, worst first, each its own commit.
 | Delivery Challan | yes | yes | yes | yes | **done** |
 | Debit Note | yes | yes | yes | yes | **done** |
 | Purchase Order | yes | yes | yes | yes | **done** |
-| Estimate | yes | yes | — | — | **next** |
-| Credit Note | yes | yes | — | — | 6th |
+| Estimate | yes | yes | yes | yes | **done** |
+| Credit Note | yes | yes | yes | yes | **done** |
 
 A first pass read four of these as having a preview. They do not. The grep
 matched `originalPreviewOpen` and `BillPreview` — a credit note showing the
@@ -122,3 +122,24 @@ order to make it tax-inclusive would be a change to stored data for a display
 gain. The tax is computed from the lines and shown under the total as a memo,
 labelled as ordered and expected, so the buyer sees the figure the bill will
 carry without the record changing underneath them.
+
+## Done
+
+All six match the invoice on the four counts. The same document is now entered
+the same way whichever one it is, and every one of them can be handed to the
+person it is addressed to.
+
+What is deliberately not the same, and should stay that way:
+
+- **The invoice keeps its own print engine.** Five paper designs, an IRN, a
+  signed QR and payment instructions, because it is the document the money moves
+  against. The other five share one layout.
+- **A challan prints no tax and a quotation prints no demand.** The paper says
+  what each document is — Rule 55 on a challan, section 34 on both notes, "not a
+  tax invoice" on the quotation and the order.
+- **The purchase order's stored value is still the taxable value.** The tax it
+  now records per line reaches the bill; the total was left alone rather than
+  rewriting what that field means on orders already recorded.
+
+The shared shell is still the better end state. Six forms that agree is a much
+easier starting point for it than six that did not.

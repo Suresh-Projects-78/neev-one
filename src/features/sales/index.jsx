@@ -32,6 +32,7 @@ import PopupSelect from '../../components/pickers/PopupSelect';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
 import PrintDownloadFrame from '../../components/PrintDownloadFrame';
+import DocumentPrintView from '../../components/DocumentPrintView';
 import Modal from '../../components/ui/Modal';
 import Drawer from '../../components/ui/Drawer';
 import InvoiceFieldSettings from '../settings/InvoiceFieldSettings';
@@ -1675,6 +1676,7 @@ export const EstimatesList = ({
   defaultWarehouseId = '',
 }) => {
   const [openMenu, setOpenMenu] = useState(null);
+  const [previewEstimate, setPreviewEstimate] = useState(null);
   const menuRef = useRef(null);
 
   const warehouseById = useMemo(() => {
@@ -2061,6 +2063,31 @@ export const EstimatesList = ({
         />
       </div>
 
+      {previewEstimate ? (
+        <Modal
+          title={`Quotation ${previewEstimate.number || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+          onClose={() => setPreviewEstimate(null)}
+        >
+          <PrintDownloadFrame
+            title={`Quotation ${previewEstimate.number || ''}`.trim()}
+            fileBase={previewEstimate.number || 'quotation'}
+          >
+            <DocumentPrintView
+              db={db}
+              currentCompany={currentCompany}
+              docTitle="QUOTATION"
+              doc={previewEstimate}
+              party={(db.customers || []).find((c) => String(c.id) === String(previewEstimate.customerId)) || null}
+              partyLabel="Quotation For"
+              metaRows={[{ label: 'Valid until', value: previewEstimate.dueDate }]}
+              sideRows={[{ label: 'GSTIN', value: previewEstimate.customerGstin }]}
+              footNote="This is a quotation, not a tax invoice. Prices hold until the date shown and are subject to the terms agreed."
+            />
+          </PrintDownloadFrame>
+        </Modal>
+      ) : null}
+
       {openMenu?.id ? (
         <div
           ref={menuRef}
@@ -2090,6 +2117,19 @@ export const EstimatesList = ({
                   className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                 >
                   <span className="ui-muted">Edit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpenMenu(null);
+                    setPreviewEstimate(est);
+                  }}
+                  aria-label={`Print quotation ${est.number}`}
+                  className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                >
+                  <Printer size={16} className="ui-muted" />
+                  <span>Print</span>
                 </button>
 
                 <button
@@ -2157,6 +2197,8 @@ export const CreditNotesList = ({
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
   }, [warehouses]);
+
+  const [previewCreditNote, setPreviewCreditNote] = useState(null);
 
   /** Settle an on-account credit note against the customer's open invoices. */
   const openKnockOff = (note) => {
@@ -2384,6 +2426,14 @@ export const CreditNotesList = ({
                       <StatusPill status={cn.status || 'Open'} />
                     </td>
                     <td className="px-4 py-2.5 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewCreditNote(cn)}
+                        aria-label={`Print credit note ${cn.number}`}
+                        className="ui-btn ui-btn-secondary ui-btn-sm text-xs mr-2"
+                      >
+                        <Printer size={13} aria-hidden="true" /> Print
+                      </button>
                       {isOnAccount(cn) ? (
                         noteBalance(cn).unsettled > 0.0001 ? (
                           <button
@@ -2414,6 +2464,37 @@ export const CreditNotesList = ({
           ]}
         />
       </div>
+
+      {previewCreditNote ? (
+        <Modal
+          title={`Credit Note ${previewCreditNote.number || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+          onClose={() => setPreviewCreditNote(null)}
+        >
+          <PrintDownloadFrame
+            title={`Credit Note ${previewCreditNote.number || ''}`.trim()}
+            fileBase={previewCreditNote.number || 'credit-note'}
+          >
+            <DocumentPrintView
+              db={db}
+              currentCompany={currentCompany}
+              docTitle="CREDIT NOTE"
+              doc={previewCreditNote}
+              party={(db.customers || []).find((c) => String(c.id) === String(previewCreditNote.customerId)) || null}
+              partyLabel="Customer"
+              metaRows={[
+                { label: 'Against invoice', value: previewCreditNote.originalInvoiceNumber },
+                { label: 'Invoice date', value: previewCreditNote.originalInvoiceDate },
+              ]}
+              sideRows={[
+                { label: 'GSTIN', value: previewCreditNote.customerGstin },
+                { label: 'Reason', value: previewCreditNote.reasonLabel },
+              ]}
+              footNote="Credit note under section 34 of the CGST Act. The tax charged on the original invoice is reduced by the amount shown above."
+            />
+          </PrintDownloadFrame>
+        </Modal>
+      ) : null}
     </div>
   );
 };
@@ -5014,6 +5095,10 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
     ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'estimate', branchId: activeBranchId || null, takenNumbers: (db.estimates || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) })
     : '';
 
+  const customFields = useMemo(() => getVisibleCustomFields(currentCompany, 'estimate'), [currentCompany]);
+  const setCustomField = (key, value) =>
+    setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
+
   const [formData, setFormData] = useState(() => {
     const defaultDate = todayIso();
     const defaultDueDate = plusDaysIso(30);
@@ -5173,6 +5258,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       igstTotal: computed.igstTotal,
       gstTotal: computed.gstTotal,
       total: computed.total,
+      customFields: { ...(formData.customFields || {}) },
     };
 
     if (isEdit) {
@@ -5426,6 +5512,14 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
       </div>
 
+      {hasCustomFieldsAt(customFields, 'header', 'reference', 'notes') ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
+        </div>
+      ) : null}
+
       <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
@@ -5471,6 +5565,10 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
   const creditDocSettingsInit = getDocSettings(db, currentCompany, { branchId: initBranchId || null });
   const creditNumberingInit = creditDocSettingsInit?.numbering?.creditNote;
   const isCreditAutoInit = String(creditNumberingInit?.mode || '').toLowerCase() === 'auto';
+
+  const customFields = useMemo(() => getVisibleCustomFields(currentCompany, 'creditNote'), [currentCompany]);
+  const setCustomField = (key, value) =>
+    setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
 
   const [formData, setFormData] = useState({
     number: isCreditAutoInit ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'creditNote', branchId: initBranchId || null, takenNumbers: (db.creditNotes || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '' : '',
@@ -5840,6 +5938,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       customerGstin: customerGstin,
       placeOfSupplyState: customerState,
       taxType: isIntra ? 'CGST_SGST' : 'IGST',
+      customFields: { ...(formData.customFields || {}) },
       items: computed.lines,
       subtotal: computed.subtotal,
       cgstTotal: computed.cgstTotal,
@@ -6178,6 +6277,14 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           </div>
         </div>
       </div>
+
+      {hasCustomFieldsAt(customFields, 'header', 'reference', 'notes') ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
+        </div>
+      ) : null}
 
       <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
