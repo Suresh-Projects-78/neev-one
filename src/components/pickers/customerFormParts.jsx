@@ -55,11 +55,20 @@ export const FormRow = ({ label, hint = '', required = false, children }) => (
 
 const COLS = ['Name of Place', 'Address Line 1', 'Address Line 2', 'Country', 'State', 'City', 'District', 'Pincode'];
 
-export const AddressTab = ({ rows, states, onChange, onAdd, onRemove }) => (
+export const AddressTab = ({
+  rows,
+  states,
+  onChange,
+  onAdd,
+  onRemove,
+  /* The ledger master reuses this table and has no customers, so the copy is
+     a prop rather than the customer wording repeated in a second component. */
+  caption = 'Billing and shipping are here by default. Add more places below if you need them.',
+}) => (
   <section className="space-y-3">
     <div>
       <h4 className="ui-t-sec">Address</h4>
-      <p className="ui-caption mt-0.5">Billing and shipping are here by default. Add more places below if you need them.</p>
+      <p className="ui-caption mt-0.5">{caption}</p>
     </div>
 
     <div className="overflow-x-auto">
@@ -170,11 +179,18 @@ export const AddressTab = ({ rows, states, onChange, onAdd, onRemove }) => (
   </section>
 );
 
-export const ContactsTab = ({ rows, onChange, onAdd, onRemove }) => (
+export const ContactsTab = ({
+  rows,
+  onChange,
+  onAdd,
+  onRemove,
+  heading = 'Contacts',
+  caption = 'The people at this customer. The first is who documents are addressed to.',
+}) => (
   <section className="space-y-3">
     <div>
-      <h4 className="ui-t-sec">Contacts</h4>
-      <p className="ui-caption mt-0.5">The people at this customer. The first is who documents are addressed to.</p>
+      <h4 className="ui-t-sec">{heading}</h4>
+      <p className="ui-caption mt-0.5">{caption}</p>
     </div>
 
     {/*

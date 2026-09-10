@@ -27,6 +27,9 @@ const PopupSelect = ({
   options,
   placeholder = 'Select',
   disabled = false,
+  /* For a picker inside a table, where the column header is the only label
+     and no <label> element can point at the trigger. */
+  ariaLabel = '',
   allowCustom = false,
   customActionText = 'Use',
   onCustomAction,
@@ -205,6 +208,10 @@ const PopupSelect = ({
         }}
         disabled={disabled}
         role="combobox"
+        /* The visible label is a plain <label> with nothing to point at — a
+           button is not a form control it can be `for`. Without this the
+           control announces only whatever is currently selected. */
+        aria-label={ariaLabel || (typeof label === 'string' && label ? label : undefined)}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}

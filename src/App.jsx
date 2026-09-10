@@ -12,7 +12,7 @@ import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExpor
 import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
-import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   BadgePercent,
@@ -155,8 +155,15 @@ import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
-import { AddressTab, ContactsTab } from './components/pickers/customerFormParts';
-import { TDS_SECTIONS, tdsDefaultRate } from './utils/tds';
+import { AddressTab, ContactsTab, CURRENCY_OPTIONS } from './components/pickers/customerFormParts';
+import { TDS_SECTIONS, tdsDefaultRate, tdsSection } from './utils/tds';
+import {
+  ledgerHasPostings,
+  openingTypeForNature,
+  tdsLedgerNature,
+  tdsSectionSummary,
+  validateLedger,
+} from './utils/ledgerMaster';
 import { lookupGstin } from './api/masters';
 
 /* The state list the ledger address table offers, same source as everywhere. */
@@ -2666,6 +2673,22 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     });
   };
 
+  /*
+   * A ledger that has been posted to cannot be deleted — the entries would
+   * point at nothing. Retiring it is the answer the spec gives: it keeps its
+   * history and its balance on the reports, and stops being offered for new
+   * entries. Nothing is lost and nothing else has to be corrected.
+   */
+  const setLedgerActive = (ledger, active) => {
+    setDb({
+      ...db,
+      chartOfAccounts: (Array.isArray(db.chartOfAccounts) ? db.chartOfAccounts : []).map((a) =>
+        a.companyId === currentCompany.id && String(a.id) === String(ledger.id) ? { ...a, active } : a
+      ),
+    });
+    notify.success(active ? `"${ledger.name}" is active again.` : `"${ledger.name}" will not be offered for new entries.`);
+  };
+
   const canDeleteGroup = (groupId) => {
     const id = String(groupId || '').trim();
     if (!id) return { ok: false, reason: 'Invalid group.' };
@@ -2843,7 +2866,10 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     const buttonKey = `ledger:${String(a.id)}`;
                     return (
                       <tr key={a.id}>
-                        <td className="ui-col-entity">{a.name}</td>
+                        <td className="ui-col-entity">
+                          {a.name}
+                          {a.active === false ? <span className="ui-chip ml-2">Inactive</span> : null}
+                        </td>
                         <td className="ui-col-meta ui-fg">{a._groupName || '-'}</td>
                         <td className="ui-col-meta ui-fg">{a._parent || '-'}</td>
                         <td className="ui-col-amount">{formatMoney(a.balance || 0, currentCompany)}</td>
@@ -2985,6 +3011,17 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
                   >
                     <span className="ui-muted">Edit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenu(null);
+                      setLedgerActive(ledger, ledger.active === false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm ui-hover-sunken flex items-center gap-2"
+                  >
+                    <span>{ledger.active === false ? 'Reactivate' : 'Make inactive'}</span>
                   </button>
 
                   <button
@@ -3185,6 +3222,34 @@ export const ChartAccountForm = ({
 
   const [ledgerTab, setLedgerTab] = useState('');
   const [gstinFetching, setGstinFetching] = useState(false);
+  /*
+   * Dr or Cr follows the group's accounting nature until somebody says
+   * otherwise — a bank overdraft is a real credit balance on an asset group.
+   * Once they have chosen a side, changing the group must not take it back.
+   */
+  const [openingTypeTouched, setOpeningTypeTouched] = useState(isEdit);
+
+  /*
+   * A ledger with entries against it keeps its group. Re-filing it moves every
+   * figure it holds onto another statement, and nothing in the entries records
+   * that it happened. The name stays editable: a rename changes no total.
+   */
+  const groupLocked = useMemo(
+    () => isEdit && ledgerHasPostings({ journalEntries: db.journalEntries, companyId: currentCompany.id, ledgerId: initialData?.id }),
+    [isEdit, db.journalEntries, currentCompany.id, initialData?.id]
+  );
+
+  const applyGroup = (groupId) => {
+    setFormData((p) => {
+      const next = { ...p, groupId: String(groupId || '') };
+      if (!openingTypeTouched) {
+        const g = groupById.get(String(groupId || '').trim());
+        const t = g ? typeById.get(String(g.typeId)) : null;
+        next.openingBalanceType = openingTypeForNature(t?.accountClass);
+      }
+      return next;
+    });
+  };
 
   const isBankGroupSelected = useMemo(() => {
     const gid = String(formData.groupId || '').trim();
@@ -3293,27 +3358,35 @@ export const ChartAccountForm = ({
     );
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e, mode = 'close') => {
     e.preventDefault();
 
     const name = String(formData.name || '').trim();
-    let groupRow = null;
     const openingBalance = round2(Number(formData.openingBalance || 0));
 
-    if (!name) {
-      notify.error('Account name is required');
-      return;
-    }
-
     const groupValue = String(formData.groupId || '').trim();
-    if (!groupValue) {
-      notify.error('Group is required');
-      return;
-    }
+    const groupRow = groupValue ? groupById.get(groupValue) || null : null;
 
-    groupRow = groupById.get(groupValue) || null;
-    if (!groupRow) {
-      notify.error('Please select a valid group.');
+    /*
+     * Everything the master refuses, in one place and in the order a person
+     * meets it: the name, the group, an identifier that cannot be what it
+     * claims to be. The tab a bad field sits on is opened rather than the
+     * message pointing at somewhere invisible.
+     */
+    const complaint = validateLedger({
+      values: formData,
+      group: groupRow,
+      ledgers: db.chartOfAccounts,
+      companyId: currentCompany.id,
+      isEdit,
+      ledgerId: initialData?.id,
+      needsBank: isBankGroupSelected,
+      needsTds: isTdsGroupSelected,
+    });
+    if (complaint) {
+      const tabForField = { bankName: 'bank', bankAccountNumber: 'bank', bankIfsc: 'bank', pan: 'statutory', gstin: 'statutory', tdsSection: 'tds' };
+      if (tabForField[complaint.field]) setLedgerTab(tabForField[complaint.field]);
+      notify.error(complaint.message);
       return;
     }
 
@@ -3334,16 +3407,7 @@ export const ChartAccountForm = ({
       const bankName = String(formData.bankName || '').trim();
       const accountNumber = String(formData.bankAccountNumber || '').trim();
       const branch = String(formData.bankBranch || '').trim();
-      const ifsc = String(formData.bankIfsc || '').trim();
-
-      if (!bankName) {
-        notify.error('Bank name is required for Bank Accounts');
-        return;
-      }
-      if (!accountNumber) {
-        notify.error('Account number is required for Bank Accounts');
-        return;
-      }
+      const ifsc = String(formData.bankIfsc || '').trim().toUpperCase();
 
       bankDetails = {
         bankName,
@@ -3459,70 +3523,108 @@ export const ChartAccountForm = ({
 
     syncCashBankLedgerToServer(newAccount);
     onCreated?.(newAccount);
+
+    /*
+     * "Save and New" is for the person entering the chart in one sitting. The
+     * group stays — the next ledger is almost always a sibling of the one just
+     * saved — and everything that describes this particular ledger is cleared.
+     */
+    if (mode === 'new') {
+      setFormData((p) => ({
+        ...p,
+        name: '',
+        openingBalance: 0,
+        bankName: '',
+        bankAccountNumber: '',
+        bankBranch: '',
+        bankIfsc: '',
+        bankHolderName: '',
+        bankUpiId: '',
+        bankBranchAddress: '',
+        pan: '',
+        gstin: '',
+        tdsSection: '',
+        tdsRate: '',
+        addresses: [],
+        contacts: [],
+      }));
+      notify.success(`Ledger "${name}" created. Next one.`);
+      return;
+    }
+
     onClose?.();
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <h4 className="ui-t-sec">Basic Details</h4>
+
       <div>
-        <label className="ui-label">Ledger Name</label>
+        <label className="ui-label" htmlFor="ledger-name">
+          Ledger Name<span style={{ color: 'rgb(var(--neg))' }}> *</span>
+        </label>
         <input
+          id="ledger-name"
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
           className="ui-input w-full"
-          placeholder="e.g., ABC Traders"
+          placeholder="e.g., HDFC Bank - Current Account"
           required
         />
       </div>
 
       <div>
         <PopupSelect
-          label="Group"
+          label="Ledger Group *"
           value={formData.groupId}
+          disabled={groupLocked}
           onChange={(val) => {
             const raw = String(val || '').trim();
             if (!raw) {
-              setFormData((p) => ({ ...p, groupId: '' }));
+              applyGroup('');
               return;
             }
 
             const byId = groupById.get(raw);
             if (byId) {
-              setFormData((p) => ({ ...p, groupId: String(byId.id) }));
+              applyGroup(String(byId.id));
               return;
             }
 
             const byName = groupByNameLower.get(raw.toLowerCase());
-            if (byName) {
-              setFormData((p) => ({ ...p, groupId: String(byName.id) }));
-              return;
-            }
-
-            setFormData((p) => ({ ...p, groupId: '' }));
+            applyGroup(byName ? String(byName.id) : '');
           }}
           options={groupOptions}
           placeholder="Select group"
           title="Select Group"
           showValueSubtext={false}
           maxWidthClass="max-w-2xl"
-          allowCustom
+          allowCustom={!groupLocked}
           customActionText="Create new Group"
           onCustomAction={(typed) => openCreateGroupFromPicker(typed)}
         />
+        {groupLocked ? (
+          <p className="ui-caption mt-1">
+            Entries have been posted to this ledger, so its group is fixed — moving it would move those figures onto another statement.
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="ui-label" htmlFor="ledger-currency">Currency</label>
+          <label className="ui-label" htmlFor="ledger-currency">
+            Currency<span style={{ color: 'rgb(var(--neg))' }}> *</span>
+          </label>
           <select
             id="ledger-currency"
             value={formData.currency}
             onChange={(e) => setFormData((p) => ({ ...p, currency: e.target.value }))}
             className="ui-select w-full"
+            title="The currency this ledger is kept in. The books are reported in the company's base currency."
           >
-            {['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD'].map((c) => (
-              <option key={c} value={c}>{c}</option>
+            {CURRENCY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
         </div>
@@ -3550,7 +3652,10 @@ export const ChartAccountForm = ({
                 name="ledgerOpeningType"
                 className="ui-radio"
                 checked={formData.openingBalanceType === o.v}
-                onChange={() => setFormData((p) => ({ ...p, openingBalanceType: o.v }))}
+                onChange={() => {
+                  setOpeningTypeTouched(true);
+                  setFormData((p) => ({ ...p, openingBalanceType: o.v }));
+                }}
               />
               {o.l}
             </label>
@@ -3693,8 +3798,33 @@ export const ChartAccountForm = ({
                   The ledger is the accounting destination, not the calculator.
                   Thresholds, deductee-type rates and the effective-date rules
                   live in the TDS section master the engine already reads; this
-                  only says which section this ledger belongs to.
+                  only says which section this ledger belongs to. They are shown
+                  because somebody configuring the ledger needs to see the rule
+                  they are pointing at — and shown read-only, because a second
+                  copy of a rate is a second answer.
                 */}
+                {(() => {
+                  const summary = tdsSectionSummary(tdsSection(formData.tdsSection));
+                  if (!summary) return null;
+                  const rows = [
+                    ['Rate rule', summary.rate],
+                    ['Threshold', summary.threshold],
+                    ['Applicability', summary.applicability],
+                    ['Effective rule / version', summary.version],
+                    ['TDS ledger nature', tdsLedgerNature(groupById.get(String(formData.groupId || '').trim()))],
+                  ];
+                  return (
+                    <dl className="sm:col-span-2 grid gap-x-5 gap-y-1.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
+                      {rows.map(([k, v]) => (
+                        <Fragment key={k}>
+                          <dt className="ui-t-label">{k}</dt>
+                          <dd className="text-sm">{v}</dd>
+                        </Fragment>
+                      ))}
+                    </dl>
+                  );
+                })()}
+
                 <p className="ui-caption sm:col-span-2">
                   {formData.tdsSection
                     ? `Threshold and rate rules come from the ${formData.tdsSection} master; the TDS engine does the calculation.`
@@ -3732,6 +3862,8 @@ export const ChartAccountForm = ({
               <AddressTab
                 rows={formData.addresses}
                 states={LEDGER_STATES}
+                caption="Where this ledger is. Registered office, a branch, wherever a document has to name a place."
+
                 onChange={(i, key, value) => setFormData((p) => ({ ...p, addresses: p.addresses.map((a, j) => (j === i ? { ...a, [key]: value } : a)) }))}
                 onAdd={() =>
                   setFormData((p) => ({
@@ -3746,6 +3878,9 @@ export const ChartAccountForm = ({
             {activeLedgerTab === 'contacts' ? (
               <ContactsTab
                 rows={formData.contacts}
+                heading="Contact Persons"
+                caption="The people behind this ledger — a relationship manager at the bank, whoever answers about it."
+
                 onChange={(i, key, value) => setFormData((p) => ({ ...p, contacts: p.contacts.map((c, j) => (j === i ? { ...c, [key]: value } : c)) }))}
                 onAdd={() => setFormData((p) => ({ ...p, contacts: [...(p.contacts || []), { name: '', position: '', email: '', mobile: '' }] }))}
                 onRemove={(i) => setFormData((p) => ({ ...p, contacts: p.contacts.filter((_, j) => j !== i) }))}
@@ -3755,13 +3890,31 @@ export const ChartAccountForm = ({
         </>
       ) : null}
 
-      <div className="flex justify-end gap-2">
+      {/*
+        Cancel on the left, the two ways of saving on the right. "Save and New"
+        is the one that matters when a chart is being entered in one sitting:
+        it keeps the group and clears the ledger, so the next sibling is one
+        field away instead of four clicks.
+      */}
+      <div className="flex items-center justify-between gap-2 pt-2">
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
-          {isEdit ? 'Save' : 'Create'}
-        </button>
+        <div className="flex items-center gap-2">
+          {isEdit ? null : (
+            <button
+              type="button"
+              onClick={(e) => handleSubmit(e, 'new')}
+              className="ui-btn ui-btn-secondary"
+              style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
+            >
+              Save and New
+            </button>
+          )}
+          <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
+            Save
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -3892,16 +4045,22 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
   );
 };
 
-const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null }) => {
+export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null }) => {
   const formRef = useRef(null);
   const accounts = db.chartOfAccounts.filter((a) => a.companyId === currentCompany.id);
 
   const accountOptions = useMemo(() => {
+    const editedLines = Array.isArray(initialData?.lines) ? initialData.lines : [];
+    const alreadyUsed = new Set(editedLines.map((l) => String(l?.accountId || '').trim()));
     return accounts
+      /* A retired ledger is not offered for a new entry — but an entry that
+         already names one must still open and show it, or editing the old
+         voucher silently drops the line. */
+      .filter((a) => a.active !== false || alreadyUsed.has(String(a.id)))
       .slice()
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))
       .map((a) => ({ value: String(a.id), label: String(a.name || '').trim() }));
-  }, [accounts]);
+  }, [accounts, initialData]);
 
   const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
   const jvDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
@@ -4195,6 +4354,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
                   <td className="ui-col-meta px-3 py-2">
                     <PopupSelect
                       label={null}
+                      ariaLabel={`Ledger, line ${idx + 1}`}
                       value={line.accountId}
                       onChange={(val) => updateLine(idx, 'accountId', String(val || '').trim())}
                       options={accountOptions}
