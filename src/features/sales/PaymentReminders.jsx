@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Bell, Copy, Mail, MessageCircle } from 'lucide-react';
-import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { Ban, Bell, Copy, Download, FileText, Mail, MessageCircle, Receipt } from 'lucide-react';
+import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
+import DocumentListShell from '../../components/list/DocumentListShell';
+import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { formatMoney } from '../../utils/money';
 import { notify } from '../../components/ui/notify';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 import { createInvoiceShareLink } from '../../api/share';
@@ -127,88 +129,141 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
     }
   };
 
-  const filters = [
-    ['ALL', `All open (${rows.length})`],
-    ['SENDNOW', `Send now (${counts.sendNow})`],
-    ['DUE', `Due (${counts.due})`],
-    ['S2', `7+ days (${counts.s2})`],
-    ['S3', `15+ days (${counts.s3})`],
+  /*
+   * The stages of chasing, as tabs rather than a row of loose buttons. Send
+   * now is not a stage — it is "the schedule says today", which cuts across
+   * all three — so it keeps its own tab and its own count.
+   */
+  const PR_STATUS_TABS = [
+    { value: 'ALL', label: 'All open', tone: 'all' },
+    { value: 'SENDNOW', label: 'Send now', tone: 'overdue' },
+    { value: 'DUE', label: 'Due', tone: 'sent' },
+    { value: 'S2', label: '7+ days', tone: 'partial' },
+    { value: 'S3', label: '15+ days', tone: 'outstanding' },
+  ];
+  const prStatusCounts = {
+    ALL: rows.length,
+    SENDNOW: counts.sendNow,
+    DUE: counts.due,
+    S2: counts.s2,
+    S3: counts.s3,
+  };
+
+  /*
+   * What is owed and how old it is. The oldest bucket is the one that decides
+   * whether this is a collections problem or a timing one, so it gets a figure
+   * of its own rather than being folded into the total.
+   */
+  const prHeadline = useMemo(() => {
+    let outstanding = 0;
+    let due = 0;
+    let old = 0;
+    let sendNow = 0;
+    for (const r of rows) {
+      const bal = Number(r.balance || 0);
+      outstanding += bal;
+      if (r.stage === 3) old += bal;
+      else if (r.stage >= 1) due += bal;
+      if (needsReminder(r.invoice, today)) sendNow += bal;
+    }
+    return { count: rows.length, outstanding, due, old, sendNow };
+  }, [rows, today]);
+
+  const prExportColumns = [
+    { key: 'invoice', label: 'Invoice', value: (r) => r.invoice?.number || '' },
+    { key: 'customer', label: 'Customer', value: (r) => r.invoice?.customerName || '' },
+    { key: 'dueDate', label: 'Due date', value: (r) => r.invoice?.dueDate || '' },
+    { key: 'overdueDays', label: 'Overdue days', value: (r) => r.overdueDays ?? '' },
+    { key: 'balance', label: 'Balance', value: (r) => Number(r.balance || 0) },
+    { key: 'stage', label: 'Stage', value: (r) => r.stage ?? '' },
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Payment Reminders"
-        description="Due → +7 → +15 schedule. WhatsApp opens with the message ready — the fastest collections channel there is."
-      />
-
-      <div className="flex flex-wrap gap-2">
-        {filters.map(([key, label]) => (
-          <button key={key} type="button" onClick={() => setFilter(key)} className={`ui-btn ui-btn-sm ${filter === key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <ListToolbar
-        search={prSearch.query}
-        onSearch={prSearch.setQuery}
-        placeholder="Search collectibles (invoice, customer)"
-        count={shown.length}
-        countLabel="invoices"
-        onExport={() =>
-          exportRows({
-            fileName: `PaymentReminders_${currentCompany?.name || 'company'}`,
-            label: 'collectible(s)',
-            columns: [
-              { key: 'invoice', label: 'Invoice', value: (r) => r.invoice?.number || '' },
-              { key: 'customer', label: 'Customer', value: (r) => r.invoice?.customerName || '' },
-              { key: 'dueDate', label: 'Due date', value: (r) => r.invoice?.dueDate || '' },
-              { key: 'overdueDays', label: 'Overdue days', value: (r) => r.overdueDays ?? '' },
-              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance || 0) },
-              { key: 'stage', label: 'Stage', value: (r) => r.stage ?? '' },
-            ],
-            rows: shown,
-          })
-        }
-      />
-
-      {shown.length === 0 ? (
-        <div className="ui-card">
-          <EmptyState icon={Bell} title="Nothing to chase" description="No open invoices with a balance in this filter." />
-        </div>
-      ) : (
-        <div className="ui-card overflow-x-auto">
-          <table className="ui-table w-full">
+    <DocumentListShell
+      title="Payment Reminders"
+      description="Due → +7 → +15 schedule. WhatsApp opens with the message ready — the fastest collections channel there is."
+      company={currentCompany}
+      search={{
+        value: prSearch.query,
+        onChange: prSearch.setQuery,
+        placeholder: 'Search collectibles…',
+        label: 'Search collectibles',
+      }}
+      moreItems={[{ key: 'export', label: 'Export collectibles', Icon: Download }]}
+      onMoreSelect={(k) => {
+        if (k !== 'export') return;
+        exportRows({
+          fileName: `PaymentReminders_${currentCompany?.name || 'company'}`,
+          label: 'collectible(s)',
+          columns: prExportColumns,
+          rows: shown,
+        });
+      }}
+      cards={[
+        { label: 'Open invoices', value: prHeadline.count, count: true, tone: 'draft', Icon: FileText },
+        { label: 'Outstanding', value: prHeadline.outstanding, tone: 'sent', Icon: Receipt },
+        { label: 'Due now', value: prHeadline.due, tone: 'outstanding', Icon: Bell },
+        { label: '15+ days old', value: prHeadline.old, tone: 'overdue', Icon: Ban },
+        { label: 'To chase today', value: prHeadline.sendNow, tone: 'partial', Icon: MessageCircle },
+      ]}
+      tabs={PR_STATUS_TABS}
+      tabsLabel="Reminder stage"
+      statusValue={filter}
+      statusCounts={prStatusCounts}
+      onStatusChange={setFilter}
+      tip={{
+        storageKey: 'neev.tip.paymentReminders',
+        text: 'Send now is not a stage — it is every invoice the schedule says is owed a message today.',
+        Icon: Bell,
+      }}
+    >
+      <div className="overflow-x-auto ui-table-scroll">
+          <table className="ui-table ui-table-wide ui-table-sticky">
             <thead>
               <tr>
-                <th className="ui-th">Invoice</th>
-                <th className="ui-th">Customer</th>
-                <th className="ui-th">Due date</th>
-                <th className="ui-th ui-num">Overdue</th>
-                <th className="ui-th ui-num">Balance</th>
-                <th className="ui-th">Stage</th>
-                <th className="ui-th">Last reminder</th>
-                <th className="px-4 py-2.5"></th>
+                <th scope="col">Invoice</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Due date</th>
+                <th scope="col" className="ui-num">Overdue</th>
+                <th scope="col" className="ui-num">Balance</th>
+                <th scope="col">Stage</th>
+                <th scope="col">Last reminder</th>
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
-            <tbody>
-              {shown.map(({ invoice: inv, overdue, stage, balance }) => {
+            <tbody className="ui-rows">
+              {shown.length === 0 ? (
+                <tr>
+                  <td colSpan="8">
+                    <EmptyState
+                      icon={Bell}
+                      kind="new"
+                      title={rows.length ? 'Nothing to chase here' : 'Nothing to chase'}
+                      description={
+                        rows.length
+                          ? 'No open invoice with a balance is at this stage.'
+                          : 'Every invoice with a balance appears here on its own, oldest first — there is nothing to set up.'
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+              shown.map(({ invoice: inv, overdue, stage, balance }) => {
                 const last = lastReminder(inv);
                 const urgent = needsReminder(inv, today);
                 return (
-                  <tr key={inv.id} className="border-t">
-                    <td className="ui-col-id px-4 py-2.5"><DocumentNumber value={inv.number} label="invoice" /></td>
-                    <td className="ui-col-entity px-4 py-2.5">{inv.customerName}</td>
-                    <td className="ui-col-date px-4 py-2.5"><DueDate value={inv.dueDate} balance={balance} /></td>
-                    <td className="px-4 py-2.5 text-right">{overdue > 0 ? `${overdue}d` : '—'}</td>
-                    <td className="ui-col-amount px-4 py-2.5 text-right"><SalesBalance value={balance} company={currentCompany} dueIso={inv.dueDate} /></td>
-                    <td className="px-4 py-2.5">
+                  <tr key={inv.id}>
+                    <td className="ui-col-id"><DocumentNumber value={inv.number} label="invoice" /></td>
+                    <td className="ui-col-entity">{inv.customerName}</td>
+                    <td className="ui-col-date"><DueDate value={inv.dueDate} balance={balance} /></td>
+                    <td className="ui-col-amount ui-mono">{overdue > 0 ? `${overdue}d` : '—'}</td>
+                    <td className="ui-col-amount"><SalesBalance value={balance} company={currentCompany} dueIso={inv.dueDate} /></td>
+                    <td>
                       <StatusPill status={stageLabel(stage)} />
                       {urgent ? <span className="ui-caption ml-1 text-[rgb(var(--warn-ink))]">Send now</span> : null}
                     </td>
-                    <td className="ui-col-meta px-4 py-2.5 text-xs">{last ? `${last.date} · ${last.channel}` : 'Never'}</td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="ui-col-meta text-xs">{last ? `${last.date} · ${last.channel}` : 'Never'}</td>
+                    <td className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button type="button" onClick={() => sendWhatsApp(inv)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs" title="WhatsApp">
                           <MessageCircle size={13} aria-hidden="true" /> WhatsApp
@@ -223,11 +278,17 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
                     </td>
                   </tr>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
-        </div>
-      )}
-    </div>
+      </div>
+      <TableTotals
+        count={shown.length}
+        totalCount={rows.length}
+        noun="invoices"
+        figures={[{ label: 'To collect', value: formatMoney(prHeadline.outstanding, currentCompany) }]}
+      />
+    </DocumentListShell>
   );
 }

@@ -61,3 +61,44 @@ A list that showed the stored word would say a lapsed quote is still Sent.
 `src/features/sales/listLayoutParity.test.jsx` holds all five to the contract:
 heading, header search, five figures, tabs with counts, More, exactly one
 primary, and no card inside a card.
+
+## CRM — Customers, Vendors, Salesmen, Payment Reminders
+
+Same shell, same order. Two of these carried a defect the layout work exposed:
+
+**Customers and Vendors showed a balance nobody maintained.** Both listed a
+stored `balance` field that nothing ever wrote to, so every row read ₹0.00
+while the invoice list showed lakhs outstanding against the same names. What a
+party owes is now computed from the documents — `src/utils/partyStanding.js`,
+shared by both sides because the arithmetic is identical and writing it twice
+is how two screens end up disagreeing about what "overdue" means. Cancelled and
+draft documents are left out; the part past its due date is counted separately,
+because that is the figure somebody rings about.
+
+| Page | Figures | Tabs |
+|---|---|---|
+| Customers | count · owing you · outstanding · overdue · GST registered | Owing · Overdue · GST registered · Unregistered |
+| Vendors | count · you owe · payable · overdue · GST registered | You owe · Overdue · GST registered · Unregistered |
+| Salesmen | team · selling · invoices · sales (pre-GST) · commission due | Selling · No sales yet · Commission due |
+| Payment Reminders | open invoices · outstanding · due now · 15+ days · to chase today | Send now · Due · 7+ days · 15+ days |
+
+Payment Reminders has no primary action — it creates nothing, every invoice
+with a balance appears on its own.
+
+`CustomersList` and `VendorsList` moved out of `App.jsx` into
+`src/features/crm/`. A screen that cannot be rendered on its own cannot be
+tested on its own, and both were 350-line components inside a 14,000-line file.
+
+### Mistakes made
+
+- `isGstRegistered` first matched `/registered/i`, which is a substring of
+  **Unregistered** — every unregistered party counted as registered.
+- The Salesmen header's primary called `add()` with the form empty, so it only
+  ever produced "name is required". It focuses the name field instead.
+- The first version of the customer-balance test asserted `11,800` appeared in
+  the row — which it did, from the *overdue* column, so replacing the computed
+  figure with the old stored one still passed. The fixture now has one invoice
+  due and one not, and the two columns are asserted separately.
+
+`src/features/crm/crmLayoutParity.test.jsx` holds these four to the contract and
+to the money.
