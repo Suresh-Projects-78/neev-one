@@ -7,15 +7,22 @@ order gets none of it.
 
 Measured 2026-09-10. Fixed one form at a time, worst first, each its own commit.
 
-| Form | Grid | Keyboard | Custom fields | Preview | State |
+| Form | Grid | Keyboard | Custom fields | Print | State |
 |---|---|---|---|---|---|
 | Invoice | yes | yes | yes | yes | reference |
 | Sales Order | — | — | — | — | **1st** |
 | Delivery Challan | — | — | — | — | **2nd** |
 | Debit Note | — | yes | — | — | **3rd** |
-| Purchase Order | — | yes | — | yes | **4th** |
-| Estimate | yes | yes | — | yes | **5th** |
-| Credit Note | yes | yes | — | yes | **6th** |
+| Purchase Order | — | yes | — | — | **4th** |
+| Estimate | yes | yes | — | — | **5th** |
+| Credit Note | yes | yes | — | — | **6th** |
+
+A first pass read four of these as having a preview. They do not. The grep
+matched `originalPreviewOpen` and `BillPreview` — a credit note showing the
+invoice it reverses, a purchase order showing the bill it came from. Neither
+prints the document being edited. Corrected before any work started: only the
+invoice (and the bill) can be put on paper at all, so an estimate cannot be
+sent to a customer and a challan cannot travel with the goods.
 
 ## What each column means
 
@@ -33,8 +40,10 @@ the others.
 **Custom fields** — fields a company invents. Built once, wired only to
 invoices, so a business that added "PO reference" cannot put it on a sales order.
 
-**Preview** — the printed document. A challan needs one most of all: it travels
-with the goods.
+**Print** — the document on paper. Only invoices and bills have one. A challan
+needs it most: it rides with the lorry and the driver hands it over. An
+estimate is worthless unless the customer can be sent it. This is the column
+that is not polish — it is the document failing to do its job.
 
 ## Order, and why
 
