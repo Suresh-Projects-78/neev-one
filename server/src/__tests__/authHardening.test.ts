@@ -30,7 +30,28 @@ async function makeUser() {
     .post('/api/auth/signup')
     .send({ email, password, name: 'Auth user' })
     .expect(200);
-  return { email, password, token: signup.body.token as string, refreshToken: signup.body.refreshToken as string, id: signup.body.user.id as string };
+  return {
+    email,
+    password,
+    token: signup.body.token as string,
+    // The refresh token is an HttpOnly cookie now, never a field in the body.
+    refreshToken: refreshCookieValue(signup),
+    id: signup.body.user.id as string,
+  };
+}
+
+/** The refresh token out of the Set-Cookie header. */
+function refreshCookieValue(res: request.Response): string {
+  const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
+  const cookie = (raw || []).find((c) => c.startsWith('neev_rt='));
+  if (!cookie) return '';
+  return decodeURIComponent(cookie.split(';')[0].split('=').slice(1).join('='));
+}
+
+/** The attributes it was set with, which are the security property. */
+function refreshCookieAttrs(res: request.Response): string {
+  const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
+  return (raw || []).find((c) => c.startsWith('neev_rt=')) || '';
 }
 
 describe('sessions', () => {
@@ -44,8 +65,29 @@ describe('sessions', () => {
       .send({ emailOrUsername: u.email, password: u.password })
       .expect(200);
 
-    expect(login.body.refreshToken).toBeTruthy();
-    expect(login.body.refreshToken).not.toBe(u.refreshToken);
+    expect(refreshCookieValue(login)).toBeTruthy();
+    expect(refreshCookieValue(login)).not.toBe(u.refreshToken);
+  });
+
+  /*
+   * The point of the change, and the thing worth asserting: the long-lived
+   * credential is not readable by anything running on the page. An access token
+   * lasts fifteen minutes; a refresh token mints sessions indefinitely, so an
+   * XSS that reads one owns the account rather than a quarter of an hour of it.
+   */
+  it('never puts the refresh token where a script can read it', async () => {
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ emailOrUsername: (await makeUser()).email, password: 'Passw0rd!23' });
+
+    // Not in the body, on any route that issues one.
+    expect(login.body.refreshToken).toBeUndefined();
+
+    const attrs = refreshCookieAttrs(login);
+    expect(attrs).toMatch(/HttpOnly/i);
+    // Scoped to the routes that need it rather than riding on every request.
+    expect(attrs).toMatch(/Path=\/api\/auth/i);
+    expect(attrs).toMatch(/SameSite=(Lax|Strict)/i);
   });
 
   it('rotates the refresh token and retires the old one', async () => {
@@ -56,11 +98,11 @@ describe('sessions', () => {
       .send({ refreshToken: u.refreshToken })
       .expect(200);
 
-    expect(first.body.refreshToken).not.toBe(u.refreshToken);
+    expect(refreshCookieValue(first)).not.toBe(u.refreshToken);
     expect(first.body.token).toBeTruthy();
 
     // The rotated token still works.
-    await request(app).post('/api/auth/refresh').send({ refreshToken: first.body.refreshToken }).expect(200);
+    await request(app).post('/api/auth/refresh').send({ refreshToken: refreshCookieValue(first) }).expect(200);
   });
 
   it('revokes every session when a retired refresh token is replayed', async () => {
@@ -79,7 +121,27 @@ describe('sessions', () => {
     expect(String(replay.body.error)).toMatch(/no longer valid/i);
 
     // And the legitimate holder is signed out too, deliberately.
-    await request(app).post('/api/auth/refresh').send({ refreshToken: rotated.body.refreshToken }).expect(401);
+    await request(app).post('/api/auth/refresh').send({ refreshToken: refreshCookieValue(rotated) }).expect(401);
+  });
+
+  /*
+   * A sign-out has to take the credential out of the browser as well as end the
+   * session. Left in place, the cookie is re-sent on every later attempt — and
+   * on a shared machine it is the next person who sends it.
+   */
+  it('clears the cookie when signing out', async () => {
+    const u = await makeUser();
+    const out = await request(app)
+      .post('/api/auth/logout')
+      .set('Cookie', `neev_rt=${encodeURIComponent(u.refreshToken)}`)
+      .expect(200);
+
+    const cleared = (out.headers['set-cookie'] as unknown as string[] | undefined) || [];
+    const cookie = cleared.find((c) => c.startsWith('neev_rt='));
+    expect(cookie).toBeTruthy();
+    // Emptied and expired, not merely re-set.
+    expect(cookie).toMatch(/neev_rt=;/);
+    expect(cookie).toMatch(/Expires=Thu, 01 Jan 1970/i);
   });
 
   it('logs out server-side so the refresh token stops working', async () => {

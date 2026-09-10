@@ -8,9 +8,6 @@ function getToken() {
   return String(localStorage.getItem('token') || '').trim();
 }
 
-function getRefreshToken() {
-  return String(localStorage.getItem('refreshToken') || '').trim();
-}
 
 /**
  * Exchanges the refresh token for a new pair.
@@ -25,21 +22,27 @@ let refreshInFlight = null;
 async function refreshSession() {
   if (refreshInFlight) return refreshInFlight;
 
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return null;
-
   refreshInFlight = (async () => {
     try {
+      /*
+       * No token in the body: the refresh token is an HttpOnly cookie and
+       * `credentials: 'include'` is what makes the browser send it. There is
+       * nothing here for a script on the page to read or to steal.
+       */
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
       });
       if (!res.ok) return null;
       const data = await res.json();
       if (!data?.token) return null;
       localStorage.setItem('token', data.token);
-      if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
+      /*
+       * The refresh token is not in this response and must not be stored. The
+       * server sets it as an HttpOnly cookie; storing a copy anywhere a script
+       * can read it would give back exactly what the cookie was for.
+       */
       return data.token;
     } catch {
       return null;
@@ -57,6 +60,7 @@ async function refreshSession() {
 function endSession(message) {
   try {
     localStorage.removeItem('token');
+    // Left over from before the cookie: remove it so no tab keeps sending one.
     localStorage.removeItem('refreshToken');
   } catch {
     // ignore
@@ -137,6 +141,9 @@ export async function apiFetch(
   try {
     res = await fetch(`${API_BASE}${path}`, {
       method,
+      // The refresh cookie is scoped to /api/auth; including credentials is
+      // what lets refresh and logout see it at all.
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

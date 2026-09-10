@@ -9,6 +9,7 @@ import { suggestSlug } from '../services/slug.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
 import { ensureLedgerSetup } from '../services/ledger.js';
 import { ensurePermissionCatalog } from './permissions.js';
+import { clearRefreshCookie, refreshTokenFrom, setRefreshCookie } from '../utils/refreshCookie.js';
 import { loginLimiter, resetLimiter, signupLimiter } from '../middleware/rateLimit.js';
 import {
   AuthError,
@@ -238,9 +239,17 @@ authRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
       })
     : [];
 
+  /*
+   * The refresh token goes in an HttpOnly cookie and NOT in this response.
+   *
+   * Returning it as well would leave it readable by any script on the page,
+   * which is the thing the cookie exists to prevent — the browser can hold a
+   * credential the page itself cannot see, and that is the whole point.
+   */
+  setRefreshCookie(res, refreshToken);
+
   return res.json({
     token,
-    refreshToken,
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     user: { id: user.id, email: user.email, fullName: user.fullName, accountId: user.accountId },
     companies,
@@ -251,11 +260,11 @@ authRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
 
 /** Exchange a refresh token for a new pair. The old one is retired. */
 authRouter.post('/refresh', async (req: Request, res: Response) => {
-  const body = z.object({ refreshToken: z.string().min(10) }).safeParse(req.body);
-  if (!body.success) return res.status(400).json({ error: 'Missing refresh token' });
+  const presented = refreshTokenFrom(req);
+  if (presented.length < 10) return res.status(400).json({ error: 'Missing refresh token' });
 
   try {
-    const rotated = await rotateSession(body.data.refreshToken, {
+    const rotated = await rotateSession(presented, {
       ip: clientIp(req),
       userAgent: req.headers['user-agent'] as string | undefined,
     });
@@ -265,8 +274,16 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
       eventType: 'TOKEN_REFRESHED',
       ip: clientIp(req),
     });
-    return res.json({ token: rotated.accessToken, refreshToken: rotated.refreshToken });
+    // The rotated token replaces the cookie and, again, is not in the body.
+    setRefreshCookie(res, rotated.refreshToken);
+    return res.json({ token: rotated.accessToken });
   } catch (e: any) {
+    /*
+     * A refused refresh means this browser's session is over, so the cookie
+     * should go with it — otherwise a stale or replayed token sits there being
+     * re-sent on every attempt.
+     */
+    clearRefreshCookie(res);
     if (e instanceof AuthError) return res.status(e.status).json({ error: e.message });
     throw e;
   }
@@ -274,8 +291,10 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
 
 /** Real logout: the session is revoked server-side, not just forgotten locally. */
 authRouter.post('/logout', async (req: Request, res: Response) => {
-  const body = z.object({ refreshToken: z.string().optional() }).safeParse(req.body);
-  const refreshToken = body.success ? body.data.refreshToken : undefined;
+  const refreshToken = refreshTokenFrom(req) || undefined;
+  // Cleared whatever happens next: a logout that leaves the credential in the
+  // browser is not a logout.
+  clearRefreshCookie(res);
 
   if (refreshToken) {
     const revoked = await revokeSession(refreshToken, 'LOGOUT');
@@ -468,9 +487,10 @@ authRouter.post('/signup', signupLimiter, async (req: Request, res: Response) =>
     transactional: true,
   });
 
+  setRefreshCookie(res, refreshToken);
+
   return res.json({
     token,
-    refreshToken,
     user,
     emailVerificationSent: true,
     ...(process.env.NODE_ENV === 'production' ? {} : { devVerifyToken: verifyToken }),

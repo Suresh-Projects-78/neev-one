@@ -1,4 +1,5 @@
 import 'express-async-errors';
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -40,10 +41,18 @@ export function buildApp() {
   const app = express();
 
   app.use(helmet());
+  // The refresh token travels as an HttpOnly cookie; this reads it back.
+  app.use(cookieParser());
 
-  // CORS
-  // We do NOT use cookies; auth is via Authorization header.
-  // Using credentials:true with origin:'*' breaks browser preflight, so keep credentials:false.
+  /*
+   * CORS, with credentials.
+   *
+   * The refresh token is an HttpOnly cookie now, so the browser has to be
+   * allowed to send it — which means `credentials: true`, and that in turn
+   * means the origin must be a specific value and never `*`. The allow-list
+   * below already is one; the note that used to sit here said we did not use
+   * cookies at all.
+   */
   const allowList = String(process.env.CORS_ORIGIN || '')
     .split(',')
     .map((s) => s.trim())
@@ -58,7 +67,7 @@ export function buildApp() {
         if (allowList.length > 0) return cb(null, allowList.includes(origin));
         return cb(null, defaultDevAllow.has(origin));
       },
-      credentials: false,
+      credentials: true,
       allowedHeaders: ['Content-Type', 'Authorization', 'x-org-id', 'x-branch-id', 'x-warehouse-id'],
     })
   );

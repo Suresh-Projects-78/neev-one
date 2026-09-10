@@ -11433,14 +11433,17 @@ const AppShell = () => {
     // Tell the server first: without this the refresh token stays valid and
     // "sign out" only clears this browser.
     try {
-      const refreshToken = String(localStorage.getItem('refreshToken') || '').trim();
-      if (refreshToken) {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-      }
+      /*
+       * No token in the body. The refresh token is an HttpOnly cookie the
+       * browser sends when credentials are included, which is also what lets
+       * the server clear it — a sign-out that cannot reach the credential is
+       * not a sign-out.
+       */
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
     } catch {
       // A failed call must not trap the user in a signed-in shell.
     }

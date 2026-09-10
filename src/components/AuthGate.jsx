@@ -123,7 +123,11 @@ const AuthGate = ({ onAuth }) => {
       const res = await api('login', { emailOrUsername: identity, password, email: identity });
       if (res.ok && res.data?.token) {
         localStorage.setItem('token', res.data.token);
-        if (res.data.refreshToken) localStorage.setItem('refreshToken', res.data.refreshToken);
+        /*
+         * Deliberately not stored. The server returns no refresh token any
+         * more — it sets an HttpOnly cookie instead — and keeping a copy where
+         * a script could read it would undo the point of the cookie.
+         */
         localStorage.setItem('userEmail', identity);
         if (res.data.user?.accountId) {
           localStorage.setItem('accountId', res.data.user.accountId);
@@ -193,7 +197,11 @@ const AuthGate = ({ onAuth }) => {
       
       if (res.ok && res.data?.token) {
         setSignupToken(res.data.token);
-        if (res.data.refreshToken) localStorage.setItem('refreshToken', res.data.refreshToken);
+        /*
+         * Deliberately not stored. The server returns no refresh token any
+         * more — it sets an HttpOnly cookie instead — and keeping a copy where
+         * a script could read it would undo the point of the cookie.
+         */
         localStorage.setItem('userEmail', email.trim().toLowerCase());
         if (res.data.user?.accountId) {
           localStorage.setItem('accountId', res.data.user.accountId);
