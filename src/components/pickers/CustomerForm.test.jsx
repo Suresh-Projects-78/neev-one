@@ -39,8 +39,8 @@ beforeEach(() => {
  * CGST + SGST or leaves as IGST. Set through the picker the form actually uses.
  */
 const setBillingState = async (user, name = 'Karnataka') => {
-  const trigger = screen.getAllByRole('combobox').filter((c) => (c.getAttribute('aria-label') || c.textContent).includes('Select'))[0];
-  await user.click(trigger);
+  /* The address table's own picker, by the name it now announces. */
+  await user.click(screen.getByLabelText('State, row 1'));
   await user.click((await screen.findAllByRole('option')).find((o) => o.textContent.includes(name)));
 };
 
@@ -173,7 +173,12 @@ describe('the remaining tabs', () => {
    * different values get saved, so the second one states it and does not take
    * input.
    */
-  it('shows GSTIN under Statutory as a statement, not a second input', async () => {
+  /*
+   * The master asks for the GSTIN to be viewable and editable here as the
+   * detailed statutory record, and warns against two independent values. Both
+   * fields are bound to the one value in state, so it is one number seen twice.
+   */
+  it('shows the same GSTIN under Statutory, editable, and edits flow back', async () => {
     const user = userEvent.setup();
     renderForm();
     await user.type(screen.getByPlaceholderText('Enter 15 digit GSTIN'), '29AABCU9603R1ZJ');
@@ -181,7 +186,14 @@ describe('the remaining tabs', () => {
 
     const shown = screen.getByLabelText('GSTIN');
     expect(shown).toHaveValue('29AABCU9603R1ZJ');
-    expect(shown).toHaveAttribute('readonly');
+    expect(shown).not.toHaveAttribute('readonly');
+
+    await user.clear(shown);
+    await user.type(shown, '27AABCU9603R1ZK');
+
+    // Back on Basic Details it is the same number, not a second one.
+    await user.click(screen.getByRole('tab', { name: 'Address' }));
+    expect(screen.getByPlaceholderText('Enter 15 digit GSTIN')).toHaveValue('27AABCU9603R1ZK');
   });
 });
 
@@ -334,5 +346,59 @@ describe('Statutory tab', () => {
     const shown = screen.getByLabelText('GST Registration / Treatment');
     expect(shown).toHaveValue('Registered');
     expect(shown).toHaveAttribute('readonly');
+  });
+});
+
+describe('the primary contact', () => {
+  /*
+   * Both masters ask for one contact to be marked primary. Until the flag
+   * existed the first row typed was the one every reminder went to, so adding
+   * an accounts clerk above the person you deal with redirected the post.
+   */
+  it('marks one contact, and only one', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
+    await user.type(screen.getByLabelText('Contact name, row 1'), 'R. Nair');
+    await user.click(screen.getByRole('button', { name: /Add Contact/i }));
+    await user.type(screen.getByLabelText('Contact name, row 2'), 'S. Rao');
+
+    // The first row answers by default until somebody says otherwise.
+    expect(screen.getByLabelText('Primary contact, row 1')).toBeChecked();
+
+    await user.click(screen.getByLabelText('Primary contact, row 2'));
+    expect(screen.getByLabelText('Primary contact, row 2')).toBeChecked();
+    expect(screen.getByLabelText('Primary contact, row 1')).not.toBeChecked();
+  });
+});
+
+describe('the shipping address', () => {
+  it('can be copied from billing rather than retyped', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole('tab', { name: 'Address' }));
+    await user.type(screen.getByLabelText('Address line 1, row 1'), '4 MG Road');
+    await user.click(screen.getByRole('button', { name: /Copy billing/i }));
+
+    expect(screen.getByLabelText('Address line 1, row 2')).toHaveValue('4 MG Road');
+  });
+});
+
+describe('a duplicated customer', () => {
+  it('copies the terms but not the identity', () => {
+    const seed = {
+      displayName: 'Acme Traders',
+      groupId: '2',
+      gstin: '29AABCU9603R1ZM',
+      pan: 'AABCU9603R',
+      code: 'CUS-000001',
+      creditLimit: 100000,
+      billingAddress: { line1: '4 MG Road', state: 'Karnataka', country: 'India' },
+    };
+    render(<CustomerForm db={db} setDb={() => {}} currentCompany={company} seedData={seed} onClose={() => {}} />);
+
+    expect(screen.getByLabelText(/^Customer Name/)).toHaveValue('Acme Traders (copy)');
+    expect(screen.queryByDisplayValue('29AABCU9603R1ZM')).toBeNull();
+    expect(screen.queryByDisplayValue('CUS-000001')).toBeNull();
   });
 });

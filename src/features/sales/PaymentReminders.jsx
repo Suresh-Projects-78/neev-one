@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { partyEmail, partyMobile } from '../../utils/contacts';
 import { Ban, Bell, Copy, Download, FileText, Mail, MessageCircle, Receipt } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
@@ -104,7 +105,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
 
   const sendWhatsApp = async (invoice) => {
     const { customer, message } = await messageFor(invoice);
-    const phone = customer?.mobile || customer?.phone || '';
+    const phone = partyMobile(customer);
     window.open(waLink(phone, message), '_blank', 'noopener');
     markSent(invoice, 'whatsapp');
     notify.success(`WhatsApp reminder opened for ${invoice.number}${phone ? '' : ' (no mobile on the customer — pick the contact in WhatsApp)'}`);
@@ -112,7 +113,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
 
   const sendEmail = async (invoice) => {
     const { customer, message } = await messageFor(invoice);
-    const email = customer?.email || '';
+    const email = partyEmail(customer);
     window.open(mailtoLink(email, `Payment reminder — Invoice ${invoice.number}`, message), '_self');
     markSent(invoice, 'email');
     notify.success(`Email reminder opened for ${invoice.number}`);

@@ -36,13 +36,15 @@ export const CURRENCY_OPTIONS = [
  * prose under every field is longer than the form, and the person filling it in
  * for the twentieth time is not reading any of it.
  */
-export const FormRow = ({ label, hint = '', required = false, children }) => (
+export const FormRow = ({ label, hint = '', required = false, htmlFor = '', children }) => (
   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-[minmax(8rem,12rem)_minmax(16rem,1fr)] sm:items-start sm:gap-5">
     <div className="flex items-center gap-1.5 sm:pt-2">
-      <span className="text-sm">
+      {/* A real <label> where the control has an id: a bare <span> beside a
+          field names it for a sighted reader and for nobody else. */}
+      <label className="text-sm" htmlFor={htmlFor || undefined}>
         {label}
         {required ? <span style={{ color: 'rgb(var(--neg))' }}> *</span> : null}
-      </span>
+      </label>
       {hint ? (
         <span title={hint} aria-label={hint} className="ui-subtle inline-flex cursor-help">
           <Info size={13} aria-hidden="true" />
@@ -61,6 +63,8 @@ export const AddressTab = ({
   onChange,
   onAdd,
   onRemove,
+  /* Shipping is the billing address far more often than not. */
+  onCopyBilling = null,
   /* The ledger master reuses this table and has no customers, so the copy is
      a prop rather than the customer wording repeated in a second component. */
   caption = 'Billing and shipping are here by default. Add more places below if you need them.',
@@ -107,6 +111,7 @@ export const AddressTab = ({
                 <div className="w-32">
                   <PopupSelect
                     label={null}
+                    ariaLabel={`Country, row ${i + 1}`}
                     title="Select Country"
                     value={r.country}
                     onChange={(v) => onChange(i, 'country', v)}
@@ -120,6 +125,7 @@ export const AddressTab = ({
                 <div className="w-40">
                   <PopupSelect
                     label={null}
+                    ariaLabel={`State, row ${i + 1}`}
                     title="Select State"
                     value={r.state}
                     onChange={(v) => onChange(i, 'state', v)}
@@ -148,7 +154,17 @@ export const AddressTab = ({
                   aria-label={`Pincode, row ${i + 1}`}
                 />
               </td>
-              <td className="px-1 py-1 text-right">
+              <td className="px-1 py-1 text-right whitespace-nowrap">
+                {onCopyBilling && i === 1 ? (
+                  <button
+                    type="button"
+                    onClick={onCopyBilling}
+                    className="ui-btn ui-btn-ghost ui-btn-sm me-1"
+                    title="Copy the billing address into this row"
+                  >
+                    Copy billing
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => onRemove(i)}
@@ -184,8 +200,9 @@ export const ContactsTab = ({
   onChange,
   onAdd,
   onRemove,
+  onSetPrimary = null,
   heading = 'Contacts',
-  caption = 'The people at this customer. The first is who documents are addressed to.',
+  caption = 'The people at this customer. The one marked primary is who a reminder is addressed to.',
 }) => (
   <section className="space-y-3">
     <div>
@@ -202,6 +219,7 @@ export const ContactsTab = ({
         <table className="w-full min-w-[42rem] border-collapse text-sm">
           <thead>
             <tr>
+              {onSetPrimary ? <th className="ui-t-label px-2 py-2 text-left">Primary</th> : null}
               {['Name', 'Position', 'Email', 'Mobile'].map((c) => (
                 <th key={c} className="ui-t-label px-2 py-2 text-left">
                   {c}
@@ -213,6 +231,24 @@ export const ContactsTab = ({
           <tbody>
             {rows.map((r, i) => (
               <tr key={i}>
+                {/*
+                  Which of them a reminder is addressed to. Both masters ask for
+                  it, and without it the first row typed was the one every
+                  message went to — so adding an accounts clerk above the person
+                  you actually deal with quietly redirected the correspondence.
+                */}
+                {onSetPrimary ? (
+                  <td className="px-1 py-1">
+                    <input
+                      type="radio"
+                      name="party-primary-contact"
+                      className="ui-radio"
+                      checked={Boolean(r.isPrimary) || (!rows.some((c) => c?.isPrimary) && i === 0)}
+                      onChange={() => onSetPrimary(i)}
+                      aria-label={`Primary contact, row ${i + 1}`}
+                    />
+                  </td>
+                ) : null}
                 <td className="px-1 py-1">
                   <input value={r.name} onChange={(e) => onChange(i, 'name', e.target.value)} className="ui-input w-44" aria-label={`Contact name, row ${i + 1}`} />
                 </td>

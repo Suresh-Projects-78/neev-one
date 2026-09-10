@@ -39,15 +39,19 @@ export function PartyFormLayout({
   groupOptions,
   onCreateGroup,
   codesEnabled,
+  priceListOptions = [],
+  onDuplicate = null,
   gstinFetching,
   fetchFromGstin,
   addressRows,
+  onCopyBilling = null,
   updateAddressRow,
   addAddressRow,
   removeAddressRow,
   updateContactRow,
   addContactRow,
   removeContactRow,
+  setPrimaryContact,
 }) {
   return (
     <>
@@ -80,6 +84,9 @@ export function PartyFormLayout({
               label: formData.isActive === false ? 'Mark active' : 'Mark inactive',
               onSelect: () => setFormData((p) => ({ ...p, isActive: !(p.isActive !== false) })),
             },
+            ...(onDuplicate
+              ? [{ key: 'duplicate', label: `Duplicate this ${cfg.noun.toLowerCase()}`, onSelect: onDuplicate }]
+              : []),
             { key: 'clear', label: 'Clear the form', onSelect: resetForm },
           ]}
         />
@@ -133,8 +140,9 @@ export function PartyFormLayout({
             </FormRow>
           ) : null}
 
-          <FormRow label={`${cfg.noun} Name`} required hint={cfg.nameHint}>
+          <FormRow label={`${cfg.noun} Name`} required htmlFor="party-name" hint={cfg.nameHint}>
             <input
+              id="party-name"
               type="text"
               value={formData.displayName}
               onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
@@ -170,8 +178,9 @@ export function PartyFormLayout({
             />
           </FormRow>
 
-          <FormRow label="Opening Balance" hint={cfg.openingBalanceHint}>
+          <FormRow label="Opening Balance" htmlFor="party-opening-balance" hint={cfg.openingBalanceHint}>
             <input
+              id="party-opening-balance"
               type="number"
               step="0.01"
               value={formData.openingBalance}
@@ -225,6 +234,7 @@ export function PartyFormLayout({
               onChange={updateAddressRow}
               onAdd={addAddressRow}
               onRemove={removeAddressRow}
+              onCopyBilling={onCopyBilling}
             />
           ) : null}
 
@@ -234,6 +244,7 @@ export function PartyFormLayout({
               onChange={updateContactRow}
               onAdd={addContactRow}
               onRemove={removeContactRow}
+              onSetPrimary={setPrimaryContact}
             />
           ) : null}
 
@@ -265,15 +276,31 @@ export function PartyFormLayout({
                 />
               </div>
               <div>
+                {/*
+                  A list, not a typed name. The rate engine looks a price list
+                  up by id, so a box somebody typed "Standard" into pointed at
+                  nothing and the party was quietly on default rates. Only
+                  lists in force are offered — a retired one cannot price
+                  anything, so the master should not name it.
+                */}
                 <label className="ui-label" htmlFor="cust-price-list">{cfg.priceListLabel}</label>
-                <input
+                <select
                   id="cust-price-list"
-                  type="text"
-                  value={formData.priceListId}
+                  value={String(formData.priceListId ?? '')}
                   onChange={(e) => setFormData({ ...formData, priceListId: e.target.value })}
-                  className="ui-input w-full"
-                  placeholder="Standard"
-                />
+                  className="ui-select w-full"
+                  disabled={priceListOptions.length === 0}
+                >
+                  <option value="">— none —</option>
+                  {priceListOptions.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+                <p className="ui-caption mt-1">
+                  {priceListOptions.length === 0
+                    ? 'No price list is in force. Add one under Master Data → Price Lists and it appears here.'
+                    : `Rates come from this list before the item's own ${cfg.kind === 'VENDOR' ? 'purchase' : 'sale'} price.`}
+                </p>
               </div>
             </div>
           ) : null}
@@ -281,20 +308,23 @@ export function PartyFormLayout({
           {tab === 'statutory' ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {/*
-                GSTIN is shown here but not editable. The master asked for it in
-                both places; the same value in two editable fields on one form
-                is how two different values get saved.
+                The same value as Basic Details, editable here too — which is
+                what the master asks for: one GSTIN seen in two places, never
+                two GSTINs. Both fields are bound to the one field in state, so
+                a correction made on either is the correction everywhere.
               */}
               <div>
                 <label className="ui-label" htmlFor="cust-stat-gstin">GSTIN</label>
                 <input
                   id="cust-stat-gstin"
                   type="text"
-                  value={formData.gstin || '—'}
-                  readOnly
-                  className="ui-input ui-mono w-full ui-sunken"
+                  value={formData.gstin || ''}
+                  onChange={(e) => setFormData((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))}
+                  className="ui-input ui-mono w-full"
+                  placeholder="Enter 15 digit GSTIN"
+                  maxLength={15}
                 />
-                <p className="ui-caption mt-1">Entered under Basic Details.</p>
+                <p className="ui-caption mt-1">The same number as Basic Details — editing either changes both.</p>
               </div>
               <div>
                 <label className="ui-label" htmlFor="cust-pan">PAN</label>

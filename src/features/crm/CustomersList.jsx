@@ -164,24 +164,23 @@ export default function CustomersList({ db, setDb, currentCompany }) {
     );
   }
 
+  /*
+   * The form carries its own header — the name on the left, Back, Cancel, Save
+   * and the ⋮ on the right, which is what the master asks for. This screen used
+   * to print a second heading and a second Back above the card.
+   */
   if (isCreating) {
+    const seed = isCreating === true ? null : isCreating;
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsCreating(false)}
-              className="ui-btn ui-btn-secondary"
-            >
-              Back
-            </button>
-            <h3 className="ui-t-sec">New Customer</h3>
-          </div>
-        </div>
-
         <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <CustomerForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => setIsCreating(false)} />
+          <CustomerForm
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            seedData={seed}
+            onClose={() => setIsCreating(false)}
+          />
         </div>
       </div>
     );
@@ -190,22 +189,6 @@ export default function CustomersList({ db, setDb, currentCompany }) {
   if (editingCustomer) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setEditingCustomer(null)}
-              className="ui-btn ui-btn-secondary"
-            >
-              Back
-            </button>
-            <div>
-              <h3 className="ui-t-sec">Edit Customer</h3>
-              <div className="text-sm ui-muted">{getCustomerDisplayName(editingCustomer) || ''}</div>
-            </div>
-          </div>
-        </div>
-
         <div className="ui-surface rounded-xl shadow-sm border p-6">
           <CustomerForm
             db={db}
@@ -213,11 +196,16 @@ export default function CustomersList({ db, setDb, currentCompany }) {
             currentCompany={currentCompany}
             initialData={editingCustomer}
             onClose={() => setEditingCustomer(null)}
+            onDuplicate={(values) => {
+              setEditingCustomer(null);
+              setIsCreating(values);
+            }}
           />
         </div>
       </div>
     );
   }
+
 
   return (
     <DocumentListShell

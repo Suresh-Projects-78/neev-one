@@ -2,11 +2,12 @@ import React from 'react';
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
-import { createVendor, listVendors } from '../../api/masters';
+import { createVendor, listVendors, toServerCustomer } from '../../api/masters';
 import { apiFetch } from '../../api/http';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
 import { getVendorDisplayName } from '../../utils/contacts';
+import { activePriceListOptions, mergeGstinFetch, validateParty } from '../../utils/partyMaster';
 import PopupSelect from './PopupSelect';
 import PartyFormLayout from './PartyFormLayout';
 import { VENDOR_CFG } from './partyFormConfig';
@@ -17,7 +18,7 @@ import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 import { useRemoteSearch } from './useRemoteSearch';
 
-export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCreated, onClose }) => {
+export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seedData = null, onCreated, onClose, onDuplicate = null }) => {
   const isEdit = Boolean(initialData);
   const INDIA_COUNTRY = 'India';
   const INDIA_STATES = Object.entries(GST_STATE_BY_CODE)
@@ -65,6 +66,17 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         gstTaxpayerType: String(initialData.gstTaxpayerType || ''),
         gstRegistrationDate: String(initialData.gstRegistrationDate || ''),
         currency: String(initialData.currency || 'INR'),
+        /*
+         * These three were absent from the edit branch, so opening the form on
+         * an existing vendor rendered them from `undefined`: the opening
+         * balance and the credit limit came up blank whatever the vendor
+         * actually carried, and the balance type fell back to the customer's
+         * Dr rather than a vendor's Cr.
+         */
+        openingBalance: Number(initialData.openingBalance ?? 0),
+        openingBalanceType: String(initialData.openingBalanceType || 'Cr'),
+        creditLimit:
+          initialData.creditLimit === undefined || initialData.creditLimit === null ? '' : String(initialData.creditLimit),
         priceListId: String(initialData.priceListId || ''),
         msmeNumber: String(initialData.msmeNumber || ''),
         statutoryOther: String(initialData.statutoryOther || ''),
@@ -96,12 +108,42 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       };
     }
 
+    /*
+     * "Duplicate this vendor": everything that describes the trading
+     * relationship, none of the identity. A copied GSTIN or vendor code is a
+     * second vendor claiming to be the first one.
+     */
+    if (seedData) {
+      const billing = { ...emptyAddress, ...(seedData.billingAddress || {}) };
+      return {
+        ...seedData,
+        id: undefined,
+        accountId: undefined,
+        backendPartyId: undefined,
+        displayName: `${String(seedData.displayName || seedData.name || '').trim()} (copy)`.trim(),
+        gstin: '',
+        pan: '',
+        code: '',
+        openingBalance: 0,
+        openingBalanceType: String(seedData.openingBalanceType || 'Cr'),
+        creditLimit:
+          seedData.creditLimit === undefined || seedData.creditLimit === null ? '' : String(seedData.creditLimit),
+        contacts: Array.isArray(seedData.contacts) && seedData.contacts.length
+          ? seedData.contacts
+          : [{ name: '', position: '', email: '', mobile: '' }],
+        billingAddress: { ...billing, country: String(billing.country || INDIA_COUNTRY) },
+        shippingSameAsBilling: true,
+        shippingAddress: { ...billing, country: String(billing.country || INDIA_COUNTRY) },
+      };
+    }
+
     return {
       displayName: '',
       groupId: sundryCreditorsGroup?.id ? String(sundryCreditorsGroup.id) : '',
       openingBalance: isEdit ? Number(initialData?.openingBalance ?? 0) : 0,
       openingBalanceType: isEdit ? (initialData?.openingBalanceType || 'Cr') : 'Cr',
       currency: 'INR',
+      creditLimit: '',
       priceListId: '',
       msmeNumber: '',
       statutoryOther: '',
@@ -247,6 +289,17 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   const [gstFetching, setGstFetching] = useState(false);
   const [tab, setTab] = useState('address');
   const saveAndNewRef = useRef(false);
+
+  /*
+   * The lists this vendor may be put on. It was a free-text box with
+   * "Standard" as a placeholder while the rate engine looks a list up by id,
+   * so whatever was typed there matched nothing and the vendor was quietly on
+   * default rates.
+   */
+  const priceListOptions = useMemo(
+    () => activePriceListOptions({ db, companyId: currentCompany.id, onDate: new Date().toISOString().slice(0, 10) }),
+    [db, currentCompany.id]
+  );
   const { isEnabled: featureOn } = useFeatures();
   const codesEnabled = featureOn('partyCodes');
 
@@ -297,6 +350,11 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   const removeAddressRow = (i) =>
     setFormData((p) => ({ ...p, shipToAddresses: (p.shipToAddresses || []).filter((_, j) => j !== i - 2) }));
 
+  /* Shipping is the billing address far more often than not, and retyping it
+     is how the two quietly diverge by a door number. */
+  const copyBillingToShipping = () =>
+    setFormData((p) => ({ ...p, shippingAddress: { ...p.billingAddress }, shippingSameAsBilling: true }));
+
   const updateContactRow = (i, key, value) =>
     setFormData((p) => ({ ...p, contacts: (p.contacts || []).map((c, j) => (j === i ? { ...c, [key]: value } : c)) }));
 
@@ -304,6 +362,13 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
     setFormData((p) => ({ ...p, contacts: [...(p.contacts || []), { name: '', position: '', email: '', mobile: '' }] }));
 
   const removeContactRow = (i) => setFormData((p) => ({ ...p, contacts: (p.contacts || []).filter((_, j) => j !== i) }));
+
+  /* One primary, or none. The flag is what a reminder is addressed to. */
+  const setPrimaryContact = (i) =>
+    setFormData((p) => ({
+      ...p,
+      contacts: (p.contacts || []).map((c, j) => ({ ...c, isPrimary: j === i })),
+    }));
 
   const resetForm = () =>
     setFormData((p) => ({
@@ -324,35 +389,17 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
     setGstFetching(true);
     try {
       const data = await apiFetch(`/gstin/${gstin}`, { skipWarehouseHeader: true });
-      setFormData((prev) => {
-        const addr = { ...prev.billingAddress };
-        /*
-         * The nested shape, which is what the company and customer forms read
-         * too. The flat keys still come back, but three forms reading a lookup
-         * two different ways is how two of them ended up reading a shape that
-         * was never returned.
-         */
-        const a = data.address || {};
-        if (a.line1) addr.line1 = a.line1;
-        if (a.city) addr.city = a.city;
-        if (a.district) addr.district = a.district;
-        if (a.state) addr.state = a.state;
-        if (a.pincode) addr.pincode = String(a.pincode);
-        if (!String(addr.country || '').trim()) addr.country = INDIA_COUNTRY;
-        const legal = String(data.legalName || data.tradeName || '').trim();
-        return {
-          ...prev,
-          gstin,
-          pan: String(prev.pan || '').trim() || String(data.pan || ''),
-          displayName: legal || prev.displayName,
-          legalName: String(data.legalName || prev.legalName || ''),
-          tradeName: String(data.tradeName || prev.tradeName || ''),
-          gstStatus: String(data.status || ''),
-          gstTaxpayerType: String(data.taxpayerType || ''),
-          gstRegistrationDate: String(data.registrationDate || ''),
-          billingAddress: addr,
-        };
-      });
+      /*
+       * A fetch fills blanks. Anything already typed stays and the difference
+       * is reported — the spec is explicit that a lookup must not silently
+       * overwrite what somebody entered, and a name corrected to what the
+       * business actually calls this supplier is the commonest casualty.
+       */
+      const { next, kept: keptFields } = mergeGstinFetch({ prev: formData, data: { ...data, gstin } });
+      setFormData(next);
+      if (keptFields.length) {
+        notify.info(`Kept what you had typed for the ${keptFields.join(', ')}. Clear a field and fetch again to take the portal's version.`);
+      }
       if (data.source === 'portal') {
         notify.success('Fetched from the GST portal — check the details and edit anything that is off.');
       } else {
@@ -379,8 +426,12 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
   const isValidGstin = (gstin) => /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(normalizeGstin(gstin));
   const getGstinState = (gstin) => getGstStateFromGstin(normalizeGstin(gstin));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    /* Which button was pressed: "Save and add another" keeps the form open. */
+    const saveAndNew = saveAndNewRef.current;
+    saveAndNewRef.current = false;
 
     const selectedGroupIdRaw = String(formData.groupId || '').trim();
     const effectiveGroupId = selectedGroupIdRaw
@@ -389,8 +440,19 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
         ? Number(sundryCreditorsGroup.id)
         : null;
 
-    if (!formData.displayName.trim()) {
-      notify.error('Company name is required');
+    /*
+     * What the master refuses, in one place and in the order a person meets
+     * it. The tab a bad field sits on is opened rather than the message
+     * pointing at somewhere invisible.
+     */
+    const complaint = validateParty({
+      values: { ...formData, groupId: selectedGroupIdRaw || (sundryCreditorsGroup ? String(sundryCreditorsGroup.id) : '') },
+      noun: 'Vendor',
+      priceListOptions,
+    });
+    if (complaint) {
+      if (complaint.tab) setTab(complaint.tab);
+      notify.error(complaint.message);
       return;
     }
 
@@ -466,6 +528,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       phone: String(formData.mobile || '').trim(),
       gstin: effectiveGstin,
       pan: effectivePan,
+      creditLimit:
+        String(formData.creditLimit ?? '').trim() === '' ? undefined : Math.max(0, Number(formData.creditLimit) || 0),
       // Stored as a number so the due-date maths never sees "30" as a string.
       paymentTermDays:
         String(formData.paymentTermDays ?? '').trim() === ''
@@ -597,15 +661,47 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
       main: String(typeRow?.main || 'Balance Sheet'),
       balance: 0,
       openingBalance: Math.round((Number(formData.openingBalance) || 0) * 100) / 100,
-      openingBalanceType: formData.openingBalanceType || 'Dr',
+      /* Cr, not Dr: a vendor balance is money the business owes. */
+      openingBalanceType: formData.openingBalanceType || 'Cr',
       createdAt: new Date().toISOString(),
     };
 
     const finalVendor = { ...newVendor, accountId: ledger.id };
 
-    setDb({ ...db, chartOfAccounts: [...coa, ledger], vendors: [...(db.vendors || []), finalVendor] });
+    /*
+     * Write through to the server, then keep what it allotted.
+     *
+     * The customer form has done this since the master was rebuilt; the vendor
+     * form never did. A vendor entered on the Vendors screen lived in one
+     * browser: its contacts and extra addresses reached nothing, the code the
+     * server allots stayed blank, and — because hydration matches a server
+     * party to the local one by `backendPartyId` — signing in on a second
+     * machine came back missing exactly the vendors the first machine had
+     * typed, with the bills against them pointing at no party at all.
+     *
+     * Failure is not fatal: a vendor entered offline stays local and usable.
+     */
+    let serverPatch = {};
+    try {
+      const created = await createVendor(toServerCustomer(finalVendor));
+      const party = created?.party;
+      if (party?.id) serverPatch = { backendPartyId: String(party.id), code: party.code || finalVendor.code || '' };
+    } catch (err) {
+      notify.error(`Saved on this device only — the server refused it: ${String(err?.message || err)}`);
+    }
 
-    if (typeof onCreated === 'function') onCreated(finalVendor);
+    const storedVendor = { ...finalVendor, ...serverPatch };
+
+    setDb({ ...db, chartOfAccounts: [...coa, ledger], vendors: [...(db.vendors || []), storedVendor] });
+
+    if (typeof onCreated === 'function') onCreated(storedVendor);
+
+    if (saveAndNew) {
+      resetForm();
+      setTab('address');
+      notify.success('Vendor created. Ready for the next one.');
+      return;
+    }
 
     if (typeof onClose === 'function') {
       onClose();
@@ -636,15 +732,19 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, onCr
             setGroupCreateOpen(true);
           }}
           codesEnabled={codesEnabled}
+          priceListOptions={priceListOptions}
+          onDuplicate={isEdit && onDuplicate ? () => onDuplicate(formData) : null}
           gstinFetching={gstFetching}
           fetchFromGstin={fetchFromGstin}
           addressRows={addressRows}
+          onCopyBilling={copyBillingToShipping}
           updateAddressRow={updateAddressRow}
           addAddressRow={addAddressRow}
           removeAddressRow={removeAddressRow}
           updateContactRow={updateContactRow}
           addContactRow={addContactRow}
           removeContactRow={removeContactRow}
+          setPrimaryContact={setPrimaryContact}
         />
       </form>
 

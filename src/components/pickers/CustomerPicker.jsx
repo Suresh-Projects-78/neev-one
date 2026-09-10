@@ -10,6 +10,7 @@ import Modal from '../ui/Modal';
 import { createCustomer, listCustomers, lookupGstin, toServerCustomer } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
+import { activePriceListOptions, mergeGstinFetch, validateParty } from '../../utils/partyMaster';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import PopupSelect from './PopupSelect';
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
@@ -17,7 +18,7 @@ import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 import { useRemoteSearch } from './useRemoteSearch';
 
-export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, onCreated, onClose }) => {
+export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, seedData = null, onDuplicate = null, onCreated, onClose }) => {
   const isEdit = Boolean(initialData);
   const INDIA_COUNTRY = 'India';
   const INDIA_STATES = Object.entries(GST_STATE_BY_CODE)
@@ -93,6 +94,35 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
           state: String(shipping.state || ''),
           country: String(shipping.country || INDIA_COUNTRY),
         },
+      };
+    }
+
+    /*
+     * "Duplicate this customer": everything that describes the trading
+     * relationship, none of the identity. A copied GSTIN or customer code is a
+     * second customer claiming to be the first one.
+     */
+    if (seedData) {
+      const billing = { ...emptyAddress, ...(seedData.billingAddress || {}) };
+      return {
+        ...seedData,
+        id: undefined,
+        accountId: undefined,
+        backendPartyId: undefined,
+        displayName: `${String(seedData.displayName || seedData.name || '').trim()} (copy)`.trim(),
+        gstin: '',
+        pan: '',
+        code: '',
+        openingBalance: 0,
+        openingBalanceType: String(seedData.openingBalanceType || 'Dr'),
+        creditLimit:
+          seedData.creditLimit === undefined || seedData.creditLimit === null ? '' : String(seedData.creditLimit),
+        contacts: Array.isArray(seedData.contacts) && seedData.contacts.length
+          ? seedData.contacts
+          : [{ name: '', position: '', email: '', mobile: '' }],
+        billingAddress: { ...billing, country: String(billing.country || INDIA_COUNTRY) },
+        shippingSameAsBilling: true,
+        shippingAddress: { ...billing, country: String(billing.country || INDIA_COUNTRY) },
       };
     }
 
@@ -265,6 +295,12 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
 
   const [tab, setTab] = useState('address');
   const saveAndNewRef = useRef(false);
+
+  /* The lists in force today. Same rule as the vendor form, same source. */
+  const priceListOptions = useMemo(
+    () => activePriceListOptions({ db, companyId: currentCompany.id, onDate: new Date().toISOString().slice(0, 10) }),
+    [db, currentCompany.id]
+  );
   const { isEnabled: featureOn } = useFeatures();
   const codesEnabled = featureOn('partyCodes');
 
@@ -331,6 +367,11 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
   const removeAddressRow = (i) =>
     setFormData((p) => ({ ...p, shipToAddresses: (p.shipToAddresses || []).filter((_, j) => j !== i - 2) }));
 
+  /* Shipping is the billing address far more often than not, and retyping it
+     is how the two quietly diverge by a door number. */
+  const copyBillingToShipping = () =>
+    setFormData((p) => ({ ...p, shippingAddress: { ...p.billingAddress }, shippingSameAsBilling: true }));
+
   const updateContactRow = (i, key, value) =>
     setFormData((p) => ({ ...p, contacts: p.contacts.map((c, j) => (j === i ? { ...c, [key]: value } : c)) }));
 
@@ -338,6 +379,13 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     setFormData((p) => ({ ...p, contacts: [...(p.contacts || []), { name: '', position: '', email: '', mobile: '' }] }));
 
   const removeContactRow = (i) => setFormData((p) => ({ ...p, contacts: p.contacts.filter((_, j) => j !== i) }));
+
+  /* One primary, or none. The flag is what a reminder is addressed to. */
+  const setPrimaryContact = (i) =>
+    setFormData((p) => ({
+      ...p,
+      contacts: (p.contacts || []).map((c, j) => ({ ...c, isPrimary: j === i })),
+    }));
 
   /*
    * What the GSTIN itself encodes is filled without asking anybody: the first
@@ -354,21 +402,14 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
     setGstinFetching(true);
     try {
       const data = await lookupGstin(gstin);
-      setFormData((p) => ({
-        ...p,
-        gstin,
-        pan: data?.pan || p.pan,
-        displayName: p.displayName || data?.legalName || data?.tradeName || '',
-        billingAddress: {
-          ...p.billingAddress,
-          state: data?.state || p.billingAddress.state,
-          line1: p.billingAddress.line1 || data?.address?.line1 || '',
-          city: p.billingAddress.city || data?.address?.city || '',
-          district: p.billingAddress.district || data?.address?.district || '',
-          pincode: p.billingAddress.pincode || data?.address?.pincode || '',
-        },
-      }));
+      /* Fills blanks, keeps what was typed — the same rule the vendor form
+         follows, from the same place, so the two cannot drift apart. */
+      const { next, kept } = mergeGstinFetch({ prev: formData, data: { ...data, gstin } });
+      setFormData(next);
       notify.success(data?.source === 'derived' ? 'State and PAN filled from the GSTIN.' : 'Fetched from the GST portal.');
+      if (kept.length) {
+        notify.info(`Kept what you had typed for the ${kept.join(', ')}. Clear a field and fetch again to take the portal's version.`);
+      }
     } catch (e) {
       notify.error(String(e?.message || 'Could not fetch that GSTIN.'));
     } finally {
@@ -394,8 +435,14 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
         ? Number(sundryDebtorsGroup.id)
         : null;
 
-    if (!formData.displayName.trim()) {
-      notify.error('Company name is required');
+    const complaint = validateParty({
+      values: { ...formData, groupId: selectedGroupIdRaw || (sundryDebtorsGroup ? String(sundryDebtorsGroup.id) : '') },
+      noun: 'Customer',
+      priceListOptions,
+    });
+    if (complaint) {
+      if (complaint.tab) setTab(complaint.tab);
+      notify.error(complaint.message);
       return;
     }
 
@@ -696,15 +743,19 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, on
             setGroupCreateOpen(true);
           }}
           codesEnabled={codesEnabled}
+          priceListOptions={priceListOptions}
+          onDuplicate={isEdit && onDuplicate ? () => onDuplicate(formData) : null}
           gstinFetching={gstinFetching}
           fetchFromGstin={fetchFromGstin}
           addressRows={addressRows}
+          onCopyBilling={copyBillingToShipping}
           updateAddressRow={updateAddressRow}
           addAddressRow={addAddressRow}
           removeAddressRow={removeAddressRow}
           updateContactRow={updateContactRow}
           addContactRow={addContactRow}
           removeContactRow={removeContactRow}
+          setPrimaryContact={setPrimaryContact}
         />
       </form>
 

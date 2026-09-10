@@ -165,24 +165,25 @@ export default function VendorsList({ db, setDb, currentCompany }) {
     );
   }
 
+  /*
+   * The form carries its own header — the name on the left, Back, Cancel, Save
+   * and the ⋮ on the right, which is what the spec asks for. This screen used
+   * to print a second heading and a second Back above the card, so the title
+   * appeared twice and there were two ways back that looked like different
+   * things.
+   */
   if (isCreating) {
+    const seed = isCreating === true ? null : isCreating;
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsCreating(false)}
-              className="ui-btn ui-btn-secondary"
-            >
-              Back
-            </button>
-            <h3 className="ui-t-sec">New Vendor</h3>
-          </div>
-        </div>
-
         <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <VendorForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => setIsCreating(false)} />
+          <VendorForm
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            seedData={seed}
+            onClose={() => setIsCreating(false)}
+          />
         </div>
       </div>
     );
@@ -191,22 +192,6 @@ export default function VendorsList({ db, setDb, currentCompany }) {
   if (editingVendor) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setEditingVendor(null)}
-              className="ui-btn ui-btn-secondary"
-            >
-              Back
-            </button>
-            <div>
-              <h3 className="ui-t-sec">Edit Vendor</h3>
-              <div className="text-sm ui-muted">{getVendorDisplayName(editingVendor) || ''}</div>
-            </div>
-          </div>
-        </div>
-
         <div className="ui-surface rounded-xl shadow-sm border p-6">
           <VendorForm
             db={db}
@@ -214,6 +199,10 @@ export default function VendorsList({ db, setDb, currentCompany }) {
             currentCompany={currentCompany}
             initialData={editingVendor}
             onClose={() => setEditingVendor(null)}
+            onDuplicate={(values) => {
+              setEditingVendor(null);
+              setIsCreating(values);
+            }}
           />
         </div>
       </div>
