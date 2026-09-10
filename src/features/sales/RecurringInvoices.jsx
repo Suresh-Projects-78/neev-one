@@ -16,6 +16,7 @@ import { runSchedulesNow } from '../../api/recurring';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 import { ListFilterBand } from '../../components/list/ListPageParts';
+import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
@@ -417,6 +418,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
    * the date range applied to the next run — the column people are actually
    * looking at when they ask "what is due this month".
    */
+  const recFilters = useColumnFilters();
+
   const shownTemplates = useMemo(() => {
     const from = String(fromDate || '').trim();
     const to = String(toDate || '').trim();
@@ -433,9 +436,22 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recSearch.filtered, customerFilter, freqFilter, statusFilter, fromDate, toDate]);
 
-  const pageCount = Math.max(1, Math.ceil(shownTemplates.length / perPage));
+  /*
+   * The same per-column filter and sort the invoice list carries. Plain <th>s
+   * here meant this was the one list whose headings did nothing when clicked.
+   */
+  const filteredTemplates = recFilters.applyFilters(shownTemplates, {
+    name: (r) => r.name,
+    customer: (r) => r.customerName,
+    frequency: (r) => FREQ_LABEL[r.frequency] || r.frequency,
+    total: (r) => r.total,
+    nextRunDate: (r) => r.nextRunDate,
+    status: (r) => scheduleStatus(r),
+  });
+
+  const pageCount = Math.max(1, Math.ceil(filteredTemplates.length / perPage));
   const safePage = Math.min(page, pageCount);
-  const pagedTemplates = shownTemplates.slice((safePage - 1) * perPage, safePage * perPage);
+  const pagedTemplates = filteredTemplates.slice((safePage - 1) * perPage, safePage * perPage);
 
   const REC_STATUS_TABS = [
     { value: '', label: 'All', tone: 'all' },
@@ -955,12 +971,12 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               <thead>
                 <tr>
                   <th scope="col" className="w-10">#</th>
-                  <th scope="col">Schedule name</th>
-                  <th scope="col">Customer</th>
-                  <th scope="col">Frequency</th>
-                  <th scope="col" className="ui-num">Amount</th>
-                  <th scope="col">Next invoice date</th>
-                  <th scope="col">Status</th>
+                  <ColumnHeader label="Schedule name" col="name" state={recFilters} />
+                  <ColumnHeader label="Customer" col="customer" state={recFilters} />
+                  <ColumnHeader label="Frequency" col="frequency" state={recFilters} />
+                  <ColumnHeader label="Amount" col="total" state={recFilters} className="ui-num" align="right" />
+                  <ColumnHeader label="Next invoice date" col="nextRunDate" state={recFilters} />
+                  <ColumnHeader label="Status" col="status" state={recFilters} />
                   <th scope="col" className="w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
@@ -1074,8 +1090,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             style={{ borderTop: '1px solid rgb(var(--border))' }}
           >
             <span className="ui-subtle text-xs">
-              Showing {shownTemplates.length === 0 ? 0 : (safePage - 1) * perPage + 1} –{' '}
-              {Math.min(safePage * perPage, shownTemplates.length)} of {shownTemplates.length} schedules
+              Showing {filteredTemplates.length === 0 ? 0 : (safePage - 1) * perPage + 1} –{' '}
+              {Math.min(safePage * perPage, filteredTemplates.length)} of {filteredTemplates.length} schedules
             </span>
             {pageCount > 1 ? (
               <div className="flex items-center gap-1.5">

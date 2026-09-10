@@ -12,6 +12,7 @@ import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } fr
 import { DocDate } from '../../components/docs';
 import { csvSafeValue } from '../../utils/csv';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
+import { ListFilterBand } from '../../components/list/ListPageParts';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -510,9 +511,11 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
         text: 'Nothing here is stored — every column is worked out from the bills, invoices and adjustments in the period.',
       }}
     >
-      {/* View, warehouse and period at the top of the table they govern —
-          they change what every column below means, so they belong to it. */}
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+      {/* View, warehouse and period at the top of the table they govern — they
+          change what every column below means, so they belong to it. In the
+          shared band, at the shared height, like every other list that needs
+          filters the tabs cannot express. */}
+      <ListFilterBand>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-view">View</label>
           <select
@@ -586,8 +589,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
             />
           </div>
         ) : null}
-
-      </div>
+      </ListFilterBand>
 
       <div className="ui-table-scroll">
         <table className="ui-table ui-table-wide ui-table-sticky">

@@ -12,6 +12,7 @@ import { isStockItem } from '../../utils/inventory';
 import { generateVoucherNumber } from '../../utils/docSettings';
 import { DocumentNumber, DocDate } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
+import { DocFormActions } from '../../components/DocumentForm';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 const normalizeId = (v) => (v === undefined || v === null ? '' : String(v).trim());
@@ -150,6 +151,7 @@ const StockAdjustments = ({
   const colFilters = useColumnFilters();
 
   const [creating, setCreating] = useState(false);
+  const formRef = useRef(null);
   const [form, setForm] = useState(() => ({
     date: today(),
     warehouseId: normalizeId(activeWarehouseId),
@@ -428,57 +430,34 @@ const StockAdjustments = ({
     { key: 'reason', label: 'Reason' },
   ];
 
-  return (
-    <DocumentListShell
-      title="Stock Adjustments"
-      description="What a count found that the books did not. Each one moves stock, so the balance sheet and the P&L move with it."
-      company={currentCompany}
-      search={{
-        value: adjSearch.query,
-        onChange: adjSearch.setQuery,
-        placeholder: 'Search adjustments…',
-        label: 'Search adjustments',
-      }}
-      moreItems={[exportMenuItem('Export adjustments')]}
-      onMoreSelect={(k) => {
-        const format = exportFormatFromKey(k);
-        if (!format) return;
-        runListExport({
-          format,
-          title: 'Adjustments',
-          fileName: `StockAdjustments_${currentCompany?.name || 'company'}`,
-          label: 'adjustment(s)',
-          columns: adjExportColumns,
-          rows: adjRows,
-        });
-      }}
-      primary={
-        creating ? null : (
-          <button type="button" onClick={() => setCreating(true)} className="ui-btn ui-btn-primary">
-            <Plus size={16} aria-hidden="true" /> New Adjustment
-          </button>
-        )
-      }
-      cards={[
-        { label: 'Adjustments', value: adjHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
-        { label: 'Units written up', value: adjHeadline.upQty, count: true, tone: 'paid', Icon: TrendingUp },
-        { label: 'Units written off', value: adjHeadline.downQty, count: true, tone: 'overdue', Icon: TrendingDown },
-        { label: 'Value written up', value: totals.up, tone: 'sent', Icon: Package },
-        { label: 'Value written off', value: Math.abs(totals.down), tone: 'outstanding', Icon: Package },
-      ]}
-      tabs={ADJ_TABS}
-      tabsLabel="Adjustment filter"
-      statusValue={adjFilter}
-      statusCounts={adjCounts}
-      onStatusChange={setAdjFilter}
-      tip={{
-        storageKey: 'neev.tip.stockAdjustments',
-        Icon: ClipboardList,
-        text: 'An adjustment is a posting, not a note — removing one puts the stock it moved back.',
-      }}
-      above={
-        creating ? (
-        <form onSubmit={saveForm} className="ui-card p-4 space-y-4">
+  /*
+   * The form is a screen, not a panel above the list.
+   *
+   * It rendered between the status tabs and the table, so the cards, the tabs
+   * and every past adjustment stayed on screen under a half-typed one — and
+   * the list's own primary action had to be hidden to stop two of them sitting
+   * side by side.
+   */
+  if (creating) {
+    return (
+      <div className="space-y-6">
+        <DocFormActions
+          title="New Stock Adjustment"
+          onBack={() => {
+            resetForm();
+            setCreating(false);
+          }}
+          sticky
+          secondaryLabel="Cancel"
+          onSecondary={() => {
+            resetForm();
+            setCreating(false);
+          }}
+          primaryLabel="Record adjustment"
+          primaryType="button"
+          onPrimary={() => formRef.current?.requestSubmit()}
+        />
+        <form ref={formRef} onSubmit={saveForm} className="ui-card p-4 space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div>
               <label className="ui-label" htmlFor="adj-date">Date</label>
@@ -612,25 +591,60 @@ const StockAdjustments = ({
               <span className="ui-caption">Columns: Item, Qty, Reason, Warehouse. Save the sheet as CSV.</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  resetForm();
-                  setCreating(false);
-                }}
-                className="ui-btn ui-btn-secondary"
-              >
-                Cancel
-              </button>
-              <button type="submit" className="ui-btn ui-btn-primary">
-                Record adjustment
-              </button>
-            </div>
           </div>
         </form>
-        ) : null
+      </div>
+    );
+  }
+
+  return (
+    <DocumentListShell
+      title="Stock Adjustments"
+      description="What a count found that the books did not. Each one moves stock, so the balance sheet and the P&L move with it."
+      company={currentCompany}
+      search={{
+        value: adjSearch.query,
+        onChange: adjSearch.setQuery,
+        placeholder: 'Search adjustments…',
+        label: 'Search adjustments',
+      }}
+      moreItems={[exportMenuItem('Export adjustments')]}
+      onMoreSelect={(k) => {
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Adjustments',
+          fileName: `StockAdjustments_${currentCompany?.name || 'company'}`,
+          label: 'adjustment(s)',
+          columns: adjExportColumns,
+          rows: adjRows,
+        });
+      }}
+      primary={
+        creating ? null : (
+          <button type="button" onClick={() => setCreating(true)} className="ui-btn ui-btn-primary">
+            <Plus size={16} aria-hidden="true" /> New Adjustment
+          </button>
+        )
       }
+      cards={[
+        { label: 'Adjustments', value: adjHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Units written up', value: adjHeadline.upQty, count: true, tone: 'paid', Icon: TrendingUp },
+        { label: 'Units written off', value: adjHeadline.downQty, count: true, tone: 'overdue', Icon: TrendingDown },
+        { label: 'Value written up', value: totals.up, tone: 'sent', Icon: Package },
+        { label: 'Value written off', value: Math.abs(totals.down), tone: 'outstanding', Icon: Package },
+      ]}
+      tabs={ADJ_TABS}
+      tabsLabel="Adjustment filter"
+      statusValue={adjFilter}
+      statusCounts={adjCounts}
+      onStatusChange={setAdjFilter}
+      tip={{
+        storageKey: 'neev.tip.stockAdjustments',
+        Icon: ClipboardList,
+        text: 'An adjustment is a posting, not a note — removing one puts the stock it moved back.',
+      }}
     >
       <div className="ui-table-scroll">
         <table className="ui-table ui-table-wide ui-table-sticky">
