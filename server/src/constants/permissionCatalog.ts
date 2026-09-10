@@ -65,6 +65,15 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
       { key: 'Receipts', label: 'Receipts', actions: DOCUMENT },
       { key: 'Estimates', label: 'Estimates / Quotes', actions: DOCUMENT },
       { key: 'Credit Notes', label: 'Credit Notes', actions: DOCUMENT_APPROVAL },
+      /*
+       * These two have had routes for a while and no entry here, which meant
+       * nobody could be granted them deliberately — the authorisation
+       * middleware quietly created and granted them when the org creator first
+       * hit one. Now that a denial is a denial, an endpoint that guards a
+       * resource must have that resource in this catalogue.
+       */
+      { key: 'Sales Orders', label: 'Sales Orders', actions: DOCUMENT_APPROVAL },
+      { key: 'Delivery Challans', label: 'Delivery Challans', actions: DOCUMENT },
     ],
   },
   {
@@ -128,6 +137,12 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
       { key: 'Units of Measure', label: 'Units of Measure', actions: MASTER },
       { key: 'Salesmen', label: 'Salesmen', actions: MASTER },
       {
+        key: 'Masters',
+        label: 'Units, categories, price lists & groups',
+        description: 'The six reference lists shared by every document',
+        actions: MASTER,
+      },
+      {
         key: 'Company/Branch setup',
         label: 'Company, Branch & Warehouse',
         description: 'Create and edit branches and warehouses',
@@ -159,6 +174,12 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
       { key: 'Tax Settings', label: 'Tax Settings', actions: SETTING },
       { key: 'Document Numbering', label: 'Document Numbering', actions: SETTING },
       { key: 'Document Templates', label: 'Document Templates', actions: SETTING },
+      {
+        key: 'Audit trail',
+        label: 'Audit Trail',
+        description: 'Read who changed what. There is nothing to grant beyond viewing: the trail cannot be edited.',
+        actions: [A.VIEW, A.EXPORT],
+      },
     ],
   },
 ];

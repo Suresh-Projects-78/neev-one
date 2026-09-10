@@ -19,65 +19,6 @@ function permString(module: string, subModule: string | null, action: Permission
   return `${module}::${subModule || ''}::${action}`;
 }
 
-async function ensureOwnerPermissionForCreator(
-  accountId: string,
-  orgId: string,
-  userId: string,
-  module: string,
-  subModule: string | null,
-  action: PermissionActionType,
-) {
-  const org = await prisma.org.findFirst({ where: { accountId, id: orgId }, select: { createdByUserId: true } });
-  if (!org || org.createdByUserId !== userId) return false;
-
-  const roleName = 'Owner';
-  const role =
-    (await prisma.role.findFirst({ where: { accountId, orgId, branchId: null, name: roleName }, select: { id: true } })) ||
-    (await prisma.role.create({
-      data: {
-        accountId,
-        orgId,
-        branchId: null,
-        name: roleName,
-        description: 'Default owner role (auto-created)',
-        roleType: 'ADMIN',
-        createdByUserId: userId,
-      },
-      select: { id: true },
-    }));
-
-  // Ensure permission exists
-  const perm =
-    (await prisma.permission.findFirst({ where: { module, subModule, action }, select: { id: true } })) ||
-    (await prisma.permission.create({ data: { module, subModule, action }, select: { id: true } }));
-
-  // Ensure rolePermission is granted
-  try {
-    await prisma.rolePermission.create({
-      data: { accountId, orgId, roleId: role.id, permissionId: perm.id, allowed: true },
-      select: { id: true },
-    });
-  } catch (err: any) {
-    if (!(String(err?.name || '') === 'PrismaClientKnownRequestError' && String(err?.code || '') === 'P2002')) {
-      throw err;
-    }
-  }
-
-  // Ensure assignment exists
-  try {
-    await prisma.userRoleAssignment.create({
-      data: { accountId, orgId, branchId: null, userId, roleId: role.id, createdByUserId: userId },
-      select: { id: true },
-    });
-  } catch (err: any) {
-    if (!(String(err?.name || '') === 'PrismaClientKnownRequestError' && String(err?.code || '') === 'P2002')) {
-      throw err;
-    }
-  }
-
-  return true;
-}
-
 async function bootstrapOwnerRoleIfCreator(accountId: string, orgId: string, userId: string) {
   const org = await prisma.org.findFirst({ where: { accountId, id: orgId }, select: { createdByUserId: true } });
   if (!org || org.createdByUserId !== userId) return false;
@@ -185,21 +126,21 @@ export function requirePermission(module: string, action: PermissionActionType, 
     req.permissionLevels = access.levels;
 
     const want = permString(m, sm || null, action);
-    const ok = allowed.has(want);
-    if (!ok) {
-      // Safety net: org creator should never get locked out of core administration.
-      // If the creator is missing this permission (e.g., older bootstraps), grant it to their Owner role.
-      try {
-        const granted = await ensureOwnerPermissionForCreator(accountId, orgId, userId, m, sm || null, action);
-        if (granted) {
-          allowed.add(want);
-          req.permissions = allowed;
-          return next();
-        }
-      } catch {
-        // fall through to the normal denial
-      }
-
+    if (!allowed.has(want)) {
+      /*
+       * A denial is a denial.
+       *
+       * This used to repair itself: a creator who hit a permission their Owner
+       * role did not carry had it created, granted and assigned, and the
+       * request went through. Authorisation was writing to the permission
+       * tables while deciding whether to authorise — so a refused request could
+       * change security configuration, and effective access depended on which
+       * endpoints somebody happened to visit first.
+       *
+       * New orgs are seeded with the whole catalogue at setup, and
+       * `scripts/backfillOwnerPermissions.ts` tops up the ones created before
+       * that. Neither happens here, while a request is being decided.
+       */
       return res.status(403).json({ error: 'Permission denied', permission: { module: m, subModule: sm || null, action } });
     }
 
