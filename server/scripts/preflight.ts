@@ -21,6 +21,8 @@
  * registered the same address, `prisma db push` either refuses or takes rows
  * with it. That is the blocking check.
  */
+import { readFileSync } from 'node:fs';
+
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -98,8 +100,46 @@ async function main() {
     }
   }
 
-  console.log('\nadditive only      AccountEntitlement, PartyAddress, PartyContact and the new nullable');
-  console.log('                   Party columns. These add tables and columns and touch no existing row.');
+  /*
+   * What this deploy will actually add, read rather than recited.
+   *
+   * This paragraph used to be a hard-coded sentence naming the tables of the
+   * deploy it was written for. It went on saying "AccountEntitlement,
+   * PartyAddress, PartyContact" for every deploy after that one — so a reader
+   * was told the check had verified this release when it had looked at nothing
+   * of the kind. A safety report that describes the wrong release is worse than
+   * one that says nothing, because it is believed.
+   *
+   * The schema file is next to this script and ships with it, so the models it
+   * declares can be compared against the tables the live database actually has.
+   */
+  const declared = (() => {
+    try {
+      const schema = readFileSync(new URL('../prisma/schema.prisma', import.meta.url), 'utf8');
+      return [...schema.matchAll(/^model\s+(\w+)\s*\{/gm)].map((m) => m[1]);
+    } catch {
+      return [];
+    }
+  })();
+
+  const live = new Set(
+    (
+      await prisma.$queryRawUnsafe<Array<{ name: string }>>(
+        "SELECT name FROM sqlite_master WHERE type = 'table'"
+      )
+    ).map((r) => r.name)
+  );
+
+  const arriving = declared.filter((m) => !live.has(m));
+  if (!declared.length) {
+    console.log('\nnew tables         could not read the schema next to this script, so this deploy has');
+    console.log('                   not been compared against the live database. Check by hand.');
+  } else if (arriving.length) {
+    console.log(`\nnew tables         ${arriving.length} arriving: ${arriving.join(', ')}`);
+    console.log('                   New tables touch no existing row.');
+  } else {
+    console.log('\nnew tables         none — every model this deploy declares already exists.');
+  }
 
   const [{ n: orgs }] = await prisma.$queryRawUnsafe<Array<{ n: number }>>('SELECT COUNT(*) AS n FROM Org');
   const [{ n: users }] = await prisma.$queryRawUnsafe<Array<{ n: number }>>('SELECT COUNT(*) AS n FROM User');
