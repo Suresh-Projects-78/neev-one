@@ -99,6 +99,78 @@ describe('a person already registered elsewhere', () => {
       .expect(201);
   };
 
+  /*
+   * The defect this file was meant to cover and did not.
+   *
+   * The tests below prove a known foreign orgId can be USED. They say nothing
+   * about whether it can be FOUND — and it could not: login and /auth/me
+   * filtered memberships by the signed-in user's own accountId, while an
+   * invited membership carries the inviting account's. So the company was
+   * authorised and invisible, and the only way in was to already know an
+   * internal id. That is the advertised CA-firm workflow, unusable.
+   */
+  it('lists the invited company at login', async () => {
+    await grantRole(globex, acme.email);
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: acme.email, password: 'Passw0rd!23' })
+      .expect(200);
+
+    const orgIds = (res.body.companies || []).map((c: any) => c.orgId);
+    expect(orgIds).toContain(acme.orgId);
+    expect(orgIds).toContain(globex.orgId);
+
+    // Each company says which account owns it, because they are no longer all
+    // the same account.
+    const invited = res.body.companies.find((c: any) => c.orgId === globex.orgId);
+    expect(invited.accountId).toBeTruthy();
+    expect(invited.accountId).not.toBe(res.body.user.accountId);
+  });
+
+  it('lists the invited company on /auth/me', async () => {
+    await grantRole(globex, acme.email);
+    const token = await login(acme.email);
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set({ Authorization: `Bearer ${token}`, 'x-org-id': globex.orgId })
+      .expect(200);
+
+    const orgIds = (res.body.orgs || []).map((o: any) => o.orgId);
+    expect(orgIds).toContain(globex.orgId);
+  });
+
+  /*
+   * Roles and branches belong to the account that owns the COMPANY, not the one
+   * that owns the person. Read from the token they came back empty, which reads
+   * as a user with no permissions rather than a lookup against the wrong
+   * account.
+   */
+  it('resolves roles and branches in the invited company', async () => {
+    await grantRole(globex, acme.email);
+    const token = await login(acme.email);
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set({ Authorization: `Bearer ${token}`, 'x-org-id': globex.orgId })
+      .expect(200);
+
+    expect(res.body.activeOrgId).toBe(globex.orgId);
+    expect(Array.isArray(res.body.allowedBranchIds)).toBe(true);
+    expect(res.body.allowedBranchIds.length).toBeGreaterThan(0);
+  });
+
+  /* Being findable must not mean being findable by everyone. */
+  it('does not list a company nobody invited them to', async () => {
+    const outsider = await makeOwner('outsider');
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: outsider.email, password: 'Passw0rd!23' })
+      .expect(200);
+    const orgIds = (res.body.companies || []).map((c: any) => c.orgId);
+    expect(orgIds).toContain(outsider.orgId);
+    expect(orgIds).not.toContain(globex.orgId);
+    expect(orgIds).not.toContain(acme.orgId);
+  });
+
   /* The point of the invitation: one login now reaches both companies. */
   it('can work in both companies with the one login', async () => {
     await grantRole(globex, acme.email);

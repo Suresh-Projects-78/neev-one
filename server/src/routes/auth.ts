@@ -195,9 +195,26 @@ authRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
 
   const token = signAccessToken({ userId: user.id, accountId: user.accountId, sid: session.id });
 
+  /*
+   * Every company this person can open, not only the ones their own account
+   * owns.
+   *
+   * A membership row carries the accountId of the company it grants — which is
+   * the INVITING account when somebody is invited into a company they do not
+   * own. Filtering by the signed-in user's own accountId therefore hid exactly
+   * the case the product is sold on: a CA firm inviting an accountant who
+   * already has a login of their own. The membership existed, the middleware
+   * would have authorised it, and the company simply never appeared in their
+   * switcher.
+   *
+   * A membership is already unique per (account, org, user), so org + user
+   * identifies it without the account. The owning account goes out with each
+   * company because the client needs to know which account a company belongs
+   * to once they are not all the same.
+   */
   const memberships = await prisma.userOrgMembership.findMany({
-    where: { accountId: user.accountId, userId: user.id },
-    select: { orgId: true, org: { select: { id: true, name: true } } },
+    where: { userId: user.id },
+    select: { orgId: true, accountId: true, org: { select: { id: true, name: true } } },
     orderBy: { createdAt: 'asc' },
   });
 
@@ -205,13 +222,17 @@ authRouter.post('/login', loginLimiter, async (req: Request, res: Response) => {
     orgId: m.orgId,
     id: m.org?.id ?? m.orgId,
     name: m.org?.name ?? '',
+    accountId: m.accountId,
   }));
 
   const firstOrgId = companies[0]?.orgId ?? null;
+  // The account that owns the company being opened, which is not necessarily
+  // the account that owns the person.
+  const firstAccountId = companies[0]?.accountId ?? user.accountId;
 
   const branches = firstOrgId
     ? await prisma.userBranchMembership.findMany({
-        where: { accountId: user.accountId, orgId: firstOrgId, userId: user.id },
+        where: { accountId: firstAccountId, orgId: firstOrgId, userId: user.id },
         select: { branchId: true },
         orderBy: { createdAt: 'asc' },
       })
@@ -322,10 +343,12 @@ authRouter.get('/me', async (req: Request, res: Response) => {
   });
   if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
+  /* Same rule as login: every company this person can open. */
   const orgMemberships = await prisma.userOrgMembership.findMany({
-    where: { accountId: auth.accountId, userId: auth.userId },
+    where: { userId: auth.userId },
     select: {
       orgId: true,
+      accountId: true,
       org: { select: { id: true, name: true } },
     },
     orderBy: { createdAt: 'asc' },
@@ -334,23 +357,39 @@ authRouter.get('/me', async (req: Request, res: Response) => {
   let isOrgAdmin = false;
   let allowedBranchIds: string[] = [];
 
+  /*
+   * The account is taken from the membership for the company being opened, not
+   * from the token.
+   *
+   * The token says which account owns the PERSON. Roles and branches belong to
+   * the account that owns the COMPANY, and for an invited user those differ —
+   * so reading them from the token returned no roles and no branches, which
+   * reads as a user with no permissions rather than as a lookup against the
+   * wrong account. This is the same correction already made in the tenant
+   * middleware.
+   */
+  const activeMembership = activeOrgId
+    ? orgMemberships.find((m) => m.orgId === activeOrgId) || null
+    : null;
+  const activeAccountId = activeMembership?.accountId || auth.accountId;
+
   if (activeOrgId) {
     const assignments = await prisma.userRoleAssignment.findMany({
-      where: { accountId: auth.accountId, orgId: activeOrgId, userId: auth.userId },
+      where: { accountId: activeAccountId, orgId: activeOrgId, userId: auth.userId },
       select: { role: { select: { roleType: true, name: true } } },
     });
     isOrgAdmin = assignments.some((a) => String(a?.role?.roleType || '') === RoleType.ADMIN);
 
     if (isOrgAdmin) {
       const branches = await prisma.branch.findMany({
-        where: { accountId: auth.accountId, orgId: activeOrgId },
+        where: { accountId: activeAccountId, orgId: activeOrgId },
         select: { id: true },
         orderBy: { branchName: 'asc' },
       });
       allowedBranchIds = branches.map((b) => b.id);
     } else {
       const memberships = await prisma.userBranchMembership.findMany({
-        where: { accountId: auth.accountId, orgId: activeOrgId, userId: auth.userId },
+        where: { accountId: activeAccountId, orgId: activeOrgId, userId: auth.userId },
         select: { branchId: true },
         orderBy: { createdAt: 'asc' },
       });
@@ -360,7 +399,7 @@ authRouter.get('/me', async (req: Request, res: Response) => {
 
   return res.json({
     user,
-    orgs: orgMemberships.map((m) => ({ orgId: m.orgId, org: m.org })),
+    orgs: orgMemberships.map((m) => ({ orgId: m.orgId, org: m.org, accountId: m.accountId })),
     activeOrgId: activeOrgId || null,
     isOrgAdmin,
     allowedBranchIds,
