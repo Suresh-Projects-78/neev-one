@@ -523,3 +523,23 @@ export function usePaged(rows, perPage, page) {
   const safePage = Math.min(page, pageCount);
   return { pageCount, safePage, pageRows: rows.slice((safePage - 1) * perPage, safePage * perPage) };
 }
+
+
+/**
+ * The strip of filters at the head of a list's table.
+ *
+ * Search and status live in the page header and the tabs; what is left is what
+ * those two cannot say — a customer, a frequency, a date window. Written by
+ * hand on the one list that needed it, it was the only list whose filters sat
+ * at a different height and inside a different rule from everybody else's.
+ */
+export function ListFilterBand({ children }) {
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 px-4 py-3"
+      style={{ borderBottom: '1px solid rgb(var(--border))' }}
+    >
+      {children}
+    </div>
+  );
+}

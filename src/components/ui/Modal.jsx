@@ -95,9 +95,17 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`ui-surface ui-dialog shadow-xl w-full max-h-[90vh] overflow-y-auto ${maxWidthClass}`}
+        /*
+          A column, not a tall page.
+          The dialog scrolled as one piece, so on a laptop the Save button of a
+          long form was somewhere below the fold and the title went with it.
+          Header and footer are fixed to the panel now and only the middle
+          moves — which is what "fits the screen" means for a form that is
+          genuinely taller than the screen.
+        */
+        className={`ui-surface ui-dialog shadow-xl w-full max-h-[90vh] flex flex-col ${maxWidthClass}`}
       >
-        <div className="sticky top-0 ui-surface border-b px-6 py-4 flex items-center justify-between gap-3">
+        <div className="shrink-0 ui-surface border-b px-6 py-4 flex items-center justify-between gap-3">
           <h2 id={titleId} className="ui-t-sec">
             {title}
           </h2>
@@ -105,7 +113,7 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
             <X size={18} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>,
     document.body

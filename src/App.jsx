@@ -3923,7 +3923,12 @@ export const ChartAccountForm = ({
         it keeps the group and clears the ledger, so the next sibling is one
         field away instead of four clicks.
       */}
-      <div className="flex items-center justify-between gap-2 pt-2">
+      {/* Pinned to the foot of the dialog: the two ways of saving stay put
+          while the tab above them scrolls, so Save is never below the fold. */}
+      <div
+        className="sticky bottom-0 -mx-6 -mb-6 flex items-center justify-between gap-2 px-6 py-3"
+        style={{ backgroundColor: 'rgb(var(--surface))', borderTop: '1px solid rgb(var(--border))' }}
+      >
         <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
           Cancel
         </button>

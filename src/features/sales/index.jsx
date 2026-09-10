@@ -5538,6 +5538,16 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
             value={formData.customerId}
             onChange={(customerId) => setFormData((prev) => ({ ...prev, customerId }))}
           />
+          {selectedCustomer ? (
+            <p className="ui-caption -mt-2">
+              {[
+                customerState ? `Place of supply: ${customerState}` : '',
+                customerGstin ? `GSTIN ${customerGstin}` : 'Unregistered',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </p>
+          ) : null}
 
           {(db.salesmen || []).some((sm) => sm.companyId === currentCompany.id) ? (
             <div>
@@ -5609,6 +5619,16 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
               />
             </div>
           </div>
+
+          {/* The company's own reference fields belong with the paperwork, not
+              in a strip below the totals where the enquiry number this quote
+              answers was read after the price. */}
+          {hasCustomFieldsAt(customFields, 'header', 'reference') ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
+              <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -5753,10 +5773,8 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
       </div>
 
-      {hasCustomFieldsAt(customFields, 'header', 'reference', 'notes') ? (
+      {hasCustomFieldsAt(customFields, 'notes') ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
-          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
           <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
         </div>
       ) : null}

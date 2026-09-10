@@ -14,6 +14,8 @@ import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '..
 import { patchSchedule, removeSchedule, saveSchedule } from '../../utils/recurringSync';
 import { runSchedulesNow } from '../../api/recurring';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
+import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
+import { ListFilterBand } from '../../components/list/ListPageParts';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
@@ -504,8 +506,20 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
   if (creatorOpen) {
     return (
       <div className="space-y-6">
-      {creatorOpen ? (
         <div className="ui-card space-y-4 p-5">
+          {/* The bar every document form carries: the name on the left, every
+              way out of it on the right, pinned so Create stays reachable from
+              the bottom of a long schedule. */}
+          <DocFormActions
+            title="New Schedule"
+            onBack={() => setCreatorOpen(false)}
+            sticky
+            secondaryLabel="Cancel"
+            onSecondary={() => setCreatorOpen(false)}
+            primaryLabel="Create Schedule"
+            primaryType="button"
+            onPrimary={createSchedule}
+          />
           <div>
             <label htmlFor="rec-name" className="ui-label">
               Schedule name
@@ -793,13 +807,18 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
           {/* What this will actually do, in a sentence, before it is created. */}
           <p className="ui-caption">{schedulePreview}</p>
 
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setCreatorOpen(false)} className="ui-btn ui-btn-secondary">Cancel</button>
-            <button type="button" onClick={createSchedule} className="ui-btn ui-btn-primary">Create Schedule</button>
+          <DocFormFootnote />
+
+          {/* What each run bills, kept on screen — the running total every
+              other document form carries. */}
+          <div className="ui-entry-summary">
+            <span className="ui-t-label">Each run</span>
+            <span className="ui-money-lg">{formatMoney(draftTotals.total || 0, currentCompany)}</span>
+            <span className="ui-caption">
+              {formatMoney(draftTotals.subtotal || 0, currentCompany)} + {formatMoney(draftTotals.gstTotal || 0, currentCompany)} GST
+            </span>
           </div>
         </div>
-      ) : null}
-
       </div>
     );
   }
@@ -886,7 +905,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       {/* Customer, frequency and the date window. Search and status moved to
           the header and the tabs, where every other list keeps them; what is
           left is what those two cannot say. */}
-      <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+      <ListFilterBand>
         <select
           className="ui-select w-auto"
           value={customerFilter}
@@ -928,7 +947,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             aria-label="Next invoice date to"
           />
         </div>
-      </div>
+      </ListFilterBand>
 
       <div className="overflow-x-auto ui-table-scroll">
             <table className="ui-table ui-table-wide ui-table-sticky">
