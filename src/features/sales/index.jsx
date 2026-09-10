@@ -2301,6 +2301,8 @@ export const CreditNotesList = ({
   defaultWarehouseId = '',
   onNavigate = null,
 }) => {
+  const { isEnabled: featureIsEnabled } = useFeatures();
+  const importsOn = featureIsEnabled('imports');
   const warehouseById = useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
@@ -2482,7 +2484,7 @@ export const CreditNotesList = ({
       }}
       moreItems={[
         exportMenuItem('Export credit notes'),
-        ...(onNavigate ? [{ key: 'dataImport', label: 'Import credit notes', Icon: Upload }] : []),
+        ...(onNavigate && importsOn ? [{ key: 'dataImport', label: 'Import credit notes', Icon: Upload }] : []),
       ]}
       onMoreSelect={(k) => {
         if (k === 'dataImport') {
@@ -3144,6 +3146,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
   const numberingBtnRef = useRef(null);
   const [numberingOpen, setNumberingOpen] = useState(false);
+  /* Open while a TDS section is being chosen; folded away once one is. */
+  const [tdsPickerOpen, setTdsPickerOpen] = useState(false);
 
   /*
    * Which line, if any, is waiting on a batch.
@@ -5037,7 +5041,27 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               and the word TDS, because that is what a reader of the totals
               wants. The full section is on the document and in the return.
             */}
-            <div className="pt-1">
+            {/*
+              Chosen once, then out of the way.
+              Section, rate and payee are how a deduction is chosen; none of
+              them is what a reader of the totals wants afterwards. Once a
+              section is set the chooser folds away and the totals say "TDS"
+              and a figure — the section is on the document and in the return,
+              which is where it is read.
+            */}
+            {!tdsPickerOpen && !formData.tdsSection ? (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setTdsPickerOpen(true)}
+                  className="ui-btn ui-btn-ghost ui-btn-sm !px-0"
+                >
+                  + TDS deduction <span className="ui-subtle">(if the customer deducts)</span>
+                </button>
+              </div>
+            ) : null}
+
+            <div className="pt-1" hidden={!tdsPickerOpen && !!formData.tdsSection}>
               <label className="ui-label" htmlFor="invoice-tds-section">
                 TDS deduction <span className="ui-subtle font-normal">(if the customer deducts)</span>
               </label>
@@ -5057,6 +5081,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                           : tdsDefaultRate(code, p.tdsDeducteeType)
                         : '',
                     }));
+                    /* Chosen is chosen: the section and rate fold away and the
+                       totals carry the figure. "None" leaves it open, because
+                       clearing it is not a decision to hide anything. */
+                    setTdsPickerOpen(!code);
                   }}
                 >
                   <option value="">None</option>
@@ -5137,7 +5165,18 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   {/* Just "TDS" and the figure. The section is chosen above and
                       printed on the document; repeating it here made the
                       totals column read like a tax return. */}
-                  <span>Less: TDS</span>
+                  <span>
+                    Less: TDS
+                    {!tdsPickerOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => setTdsPickerOpen(true)}
+                        className="ms-2 text-xs underline ui-muted hover:ui-fg"
+                      >
+                        Change
+                      </button>
+                    ) : null}
+                  </span>
                   <span className="text-[rgb(var(--neg-ink))]">− {formatMoney(tdsAmount, currentCompany)}</span>
                 </div>
                 <div className="ui-total-row">

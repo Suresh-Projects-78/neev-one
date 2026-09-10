@@ -39,6 +39,16 @@ describe('money is not emphasis', () => {
     expect(weightOf('.ui-col-amount.ui-col-amount')).toBe(400);
   });
 
+  /*
+   * And so is every other figure. A headline number earns its emphasis from
+   * size and colour; a weight on top of that made every number on every list
+   * read as emphasis, which is a page with none.
+   */
+  it('the headline figure and the document total are normal weight too', () => {
+    expect(weightOf('.ui-money-lg')).toBe(400);
+    expect(weightOf('.ui-total-row > :last-child')).toBe(400);
+  });
+
   it('no money role reintroduces a weight', () => {
     const roles = CSS.match(/\.ui-cell-money\[data-role='[a-z]+'\][^}]*}/g) || [];
     expect(roles.length).toBeGreaterThan(3);

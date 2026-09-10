@@ -11719,6 +11719,25 @@ const AppShell = () => {
     (currentCompany?.profile?.taxCompliances?.gstEnabled ?? currentCompany?.gstEnabled ?? true) !== false ? 'GST on' : 'GST off';
   const emailStateLabel = currentCompany?.profile?.emailSettings?.fromAddress ? '' : 'Not set';
 
+  /*
+   * What a screen is called, taken from the rail rather than a second list —
+   * a back button that names a screen differently from the menu it came from
+   * is a back button nobody trusts.
+   */
+  const screenLabel = useCallback(
+    (key) => {
+      const want = String(key || '');
+      for (const node of navModel || []) {
+        if (node?.key === want && node.label) return node.label;
+        for (const item of node?.items || []) {
+          if (String(item?.key) === want) return item.label;
+        }
+      }
+      return 'Home';
+    },
+    [navModel]
+  );
+
   const navModel = useMemo(
     () => [
       { type: 'item', key: 'dashboard', label: 'Home', icon: PhDashboard, ph: true, tone: 'dashboard' },
@@ -14346,6 +14365,9 @@ const AppShell = () => {
               that do not otherwise need one. */}
           {returnTo && returnTo.to === active ? (
             <div className="mb-3">
+              {/* Named after where it actually goes. It always said "Back to
+                  Home" whatever screen sent you here, so the one control that
+                  exists to undo a jump did not say what it would undo. */}
               <button
                 type="button"
                 onClick={() => {
@@ -14354,7 +14376,7 @@ const AppShell = () => {
                 }}
                 className="ui-btn ui-btn-ghost ui-btn-sm"
               >
-                <ArrowLeft size={15} aria-hidden="true" /> Back to Home
+                <ArrowLeft size={15} aria-hidden="true" /> Back to {screenLabel(returnTo.from)}
               </button>
             </div>
           ) : null}

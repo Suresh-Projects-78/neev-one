@@ -9,6 +9,7 @@ import {
   validateImport,
 } from '../../api/imports';
 import { PageHeader, Spinner } from '../../components/ui/Primitives';
+import { useFeatures } from '../../permissions/useFeatures';
 import { csvSafeValue } from '../../utils/csv';
 
 /**
@@ -62,6 +63,14 @@ export const narrowTemplate = (text, keys) => {
 };
 
 export default function ImportCenter({ onBack = null, initialDocType = '' }) {
+  /*
+   * Import is an opt-in feature, and the screen behaved as though it were not:
+   * the file was pasted, checked, and only then did the server say the whole
+   * thing was switched off. Say it before any of that work is done, and say
+   * where to switch it on.
+   */
+  const { isEnabled } = useFeatures();
+  const importsOn = isEnabled('imports');
   const [specs, setSpecs] = useState([]);
   const [unsupported, setUnsupported] = useState([]);
   const [docType, setDocType] = useState('');
@@ -215,6 +224,18 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
         <div className="rounded-lg border border-[rgb(var(--neg)/0.35)] bg-[rgb(var(--neg-soft))] px-4 py-3 text-sm text-[rgb(var(--neg))]">{error}</div>
       ) : null}
 
+      {!importsOn ? (
+        <div
+          role="status"
+          className="rounded-xl px-4 py-3 text-sm"
+          style={{ background: 'rgb(var(--accent-soft))', border: '1px solid rgb(var(--brand) / 0.25)' }}
+        >
+          <span className="ui-t-label block mb-0.5">Data import is switched off</span>
+          Nothing here will write to the books until it is on. Switch it on under Settings → Features → Data,
+          then come back.
+        </div>
+      ) : null}
+
       <div className="ui-card p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
@@ -319,7 +340,8 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
         <button
           type="button"
           onClick={onStageAndValidate}
-          disabled={busy || !csv.trim() || !docType}
+          disabled={busy || !csv.trim() || !docType || !importsOn}
+          title={importsOn ? undefined : 'Switch data import on under Settings → Features'}
           className="ui-btn ui-btn-primary disabled:opacity-50"
         >
           <Upload size={16} className="inline mr-1" /> {busy ? 'Checking…' : 'Check the file'}

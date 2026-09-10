@@ -10,6 +10,7 @@ import DocumentListShell from '../../components/list/DocumentListShell';
 import { formatMoney } from '../../utils/money';
 import { reverseJournalOnLedger } from '../../utils/journalSync';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
+import { useFeatures } from '../../permissions/useFeatures';
 
 /**
  * The journal list.
@@ -18,6 +19,8 @@ import { exportFormatFromKey, exportMenuItem, runListExport } from '../../compon
  * that cannot be rendered on its own cannot be tested on its own either.
  */
 export default function JournalEntriesList({ db, setDb, currentCompany, onNewJournal, onEditJournal, onNavigate = null }) {
+  const { isEnabled } = useFeatures();
+  const importsOn = isEnabled('imports');
   const jvPeriod = usePeriodFilter();
   const jvSearch = useListSearch(
     db.journalEntries.filter((j) => j.companyId === currentCompany.id),
@@ -148,7 +151,7 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
         exportMenuItem('Export journal entries'),
         /* An opening trial balance arrives as a spreadsheet, not as
            four hundred vouchers somebody types. */
-        ...(onNavigate ? [{ key: 'dataImport', label: 'Import journal entries', Icon: Upload }] : []),
+        ...(onNavigate && importsOn ? [{ key: 'dataImport', label: 'Import journal entries', Icon: Upload }] : []),
       ]}
       onMoreSelect={(k) => {
         if (k === 'dataImport') {

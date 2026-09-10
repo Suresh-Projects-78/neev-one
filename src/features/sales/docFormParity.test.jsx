@@ -260,3 +260,20 @@ describe('the purchase module wears the invoice layout', () => {
     expect(screen.getByText(/press Tab in the last field of the last row/i)).toBeInTheDocument();
   });
 });
+
+describe('TDS is chosen once, then out of the way', () => {
+  /*
+   * Section, rate and payee are how a deduction is chosen; none of them is
+   * what a reader of the totals wants afterwards. The chooser folds away and
+   * the totals say TDS and a figure — the section is on the document and in
+   * the return, which is where it is read.
+   */
+  it('offers the section only while nothing is chosen', async () => {
+    const { InvoiceForm } = await import('./index');
+    render(<InvoiceForm db={baseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+
+    // Folded to a single opener until somebody asks for it.
+    expect(screen.getByRole('button', { name: /TDS deduction/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText('invoice-tds-section')).toBeNull();
+  });
+});

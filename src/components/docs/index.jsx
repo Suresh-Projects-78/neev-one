@@ -128,7 +128,10 @@ export const MetricCard = ({ label, value, company, tone = 'sent', Icon = null, 
           {label}
         </span>
         <span
-          className={`block font-semibold leading-6 truncate ${count ? 'text-base' : 'ui-mono text-base'}`}
+          /* A figure on a card is already the largest thing in it and sits in
+             its own colour; a weight on top made every number on every list
+             read as emphasis, so none of them were. */
+          className={`block font-normal leading-6 truncate ${count ? 'text-base' : 'ui-mono text-base'}`}
           title={text}
           style={{ color: `rgb(var(--st-${tone}-ink))` }}
         >

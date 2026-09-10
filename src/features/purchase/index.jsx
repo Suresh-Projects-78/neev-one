@@ -59,6 +59,7 @@ import DocumentListShell from '../../components/list/DocumentListShell';
 import { blockIfClosed } from '../../utils/bookClose';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
+import { useFeatures } from '../../permissions/useFeatures';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '', screenTitle = '', onBack = null }) => {
   const fieldErrors = useFieldErrors('bill');
@@ -3156,6 +3157,8 @@ export const DebitNoteForm = ({
 };
 
 export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebitNote, warehouses = [], defaultWarehouseId = '', onNavigate = null }) => {
+  const { isEnabled: featureIsEnabled } = useFeatures();
+  const importsOn = featureIsEnabled('imports');
   const warehouseById = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
     return new Map(list.map((w) => [String(w?.id), w]));
@@ -3338,7 +3341,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
       }}
       moreItems={[
         exportMenuItem('Export debit notes'),
-        ...(onNavigate ? [{ key: 'dataImport', label: 'Import purchase returns', Icon: Upload }] : []),
+        ...(onNavigate && importsOn ? [{ key: 'dataImport', label: 'Import purchase returns', Icon: Upload }] : []),
       ]}
       onMoreSelect={(k) => {
         if (k === 'dataImport') {
