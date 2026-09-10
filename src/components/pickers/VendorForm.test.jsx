@@ -70,6 +70,16 @@ describe('the vendor form is the customer form, re-labelled', () => {
     expect(screen.queryByText('Customer Name')).toBeNull();
   });
 
+  /* Including the prose on the tabs, which is where the noun kept leaking. */
+  it('says nothing about customers anywhere on the form', async () => {
+    const user = userEvent.setup();
+    renderVendor();
+    for (const name of ['Address', 'Contacts', 'Credit Details', 'Statutory Details', 'Others']) {
+      await user.click(screen.getByRole('tab', { name }));
+      expect(document.body.textContent).not.toMatch(/customer/i);
+    }
+  });
+
   it('has the same header actions', () => {
     renderVendor();
     expect(screen.getByRole('button', { name: /^Back$/ })).toBeInTheDocument();

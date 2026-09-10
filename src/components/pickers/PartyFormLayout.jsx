@@ -240,6 +240,9 @@ export function PartyFormLayout({
 
           {tab === 'contacts' ? (
             <ContactsTab
+              /* Whose people these are follows the party, or the vendor form
+                 says "the people at this customer". */
+              caption={`The people at this ${cfg.noun.toLowerCase()}. The one marked primary is who a reminder is addressed to.`}
               rows={formData.contacts}
               onChange={updateContactRow}
               onAdd={addContactRow}
