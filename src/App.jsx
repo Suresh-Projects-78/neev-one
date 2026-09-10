@@ -12822,22 +12822,17 @@ const AppShell = () => {
         if (receiptEditor.open) {
           return (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="ui-t-sec">Record Receipt</h3>
-                <button
-                  type="button"
-                  onClick={() => setReceiptEditor({ open: false })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
+              {/* Title, Back and the primary action in one bar inside the card,
+                  as the invoice screen has them — not a heading floating above
+                  a card with the buttons somewhere else. */}
               <div className="ui-surface border rounded-xl p-4">
                 <RecordReceiptForm
                   db={dbForUser}
                   setDb={setDb}
                   currentCompany={currentCompany}
                   initialData={receiptEditor.initial || null}
+                  screenTitle="Record Receipt"
+                  onBack={() => setReceiptEditor({ open: false })}
                   onClose={() => setReceiptEditor({ open: false })}
                 />
               </div>

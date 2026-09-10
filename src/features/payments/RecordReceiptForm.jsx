@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef } from 'react';
 
 import { cashReceiptWarning } from '../../utils/cashLimits';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
-import { DocFormActions } from '../../components/DocumentForm';
+import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
@@ -33,7 +33,7 @@ const canCollectAgainstInvoice = (inv, notes) => {
   return getInvoiceBalance(inv, notes) > 0.0001;
 };
 
-const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false }) => {
+const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false, screenTitle = '', onBack = null }) => {
   const formRef = useRef(null);
   const fieldErrors = useFieldErrors('receipt');
   const companyId = currentCompany.id;
@@ -479,7 +479,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
+      {/* The bar an invoice carries: the document's name on the left, every
+          way out of it on the right, pinned so Record stays reachable from the
+          bottom of a long list of outstanding invoices. */}
       <DocFormActions
+        title={screenTitle}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
         primaryLabel={saving ? 'Recording…' : 'Record Receipt'}
         disabled={saving}
         secondaryLabel="Cancel"
@@ -506,82 +512,16 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">Receipt Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="ui-input w-full"
-            required
-          />
-        </div>
-        <div>
-          <label className="ui-label">Amount Received</label>
-          <input
-            type="number"
-            value={formData.amount}
-            onChange={(e) => {
-              fieldErrors.clearField('amount');
-              setFormData((p) => ({ ...p, amount: e.target.value }));
-            }}
-            className="ui-input w-full"
-            min="0"
-            step="0.01"
-            required
-            {...fieldErrors.props('amount')}
-          />
-          <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
-          <p className="mt-1 text-xs ui-muted">What the invoice is settled by, before deductions.</p>
-        </div>
-
-        {/*
-          What came off the payment on the way.
-
-          None of these reached the bank and all of them settled the invoice,
-          so they are stated here and posted as their own ledger lines — TDS to
-          the receivable it is, charges to the expense they are — with the
-          customer credited for the whole amount above.
-        */}
+      {/*
+        The head of the document, in the invoice's two columns: who paid and
+        where the money landed on the left, the paperwork — date and amount —
+        on the right, ruled off between them. It was a flat two-across band in
+        which the date sat beside the amount and the account beside the
+        reference, so nothing said which of them described what.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-6 space-y-4">
         <div
-          className="col-span-2 rounded-xl p-3"
-          style={{ backgroundColor: 'rgb(var(--accent-soft))', border: '1px solid rgb(var(--brand) / 0.18)' }}
-        >
-          <div className="ui-t-sec mb-2">Deductions</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              { k: 'tdsAmount', label: 'TDS deduction' },
-              { k: 'bankCharges', label: 'Bank charges' },
-              { k: 'otherCharges', label: 'Other charges' },
-            ].map((f) => (
-              <div key={f.k}>
-                <label className="ui-label" htmlFor={`rcpt-${f.k}`}>
-                  {f.label}
-                </label>
-                <input
-                  id={`rcpt-${f.k}`}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className="ui-input ui-mono w-full"
-                  value={formData[f.k]}
-                  onChange={(e) => setFormData((p) => ({ ...p, [f.k]: e.target.value }))}
-                />
-              </div>
-            ))}
-          </div>
-          {computed.deductions > 0 ? (
-            <p className="mt-2 text-xs ui-muted">
-              {formatMoney(computed.deductions, currentCompany)} deducted ·{' '}
-              {formatMoney(computed.netCash, currentCompany)} actually received into the account.
-            </p>
-          ) : null}
-        </div>
-
-        <div
-          className="col-span-2"
           ref={(el) => fieldErrors.register('customerId', el)}
           data-invalid-within={fieldErrors.error('customerId') ? 'true' : undefined}
         >
@@ -633,17 +573,108 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             ) : null}
           </div>
         ) : null}
-        <div>
-          <label className="ui-label">Reference</label>
-          <input
-            type="text"
-            value={formData.reference}
-            onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-            className="ui-input w-full"
-            placeholder="Txn / UTR / Cheque no"
-          />
+        </div>
+
+        <div
+          className="lg:col-span-6 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-date">
+                Receipt Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="rcpt-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
+                className="ui-input w-full"
+                required
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-amount">
+                Amount Received <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="rcpt-amount"
+                type="number"
+                value={formData.amount}
+                onChange={(e) => {
+                  fieldErrors.clearField('amount');
+                  setFormData((p) => ({ ...p, amount: e.target.value }));
+                }}
+                className="ui-input ui-money w-full"
+                min="0"
+                step="0.01"
+                required
+                {...fieldErrors.props('amount')}
+              />
+              <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
+              <p className="mt-1 text-xs ui-muted">What the invoice is settled by, before deductions.</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="ui-label" htmlFor="rcpt-reference">Reference</label>
+            <input
+              id="rcpt-reference"
+              type="text"
+              value={formData.reference}
+              onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+              className="ui-input w-full"
+              placeholder="Txn / UTR / Cheque no"
+            />
+          </div>
         </div>
       </div>
+
+        {/*
+          What came off the payment on the way.
+
+          None of these reached the bank and all of them settled the invoice,
+          so they are stated here and posted as their own ledger lines — TDS to
+          the receivable it is, charges to the expense they are — with the
+          customer credited for the whole amount above.
+        */}
+        <div
+          className="rounded-xl p-3"
+          style={{ backgroundColor: 'rgb(var(--accent-soft))', border: '1px solid rgb(var(--brand) / 0.18)' }}
+        >
+          <div className="ui-t-sec mb-2">Deductions</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { k: 'tdsAmount', label: 'TDS deduction' },
+              { k: 'bankCharges', label: 'Bank charges' },
+              { k: 'otherCharges', label: 'Other charges' },
+            ].map((f) => (
+              <div key={f.k}>
+                <label className="ui-label" htmlFor={`rcpt-${f.k}`}>
+                  {f.label}
+                </label>
+                <input
+                  id={`rcpt-${f.k}`}
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  className="ui-input ui-mono w-full"
+                  value={formData[f.k]}
+                  onChange={(e) => setFormData((p) => ({ ...p, [f.k]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+          {computed.deductions > 0 ? (
+            <p className="mt-2 text-xs ui-muted">
+              {formatMoney(computed.deductions, currentCompany)} deducted ·{' '}
+              {formatMoney(computed.netCash, currentCompany)} actually received into the account.
+            </p>
+          ) : null}
+        </div>
+
+
 
       {/*
         The receipt in one column: what settled the invoice, what came off it,
@@ -779,7 +810,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         />
       </div>
 
-      <div className="flex justify-end items-center gap-2">
+      <DocFormFootnote />
+
+      {/* What actually reaches the account, kept on screen while invoices are
+          being ticked off — the invoice form's running total, for the figure
+          that has to match the bank statement. */}
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Net into the account</span>
+        <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
+        <span className="ui-caption">
+          {computed.lines.length} invoice(s) allocated
+          {computed.deductions > 0 ? ` · ${formatMoney(computed.deductions, currentCompany)} deducted` : ''}
+        </span>
         <FieldErrorSummary errors={fieldErrors.errors} />
       </div>
     </form>

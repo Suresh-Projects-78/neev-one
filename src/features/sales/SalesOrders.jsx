@@ -427,40 +427,61 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             primaryLabel="Create Sales Order"
             onPrimary={save}
           />
-          <div className="grid gap-3 sm:grid-cols-4">
-            <div>
-              <label className="ui-label">Date</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" />
-            </div>
-            <div>
-              <label className="ui-label">Customer</label>
-              <CustomerPicker db={db} setDb={setDb} currentCompany={currentCompany} value={form.customerId} onChange={(id) => setForm((p) => ({ ...p, customerId: id }))} label={null} />
-            </div>
-            <div>
-              <label className="ui-label">Expected delivery</label>
-              <input type="date" value={form.expectedDate} onChange={(e) => setForm((p) => ({ ...p, expectedDate: e.target.value }))} className="ui-input w-full" />
-            </div>
-            <div>
-              <label className="ui-label">Notes</label>
-              <input type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full" placeholder="Customer PO ref…" />
-            </div>
-            {(db.salesmen || []).some((sm) => sm.companyId === companyId) ? (
+          {/*
+            The head of the document, in the invoice's two columns: who it is
+            for on the left, the paperwork that identifies it on the right,
+            ruled off between them. Four fields strung across the top put the
+            customer between two dates and read as one undifferentiated band.
+          */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+            <div className="lg:col-span-6 space-y-4">
               <div>
-                <label className="ui-label">Salesman</label>
-                <select
-                  value={form.salesmanId || ''}
-                  onChange={(e) => setForm((p) => ({ ...p, salesmanId: e.target.value ? Number(e.target.value) : '' }))}
-                  className="ui-select w-full"
-                >
-                  <option value="">— none —</option>
-                  {(db.salesmen || []).filter((sm) => sm.companyId === companyId).map((sm) => (
-                    <option key={sm.id} value={sm.id}>{sm.name}</option>
-                  ))}
-                </select>
+                <label className="ui-label">Customer</label>
+                <CustomerPicker db={db} setDb={setDb} currentCompany={currentCompany} value={form.customerId} onChange={(id) => setForm((p) => ({ ...p, customerId: id }))} label={null} />
               </div>
-            ) : null}
-            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="header" />
-            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="reference" />
+              {(db.salesmen || []).some((sm) => sm.companyId === companyId) ? (
+                <div>
+                  <label className="ui-label" htmlFor="so-salesman">Salesman</label>
+                  <select
+                    id="so-salesman"
+                    value={form.salesmanId || ''}
+                    onChange={(e) => setForm((p) => ({ ...p, salesmanId: e.target.value ? Number(e.target.value) : '' }))}
+                    className="ui-select w-full"
+                  >
+                    <option value="">— none —</option>
+                    {(db.salesmen || []).filter((sm) => sm.companyId === companyId).map((sm) => (
+                      <option key={sm.id} value={sm.id}>{sm.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
+            </div>
+
+            <div
+              className="lg:col-span-6 space-y-4 lg:ps-6"
+              style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label className="ui-label" htmlFor="so-date">
+                    Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+                  </label>
+                  <input id="so-date" type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" required />
+                </div>
+                <div className="min-w-0">
+                  <label className="ui-label" htmlFor="so-expected">Expected delivery</label>
+                  <input id="so-expected" type="date" value={form.expectedDate} onChange={(e) => setForm((p) => ({ ...p, expectedDate: e.target.value }))} className="ui-input w-full" />
+                </div>
+              </div>
+              <div>
+                <label className="ui-label" htmlFor="so-notes">Ref No.</label>
+                <input id="so-notes" type="text" value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full" placeholder="Customer PO ref…" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="header" />
+                <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="reference" />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -535,13 +556,17 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             </div>
           </div>
 
-          <div className="flex items-start justify-between gap-4">
-            <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-              + Add line
+          <div className="mt-2 flex items-center gap-3">
+            <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary">
+              <Plus size={15} aria-hidden="true" /> Add Item
             </button>
+            <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
+          </div>
+
+          <div className="flex items-start justify-end gap-4">
             <div className="w-64 space-y-1 text-sm">
               <div className="flex justify-between">
-                <span>Taxable value</span>
+                <span>Subtotal</span>
                 <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
               </div>
               {computed.cgstTotal > 0 ? (
@@ -578,6 +603,17 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           ) : null}
 
           <DocFormFootnote />
+
+          {/* The figure and the line count, kept on screen while the lines are
+              typed — the same running total the invoice carries. */}
+          <div className="ui-entry-summary">
+            <span className="ui-t-label">Total</span>
+            <span className="ui-money-lg">{formatMoney(computed.total, currentCompany)}</span>
+            <span className="ui-caption">
+              {form.items.filter((l) => String(l.itemId || '').trim()).length} line(s)
+              {computed.gstTotal > 0 ? ` · ${formatMoney(computed.gstTotal, currentCompany)} GST` : ''}
+            </span>
+          </div>
         </form>
       ) : null}
         </>

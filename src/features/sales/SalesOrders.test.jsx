@@ -42,7 +42,8 @@ describe('the sales order line grid', () => {
   it('adds a line and removes it again', () => {
     openForm();
     expect(document.querySelectorAll('[data-line-row]')).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: /Add line/i }));
+    /* Named as the invoice names it — the same control on every document. */
+    fireEvent.click(screen.getByRole('button', { name: /Add Item/i }));
     expect(document.querySelectorAll('[data-line-row]')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Remove line 2' }));
     expect(document.querySelectorAll('[data-line-row]')).toHaveLength(1);
