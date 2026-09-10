@@ -269,8 +269,19 @@ const slugify = (label) =>
     .replace(/^_+|_+$/g, '')
     .slice(0, 40) || 'field';
 
-export const getCustomFields = (company) => {
-  const list = company?.docSettings?.customFields?.invoice;
+/**
+ * The fields, for whichever document is asking.
+ *
+ * Stored per document type, and a type with no list of its own falls back to
+ * the invoice's. That fallback is the point: a company defines "Customer PO
+ * ref" once and it appears on the order the PO arrives with, the challan that
+ * quotes it and the invoice that bills it, rather than on the invoice alone.
+ * Give a type its own list and it stops inheriting.
+ */
+export const getCustomFields = (company, docType = 'invoice') => {
+  const all = company?.docSettings?.customFields;
+  const own = all?.[docType];
+  const list = Array.isArray(own) ? own : all?.invoice;
   if (!Array.isArray(list)) return [];
   return list
     .filter((f) => f && typeof f === 'object' && f.key && f.label)
@@ -287,7 +298,8 @@ export const getCustomFields = (company) => {
 };
 
 /** Only the fields a form should render — hidden ones keep their stored values. */
-export const getVisibleCustomFields = (company) => getCustomFields(company).filter((f) => !f.hidden);
+export const getVisibleCustomFields = (company, docType = 'invoice') =>
+  getCustomFields(company, docType).filter((f) => !f.hidden);
 
 /** A key that no existing field is already using. */
 export const nextCustomFieldKey = (existing, label) => {

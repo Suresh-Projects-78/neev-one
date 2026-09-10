@@ -30,6 +30,8 @@ import GridControls, { BulkBar } from '../../components/grid/GridControls';
 import Popover from '../../components/ui/Popover';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
+import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
+import PrintDownloadFrame from '../../components/PrintDownloadFrame';
 import Modal from '../../components/ui/Modal';
 import Drawer from '../../components/ui/Drawer';
 import InvoiceFieldSettings from '../settings/InvoiceFieldSettings';
@@ -191,9 +193,20 @@ export const InvoicesList = ({
     };
   }, [openMenu?.id]);
 
-  useEffect(() => {
+  /*
+   * A row menu belongs to the row it was opened on, so changing the filters
+   * closes it — the row underneath it may no longer be in the list.
+   *
+   * Adjusted during render rather than in an effect. As an effect it ran after
+   * the filtered list had already painted, which left the menu hanging over
+   * whatever row had moved into that position for one frame.
+   */
+  const filterSignature = `${searchText}\u0000${statusFilter}\u0000${dateFrom}\u0000${dateTo}`;
+  const [lastFilterSignature, setLastFilterSignature] = useState(filterSignature);
+  if (filterSignature !== lastFilterSignature) {
+    setLastFilterSignature(filterSignature);
     setOpenMenu(null);
-  }, [searchText, statusFilter, dateFrom, dateTo]);
+  }
 
 /**
  * The answer to the question the status word provokes.
@@ -553,106 +566,11 @@ const statusReason = (doc, status, company, nowMs) => {
   };
 
   const InvoicePrintDownloadView = ({ invoice }) => {
-    const previewRef = useRef(null);
-    const [downloading, setDownloading] = useState(false);
-    const title = useMemo(() => {
-      const no = String(invoice?.number || '').trim();
-      return no ? `Invoice ${no}` : 'Invoice';
-    }, [invoice?.number]);
-
-    const doPrint = () => {
-      try {
-        const prevTitle = document.title;
-        const no = String(invoice?.number || '').trim();
-        if (no) document.title = no;
-
-        document.body.classList.add('print-mode');
-        const cleanup = () => {
-          document.body.classList.remove('print-mode');
-          document.title = prevTitle;
-        };
-        window.addEventListener('afterprint', cleanup, { once: true });
-        window.print();
-
-        // fallback cleanup
-        window.setTimeout(cleanup, 1200);
-      } catch {
-        // ignore
-      }
-    };
-
-    const doDownload = async () => {
-      const el = previewRef.current;
-      if (!el || downloading) return;
-
-      setDownloading(true);
-      const prevTitle = document.title;
-      const no = String(invoice?.number || '').trim();
-      const filenameBase = (no || 'invoice').replace(/[\\/:*?"<>|]/g, '-').trim() || 'invoice';
-
-      try {
-        if (no) document.title = no;
-        document.body.classList.add('print-mode');
-
-        const { jsPDF } = await import('jspdf');
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-
-        await new Promise((resolve) => {
-          doc.html(el, {
-            x: 18,
-            y: 18,
-            width: 559, // A4 width (595pt) - 18pt margins on both sides
-            windowWidth: Math.max(el.scrollWidth || 0, 980),
-            margin: [18, 18, 18, 18],
-            autoPaging: 'text',
-            html2canvas: {
-              scale: 2,
-              useCORS: true,
-              backgroundColor: '#ffffff',
-            },
-            callback: () => resolve(),
-          });
-        });
-
-        doc.save(`${filenameBase}.pdf`);
-      } catch {
-        notify.error('Unable to generate PDF. Please try again.');
-      } finally {
-        document.body.classList.remove('print-mode');
-        document.title = prevTitle;
-        setDownloading(false);
-      }
-    };
-
+    const no = String(invoice?.number || '').trim();
     return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="ui-muted text-sm">{title}</div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={doPrint}
-              className="ui-btn ui-btn-secondary"
-            >
-              <Printer size={16} /> Print
-            </button>
-            <button
-              type="button"
-              onClick={doDownload}
-              disabled={downloading}
-              className="px-3 py-2 rounded-lg ui-btn ui-btn-primary flex items-center gap-2"
-            >
-              <Download size={16} /> {downloading ? 'Preparing...' : 'Download'}
-            </button>
-          </div>
-        </div>
-
-        <div ref={previewRef}>
-          <InvoicePreview db={db} currentCompany={currentCompany} invoice={invoice} />
-        </div>
-      </div>
+      <PrintDownloadFrame title={no ? `Invoice ${no}` : 'Invoice'} fileBase={no || 'invoice'}>
+        <InvoicePreview db={db} currentCompany={currentCompany} invoice={invoice} />
+      </PrintDownloadFrame>
     );
   };
 
@@ -2804,56 +2722,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
     setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
 
   /** One company-defined field. `where` matches the placement it was given. */
-  const renderCustomFields = (where) =>
-    customFields
-      .filter((f) => f.formPlacement === where)
-      .map((f) => {
-        const value = (formData.customFields || {})[f.key] ?? '';
-        const id = `cf-${f.key}`;
-        return (
-          <div key={f.key}>
-            <label htmlFor={id} className="ui-label">
-              {f.label}
-              {f.required ? <span className="ml-1 text-[rgb(var(--neg-ink))]">*</span> : null}
-            </label>
-            {f.type === 'Yes/No' ? (
-              <label className="inline-flex items-center gap-2 text-sm cursor-pointer h-[38px]">
-                <input
-                  id={id}
-                  type="checkbox"
-                  className="ui-checkbox"
-                  checked={value === true || value === 'true'}
-                  onChange={(e) => setCustomField(f.key, e.target.checked)}
-                />
-                {value === true || value === 'true' ? 'Yes' : 'No'}
-              </label>
-            ) : f.type === 'List' && f.options.length ? (
-              <select
-                id={id}
-                value={value}
-                onChange={(e) => setCustomField(f.key, e.target.value)}
-                className="ui-select"
-              >
-                <option value="">— none —</option>
-                {f.options.map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                id={id}
-                type={f.type === 'Number' ? 'number' : f.type === 'Date' ? 'date' : 'text'}
-                value={value}
-                required={f.required}
-                onChange={(e) => setCustomField(f.key, e.target.value)}
-                className="ui-input"
-              />
-            )}
-          </div>
-        );
-      });
+  const renderCustomFields = (where) => (
+    <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where={where} />
+  );
 
   /**
    * Whether this invoice is still a draft — a new one, or one saved as a draft
@@ -4226,7 +4097,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         column had room. Two per row at half the width each, so a company that
         configures six gets three tidy rows instead of a ragged column.
       */}
-      {customFields.some((f) => f.formPlacement === 'header' || f.formPlacement === 'reference') ? (
+      {hasCustomFieldsAt(customFields, 'header', 'reference') ? (
         <div
           className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4"
           style={{ borderTop: '1px solid rgb(var(--border))' }}
@@ -4843,7 +4714,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               </div>
             ) : null}
 
-            {customFields.some((f) => f.formPlacement === 'notes') ? (
+            {hasCustomFieldsAt(customFields, 'notes') ? (
               <div className="grid gap-3 sm:grid-cols-2">{renderCustomFields('notes')}</div>
             ) : null}
 
