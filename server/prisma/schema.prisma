@@ -20,6 +20,7 @@ model Account {
   users User[]
 
   entitlement AccountEntitlement?
+  orgMasters       OrgMaster[]
 }
 
 model Org {
@@ -61,6 +62,7 @@ model Org {
 
   @@unique([accountId, name])
   @@index([accountId])
+  orgMasters       OrgMaster[]
 }
 
 model Branch {
@@ -2140,4 +2142,46 @@ model PaymentAllocation {
 
   @@index([accountId, orgId, docType, docId])
   @@index([paymentId])
+}
+
+//
+// * The six reference masters that only ever existed in a browser.
+// *
+// * Units, item categories, price lists, discount rules, cost centres and
+// * account groups were held in localStorage while every document that depends
+// * on them lived on the server. Clearing browser data lost them, a second user
+// * never saw them, and a second device started empty — and a price list decides
+// * what rate lands on an invoice, so a book whose prices live in one person's
+// * browser is a book nobody else can raise an invoice from.
+// *
+// * One table rather than six. These are small, low-cardinality reference lists
+// * that are always read whole — pricing an invoice reads an entire price list,
+// * never one row of it — so the shape that varies per kind lives in `data` and
+// * the columns are only what every kind shares and what has to be indexed or
+// * kept unique.
+//
+model OrgMaster {
+  id        String   @id @default(cuid())
+  accountId String
+  orgId     String
+
+  /// UOM | ITEM_CATEGORY | PRICE_LIST | DISCOUNT_RULE | COST_CENTER | ACCOUNT_GROUP
+  kind      String
+  name      String
+  isActive  Boolean  @default(true)
+
+  /// Everything specific to the kind: a price list's rates, a rule's scope.
+  /// JSON in a string column, the way every other payload in this schema is
+  /// stored — SQLite has no Json type through Prisma.
+  dataJson  String   @default("{}")
+
+  createdByUserId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  org     Org     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, orgId, kind, name])
+  @@index([accountId, orgId, kind])
 }

@@ -1,6 +1,7 @@
 import InventoryModule from './features/inventory/InventoryModule';
 import StockAdjustments from './features/inventory/StockAdjustments';
 import { notify, confirmDialog } from './components/ui/notify';
+import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
 import { useRecurringInvoices } from './hooks/useRecurringInvoices';
@@ -4146,7 +4147,7 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
     setFormData((p) => ({ ...p, parentGroupId: String(groups[0].id) }));
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const name = String(formData.name || '').trim();
@@ -4186,12 +4187,22 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
       createdAt: new Date().toISOString(),
     };
 
-    setDb({
-      ...db,
-      accountGroups: [...(Array.isArray(db.accountGroups) ? db.accountGroups : []), newGroup],
+    // The chart of accounts is the book's own structure. Held in one browser,
+    // a group somebody added existed for nobody else and every ledger filed
+    // under it landed in a group the next person could not see.
+    const serverPatch = await saveMaster('accountGroups', name, {
+      typeId: newGroup.typeId,
+      parentGroupId: newGroup.parentGroupId,
+      groupCategory: newGroup.groupCategory,
+      isUserDefined: true,
     });
 
-    onCreated?.(newGroup);
+    setDb({
+      ...db,
+      accountGroups: [...(Array.isArray(db.accountGroups) ? db.accountGroups : []), { ...newGroup, ...serverPatch }],
+    });
+
+    onCreated?.({ ...newGroup, ...serverPatch });
     onClose?.();
   };
 
@@ -7207,7 +7218,7 @@ const UomsList = ({ db, setDb, currentCompany }) => {
 
   const [newUom, setNewUom] = useState('');
 
-  const addUom = () => {
+  const addUom = async () => {
     const name = String(newUom || '').trim();
     if (!name) {
       notify.error('Please enter a UoM name.');
@@ -7221,7 +7232,10 @@ const UomsList = ({ db, setDb, currentCompany }) => {
     }
 
     const nextId = Math.max(0, ...(db.uoms || []).map((u) => Number(u.id) || 0)) + 1;
-    const next = { id: nextId, companyId: currentCompany.id, name };
+    // Every item carries a unit, so a unit list held in one browser meant a
+    // second person could not enter the item at all.
+    const serverPatch = await saveMaster('uoms', name);
+    const next = { id: nextId, companyId: currentCompany.id, name, ...serverPatch };
 
     setDb({
       ...db,
@@ -7230,7 +7244,9 @@ const UomsList = ({ db, setDb, currentCompany }) => {
     setNewUom('');
   };
 
-  const deleteUom = (id) => {
+  const deleteUom = async (id) => {
+    const row = (db.uoms || []).find((u) => u.id === id);
+    if (row) await removeMaster(row);
     setDb({
       ...db,
       uoms: (db.uoms || []).filter((u) => u.id !== id),
@@ -7351,11 +7367,22 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
     if (!orphans.length) return;
     let nextId = Math.max(0, ...(db.itemCategories || []).map((c) => Number(c.id) || 0));
     const added = orphans.map((name) => ({ id: ++nextId, companyId: currentCompany.id, name, description: '' }));
+    // Written one at a time: a name that clashes on the server is refused on
+    // its own rather than taking the whole import down with it.
+    Promise.all(added.map((c) => saveMaster('itemCategories', c.name, { description: '' }))).then((patches) =>
+      setDb((prev) => ({
+        ...prev,
+        itemCategories: (prev.itemCategories || []).map((c) => {
+          const at = added.findIndex((a) => a.id === c.id);
+          return at === -1 ? c : { ...c, ...patches[at] };
+        }),
+      }))
+    );
     setDb({ ...db, itemCategories: [...(db.itemCategories || []), ...added] });
     notify.success(`${added.length} categor${added.length === 1 ? 'y' : 'ies'} imported from items.`);
   };
 
-  const addCategory = () => {
+  const addCategory = async () => {
     const name = String(newName || '').trim();
     if (!name) {
       notify.error('Category name is required.');
@@ -7366,11 +7393,13 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
       return;
     }
     const nextId = Math.max(0, ...(db.itemCategories || []).map((c) => Number(c.id) || 0)) + 1;
+    const description = String(newDescription || '').trim();
+    const serverPatch = await saveMaster('itemCategories', name, { description });
     setDb({
       ...db,
       itemCategories: [
         ...(db.itemCategories || []),
-        { id: nextId, companyId: currentCompany.id, name, description: String(newDescription || '').trim() },
+        { id: nextId, companyId: currentCompany.id, name, description, ...serverPatch },
       ],
     });
     setNewName('');
@@ -7393,6 +7422,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
     }
     const before = categories.find((c) => Number(c.id) === Number(editing.id));
     const oldName = String(before?.name || '').trim();
+    if (before) pushMaster({ ...before, name, description: String(editing.description || '').trim() });
 
     setDb({
       ...db,
@@ -7420,6 +7450,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
       confirmLabel: 'Yes, delete',
     });
     if (!ok) return;
+    await removeMaster(cat);
     setDb({ ...db, itemCategories: (db.itemCategories || []).filter((c) => Number(c.id) !== Number(cat.id)) });
   };
 

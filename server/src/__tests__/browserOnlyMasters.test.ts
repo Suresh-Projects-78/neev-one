@@ -13,8 +13,10 @@ import { prisma } from '../utils/prisma.js';
  * the same company show different figures, or hold different records, on
  * different machines.
  *
- * Discount rules, cost centres and price lists are still browser-only on
- * purpose: nothing reports on them and no document is one.
+ * The same argument was written here as the reason discount rules, cost centres
+ * and price lists could stay in the browser, and it was wrong on the facts:
+ * Cost Centers is a report — P&L by branch or project — and a price list
+ * decides what rate lands on an invoice. All six now have a table.
  */
 
 const app = buildApp().listen(0);
@@ -215,5 +217,216 @@ describe('tenant isolation holds for the new tables', () => {
     const a = await request(app).get(`/api/orgs/${other.orgId}/fixed-assets`).set(auth(other)).expect(200);
     expect(s.body.salesmen).toEqual([]);
     expect(a.body.assets).toEqual([]);
+  });
+});
+
+/**
+ * The six reference lists, through the one endpoint they share.
+ *
+ * They share a table because they share a life: small lists, read whole, whose
+ * only difference is the shape of what hangs off a name.
+ */
+describe('the six reference masters', () => {
+  it('stores a price list with its rates and reads them back', async () => {
+    const name = `Wholesale ${rnd()}`;
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'PRICE_LIST', name, data: { status: 'active', rates: { '11': 92.5 } } })
+      .expect(201);
+    expect(created.body.master.name).toBe(name);
+    // The payload has to survive the round trip intact — a price list read
+    // back without its rates is a price list that prices nothing.
+    expect(created.body.master.data.rates['11']).toBe(92.5);
+
+    const listed = await request(app)
+      .get(`/api/orgs/${owner.orgId}/masters?kind=PRICE_LIST`)
+      .set(auth(owner))
+      .expect(200);
+    const row = listed.body.masters.find((m: any) => m.id === created.body.master.id);
+    expect(row.data.rates['11']).toBe(92.5);
+    expect(row.kind).toBe('PRICE_LIST');
+  });
+
+  it('keeps names unique within a kind, and only within it', async () => {
+    const name = `Retail ${rnd()}`;
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'PRICE_LIST', name })
+      .expect(201);
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'PRICE_LIST', name })
+      .expect(409);
+    // A cost centre and a price list may share a name; they are different lists.
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'COST_CENTER', name })
+      .expect(201);
+  });
+
+  it('filters by kind, so one screen does not load the other five', async () => {
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'UOM', name: `Nos ${rnd()}` })
+      .expect(201);
+    const listed = await request(app)
+      .get(`/api/orgs/${owner.orgId}/masters?kind=UOM`)
+      .set(auth(owner))
+      .expect(200);
+    expect(listed.body.masters.length).toBeGreaterThan(0);
+    expect(listed.body.masters.every((m: any) => m.kind === 'UOM')).toBe(true);
+  });
+
+  it('rejects a kind it does not know', async () => {
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'NOT_A_KIND', name: 'x' })
+      .expect(400);
+  });
+
+  it('updates the payload without losing the name', async () => {
+    const name = `Bulk ${rnd()}`;
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'DISCOUNT_RULE', name, data: { type: 'PCT', value: 5 } })
+      .expect(201);
+    const patched = await request(app)
+      .patch(`/api/orgs/${owner.orgId}/masters/${created.body.master.id}`)
+      .set(auth(owner))
+      .send({ data: { type: 'PCT', value: 7.5 }, isActive: false })
+      .expect(200);
+    expect(patched.body.master.name).toBe(name);
+    expect(patched.body.master.data.value).toBe(7.5);
+    expect(patched.body.master.isActive).toBe(false);
+  });
+
+  /*
+   * Deleted rather than deactivated: nothing points at one of these by id — a
+   * document records the unit it was entered in, not a reference to the list.
+   */
+  it('deletes one and stops listing it', async () => {
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'ITEM_CATEGORY', name: `Scrap ${rnd()}` })
+      .expect(201);
+    await request(app)
+      .delete(`/api/orgs/${owner.orgId}/masters/${created.body.master.id}`)
+      .set(auth(owner))
+      .expect(200);
+    const listed = await request(app)
+      .get(`/api/orgs/${owner.orgId}/masters?kind=ITEM_CATEGORY`)
+      .set(auth(owner))
+      .expect(200);
+    expect(listed.body.masters.find((m: any) => m.id === created.body.master.id)).toBeUndefined();
+  });
+
+  /*
+   * Two companies inside ONE account — the CA firm case, and the one the
+   * cross-account test above does not reach.
+   *
+   * Both orgs share an accountId, so scoping the query by account alone looks
+   * correct and is not: one client's price list would appear on another
+   * client's invoice form.
+   */
+  it('keeps one account\'s two companies apart', async () => {
+    const second = await request(app)
+      .post('/api/auth/setup-company')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ companyName: `BOM Co Two ${Date.now()}-${rnd()}`, state: 'Kerala' })
+      .expect(200);
+    const sibling: Ctx = {
+      token: owner.token,
+      orgId: second.body.company.orgId,
+      branchId: second.body.branch.id,
+    };
+    expect(sibling.orgId).not.toBe(owner.orgId);
+
+    const listName = `Client A rates ${rnd()}`;
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'PRICE_LIST', name: listName, data: { rates: { '11': 50 } } })
+      .expect(201);
+
+    const onSibling = await request(app)
+      .get(`/api/orgs/${sibling.orgId}/masters?kind=PRICE_LIST`)
+      .set(auth(sibling))
+      .expect(200);
+    expect(onSibling.body.masters.find((m: any) => m.name === listName)).toBeUndefined();
+  });
+
+  /*
+   * Reading is not the only way across the boundary.
+   *
+   * Listing can be scoped correctly while the routes that change a row are
+   * not, and those are the worse half: one company editing or deleting
+   * another's price list changes what the other invoices at.
+   */
+  it("will not edit or delete another company's row", async () => {
+    const second = await request(app)
+      .post('/api/auth/setup-company')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ companyName: `BOM Co Three ${Date.now()}-${rnd()}`, state: 'Goa' })
+      .expect(200);
+    const sibling: Ctx = { token: owner.token, orgId: second.body.company.orgId, branchId: second.body.branch.id };
+
+    const created = await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'PRICE_LIST', name: `Guarded ${rnd()}`, data: { rates: { '11': 10 } } })
+      .expect(201);
+    const id = created.body.master.id;
+
+    await request(app)
+      .patch(`/api/orgs/${sibling.orgId}/masters/${id}`)
+      .set(auth(sibling))
+      .send({ data: { rates: { '11': 1 } } })
+      .expect(404);
+
+    await request(app).delete(`/api/orgs/${sibling.orgId}/masters/${id}`).set(auth(sibling)).expect(404);
+
+    // Still there, still priced the way its own company priced it.
+    const mine = await request(app)
+      .get(`/api/orgs/${owner.orgId}/masters?kind=PRICE_LIST`)
+      .set(auth(owner))
+      .expect(200);
+    const row = mine.body.masters.find((m: any) => m.id === id);
+    expect(row.data.rates['11']).toBe(10);
+  });
+
+  /* The whole point of the table: another org must never see these. */
+  it('does not leak one org\'s lists to another', async () => {
+    const email = `bom2.${Date.now()}.${rnd()}@example.com`;
+    const signup = await request(app)
+      .post('/api/auth/signup')
+      .send({ email, password: 'Passw0rd!23', name: 'Other owner' })
+      .expect(200);
+    const setup = await request(app)
+      .post('/api/auth/setup-company')
+      .set('Authorization', `Bearer ${signup.body.token}`)
+      .send({ companyName: `Other Co ${Date.now()}-${rnd()}`, state: 'Kerala' })
+      .expect(200);
+    const other: Ctx = { token: signup.body.token, orgId: setup.body.company.orgId, branchId: setup.body.branch.id };
+
+    const mine = `Mine ${rnd()}`;
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/masters`)
+      .set(auth(owner))
+      .send({ kind: 'COST_CENTER', name: mine })
+      .expect(201);
+
+    const theirs = await request(app)
+      .get(`/api/orgs/${other.orgId}/masters?kind=COST_CENTER`)
+      .set(auth(other))
+      .expect(200);
+    expect(theirs.body.masters.find((m: any) => m.name === mine)).toBeUndefined();
   });
 });

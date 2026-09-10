@@ -4,6 +4,7 @@ import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { ListSearch, StatusTabs, ExportButton, Pagination, usePaged } from '../../components/list/ListPageParts';
 import { useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
+import { pushMaster, removeMaster, saveMaster } from '../../utils/masterSync';
 import { formatMoney } from '../../utils/money';
 import { isPriceListInForce } from '../../utils/pricing';
 
@@ -86,13 +87,26 @@ export default function PriceLists({ db, setDb, currentCompany }) {
   }, [openMenu]);
   const editing = lists.find((p) => Number(p.id) === Number(editingId)) || null;
 
-  const patchList = (id, patch) =>
+  /*
+   * Every change to a price list goes to the server as well.
+   *
+   * The row is pushed whole rather than as a patch: a price list is read whole
+   * when an invoice is priced, and reconstructing a partial update on the
+   * server would be a second place for the rates to be wrong.
+   *
+   * Computed here rather than inside the setDb updater — an updater has to be
+   * pure, and React may run it twice.
+   */
+  const patchList = (id, patch) => {
+    const row = (db.priceLists || []).find((p) => Number(p.id) === Number(id));
+    if (row) pushMaster({ ...row, ...patch });
     setDb((prev) => ({
       ...prev,
       priceLists: (prev.priceLists || []).map((p) => (Number(p.id) === Number(id) ? { ...p, ...patch } : p)),
     }));
+  };
 
-  const createList = () => {
+  const createList = async () => {
     const name = newName.trim();
     if (!name) {
       notify.error('Give the price list a name (Retail, Wholesale…)');
@@ -103,6 +117,14 @@ export default function PriceLists({ db, setDb, currentCompany }) {
       return;
     }
     const nextId = (db.priceLists || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1;
+    /*
+     * A price list decides what rate lands on an invoice. Held in one browser,
+     * the same customer was quoted differently depending on who raised the
+     * document, and clearing that browser lost the prices outright.
+     */
+    const serverPatch = await saveMaster('priceLists', name, {
+      description: '', applyTo: 'all', validFrom: '', validTo: '', status: 'active', rates: {},
+    });
     setDb((prev) => ({
       ...prev,
       priceLists: [
@@ -118,6 +140,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
           status: 'active',
           rates: {},
           createdAt: new Date().toISOString(),
+          ...serverPatch,
         },
       ],
     }));
@@ -135,6 +158,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
       confirmLabel: 'Delete',
     });
     if (!ok) return;
+    await removeMaster(list);
     setDb((prev) => ({
       ...prev,
       priceLists: (prev.priceLists || []).filter((p) => Number(p.id) !== Number(list.id)),
@@ -146,6 +170,15 @@ export default function PriceLists({ db, setDb, currentCompany }) {
   };
 
   const setRate = (itemId, value) => {
+    // The rates are the price list. Same rule as every other field on it.
+    const row = (db.priceLists || []).find((p) => Number(p.id) === Number(editingId));
+    if (row) {
+      const rates = { ...(row.rates || {}) };
+      const n = Number(value);
+      if (!value || !Number.isFinite(n) || n <= 0) delete rates[String(itemId)];
+      else rates[String(itemId)] = n;
+      pushMaster({ ...row, rates });
+    }
     setDb((prev) => ({
       ...prev,
       priceLists: (prev.priceLists || []).map((p) => {

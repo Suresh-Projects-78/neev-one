@@ -5,8 +5,8 @@ starts — the same way the six document forms were done.
 
 | # | Item | Why it is on the list | State |
 |---|---|---|---|
-| 1 | Six masters reach the server | Clear the browser and they are gone | **1st** |
-| 2 | CSV formula injection | An export runs code on the accountant's machine | 2nd |
+| 1 | Six masters reach the server | Clear the browser and they are gone | **done** |
+| 2 | CSV formula injection | An export runs code on the accountant's machine | **next** |
 | 3 | Audit trail can be read | Written in 7 places, readable in none | 3rd |
 | 4 | Bank reconciliation | The largest genuinely missing module | 4th |
 | 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | 5th |
@@ -75,3 +75,27 @@ are real and already on the server, so the admin area and the multi-company
 dashboard can be built against live data from the first commit. Billing is the
 one that needs invented numbers, because the plans do not exist yet — and the
 pricing itself stays deferred, as asked.
+
+## 1 — done
+
+One `OrgMaster` table rather than six. These are small lists that are always
+read whole — pricing an invoice reads an entire price list, never one row of it
+— so what varies per kind lives in a JSON payload and the columns are only what
+every kind shares: account, org, kind, name, active.
+
+Write-through alone would have fixed half of it. The reason the browser was the
+problem is that a second device started empty, so the six are hydrated on
+sign-in through the same pull the documents already used, matched by server id
+first and then by name so a list the browser already has never arrives twice.
+
+Two comments in the codebase said cost centres, discount rules and price lists
+could stay in the browser because "nothing reports on them". Both were wrong on
+the facts and both are corrected: Cost Centers **is** a report — P&L by branch
+or project — and a price list decides what rate lands on an invoice.
+
+Isolation is tested three ways, because the first two passed while the third was
+broken: across accounts, across two companies **inside one account** (the CA firm
+case), and on the routes that change a row rather than only the one that lists
+them. That last pair is the worse half — one company editing another's price
+list changes what the other invoices at — and it took a surviving mutation to
+notice the test was missing.

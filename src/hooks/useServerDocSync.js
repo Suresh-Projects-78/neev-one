@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { hasApiSession, listDocsApi } from '../api/purchaseDocs';
 import { listInvoicesApi } from '../api/invoices';
-import { listCustomers, listItems, listVendors } from '../api/masters';
+import { COLLECTION_FOR_KIND, listCustomers, listItems, listOrgMasters, listVendors } from '../api/masters';
 
 /**
  * Pull-hydration: documents saved to the server come BACK on a fresh browser.
@@ -116,6 +116,14 @@ const MASTER_KINDS = [
   ['items', 'backendItemId', listItems, (r) => r?.items, mapItem],
 ];
 
+/**
+ * The six reference lists, hydrated by name the same way a customer is.
+ *
+ * They arrive from one endpoint keyed by kind, so unlike the masters above
+ * there is nothing to fetch per collection — the rows are split on the way in.
+ */
+const REFERENCE_COLLECTIONS = Object.values(COLLECTION_FOR_KIND).map((collection) => [collection, 'backendMasterId']);
+
 /** kind → [db collection, backend id field, party field, extra mapper] */
 const KINDS = [
   ['bill', 'bills', 'backendDocId', 'vendorName', null],
@@ -181,6 +189,27 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
       }
 
       try {
+        const rows = (await listOrgMasters())?.masters || [];
+        for (const r of rows) {
+          const collection = COLLECTION_FOR_KIND[r.kind];
+          if (!collection) continue;
+          if (!collected[collection]) collected[collection] = [];
+          collected[collection].push({
+            // `data` first so a stored payload can never overwrite the identity
+            // the server keeps in its own columns.
+            ...(r.data && typeof r.data === 'object' ? r.data : {}),
+            companyId: currentCompanyId,
+            backendMasterId: r.id,
+            name: r.name,
+            active: r.isActive !== false,
+            hydratedFromServer: true,
+          });
+        }
+      } catch {
+        /* same rule: what does not arrive hydrates nothing */
+      }
+
+      try {
         const invoices = await listInvoicesApi();
         collected.invoices = invoices.map((d) => ({
           ...mapCommon(d, currentCompanyId, 'backendInvoiceId'),
@@ -196,7 +225,7 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
       setDb((prev) => {
         const next = { ...prev };
 
-        for (const [collection, idKey] of MASTER_KINDS) {
+        for (const [collection, idKey] of [...MASTER_KINDS, ...REFERENCE_COLLECTIONS]) {
           const incoming = collected[collection];
           if (!incoming || !incoming.length) continue;
           const existing = Array.isArray(prev[collection]) ? prev[collection] : [];

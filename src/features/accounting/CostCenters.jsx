@@ -3,6 +3,7 @@ import { Plus, Trash2, PieChart } from 'lucide-react';
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
+import { removeMaster, saveMaster } from '../../utils/masterSync';
 import { formatMoney } from '../../utils/money';
 
 /**
@@ -40,14 +41,17 @@ export default function CostCenters({ db, setDb, currentCompany }) {
     return list.sort((a, b) => b.net - a.net);
   }, [db, companyId, centers]);
 
-  const add = () => {
+  const add = async () => {
     const n = name.trim();
     if (!n) {
       notify.error('Give the cost center a name (branch, project, vertical…)');
       return;
     }
     const nextId = (db.costCenters || []).reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
-    setDb((prev) => ({ ...prev, costCenters: [...(prev.costCenters || []), { id: nextId, companyId, name: n, createdAt: new Date().toISOString() }] }));
+    // This is a report — P&L by branch or project — so a cost centre held in
+    // one browser made the same books report differently on different machines.
+    const serverPatch = await saveMaster('costCenters', n);
+    setDb((prev) => ({ ...prev, costCenters: [...(prev.costCenters || []), { id: nextId, companyId, name: n, createdAt: new Date().toISOString(), ...serverPatch }] }));
     setName('');
     notify.success(`Cost center "${n}" added.`);
   };
@@ -55,6 +59,7 @@ export default function CostCenters({ db, setDb, currentCompany }) {
   const remove = async (c) => {
     const ok = await confirmDialog({ title: 'Remove cost center', message: `Remove "${c.name}"? Documents keep their tag but report as Unallocated.`, confirmLabel: 'Remove' });
     if (!ok) return;
+    await removeMaster(c);
     setDb((prev) => ({ ...prev, costCenters: (prev.costCenters || []).filter((x) => x.id !== c.id) }));
   };
 

@@ -138,3 +138,35 @@ export const listFixedAssets = () => apiFetch(`${base()}/fixed-assets`, opts);
 export const createFixedAsset = (a) => apiFetch(`${base()}/fixed-assets`, { method: 'POST', body: a, ...opts });
 export const updateFixedAsset = (id, patch) =>
   apiFetch(`${base()}/fixed-assets/${id}`, { method: 'PATCH', body: patch, ...opts });
+
+/**
+ * The six reference lists — units, item categories, price lists, discount
+ * rules, cost centres, account groups — through one endpoint.
+ *
+ * `data` is whatever the kind carries and the browser owns its shape; the
+ * server stores it verbatim. Names are unique per kind, so a duplicate comes
+ * back as a 409 with a sentence rather than a silent second row.
+ */
+export const MASTER_KIND = {
+  uoms: 'UOM',
+  itemCategories: 'ITEM_CATEGORY',
+  priceLists: 'PRICE_LIST',
+  discountRules: 'DISCOUNT_RULE',
+  costCenters: 'COST_CENTER',
+  accountGroups: 'ACCOUNT_GROUP',
+};
+
+/** The db collection each server kind belongs to — MASTER_KIND, reversed. */
+export const COLLECTION_FOR_KIND = Object.fromEntries(
+  Object.entries(MASTER_KIND).map(([collection, kind]) => [kind, collection])
+);
+
+export const listOrgMasters = (kinds = []) => {
+  const q = kinds.length ? `?kind=${encodeURIComponent(kinds.join(','))}` : '';
+  return apiFetch(`${base()}/masters${q}`, opts);
+};
+export const createOrgMaster = (kind, name, data = {}) =>
+  apiFetch(`${base()}/masters`, { method: 'POST', body: { kind, name, data }, ...opts });
+export const updateOrgMaster = (id, patch) =>
+  apiFetch(`${base()}/masters/${id}`, { method: 'PATCH', body: patch, ...opts });
+export const deleteOrgMaster = (id) => apiFetch(`${base()}/masters/${id}`, { method: 'DELETE', ...opts });

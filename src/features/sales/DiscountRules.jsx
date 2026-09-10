@@ -3,6 +3,7 @@ import { Plus, Trash2, BadgePercent } from 'lucide-react';
 import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
+import { patchMaster, removeMaster, saveMaster } from '../../utils/masterSync';
 import { getCustomerDisplayName } from '../../utils/contacts';
 
 /**
@@ -54,7 +55,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
 
   const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
-  const save = () => {
+  const save = async () => {
     const name = form.name.trim();
     if (!name) {
       notify.error('Give the rule a name (e.g. "Bulk buy", "Diwali offer").');
@@ -90,6 +91,27 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
       return;
     }
     const nextId = (db.discountRules || []).reduce((m, r) => Math.max(m, Number(r.id) || 0), 0) + 1;
+    const rule = {
+      active: true,
+      type: form.type,
+      value: Number(form.value) || 0,
+      itemScope: form.itemScope,
+      itemId: form.itemScope === 'ITEM' ? Number(form.itemId) : null,
+      itemIds: form.itemScope === 'ITEMS' ? form.itemIds.map(Number) : [],
+      category: form.itemScope === 'CATEGORY' ? form.category.trim() : null,
+      customerScope: form.customerScope,
+      customerId: form.customerScope === 'CUSTOMER' ? Number(form.customerId) : null,
+      customerIds: form.customerScope === 'CUSTOMERS' ? form.customerIds.map(Number) : [],
+      groupId: form.customerScope === 'GROUP' ? Number(form.groupId) : null,
+      validFrom: form.validFrom || null,
+      validTo: form.validTo || null,
+      qtyTiers: tiers,
+    };
+    /*
+     * A discount rule decides what a customer is charged. Held in one browser,
+     * two people invoicing the same customer quoted two different prices.
+     */
+    const serverPatch = await saveMaster('discountRules', name, rule);
     setDb((prev) => ({
       ...prev,
       discountRules: [
@@ -113,6 +135,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           validTo: form.validTo || null,
           qtyTiers: tiers,
           createdAt: new Date().toISOString(),
+          ...serverPatch,
         },
       ],
     }));
@@ -121,15 +144,19 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
     notify.success(`Discount rule "${name}" created.`);
   };
 
-  const toggle = (rule) =>
+  const toggle = (rule) => {
+    // A rule switched off has to be off everywhere, not just here.
+    patchMaster(rule, { isActive: rule.active === false });
     setDb((prev) => ({
       ...prev,
       discountRules: (prev.discountRules || []).map((r) => (r.id === rule.id ? { ...r, active: r.active === false } : r)),
     }));
+  };
 
   const remove = async (rule) => {
     const ok = await confirmDialog({ title: 'Delete rule', message: `Delete "${rule.name}"?`, confirmLabel: 'Delete' });
     if (!ok) return;
+    await removeMaster(rule);
     setDb((prev) => ({ ...prev, discountRules: (prev.discountRules || []).filter((r) => r.id !== rule.id) }));
   };
 
