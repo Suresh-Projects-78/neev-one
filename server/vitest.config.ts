@@ -1,5 +1,25 @@
 import { defineConfig } from 'vitest/config';
 
+/**
+ * One database per run, not one database.
+ *
+ * The suite shared `prisma/test.db`, and globalSetup resets it before anything
+ * starts. Two runs at once — a watch and a one-off, two terminals, a script
+ * touching the file — meant the second reset the database out from under the
+ * first, and tests failed to collect with nothing wrong with them. It looked
+ * like flakiness and was contention.
+ *
+ * Keyed on the process id so concurrent runs cannot collide. Overridable with
+ * TEST_DATABASE_URL, which is also how the same suite is pointed at Postgres:
+ *
+ *   TEST_DATABASE_URL=postgresql://…  npm test
+ */
+const TEST_DATABASE_URL =
+  process.env.TEST_DATABASE_URL || `file:./test-${process.pid}.db?connection_limit=1`;
+
+// globalSetup runs in this same process and reads it from here.
+process.env.DATABASE_URL = TEST_DATABASE_URL;
+
 export default defineConfig({
   test: {
     environment: 'node',
@@ -17,11 +37,9 @@ export default defineConfig({
       // connections to one file turn into "database is locked" retries and
       // occasional stale reads right after a write. One connection makes every
       // query strictly serial, which is exactly what a test suite wants.
-      // Overridable so the same suite can be run against Postgres:
-      //   TEST_DATABASE_URL=postgresql://… npm test
-      // Nothing in the tests knows which one it is, which is the point — that
-      // is what makes it evidence rather than a guess.
-      DATABASE_URL: process.env.TEST_DATABASE_URL || 'file:./test.db?connection_limit=1',
+      // Set above, and shared with globalSetup through the environment so both
+      // halves of the run agree on which database they are using.
+      DATABASE_URL: TEST_DATABASE_URL,
       // Deterministic and fast: rate limiting is exercised by one test that
       // enables it explicitly, and 4 bcrypt rounds keep the suite quick.
       DISABLE_RATE_LIMIT: 'true',

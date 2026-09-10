@@ -57,15 +57,28 @@ failure the whole exercise exists to prevent, so it now refuses and cleans up.
 
 ## Installing it
 
-Not done from here — it changes the server. On the box:
+Not done from here — it changes the server.
+
+**These run on the production host, not on your machine.** Run locally they fail
+with `no database at /opt/neev/data/prod.db`, because that path only exists on
+the server. Copy the script up and install it over ssh:
 
 ```bash
-sudo cp deploy/backup.sh /usr/local/bin/neev-backup
-sudo chmod +x /usr/local/bin/neev-backup
-sudo apt-get install -y sqlite3            # if it is not already there
-sudo /usr/local/bin/neev-backup --verify   # prove it works before trusting it
-( crontab -l 2>/dev/null; echo "30 2 * * * /usr/local/bin/neev-backup --verify >> /var/log/neev-backup.log 2>&1" ) | crontab -
+scp deploy/backup.sh neevone:/tmp/neev-backup
+ssh neevone 'sudo mv /tmp/neev-backup /usr/local/bin/neev-backup \
+  && sudo chmod +x /usr/local/bin/neev-backup \
+  && sudo apt-get install -y sqlite3 \
+  && sudo /usr/local/bin/neev-backup --verify'
 ```
+
+Only once that prints row counts and `verified:` is it worth scheduling:
+
+```bash
+ssh neevone '( crontab -l 2>/dev/null; echo "30 2 * * * /usr/local/bin/neev-backup --verify >> /var/log/neev-backup.log 2>&1" ) | crontab -'
+```
+
+To take a backup of a database somewhere else — a copy on your own machine, say
+— point it at one: `NEEV_DB=/path/to.db NEEV_BACKUP_DIR=/tmp/bk ./backup.sh --verify`.
 
 ## Still missing, and it matters
 

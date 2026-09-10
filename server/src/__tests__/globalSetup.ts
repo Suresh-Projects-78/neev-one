@@ -27,7 +27,17 @@ export default function setup() {
     return;
   }
 
-  const dbFile = resolve(serverRoot, 'prisma/test.db');
+  /*
+   * The file vitest.config.ts chose for this run. Reading it back rather than
+   * naming it again keeps the two halves of the run from disagreeing about
+   * which database they are using — which is how one run came to reset another
+   * run's database mid-flight.
+   */
+  const configured = String(process.env.DATABASE_URL || '').trim();
+  const fromUrl = configured.startsWith('file:')
+    ? configured.slice('file:'.length).split('?')[0]
+    : 'prisma/test.db';
+  const dbFile = resolve(serverRoot, fromUrl.startsWith('/') ? fromUrl : `prisma/${fromUrl.replace(/^\.\//, '')}`);
 
   // Start clean: a schema left over from an older run would hide migrations
   // that never got applied.
@@ -40,4 +50,11 @@ export default function setup() {
     env: { ...process.env, DATABASE_URL: `file:${dbFile}` },
     stdio: 'inherit',
   });
+
+  // Per-run databases would otherwise pile up in prisma/ one file per run.
+  return () => {
+    for (const suffix of ['', '-journal']) {
+      rmSync(`${dbFile}${suffix}`, { force: true });
+    }
+  };
 }
