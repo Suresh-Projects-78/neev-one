@@ -2,6 +2,7 @@ import InventoryModule from './features/inventory/InventoryModule';
 import StockAdjustments from './features/inventory/StockAdjustments';
 import { notify, confirmDialog } from './components/ui/notify';
 import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
+import { postJournalToLedger, reverseJournalOnLedger } from './utils/journalSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
 import OnboardingWizard, { shouldOnboard, markOnboardingSeen } from './components/OnboardingWizard';
@@ -4266,8 +4267,34 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
   });
 
   const deleteEntry = async (jv) => {
-    const ok = await confirmDialog({ title: 'Please confirm', message: `Delete journal entry "${String(jv?.number || '').trim() || 'this entry'}"?`, confirmLabel: 'Yes, continue' });
+    /*
+     * An entry that reached the ledger is reversed, not deleted. Erasing the
+     * row here while the server kept the posting is exactly the divergence
+     * this screen was fixed to stop, and a posting is undone by an equal and
+     * opposite entry so the trail shows both.
+     */
+    const posted = Boolean(String(jv?.backendEntryId || '').trim());
+    const ok = await confirmDialog({
+      title: 'Please confirm',
+      message: posted
+        ? `Entry "${String(jv?.number || '').trim() || 'this entry'}" is posted to the ledger. Reverse it with an opposite entry?`
+        : `Delete journal entry "${String(jv?.number || '').trim() || 'this entry'}"?`,
+      confirmLabel: posted ? 'Yes, reverse it' : 'Yes, continue',
+    });
     if (!ok) return;
+
+    if (posted) {
+      const { reversed } = await reverseJournalOnLedger(jv);
+      if (!reversed) return;
+      setDb({
+        ...db,
+        journalEntries: (Array.isArray(db.journalEntries) ? db.journalEntries : []).map((x) =>
+          x.companyId === currentCompany.id && String(x.id) === String(jv.id) ? { ...x, status: 'REVERSED' } : x
+        ),
+      });
+      return;
+    }
+
     setDb({
       ...db,
       journalEntries: (Array.isArray(db.journalEntries) ? db.journalEntries : []).filter(
@@ -4370,10 +4397,22 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(jv.totalDebit || 0, currentCompany)}</td>
                   <td className="ui-col-amount px-4 py-2.5 text-right">{formatMoney(jv.totalCredit || 0, currentCompany)}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
-                    <StatusPill status={(jv.totalDebit || 0) === (jv.totalCredit || 0) ? 'Balanced' : 'Unbalanced'} />
+                    <StatusPill
+                      status={
+                        jv.status === 'REVERSED'
+                          ? 'Reversed'
+                          : (jv.totalDebit || 0) === (jv.totalCredit || 0)
+                            ? 'Balanced'
+                            : 'Unbalanced'
+                      }
+                    />
                   </td>
                   <td className="px-4 py-2.5 ui-col-meta">
                     <div className="flex justify-end gap-2">
+                      {jv.status === 'REVERSED' ? (
+                        <span className="text-sm ui-muted">Reversed</span>
+                      ) : (
+                      <>
                       <button
                         type="button"
                         onClick={() => onEditJournal?.(jv)}
@@ -4386,8 +4425,10 @@ const JournalEntriesList = ({ db, setDb, currentCompany, onNewJournal, onEditJou
                         onClick={() => deleteEntry(jv)}
                         className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-[rgb(var(--neg))]"
                       >
-                        <Trash2 size={16} /> Delete
+                        <Trash2 size={16} /> {jv.backendEntryId ? 'Reverse' : 'Delete'}
                       </button>
+                      </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -4494,7 +4535,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
   const difference = round2(totalDebit - totalCredit);
   const isBalanced = Math.abs(difference) < 0.005 && totalDebit > 0;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Year-end lock: nothing back-dates into closed books.
@@ -4565,8 +4606,25 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
     });
 
     if (isEdit) {
+      /*
+       * Editing an entry that already reached the ledger means reversing the
+       * old posting and making a new one — a posting is never rewritten in
+       * place. If the reversal is refused, nothing here changes either, so the
+       * two books do not drift apart.
+       */
+      let editPatch = {};
+      if (String(initialData?.backendEntryId || '').trim()) {
+        const { reversed } = await reverseJournalOnLedger(initialData);
+        if (!reversed) return;
+        editPatch = await postJournalToLedger({
+          chartRows: accounts,
+          entry: { date: formData.date, narration: formData.narration, lines: resolveLines },
+        });
+      }
+
       const updated = {
         ...initialData,
+        ...editPatch,
         number: jvNumber,
         date: formData.date,
         narration: formData.narration,
@@ -4588,6 +4646,20 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
     }
 
     const nextId = (Array.isArray(db.journalEntries) ? db.journalEntries : []).reduce((m, j) => Math.max(m, Number(j?.id || 0)), 0) + 1;
+
+    /*
+     * Posted to the general ledger on the server, not only recorded here.
+     *
+     * A journal is a ledger posting. Kept in the browser alone it meant the
+     * trial balance, the P&L and the balance sheet said different things on
+     * different machines, and the server's own books were missing entries
+     * somebody had deliberately made.
+     */
+    const ledgerPatch = await postJournalToLedger({
+      chartRows: accounts,
+      entry: { date: formData.date, narration: formData.narration, lines: resolveLines },
+    });
+
     const newJv = {
       id: nextId,
       companyId: currentCompany.id,
@@ -4598,6 +4670,7 @@ const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose, initi
       totalDebit: debitSum,
       totalCredit: creditSum,
       createdAt: new Date().toISOString(),
+      ...ledgerPatch,
     };
 
     setDb({

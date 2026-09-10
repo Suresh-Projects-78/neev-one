@@ -224,6 +224,9 @@ ledgerRouter.get('/orgs/:orgId/ledger/entries', requirePermission(MODULE, Permis
       lines: {
         select: {
           id: true,
+          // The browser keeps this against its own chart row, so a journal it
+          // hydrated can later be edited against the same server account.
+          ledgerAccountId: true,
           debit: true,
           credit: true,
           description: true,

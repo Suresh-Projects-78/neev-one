@@ -118,6 +118,41 @@ describe('double-entry posting', () => {
     expect(tb.body.totals.balanced).toBe(true);
   });
 
+  it('posts a balanced manual entry and hands it back as MANUAL', async () => {
+    // What the Journal screen depends on: the entry comes back marked MANUAL,
+    // numbered, with each line's account and its note intact. The browser
+    // tells manual journals apart from an invoice's own posting by that mark.
+    const accounts = await request(app).get(`/api/orgs/${A.orgId}/ledger/accounts`).set(auth(A)).expect(200);
+    const ar = accounts.body.accounts.find((a: any) => a.controlKind === 'AR');
+    const sales = accounts.body.accounts.find((a: any) => a.controlKind === 'SALES');
+
+    const posted = await request(app)
+      .post(`/api/orgs/${A.orgId}/ledger/entries`)
+      .set(auth(A))
+      .send({
+        date: '2026-08-16',
+        journalCode: 'JV',
+        narration: 'Year-end adjustment',
+        lines: [
+          { ledgerAccountId: ar.id, debit: 500, description: 'raised on the customer' },
+          { ledgerAccountId: sales.id, credit: 500 },
+        ],
+      })
+      .expect(201);
+
+    expect(posted.body.entry.id).toBeTruthy();
+
+    const listed = await request(app).get(`/api/orgs/${A.orgId}/ledger/entries`).set(auth(A)).expect(200);
+    const mine = listed.body.entries.find((e: any) => e.id === posted.body.entry.id);
+    expect(mine.sourceDocType).toBe('MANUAL');
+    expect(mine.narration).toBe('Year-end adjustment');
+    expect(String(mine.entryNo || '')).not.toBe('');
+    const arLine = mine.lines.find((l: any) => l.ledgerAccount.controlKind === 'AR');
+    expect(arLine.debit).toBe(500);
+    expect(arLine.description).toBe('raised on the customer');
+    expect(arLine.ledgerAccountId).toBe(ar.id);
+  });
+
   it('rejects an unbalanced manual entry', async () => {
     const accounts = await request(app).get(`/api/orgs/${A.orgId}/ledger/accounts`).set(auth(A)).expect(200);
     const ar = accounts.body.accounts.find((a: any) => a.controlKind === 'AR');

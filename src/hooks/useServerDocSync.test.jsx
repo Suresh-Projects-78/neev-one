@@ -14,6 +14,7 @@ const api = {
 const listPayments = vi.fn();
 const listDocsApi = vi.fn();
 const listInvoicesApi = vi.fn();
+const getJournalEntries = vi.fn();
 
 vi.mock('../api/masters', () => ({
   COLLECTION_FOR_KIND: { UOM: 'uoms', PRICE_LIST: 'priceLists' },
@@ -28,6 +29,7 @@ vi.mock('../api/masters', () => ({
 vi.mock('../api/payments', () => ({ listPayments: (...a) => listPayments(...a) }));
 vi.mock('../api/bankBook', () => ({ listBankBook: async () => ({ entries: [] }) }));
 vi.mock('../api/recurring', () => ({ listSchedules: (...a) => api.listSchedules(...a) }));
+vi.mock('../api/ledger', () => ({ getJournalEntries: (...a) => getJournalEntries(...a) }));
 vi.mock('../api/purchaseDocs', () => ({
   hasApiSession: () => true,
   listDocsApi: (...a) => listDocsApi(...a),
@@ -57,6 +59,7 @@ beforeEach(() => {
   listPayments.mockReset().mockResolvedValue([]);
   listDocsApi.mockReset().mockResolvedValue([]);
   listInvoicesApi.mockReset().mockResolvedValue([]);
+  getJournalEntries.mockReset().mockResolvedValue({ entries: [] });
   api.listOrgMasters.mockResolvedValue({ masters: [] });
   api.listSchedules.mockResolvedValue({ schedules: [] });
 });
@@ -213,5 +216,59 @@ describe('recurring schedules', () => {
     });
     const book = await hydrate();
     expect(book.recurringTemplates[0].active).toBe(false);
+  });
+});
+
+describe('journal entries', () => {
+  const serverJv = {
+    id: 'srv-jv-1',
+    entryNo: 'JV/2026/0007',
+    date: '2026-09-10T00:00:00.000Z',
+    narration: 'September rent',
+    sourceDocType: 'MANUAL',
+    status: 'POSTED',
+    lines: [
+      { ledgerAccountId: 'srv-rent', debit: 25000, credit: 0, description: 'rent', ledgerAccount: { code: '5100', name: 'Rent' } },
+      { ledgerAccountId: 'srv-bank', debit: 0, credit: 25000, ledgerAccount: { code: '1100', name: 'Bank' } },
+    ],
+  };
+
+  it('brings a journal raised on another machine into this book', async () => {
+    getJournalEntries.mockResolvedValue({ entries: [serverJv] });
+
+    const book = await hydrate();
+
+    expect(book.journalEntries).toHaveLength(1);
+    const jv = book.journalEntries[0];
+    expect(jv.number).toBe('JV/2026/0007');
+    expect(jv.date).toBe('2026-09-10');
+    expect(jv.narration).toBe('September rent');
+    expect(jv.totalDebit).toBe(25000);
+    expect(jv.totalCredit).toBe(25000);
+    expect(jv.lines[0]).toMatchObject({ accountName: 'Rent', accountCode: '5100', debit: 25000, credit: 0 });
+    expect(jv.lines[1]).toMatchObject({ accountName: 'Bank', serverLedgerAccountId: 'srv-bank', credit: 25000 });
+  });
+
+  it('leaves out postings a document already made, so nothing is listed twice', async () => {
+    // An invoice posts to the ledger too. That posting arrives with the
+    // invoice; listing it on the Journal screen as well would show the same
+    // transaction as two entries.
+    getJournalEntries.mockResolvedValue({
+      entries: [serverJv, { ...serverJv, id: 'srv-jv-2', sourceDocType: 'SALES_INVOICE' }],
+    });
+
+    const book = await hydrate();
+
+    expect(book.journalEntries.map((j) => j.backendEntryId)).toEqual(['srv-jv-1']);
+  });
+
+  it('does not list the same journal twice once it comes back from the server', async () => {
+    getJournalEntries.mockResolvedValue({ entries: [serverJv] });
+
+    const book = await hydrate({
+      journalEntries: [{ id: 4, companyId: 1, backendEntryId: 'srv-jv-1', number: 'JV/2026/0007', lines: [] }],
+    });
+
+    expect(book.journalEntries).toHaveLength(1);
   });
 });

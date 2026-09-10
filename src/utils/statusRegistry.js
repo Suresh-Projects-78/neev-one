@@ -87,6 +87,9 @@ const REGISTRY = [
   { key: 'uncategorised', label: 'Uncategorised', statusTone: 'outstanding', tone: 'warn', aliases: ['uncategorised', 'uncategorized'] },
   { key: 'balanced', label: 'Balanced', statusTone: 'paid', tone: 'pos', aliases: ['balanced'] },
   { key: 'unbalanced', label: 'Unbalanced', statusTone: 'overdue', tone: 'neg', aliases: ['unbalanced'] },
+  // A posting that was taken back. Cancelled, not failed: the entry was
+  // correct enough to post and was undone on purpose.
+  { key: 'reversed', label: 'Reversed', statusTone: 'cancelled', tone: 'neutral', aliases: ['reversed'] },
 
   // --- external filings ----------------------------------------------------
   { key: 'registered', label: 'Registered', statusTone: 'paid', tone: 'pos', aliases: ['registered'] },

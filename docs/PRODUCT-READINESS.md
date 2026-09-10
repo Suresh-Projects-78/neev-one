@@ -405,3 +405,31 @@ Writing that test took four attempts, each passing while the code was broken:
 
 Each attempt was found by breaking the code and watching the test pass anyway.
 A guard that has not been shown to fail is not a guard.
+
+## P0-2 — journal entries reach the ledger (10 Sep 2026)
+
+A manual journal raised in the app was written to the browser and nowhere
+else, although `POST /orgs/:orgId/ledger/entries` had existed since the ledger
+was built. That is worse than losing a document: a journal is a ledger
+posting, so the trial balance, the P&L and the balance sheet differed by
+machine, and the server's own books were missing entries somebody had made
+deliberately.
+
+- `src/utils/journalSync.js` posts the entry, mapping each line's local chart
+  id to its `serverLedgerAccountId`. An entry with **any** unmapped line is not
+  posted at all — half a journal would unbalance the ledger it was meant to
+  correct.
+- The line note is sent as `description`. The server's schema calls it that;
+  under any other key zod strips it and the note is lost without a word.
+- `useServerDocSync` hydrates journals back, filtered to `sourceDocType:
+  MANUAL`. Every other ledger entry was posted by a document that hydrates in
+  its own right, so listing those too would show one transaction twice.
+- The list route now selects `ledgerAccountId` on each line — the hydration
+  reads it, and it was not being sent.
+- Delete became **Reverse** for a posted entry, and an edit reverses then
+  reposts. A posting is never erased or rewritten in place; erasing the row
+  here while the server kept the posting is the same divergence again. If the
+  reversal is refused, nothing changes locally either.
+
+Still browser-only after this: `fyLocks`, `gstRates`, `posDayCloses`. None is
+ledger data.

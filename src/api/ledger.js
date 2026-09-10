@@ -45,3 +45,33 @@ export const createLedgerAccount = ({ name, accountType, controlKind, sourceKey 
   });
 
 export const getJournalEntries = (limit = 50) => apiFetch(`${base()}/entries?limit=${limit}`, opts);
+
+/**
+ * A manual journal entry, posted to the general ledger on the server.
+ *
+ * The route has existed since the ledger was built and nothing called it: a
+ * journal entry raised in the app was written to the browser and nowhere else.
+ * That is worse than losing a document — a journal is a ledger posting, so the
+ * trial balance, the P&L and the balance sheet differed by machine, and the
+ * server's own books were missing entries somebody had made on purpose.
+ */
+export const postJournalEntry = ({ date, journalCode = 'JV', narration, lines }) =>
+  apiFetch(`${base()}/entries`, {
+    method: 'POST',
+    body: { date, journalCode, narration: narration || null, lines },
+    ...opts,
+  });
+
+/**
+ * Reversing a posted entry, which is how a journal is taken back.
+ *
+ * A posting that has reached the ledger is never edited or erased — it is
+ * reversed by an equal and opposite entry, so the audit trail shows both what
+ * was recorded and that it was undone.
+ */
+export const reverseJournalEntry = (entryId, narration) =>
+  apiFetch(`${base()}/entries/${entryId}/reverse`, {
+    method: 'POST',
+    body: { narration: narration || undefined },
+    ...opts,
+  });

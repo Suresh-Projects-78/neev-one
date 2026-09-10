@@ -15,6 +15,7 @@ import {
 import { listPayments } from '../api/payments';
 import { listBankBook } from '../api/bankBook';
 import { listSchedules } from '../api/recurring';
+import { getJournalEntries } from '../api/ledger';
 
 /**
  * Pull-hydration: documents saved to the server come BACK on a fresh browser.
@@ -200,6 +201,35 @@ const mapFixedAsset = (r, companyId) => ({
 });
 
 /**
+ * A manual journal entry as the Journal screen stores one.
+ *
+ * Only the ones somebody keyed by hand. Every other entry in the ledger was
+ * posted by the document that caused it — an invoice, a receipt — and those
+ * documents are hydrated in their own right; bringing their postings across as
+ * well would show the same transaction twice on the Journal screen.
+ */
+const mapJournalEntry = (e, companyId) => ({
+  companyId,
+  backendEntryId: e.id,
+  number: e.entryNo || '',
+  date: String(e.date || '').slice(0, 10),
+  narration: e.narration || '',
+  lines: (Array.isArray(e.lines) ? e.lines : []).map((l) => ({
+    accountName: l.ledgerAccount?.name || '',
+    accountCode: l.ledgerAccount?.code || '',
+    serverLedgerAccountId: l.ledgerAccountId || null,
+    debit: num(l.debit),
+    credit: num(l.credit),
+    narration: l.description || '',
+  })),
+  totalDebit: num((e.lines || []).reduce((t, l) => t + num(l.debit), 0)),
+  totalCredit: num((e.lines || []).reduce((t, l) => t + num(l.credit), 0)),
+  status: e.status || 'POSTED',
+  createdAt: e.createdAt,
+  hydratedFromServer: true,
+});
+
+/**
  * A recurring schedule as the browser's screen stores one.
  *
  * The server owns the schedule and raises its invoices; the local row exists so
@@ -375,6 +405,20 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
       }
 
       try {
+        /*
+         * Manual journals only. Everything else in the ledger was posted by a
+         * document that is hydrated in its own right, so pulling those across
+         * would list the same transaction twice.
+         */
+        const journal = (await getJournalEntries(500))?.entries || [];
+        collected.journalEntries = journal
+          .filter((e) => String(e.sourceDocType || '') === 'MANUAL')
+          .map((e) => mapJournalEntry(e, currentCompanyId));
+      } catch {
+        /* same rule: what does not arrive hydrates nothing */
+      }
+
+      try {
         const entries = (await listBankBook())?.entries || [];
         collected.bankTransactions = entries.map((r) => mapBankEntry(r, currentCompanyId));
       } catch {
@@ -468,6 +512,9 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
           // only test — which is right: two identical charges on one day are
           // two charges, not one recorded twice.
           ['bankBookEntry', 'bankTransactions', 'backendBankEntryId'],
+          // A journal carries its own number, so that is the second test after
+          // the server id.
+          ['journalEntry', 'journalEntries', 'backendEntryId'],
         ]) {
           const incoming = collected[collection];
           if (!incoming || !incoming.length) continue;
