@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { CalendarClock, Download, FileText, MoreVertical, Pause, PauseCircle, Play, Plus, Receipt, RefreshCw, Settings, Trash2 } from 'lucide-react';
 import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { formatMoney } from '../../utils/money';
 import { branchLabel } from '../../utils/branchLabel';
@@ -13,6 +13,7 @@ import { computeGstForLines } from '../../utils/gst';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 import { patchSchedule, removeSchedule, saveSchedule } from '../../utils/recurringSync';
 import { runSchedulesNow } from '../../api/recurring';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
@@ -374,8 +375,10 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     return `Raises a draft invoice ${every}${from}${stop}.${terms}`;
   }, [interval, frequency, startDate, endDate, endMode, maxOccurrences, dueDays]);
 
-  const exportSchedules = () =>
-    exportRows({
+  const exportSchedules = (format) =>
+    runListExport({
+      format,
+      title: 'Recurring invoices',
       fileName: `RecurringInvoices_${currentCompany?.name || 'company'}`,
       label: 'schedule(s)',
       columns: [
@@ -842,13 +845,14 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </button>
       }
       moreItems={[
-        { key: 'export', label: 'Export schedules', Icon: Download },
+        exportMenuItem('Export schedules'),
         { sep: true },
         { key: 'settingsInvoiceFields', label: 'Invoice settings', Icon: Settings, group: 'Configure — every invoice' },
       ]}
       onMoreSelect={(k) => {
-        if (k === 'export') {
-          exportSchedules();
+        const format = exportFormatFromKey(k);
+        if (format) {
+          exportSchedules(format);
           return;
         }
         if (typeof onNavigate === 'function') onNavigate(k);

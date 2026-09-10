@@ -4,13 +4,14 @@ import { ClipboardList, Download, Package, Plus, Trash2, TrendingDown, TrendingU
 import { notify } from '../../components/ui/notify';
 import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { formatMoney, round2 } from '../../utils/money';
 import { isStockItem } from '../../utils/inventory';
 import { generateVoucherNumber } from '../../utils/docSettings';
 import { DocumentNumber, DocDate } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 const normalizeId = (v) => (v === undefined || v === null ? '' : String(v).trim());
@@ -438,10 +439,13 @@ const StockAdjustments = ({
         placeholder: 'Search adjustments…',
         label: 'Search adjustments',
       }}
-      moreItems={[{ key: 'export', label: 'Export adjustments', Icon: Download }]}
+      moreItems={[exportMenuItem('Export adjustments')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Adjustments',
           fileName: `StockAdjustments_${currentCompany?.name || 'company'}`,
           label: 'adjustment(s)',
           columns: adjExportColumns,

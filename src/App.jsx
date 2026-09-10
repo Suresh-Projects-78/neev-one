@@ -84,7 +84,7 @@ import { nextFreeVoucherNumber } from './utils/docSettings';
 import { dueDateFor, termDaysFor, termsLabel } from './utils/paymentTerms';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
 import { formatMoney, round2 } from './utils/money';
-import { downloadCsv, downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
+import { downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
 import { useColumnFilters, ColumnHeader } from './components/ColumnFilters';
 import { ListToolbar, exportRows, useListSearch } from './components/ListToolbar';
 import { getVendorDisplayName } from './utils/contacts';
@@ -238,6 +238,7 @@ import { nextItemCode, bumpItemCodeSeries } from './utils/itemCode';
 import { useTheme } from './components/ui/useTheme';
 import { useDensity } from './components/ui/useDensity';
 import { useFieldErrors } from './components/ui/useFieldErrors';
+import { exportFormatFromKey, exportMenuItem, runListExport } from './components/list/exportMenu';
 const normalizeId = (v) => String(v ?? '').trim();
 
 const getBranchLabel = (b) => {
@@ -355,12 +356,15 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   const ledgerNamesOf = (e) =>
     (Array.isArray(e?.lines) ? e.lines : []).map((l) => l.ledgerName).filter(Boolean).join('; ');
 
-  const exportExpenses = () => {
+  const exportExpenses = (format = 'csv') => {
     if (!filteredExpenses.length) {
       notify.error('Nothing to export in the current view.');
       return;
     }
-    downloadCsv({
+    runListExport({
+      format,
+      title: 'Expenses',
+      label: 'expense(s)',
       fileName: `Expenses_${currentCompany?.name || 'company'}${fromDate || toDate ? `_${fromDate || 'start'}_to_${toDate || 'today'}` : ''}`,
       columns: [
         { key: 'number', label: 'Voucher No' },
@@ -379,7 +383,6 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       ],
       rows: filteredExpenses,
     });
-    notify.success(`${filteredExpenses.length} expense(s) exported.`);
   };
 
   const downloadImportTemplate = () => {
@@ -645,12 +648,13 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         label: 'Search expenses',
       }}
       moreItems={[
-        { key: 'export', label: 'Export expenses', Icon: Download },
+        exportMenuItem('Export expenses'),
         { key: 'template', label: 'Download import template', Icon: FileText },
         { key: 'import', label: 'Import expenses', Icon: Upload },
       ]}
       onMoreSelect={(k) => {
-        if (k === 'export') exportExpenses();
+        const format = exportFormatFromKey(k);
+        if (format) exportExpenses(format);
         else if (k === 'template') downloadImportTemplate();
         else if (k === 'import') importInputRef.current?.click();
       }}
@@ -1610,10 +1614,13 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
         placeholder: 'Search items…',
         label: 'Search items',
       }}
-      moreItems={[{ key: 'export', label: 'Export items', Icon: Download }]}
+      moreItems={[exportMenuItem('Export items')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Items',
           fileName: `Items_${currentCompany?.name || 'company'}`,
           label: 'item(s)',
           columns: itemExportColumns,
@@ -2753,11 +2760,14 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
           ? { value: ledgerSearch, onChange: setLedgerSearch, placeholder: 'Search ledgers…', label: 'Search ledgers' }
           : { value: groupSearch, onChange: setGroupSearch, placeholder: 'Search groups…', label: 'Search groups' }
       }
-      moreItems={[{ key: 'export', label: coaView === 'ledgers' ? 'Export ledgers' : 'Export groups', Icon: Download }]}
+      moreItems={[exportMenuItem(coaView === 'ledgers' ? 'Export ledgers' : 'Export groups')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
+        const format = exportFormatFromKey(k);
+        if (!format) return;
         if (coaView === 'ledgers') {
-          exportRows({
+          runListExport({
+            format,
+            title: 'Chart of accounts — ledgers',
             fileName: `ChartOfAccounts_${currentCompany?.name || 'company'}`,
             label: 'ledger(s)',
             columns: [
@@ -7191,10 +7201,13 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
         placeholder: 'Search categories…',
         label: 'Search categories',
       }}
-      moreItems={[{ key: 'export', label: 'Export categories', Icon: Download }]}
+      moreItems={[exportMenuItem('Export categories')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Item categories',
           fileName: `ItemCategories_${currentCompany?.name || 'company'}`,
           label: 'categor(y/ies)',
           columns: [

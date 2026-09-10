@@ -3,11 +3,12 @@ import { partyEmail, partyMobile } from '../../utils/contacts';
 import { Ban, Bell, Copy, Download, FileText, Mail, MessageCircle, Receipt } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { formatMoney } from '../../utils/money';
 import { notify } from '../../components/ui/notify';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 import { createInvoiceShareLink } from '../../api/share';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 import {
   collectiblesList,
   buildReminderMessage,
@@ -190,10 +191,13 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
         placeholder: 'Search collectibles…',
         label: 'Search collectibles',
       }}
-      moreItems={[{ key: 'export', label: 'Export collectibles', Icon: Download }]}
+      moreItems={[exportMenuItem('Export collectibles')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Collectibles',
           fileName: `PaymentReminders_${currentCompany?.name || 'company'}`,
           label: 'collectible(s)',
           columns: prExportColumns,

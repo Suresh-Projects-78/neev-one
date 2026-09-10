@@ -9,12 +9,12 @@ import { computeInventorySummaryByItemId, isStockItem } from '../../utils/invent
 import { isTracked, needsExpiry, batchesForItem } from '../../utils/batches';
 import { bumpCompanyNextNumber, generateVoucherNumber, getDocSettings } from '../../utils/docSettings';
 import ItemPicker from '../../components/pickers/ItemPicker';
-import { exportRows } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { latestPurchaseRate } from '../../utils/pricing';
 import { formatMoney } from '../../utils/money';
 import { DocDate } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1790,10 +1790,13 @@ export const StockTransfersList = ({
         placeholder: 'Search transfers…',
         label: 'Search transfers',
       }}
-      moreItems={[{ key: 'export', label: 'Export transfers', Icon: Download }]}
+      moreItems={[exportMenuItem('Export transfers')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Transfers',
           fileName: `${mode === 'branch' ? 'BranchTransfers' : 'WarehouseTransfers'}_${currentCompany?.name || 'company'}`,
           label: 'transfer(s)',
           columns: transferExportColumns,

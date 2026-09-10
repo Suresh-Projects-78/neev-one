@@ -4,7 +4,6 @@ import { notify } from '../../components/ui/notify';
 import RecordPaymentForm from './RecordPaymentForm';
 import { formatMoney, round2 } from '../../utils/money';
 import { TableTotals } from '../../components/ui/Primitives';
-import { downloadCsv } from '../../utils/csv';
 import { ListToolbar, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { StatCards, ListSearch, FiltersButton, MoreButton, ExportButton, Pagination, usePaged } from '../../components/list/ListPageParts';
@@ -14,6 +13,7 @@ import { CreditCard, FileText, Landmark, Receipt, Undo2 } from 'lucide-react';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { Download } from 'lucide-react';
 import { DocumentNumber, SalesDate, MoneyValue } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -341,12 +341,15 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
     amount: (r) => r.amount,
   });
 
-  const exportRows = () => {
+  const exportTransactions = (format) => {
     if (!shown.length) {
       notify.error('Nothing to export.');
       return;
     }
-    downloadCsv({
+    runListExport({
+      format,
+      title,
+      label: title.toLowerCase(),
       fileName: `${title}_${currentCompany?.name || 'company'}`,
       columns: [
         { key: 'date', label: 'Date' },
@@ -359,7 +362,6 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
       ],
       rows: shown,
     });
-    notify.success(`${shown.length} ${title.toLowerCase()} exported.`);
   };
 
   /*
@@ -438,9 +440,10 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
         label: `Search ${title.toLowerCase()}`,
       }}
       headerExtras={rightActions ? <>{rightActions}</> : null}
-      moreItems={[{ key: 'export', label: 'Export as CSV', Icon: Download }]}
+      moreItems={[exportMenuItem(`Export ${title.toLowerCase()}`)]}
       onMoreSelect={(k) => {
-        if (k === 'export') exportRows();
+        const format = exportFormatFromKey(k);
+        if (format) exportTransactions(format);
       }}
       cards={[
         { label: `Total ${title.toLowerCase()}`, value: headline.count, count: true, tone: 'draft', Icon: FileText },

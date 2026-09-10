@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Boxes, CalendarClock, Download, Package, Timer } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { batchStockRows } from '../../utils/batches';
 import { DocDate } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * Batch-wise stock and expiry report.
@@ -107,10 +108,13 @@ export default function BatchStock({ db, currentCompany }) {
         placeholder: 'Search batches…',
         label: 'Search batches',
       }}
-      moreItems={[{ key: 'export', label: 'Export batches', Icon: Download }]}
+      moreItems={[exportMenuItem('Export batches')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Batches',
           fileName: `BatchStock_${currentCompany?.name || 'company'}`,
           label: 'batch(es)',
           columns: batchExportColumns,

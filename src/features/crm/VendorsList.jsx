@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { BadgePercent, Ban, Download, FileText, Pencil, Plus, Receipt, Trash2, Truck } from 'lucide-react';
 
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 import { confirmDialog, notify } from '../../components/ui/notify';
 import DocumentListShell from '../../components/list/DocumentListShell';
@@ -11,6 +11,7 @@ import PartyDetail from '../parties/PartyDetail';
 import { getVendorDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { isGstRegistered, outstandingByParty, standingOf } from '../../utils/partyStanding';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * The vendor master.
@@ -220,10 +221,13 @@ export default function VendorsList({ db, setDb, currentCompany }) {
         placeholder: 'Search vendors…',
         label: 'Search vendors',
       }}
-      moreItems={[{ key: 'export', label: 'Export vendors', Icon: Download }]}
+      moreItems={[exportMenuItem('Export vendors')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Vendors',
           fileName: `Vendors_${currentCompany?.name || 'company'}`,
           label: 'vendor(s)',
           columns: vendExportColumns,

@@ -310,7 +310,6 @@ describe('Fetch from GSTN', () => {
 
   /* The spec: do not silently overwrite manually entered information. */
   it('keeps a name that was already typed, and says so', async () => {
-    const user = userEvent.setup();
     const { apiFetch } = await import('../../api/http');
     apiFetch.mockResolvedValueOnce(portal);
 

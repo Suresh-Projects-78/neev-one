@@ -2,11 +2,12 @@ import React, { useMemo, useRef, useState } from 'react';
 import { BadgeIndianRupee, Download, FileText, Plus, Receipt, Trash2, UserCheck, Users } from 'lucide-react';
 import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { createSalesman, deactivateSalesman } from '../../api/masters';
 import { MoneyValue } from '../../components/docs';
 import { formatMoney } from '../../utils/money';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * Salesman master + performance report. Invoices carry salesmanId (picked on
@@ -168,10 +169,13 @@ export default function Salesmen({ db, setDb, currentCompany }) {
         placeholder: 'Search salesmen…',
         label: 'Search salesmen',
       }}
-      moreItems={[{ key: 'export', label: 'Export salesmen', Icon: Download }]}
+      moreItems={[exportMenuItem('Export salesmen')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Salesmen',
           fileName: `Salesmen_${currentCompany?.name || 'company'}`,
           label: 'salesman/men',
           columns: smExportColumns,

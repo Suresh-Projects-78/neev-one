@@ -3,12 +3,13 @@ import { Ban, BookOpen, ClipboardList, Download, Pencil, Plus, Receipt, Trash2, 
 
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import { usePeriodFilter } from '../../components/ListControls';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import { confirmDialog } from '../../components/ui/notify';
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { formatMoney } from '../../utils/money';
 import { reverseJournalOnLedger } from '../../utils/journalSync';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * The journal list.
@@ -143,10 +144,13 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
         placeholder: 'Search journal entries…',
         label: 'Search journal entries',
       }}
-      moreItems={[{ key: 'export', label: 'Export journal entries', Icon: Download }]}
+      moreItems={[exportMenuItem('Export journal entries')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Journal entries',
           fileName: `JournalEntries_${currentCompany?.name || 'company'}`,
           label: 'entry/entries',
           columns: jvExportColumns,

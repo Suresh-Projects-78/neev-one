@@ -41,7 +41,7 @@ import {
 } from '../../utils/gst';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
-import { ListToolbar, exportRows, useListSearch } from '../../components/ListToolbar';
+import { ListToolbar, useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import {
   StatCards,
@@ -58,6 +58,7 @@ import { PageHeader } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { blockIfClosed } from '../../utils/bookClose';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
   const fieldErrors = useFieldErrors('bill');
@@ -897,10 +898,13 @@ export const PurchaseOrdersList = ({
         placeholder: 'Search purchase orders…',
         label: 'Search purchase orders',
       }}
-      moreItems={[{ key: 'export', label: 'Export purchase orders', Icon: Download }]}
+      moreItems={[exportMenuItem('Export purchase orders')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Purchase orders',
           fileName: `PurchaseOrders_${currentCompany?.name || 'company'}`,
           label: 'purchase order(s)',
           columns: poExportColumns,
@@ -1996,15 +2000,18 @@ const billStatusReason = (doc, status, company, nowMs) => {
         label: 'Search bills',
       }}
       moreItems={[
-        { key: 'export', label: 'Export bills', Icon: Download },
+        exportMenuItem('Export bills'),
         { key: 'dataImport', label: 'Import bills', Icon: Download },
         { sep: true },
         { key: 'purchaseOrders', label: 'Purchase orders', Icon: ShoppingCart, group: 'Elsewhere in purchases' },
         { key: 'debitNotes', label: 'Purchase returns', Icon: Receipt },
       ]}
       onMoreSelect={(k) => {
-        if (k === 'export') {
-          exportRows({
+        const format = exportFormatFromKey(k);
+        if (format) {
+          runListExport({
+            format,
+            title: 'Bills',
             fileName: `Bills_${currentCompany?.name || 'company'}`,
             label: 'bill(s)',
             columns: billExportColumns,
@@ -3234,10 +3241,13 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
         placeholder: 'Search debit notes…',
         label: 'Search debit notes',
       }}
-      moreItems={[{ key: 'export', label: 'Export debit notes', Icon: Download }]}
+      moreItems={[exportMenuItem('Export debit notes')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Purchase returns',
           fileName: `DebitNotes_${currentCompany?.name || 'company'}`,
           label: 'debit note(s)',
           columns: dnExportColumns,

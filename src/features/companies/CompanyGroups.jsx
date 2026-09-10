@@ -4,10 +4,10 @@ import { Ban, Building2, ChevronRight, CornerDownRight, Download, FileText, Land
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
 import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows } from '../../components/ListToolbar';
 import { notify } from '../../components/ui/notify';
 import { GST_STATE_BY_CODE } from '../../utils/gst';
 import { createCompany } from '../../api/auth';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * The company group viewer.
@@ -394,10 +394,13 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
         placeholder: 'Search companies…',
         label: 'Search companies',
       }}
-      moreItems={[{ key: 'export', label: 'Export companies', Icon: Download }]}
+      moreItems={[exportMenuItem('Export companies')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Companies',
           fileName: 'Companies',
           label: 'company/companies',
           columns: [

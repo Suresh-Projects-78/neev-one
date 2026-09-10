@@ -247,6 +247,9 @@ export function FiltersButton({ period, onPeriodChange, dateFrom, dateTo, onDate
 export function MoreButton({ items, onSelect }) {
   const ref = useRef(null);
   const [open, setOpen] = useState(false);
+  /* Which submenu is showing. One at a time: two open lists in a menu this
+     narrow is a scroll, not a choice. */
+  const [openChild, setOpenChild] = useState('');
   return (
     <div className="relative">
       <button
@@ -271,14 +274,48 @@ export function MoreButton({ items, onSelect }) {
                   <button
                     type="button"
                     role="menuitem"
+                    aria-expanded={o.children ? openChild === o.key : undefined}
                     onClick={() => {
+                      /* An entry with children asks a question; it does not
+                         answer one. Closing the menu here would fire the
+                         parent's own key and export in whatever format the
+                         handler happened to default to. */
+                      if (o.children?.length) {
+                        setOpenChild((k) => (k === o.key ? '' : o.key));
+                        return;
+                      }
                       setOpen(false);
                       onSelect(o.key);
                     }}
                     className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                   >
                     {o.Icon ? <o.Icon size={15} aria-hidden="true" /> : null} {o.label}
+                    {o.children?.length ? (
+                      <ChevronDown
+                        size={14}
+                        aria-hidden="true"
+                        className="ms-auto transition-transform"
+                        style={openChild === o.key ? { transform: 'rotate(180deg)' } : undefined}
+                      />
+                    ) : null}
                   </button>
+                  {o.children?.length && openChild === o.key
+                    ? o.children.map((c) => (
+                        <button
+                          key={c.key}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            setOpen(false);
+                            setOpenChild('');
+                            onSelect(c.key);
+                          }}
+                          className="w-full text-left flex items-center gap-2 px-3 py-2 ps-9 text-sm hover:bg-[rgb(var(--surface-sunken))]"
+                        >
+                          {c.Icon ? <c.Icon size={15} aria-hidden="true" /> : null} {c.label}
+                        </button>
+                      ))
+                    : null}
                 </React.Fragment>
               )
             )}

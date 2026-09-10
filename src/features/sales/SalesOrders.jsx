@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Ban, ClipboardList, Download, FileText, Package, Plus, Printer, Receipt, Settings2, Trash2, Truck } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '../../components/DocumentForm';
 import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
@@ -23,6 +23,7 @@ import { getCompanyGstProfile, getPartyGstProfile, isIntraStateSupply } from '..
 import { resolveSaleRate } from '../../utils/pricing';
 import { createDocApi, hasApiSession } from '../../api/purchaseDocs';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * Sales orders — the confirmed order between quote and invoice.
@@ -602,10 +603,13 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           Pending orders ({pendingRows.length})
         </button>
       }
-      moreItems={[{ key: 'export', label: 'Export sales orders', Icon: Download }]}
+      moreItems={[exportMenuItem('Export sales orders')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Sales orders',
           fileName: `SalesOrders_${currentCompany?.name || 'company'}`,
           label: 'sales order(s)',
           columns: soExportColumns,

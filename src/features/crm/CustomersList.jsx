@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { BadgePercent, Ban, Download, FileText, Pencil, Plus, Receipt, Trash2, Users } from 'lucide-react';
 
 import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 import { confirmDialog, notify } from '../../components/ui/notify';
 import DocumentListShell from '../../components/list/DocumentListShell';
@@ -11,6 +11,7 @@ import PartyDetail from '../parties/PartyDetail';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { isGstRegistered, outstandingByParty, standingOf } from '../../utils/partyStanding';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * The customer master.
@@ -218,10 +219,13 @@ export default function CustomersList({ db, setDb, currentCompany }) {
         placeholder: 'Search customers…',
         label: 'Search customers',
       }}
-      moreItems={[{ key: 'export', label: 'Export customers', Icon: Download }]}
+      moreItems={[exportMenuItem('Export customers')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Customers',
           fileName: `Customers_${currentCompany?.name || 'company'}`,
           label: 'customer(s)',
           columns: custExportColumns,

@@ -3,11 +3,12 @@ import { ArrowLeft, BadgeIndianRupee, Ban, CalendarX, CheckCircle2, Download, Li
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { Pagination, usePaged } from '../../components/list/ListPageParts';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { pushMaster, removeMaster, saveMaster } from '../../utils/masterSync';
 import { formatMoney } from '../../utils/money';
 import { isPriceListInForce } from '../../utils/pricing';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /** dd MMM yyyy, or an em dash. Lists without a window are open-ended. */
 const fmtDate = (v) => {
@@ -306,10 +307,13 @@ export default function PriceLists({ db, setDb, currentCompany }) {
             </>
           ) : null
         }
-        moreItems={[{ key: 'export', label: 'Export price lists', Icon: Download }]}
+        moreItems={[exportMenuItem('Export price lists')]}
         onMoreSelect={(k) => {
-          if (k !== 'export') return;
-          exportRows({
+          const format = exportFormatFromKey(k);
+          if (!format) return;
+          runListExport({
+            format,
+            title: 'Price lists',
             fileName: `PriceLists_${currentCompany?.name || 'company'}`,
             label: 'price list(s)',
             columns: exportColumns,

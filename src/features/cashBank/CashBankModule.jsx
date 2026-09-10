@@ -5,7 +5,7 @@ import { CheckCircle2, Download, FileSpreadsheet, Link2, MoreVertical, Pencil, P
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { formatMoney, round2 } from '../../utils/money';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
@@ -13,6 +13,7 @@ import { ArrowDownLeft, ArrowUpRight, Landmark, ListTodo } from 'lucide-react';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 import { csvSafeValue } from '../../utils/csv';
 import { patchBankEntry, removeBankEntry, saveBankEntry } from '../../utils/bankBookSync';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -1932,15 +1933,18 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         </>
       }
       moreItems={[
-        { key: 'export', label: 'Export transactions', Icon: Download },
+        exportMenuItem('Export transactions'),
         { key: 'template', label: 'Download statement template', Icon: FileSpreadsheet },
         { key: 'upload', label: 'Upload statement', Icon: Upload },
         { sep: true },
         { key: 'newAccount', label: 'New cash or bank account', Icon: Landmark, group: 'Accounts' },
       ]}
       onMoreSelect={(k) => {
-        if (k === 'export') {
-          exportRows({
+        const format = exportFormatFromKey(k);
+        if (format) {
+          runListExport({
+            format,
+            title: `Cash & bank — ${selectedAccount?.name || 'account'}`,
             fileName: `CashBank_${selectedAccount?.name || 'account'}`,
             label: 'transaction(s)',
             columns: txnExportColumns,

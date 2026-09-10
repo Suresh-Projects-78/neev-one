@@ -2,13 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { AlertTriangle, Download, Package, PackageSearch, ShoppingCart, Truck } from 'lucide-react';
 import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { formatMoney } from '../../utils/money';
 import { notify } from '../../components/ui/notify';
 import { computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { createDocApi, hasApiSession } from '../../api/purchaseDocs';
 import { getVendorDisplayName } from '../../utils/contacts';
 import { MoneyValue } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * Reorder alerts — inventory as buying decisions.
@@ -197,10 +198,13 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
         placeholder: 'Search items…',
         label: 'Search items',
       }}
-      moreItems={[{ key: 'export', label: 'Export alerts', Icon: Download }]}
+      moreItems={[exportMenuItem('Export alerts')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Alerts',
           fileName: `ReorderAlerts_${currentCompany?.name || 'company'}`,
           label: 'alert(s)',
           columns: raExportColumns,

@@ -13,7 +13,7 @@ import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { nextFreeVoucherNumber } from '../../utils/docSettings';
-import { exportRows, useListSearch } from '../../components/ListToolbar';
+import { useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
@@ -22,6 +22,7 @@ import PrintDownloadFrame from '../../components/PrintDownloadFrame';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * Delivery challans — goods leaving without (yet) an invoice: job work,
@@ -480,10 +481,13 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
         placeholder: 'Search challans…',
         label: 'Search challans',
       }}
-      moreItems={[{ key: 'export', label: 'Export challans', Icon: Download }]}
+      moreItems={[exportMenuItem('Export challans')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Challans',
           fileName: `DeliveryChallans_${currentCompany?.name || 'company'}`,
           label: 'challan(s)',
           columns: dcExportColumns,

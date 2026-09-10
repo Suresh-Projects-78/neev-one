@@ -69,6 +69,7 @@ import { exportListPdf } from '../../utils/listPdf';
 import { exportListXlsx } from '../../utils/listXlsx';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 import { blockIfClosed } from '../../utils/bookClose';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 
 /** Columns the invoices grid can show or hide. Identity and actions stay. */
@@ -1989,14 +1990,17 @@ export const EstimatesList = ({
         label: 'Search quotations',
       }}
       moreItems={[
-        { key: 'export', label: 'Export quotations', Icon: Download },
+        exportMenuItem('Export quotations'),
         { sep: true },
         { key: 'settingsCustomFields', label: 'Custom fields', Icon: Plus, group: 'Configure — every quotation' },
         { key: 'invoiceTemplates', label: 'Document template', Icon: Settings2 },
       ]}
       onMoreSelect={(k) => {
-        if (k === 'export') {
-          exportRows({
+        const format = exportFormatFromKey(k);
+        if (format) {
+          runListExport({
+            format,
+            title: 'Quotations',
             fileName: `Quotations_${currentCompany?.name || 'company'}`,
             label: 'quotation(s)',
             columns: estExportColumns,
@@ -2475,10 +2479,13 @@ export const CreditNotesList = ({
         placeholder: 'Search credit notes…',
         label: 'Search credit notes',
       }}
-      moreItems={[{ key: 'export', label: 'Export credit notes', Icon: Download }]}
+      moreItems={[exportMenuItem('Export credit notes')]}
       onMoreSelect={(k) => {
-        if (k !== 'export') return;
-        exportRows({
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        runListExport({
+          format,
+          title: 'Credit notes',
           fileName: `CreditNotes_${currentCompany?.name || 'company'}`,
           label: 'credit note(s)',
           columns: cnExportColumns,
