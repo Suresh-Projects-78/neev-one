@@ -2,7 +2,17 @@ import { useEffect, useRef } from 'react';
 
 import { hasApiSession, listDocsApi } from '../api/purchaseDocs';
 import { listInvoicesApi } from '../api/invoices';
-import { COLLECTION_FOR_KIND, listCustomers, listItems, listOrgMasters, listVendors } from '../api/masters';
+import {
+  COLLECTION_FOR_KIND,
+  listCustomers,
+  listDeliveryChallans,
+  listFixedAssets,
+  listItems,
+  listOrgMasters,
+  listSalesmen,
+  listVendors,
+} from '../api/masters';
+import { listPayments } from '../api/payments';
 
 /**
  * Pull-hydration: documents saved to the server come BACK on a fresh browser.
@@ -124,6 +134,115 @@ const MASTER_KINDS = [
  */
 const REFERENCE_COLLECTIONS = Object.values(COLLECTION_FOR_KIND).map((collection) => [collection, 'backendMasterId']);
 
+/**
+ * Written through and never read back.
+ *
+ * A challan, a salesman and a fixed asset were each given a table so they would
+ * stop living in one browser — and then nothing fetched them, which fixes only
+ * half of the problem it was meant to fix: the server holds the record and a
+ * fresh browser still opens onto an empty list.
+ *
+ * Payments are the worst of the four. They are created through the API and
+ * never read back, so a new machine showed no receipts, no payments, and — now
+ * that reconciliation exists — an empty book side against a full statement,
+ * which would report every line as money nobody had recorded.
+ */
+const mapChallan = (d, companyId) => ({
+  companyId,
+  backendDocId: d.id,
+  number: d.number,
+  date: d.date,
+  customerId: d.partyId || '',
+  customerName: d.partyName || '',
+  purpose: String(d.purpose || '')
+    .toLowerCase()
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase()),
+  vehicleNo: d.vehicleNo || '',
+  notes: d.notes || '',
+  items: Array.isArray(d.items) ? d.items : [],
+  value: num(d.total ?? d.subtotal),
+  status: d.status || 'Open',
+  warehouseId: d.warehouseId || '',
+  createdAt: d.createdAt,
+  hydratedFromServer: true,
+});
+
+const mapSalesman = (r, companyId) => ({
+  companyId,
+  backendSalesmanId: r.id,
+  name: r.name,
+  phone: r.phone || '',
+  email: r.email || '',
+  commissionPct: num(r.commissionRate),
+  active: r.isActive !== false,
+  createdAt: r.createdAt,
+  hydratedFromServer: true,
+});
+
+const mapFixedAsset = (r, companyId) => ({
+  companyId,
+  backendAssetId: r.id,
+  name: r.name,
+  category: r.category || '',
+  purchaseDate: r.purchaseDate || '',
+  cost: num(r.cost),
+  salvageValue: num(r.salvageValue),
+  method: r.depreciationMethod || '',
+  rate: num(r.depreciationRate),
+  usefulLifeYears: r.usefulLifeYears ?? null,
+  accumulatedDepreciation: num(r.accumulatedDepreciation),
+  status: r.status || 'Active',
+  createdAt: r.createdAt,
+  hydratedFromServer: true,
+});
+
+/**
+ * A payment as the browser's books store one.
+ *
+ * `reconciled` comes across because the reconciliation screen reads it: a
+ * payment already tied off against a statement must not be offered again on
+ * the next machine that opens the book.
+ */
+const mapPayment = (p, companyId) => ({
+  companyId,
+  backendPaymentId: p.id,
+  id: p.id,
+  number: p.number || '',
+  date: String(p.date || '').slice(0, 10),
+  voucherType: String(p.direction || '').toUpperCase() === 'RECEIPT' ? 'receipt' : 'payment',
+  amount: num(p.amount),
+  partyName: p.partyName || '',
+  customerName: String(p.partyType || '') === 'CUSTOMER' ? p.partyName || '' : '',
+  vendorName: String(p.partyType || '') === 'VENDOR' ? p.partyName || '' : '',
+  ledgerAccountId: p.ledgerAccountId || '',
+  notes: p.notes || '',
+  reconciled: p.reconciled === true,
+  bankDate: p.bankDate || null,
+  statementRef: p.statementRef || '',
+  createdAt: p.createdAt,
+  hydratedFromServer: true,
+});
+
+/**
+ * [db collection, backend id field, fetcher, pick, mapper]
+ *
+ * Split by what makes a row the same row. A challan carries a number, so a
+ * challan the browser wrote is recognised by it; a salesman has only a name.
+ * Getting that wrong duplicates: the same person under two ids, and a
+ * commission report that counts their invoices once each.
+ */
+const WRITE_THROUGH_BY_NUMBER = [
+  ['deliveryChallans', 'backendDocId', listDeliveryChallans, (r) => r?.documents, mapChallan],
+];
+
+const WRITE_THROUGH_BY_NAME = [
+  ['salesmen', 'backendSalesmanId', listSalesmen, (r) => r?.salesmen, mapSalesman],
+  ['fixedAssets', 'backendAssetId', listFixedAssets, (r) => r?.assets, mapFixedAsset],
+];
+
+const WRITE_THROUGH_KINDS = [...WRITE_THROUGH_BY_NUMBER, ...WRITE_THROUGH_BY_NAME];
+
 /** kind → [db collection, backend id field, party field, extra mapper] */
 const KINDS = [
   ['bill', 'bills', 'backendDocId', 'vendorName', null],
@@ -179,13 +298,28 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
         }
       }
 
-      for (const [collection, , fetcher, pick, mapper] of MASTER_KINDS) {
+      for (const [collection, , fetcher, pick, mapper] of [...MASTER_KINDS, ...WRITE_THROUGH_KINDS]) {
         try {
           const rows = pick(await fetcher()) || [];
           collected[collection] = rows.map((r) => mapper(r, currentCompanyId));
         } catch {
           // Same rule as the documents: what does not arrive hydrates nothing.
         }
+      }
+
+      try {
+        /*
+         * Both directions. `listPayments` defaults to receipts, so asking once
+         * would have hydrated the money coming in and quietly left out the
+         * money going out.
+         */
+        const [receipts, paid] = await Promise.all([
+          listPayments({ direction: 'RECEIPT' }).catch(() => []),
+          listPayments({ direction: 'PAYMENT' }).catch(() => []),
+        ]);
+        collected.payments = [...receipts, ...paid].map((p) => mapPayment(p, currentCompanyId));
+      } catch {
+        /* same rule: what does not arrive hydrates nothing */
       }
 
       try {
@@ -225,7 +359,7 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
       setDb((prev) => {
         const next = { ...prev };
 
-        for (const [collection, idKey] of [...MASTER_KINDS, ...REFERENCE_COLLECTIONS]) {
+        for (const [collection, idKey] of [...MASTER_KINDS, ...REFERENCE_COLLECTIONS, ...WRITE_THROUGH_BY_NAME]) {
           const incoming = collected[collection];
           if (!incoming || !incoming.length) continue;
           const existing = Array.isArray(prev[collection]) ? prev[collection] : [];
@@ -249,7 +383,14 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
           if (fresh.length) next[collection] = [...existing, ...fresh];
         }
 
-        for (const [, collection, idKey] of [...KINDS, ['invoice', 'invoices', 'backendInvoiceId']]) {
+        for (const [, collection, idKey] of [
+          ...KINDS,
+          ['invoice', 'invoices', 'backendInvoiceId'],
+          ['deliveryChallan', 'deliveryChallans', 'backendDocId'],
+          // A payment's number is its voucher number, which is exactly what
+          // makes two rows the same payment.
+          ['payment', 'payments', 'backendPaymentId'],
+        ]) {
           const incoming = collected[collection];
           if (!incoming || !incoming.length) continue;
           const existing = Array.isArray(prev[collection]) ? prev[collection] : [];
