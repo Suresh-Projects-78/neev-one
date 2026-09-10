@@ -60,7 +60,7 @@ import { blockIfClosed } from '../../utils/bookClose';
 import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
-export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '' }) => {
+export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '', screenTitle = '', onBack = null }) => {
   const fieldErrors = useFieldErrors('bill');
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   const resolveBranchIdFromWarehouseId = (warehouseId) => {
@@ -382,20 +382,20 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
-      <DocFormActions primaryLabel={initialData?.id ? 'Update Bill' : 'Create Bill'} />
-
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => {
-            setSubmitAsDraft(true);
-            formRef.current?.requestSubmit();
-          }}
-          className="ui-btn ui-btn-secondary"
-        >
-          Save Draft
-        </button>
-      </div>
+      {/* One bar: the document's name on the left, and every way out of it on
+          the right. Save Draft used to sit in a row of its own under the
+          primary, which read as two separate decisions. */}
+      <DocFormActions
+        title={screenTitle}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
+        secondaryLabel="Save Draft"
+        onSecondary={() => {
+          setSubmitAsDraft(true);
+          formRef.current?.requestSubmit();
+        }}
+        primaryLabel={initialData?.id ? 'Update Bill' : 'Create Bill'}
+      />
       {/*
         The head of the document, in the invoice's two columns: who it came from
         and where the goods landed on the left, the paperwork that identifies it

@@ -13166,16 +13166,8 @@ const AppShell = () => {
         if (billEditor.open) {
           return (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="ui-t-sec">New Bill</h3>
-                <button
-                  type="button"
-                  onClick={() => setBillEditor({ open: false, initial: null })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
+              {/* Name, Back and both ways of saving in one bar inside the card,
+                  as every other document screen has them. */}
               <div className="ui-surface border rounded-xl p-4">
                 <BillForm
                   db={dbForUser}
@@ -13184,6 +13176,8 @@ const AppShell = () => {
                   initialData={billEditor.initial}
                   warehouses={warehousesForUser}
                   defaultWarehouseId={activeWarehouseId}
+                  screenTitle={billEditor.initial?.id ? 'Edit Bill' : 'New Bill'}
+                  onBack={() => setBillEditor({ open: false, initial: null })}
                   onClose={() => setBillEditor({ open: false, initial: null })}
                 />
               </div>
