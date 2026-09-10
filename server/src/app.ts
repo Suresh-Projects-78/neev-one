@@ -23,6 +23,7 @@ import { purchaseDocsRouter } from './routes/purchaseDocs.js';
 import { quoteDocsRouter } from './routes/quoteDocs.js';
 import { orgMastersRouter } from './routes/orgMasters.js';
 import { auditRouter } from './routes/audit.js';
+import { accountRouter } from './routes/account.js';
 import { einvoiceRouter } from './routes/einvoice.js';
 import { revaluationRouter } from './routes/revaluation.js';
 import { currenciesRouter } from './routes/currencies.js';
@@ -125,6 +126,7 @@ export function buildApp() {
   app.use('/api', transfersRouter);
   app.use('/api', orgMastersRouter);
   app.use('/api', auditRouter);
+  app.use('/api', accountRouter);
   app.use('/api', inventoryAdjustmentsRouter);
   app.use('/api', invoicesRouter);
   app.use('/api', ledgerRouter);

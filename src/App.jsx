@@ -185,6 +185,9 @@ const YearEndClose = lazy(() => import('./features/accounting/YearEndClose'));
 const CostCenters = lazy(() => import('./features/accounting/CostCenters'));
 const AuditTrail = lazy(() => import('./features/audit/AuditTrail'));
 const BankReconciliation = lazy(() => import('./features/cashBank/BankReconciliation'));
+const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
+const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
+const SsoSettings = lazy(() => import('./features/account/SsoSettings'));
 const RecurringInvoices = lazy(() => import('./features/sales/RecurringInvoices'));
 const ImportCenter = lazy(() => import('./features/data/ImportCenter'));
 import DashboardOverview from './features/dashboard/DashboardOverview';
@@ -11989,7 +11992,7 @@ const AppShell = () => {
         ],
       },
       { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW' },
-      { type: 'item', key: 'bankReco', label: 'Bank Reconciliation', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW' },
+      { type: 'item', key: 'bankReco', label: 'Bank Reconciliation', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW', feature: 'bankReconciliation' },
       // A group of one is a menu that opens onto itself. With the duplicate
       // Payments entry gone, Expenses is a destination, not a section.
       { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, tone: 'expenses', perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
@@ -12089,6 +12092,10 @@ const AppShell = () => {
           { key: 'settingsTax', label: 'GST', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW', state: gstStateLabel },
           { key: 'gstRates', label: 'Tax Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
 
+          { type: 'subgroup', label: 'Account' },
+          { key: 'settingsAccount', label: 'Overview', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
+          { key: 'settingsBilling', label: 'Billing', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
+
           { type: 'subgroup', label: 'Users & Access' },
           { key: 'settingsUsers', label: 'Users', icon: Users, perm: 'SETTINGS::Users::VIEW' },
           { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
@@ -12096,6 +12103,7 @@ const AppShell = () => {
           { key: 'settingsGovernance', label: 'Approval Workflows', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
           { key: 'settingsSecurity', label: 'Login & Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
           { key: 'settingsAudit', label: 'Audit Trail', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
+          { key: 'settingsSso', label: 'Single Sign-On', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
 
           { type: 'subgroup', label: 'Communication' },
           { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications', state: emailStateLabel },
@@ -13750,6 +13758,24 @@ const AppShell = () => {
         return <ApprovalsInbox currentCompany={currentCompany} />;
       case 'settingsAudit':
         return <AuditTrail />;
+      case 'settingsAccount':
+        return (
+          <AccountOverview
+            currentCompany={currentCompany}
+            /* Clicking a company here switches to it, the same way the
+               company switcher does. */
+            onOpenCompany={(c) => {
+              const match = (db.companies || []).find(
+                (x) => String(x.serverOrgId || x.orgId || '') === String(c.orgId)
+              );
+              if (match) setDb((prev) => ({ ...prev, activeCompanyId: match.id }));
+            }}
+          />
+        );
+      case 'settingsBilling':
+        return <BillingPreview currentCompany={currentCompany} />;
+      case 'settingsSso':
+        return <SsoSettings />;
       case 'bankReco':
         return <BankReconciliation db={db} currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':

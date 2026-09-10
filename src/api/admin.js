@@ -140,3 +140,13 @@ export function setUserCompanies(userId, orgIds) {
     skipWarehouseHeader: true,
   });
 }
+
+/**
+ * The account, above any one company.
+ *
+ * Everything else in this product is scoped to a company, which is right for
+ * doing the work and wrong for running the business that does it.
+ */
+export function getAccountOverview() {
+  return apiFetch('/account/overview', { skipWarehouseHeader: true });
+}

@@ -11,7 +11,7 @@ starts — the same way the six document forms were done.
 | 4 | Bank reconciliation | The largest genuinely missing module | **done** |
 | 5 | Record Receipt as a screen | Rows 49/52 of the original validation sheet | **done** |
 | 6 | Per-user module assignment | Waiting on one decision | **done** |
-| 7 | The deferred shells, built for real | Admin area, dashboard, billing, SSO, subdomains | **next** |
+| 7 | The deferred shells, built for real | Admin area, dashboard, billing, SSO, subdomains | **done** |
 
 ## 1 — Six masters that live only in the browser
 
@@ -223,3 +223,48 @@ listing is scoped by account, so a membership wrongly created against another
 account's company would be invisible there while being perfectly real — a row
 that lets somebody walk into a company nobody invited them to. The first version
 of that test passed against the broken code for exactly that reason.
+
+## 7 — done
+
+Five things were deferred. Three of them needed no mock at all, which is worth
+saying because the plan assumed otherwise: **the account, its companies and its
+people are already real and on the server**, so the admin area and the
+multi-company dashboard are one screen built entirely from live data — every
+company with its people, invoices, billed and outstanding, summed across the
+account, against the plan's limits.
+
+The limits are drawn as a bar rather than "8 of 10", because a number is read
+and a bar is felt. Running out of seats should be visible before somebody is
+refused, not at the moment they are.
+
+**Billing** is the only page with invented figures. The plan and the usage on it
+are real and read from the server; the money, the card and the receipts are
+sample rows, because there is no payment provider and pricing is still yours to
+set.
+
+**SSO** carries no sign-in control at all — no button, no field, no form. Of
+everything that can be mocked, an authentication control is the one that is
+genuinely unsafe: a button that appears to sign somebody in and does not is
+telling them something untrue about who can reach their books. The page says
+what setting it up will ask for and stops there.
+
+**Company subdomains** show the real handle each company already has, with the
+routing named as the deployment step it is.
+
+The rule from the top of this file — *nothing may look wired when it is not* —
+is enforced by `src/test/preview-pages-say-so.test.js` rather than remembered:
+any page with sample data must render the banner, that banner must say the data
+is sample, and the SSO page must contain no interactive control. Removing any of
+those fails a test.
+
+## Two things found on the way
+
+The bank reconciliation screen is now gated behind the `bankReconciliation`
+feature key, which was already in the plan catalogue and already sold on Growth
+and above. It was shipped ungated in item 4.
+
+Editing an invoice cannot set `paidAmount`, and should not — the field-level
+permission filter strips it, because money is recorded by a receipt rather than
+by typing a number onto the document it settles. Found while writing a fixture,
+confirmed as deliberate, and recorded in the test that hit it so the next person
+does not spend the same twenty minutes.
