@@ -607,21 +607,16 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   if (isCreating) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsCreating(false)}
-              className="ui-btn ui-btn-secondary"
-            >
-              Back
-            </button>
-            <h3 className="ui-t-sec">New Expense</h3>
-          </div>
-        </div>
-
         <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <ExpenseForm db={db} setDb={setDb} currentCompany={currentCompany} openModal={openModal} onClose={() => setIsCreating(false)} />
+          <ExpenseForm
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            openModal={openModal}
+            screenTitle="New Expense"
+            onBack={() => setIsCreating(false)}
+            onClose={() => setIsCreating(false)}
+          />
         </div>
       </div>
     );
@@ -848,7 +843,7 @@ const emptyExpenseLine = () => ({ ledgerId: '', description: '', amount: '', gst
 /** Sentinel value for the "create one" entry inside the ledger picker. */
 const NEW_LEDGER_OPTION = '__new_ledger__';
 
-const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null }) => {
+const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialData = null, screenTitle = '', onBack = null }) => {
   const expenseErrors = useFieldErrors('expense');
   const activeBranchId = normalizeId(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '');
   const expenseDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
@@ -1172,17 +1167,26 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
       <DocFormActions
+        title={screenTitle}
+        subtitle={screenTitle ? 'Book a spend against one or more expense ledgers.' : ''}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
         primaryLabel="Submit Expense"
         secondaryLabel="Save Draft"
         onSecondary={submitExpenseAsDraft}
       />
 
-      {/* Voucher number and date sit to the right of the heading so the body
-          of the form keeps the full width for entry. */}
+      {/* Voucher number and date sit to the right, so the body of the form
+          keeps the full width for entry. The document's own name is in the bar
+          above rather than repeated here. */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="ui-t-sec">Expense</div>
-          <div className="text-xs ui-muted">Book a spend against one or more expense ledgers.</div>
+          {screenTitle ? null : (
+            <>
+              <div className="ui-t-sec">Expense</div>
+              <div className="text-xs ui-muted">Book a spend against one or more expense ledgers.</div>
+            </>
+          )}
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-44">
@@ -2384,7 +2388,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
         <div className="ui-surface rounded-xl shadow-sm border p-6">
           <CustomerForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />
         </div>,
-        { title: 'New Customer', maxWidthClass: 'max-w-3xl' }
+        { title: 'New Customer', maxWidthClass: 'max-w-5xl' }
       );
     };
 
@@ -2393,7 +2397,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
         <div className="ui-surface rounded-xl shadow-sm border p-6">
           <VendorForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />
         </div>,
-        { title: 'New Vendor', maxWidthClass: 'max-w-3xl' }
+        { title: 'New Vendor', maxWidthClass: 'max-w-5xl' }
       );
     };
 
@@ -13000,29 +13004,6 @@ const AppShell = () => {
           const mode = active === 'branchTransfers' ? 'branch' : 'warehouse';
           return (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="ui-t-sec">
-                    {mode === 'branch'
-                      ? stockTransferEditor.initial
-                        ? 'Edit Branch Transfer'
-                        : 'New Branch Transfer'
-                      : stockTransferEditor.initial
-                        ? 'Edit Warehouse Transfer'
-                        : 'New Warehouse Transfer'}
-                  </h3>
-                  {stockTransferEditor.initial?.number ? (
-                    <div className="text-sm ui-muted">{String(stockTransferEditor.initial.number)}</div>
-                  ) : null}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setStockTransferEditor({ open: false, initial: null })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
               <div className="ui-surface border rounded-xl p-4">
                 <StockTransferEditor
                   db={dbForUser}
@@ -13229,16 +13210,7 @@ const AppShell = () => {
         if (debitNoteEditor.open) {
           return (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h3 className="ui-t-sec">New Debit Note</h3>
-                <button
-                  type="button"
-                  onClick={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  Back
-                </button>
-              </div>
+              {/* Name, Back and the primary action in one bar inside the card. */}
               <div className="ui-surface border rounded-xl p-4">
                 <DebitNoteForm
                   db={dbForUser}
@@ -13247,6 +13219,8 @@ const AppShell = () => {
                   initialOriginalBillId={debitNoteEditor.initialOriginalBillId}
                   warehouses={warehousesForUser}
                   defaultWarehouseId={activeWarehouseId}
+                  screenTitle="New Purchase Return"
+                  onBack={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
                   onClose={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
                 />
               </div>

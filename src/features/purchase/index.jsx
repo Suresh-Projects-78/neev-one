@@ -2416,6 +2416,8 @@ export const DebitNoteForm = ({
   warehouses = [],
   defaultWarehouseId = '',
   initialData = null,
+  screenTitle = '',
+  onBack = null,
 }) => {
   const formRef = useRef(null);
   const companyBills = db.bills.filter((b) => b.companyId === currentCompany.id);
@@ -2888,7 +2890,12 @@ export const DebitNoteForm = ({
 
   return (
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
-      <DocFormActions primaryLabel={initialData?.id ? 'Update Debit Note' : 'Create Debit Note'} />
+      <DocFormActions
+        title={screenTitle}
+        onBack={onBack}
+        sticky={Boolean(screenTitle)}
+        primaryLabel={initialData?.id ? 'Update Debit Note' : 'Create Debit Note'}
+      />
 
       <div className="grid grid-cols-2 gap-4">
         <div>

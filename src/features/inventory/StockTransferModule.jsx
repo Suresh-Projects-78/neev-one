@@ -15,6 +15,7 @@ import { latestPurchaseRate } from '../../utils/pricing';
 import { formatMoney } from '../../utils/money';
 import { DocDate } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
+import { DocFormActions } from '../../components/DocumentForm';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -575,21 +576,31 @@ export const StockTransferEditor = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.lines, interState]);
 
+  const documentName =
+    mode === 'branch'
+      ? isEdit
+        ? 'Edit Branch Transfer'
+        : 'New Branch Transfer'
+      : isEdit
+        ? 'Edit Warehouse Transfer'
+        : 'New Warehouse Transfer';
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
+      {/* The bar every document form carries. The name was printed twice —
+          once by the screen above the card and again inside it — and the two
+          ways out sat at opposite ends of a long form. */}
+      <DocFormActions
+        title={documentName}
+        subtitle={String(form.number || '').trim() || 'Draft'}
+        onBack={() => onBack?.()}
+        sticky
+        primaryLabel={saving ? 'Saving…' : isEdit ? 'Save' : 'Create'}
+        disabled={saving || readOnly}
+      />
+
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm ui-muted">
-            {mode === 'branch'
-              ? isEdit
-                ? 'Edit Branch Transfer'
-                : 'New Branch Transfer'
-              : isEdit
-                ? 'Edit Warehouse Transfer'
-                : 'New Warehouse Transfer'}
-          </div>
-          <div className="ui-t-sec">{String(form.number || '').trim() || 'Draft'}</div>
-        </div>
+        <div />
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-44">
             <label className="ui-label">Voucher No.</label>
@@ -903,14 +914,6 @@ export const StockTransferEditor = ({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => onBack?.()} className="px-3 py-2 rounded-lg text-sm border ui-surface ui-hover-sunken ui-border-c">
-          Back
-        </button>
-        <button type="submit" disabled={saving || readOnly} className="px-3 py-2 rounded-lg text-sm ui-btn ui-btn-primary disabled:opacity-50">
-          {saving ? 'Saving…' : isEdit ? 'Save' : 'Create'}
-        </button>
-      </div>
     </form>
   );
 };

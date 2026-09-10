@@ -76,7 +76,10 @@ export const AddressTab = ({
     </div>
 
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[60rem] border-collapse text-sm">
+      {/* Narrower than it was, and fluid inside: fixed pixel inputs forced the
+          table past the dialog and pushed Actions — the only way to remove a
+          row — off the right-hand edge. */}
+      <table className="w-full min-w-[52rem] border-collapse text-sm">
         <thead>
           <tr>
             {COLS.map((c) => (
@@ -94,7 +97,7 @@ export const AddressTab = ({
                 <input
                   value={r.label}
                   onChange={(e) => onChange(i, 'label', e.target.value)}
-                  className="ui-input w-40"
+                  className="ui-input w-full min-w-[7rem]"
                   aria-label={`Name of place, row ${i + 1}`}
                   /* Billing and shipping are the two places every document
                      reaches for by name, so their labels are not editable. */
@@ -102,13 +105,13 @@ export const AddressTab = ({
                 />
               </td>
               <td className="px-1 py-1">
-                <input value={r.line1} onChange={(e) => onChange(i, 'line1', e.target.value)} className="ui-input w-48" aria-label={`Address line 1, row ${i + 1}`} />
+                <input value={r.line1} onChange={(e) => onChange(i, 'line1', e.target.value)} className="ui-input w-full min-w-[9rem]" aria-label={`Address line 1, row ${i + 1}`} />
               </td>
               <td className="px-1 py-1">
-                <input value={r.line2} onChange={(e) => onChange(i, 'line2', e.target.value)} className="ui-input w-48" aria-label={`Address line 2, row ${i + 1}`} />
+                <input value={r.line2} onChange={(e) => onChange(i, 'line2', e.target.value)} className="ui-input w-full min-w-[9rem]" aria-label={`Address line 2, row ${i + 1}`} />
               </td>
               <td className="px-1 py-1">
-                <div className="w-32">
+                <div className="w-full min-w-[6rem]">
                   <PopupSelect
                     label={null}
                     ariaLabel={`Country, row ${i + 1}`}
@@ -122,7 +125,7 @@ export const AddressTab = ({
                 </div>
               </td>
               <td className="px-1 py-1">
-                <div className="w-40">
+                <div className="w-full min-w-[7rem]">
                   <PopupSelect
                     label={null}
                     ariaLabel={`State, row ${i + 1}`}
@@ -140,21 +143,24 @@ export const AddressTab = ({
                 </div>
               </td>
               <td className="px-1 py-1">
-                <input value={r.city} onChange={(e) => onChange(i, 'city', e.target.value)} className="ui-input w-32" aria-label={`City, row ${i + 1}`} />
+                <input value={r.city} onChange={(e) => onChange(i, 'city', e.target.value)} className="ui-input w-full min-w-[6rem]" aria-label={`City, row ${i + 1}`} />
               </td>
               <td className="px-1 py-1">
-                <input value={r.district} onChange={(e) => onChange(i, 'district', e.target.value)} className="ui-input w-32" aria-label={`District, row ${i + 1}`} />
+                <input value={r.district} onChange={(e) => onChange(i, 'district', e.target.value)} className="ui-input w-full min-w-[6rem]" aria-label={`District, row ${i + 1}`} />
               </td>
               <td className="px-1 py-1">
                 <input
                   value={r.pincode}
                   onChange={(e) => onChange(i, 'pincode', e.target.value)}
-                  className="ui-input ui-mono w-24"
+                  className="ui-input ui-mono w-full min-w-[5rem]"
                   maxLength={10}
                   aria-label={`Pincode, row ${i + 1}`}
                 />
               </td>
-              <td className="px-1 py-1 text-right whitespace-nowrap">
+              <td
+                className="sticky end-0 px-1 py-1 text-right whitespace-nowrap"
+                style={{ backgroundColor: 'rgb(var(--surface))' }}
+              >
                 {onCopyBilling && i === 1 ? (
                   <button
                     type="button"
@@ -216,7 +222,7 @@ export const ContactsTab = ({
       customer with exactly one contact.
     */}
     <div className="overflow-x-auto">
-        <table className="w-full min-w-[42rem] border-collapse text-sm">
+        <table className="w-full min-w-[38rem] border-collapse text-sm">
           <thead>
             <tr>
               {onSetPrimary ? <th className="ui-t-label px-2 py-2 text-left">Primary</th> : null}
@@ -225,7 +231,14 @@ export const ContactsTab = ({
                   {c}
                 </th>
               ))}
-              <th className="ui-t-label px-2 py-2 text-right">Actions</th>
+              {/* Pinned to the right edge so the delete control is on screen
+                  however far the table is scrolled. */}
+              <th
+                className="ui-t-label sticky end-0 px-2 py-2 text-right"
+                style={{ backgroundColor: 'rgb(var(--surface))' }}
+              >
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -250,18 +263,21 @@ export const ContactsTab = ({
                   </td>
                 ) : null}
                 <td className="px-1 py-1">
-                  <input value={r.name} onChange={(e) => onChange(i, 'name', e.target.value)} className="ui-input w-44" aria-label={`Contact name, row ${i + 1}`} />
+                  <input value={r.name} onChange={(e) => onChange(i, 'name', e.target.value)} className="ui-input w-full min-w-[8rem]" aria-label={`Contact name, row ${i + 1}`} />
                 </td>
                 <td className="px-1 py-1">
-                  <input value={r.position} onChange={(e) => onChange(i, 'position', e.target.value)} className="ui-input w-36" aria-label={`Position, row ${i + 1}`} />
+                  <input value={r.position} onChange={(e) => onChange(i, 'position', e.target.value)} className="ui-input w-full min-w-[7rem]" aria-label={`Position, row ${i + 1}`} />
                 </td>
                 <td className="px-1 py-1">
-                  <input type="email" value={r.email} onChange={(e) => onChange(i, 'email', e.target.value)} className="ui-input w-52" aria-label={`Email, row ${i + 1}`} />
+                  <input type="email" value={r.email} onChange={(e) => onChange(i, 'email', e.target.value)} className="ui-input w-full min-w-[9rem]" aria-label={`Email, row ${i + 1}`} />
                 </td>
                 <td className="px-1 py-1">
-                  <input value={r.mobile} onChange={(e) => onChange(i, 'mobile', e.target.value)} className="ui-input ui-mono w-36" aria-label={`Mobile, row ${i + 1}`} />
+                  <input value={r.mobile} onChange={(e) => onChange(i, 'mobile', e.target.value)} className="ui-input ui-mono w-full min-w-[7rem]" aria-label={`Mobile, row ${i + 1}`} />
                 </td>
-                <td className="px-1 py-1 text-right">
+                <td
+                  className="sticky end-0 px-1 py-1 text-right"
+                  style={{ backgroundColor: 'rgb(var(--surface))' }}
+                >
                   <button type="button" onClick={() => onRemove(i)} aria-label={`Remove contact ${i + 1}`} className="ui-icon-btn ui-btn-sm !w-8">
                     <Trash2 size={14} aria-hidden="true" />
                   </button>

@@ -11,6 +11,7 @@ import { useListSearch } from '../../components/ListToolbar';
 import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } from '../../utils/inventory';
 import { DocDate } from '../../components/docs';
 import { csvSafeValue } from '../../utils/csv';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -379,173 +380,60 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
     );
   };
 
-  const exportCsv = () => {
-    const colsQty = ['Item', 'Code', 'Unit', 'Opening Qty', 'Purchases Qty', 'Sales Qty', 'DN Qty', 'CN Qty', 'Closing Qty'];
-    const colsVal = ['Item', 'Code', 'Unit', 'Opening Value', 'Purchases Value', 'Sales Value', 'DN Value', 'CN Value', 'Closing Value'];
-
-    const header = viewMode === 'value' ? colsVal : colsQty;
-    const rows = [header];
-
-    for (const it of items) {
-      const row = summaryByItemId.get(String(it.id));
-      const unit = String(it.unit || '').trim();
-      const rate = Number(it.purchasePrice ?? 0);
-      const safeRate = Number.isFinite(rate) ? rate : 0;
-
-      if (viewMode === 'value') {
-        const opening = round2(Number(row?.openingQty ?? 0) * safeRate);
-        const purchases = round2(Number(row?.purchasesQty ?? 0) * safeRate);
-        const sales = round2(Number(row?.salesQty ?? 0) * safeRate);
-        const dn = round2(Number(row?.debitNoteQty ?? 0) * safeRate);
-        const cn = round2(Number(row?.creditNoteQty ?? 0) * safeRate);
-        const closing = round2(Number(row?.closingQty ?? 0) * safeRate);
-        rows.push([it.name || '', it.code || '', unit, opening, purchases, sales, dn, cn, closing]);
-      } else {
-        rows.push([
-          it.name || '',
-          it.code || '',
-          unit,
-          Number(row?.openingQty ?? 0),
-          Number(row?.purchasesQty ?? 0),
-          Number(row?.salesQty ?? 0),
-          Number(row?.debitNoteQty ?? 0),
-          Number(row?.creditNoteQty ?? 0),
-          Number(row?.closingQty ?? 0),
-        ]);
-      }
-    }
-
-    const escape = (v) => {
-      const s = String(v ?? '');
-      return s.includes(',') || s.includes('\n') || s.includes('"') ? `"${s.replaceAll('"', '""')}"` : s;
-    };
-    const csv = rows.map((r) => r.map(escape).join(',')).join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const name = `inventory_${viewMode}_${fromDate || 'all'}_${toDate || 'all'}.csv`;
-    a.href = url;
-    a.download = name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportPdf = () => {
-    const title = `Inventory (${viewMode === 'value' ? 'Value' : 'Qty'})`;
-    const subtitle = `Period: ${fromDate || 'Start'} to ${toDate || 'End'}`;
-
-    const rows = items
+  /*
+   * The rows behind every export, built once.
+   *
+   * There were two exports here — a hand-rolled CSV and a printed HTML page —
+   * and each built its own rows, so "Export as Excel" wrote a CSV and there was
+   * no way to ask for anything else. Same rows, same columns, three formats.
+   */
+  const exportRowsForView = () =>
+    items
       .map((it) => {
         const r = summaryByItemId.get(String(it.id));
-        const unit = String(it.unit || '').trim();
         const rate = Number(it.purchasePrice ?? 0);
         const safeRate = Number.isFinite(rate) ? rate : 0;
-
-        if (viewMode === 'value') {
-          return {
-            name: it.name || '',
-            code: it.code || '',
-            unit,
-            opening: round2(Number(r?.openingQty ?? 0) * safeRate),
-            purchases: round2(Number(r?.purchasesQty ?? 0) * safeRate),
-            sales: round2(Number(r?.salesQty ?? 0) * safeRate),
-            dn: round2(Number(r?.debitNoteQty ?? 0) * safeRate),
-            cn: round2(Number(r?.creditNoteQty ?? 0) * safeRate),
-            closing: round2(Number(r?.closingQty ?? 0) * safeRate),
-          };
-        }
-
+        const at = (qty) => (viewMode === 'value' ? round2(Number(qty ?? 0) * safeRate) : Number(qty ?? 0));
         return {
           name: it.name || '',
           code: it.code || '',
-          unit,
-          opening: Number(r?.openingQty ?? 0),
-          purchases: Number(r?.purchasesQty ?? 0),
-          sales: Number(r?.salesQty ?? 0),
-          dn: Number(r?.debitNoteQty ?? 0),
-          cn: Number(r?.creditNoteQty ?? 0),
-          closing: Number(r?.closingQty ?? 0),
+          unit: String(it.unit || '').trim(),
+          opening: at(r?.openingQty),
+          purchases: at(r?.purchasesQty),
+          sales: at(r?.salesQty),
+          dn: at(r?.debitNoteQty),
+          cn: at(r?.creditNoteQty),
+          closing: at(r?.closingQty),
         };
       })
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
 
-    const moneyOrNum = (v) => (viewMode === 'value' ? formatMoney(Number(v || 0), currentCompany) : String(v ?? ''));
-
-    const html = `<!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>${title}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 16px; }
-            h1 { font-size: 18px; margin: 0 0 4px 0; }
-            .sub { color: #555; font-size: 12px; margin: 0 0 12px 0; }
-            table { border-collapse: collapse; width: 100%; font-size: 12px; }
-            th, td { border: 1px solid #ddd; padding: 6px; }
-            th { background: #f5f5f5; text-align: left; }
-            td.num { text-align: right; }
-          </style>
-        </head>
-        <body>
-          <h1>${title}</h1>
-          <div class="sub">${subtitle}</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Code</th>
-                <th>Unit</th>
-                <th class="num">Opening</th>
-                <th class="num">Purchases</th>
-                <th class="num">Sales</th>
-                <th class="num">DN</th>
-                <th class="num">CN</th>
-                <th class="num">Closing</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows
-                .map(
-                  (r) => `
-                    <tr>
-                      <td className="ui-col-meta">${String(r.name).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
-                      <td className="ui-col-meta">${String(r.code).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
-                      <td className="ui-col-meta">${String(r.unit).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</td>
-                      <td className="ui-col-meta" class="num">${moneyOrNum(r.opening)}</td>
-                      <td className="ui-col-meta" class="num">${moneyOrNum(r.purchases)}</td>
-                      <td className="ui-col-meta" class="num">${moneyOrNum(r.sales)}</td>
-                      <td className="ui-col-meta" class="num">${moneyOrNum(r.dn)}</td>
-                      <td className="ui-col-meta" class="num">${moneyOrNum(r.cn)}</td>
-                      <td className="ui-col-meta" class="num">${moneyOrNum(r.closing)}</td>
-                    </tr>
-                  `
-                )
-                .join('')}
-            </tbody>
-          </table>
-        </body>
-      </html>`;
-
-    const w = window.open('', '_blank');
-    if (!w) {
-      notify.error('Popup blocked. Please allow popups to export PDF.');
-      return;
-    }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    w.print();
+  const exportColumnsForView = () => {
+    const suffix = viewMode === 'value' ? 'Value' : 'Qty';
+    return [
+      { key: 'name', label: 'Item' },
+      { key: 'code', label: 'Code' },
+      { key: 'unit', label: 'Unit' },
+      { key: 'opening', label: `Opening ${suffix}` },
+      { key: 'purchases', label: `Purchases ${suffix}` },
+      { key: 'sales', label: `Sales ${suffix}` },
+      { key: 'dn', label: `DN ${suffix}` },
+      { key: 'cn', label: `CN ${suffix}` },
+      { key: 'closing', label: `Closing ${suffix}` },
+    ];
   };
 
-  /*
-   * What the shelf looks like, as tabs. Negative stock is not "low": it means
-   * more has been sold than was ever received, which is a data problem rather
-   * than a buying one, and it is the row somebody has to fix.
-   */
+  const runInventoryExport = (format) =>
+    runListExport({
+      format,
+      title: `Inventory (${viewMode === 'value' ? 'Value' : 'Qty'})`,
+      subtitle: `Period: ${fromDate || 'Start'} to ${toDate || 'End'}`,
+      fileName: `inventory_${viewMode}_${fromDate || 'all'}_${toDate || 'all'}`,
+      label: 'item(s)',
+      columns: exportColumnsForView(),
+      rows: exportRowsForView(),
+    });
+
   const [invFilter, setInvFilter] = useState('ALL');
   const INV_TABS = [
     { value: 'ALL', label: 'All', tone: 'all' },
@@ -599,13 +487,10 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
         placeholder: 'Search items…',
         label: 'Search items',
       }}
-      moreItems={[
-        { key: 'pdf', label: 'Export as PDF', Icon: Download },
-        { key: 'csv', label: 'Export as Excel', Icon: Download },
-      ]}
+      moreItems={[exportMenuItem('Export stock')]}
       onMoreSelect={(k) => {
-        if (k === 'pdf') exportPdf();
-        else if (k === 'csv') exportCsv();
+        const format = exportFormatFromKey(k);
+        if (format) runInventoryExport(format);
       }}
       cards={[
         { label: 'Items', value: items.length, count: true, tone: 'draft', Icon: Package },

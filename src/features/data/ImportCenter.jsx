@@ -10,6 +10,7 @@ import {
 } from '../../api/imports';
 import { PageHeader, Spinner } from '../../components/ui/Primitives';
 import { useFeatures } from '../../permissions/useFeatures';
+import Modal from '../../components/ui/Modal';
 import { csvSafeValue } from '../../utils/csv';
 
 /**
@@ -83,6 +84,7 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
    * cannot be checked, let alone imported.
    */
   const [chosenColumns, setChosenColumns] = useState([]);
+  const [templateOpen, setTemplateOpen] = useState(false);
   const [csv, setCsv] = useState('');
   const [fileName, setFileName] = useState('');
 
@@ -256,7 +258,12 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
             </select>
           </div>
           <div className="flex items-end">
-            <button type="button" onClick={onTemplate} disabled={busy || !docType} className="ui-btn ui-btn-secondary disabled:opacity-50">
+            <button
+              type="button"
+              onClick={() => setTemplateOpen(true)}
+              disabled={busy || !docType}
+              className="ui-btn ui-btn-secondary disabled:opacity-50"
+            >
               <Download size={16} className="inline mr-1" /> Download template
             </button>
           </div>
@@ -272,52 +279,15 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
 
         {spec ? (
           <details className="text-sm">
-            <summary className="cursor-pointer ui-muted">
-              Columns this file needs — {chosenColumns.length} of {spec.columns.length} in the template
-            </summary>
-            {/*
-              Tick what the template should carry. A template with every column
-              on it is a spreadsheet somebody has to prune before they can
-              start, and the columns they do not need are the ones they fill in
-              wrongly. The required ones cannot be turned off: a file without
-              them cannot be checked, let alone imported.
-            */}
-            <ul className="mt-2 grid gap-1 sm:grid-cols-2">
+            <summary className="cursor-pointer ui-muted">Columns this file needs</summary>
+            <ul className="mt-2 space-y-1">
               {spec.columns.map((c) => (
                 <li key={c.key}>
-                  <label className="flex cursor-pointer items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="ui-checkbox mt-0.5"
-                      checked={required.has(c.key) || chosenColumns.includes(c.key)}
-                      disabled={required.has(c.key)}
-                      onChange={() => toggleColumn(c.key)}
-                      aria-label={`Include ${c.key} in the template`}
-                    />
-                    <span>
-                      <code className="font-mono">{c.key}</code>
-                      {c.required ? <span className="text-[rgb(var(--neg))]"> *</span> : null} — {c.hint}
-                    </span>
-                  </label>
+                  <code className="font-mono">{c.key}</code>
+                  {c.required ? <span className="text-[rgb(var(--neg))]"> *</span> : null} — {c.hint}
                 </li>
               ))}
             </ul>
-            <div className="mt-2 flex gap-3">
-              <button
-                type="button"
-                className="ui-btn ui-btn-ghost ui-btn-sm"
-                onClick={() => setChosenColumns(spec.columns.map((c) => c.key))}
-              >
-                Select all
-              </button>
-              <button
-                type="button"
-                className="ui-btn ui-btn-ghost ui-btn-sm"
-                onClick={() => setChosenColumns(spec.columns.filter((c) => c.required).map((c) => c.key))}
-              >
-                Required only
-              </button>
-            </div>
           </details>
         ) : null}
 
@@ -347,6 +317,85 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
           <Upload size={16} className="inline mr-1" /> {busy ? 'Checking…' : 'Check the file'}
         </button>
       </div>
+
+      {/*
+        Which columns the template carries, asked before it is written.
+        A template with every column on it is a spreadsheet somebody has to
+        prune before they can start, and the columns they do not need are the
+        ones they fill in wrongly. The required ones cannot be turned off: a
+        file without them cannot be checked, let alone imported.
+      */}
+      {templateOpen && spec ? (
+        <Modal onClose={() => setTemplateOpen(false)} title={`Template — ${spec.label}`} maxWidthClass="max-w-2xl">
+          <div className="space-y-4">
+            <p className="text-sm ui-muted">
+              Tick what the file should carry. {required.size} of {spec.columns.length} are required and always
+              included.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="ui-btn ui-btn-secondary ui-btn-sm"
+                onClick={() => setChosenColumns(spec.columns.map((c) => c.key))}
+              >
+                Select all
+              </button>
+              <button
+                type="button"
+                className="ui-btn ui-btn-secondary ui-btn-sm"
+                onClick={() => setChosenColumns(spec.columns.filter((c) => c.required).map((c) => c.key))}
+              >
+                Required only
+              </button>
+            </div>
+
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {spec.columns.map((c) => (
+                <li key={c.key}>
+                  <label className="flex cursor-pointer items-start gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="ui-checkbox mt-0.5"
+                      checked={required.has(c.key) || chosenColumns.includes(c.key)}
+                      disabled={required.has(c.key)}
+                      onChange={() => toggleColumn(c.key)}
+                      aria-label={`Include ${c.key} in the template`}
+                    />
+                    <span>
+                      <code className="font-mono">{c.key}</code>
+                      {c.required ? <span className="text-[rgb(var(--neg))]"> *</span> : null}
+                      <span className="ui-muted"> — {c.hint}</span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+
+            <div className="flex items-center justify-between gap-2 pt-2" style={{ borderTop: '1px solid rgb(var(--border))' }}>
+              <span className="ui-caption">
+                {chosenColumns.length} of {spec.columns.length} columns
+              </span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setTemplateOpen(false)} className="ui-btn ui-btn-secondary">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={async () => {
+                    await onTemplate();
+                    setTemplateOpen(false);
+                  }}
+                  className="ui-btn ui-btn-primary"
+                >
+                  <Download size={16} className="inline mr-1" /> Download
+                </button>
+              </div>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
 
       {unsupported.length ? (
         <div className="ui-card p-4 text-sm">
