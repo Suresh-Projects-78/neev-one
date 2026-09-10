@@ -5926,11 +5926,14 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       newItems[index][field] = value;
     }
 
-    if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId') {
+    if (field === 'quantity' || field === 'rate' || field === 'gstRate' || field === 'itemId' || field === 'discountPct') {
+      /* A credit note reverses an invoice line, and an invoice line can carry
+         a discount — without it the note returns more than was charged. */
       const computedLine = computeGstForLine({
         quantity: Number(newItems[index].quantity ?? 1),
         rate: Number(newItems[index].rate ?? 0),
         gstRate: Number(newItems[index].gstRate ?? 0),
+        discountPct: Number(newItems[index].discountPct ?? 0),
         isIntra,
       });
       newItems[index].amount = computedLine.taxableAmount;
@@ -6237,54 +6240,102 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         primaryLabel="Create Credit Note"
       />
 
-      {/* Where the goods came back to, and under which branch's number series.
-          Both were inferred from the header before; a company running one
-          warehouse for two branches could not say which. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="cn-branch" className="ui-label">Branch</label>
-          <select
-            id="cn-branch"
-            className="ui-select"
-            value={branchIdInList || ''}
-            onChange={(e) => setBranchId(e.target.value)}
-          >
-            <option value="">All branches</option>
-            {branchOptions.map((b) => (
-              <option key={String(b.id)} value={String(b.id)}>{branchLabel(b)}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="cn-reason" className="ui-label">
-            Reason <span className="text-[rgb(var(--neg-ink))]">*</span>
-          </label>
-          <select
-            id="cn-reason"
-            className="ui-select"
-            value={formData.reasonCode}
-            onChange={(e) => setFormData({ ...formData, reasonCode: e.target.value })}
-            required
-          >
-            {CREDIT_NOTE_REASONS.map((r) => (
-              <option key={r.code} value={r.code}>{r.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {/*
+        The head of the document, in the invoice's two columns — a credit note
+        reverses one, so it is read beside one. Left is who and where the goods
+        came back to; right is the paperwork: the note's own number and date,
+        why it was raised, and the invoice it answers to.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-6 space-y-4">
+          <div>
+            <label htmlFor="cn-branch" className="ui-label">Branch</label>
+            <select
+              id="cn-branch"
+              className="ui-select w-full"
+              value={branchIdInList || ''}
+              onChange={(e) => setBranchId(e.target.value)}
+            >
+              <option value="">All branches</option>
+              {branchOptions.map((b) => (
+                <option key={String(b.id)} value={String(b.id)}>{branchLabel(b)}</option>
+              ))}
+            </select>
+          </div>
 
-      <div className="grid grid-cols-2 gap-4">
+          <WarehouseField
+            value={formData.warehouseId}
+            onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
+            options={warehouseOptions}
+            activeWarehouseId={defaultWarehouseId}
+            isEdit={false}
+            className="ui-select"
+          />
+
         <div>
-          <label className="ui-label">Credit Note Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-            className={`w-full px-3 py-2 border rounded-lg ${lockCreditNumber ? 'ui-sunken' : ''}`}
-            disabled={lockCreditNumber}
-            required
+          <CustomerPicker
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            value={formData.customerId}
+            onChange={(customerId) => setFormData((prev) => ({ ...prev, customerId }))}
+            disabled={Boolean(String(formData.originalInvoiceId || '').trim()) && Boolean(String(formData.customerId || '').trim())}
+            disabledHint="Customer comes from the original invoice"
           />
         </div>
+        </div>
+
+        <div
+          className="lg:col-span-6 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="cn-number">
+                Credit Note No. <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="cn-number"
+                type="text"
+                value={formData.number}
+                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                className={`ui-input ui-mono w-full ${lockCreditNumber ? 'ui-sunken' : ''}`}
+                disabled={lockCreditNumber}
+                required
+              />
+            </div>
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="cn-date">
+                Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="cn-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="ui-input w-full"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="cn-reason" className="ui-label">
+              Reason <span className="text-[rgb(var(--neg-ink))]">*</span>
+            </label>
+            <select
+              id="cn-reason"
+              className="ui-select w-full"
+              value={formData.reasonCode}
+              onChange={(e) => setFormData({ ...formData, reasonCode: e.target.value })}
+              required
+            >
+              {CREDIT_NOTE_REASONS.map((r) => (
+                <option key={r.code} value={r.code}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="ui-label">
@@ -6384,65 +6435,38 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
             </>
           )}
         </div>
-        <div>
-          <label className="ui-label">Credit Note Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            className="ui-input"
-            required
-          />
-        </div>
-
-        <WarehouseField
-          value={formData.warehouseId}
-          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
-          options={warehouseOptions}
-          activeWarehouseId={defaultWarehouseId}
-          isEdit={false}
-          className="ui-select"
-        />
-        <div>
-          <CustomerPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.customerId}
-            onChange={(customerId) => setFormData((prev) => ({ ...prev, customerId }))}
-            disabled={Boolean(String(formData.originalInvoiceId || '').trim()) && Boolean(String(formData.customerId || '').trim())}
-            disabledHint="Customer comes from the original invoice"
-          />
         </div>
       </div>
 
       <div>
-        <div className="flex justify-between items-center mb-2">
+        <div className="mb-2">
           <label className="ui-label">Line Items</label>
-          <button type="button" onClick={addItem} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-            <Plus size={16} /> Add Item
-          </button>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
           <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
               <tr>
-                {/* A line number, so "line 3 is wrong" means something when
-                    somebody is reading the note back over the phone. */}
-                <th className="ui-th w-10 text-left">#</th>
-                <th className="ui-th text-left">Item</th>
-                <th className="ui-th text-left">Description</th>
-                <th className="ui-th text-left">Qty</th>
-                <th className="ui-th text-left">Rate</th>
-                <th className="ui-th text-left">Line Total</th>
+                <th className="ui-th text-left w-[28%]">Item</th>
+                <th className="ui-th text-left w-[20%]">Description</th>
+                <th className="ui-th ui-num w-[7%]">
+                  Qty <span className="text-[rgb(var(--neg-ink))]">*</span>
+                </th>
+                <th className="ui-th text-left w-[6%]">Unit</th>
+                <th className="ui-th ui-num w-[11%]">
+                  Rate (₹) <span className="text-[rgb(var(--neg-ink))]">*</span>
+                </th>
+                <th className="ui-th ui-num w-[7%]">Disc %</th>
+                <th className="ui-th ui-num w-[8%]">Tax %</th>
+                <th className="ui-th ui-num w-[13%]">Amount (₹)</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
-              {formData.items.map((item, idx) => (
+              {formData.items.map((item, idx) => {
+                const lineMaster = itemsMaster.find((i) => String(i.id) === String(item.itemId));
+                return (
                 <tr key={idx} className="border-t" data-line-row={idx}>
-                  <td className="ui-col-meta px-3 py-2 ui-mono ui-subtle">{idx + 1}</td>
                   <td className="ui-col-meta px-3 py-2">
                     <ItemPicker
                       db={db}
@@ -6458,7 +6482,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       type="text"
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
-                      className="ui-input w-full px-2 py-1"
+                      className="ui-input w-full min-w-0 px-2 py-1"
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -6471,6 +6495,9 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                     />
                   </td>
                   <td className="px-3 py-2">
+                    <span className="text-[0.8125rem] ui-muted">{String(lineMaster?.unit || '').trim() || '—'}</span>
+                  </td>
+                  <td className="px-3 py-2">
                     <input
                       type="number"
                       value={item.rate}
@@ -6480,16 +6507,40 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
                       step="0.01"
                     />
                   </td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="number"
+                      value={item.discountPct || ''}
+                      onChange={(e) => updateItem(idx, 'discountPct', e.target.value)}
+                      className="ui-input w-full min-w-0 px-2 py-1"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      placeholder="0"
+                      aria-label={`Discount percent for line ${idx + 1}`}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className="ui-num block text-[0.8125rem]">{Number(item.gstRate ?? 0)}%</span>
+                  </td>
                   <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
+                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]" aria-label={`Remove line ${idx + 1}`}>
                       <Trash2 size={16} />
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-2 flex items-center gap-3">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+            <Plus size={15} aria-hidden="true" /> Add Item
+          </button>
+          <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
         </div>
 
         <div className="mt-4 flex justify-end">
@@ -6534,6 +6585,15 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
+
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Total</span>
+        <span className="ui-money-lg">{formatMoney(computed.total, currentCompany)}</span>
+        <span className="ui-caption">
+          {formData.items.filter((l) => String(l.itemId || '').trim()).length} line(s)
+          {computed.gstTotal > 0 ? ` · ${formatMoney(computed.gstTotal, currentCompany)} GST` : ''}
+        </span>
+      </div>
 
       {/* The invoice being reversed, read-only, over the note. Checking what
           was billed should not mean leaving a half-typed credit note. */}

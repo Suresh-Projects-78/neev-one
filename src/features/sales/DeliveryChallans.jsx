@@ -364,30 +364,50 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             secondaryLabel="Cancel"
             onSecondary={() => setOpen(false)}
           />
-          <div className="grid gap-3 sm:grid-cols-4">
-            <div>
-              <label className="ui-label">Date</label>
-              <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" />
+          {/*
+            The head of the document, in the invoice's two columns: who the
+            goods are going to on the left, the paperwork that identifies the
+            movement on the right, ruled off between them.
+          */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+            <div className="lg:col-span-6 space-y-4">
+              <div>
+                <label className="ui-label">Customer</label>
+                <CustomerPicker db={db} setDb={setDb} currentCompany={currentCompany} value={form.customerId} onChange={(id) => setForm((p) => ({ ...p, customerId: id }))} label={null} />
+              </div>
+              <div>
+                <label className="ui-label" htmlFor="dc-purpose">Purpose</label>
+                <select id="dc-purpose" value={form.purpose} onChange={(e) => setForm((p) => ({ ...p, purpose: e.target.value }))} className="ui-select w-full">
+                  <option>Job Work</option>
+                  <option>Supply on Approval</option>
+                  <option>Own Use / Branch</option>
+                  <option>Exhibition</option>
+                </select>
+                <p className="ui-caption mt-1">Rule 55 — why goods move without a sale.</p>
+              </div>
             </div>
-            <div>
-              <label className="ui-label">Customer</label>
-              <CustomerPicker db={db} setDb={setDb} currentCompany={currentCompany} value={form.customerId} onChange={(id) => setForm((p) => ({ ...p, customerId: id }))} label={null} />
+
+            <div
+              className="lg:col-span-6 space-y-4 lg:ps-6"
+              style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="min-w-0">
+                  <label className="ui-label" htmlFor="dc-date">
+                    Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+                  </label>
+                  <input id="dc-date" type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" required />
+                </div>
+                <div className="min-w-0">
+                  <label className="ui-label" htmlFor="dc-vehicle">Vehicle No</label>
+                  <input id="dc-vehicle" type="text" value={form.vehicleNo} onChange={(e) => setForm((p) => ({ ...p, vehicleNo: e.target.value }))} className="ui-input ui-mono w-full" placeholder="KA01AB1234" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="header" />
+                <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="reference" />
+              </div>
             </div>
-            <div>
-              <label className="ui-label">Purpose</label>
-              <select value={form.purpose} onChange={(e) => setForm((p) => ({ ...p, purpose: e.target.value }))} className="ui-select w-full">
-                <option>Job Work</option>
-                <option>Supply on Approval</option>
-                <option>Own Use / Branch</option>
-                <option>Exhibition</option>
-              </select>
-            </div>
-            <div>
-              <label className="ui-label">Vehicle No</label>
-              <input type="text" value={form.vehicleNo} onChange={(e) => setForm((p) => ({ ...p, vehicleNo: e.target.value }))} className="ui-input w-full" placeholder="KA01AB1234" />
-            </div>
-            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="header" />
-            <DocumentCustomFields fields={customFields} values={form.customFields} onChange={setCustomField} where="reference" />
           </div>
 
           <div>
@@ -448,15 +468,11 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-              + Add line
+          <div className="mt-2 flex items-center gap-3">
+            <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary">
+              <Plus size={15} aria-hidden="true" /> Add Item
             </button>
-            {/* Not a tax total. A challan states the value of the goods so the
-                consignment can be insured and an e-way bill raised against it. */}
-            <div className="text-sm font-semibold">
-              Goods value: {formatMoney(form.items.reduce((t, l) => t + (Number(l.quantity) || 0) * (Number(l.rate) || 0), 0), currentCompany)}
-            </div>
+            <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           </div>
 
           {hasCustomFieldsAt(customFields, 'notes') ? (
@@ -466,6 +482,16 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           ) : null}
 
           <DocFormFootnote />
+
+          <div className="ui-entry-summary">
+            <span className="ui-t-label">Goods value</span>
+            <span className="ui-money-lg">
+              {formatMoney(form.items.reduce((t, l) => t + (Number(l.quantity) || 0) * (Number(l.rate) || 0), 0), currentCompany)}
+            </span>
+            <span className="ui-caption">
+              {form.items.filter((l) => String(l.itemId || '').trim()).length} line(s) · what the consignment is insured for, not a tax total
+            </span>
+          </div>
         </form>
       ) : null}
         </>

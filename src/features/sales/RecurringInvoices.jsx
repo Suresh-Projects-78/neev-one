@@ -634,9 +634,9 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                     <tr>
                       <th className="ui-th">Item</th>
                       <th className="ui-th ui-num w-24">Qty</th>
-                      <th className="ui-th ui-num w-32">Rate</th>
-                      <th className="ui-th ui-num w-20">GST %</th>
-                      <th className="ui-th ui-num w-32">Amount</th>
+                      <th className="ui-th ui-num w-32">Rate (₹)</th>
+                      <th className="ui-th ui-num w-20">Tax %</th>
+                      <th className="ui-th ui-num w-32">Amount (₹)</th>
                       <th className="w-10" />
                     </tr>
                   </thead>
@@ -694,12 +694,16 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               </div>
 
               <div className="flex items-center justify-between">
+                {/* Named as every other line grid names it. A schedule is not
+                    a document — it has no number, no date and nothing to post —
+                    so it keeps its own chrome, but the grid under it behaves
+                    like the invoice's. */}
                 <button
                   type="button"
                   onClick={() => setDraft((p) => ({ ...p, items: [...p.items, { ...emptyLine }] }))}
-                  className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
+                  className="ui-btn ui-btn-secondary"
                 >
-                  <Plus size={14} /> Add line
+                  <Plus size={15} aria-hidden="true" /> Add Item
                 </button>
                 <div className="text-sm">
                   <span className="ui-muted mr-2">Each run:</span>

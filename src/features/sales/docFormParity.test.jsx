@@ -13,8 +13,9 @@ vi.mock('../../api/ledger', () => ({
   createLedgerAccount: vi.fn(async () => ({})),
 }));
 
-import { EstimateForm } from './index';
+import { CreditNoteForm, EstimateForm } from './index';
 import SalesOrders from './SalesOrders';
+import DeliveryChallans from './DeliveryChallans';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 
 /**
@@ -148,5 +149,57 @@ describe('the receipt wears the invoice layout', () => {
     renderReceipt();
     expect(screen.getAllByText('Net into the account').length).toBeGreaterThan(0);
     expect(screen.getByText(/invoice\(s\) allocated/)).toBeInTheDocument();
+  });
+});
+
+
+describe('the sales return wears the invoice layout', () => {
+  const renderNote = () =>
+    render(<CreditNoteForm db={baseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+
+  it('carries every line column the invoice has', () => {
+    renderNote();
+    expect(lineHeaders()).toEqual(LINE_COLUMNS);
+  });
+
+  it('adds lines with the invoice\'s control and hint, and keeps a running total', () => {
+    renderNote();
+    expect(screen.getByRole('button', { name: /Add Item/i })).toBeInTheDocument();
+    expect(screen.getByText(/press Tab in the last field of the last row/i)).toBeInTheDocument();
+    expect(screen.getByText(/line\(s\)/)).toBeInTheDocument();
+  });
+
+  /* A credit note reverses an invoice line, and an invoice line can be
+     discounted — without the column the note returns more than was charged. */
+  it('can discount a line, as the invoice it reverses can', () => {
+    renderNote();
+    expect(screen.getByLabelText('Discount percent for line 1')).toBeInTheDocument();
+  });
+});
+
+describe('the delivery challan wears the invoice layout', () => {
+  const openChallan = async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    render(<DeliveryChallans db={baseDb()} setDb={() => {}} currentCompany={COMPANY} />);
+    await user.click(screen.getByRole('button', { name: /New Challan|New Delivery Challan/i }));
+    return user;
+  };
+
+  it('names its add control as the invoice does and hints the same', async () => {
+    await openChallan();
+    expect(screen.getByRole('button', { name: /Add Item/i })).toBeInTheDocument();
+    expect(screen.getByText(/press Tab in the last field of the last row/i)).toBeInTheDocument();
+  });
+
+  /* A challan states the value of the goods for insurance and the e-way bill,
+     so its running figure is goods value, not a tax total. */
+  it('keeps the goods value on screen and says what it is not', async () => {
+    await openChallan();
+    /* The list behind the form carries a Goods value stat too, so this is
+       scoped to the running bar the invoice form defines. */
+    const bar = document.querySelector('.ui-entry-summary');
+    expect(bar).toBeTruthy();
+    expect(bar.textContent).toMatch(/Goods value/);
+    expect(bar.textContent).toMatch(/not a tax total/i);
   });
 });

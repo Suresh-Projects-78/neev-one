@@ -37,7 +37,7 @@ describe('the delivery challan line grid', () => {
 
   it('adds and removes lines', () => {
     openForm();
-    fireEvent.click(screen.getByRole('button', { name: /Add line/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Add Item/i }));
     expect(document.querySelectorAll('[data-line-row]')).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: 'Remove line 2' }));
     expect(document.querySelectorAll('[data-line-row]')).toHaveLength(1);
