@@ -292,3 +292,53 @@ describe('the TDS tab shows the rule it points at', () => {
     expect(screen.getByText('Payable')).toBeInTheDocument();
   });
 });
+
+describe('the group list is the chart, in tree order', () => {
+  /*
+   * "TDS Payable" means one thing under Duties & Taxes and another on its own,
+   * so a child has to be shown where it sits. Alphabetical order puts it
+   * nowhere near its parent.
+   */
+  const nested = {
+    ...db,
+    accountGroups: [
+      { id: 12, companyId: 1, name: 'Duties & Taxes', typeId: 1, parentGroupId: null },
+      { id: 13, companyId: 1, name: 'TDS Payable', typeId: 1, parentGroupId: 12 },
+      { id: 14, companyId: 1, name: 'Bank Accounts', typeId: 1, parentGroupId: null },
+      /* Enough groups that the picker offers its search box. */
+      ...['Capital', 'Computers', 'Direct Expenses', 'Direct Income', 'Investments', 'Loans'].map((name, i) => ({
+        id: 20 + i,
+        companyId: 1,
+        name,
+        typeId: 1,
+        parentGroupId: null,
+      })),
+    ],
+  };
+
+  it('indents a child and keeps it under its parent', async () => {
+    const user = userEvent.setup();
+    render(<ChartAccountForm db={nested} setDb={() => {}} currentCompany={company} onClose={() => {}} />);
+    await user.click(groupTrigger());
+
+    const labels = (await screen.findAllByRole('option')).map((o) => o.textContent);
+    const parent = labels.findIndex((l) => l.includes('Duties & Taxes'));
+    const child = labels.findIndex((l) => l.includes('TDS Payable'));
+
+    expect(child).toBe(parent + 1);
+    // Bank Accounts sorts before Duties & Taxes at the root, so a flat
+    // alphabetical list would have put the child last.
+    expect(labels[child]).not.toBe('TDS Payable');
+    expect(labels[child].trim()).toBe('TDS Payable');
+  });
+
+  it('still finds a nested group by typing its plain name', async () => {
+    const user = userEvent.setup();
+    render(<ChartAccountForm db={nested} setDb={() => {}} currentCompany={company} onClose={() => {}} />);
+    await user.click(groupTrigger());
+    await user.type(screen.getByPlaceholderText(/search select group/i), 'TDS');
+
+    const labels = (await screen.findAllByRole('option')).map((o) => o.textContent.trim());
+    expect(labels).toContain('TDS Payable');
+  });
+});

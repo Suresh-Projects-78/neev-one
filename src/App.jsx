@@ -3144,8 +3144,37 @@ export const ChartAccountForm = ({
     return m;
   }, [groups]);
 
+  /*
+   * The chart is a tree, and the tree is the thing being chosen from: "TDS
+   * Payable" means one thing under Duties & Taxes and another on its own. So
+   * the list is offered in tree order with each level indented, rather than as
+   * an alphabetical run in which a child sits nowhere near its parent.
+   *
+   * Search still matches the plain name — the indent is on the label, and a
+   * group whose parent is missing (a chart that only half loaded) is listed at
+   * the root rather than dropped.
+   */
   const groupOptions = useMemo(() => {
-    return groups.map((g) => ({ value: String(g.id), label: String(g.name || '').trim() }));
+    const childrenOf = new Map();
+    const present = new Set(groups.map((g) => String(g.id)));
+    for (const g of groups) {
+      const parent = String(g.parentGroupId ?? '').trim();
+      const key = parent && present.has(parent) ? parent : '';
+      if (!childrenOf.has(key)) childrenOf.set(key, []);
+      childrenOf.get(key).push(g);
+    }
+
+    const out = [];
+    const walk = (key, depth) => {
+      const kids = (childrenOf.get(key) || []).slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+      for (const g of kids) {
+        const name = String(g.name || '').trim();
+        out.push({ value: String(g.id), label: depth ? `${'\u2007'.repeat(depth * 3)}${name}` : name, searchText: name });
+        walk(String(g.id), depth + 1);
+      }
+    };
+    walk('', 0);
+    return out;
   }, [groups]);
 
   const isEdit = Boolean(initialData && (initialData.id !== null && initialData.id !== undefined && String(initialData.id) !== ''));

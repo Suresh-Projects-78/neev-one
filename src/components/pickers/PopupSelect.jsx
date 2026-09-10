@@ -59,7 +59,9 @@ const PopupSelect = ({
   const filtered = useMemo(() => {
     if (!normalizedQuery) return options || [];
     return rankedSearch(options || [], normalizedQuery, {
-      fields: (o) => [o?.label, o?.value],
+      /* `searchText` is the plain name where the label carries a tree indent —
+         typing "TDS" must find a group however deep it sits. */
+      fields: (o) => [o?.searchText, o?.label, o?.value],
       codes: (o) => [o?.code],
     });
   }, [normalizedQuery, options]);
@@ -71,7 +73,7 @@ const PopupSelect = ({
     if (!normalizedValue) return '';
     const exact = (options || []).find((o) => String(o.value || '').trim() === normalizedValue);
     if (!exact) return normalizedValue;
-    const labelText = String(exact.label || exact.value || '');
+    const labelText = String(exact.searchText || exact.label || exact.value || '');
     const codeText = String(exact.code || '').trim();
     return codeText ? `${codeText} - ${labelText}` : labelText;
   }, [normalizedValue, options]);
