@@ -52,10 +52,14 @@ describe('the landing band is one component', () => {
 
   it('keeps the drawing out of the way of the words', () => {
     const band = read('components/ui/HeroBand.jsx');
-    /* Behind the text, pinned to the foot, and gone on a narrow screen —
-       given the full height it printed over the search box. */
+    /*
+     * Three things, and each one was wrong at some point on the way here: it
+     * takes no clicks, it is pinned to the end of the band rather than given
+     * the whole width, and it is gone on a screen too narrow to hold both it
+     * and the words.
+     */
     expect(band).toMatch(/pointer-events-none/);
-    expect(band).toMatch(/bottom-0/);
+    expect(band).toMatch(/absolute[^"]*end-0/);
     expect(band).toMatch(/hidden[^"]*lg:flex/);
   });
 

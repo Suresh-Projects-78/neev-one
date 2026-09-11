@@ -657,7 +657,7 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
           greetingFor(new Date().getHours())
         )
       }
-      art={<HeroArt className="h-[16.5rem] w-[30rem]" />}
+      art={<HeroArt className="h-full w-full" />}
       subtitle={
         <>
           <p
