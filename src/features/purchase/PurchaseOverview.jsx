@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
+import HeroBand from '../../components/ui/HeroBand';
 import {
   AlertTriangle,
   BarChart3,
@@ -308,18 +309,18 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
 
   return (
     <div className="space-y-6">
-      {/* Title left, the controls that govern every figure below it on the
-          right — period first, because nothing else on the page means anything
-          until you know what window it covers. */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="min-w-0">
-          <h1 className="ui-t-page">Purchase Overview</h1>
-          <p className="ui-muted text-sm mt-1">
+      {/* The same band Home opens with — see HeroBand. The module names
+          itself, and the controls that govern every figure below sit
+          where Home keeps its search. */}
+      <HeroBand
+        title="Purchase Overview"
+        subtitle={
+          <p className="ui-t-body" style={{ color: 'rgb(var(--fg-muted))' }}>
             Get a snapshot of your spending, payables and purchase returns.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
+        }
+        right={
+          <div className="flex items-center gap-2 flex-wrap justify-end">
           <div className="relative">
             <button
               type="button"
@@ -417,8 +418,9 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
               </div>
             ) : null}
           </div>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {/* The six figures. Payables, overdue and returns read as bad-when-rising,
           so their arrows are coloured by meaning rather than direction. */}

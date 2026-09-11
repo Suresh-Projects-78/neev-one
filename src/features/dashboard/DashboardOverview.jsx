@@ -34,6 +34,7 @@ import {
   ThingsToDo,
 } from './HomeBoard';
 import Illustration from '../../components/ui/Illustration';
+import HeroBand from '../../components/ui/HeroBand';
 import ChartCard from '../../components/charts/ChartCard';
 import { useTilt } from '../../components/ui/useTilt';
 /**
@@ -642,51 +643,51 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
 
   return (
-    <section className="pt-1" aria-label="Overview">
-      <div className="flex items-start justify-between gap-6 flex-wrap">
-        <div className="min-w-0">
-          <h1
-            className="ui-t-page"
-            style={{ fontSize: '1.75rem', lineHeight: '2.125rem', letterSpacing: '-0.015em' }}
+    <HeroBand
+      title={
+        <>
+          {greetingFor(new Date().getHours())}
+          {name ? (
+            <>
+              , <span style={{ color: 'rgb(var(--fg-subtle))' }}>{name}</span>
+            </>
+          ) : null}
+        </>
+      }
+      subtitle={
+        <>
+          <p
+            className="ui-t-body"
+            style={{ color: active ? 'rgb(var(--fg-muted))' : 'rgb(var(--fg-subtle))' }}
+            aria-live="polite"
           >
-            {greetingFor(new Date().getHours())}
-            {name ? (
-              <>
-                , <span style={{ color: 'rgb(var(--fg-subtle))' }}>{name}</span>
-              </>
-            ) : null}
-          </h1>
-
-          <div className="mt-1.5 flex items-center gap-2.5 flex-wrap">
-            <p className="ui-t-body" style={{ color: active ? 'rgb(var(--fg-muted))' : 'rgb(var(--fg-subtle))' }} aria-live="polite">
-              {active ? active.text : 'Nothing needs you right now.'}
-            </p>
-            {/* Inline with the sentence they page through, rather than
-                centred underneath as an anonymous row of marks. */}
-            {list.length > 1 ? (
-              <span className="flex items-center gap-1" role="tablist" aria-label="Insights">
-                {list.map((it, i) => (
-                  <button
-                    key={it.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={i === idx}
-                    aria-label={it.label || `Insight ${i + 1}`}
-                    onClick={() => setIdx(i)}
-                    className="h-1 rounded-full transition-all"
-                    style={{
-                      width: i === idx ? 16 : 6,
-                      backgroundColor: i === idx ? 'rgb(var(--brand))' : 'rgb(var(--border-strong))',
-                    }}
-                  />
-                ))}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-end gap-1.5">
-        {onCommand ? (
+            {active ? active.text : 'Nothing needs you right now.'}
+          </p>
+          {/* Inline with the sentence they page through, rather than centred
+              underneath as an anonymous row of marks. */}
+          {list.length > 1 ? (
+            <span className="flex items-center gap-1" role="tablist" aria-label="Insights">
+              {list.map((it, i) => (
+                <button
+                  key={it.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === idx}
+                  aria-label={it.label || `Insight ${i + 1}`}
+                  onClick={() => setIdx(i)}
+                  className="h-1 rounded-full transition-all"
+                  style={{
+                    width: i === idx ? 16 : 6,
+                    backgroundColor: i === idx ? 'rgb(var(--brand))' : 'rgb(var(--border-strong))',
+                  }}
+                />
+              ))}
+            </span>
+          ) : null}
+        </>
+      }
+      right={
+        onCommand ? (
           <button
             type="button"
             onClick={onCommand}
@@ -708,31 +709,11 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
               ⌘K
             </span>
           </button>
-        ) : null}
-        </div>
-      </div>
-
-      {/* Today's date, under the search. A book is read against a date, and
-          the one thing the screen never said was which. */}
-      {dateLabel ? <div className="ui-caption mt-1.5 text-end">{dateLabel}</div> : null}
-
-      {actions?.length ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {actions.map((a, i) => (
-            <button
-              key={a.label}
-              type="button"
-              onClick={a.onClick}
-              /* One primary, first. The rest are ways in, not invitations. */
-              className={i === 0 ? 'ui-btn ui-btn-primary' : 'ui-btn ui-btn-secondary'}
-            >
-              <a.Icon size={15} aria-hidden="true" />
-              {a.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </section>
+        ) : null
+      }
+      meta={dateLabel}
+      actions={actions}
+    />
   );
 }
 
