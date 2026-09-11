@@ -1,5 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Ban, ClipboardList, Download, FileText, Package, Plus, Printer, Receipt, Settings2, Trash2, Truck } from 'lucide-react';
+import FormSection from '../../components/ui/FormSection';
+import { Ban, Calculator, ClipboardList, Download, FileText, Package, Plus, Printer, Receipt, Settings2, Trash2, Truck } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { useListSearch } from '../../components/ListToolbar';
@@ -393,6 +394,11 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             ruled off between them. Four fields strung across the top put the
             customer between two dates and read as one undifferentiated band.
           */}
+          <FormSection
+            icon={ClipboardList}
+            title="Basic Details"
+            description="Who the order is for, and the paperwork that identifies it."
+          >
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
             <div className="lg:col-span-6 space-y-4">
               <div>
@@ -444,11 +450,18 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             </div>
           </div>
 
-          <div>
-            <div className="mb-2">
-              <label className="ui-label">Line Items</label>
-            </div>
+          </FormSection>
 
+          <FormSection
+            icon={Package}
+            title="Line Items"
+            description="What the customer has ordered."
+            action={
+              <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary">
+                <Plus size={15} aria-hidden="true" /> Add Item
+              </button>
+            }
+          >
             <div className="border rounded-lg overflow-hidden">
               <table className="ui-table ui-grid-dense w-full ui-table-wide">
                 <thead className="ui-sunken">
@@ -514,15 +527,25 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                 </tbody>
               </table>
             </div>
-          </div>
 
-          <div className="mt-2 flex items-center gap-3">
-            <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary">
-              <Plus size={15} aria-hidden="true" /> Add Item
+          {/* The next row, rather than a button adrift under the table. */}
+          <div
+            className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-2.5"
+            style={{ borderColor: 'rgb(var(--brand) / 0.4)', backgroundColor: 'rgb(var(--brand) / 0.04)' }}
+          >
+            <button
+              type="button"
+              onClick={addLine}
+              className="inline-flex items-center gap-2 text-sm font-medium"
+              style={{ color: 'rgb(var(--brand-ink))' }}
+            >
+              <Plus size={15} aria-hidden="true" /> Add another item
             </button>
             <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           </div>
+          </FormSection>
 
+          <FormSection icon={Calculator} title="Summary">
           <div className="flex items-start justify-end gap-4">
             <div className="w-64 space-y-1 text-sm">
               <div className="flex justify-between">
@@ -553,6 +576,8 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
               </div>
             </div>
           </div>
+
+          </FormSection>
 
           <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
