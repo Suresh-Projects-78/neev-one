@@ -262,13 +262,22 @@ export const EmptyState = ({
       ) : null}
 
       {!isFiltered && routes.length ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-3 w-full max-w-2xl text-left">
+        /*
+          Centred on the cards, not on a three-column grid.
+
+          This was `sm:grid-cols-3`, so two routes — which is most of them —
+          filled columns one and two and left the third empty. The cards then
+          sat left of the heading and the sentence above them, which are
+          centred. A row that centres whatever it is given keeps the block
+          symmetrical at one, two or three routes.
+        */
+        <div className="mt-4 flex w-full max-w-2xl flex-col flex-wrap justify-center gap-2 text-left sm:flex-row">
           {routes.map((r) => (
             <button
               key={r.label}
               type="button"
               onClick={r.onSelect}
-              className="ui-card p-3 hover:border-[rgb(var(--brand))] transition-colors"
+              className="ui-card p-3 hover:border-[rgb(var(--brand))] transition-colors sm:w-[13.5rem]"
             >
               <span className="block text-sm font-medium">{r.label}</span>
               {r.description ? <span className="block ui-muted text-xs mt-0.5 leading-4">{r.description}</span> : null}
