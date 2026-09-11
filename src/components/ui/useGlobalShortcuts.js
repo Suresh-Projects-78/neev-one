@@ -83,8 +83,52 @@ export function useGlobalShortcuts(actions) {
       run();
     };
 
+    /*
+     * Tally's voucher keys.
+     *
+     * Everybody who keys accounts in this country learned them there, and they
+     * are held in the fingers rather than in the head: F6 is a receipt, and a
+     * person reaches for it before deciding to. They cost nothing to honour and
+     * a person who has them does not have to learn this screen at all.
+     *
+     * Three of Tally's are the browser's and are left alone rather than fought
+     * over: F5 reloads the page, F11 goes full screen and F12 opens the
+     * developer tools. Taking F5 from somebody who meant to reload is a worse
+     * trade than a payment voucher is worth — Alt+P raises one, and the sheet
+     * on ? says so. The rest are free in a browser and are taken.
+     */
+    const VOUCHER_KEYS = {
+      F4: 'contra',
+      F6: 'newReceipt',
+      F7: 'newJournal',
+      F8: 'newInvoice',
+      F9: 'newBill',
+    };
+
+    const onFunctionKey = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.isComposing) return;
+      const name = VOUCHER_KEYS[e.key];
+      if (!name) return;
+
+      const a = ref.current || {};
+      const run = a[name];
+      if (!run) return;
+
+      /* Not out from under a dialog or a list, for the same reason the letters
+         are not: a key pressed inside a picker belongs to the picker. */
+      const el = document.activeElement;
+      if (el instanceof HTMLElement && el.closest('[role="dialog"], [role="listbox"], [role="menu"]')) return;
+
+      e.preventDefault();
+      run();
+    };
+
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onFunctionKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', onFunctionKey);
+    };
   }, []);
 }
 

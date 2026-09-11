@@ -12084,6 +12084,23 @@ const AppShell = () => {
     },
     dashboard: () => setActive('dashboard'),
     openCommand: () => setPaletteOpen(true),
+
+    /*
+     * Tally's voucher keys, on the screens that own those vouchers here.
+     *
+     * F4 is a contra in Tally — money moved between the company's own cash and
+     * bank — which is the transfer on the Cash & Bank screen, not a document of
+     * its own.
+     */
+    contra: () => setActive('cashBank'),
+    newJournal: () => {
+      setActive('journalEntries');
+      setJournalEditor({ open: true, initial: null });
+    },
+    newBill: () => {
+      setActive('bills');
+      setBillEditor({ open: true, initial: null });
+    },
   });
 
   // --- shell trio: collapsed rail, quick create, notifications ---

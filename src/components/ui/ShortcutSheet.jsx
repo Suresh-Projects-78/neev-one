@@ -20,13 +20,24 @@ const isMac = () =>
 
 export const GROUPS = [
   {
+    name: 'Vouchers',
+    keys: [
+      { combo: ['F8'], does: 'Sales invoice' },
+      { combo: ['F9'], does: 'Purchase bill' },
+      { combo: ['F6'], does: 'Receipt' },
+      { combo: ['F7'], does: 'Journal' },
+      { combo: ['F4'], does: 'Contra — cash and bank' },
+      { combo: ['Alt', 'P'], does: 'Payment — F5 belongs to the browser' },
+    ],
+  },
+  {
     name: 'Anywhere',
     keys: [
       { combo: ['mod', 'K'], does: 'Search invoices, customers and items' },
       { combo: ['mod', '/'], does: 'The same search, from the keyboard' },
       { combo: ['Alt', 'I'], does: 'New invoice' },
-      { combo: ['Alt', 'B'], does: 'New bill' },
       { combo: ['Alt', 'C'], does: 'New credit note' },
+      { combo: ['Alt', 'D'], does: 'Home' },
       { combo: ['?'], does: 'This list' },
     ],
   },
@@ -35,6 +46,7 @@ export const GROUPS = [
     keys: [
       { combo: ['mod', 'S'], does: 'Save' },
       { combo: ['mod', 'Enter'], does: 'Save and post' },
+      { combo: ['mod', 'A'], does: 'Accept — Tally\u2019s, outside a text field' },
       { combo: ['mod', ';'], does: "Today's date, into the date field you are in" },
       { combo: ['Esc'], does: 'Leave without saving' },
     ],
@@ -45,6 +57,7 @@ export const GROUPS = [
       { combo: ['mod', '='], does: 'Add a line' },
       { combo: ['mod', 'D'], does: 'Copy the line you are on' },
       { combo: ['mod', 'Delete'], does: 'Remove the line you are on' },
+      { combo: ['Alt', 'D'], does: 'The same, as Tally spells it' },
       { combo: ['Tab'], does: 'Next field — from the last one, a new line' },
       { combo: ['↑', '↓'], does: 'The same column, a row up or down' },
       { combo: ['←', '→'], does: 'The next field, once the caret is at the end' },

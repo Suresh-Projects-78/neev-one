@@ -61,6 +61,10 @@ export function useDocumentFormKeys({
   formRef,
   onSave = null,
   onCommit = null,
+  /* What Escape does. A form with no way out but the mouse is the thing these
+     keys are here to fix; what counts as leaving — a confirm on unsaved work,
+     a route back — is the caller's business, not this hook's. */
+  onCancel = null,
   lineCount = 0,
   addLine = null,
   duplicateLine = null,
@@ -72,7 +76,7 @@ export function useDocumentFormKeys({
   // keystroke that re-renders the form.
   const cfg = useRef({});
   useEffect(() => {
-    cfg.current = { onSave, onCommit, lineCount, addLine, duplicateLine, removeLine, isDirty };
+    cfg.current = { onSave, onCommit, onCancel, lineCount, addLine, duplicateLine, removeLine, isDirty };
   });
 
   const submit = useCallback(() => formRef.current?.requestSubmit(), [formRef]);
@@ -108,6 +112,57 @@ export function useDocumentFormKeys({
       if (mod && key === 's') {
         e.preventDefault();
         (c.onSave || submit)();
+        return;
+      }
+
+      /*
+       * Tally's accept, on the same document.
+       *
+       * Ctrl+A is what the hands do at the end of a voucher, and it is also the
+       * browser's select-all — so it only saves where there is nothing to
+       * select: outside a text field. In a narration it still selects the
+       * narration, which is what somebody pressing it in a narration meant.
+       */
+      if (mod && key === 'a') {
+        const el = e.target;
+        const typing =
+          el instanceof HTMLElement &&
+          (el.tagName === 'TEXTAREA' ||
+            (el.tagName === 'INPUT' && !['checkbox', 'radio', 'date', 'number'].includes(el.type)) ||
+            el.isContentEditable);
+        if (!typing) {
+          e.preventDefault();
+          (c.onSave || submit)();
+          return;
+        }
+      }
+
+      /*
+       * Alt+D — remove the line the cursor is on. Tally's delete, where the
+       * same combination removes the line of a voucher.
+       */
+      if (e.altKey && !mod && key === 'd' && c.removeLine) {
+        const row = e.target instanceof HTMLElement ? e.target.closest('[data-line-row]') : null;
+        if (row) {
+          const idx = Number(row.getAttribute('data-line-row'));
+          if (Number.isFinite(idx)) {
+            e.preventDefault();
+            c.removeLine(idx);
+            return;
+          }
+        }
+      }
+
+      /*
+       * Esc — leave the document. Tally quits a voucher on it, and a form with
+       * no way out but the mouse is the thing the keys are here to fix. Not
+       * while a picker is open: that Esc closes the picker, and the caller's
+       * own handler is what decides whether anything unsaved is worth a word
+       * first.
+       */
+      if (e.key === 'Escape' && c.onCancel && !popup) {
+        e.preventDefault();
+        c.onCancel();
         return;
       }
       /*
