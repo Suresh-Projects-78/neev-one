@@ -27,7 +27,7 @@ export default function HeroBand({
   return (
     <section
       /* Tall enough for the drawing to sit in, where there is one. */
-      className={`ui-hero-ground relative pt-1 ${art ? 'lg:min-h-[13.5rem]' : ''}`}
+      className={`ui-hero-ground relative pt-1 ${art ? 'lg:min-h-[15.5rem]' : ''}`}
       aria-label="Overview"
     >
       {/* Behind the words, never over them: it ends before the text does at
@@ -37,7 +37,7 @@ export default function HeroBand({
           /* Pinned to the foot of the band, clear of the search above it.
              Given the whole height it was squeezed into whatever the band
              happened to be and printed over the search box. */
-          className="pointer-events-none absolute end-0 bottom-0 hidden w-[26rem] justify-end lg:flex"
+          className="pointer-events-none absolute end-0 bottom-0 hidden w-[30rem] justify-end lg:flex"
           aria-hidden="true"
         >
           {art}
