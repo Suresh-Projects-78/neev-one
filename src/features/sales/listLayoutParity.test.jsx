@@ -148,3 +148,29 @@ describe.each(PAGES)('$name, laid out like Sales Invoices', (page) => {
     expect(card.parentElement.closest('.ui-card')).toBeNull();
   });
 });
+
+describe('an empty list is centred on what you can see', () => {
+  /*
+   * The empty state used to sit in a cell spanning the table, and these tables
+   * are wider than the screen — so "centred" meant centred across a width that
+   * runs off the right-hand edge, and the card drifted left of the view. Out of
+   * the table and inside the scroller, its width is the visible width.
+   */
+  it('the invoice list renders its empty state outside the table', async () => {
+    const { InvoicesList } = await import('./index');
+    render(<InvoicesList db={db} setDb={noop} openModal={noop} currentCompany={COMPANY} />);
+    const pane = document.querySelector('.ui-empty-pane');
+    expect(pane).toBeTruthy();
+    expect(pane.closest('table')).toBeNull();
+    expect(within(pane).getByText('No invoices yet')).toBeInTheDocument();
+  });
+
+  it('and so does the quotation list', () => {
+    /* The shared fixture has a quotation in it; this one must not. */
+    render(<EstimatesList db={{ ...db, estimates: [] }} setDb={noop} openModal={noop} currentCompany={COMPANY} />);
+    const pane = document.querySelector('.ui-empty-pane');
+    expect(pane).toBeTruthy();
+    expect(pane.closest('table')).toBeNull();
+    expect(within(pane).getByText('No quotations yet')).toBeInTheDocument();
+  });
+});

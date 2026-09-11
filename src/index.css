@@ -679,18 +679,36 @@
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg));
   }
-  /* A module name is the strongest text in the rail: near-black at 600, so it
-     outranks its children by weight and value rather than by hue. The hue is
-     spent on the icon instead, where twelve of them are landmarks rather than
-     twelve competing labels. */
+  /* A module name is the strongest text in the rail, but it does not need to
+     shout: eleven names at 600 read as eleven headings competing with each
+     other. 500 still outranks a child entry, and the colour — near-black
+     against the children's grey — is what actually does the ranking. */
   .ui-nav-item[data-level='module'] {
     color: rgb(var(--fg));
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.005em;
   }
   .ui-nav-item[data-level='module']:hover {
     color: rgb(var(--fg));
     background-color: rgb(var(--surface-sunken));
+  }
+
+  /* The collapse toggle.
+     Collapsed, the label goes and all that is left is a 16px glyph — in the
+     muted grey every other row starts at, against the rail's own background,
+     which read as a smudge rather than a control. It gets the foreground
+     colour and, once collapsed, a surface of its own so it is visibly a
+     button in an otherwise empty strip. */
+  .ui-nav-collapse {
+    color: rgb(var(--fg));
+  }
+  .ui-nav-collapse[data-collapsed='true'] {
+    background-color: rgb(var(--surface-sunken));
+    border: 1px solid rgb(var(--border));
+  }
+  .ui-nav-collapse:hover {
+    background-color: rgb(var(--surface-sunken));
+    color: rgb(var(--fg));
   }
 
   /* A child is one muted value, indented under its module.
@@ -1450,6 +1468,19 @@
     min-height: 8rem;
     overflow: auto;
   }
+  /* An empty list, centred on what you can see.
+     The empty state used to live in a cell that spanned the table, and the
+     table is wider than the screen — so "centred" meant centred across a width
+     that runs off the right-hand edge, and the card drifted left of the view.
+     Sitting inside the scroll container but outside the table, its width is the
+     container's visible width, which is the width somebody is actually looking
+     at. */
+  .ui-empty-pane {
+    position: sticky;
+    inset-inline-start: 0;
+    width: 100%;
+  }
+
   .ui-table-sticky thead th {
     position: sticky;
     top: 0;

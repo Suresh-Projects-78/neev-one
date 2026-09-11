@@ -14091,7 +14091,8 @@ const AppShell = () => {
             <button
               type="button"
               onClick={toggleNavCollapsed}
-              className={`ui-nav-item hidden md:flex ${navCollapsed ? 'md:justify-center' : ''}`}
+              className={`ui-nav-item ui-nav-collapse hidden md:flex ${navCollapsed ? 'md:justify-center' : ''}`}
+              data-collapsed={navCollapsed ? 'true' : undefined}
               aria-pressed={navCollapsed}
               aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
               title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}

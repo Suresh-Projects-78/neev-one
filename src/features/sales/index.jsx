@@ -1080,40 +1080,7 @@ const statusReason = (doc, status, company, nowMs) => {
             </tr>
           </thead>
           <tbody className="ui-rows">
-            {filteredInvoices.length === 0 ? (
-              <tr>
-                <td colSpan={3 + (gridEnabled ? 1 : 0) + GRID_COLUMNS.filter((c) => !c.always && col(c.key)).length}>
-                  {invoices.length === 0 ? (
-                    <EmptyState
-                      icon={FileText}
-                      kind="new"
-                      title="No invoices yet"
-                      description="An invoice is what turns a sale into money owed to you, and into the GST you have collected."
-                      routes={[
-                        {
-                          label: 'Raise one now',
-                          description: 'Pick a customer, add lines, save. Two minutes.',
-                          onSelect: () => onNewInvoice?.(),
-                        },
-                        {
-                          label: 'Import your history',
-                          description: 'Bring across invoices from your existing books.',
-                          onSelect: () => onNewInvoice?.(),
-                        },
-                      ]}
-                    />
-                  ) : (
-                    <EmptyState
-                      icon={FileText}
-                      kind="filtered"
-                      totalCount={invoices.length}
-                      filters={activeFilterChips}
-                      onClearFilters={clearAllInvoiceFilters}
-                    />
-                  )}
-                </td>
-              </tr>
-            ) : (
+            {filteredInvoices.length === 0 ? null : (
               pagedInvoices.map((inv) => {
                 const whId = String(inv?.warehouseId || '').trim();
                 const wh = whId ? warehouseById.get(whId) : null;
@@ -1230,6 +1197,42 @@ const statusReason = (doc, status, company, nowMs) => {
             )}
           </tbody>
         </table>
+
+        {/* Outside the table, inside the scroller: its width resolves to what
+            is visible rather than to a table that runs off the right edge, so
+            the card centres on the view. */}
+        {filteredInvoices.length === 0 ? (
+          <div className="ui-empty-pane p-2">
+            {invoices.length === 0 ? (
+                    <EmptyState
+                      icon={FileText}
+                      kind="new"
+                      title="No invoices yet"
+                      description="An invoice is what turns a sale into money owed to you, and into the GST you have collected."
+                      routes={[
+                        {
+                          label: 'Raise one now',
+                          description: 'Pick a customer, add lines, save. Two minutes.',
+                          onSelect: () => onNewInvoice?.(),
+                        },
+                        {
+                          label: 'Import your history',
+                          description: 'Bring across invoices from your existing books.',
+                          onSelect: () => onNewInvoice?.(),
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={FileText}
+                      kind="filtered"
+                      totalCount={invoices.length}
+                      filters={activeFilterChips}
+                      onClearFilters={clearAllInvoiceFilters}
+                    />
+                  )}
+          </div>
+        ) : null}
         </div>
 
 
@@ -2055,43 +2058,7 @@ export const EstimatesList = ({
             </tr>
           </thead>
           <tbody className="ui-rows">
-            {estimates.length === 0 ? (
-              <tr>
-                <td colSpan="8">
-                  {estFilterChips.length === 0 && !estStatus ? (
-                    <EmptyState
-                      icon={ClipboardList}
-                      kind="new"
-                      title="No quotations yet"
-                      description="A quotation is a price you are standing behind until it expires — and an invoice waiting for a yes."
-                      routes={[
-                        {
-                          label: 'Quote one now',
-                          description: 'Pick a customer, add lines, set how long the price holds.',
-                          onSelect: () => openNewEstimate(),
-                        },
-                        {
-                          label: 'Start from an invoice',
-                          description: 'Quote what you have already billed this customer before.',
-                          onSelect: () => openNewEstimate(),
-                        },
-                      ]}
-                    />
-                  ) : (
-                    <EmptyState
-                      icon={ClipboardList}
-                      kind="filtered"
-                      totalCount={(db.estimates || []).filter((e) => e.companyId === currentCompany.id).length}
-                      filters={estFilterChips}
-                      onClearFilters={() => {
-                        estSearch.setQuery('');
-                        estFilters.clearAll();
-                      }}
-                    />
-                  )}
-                </td>
-              </tr>
-            ) : (
+            {estimates.length === 0 ? null : (
               estimates.map((est) => {
                 const whId = String(est?.warehouseId || '').trim();
                 const wh = whId ? warehouseById.get(whId) : null;
@@ -2162,6 +2129,43 @@ export const EstimatesList = ({
             )}
           </tbody>
         </table>
+
+        {/* Centred on the view rather than on a table wider than it. */}
+        {estimates.length === 0 ? (
+          <div className="ui-empty-pane p-2">
+            {estFilterChips.length === 0 && !estStatus ? (
+                    <EmptyState
+                      icon={ClipboardList}
+                      kind="new"
+                      title="No quotations yet"
+                      description="A quotation is a price you are standing behind until it expires — and an invoice waiting for a yes."
+                      routes={[
+                        {
+                          label: 'Quote one now',
+                          description: 'Pick a customer, add lines, set how long the price holds.',
+                          onSelect: () => openNewEstimate(),
+                        },
+                        {
+                          label: 'Start from an invoice',
+                          description: 'Quote what you have already billed this customer before.',
+                          onSelect: () => openNewEstimate(),
+                        },
+                      ]}
+                    />
+                  ) : (
+                    <EmptyState
+                      icon={ClipboardList}
+                      kind="filtered"
+                      totalCount={(db.estimates || []).filter((e) => e.companyId === currentCompany.id).length}
+                      filters={estFilterChips}
+                      onClearFilters={() => {
+                        estSearch.setQuery('');
+                        estFilters.clearAll();
+                      }}
+                    />
+                  )}
+          </div>
+        ) : null}
       </div>
       <TableTotals
         count={estimates.length}
