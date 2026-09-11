@@ -2395,22 +2395,22 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   const MENU_HEIGHT_ESTIMATE = 120;
 
   const LedgerCreateChooser = ({ onClose }) => {
+    /*
+     * Every door out of the chooser opens a screen.
+     *
+     * A customer and a vendor are masters with five tabs behind them, the same
+     * as a ledger. In a dialog the form's own bar sat under the dialog's title
+     * — two headings saying "New Customer" — and the tabs scrolled inside a box
+     * with the list greyed out behind it.
+     */
     const openCustomerCreate = () => {
-      openModal(
-        /* The form brings its own cards — header, basic details, tabs — so a
-           card around it would be a card in a card. */
-        <CustomerForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />,
-        { title: 'New Customer', maxWidthClass: 'max-w-5xl' }
-      );
+      openModal(null);
+      setLedgerForm({ mode: 'newCustomer' });
     };
 
     const openVendorCreate = () => {
-      openModal(
-        /* The form brings its own cards — header, basic details, tabs — so a
-           card around it would be a card in a card. */
-        <VendorForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />,
-        { title: 'New Vendor', maxWidthClass: 'max-w-5xl' }
-      );
+      openModal(null);
+      setLedgerForm({ mode: 'newVendor' });
     };
 
     const openOtherLedgerCreate = () => {
@@ -2749,6 +2749,15 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
    * The form takes the screen, the way the customer and vendor masters do. Back
    * and Cancel in its own bar return here; there is no dialog to dismiss.
    */
+  if (ledgerForm?.mode === 'newCustomer' || ledgerForm?.mode === 'newVendor') {
+    const PartyForm = ledgerForm.mode === 'newCustomer' ? CustomerForm : VendorForm;
+    return (
+      <div className="space-y-6">
+        <PartyForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => setLedgerForm(null)} />
+      </div>
+    );
+  }
+
   if (ledgerForm) {
     return (
       <div className="space-y-6">

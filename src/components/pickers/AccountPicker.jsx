@@ -328,18 +328,21 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
   const [mode, setMode] = useState('select');
   const [search, setSearch] = useState('');
 
+  /*
+   * The party masters print their own header — the title and every way out of
+   * the form — so the dialog does not print a second one above it. Everything
+   * else here is a plain panel and is titled by the dialog.
+   */
   const modalTitle =
     mode === 'choose'
       ? 'Create'
       : mode === 'createOther'
         ? 'Create Ledger'
-        : mode === 'createCustomer'
-          ? 'New Customer'
-          : mode === 'createVendor'
-            ? 'New Vendor'
-            : mode === 'create'
-              ? 'Create Account'
-              : 'Select Account';
+        : mode === 'createCustomer' || mode === 'createVendor'
+          ? ''
+          : mode === 'create'
+            ? 'Create Account'
+            : 'Select Account';
 
   const selected = value ? accounts.find((a) => String(a.id) === String(value)) : null;
   const selectedLabel = selected ? `${selected.code ? `${selected.code} - ` : ''}${selected.name}` : '';
@@ -484,7 +487,14 @@ const AccountPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Ac
       </button>
 
       {showPopup && (
-        <Modal onClose={() => closePopup()} title={modalTitle} maxWidthClass={mode === 'choose' ? 'max-w-lg' : 'max-w-2xl'}>
+        <Modal onClose={() => closePopup()} title={modalTitle} maxWidthClass={
+            mode === 'choose'
+              ? 'max-w-lg'
+              : mode === 'createCustomer' || mode === 'createVendor'
+                ? 'max-w-5xl'
+                : 'max-w-2xl'
+          }
+        >
           {mode === 'select' ? (
             <div className="space-y-3">
               <input

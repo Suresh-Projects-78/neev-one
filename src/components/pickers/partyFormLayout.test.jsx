@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -20,6 +23,9 @@ import { VendorForm } from './VendorPicker';
  * the identity in two columns and each address in the shape of an address.
  * These hold the parts of that which are contract rather than styling.
  */
+
+/* src/components/pickers/ → src/ */
+const SRC = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 const db = {
   customers: [],
@@ -79,6 +85,30 @@ describe('an address reads as an address', () => {
        not hear "Country" twice with nothing to tell them apart. */
     expect(screen.getByLabelText('Country, address 1')).toBeInTheDocument();
     expect(screen.getByLabelText('State, address 2')).toBeInTheDocument();
+  });
+});
+
+describe('the master is a screen, not a dialog', () => {
+  /*
+   * The form prints its own title and every way out of it. Opened inside a
+   * dialog that also prints a title, the screen said "New Customer" twice and
+   * the tabs scrolled inside a box with the list greyed out behind them.
+   *
+   * Stated against the source, because what is wrong is the call site: nothing
+   * may hand a party master to the modal with a title above it.
+   */
+  it('is not opened anywhere with a dialog title over it', () => {
+    const app = readFileSync(join(SRC, 'App.jsx'), 'utf8');
+    expect(app).not.toMatch(/title: 'New Customer'/);
+    expect(app).not.toMatch(/title: 'New Vendor'/);
+  });
+
+  it('leaves the picker\'s inline create untitled, so only the form speaks', () => {
+    const picker = readFileSync(join(SRC, 'components/pickers/AccountPicker.jsx'), 'utf8');
+    /* The two party modes share the empty title; the ledger and account
+       panels keep theirs. */
+    expect(picker).toMatch(/mode === 'createCustomer' \|\| mode === 'createVendor'\s*\n\s*\? ''/);
+    expect(picker).toMatch(/'Create Ledger'/);
   });
 });
 
