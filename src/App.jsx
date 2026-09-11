@@ -2388,18 +2388,18 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   const LedgerCreateChooser = ({ onClose }) => {
     const openCustomerCreate = () => {
       openModal(
-        <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <CustomerForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />
-        </div>,
+        /* The form brings its own cards — header, basic details, tabs — so a
+           card around it would be a card in a card. */
+        <CustomerForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />,
         { title: 'New Customer', maxWidthClass: 'max-w-5xl' }
       );
     };
 
     const openVendorCreate = () => {
       openModal(
-        <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <VendorForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />
-        </div>,
+        /* The form brings its own cards — header, basic details, tabs — so a
+           card around it would be a card in a card. */
+        <VendorForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />,
         { title: 'New Vendor', maxWidthClass: 'max-w-5xl' }
       );
     };

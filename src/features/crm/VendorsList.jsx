@@ -177,15 +177,13 @@ export default function VendorsList({ db, setDb, currentCompany }) {
     const seed = isCreating === true ? null : isCreating;
     return (
       <div className="space-y-6">
-        <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <VendorForm
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            seedData={seed}
-            onClose={() => setIsCreating(false)}
-          />
-        </div>
+        <VendorForm
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          seedData={seed}
+          onClose={() => setIsCreating(false)}
+        />
       </div>
     );
   }
@@ -193,19 +191,17 @@ export default function VendorsList({ db, setDb, currentCompany }) {
   if (editingVendor) {
     return (
       <div className="space-y-6">
-        <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <VendorForm
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            initialData={editingVendor}
-            onClose={() => setEditingVendor(null)}
-            onDuplicate={(values) => {
-              setEditingVendor(null);
-              setIsCreating(values);
-            }}
-          />
-        </div>
+        <VendorForm
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          initialData={editingVendor}
+          onClose={() => setEditingVendor(null)}
+          onDuplicate={(values) => {
+            setEditingVendor(null);
+            setIsCreating(values);
+          }}
+        />
       </div>
     );
   }

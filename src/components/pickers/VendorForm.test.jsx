@@ -48,7 +48,7 @@ const renderVendor = () =>
 const fillMinimum = async (user, name = 'Umbrella Chemicals') => {
   await user.type(screen.getByLabelText(/^Vendor Name/), name);
   await user.click(screen.getByRole('tab', { name: 'Address' }));
-  await user.click(screen.getByLabelText('State, row 1'));
+  await user.click(screen.getByLabelText('State, address 1'));
   await user.click((await screen.findAllByRole('option')).find((o) => o.textContent.includes('Karnataka')));
 };
 
@@ -281,7 +281,7 @@ describe('the vendor reaches the server', () => {
   });
 });
 
-describe('Fetch from GSTN', () => {
+describe('Fetch from GSTIN', () => {
   const portal = {
     gstin: '29AABCU9603R1ZM',
     pan: 'AABCU9603R',
@@ -303,7 +303,7 @@ describe('Fetch from GSTN', () => {
     apiFetch.mockResolvedValueOnce(portal);
 
     await openRegistered(user);
-    await user.click(screen.getByRole('button', { name: /Fetch from GSTN/i }));
+    await user.click(screen.getByRole('button', { name: /Fetch from GSTIN/i }));
 
     expect(await screen.findByDisplayValue('Umbrella Chemicals Private Limited')).toBeInTheDocument();
   });
@@ -318,7 +318,7 @@ describe('Fetch from GSTN', () => {
     await user2.type(screen.getByLabelText(/^Vendor Name/), 'Umbrella Chem');
     await user2.click(screen.getByRole('radio', { name: 'Registered' }));
     await user2.type(screen.getByPlaceholderText('Enter 15 digit GSTIN'), '29AABCU9603R1ZM');
-    await user2.click(screen.getByRole('button', { name: /Fetch from GSTN/i }));
+    await user2.click(screen.getByRole('button', { name: /Fetch from GSTIN/i }));
 
     expect(await screen.findByDisplayValue('Umbrella Chem')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('Umbrella Chemicals Private Limited')).toBeNull();

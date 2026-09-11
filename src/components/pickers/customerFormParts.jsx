@@ -1,4 +1,4 @@
-import { Info, Plus, Trash2 } from 'lucide-react';
+import { Info, MapPin, Plus, Trash2 } from 'lucide-react';
 
 import PopupSelect from './PopupSelect';
 
@@ -55,7 +55,174 @@ export const FormRow = ({ label, hint = '', required = false, htmlFor = '', clas
   </div>
 );
 
-const COLS = ['Name of Place', 'Address Line 1', 'Address Line 2', 'Country', 'State', 'City', 'District', 'Pincode'];
+/** One field in an address card: its name above it, full width. */
+const AddrField = ({ label, id, children }) => (
+  <div className="min-w-0">
+    <label className="ui-label" htmlFor={id}>{label}</label>
+    {children}
+  </div>
+);
+
+/**
+ * One place this party can be written to.
+ *
+ * Billing and shipping were two rows of a table eight columns wide, which is
+ * how an address is stored and not how anybody reads one. A card per address
+ * puts the lines of it in the shape of an address, and leaves room for the two
+ * things that are true of a particular card rather than of all of them: which
+ * one invoices are addressed to, and whether shipping is simply billing again.
+ */
+const AddressCard = ({ row, index, states, onChange, onRemove, tone, title, subtitle, badge, linked = false }) => {
+  const id = (f) => `addr-${index}-${f}`;
+  const disabled = linked;
+
+  return (
+    <div className="ui-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          {/*
+            Brand tint on the address invoices are addressed to, neutral on the
+            rest. The mockup marks the second one in blue; the design system has
+            one accent and it is orange, so the distinction is made by weight
+            rather than by introducing a second hue.
+          */}
+          <span
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+            style={
+              tone === 'brand'
+                ? { backgroundColor: 'rgb(var(--brand) / 0.12)', color: 'rgb(var(--brand))' }
+                : { backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--info))' }
+            }
+            aria-hidden="true"
+          >
+            <MapPin size={17} />
+          </span>
+          <div className="min-w-0">
+            {row.builtIn ? (
+              <div className="text-sm font-medium">{title}</div>
+            ) : (
+              <input
+                value={row.label}
+                onChange={(e) => onChange(index, 'label', e.target.value)}
+                className="ui-input w-full min-w-0 max-w-[14rem]"
+                aria-label={`Name of place, address ${index + 1}`}
+                placeholder="Name of place"
+              />
+            )}
+            <p className="ui-caption mt-0.5">{subtitle}</p>
+          </div>
+        </div>
+
+        {badge}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <AddrField label="Address Line 1" id={id('line1')}>
+          <input
+            id={id('line1')}
+            value={row.line1}
+            onChange={(e) => onChange(index, 'line1', e.target.value)}
+            disabled={disabled}
+            className="ui-input w-full"
+            placeholder="Enter address line 1"
+          />
+        </AddrField>
+        <AddrField label="Address Line 2" id={id('line2')}>
+          <input
+            id={id('line2')}
+            value={row.line2}
+            onChange={(e) => onChange(index, 'line2', e.target.value)}
+            disabled={disabled}
+            className="ui-input w-full"
+            placeholder="Enter address line 2"
+          />
+        </AddrField>
+      </div>
+
+      <div className="mt-3 grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {/* The picker prints its own label, which is the one a sighted reader
+            sees; the spoken name says which card it belongs to. */}
+        <div className="min-w-0">
+          <PopupSelect
+            label="Country"
+            ariaLabel={`Country, address ${index + 1}`}
+            title="Select Country"
+            value={row.country}
+            onChange={(v) => onChange(index, 'country', v)}
+            options={[{ value: 'India', label: 'India' }]}
+            placeholder="Country"
+            allowCustom
+            disabled={disabled}
+          />
+        </div>
+        <div className="min-w-0">
+          <PopupSelect
+            label="State"
+            ariaLabel={`State, address ${index + 1}`}
+            title="Select State"
+            value={row.state}
+            onChange={(v) => onChange(index, 'state', v)}
+            options={states.map((st) => ({ value: st.name, label: st.name, code: st.code }))}
+            placeholder="Select"
+            /* An Indian state decides CGST + SGST against IGST by string
+               match, so a typed "Karntaka" charges the wrong tax silently.
+               Outside India there is no list to pick from and typing is the
+               only way in. */
+            allowCustom={String(row.country || '').trim() !== 'India'}
+            disabled={disabled}
+          />
+        </div>
+        <AddrField label="City" id={id('city')}>
+          <input
+            id={id('city')}
+            value={row.city}
+            onChange={(e) => onChange(index, 'city', e.target.value)}
+            disabled={disabled}
+            className="ui-input w-full"
+            placeholder="Enter city"
+          />
+        </AddrField>
+        <AddrField label="Pincode" id={id('pincode')}>
+          <input
+            id={id('pincode')}
+            value={row.pincode}
+            onChange={(e) => onChange(index, 'pincode', e.target.value)}
+            disabled={disabled}
+            className="ui-input ui-mono w-full"
+            maxLength={10}
+            placeholder="Enter pincode"
+          />
+        </AddrField>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <AddrField label="District" id={id('district')}>
+          <input
+            id={id('district')}
+            value={row.district}
+            onChange={(e) => onChange(index, 'district', e.target.value)}
+            disabled={disabled}
+            className="ui-input w-full"
+            placeholder="Enter district"
+          />
+        </AddrField>
+      </div>
+
+      {row.builtIn ? null : (
+        <div className="mt-3 flex justify-end">
+          <button
+            type="button"
+            onClick={() => onRemove(index)}
+            aria-label={`Remove ${row.label || `address ${index + 1}`}`}
+            className="ui-btn ui-btn-ghost ui-btn-sm"
+          >
+            <Trash2 size={14} aria-hidden="true" /> Remove
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const AddressTab = ({
   rows,
@@ -64,139 +231,69 @@ export const AddressTab = ({
   onAdd,
   onRemove,
   /* Shipping is the billing address far more often than not. */
-  onCopyBilling = null,
-  /* The ledger master reuses this table and has no customers, so the copy is
-     a prop rather than the customer wording repeated in a second component. */
-  caption = 'Billing and shipping are here by default. Add more places below if you need them.',
+  sameAsBilling = false,
+  onSameAsBilling = null,
+  /* The ledger master reuses this and has no customers, so the copy is a prop
+     rather than the customer wording repeated in a second component. */
+  caption = 'Billing and shipping addresses are here by default. Add more places below if you need them.',
 }) => (
-  <section className="space-y-3">
-    <div>
-      <h4 className="ui-t-sec">Address</h4>
-      <p className="ui-caption mt-0.5">{caption}</p>
-    </div>
+  <section className="space-y-4">
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h4 className="ui-t-sec">Address</h4>
+        <p className="ui-caption mt-0.5">{caption}</p>
+      </div>
 
-    <div className="overflow-x-auto">
-      {/* Narrower than it was, and fluid inside: fixed pixel inputs forced the
-          table past the dialog and pushed Actions — the only way to remove a
-          row — off the right-hand edge. */}
-      <table className="w-full min-w-[52rem] border-collapse text-sm">
-        <thead>
-          <tr>
-            {COLS.map((c) => (
-              <th key={c} className="ui-t-label px-2 py-2 text-left">
-                {c}
-              </th>
-            ))}
-            <th className="ui-t-label px-2 py-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.key ?? i}>
-              <td className="px-1 py-1">
-                <input
-                  value={r.label}
-                  onChange={(e) => onChange(i, 'label', e.target.value)}
-                  className="ui-input w-full min-w-[7rem]"
-                  aria-label={`Name of place, row ${i + 1}`}
-                  /* Billing and shipping are the two places every document
-                     reaches for by name, so their labels are not editable. */
-                  readOnly={r.builtIn}
-                />
-              </td>
-              <td className="px-1 py-1">
-                <input value={r.line1} onChange={(e) => onChange(i, 'line1', e.target.value)} className="ui-input w-full min-w-[9rem]" aria-label={`Address line 1, row ${i + 1}`} />
-              </td>
-              <td className="px-1 py-1">
-                <input value={r.line2} onChange={(e) => onChange(i, 'line2', e.target.value)} className="ui-input w-full min-w-[9rem]" aria-label={`Address line 2, row ${i + 1}`} />
-              </td>
-              <td className="px-1 py-1">
-                <div className="w-full min-w-[6rem]">
-                  <PopupSelect
-                    label={null}
-                    ariaLabel={`Country, row ${i + 1}`}
-                    title="Select Country"
-                    value={r.country}
-                    onChange={(v) => onChange(i, 'country', v)}
-                    options={[{ value: 'India', label: 'India' }]}
-                    placeholder="Country"
-                    allowCustom
-                  />
-                </div>
-              </td>
-              <td className="px-1 py-1">
-                <div className="w-full min-w-[7rem]">
-                  <PopupSelect
-                    label={null}
-                    ariaLabel={`State, row ${i + 1}`}
-                    title="Select State"
-                    value={r.state}
-                    onChange={(v) => onChange(i, 'state', v)}
-                    options={states.map((s) => ({ value: s.name, label: s.name, code: s.code }))}
-                    placeholder="Select"
-                    /* An Indian state decides CGST + SGST against IGST by
-                       string match, so a typed "Karntaka" charges the wrong
-                       tax silently. Outside India there is no list to pick
-                       from and typing is the only way in. */
-                    allowCustom={String(r.country || '').trim() !== 'India'}
-                  />
-                </div>
-              </td>
-              <td className="px-1 py-1">
-                <input value={r.city} onChange={(e) => onChange(i, 'city', e.target.value)} className="ui-input w-full min-w-[6rem]" aria-label={`City, row ${i + 1}`} />
-              </td>
-              <td className="px-1 py-1">
-                <input value={r.district} onChange={(e) => onChange(i, 'district', e.target.value)} className="ui-input w-full min-w-[6rem]" aria-label={`District, row ${i + 1}`} />
-              </td>
-              <td className="px-1 py-1">
-                <input
-                  value={r.pincode}
-                  onChange={(e) => onChange(i, 'pincode', e.target.value)}
-                  className="ui-input ui-mono w-full min-w-[5rem]"
-                  maxLength={10}
-                  aria-label={`Pincode, row ${i + 1}`}
-                />
-              </td>
-              <td
-                className="sticky end-0 px-1 py-1 text-right whitespace-nowrap"
-                style={{ backgroundColor: 'rgb(var(--surface))' }}
-              >
-                {onCopyBilling && i === 1 ? (
-                  <button
-                    type="button"
-                    onClick={onCopyBilling}
-                    className="ui-btn ui-btn-ghost ui-btn-sm me-1"
-                    title="Copy the billing address into this row"
-                  >
-                    Copy billing
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => onRemove(i)}
-                  disabled={r.builtIn}
-                  aria-label={`Remove ${r.label || `address ${i + 1}`}`}
-                  title={r.builtIn ? 'Billing and shipping cannot be removed' : 'Remove this address'}
-                  className="ui-icon-btn ui-btn-sm !w-8 disabled:opacity-40"
-                >
-                  <Trash2 size={14} aria-hidden="true" />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-
-    {/*
-      Below the rows, not above them. The button adds a row to the end of the
-      table, so it belongs where that row will appear — put at the top it reads
-      as a heading action and you lose sight of what it did.
-    */}
-    <div>
-      <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary">
+      {/* At the head of the group it adds to, where the mockup puts it and
+          where a section action belongs. */}
+      <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary shrink-0">
         <Plus size={15} aria-hidden="true" /> Add Address
       </button>
+    </div>
+
+    <div className="grid gap-4 lg:grid-cols-2">
+      {rows.map((r, i) => (
+        <AddressCard
+          key={r.key ?? i}
+          row={r}
+          index={i}
+          states={states}
+          onChange={onChange}
+          onRemove={onRemove}
+          tone={i === 0 ? 'brand' : 'muted'}
+          title={i === 0 ? 'Billing Address' : i === 1 ? 'Shipping Address' : r.label || `Address ${i + 1}`}
+          subtitle={
+            i === 0
+              ? 'Primary address for invoices and accounting.'
+              : i === 1
+                ? 'Used for delivery and correspondence.'
+                : 'Another place goods or documents go.'
+          }
+          /* Shipping copies billing while the box is ticked, so the two cannot
+             drift apart by a door number. */
+          linked={i === 1 && sameAsBilling}
+          badge={
+            i === 0 ? (
+              <span
+                className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
+                style={{ backgroundColor: 'rgb(var(--brand) / 0.12)', color: 'rgb(var(--brand))' }}
+              >
+                Primary
+              </span>
+            ) : i === 1 && onSameAsBilling ? (
+              <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="ui-checkbox"
+                  checked={sameAsBilling}
+                  onChange={(e) => onSameAsBilling(e.target.checked)}
+                />
+                Same as billing
+              </label>
+            ) : null
+          }
+        />
+      ))}
     </div>
   </section>
 );

@@ -47,6 +47,15 @@ export const DocFormActions = ({
   onBack = null,
   backLabel = 'Back',
   sticky = false,
+  /*
+   * The bar is a card in its own right rather than the lid of one.
+   *
+   * The default assumes it sits inside a padded card and reaches out to that
+   * card's edges with negative margins. A form built as stacked cards — header,
+   * then the fields, then the tabs — wants the bar to be the whole of the first
+   * card instead, and those margins would then pull it outside its own border.
+   */
+  ownCard = false,
 }) => {
   const menuBtnRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -69,17 +78,20 @@ export const DocFormActions = ({
    * the shell; there is no app header to offset against inside it.
    */
   const shellClass = title
-    ? // `rounded-t-xl` because the negative margins take this bar out to the
-      // card's border box, where a square fill was overprinting the card's own
-      // rounded top corners.
-      `flex items-center justify-between gap-3 flex-wrap -mx-4 -mt-4 mb-1 px-4 py-3 rounded-t-xl ${
-        sticky ? 'sticky top-0 z-30' : ''
-      }`
+    ? ownCard
+      ? `ui-card flex items-center justify-between gap-3 flex-wrap px-5 py-4 ${sticky ? 'sticky top-0 z-30' : ''}`
+      : // `rounded-t-xl` because the negative margins take this bar out to the
+        // card's border box, where a square fill was overprinting the card's own
+        // rounded top corners.
+        `flex items-center justify-between gap-3 flex-wrap -mx-4 -mt-4 mb-1 px-4 py-3 rounded-t-xl ${
+          sticky ? 'sticky top-0 z-30' : ''
+        }`
     : 'flex items-center justify-end gap-2 -mb-2';
 
-  const shellStyle = title
-    ? { backgroundColor: 'rgb(var(--surface))', borderBottom: '1px solid rgb(var(--border))' }
-    : undefined;
+  const shellStyle =
+    title && !ownCard
+      ? { backgroundColor: 'rgb(var(--surface))', borderBottom: '1px solid rgb(var(--border))' }
+      : undefined;
 
   return (
     <div className={shellClass} style={shellStyle}>

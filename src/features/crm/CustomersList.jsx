@@ -174,15 +174,13 @@ export default function CustomersList({ db, setDb, currentCompany }) {
     const seed = isCreating === true ? null : isCreating;
     return (
       <div className="space-y-6">
-        <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <CustomerForm
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            seedData={seed}
-            onClose={() => setIsCreating(false)}
-          />
-        </div>
+        <CustomerForm
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          seedData={seed}
+          onClose={() => setIsCreating(false)}
+        />
       </div>
     );
   }
@@ -190,19 +188,17 @@ export default function CustomersList({ db, setDb, currentCompany }) {
   if (editingCustomer) {
     return (
       <div className="space-y-6">
-        <div className="ui-surface rounded-xl shadow-sm border p-6">
-          <CustomerForm
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            initialData={editingCustomer}
-            onClose={() => setEditingCustomer(null)}
-            onDuplicate={(values) => {
-              setEditingCustomer(null);
-              setIsCreating(values);
-            }}
-          />
-        </div>
+        <CustomerForm
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          initialData={editingCustomer}
+          onClose={() => setEditingCustomer(null)}
+          onDuplicate={(values) => {
+            setEditingCustomer(null);
+            setIsCreating(values);
+          }}
+        />
       </div>
     );
   }

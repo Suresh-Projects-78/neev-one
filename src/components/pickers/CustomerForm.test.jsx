@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('../../api/masters', async (importOriginal) => ({
@@ -39,15 +39,15 @@ beforeEach(() => {
  * CGST + SGST or leaves as IGST. Set through the picker the form actually uses.
  */
 const setBillingState = async (user, name = 'Karnataka') => {
-  /* The address table's own picker, by the name it now announces. */
-  await user.click(screen.getByLabelText('State, row 1'));
+  /* The billing card's own picker, by the name it now announces. */
+  await user.click(screen.getByLabelText('State, address 1'));
   await user.click((await screen.findAllByRole('option')).find((o) => o.textContent.includes(name)));
 };
 
 describe('basic details', () => {
   it('asks the six things every customer needs, in order', () => {
     renderForm();
-    for (const label of ['GST Registration Type', 'Customer Name', 'Customer Group', 'Currency', 'Opening Balance Type']) {
+    for (const label of ['GST Registration Type', 'Customer Name', 'Customer Group', 'Currency', 'Balance Type']) {
       expect(screen.getByText(label, { exact: true })).toBeInTheDocument();
     }
     expect(screen.getByPlaceholderText('0.00')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('basic details', () => {
     renderForm();
 
     await user.type(screen.getByPlaceholderText('Enter 15 digit GSTIN'), '29AABCU9603R1ZJ');
-    await user.click(screen.getByRole('button', { name: /Fetch from GSTN/i }));
+    await user.click(screen.getByRole('button', { name: /Fetch from GSTIN/i }));
 
     expect(lookupGstin).toHaveBeenCalledWith('29AABCU9603R1ZJ');
     await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
@@ -82,7 +82,7 @@ describe('basic details', () => {
     const user = userEvent.setup();
     renderForm();
     await user.type(screen.getByPlaceholderText('Enter 15 digit GSTIN'), '29AAB');
-    await user.click(screen.getByRole('button', { name: /Fetch from GSTN/i }));
+    await user.click(screen.getByRole('button', { name: /Fetch from GSTIN/i }));
     expect(lookupGstin).not.toHaveBeenCalled();
     expect(notify.error).toHaveBeenCalled();
   });
@@ -93,11 +93,14 @@ describe('addresses', () => {
     const user = userEvent.setup();
     renderForm();
 
-    const table = screen.getByRole('table');
-    expect(within(table).getAllByRole('row')).toHaveLength(3); // header + 2
+    /* A card each, in the shape of an address, rather than two rows of a table
+       eight columns wide. */
+    expect(screen.getByText('Billing Address')).toBeInTheDocument();
+    expect(screen.getByText('Shipping Address')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Address Line 1')).toHaveLength(2);
 
     await user.click(screen.getByRole('button', { name: /Add Address/i }));
-    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(4);
+    expect(screen.getAllByLabelText('Address Line 1')).toHaveLength(3);
     // Named for the user, not left blank for them to name.
     expect(screen.getByDisplayValue('Shipping 2')).toBeInTheDocument();
   });
@@ -110,18 +113,19 @@ describe('addresses', () => {
     const user = userEvent.setup();
     renderForm();
 
-    expect(screen.getByRole('button', { name: /Remove Billing/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Remove Shipping$/i })).toBeDisabled();
-    expect(screen.getByDisplayValue('Billing')).toHaveAttribute('readonly');
+    /* The two built-in cards carry no way to remove themselves, and their
+       names are headings rather than fields. */
+    expect(screen.queryByRole('button', { name: /Remove Billing/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Remove Shipping Address/i })).toBeNull();
+    expect(screen.queryByDisplayValue('Billing')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: /Add Address/i }));
     expect(screen.getByRole('button', { name: /Remove Shipping 2/i })).toBeEnabled();
   });
 
-  it('carries a District column, which the old two-address shape had nowhere for', () => {
+  it('carries a District field, which the old two-address shape had nowhere for', () => {
     renderForm();
-    expect(screen.getByRole('columnheader', { name: 'District' })).toBeInTheDocument();
-    expect(screen.getByLabelText('District, row 1')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('District')).toHaveLength(2);
   });
 });
 
@@ -345,7 +349,9 @@ describe('Statutory tab', () => {
     await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
     const shown = screen.getByLabelText('GST Registration / Treatment');
     expect(shown).toHaveValue('Registered');
-    expect(shown).toHaveAttribute('readonly');
+    /* A select, so it reads as the same control it mirrors — but not one that
+       can answer the question a second time. */
+    expect(shown).toBeDisabled();
   });
 });
 
@@ -373,14 +379,35 @@ describe('the primary contact', () => {
 });
 
 describe('the shipping address', () => {
-  it('can be copied from billing rather than retyped', async () => {
+  const lines = () => screen.getAllByLabelText('Address Line 1');
+
+  it('follows billing while it is tied to it', async () => {
     const user = userEvent.setup();
     renderForm();
     await user.click(screen.getByRole('tab', { name: 'Address' }));
-    await user.type(screen.getByLabelText('Address line 1, row 1'), '4 MG Road');
-    await user.click(screen.getByRole('button', { name: /Copy billing/i }));
 
-    expect(screen.getByLabelText('Address line 1, row 2')).toHaveValue('4 MG Road');
+    expect(screen.getByLabelText('Same as billing')).toBeChecked();
+    await user.type(lines()[0], '4 MG Road');
+
+    /* Not copied on a button press — the same address, so a typo fixed in one
+       is fixed in both. */
+    expect(lines()[1]).toHaveValue('4 MG Road');
+    expect(lines()[1]).toBeDisabled();
+  });
+
+  it('keeps what it had and becomes its own once untied', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await user.click(screen.getByRole('tab', { name: 'Address' }));
+    await user.type(lines()[0], '4 MG Road');
+    await user.click(screen.getByLabelText('Same as billing'));
+
+    expect(lines()[1]).toHaveValue('4 MG Road');
+    expect(lines()[1]).toBeEnabled();
+
+    await user.clear(lines()[1]);
+    await user.type(lines()[1], 'Plot 9, Peenya');
+    expect(lines()[0]).toHaveValue('4 MG Road');
   });
 });
 

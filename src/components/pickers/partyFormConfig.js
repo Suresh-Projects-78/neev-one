@@ -26,6 +26,18 @@ export const CUSTOMER_CFG = {
   defaultBalanceType: 'Dr',
   priceListLabel: 'Price List',
   showTdsConfig: false,
+  /*
+   * Whether a credit note may be raised against them at all.
+   *
+   * Some customers are settled by note routinely; others are a case where a
+   * note is how money leaves without anybody deciding to send it. The master
+   * says which, and the credit note form refuses the ones it is told to.
+   */
+  noteToggle: {
+    title: 'Credit Notes',
+    label: 'Allow credit notes for this customer',
+    help: 'If disabled, credit notes cannot be raised for this customer.',
+  },
 };
 
 export const VENDOR_CFG = {
@@ -46,4 +58,9 @@ export const VENDOR_CFG = {
   priceListLabel: 'Purchase Price List',
   showTdsConfig: true,
   tdsSections: TDS_SECTIONS,
+  noteToggle: {
+    title: 'Debit Notes',
+    label: 'Allow debit notes for this vendor',
+    help: 'If disabled, debit notes cannot be raised against this vendor.',
+  },
 };

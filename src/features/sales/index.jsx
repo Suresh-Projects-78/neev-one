@@ -5458,6 +5458,20 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       return;
     }
 
+    /*
+     * The master can forbid it. A credit note is how money goes back out
+     * without an invoice being raised, so a customer can be marked as one that
+     * notes may not be written against — and the switch that says so has to be
+     * read somewhere or it is decoration.
+     */
+    const noteCustomer = (db.customers || []).find((c) => c.id === parseInt(formData.customerId));
+    if (noteCustomer && noteCustomer.allowCreditNotes === false) {
+      notify.error(
+        `Credit notes are switched off for ${noteCustomer.displayName || noteCustomer.name}. Turn them on under the customer's Credit Details.`
+      );
+      return;
+    }
+
     if (!companyState) {
       notify.error('Please set Company State in Company Profile before creating GST estimates.');
       return;

@@ -83,6 +83,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
         tdsSection: String(initialData.tdsSection || ''),
         code: String(initialData.code || ''),
         isActive: initialData.isActive !== false,
+        allowCreditNotes: initialData.allowCreditNotes !== false,
         contacts: Array.isArray(initialData.contacts) && initialData.contacts.length
           ? initialData.contacts
           : [{ name: '', position: '', email: '', mobile: '' }],
@@ -150,6 +151,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
       tdsSection: '',
       code: '',
       isActive: true,
+      /* Allowed unless somebody says otherwise: refusing notes is the exception. */
+      allowCreditNotes: true,
       // One line ready to type into, as on the customer form.
       contacts: [{ name: '', position: '', email: '', mobile: '' }],
       shipToAddresses: [],
@@ -332,7 +335,14 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
 
   const updateAddressRow = (i, key, value) =>
     setFormData((p) => {
-      if (i === 0) return { ...p, billingAddress: { ...p.billingAddress, [key]: value } };
+      if (i === 0) {
+        const billing = { ...p.billingAddress, [key]: value };
+        /* Tied to billing, shipping is billing — including the edit being made
+           now, or the two go out of step the moment somebody fixes a typo. */
+        return p.shippingSameAsBilling
+          ? { ...p, billingAddress: billing, shippingAddress: { ...billing } }
+          : { ...p, billingAddress: billing };
+      }
       if (i === 1) return { ...p, shippingAddress: { ...p.shippingAddress, [key]: value }, shippingSameAsBilling: false };
       const idx = i - 2;
       return { ...p, shipToAddresses: (p.shipToAddresses || []).map((a, j) => (j === idx ? { ...a, [key]: value } : a)) };
@@ -350,10 +360,18 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
   const removeAddressRow = (i) =>
     setFormData((p) => ({ ...p, shipToAddresses: (p.shipToAddresses || []).filter((_, j) => j !== i - 2) }));
 
-  /* Shipping is the billing address far more often than not, and retyping it
-     is how the two quietly diverge by a door number. */
-  const copyBillingToShipping = () =>
-    setFormData((p) => ({ ...p, shippingAddress: { ...p.billingAddress }, shippingSameAsBilling: true }));
+  /*
+   * Shipping is the billing address far more often than not, and retyping it is
+   * how the two quietly diverge by a door number. Ticked, the shipping card
+   * shows billing and stays with it; unticked, it keeps the copy it had and
+   * becomes editable again.
+   */
+  const setShippingSameAsBilling = (on) =>
+    setFormData((p) =>
+      on
+        ? { ...p, shippingAddress: { ...p.billingAddress }, shippingSameAsBilling: true }
+        : { ...p, shippingSameAsBilling: false }
+    );
 
   const updateContactRow = (i, key, value) =>
     setFormData((p) => ({ ...p, contacts: (p.contacts || []).map((c, j) => (j === i ? { ...c, [key]: value } : c)) }));
@@ -737,7 +755,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
           gstinFetching={gstFetching}
           fetchFromGstin={fetchFromGstin}
           addressRows={addressRows}
-          onCopyBilling={copyBillingToShipping}
+          sameAsBilling={formData.shippingSameAsBilling === true}
+          onSameAsBilling={setShippingSameAsBilling}
           updateAddressRow={updateAddressRow}
           addAddressRow={addAddressRow}
           removeAddressRow={removeAddressRow}
