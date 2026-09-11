@@ -35,6 +35,7 @@ import {
 } from './HomeBoard';
 import Illustration from '../../components/ui/Illustration';
 import HeroBand from '../../components/ui/HeroBand';
+import HeroArt from '../../components/ui/HeroArt';
 import ChartCard from '../../components/charts/ChartCard';
 import { useTilt } from '../../components/ui/useTilt';
 /**
@@ -644,16 +645,19 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
 
   return (
     <HeroBand
+      /* The greeting is the quiet half and the name is the loud one: two
+         lines, not one long sentence trailing off into a name. */
+      eyebrow={`${greetingFor(new Date().getHours())},`}
       title={
-        <>
-          {greetingFor(new Date().getHours())}
-          {name ? (
-            <>
-              , <span style={{ color: 'rgb(var(--fg-subtle))' }}>{name}</span>
-            </>
-          ) : null}
-        </>
+        name ? (
+          <>
+            {name} <span aria-hidden="true">👋</span>
+          </>
+        ) : (
+          greetingFor(new Date().getHours())
+        )
       }
+      art={<HeroArt className="h-[13rem] w-[26rem] opacity-95" />}
       subtitle={
         <>
           <p

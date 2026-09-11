@@ -41,6 +41,24 @@ describe('the landing band is one component', () => {
     }
   });
 
+  it('carries the drawing on Home and nowhere else', () => {
+    /* The blank first hour is the day somebody decides what they think of the
+       product. A module landing is not that moment and gets no picture. */
+    expect(read('features/dashboard/DashboardOverview.jsx')).toMatch(/art=\{<HeroArt/);
+    for (const file of LANDINGS.slice(1)) {
+      expect(read(file)).not.toMatch(/HeroArt/);
+    }
+  });
+
+  it('keeps the drawing out of the way of the words', () => {
+    const band = read('components/ui/HeroBand.jsx');
+    /* Behind the text, pinned to the foot, and gone on a narrow screen —
+       given the full height it printed over the search box. */
+    expect(band).toMatch(/pointer-events-none/);
+    expect(band).toMatch(/bottom-0/);
+    expect(band).toMatch(/hidden[^"]*lg:flex/);
+  });
+
   it('the band owns the shape, so a caller cannot set it', () => {
     const band = read('components/ui/HeroBand.jsx');
     /* Size, spacing and the actions row live here and take no prop. */
