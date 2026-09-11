@@ -231,6 +231,7 @@ import CommandPalette from './components/ui/CommandPalette';
 import { buildRecordIndex, searchRecords } from './utils/searchIndex';
 import { setSearchSeed } from './utils/searchSeed';
 import { useGlobalShortcuts } from './components/ui/useGlobalShortcuts';
+import { useFitToViewport } from './components/ui/useFitToViewport';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import { useDocumentFormKeys } from './components/ui/useDocumentFormKeys';
 import SalesOverview from './features/sales/SalesOverview';
@@ -12056,6 +12057,9 @@ const AppShell = () => {
    * were looking at: the list behind a new invoice is part of how you check
    * you are not raising it twice.
    */
+  /* The rows scroll, the page does not — see useFitToViewport. */
+  useFitToViewport(active);
+
   useGlobalShortcuts({
     newInvoice: () => {
       setActive('invoices');
