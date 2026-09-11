@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   SlidersHorizontal,
   Tags,
+  HardDriveDownload,
   Upload,
   Users,
 } from 'lucide-react';
@@ -130,6 +131,12 @@ export const SETTINGS_ITEMS = [
   { key: 'invoiceTemplates', standalone: true, title: 'Invoice Templates', category: 'platform', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW', group: 'Documents', description: 'What a printed document looks like.', keywords: ['template', 'print', 'layout', 'letterhead'] },
   { key: 'docNumbering', title: 'Numbering', category: 'platform', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW', group: 'Documents', description: 'The prefix and next number for every kind of document.', keywords: ['prefix', 'series', 'sequence', 'next number'] },
   { key: 'settingsDocuments', title: 'Documents', category: 'platform', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Terms, declarations and the notes documents carry.', keywords: ['terms', 'declaration', 'notes', 'footer'] },
+  /*
+   * Backup was written, wired to a screen, and never put here — so there was no
+   * route to it from anywhere in the product. A company's own data, and the
+   * only way out of it, reachable by nobody.
+   */
+  { key: 'settingsDataBackup', standalone: true, title: 'Backup', category: 'platform', icon: HardDriveDownload, perm: 'ACCOUNTING::Ledger::VIEW', group: 'System', description: 'Take a copy of this company\u2019s data.', keywords: ['backup', 'export', 'download', 'copy', 'restore', 'archive'] },
   { key: 'dataImport', standalone: true, title: 'Data & Import', category: 'platform', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports', group: 'System', description: 'Bring journals, invoices and bills in from a file.', keywords: ['import', 'csv', 'migrate', 'template', 'upload'] },
 ];
 

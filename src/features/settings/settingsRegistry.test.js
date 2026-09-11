@@ -32,6 +32,44 @@ describe('nothing was lost on the way in', () => {
     expect(missing.map((m) => m.key)).toEqual([]);
   });
 
+  /*
+   * And nothing was lost on the way out either.
+   *
+   * The test above asks that every setting has a screen. Nobody asked the
+   * reverse, and four screens fell through the gap: a working Backup page, a
+   * second numbering page, a combined users-and-roles page and a terms page —
+   * each rendering real code with no route to it from anywhere in the product.
+   * Backup was the one that mattered: a company's own data, and the only way
+   * out of it, reachable by nobody.
+   */
+  it('every settings screen has a route to it from somewhere', () => {
+    /* Screens the switch answers to that look like settings. */
+    const cases = [...APP.matchAll(/case '([A-Za-z0-9]+)':/g)].map((m) => m[1]);
+    const settingsish = [...new Set(cases)].filter((k) => /^settings[A-Z]/.test(k));
+
+    /*
+     * Three ways in, and a screen needs one of them: the hub, the navigation
+     * rail, or something in the product that navigates there — the profile is
+     * reached from the account menu, and a person's own name is not a company
+     * setting.
+     */
+    const inHub = new Set(SETTINGS_ITEMS.map((i) => i.key));
+    const reachable = (key) =>
+      inHub.has(key) || APP.includes(`key: '${key}'`) || APP.includes(`setActive('${key}')`);
+
+    /*
+     * One screen is knowingly unreachable and stays that way until somebody
+     * decides which of two numbering pages is the real one: this one reads and
+     * writes number series on the server, and the one in the hub keeps them in
+     * the browser's own state. Deleting the wrong one loses work; showing both
+     * gives a person two pages that disagree. Named here so it is a decision
+     * waiting rather than an oversight repeating.
+     */
+    const pendingDecision = new Set(['settingsNumbering']);
+
+    expect(settingsish.filter((k) => !reachable(k) && !pendingDecision.has(k))).toEqual([]);
+  });
+
   it('every setting belongs to a category that exists', () => {
     const ids = new Set(SETTINGS_CATEGORIES.map((c) => c.id));
     expect(SETTINGS_ITEMS.filter((i) => !ids.has(i.category)).map((i) => i.key)).toEqual([]);
@@ -98,6 +136,14 @@ describe('search finds what people type', () => {
   it('puts the setting actually called that first', () => {
     expect(searchSettings('gst', all)[0].key).toBe('settingsTax');
     expect(searchSettings('roles', all)[0].key).toBe('settingsRoles');
+  });
+
+  it('finds the backup by the words somebody would reach for', () => {
+    /* It was written, wired to a screen, and in no list — so no search could
+       have found it either. */
+    for (const word of ['backup', 'export', 'download', 'copy']) {
+      expect(searchSettings(word, all).map((i) => i.key)).toContain('settingsDataBackup');
+    }
   });
 
   it('finds every invoice-related page from one word', () => {

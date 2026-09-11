@@ -136,8 +136,6 @@ import {
 } from './features/purchase';
 const CashBankModule = lazy(() => import('./features/cashBank/CashBankModule'));
 import { AccountGroupForm } from './features/accounts/AccountGroupTypeForms';
-import { SettingsWarehousesBranches } from './features/admin/SettingsWarehousesBranches';
-import { SettingsUsersRoles } from './features/admin/SettingsUsersRoles';
 import { SettingsBranches } from './features/admin/SettingsBranches';
 import EInvoiceSettings from './features/admin/EInvoiceSettings';
 import { SettingsWarehouses } from './features/admin/SettingsWarehouses';
@@ -13744,10 +13742,6 @@ const AppShell = () => {
         return <BankReconciliation db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':
         return <LedgerTrialBalance currentCompany={currentCompany} />;
-      case 'settingsUsersRoles': {
-        const orgId = resolveServerOrgId(currentCompany);
-        return <SettingsUsersRoles orgId={orgId} />;
-      }
       default:
         return <SalesOverview db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} warehouses={warehousesForUser} onNavigate={setActive} />;
     }
