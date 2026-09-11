@@ -232,6 +232,7 @@ import { buildRecordIndex, searchRecords } from './utils/searchIndex';
 import { setSearchSeed } from './utils/searchSeed';
 import { useGlobalShortcuts } from './components/ui/useGlobalShortcuts';
 import { useFitToViewport } from './components/ui/useFitToViewport';
+import ShortcutSheet, { useShortcutSheet } from './components/ui/ShortcutSheet';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import { useDocumentFormKeys } from './components/ui/useDocumentFormKeys';
 import SalesOverview from './features/sales/SalesOverview';
@@ -12060,6 +12061,9 @@ const AppShell = () => {
   /* The rows scroll, the page does not — see useFitToViewport. */
   useFitToViewport(active);
 
+  /* What the keyboard does, on `?`. */
+  const shortcutSheet = useShortcutSheet();
+
   useGlobalShortcuts({
     newInvoice: () => {
       setActive('invoices');
@@ -14543,6 +14547,8 @@ const AppShell = () => {
           {modal.content}
         </Modal>
       )}
+
+      <ShortcutSheet open={shortcutSheet.open} onClose={() => shortcutSheet.setOpen(false)} />
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
+import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { ClipboardList, Download, Package, Plus, Trash2, TrendingDown, TrendingUp, Upload } from 'lucide-react';
 
 import { notify } from '../../components/ui/notify';
@@ -237,11 +238,28 @@ const StockAdjustments = ({
 
   const addLine = () => setForm((p) => ({ ...p, lines: [...safeArray(p.lines), { itemId: '', qtyDelta: '' }] }));
 
+
   const removeLine = (idx) =>
     setForm((p) => {
       const next = safeArray(p.lines).filter((_, i) => i !== idx);
       return { ...p, lines: next.length ? next : [{ itemId: '', qtyDelta: '' }] };
     });
+
+  /*
+   * The same keys as every other document with lines in it.
+   *
+   * An adjustment is typed the way a bill is — an item, a figure, the next row
+   * — and this was the one such grid where none of it worked: no Ctrl+= for a
+   * row, no arrows down a column, no Ctrl+S. A person who keys figures does not
+   * hold a different set of habits for the stock screen.
+   */
+  const onFormKeyDown = useDocumentFormKeys({
+    formRef,
+    lineCount: safeArray(form.lines).length,
+    addLine,
+    removeLine,
+    onSave: () => formRef.current?.requestSubmit?.(),
+  });
 
   /** Writes a batch of adjustment rows into the book as separate movements. */
   const commit = (rows, { date, reason, warehouseId }) => {
@@ -457,7 +475,7 @@ const StockAdjustments = ({
           primaryType="button"
           onPrimary={() => formRef.current?.requestSubmit()}
         />
-        <form ref={formRef} onSubmit={saveForm} className="ui-card p-4 space-y-4">
+        <form ref={formRef} onSubmit={saveForm} onKeyDown={onFormKeyDown} className="ui-card p-4 space-y-4">
           <div className="grid gap-3 md:grid-cols-3">
             <div>
               <label className="ui-label" htmlFor="adj-date">Date</label>
@@ -530,7 +548,8 @@ const StockAdjustments = ({
                 </thead>
                 <tbody>
                   {safeArray(form.lines).map((l, idx) => (
-                    <tr key={idx} className="border-t">
+                    /* The grid keys walk rows and columns by this. */
+                    <tr key={idx} className="border-t" data-line-row={idx}>
                       <td className="ui-col-entity px-3 py-2 w-1/2">
                         <ItemPicker
                           db={db}
