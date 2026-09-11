@@ -342,3 +342,48 @@ describe('the group list is the chart, in tree order', () => {
     expect(labels).toContain('TDS Payable');
   });
 });
+
+describe('as a screen rather than a dialog', () => {
+  /*
+   * A ledger has five tabs behind it — bank, statutory, TDS, addresses, the
+   * people who answer about it — and the dialog gave all of that a scrolling
+   * box with the list greyed out behind it. As a screen it gets the same three
+   * cards as the customer and vendor masters.
+   */
+  it('brings its own bar, with every way out of the screen on it', () => {
+    renderForm({ fullPage: true });
+    expect(screen.getByRole('heading', { name: 'New Ledger' })).toBeInTheDocument();
+    for (const name of ['Back', 'Cancel', 'Save']) {
+      expect(screen.getByRole('button', { name })).toBeInTheDocument();
+    }
+    /* The dialog's own footer would be a second set of the same buttons. */
+    expect(screen.queryByRole('button', { name: 'Save and New' })).toBeNull();
+  });
+
+  it('says it is an edit when it is one', () => {
+    renderForm({ fullPage: true, initialData: { id: 5, companyId: 1, name: 'HDFC Current', groupId: 10 } });
+    expect(screen.getByRole('heading', { name: 'Edit Ledger' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument();
+  });
+
+  it('lays the identity out in cards, not one column of rows', () => {
+    const { container } = renderForm({ fullPage: true });
+    expect(container.querySelectorAll('.ui-card').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Enter the primary information about this ledger.')).toBeInTheDocument();
+  });
+
+  it('asks for the same things either way', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderForm({ fullPage: true });
+    await pickGroup(user, 'Bank Accounts');
+    /* The group still decides the tabs — the shell changed, not the form. */
+    expect(screen.getByRole('tab', { name: 'Bank Details' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Ledger Name \*$/)).toBeInTheDocument();
+    unmount();
+
+    /* And the dialog is unchanged: it keeps its own footer. */
+    renderForm();
+    expect(screen.queryByRole('heading', { name: 'New Ledger' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save and New' })).toBeInTheDocument();
+  });
+});

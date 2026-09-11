@@ -292,77 +292,92 @@ export function PartyFormLayout({
                 <p className="ui-caption mt-0.5">Set credit terms and limits for this {cfg.noun.toLowerCase()}.</p>
               </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="ui-label" htmlFor="cust-credit-period">Credit Period (days)</label>
-                <input
-                  id="cust-credit-period"
-                  type="number"
-                  min="0"
-                  value={formData.paymentTermDays}
-                  onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
-                  className="ui-input w-full"
-                  placeholder="30"
-                />
-                <p className="ui-caption mt-1">Sets the due date on every invoice raised for them.</p>
+            {/*
+              Two columns that each hold a pair: what the terms are on the left,
+              what the ceiling is on the right. The price list ran the width of
+              the card and pushed the note switch below the fold of the tab.
+            */}
+            <div className="grid gap-x-10 gap-y-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                <div>
+                  <label className="ui-label" htmlFor="cust-credit-period">Credit Period (days)</label>
+                  <input
+                    id="cust-credit-period"
+                    type="number"
+                    min="0"
+                    value={formData.paymentTermDays}
+                    onChange={(e) => setFormData({ ...formData, paymentTermDays: e.target.value })}
+                    className="ui-input w-full"
+                    placeholder="30"
+                  />
+                  <p className="ui-caption mt-1">Sets the due date on every invoice raised for them.</p>
+                </div>
+
+                <div>
+                  {/*
+                    A list, not a typed name. The rate engine looks a price list
+                    up by id, so a box somebody typed "Standard" into pointed at
+                    nothing and the party was quietly on default rates. Only
+                    lists in force are offered — a retired one cannot price
+                    anything, so the master should not name it.
+                  */}
+                  <label className="ui-label" htmlFor="cust-price-list">{cfg.priceListLabel}</label>
+                  <select
+                    id="cust-price-list"
+                    value={String(formData.priceListId ?? '')}
+                    onChange={(e) => setFormData({ ...formData, priceListId: e.target.value })}
+                    className="ui-select w-full"
+                    disabled={priceListOptions.length === 0}
+                  >
+                    <option value="">— none —</option>
+                    {priceListOptions.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <p className="ui-caption mt-1">
+                    {priceListOptions.length === 0
+                      ? 'No price list is in force. Add one under Master Data → Price Lists and it appears here.'
+                      : `Rates come from this list before the item's own ${cfg.kind === 'VENDOR' ? 'purchase' : 'sale'} price.`}
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="ui-label" htmlFor="cust-credit-limit">Credit Limit</label>
-                <input
-                  id="cust-credit-limit"
-                  type="number"
-                  min="0"
-                  value={formData.creditLimit}
-                  onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-                  className="ui-input ui-money w-full"
-                  placeholder="0.00"
-                />
-                <p className="ui-caption mt-1">Maximum outstanding amount allowed.</p>
-              </div>
-              <div className="sm:col-span-2">
-                {/*
-                  A list, not a typed name. The rate engine looks a price list
-                  up by id, so a box somebody typed "Standard" into pointed at
-                  nothing and the party was quietly on default rates. Only
-                  lists in force are offered — a retired one cannot price
-                  anything, so the master should not name it.
-                */}
-                <label className="ui-label" htmlFor="cust-price-list">{cfg.priceListLabel}</label>
-                <select
-                  id="cust-price-list"
-                  value={String(formData.priceListId ?? '')}
-                  onChange={(e) => setFormData({ ...formData, priceListId: e.target.value })}
-                  className="ui-select w-full"
-                  disabled={priceListOptions.length === 0}
-                >
-                  <option value="">— none —</option>
-                  {priceListOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
-                  ))}
-                </select>
-                <p className="ui-caption mt-1">
-                  {priceListOptions.length === 0
-                    ? 'No price list is in force. Add one under Master Data → Price Lists and it appears here.'
-                    : `Rates come from this list before the item's own ${cfg.kind === 'VENDOR' ? 'purchase' : 'sale'} price.`}
-                </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="ui-label" htmlFor="cust-credit-limit">Credit Limit</label>
+                  <div className="relative">
+                    <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+                    <input
+                      id="cust-credit-limit"
+                      type="number"
+                      min="0"
+                      value={formData.creditLimit}
+                      onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
+                      className="ui-input ui-money w-full ps-7"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="ui-caption mt-1">Maximum outstanding amount allowed.</p>
+                </div>
+
+                {cfg.noteToggle ? (
+                  <div>
+                    <span className="ui-label block">{cfg.noteToggle.title}</span>
+                    <label className="mt-1.5 inline-flex cursor-pointer items-center gap-2.5 text-sm">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        checked={formData.allowCreditNotes !== false}
+                        onChange={(e) => setFormData((p) => ({ ...p, allowCreditNotes: e.target.checked }))}
+                      />
+                      {cfg.noteToggle.label}
+                    </label>
+                    <p className="ui-caption mt-1">{cfg.noteToggle.help}</p>
+                  </div>
+                ) : null}
               </div>
             </div>
 
-            {cfg.noteToggle ? (
-              <div>
-                <h5 className="text-sm font-medium">{cfg.noteToggle.title}</h5>
-                <label className="mt-1.5 inline-flex cursor-pointer items-center gap-2.5 text-sm">
-                  <input
-                    type="checkbox"
-                    className="ui-checkbox"
-                    checked={formData.allowCreditNotes !== false}
-                    onChange={(e) => setFormData((p) => ({ ...p, allowCreditNotes: e.target.checked }))}
-                  />
-                  {cfg.noteToggle.label}
-                </label>
-                <p className="ui-caption mt-1">{cfg.noteToggle.help}</p>
-              </div>
-            ) : null}
             </section>
           ) : null}
 

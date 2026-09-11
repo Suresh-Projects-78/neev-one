@@ -34,6 +34,7 @@ import {
   Plus,
   Receipt,
   RefreshCw,
+  Info,
   Landmark,
   LogOut,
   Search,
@@ -2377,6 +2378,14 @@ const InventoryOverview = ({ db, currentCompany }) => {
 const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   const accounts = db.chartOfAccounts.filter((a) => a.companyId === currentCompany.id);
   const [coaView, setCoaView] = useState('ledgers');
+  /*
+   * The ledger master opens as a screen, not a dialog.
+   *
+   * A ledger has five tabs behind it — bank, statutory, TDS, addresses, the
+   * people who answer about it — and a dialog gave all of that a scrolling box
+   * with the list greyed out behind it. `null`, or the ledger being written.
+   */
+  const [ledgerForm, setLedgerForm] = useState(null);
   const [openMenu, setOpenMenu] = useState(null);
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
@@ -2405,17 +2414,8 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     };
 
     const openOtherLedgerCreate = () => {
-      openModal(
-        <ChartAccountForm
-          db={db}
-          setDb={setDb}
-          currentCompany={currentCompany}
-          openModal={openModal}
-          excludeGroupCategories={['Customer', 'Vendor']}
-          onClose={() => openModal(null)}
-        />,
-        { title: 'New Ledger', maxWidthClass: 'max-w-4xl' }
-      );
+      openModal(null);
+      setLedgerForm({ mode: 'new' });
     };
 
     return (
@@ -2613,19 +2613,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     });
   };
 
-  const openEditLedger = (ledger) => {
-    openModal(
-      <ChartAccountForm
-        db={db}
-        setDb={setDb}
-        currentCompany={currentCompany}
-        openModal={openModal}
-        initialData={ledger}
-        onClose={() => openModal(null)}
-      />,
-      { title: 'Edit Ledger', maxWidthClass: 'max-w-4xl' }
-    );
-  };
+  const openEditLedger = (ledger) => setLedgerForm({ mode: 'edit', ledger });
 
   const openEditGroup = (group) => {
     if (group?.isSystem && !group?.isUserDefined) {
@@ -2756,6 +2744,27 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     }
     return { ledgers: ledgerRows.length, groups: groupRows.length, debit, credit, suspense, unposted };
   }, [ledgerRows, groupRows]);
+
+  /*
+   * The form takes the screen, the way the customer and vendor masters do. Back
+   * and Cancel in its own bar return here; there is no dialog to dismiss.
+   */
+  if (ledgerForm) {
+    return (
+      <div className="space-y-6">
+        <ChartAccountForm
+          fullPage
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          openModal={openModal}
+          initialData={ledgerForm.mode === 'edit' ? ledgerForm.ledger : null}
+          excludeGroupCategories={ledgerForm.mode === 'edit' ? [] : ['Customer', 'Vendor']}
+          onClose={() => setLedgerForm(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <DocumentListShell
@@ -3110,6 +3119,16 @@ export const ChartAccountForm = ({
   onCreated,
   excludeGroupCategories = [],
   includeGroupIds = null,
+  /*
+   * A screen rather than a dialog.
+   *
+   * The master screen opens this full page, where it gets the same three cards
+   * as the customer and vendor masters — bar, identity, tabs. The quick create
+   * from inside an invoice line or a journal stays a dialog: it is an errand in
+   * the middle of a document, and taking the document off the screen to name a
+   * ledger is how you lose the document.
+   */
+  fullPage = false,
 }) => {
   const excludedCats = new Set((Array.isArray(excludeGroupCategories) ? excludeGroupCategories : []).map((x) => String(x || '').trim()));
   const includeIds = includeGroupIds ? new Set((Array.isArray(includeGroupIds) ? includeGroupIds : []).map((x) => String(x))) : null;
@@ -3404,8 +3423,19 @@ export const ChartAccountForm = ({
     );
   };
 
+  /*
+   * Which of the two saves the menu asked for. A ref, not state: the menu item
+   * submits the form in the same click, and a state update would not have
+   * landed by the time this reads it.
+   */
+  const saveAndNewRef = useRef(false);
+
   const handleSubmit = (e, mode = 'close') => {
     e.preventDefault();
+    if (saveAndNewRef.current) {
+      saveAndNewRef.current = false;
+      mode = 'new';
+    }
 
     const name = String(formData.name || '').trim();
     const openingBalance = round2(Number(formData.openingBalance || 0));
@@ -3601,10 +3631,14 @@ export const ChartAccountForm = ({
     onClose?.();
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h4 className="ui-t-sec">Basic Details</h4>
-
+  /*
+   * The identity of the ledger, in the two columns the party masters use: what
+   * it is called and what it opens with on the left, and on the right the three
+   * settings that each have one obvious answer.
+   */
+  const basicDetails = (
+    <div className="grid gap-x-10 gap-y-4 lg:grid-cols-2">
+      <div className="space-y-4">
       <PartyFormRow label="Ledger Name" required htmlFor="ledger-name" hint="What this ledger is called in the books and on every posting to it.">
         <input
           id="ledger-name"
@@ -3617,9 +3651,27 @@ export const ChartAccountForm = ({
         />
       </PartyFormRow>
 
-      <PartyFormRow label="Ledger Group" required hint="The group decides which statement this ledger lands on, and which tabs the form offers.">
+
+
+      <PartyFormRow label="Opening Balance" htmlFor="ledger-opening" hint="What this ledger already held on the day the books begin.">
+        <div className="relative">
+        <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+        <input
+          id="ledger-opening"
+          type="number"
+          value={formData.openingBalance}
+          onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
+          className="ui-input ui-money w-full ps-7"
+          step="0.01"
+        />
+        </div>
+      </PartyFormRow>
+      </div>
+
+      <div className="space-y-4">
+      <div>
         <PopupSelect
-          label={null}
+          label="Ledger Group *"
           ariaLabel="Ledger Group *"
           value={formData.groupId}
           disabled={groupLocked}
@@ -3653,9 +3705,10 @@ export const ChartAccountForm = ({
             Entries have been posted to this ledger, so its group is fixed — moving it would move those figures onto another statement.
           </p>
         ) : null}
-      </PartyFormRow>
+      </div>
 
-      <PartyFormRow label="Currency" required htmlFor="ledger-currency" hint="The currency this ledger is kept in. The books are reported in the company's base currency.">
+      <div>
+        <label className="ui-label" htmlFor="ledger-currency">Currency *</label>
         <select
           id="ledger-currency"
           value={formData.currency}
@@ -3666,21 +3719,21 @@ export const ChartAccountForm = ({
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </select>
-      </PartyFormRow>
+      </div>
 
-      <PartyFormRow label="Opening Balance" htmlFor="ledger-opening" hint="What this ledger already held on the day the books begin.">
-        <input
-          id="ledger-opening"
-          type="number"
-          value={formData.openingBalance}
-          onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-          className="ui-input ui-money w-full"
-          step="0.01"
-        />
-      </PartyFormRow>
 
-      <PartyFormRow label="Opening Balance Type" hint="Which side the balance opens on. It follows the group's nature until you choose otherwise.">
-        <div className="flex items-center gap-6 pt-1.5">
+      <div>
+        <span className="ui-label inline-flex items-center gap-1.5">
+          Balance Type
+          <span
+            title="Which side the balance opens on. It follows the group's nature until you choose otherwise."
+            aria-label="Which side the balance opens on. It follows the group's nature until you choose otherwise."
+            className="ui-subtle inline-flex cursor-help"
+          >
+            <Info size={13} aria-hidden="true" />
+          </span>
+        </span>
+        <div className="mt-2 flex items-center gap-6">
           {[{ v: 'Dr', l: 'Dr (Default)' }, { v: 'Cr', l: 'Cr' }].map((o) => (
             <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
               <input
@@ -3697,16 +3750,19 @@ export const ChartAccountForm = ({
             </label>
           ))}
         </div>
-      </PartyFormRow>
+      </div>
+      </div>
+    </div>
+  );
 
+  const detailTabs = ledgerTabs.length ? (
+    <>
       {/*
         One form, dynamic behaviour. The group is the accounting context, so it
         decides which tabs exist — a bank ledger gets Bank Details, a ledger
         under a TDS group gets TDS Details, and an Indirect Expenses ledger gets
         neither. Statutory, Address and Contact Persons apply to any ledger.
       */}
-      {ledgerTabs.length ? (
-        <>
           <div className="ui-tabs" role="tablist" aria-label="Ledger details">
             {ledgerTabs.map((t) => (
               <button
@@ -3921,8 +3977,62 @@ export const ChartAccountForm = ({
               />
             ) : null}
           </div>
-        </>
-      ) : null}
+    </>
+  ) : null;
+
+  /*
+   * As a screen, the ledger master is the party master: a bar, a card for the
+   * identity, a card for the tabs. Written once and shown two ways rather than
+   * twice, so the fields cannot drift between the dialog and the page.
+   */
+  if (fullPage) {
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <DocFormActions
+          ownCard
+          sticky
+          title={isEdit ? 'Edit Ledger' : 'New Ledger'}
+          subtitle="Name it, file it under a group, and say what it opens with."
+          onBack={onClose}
+          backLabel="Back"
+          secondaryLabel="Cancel"
+          onSecondary={onClose}
+          primaryLabel={isEdit ? 'Save changes' : 'Save'}
+          primaryType="submit"
+          menu={
+            isEdit
+              ? []
+              : [
+                  {
+                    key: 'saveAndNew',
+                    label: 'Save and add another',
+                    submit: true,
+                    /* Keeps the group and clears the name, so the next sibling
+                       in a chart is one field away rather than four clicks. */
+                    onSelect: () => {
+                      saveAndNewRef.current = true;
+                    },
+                  },
+                ]
+          }
+        />
+
+        <section className="ui-card p-5 sm:p-6">
+          <h3 className="ui-t-sec">Basic Details</h3>
+          <p className="ui-caption mt-0.5">Enter the primary information about this ledger.</p>
+          <div className="mt-5">{basicDetails}</div>
+        </section>
+
+        {detailTabs ? <section className="ui-card p-5 sm:p-6">{detailTabs}</section> : null}
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h4 className="ui-t-sec">Basic Details</h4>
+      {basicDetails}
+      {detailTabs}
 
       {/*
         Cancel on the left, the two ways of saving on the right. "Save and New"
