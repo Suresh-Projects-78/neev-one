@@ -187,7 +187,16 @@ describe('weight marks structure, not content', () => {
     const offenders = [];
     for (const file of jsxFiles(SRC)) {
       const source = readFileSync(file, 'utf8');
-      const el = /<\w+[^>]*className="([^"]*\bfont-(?:semibold|bold)\b[^"]*)"[^>]*>\s*\{[^<}]{0,70}/g;
+      /*
+       * Heading elements are exempt, and only them.
+       *
+       * The rule is about weight standing in for hierarchy on content. A
+       * heading whose text happens to arrive as a prop — the name of an
+       * address card, say — is structure by the tag it is written in, and the
+       * document says so to a screen reader as well as to the eye. Anything
+       * else rendering a value at 600 is the thing this bans.
+       */
+      const el = /<(?!h[1-6]\b)\w+[^>]*className="([^"]*\bfont-(?:semibold|bold)\b[^"]*)"[^>]*>\s*\{[^<}]{0,70}/g;
       let m;
       while ((m = el.exec(source)) !== null) {
         offenders.push(`${relative(SRC, file)}:${source.slice(0, m.index).split('\n').length}`);

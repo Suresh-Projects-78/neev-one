@@ -147,6 +147,37 @@ describe('the statutory tab', () => {
   });
 });
 
+describe('the address cards', () => {
+  /*
+   * A row of four controls read as two pairs: Country and State were a
+   * picker's own padding and inherited 16px type, two pixels taller and a size
+   * bigger than the City box beside them.
+   */
+  it('gives the pickers the metrics of the fields they stand with', () => {
+    renderCustomer();
+    const country = screen.getByLabelText('Country, address 1');
+    const city = screen.getAllByLabelText('City')[0];
+    expect(country.className).toContain('ui-input');
+    expect(city.className).toContain('ui-input');
+  });
+
+  it('marks the two built-in places apart by colour', () => {
+    renderCustomer();
+    const [billing, shipping] = screen
+      .getAllByText(/^(Billing|Shipping) Address$/)
+      .map((el) => el.parentElement.parentElement.querySelector('span'));
+    expect(billing.getAttribute('style')).toContain('--brand');
+    /* Blue on the one goods go to — a token, so it holds in dark mode too. */
+    expect(shipping.getAttribute('style')).toContain('--ov-blue');
+  });
+
+  it('names each card a shade heavier than the fields under it', () => {
+    renderCustomer();
+    expect(screen.getByText('Billing Address').className).toContain('font-semibold');
+    expect(screen.getByText('Shipping Address').className).toContain('font-semibold');
+  });
+});
+
 describe('remarks', () => {
   it('gives a note about the party somewhere to go', async () => {
     const user = userEvent.setup();

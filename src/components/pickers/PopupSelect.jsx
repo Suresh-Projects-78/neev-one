@@ -218,8 +218,14 @@ const PopupSelect = ({
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-activedescendant={activeOptionId}
-        className={`w-full flex items-center justify-between gap-2 px-3 py-2 border rounded-lg text-left ${
-          disabled ? 'ui-sunken ui-muted cursor-not-allowed' : 'ui-surface ui-hover-sunken'
+        /*
+          The same metrics as a text field, because it stands in a row with
+          them. On its own padding and inherited 16px type it was two pixels
+          taller and a size bigger than the City box beside it, which is what
+          made a row of four controls look like two pairs.
+        */
+        className={`ui-input flex items-center justify-between gap-2 text-left ${
+          disabled ? 'ui-sunken ui-muted cursor-not-allowed' : 'ui-hover-sunken'
         }`}
       >
         <span className={displayLabel ? 'ui-fg' : 'ui-subtle'}>{displayLabel || placeholder}</span>

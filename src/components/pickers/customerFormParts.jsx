@@ -81,17 +81,19 @@ const AddressCard = ({ row, index, states, onChange, onRemove, tone, title, subt
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           {/*
-            Brand tint on the address invoices are addressed to, neutral on the
-            rest. The mockup marks the second one in blue; the design system has
-            one accent and it is orange, so the distinction is made by weight
-            rather than by introducing a second hue.
+            Brand on the address invoices are addressed to, blue on the one
+            goods go to. Both are tokens with a dark-mode pair, so the pair
+            holds in either theme; anything past the two built-in places is
+            neutral, or a wall of coloured squares says nothing.
           */}
           <span
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
             style={
               tone === 'brand'
                 ? { backgroundColor: 'rgb(var(--brand) / 0.12)', color: 'rgb(var(--brand))' }
-                : { backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--info))' }
+                : tone === 'blue'
+                  ? { backgroundColor: 'rgb(var(--ov-blue-soft))', color: 'rgb(var(--ov-blue))' }
+                  : { backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--info))' }
             }
             aria-hidden="true"
           >
@@ -99,7 +101,10 @@ const AddressCard = ({ row, index, states, onChange, onRemove, tone, title, subt
           </span>
           <div className="min-w-0">
             {row.builtIn ? (
-              <div className="text-sm font-medium">{title}</div>
+              /* A heading element, and a shade heavier than the fields under
+                 it: the card's name is what you read first when there are
+                 several of them on the tab. */
+              <h5 className="text-sm font-semibold">{title}</h5>
             ) : (
               <input
                 value={row.label}
@@ -260,7 +265,7 @@ export const AddressTab = ({
           states={states}
           onChange={onChange}
           onRemove={onRemove}
-          tone={i === 0 ? 'brand' : 'muted'}
+          tone={i === 0 ? 'brand' : i === 1 ? 'blue' : 'muted'}
           title={i === 0 ? 'Billing Address' : i === 1 ? 'Shipping Address' : r.label || `Address ${i + 1}`}
           subtitle={
             i === 0
