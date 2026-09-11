@@ -388,11 +388,50 @@ export function useDocumentFormKeys({
     // Once, on open. Re-running would steal focus mid-typing.
   }, [autoFocus, formRef]);
 
+  /**
+   * Whether anything has been typed into this document.
+   *
+   * Tracked from the form's own input and change events, which fire when a
+   * person types and not when React writes a value — so a generated number, a
+   * defaulted date and a warehouse that arrives from the server are not
+   * "unsaved work", and the warning stays the one that matters.
+   *
+   * The guard existed and one form of twelve armed it: the invoice passed an
+   * `isDirty` and every other document passed nothing, so closing a tab
+   * half-way through a receipt, a bill or a stock adjustment lost it without a
+   * word. A form that knows better still says so — `isDirty` wins where it is
+   * given — and the rest are covered by having been typed into.
+   */
+  const touched = useRef(false);
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return undefined;
+
+    const onEdit = () => {
+      touched.current = true;
+    };
+    /* Saved is not dirty: the document is on its way out. */
+    const onSubmit = () => {
+      touched.current = false;
+    };
+
+    form.addEventListener('input', onEdit);
+    form.addEventListener('change', onEdit);
+    form.addEventListener('submit', onSubmit);
+    return () => {
+      form.removeEventListener('input', onEdit);
+      form.removeEventListener('change', onEdit);
+      form.removeEventListener('submit', onSubmit);
+    };
+  }, [formRef]);
+
   // The browser's own reload and close, which no in-app dialog can intercept.
   useEffect(() => {
-    if (!isDirty) return undefined;
     const onBeforeUnload = (e) => {
-      if (!cfg.current.isDirty?.()) return;
+      const own = cfg.current.isDirty;
+      const dirty = typeof own === 'function' ? own() : touched.current;
+      if (!dirty) return;
       e.preventDefault();
       // Chrome shows its own wording and ignores the string; setting it is
       // still what arms the prompt in older engines.
