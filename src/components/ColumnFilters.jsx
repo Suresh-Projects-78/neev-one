@@ -45,6 +45,24 @@ const compareValues = (a, b) => {
   return String(a ?? '').localeCompare(String(b ?? ''), undefined, { numeric: true, sensitivity: 'base' });
 };
 
+/**
+ * A date column filters by window, not by operator.
+ *
+ * The text conditions can express one bound — "greater than 2026-09-01" — but
+ * never both at once, and a person looking at a list of dates wants the month,
+ * not an inequality. Dates reach here as ISO (yyyy-mm-dd), which compares
+ * correctly as text, so the window is a string comparison and needs no parsing.
+ */
+const rangeMatches = (cellText, { from, to }) => {
+  const cell = asText(cellText).slice(0, 10);
+  if (!from && !to) return true;
+  /* A row with no date is not inside any window. */
+  if (!cell) return false;
+  if (from && cell < asText(from)) return false;
+  if (to && cell > asText(to)) return false;
+  return true;
+};
+
 const conditionMatches = (cellText, { op, value }) => {
   if (!op) return true;
   const cell = asText(cellText);
@@ -80,8 +98,13 @@ export function useColumnFilters() {
   const setColumn = (key, patch) =>
     setFilters((prev) => {
       const next = { ...prev };
-      const merged = { ...(prev[key] || { values: null, op: '', value: '' }), ...patch };
-      const inert = merged.values === null && !merged.op && asText(merged.value) === '';
+      const merged = { ...(prev[key] || { values: null, op: '', value: '', from: '', to: '' }), ...patch };
+      const inert =
+        merged.values === null &&
+        !merged.op &&
+        asText(merged.value) === '' &&
+        asText(merged.from) === '' &&
+        asText(merged.to) === '';
       if (inert) delete next[key];
       else next[key] = merged;
       return next;
@@ -114,7 +137,7 @@ export function useColumnFilters() {
       others.every(([k, f]) => {
         const cell = asText(extractors?.[k] ? extractors[k](row) : '');
         if (Array.isArray(f.values) && !f.values.includes(cell)) return false;
-        return conditionMatches(cell, f);
+        return rangeMatches(cell, f) && conditionMatches(cell, f);
       })
     );
     const seen = new Set();
@@ -133,7 +156,7 @@ export function useColumnFilters() {
         active.every(([key, f]) => {
           const cell = asText(extractors?.[key] ? extractors[key](row) : '');
           if (Array.isArray(f.values) && !f.values.includes(cell)) return false;
-          return conditionMatches(cell, f);
+          return rangeMatches(cell, f) && conditionMatches(cell, f);
         })
       );
     }
@@ -169,13 +192,16 @@ export function useColumnFilters() {
 /** The panel itself — rendered fixed so a scrolling table cannot clip it. */
 const FilterPanel = ({ column, state, anchorRect, onClose }) => {
   const key = column.key;
-  const current = state.filters[key] || { values: null, op: '', value: '' };
+  const current = state.filters[key] || { values: null, op: '', value: '', from: '', to: '' };
+  const isDate = column.type === 'date';
   const all = useMemo(() => state.valuesFor(key), [state, key]);
 
   const [search, setSearch] = useState('');
   const [checked, setChecked] = useState(() => (current.values === null ? new Set(all) : new Set(current.values)));
   const [op, setOp] = useState(current.op || '');
   const [value, setValue] = useState(current.value || '');
+  const [from, setFrom] = useState(current.from || '');
+  const [to, setTo] = useState(current.to || '');
   const panelRef = useRef(null);
 
   useEffect(() => {
@@ -212,6 +238,8 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
       values: everything ? null : [...checked],
       op,
       value,
+      from,
+      to,
     });
     onClose();
   };
@@ -262,6 +290,26 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
 
       <div>
         <div className="ui-caption mb-1">Filter</div>
+        {isDate ? (
+          /* The window this column used to need a page-wide band for. */
+          <div className="flex items-center gap-1">
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="ui-input !h-8 min-w-0 flex-1 px-2 text-xs"
+              aria-label={`${column.label || key} from`}
+            />
+            <span className="ui-subtle">–</span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="ui-input !h-8 min-w-0 flex-1 px-2 text-xs"
+              aria-label={`${column.label || key} to`}
+            />
+          </div>
+        ) : (
         <div className="flex gap-2">
           <select value={op} onChange={(e) => setOp(e.target.value)} className="ui-select !h-8 flex-1 px-2 text-xs">
             {CONDITIONS.map((c) => (
@@ -280,6 +328,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
             aria-label="Condition value"
           />
         </div>
+        )}
       </div>
 
       <div className="relative">
@@ -335,7 +384,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
  * A header cell that carries its own filter, the way a spreadsheet does: the
  * label stays put and a caret on the right opens the panel. No second row.
  */
-export const ColumnHeader = ({ label, col, state, className = '', align = 'left' }) => {
+export const ColumnHeader = ({ label, col, state, className = '', align = 'left', type = 'text' }) => {
   const [rect, setRect] = useState(null);
   const [localOpen, setLocalOpen] = useState(false);
   const shared = typeof state?.setOpenKey === 'function';
@@ -379,7 +428,7 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
 
       {open && rect ? (
         <FilterPanel
-          column={{ key: col, label: typeof label === 'string' ? label : col }}
+          column={{ key: col, label: typeof label === 'string' ? label : col, type }}
           state={state}
           anchorRect={rect}
           onClose={close}

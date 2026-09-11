@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
@@ -172,5 +172,38 @@ describe('an empty list is centred on what you can see', () => {
     expect(pane).toBeTruthy();
     expect(pane.closest('table')).toBeNull();
     expect(within(pane).getByText('No quotations yet')).toBeInTheDocument();
+  });
+});
+
+describe('no list carries a filter band of its own', () => {
+  /*
+   * Recurring Invoices had three controls in a strip above the table —
+   * customer, frequency, a date window — and all three narrowed columns that
+   * were already sitting underneath with their own filter. It read as a second
+   * toolbar, it is the one piece of furniture the shared shell has no slot for,
+   * and it was the only list that had one.
+   */
+  it('puts the narrowings in the column headings, not above them', () => {
+    render(
+      <RecurringInvoices db={db} setDb={noop} currentCompany={COMPANY} branches={[]} warehouses={[]} />
+    );
+
+    expect(screen.queryByRole('combobox', { name: 'Customer' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Frequency' })).toBeNull();
+    expect(screen.queryByLabelText('Next invoice date from')).toBeNull();
+
+    /* Each of them is a heading that opens its own panel instead. */
+    for (const col of ['Customer', 'Frequency', 'Next invoice date']) {
+      expect(screen.getByLabelText(`Sort and filter ${col}`)).toBeTruthy();
+    }
+  });
+
+  it('opens the date window from the column it narrows', async () => {
+    render(
+      <RecurringInvoices db={db} setDb={noop} currentCompany={COMPANY} branches={[]} warehouses={[]} />
+    );
+    fireEvent.click(screen.getByLabelText('Sort and filter Next invoice date'));
+    expect(screen.getByLabelText('Next invoice date from')).toBeTruthy();
+    expect(screen.getByLabelText('Next invoice date to')).toBeTruthy();
   });
 });
