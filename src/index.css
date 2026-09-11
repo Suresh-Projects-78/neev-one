@@ -723,17 +723,20 @@
      icon rather than on twelve competing labels. Rank is carried by indent
      and weight, which is what a tree is normally read by; hue is the module
      icon's job alone. */
-  .ui-nav-item:not([data-level='module']) {
+  /* The collapse control is excluded throughout: it is not a child of any
+     module, and the indent put its icon half an inch right of every other
+     glyph in the rail, off the line they all share. */
+  .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse) {
     color: rgb(var(--fg-muted));
     font-weight: 400;
     padding-inline-start: 2rem;
   }
-  .ui-nav-item:not([data-level='module']):hover {
+  .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse):hover {
     color: rgb(var(--fg));
   }
   /* A child icon is a bullet, not a landmark. Twelve coloured module glyphs
      are findable; sixty are wallpaper. */
-  .ui-nav-item:not([data-level='module'])[data-tone] svg {
+  .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse)[data-tone] svg {
     color: rgb(var(--fg-subtle));
   }
 

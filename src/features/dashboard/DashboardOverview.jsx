@@ -1,23 +1,38 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
+  AlertCircle,
   AlertTriangle,
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  BarChart3,
   Building2,
   Check,
+  Clock,
   CircleSlash,
   FileText,
+  Landmark,
   Minus,
+  Package,
   Plus,
   Receipt,
   Search,
   TrendingUp,
+  Users,
   Wallet,
 } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '../../utils/money';
-import { bookState, setupSteps, BOOK_NEW, BOOK_SETUP } from './bookState';
+import { bookState, setupSteps, BOOK_NEW, BOOK_SETUP, BOOK_RUNNING } from './bookState';
+import {
+  CashFlowPanel,
+  DueSplitPanel,
+  QuickLinks,
+  RecentActivity,
+  RevenueExpenses,
+  StatCard,
+  ThingsToDo,
+} from './HomeBoard';
 import Illustration from '../../components/ui/Illustration';
 import ChartCard from '../../components/charts/ChartCard';
 import { useTilt } from '../../components/ui/useTilt';
@@ -621,7 +636,7 @@ function NothingBilledYet({ payable, stockValue, company, onNewInvoice }) {
  * than ornament is what reads as considered — and it gives back most of the
  * height to the figures, which is what the page is actually for.
  */
-function DashboardHero({ name, insights, onCommand, actions }) {
+function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
   const [idx, setIdx] = useState(0);
   const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
@@ -670,6 +685,7 @@ function DashboardHero({ name, insights, onCommand, actions }) {
           </div>
         </div>
 
+        <div className="flex flex-col items-end gap-1.5">
         {onCommand ? (
           <button
             type="button"
@@ -693,7 +709,12 @@ function DashboardHero({ name, insights, onCommand, actions }) {
             </span>
           </button>
         ) : null}
+        </div>
       </div>
+
+      {/* Today's date, under the search. A book is read against a date, and
+          the one thing the screen never said was which. */}
+      {dateLabel ? <div className="ui-caption mt-1.5 text-end">{dateLabel}</div> : null}
 
       {actions?.length ? (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -1074,6 +1095,92 @@ export default function DashboardOverview({
    */
   const heroName = String(userName || '').trim().split(/\s+/)[0] || nameFromEmail(userEmail);
 
+  /**
+   * The three windows a due date falls into: past, this week, later.
+   *
+   * The ageing buckets answer a different question — how long a debt has been
+   * late — and cannot be reused here. A morning asks what is already a problem,
+   * what becomes one this week, and what can wait.
+   */
+  const dueSplit = (docs) => {
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    const week = new Date(today.getTime() + 7 * DAY);
+    let overdue = 0;
+    let soon = 0;
+    let later = 0;
+    for (const d of docs) {
+      const balance = Number(d.balance ?? d.total ?? 0);
+      if (balance <= 0) continue;
+      const due = d.dueDate || d.date;
+      const when = due ? new Date(`${String(due).slice(0, 10)}T00:00:00`) : null;
+      if (when && when < today) overdue += balance;
+      else if (when && when <= week) soon += balance;
+      else later += balance;
+    }
+    return { overdue, soon, later };
+  };
+
+  const openInvoices = useMemo(
+    () =>
+      postedInvoices.filter((i) => {
+        const st = String(i.status || '').toLowerCase();
+        return st !== 'paid' && st !== 'cancelled';
+      }),
+    [postedInvoices]
+  );
+
+  const openBills = useMemo(
+    () =>
+      (Array.isArray(db?.bills) ? db.bills : [])
+        .filter((b) => b.companyId === currentCompany?.id)
+        .filter((b) => {
+          const st = String(b.status || '').toLowerCase();
+          return st !== 'draft' && st !== 'paid' && st !== 'cancelled';
+        }),
+    [db, currentCompany]
+  );
+
+  const recvSplit = useMemo(() => dueSplit(openInvoices), [openInvoices, now]);
+  const paySplit = useMemo(() => dueSplit(openBills), [openBills, now]);
+
+  /** This month against last, from the same series the chart draws. */
+  const salesThisMonth = useMemo(() => {
+    const months = flow.months;
+    const thisM = months[months.length - 1]?.inAmt || 0;
+    const lastM = months[months.length - 2]?.inAmt || 0;
+    const pct = lastM > 0 ? Math.round(((thisM - lastM) / lastM) * 1000) / 10 : null;
+    return { value: thisM, pct };
+  }, [flow]);
+
+  /** The last few documents raised, whatever kind they were. */
+  const activity = useMemo(() => {
+    const rows = [];
+    const push = (doc, kind, party, tone, status) =>
+      rows.push({
+        key: `${kind}-${doc.id}`,
+        number: String(doc.number || '').trim() || '—',
+        party: String(party || '').trim() || '—',
+        kind,
+        amount: Number(doc.total ?? doc.amount ?? 0),
+        status,
+        tone,
+        date: String(doc.date || ''),
+      });
+
+    for (const i of postedInvoices) {
+      const st = String(i.status || '').toLowerCase();
+      push(i, 'Invoice', i.customerName, st === 'paid' ? 'green' : st === 'overdue' ? 'red' : 'blue',
+        st === 'paid' ? 'Paid' : st === 'overdue' ? 'Overdue' : 'Sent');
+    }
+    for (const b of openBills) push(b, 'Bill', b.vendorName, 'amber', 'Due');
+    for (const r of (Array.isArray(db?.payments) ? db.payments : []).filter((x) => x.companyId === currentCompany?.id)) {
+      push(r, 'Receipt', r.customerName, 'green', 'Received');
+    }
+
+    return rows.sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 5);
+  }, [postedInvoices, openBills, db, currentCompany]);
+
   const quickActions = [
     onNewInvoice ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice } : null,
     onRecordReceipt ? { label: 'Record receipt', Icon: Receipt, onClick: onRecordReceipt } : null,
@@ -1081,6 +1188,189 @@ export default function DashboardOverview({
     onOpenCustomers ? { label: 'Add customer', Icon: Plus, onClick: onOpenCustomers } : null,
     onOpenReports ? { label: 'Reports', Icon: TrendingUp, onClick: onOpenReports } : null,
   ].filter(Boolean);
+
+  /*
+   * Home, once the books are running.
+   *
+   * The setup list answers "what do I still have to do" and this answers "what
+   * is happening" — a different screen, not a longer version of the same one.
+   * The analytical panels below are for the states before this one; a running
+   * book gets the four figures, the two panels with dates in them, and the
+   * three summaries underneath.
+   */
+  if (state === BOOK_RUNNING) {
+    const nav = (key) => (onNavigate ? () => onNavigate(key) : null);
+    const todo = [
+      recvSplit.overdue > 0
+        ? {
+            key: 'overdue',
+            tone: 'red',
+            Icon: AlertCircle,
+            text: `${formatMoney(recvSplit.overdue, currentCompany)} overdue from customers`,
+            onSelect: onOpenInvoices || nav('invoices'),
+          }
+        : null,
+      paySplit.soon > 0
+        ? {
+            key: 'billsSoon',
+            tone: 'amber',
+            Icon: Clock,
+            text: `${formatMoney(paySplit.soon, currentCompany)} of bills due this week`,
+            onSelect: nav('bills'),
+          }
+        : null,
+      Number.isFinite(gst?.daysToGstr1) && gst.daysToGstr1 >= 0
+        ? {
+            key: 'gstr1',
+            tone: 'blue',
+            Icon: FileText,
+            text: `GSTR-1 due in ${gst.daysToGstr1} day${gst.daysToGstr1 === 1 ? '' : 's'}`,
+            onSelect: nav('gstr1'),
+          }
+        : null,
+      draftCount
+        ? {
+            key: 'drafts',
+            tone: 'violet',
+            Icon: FileText,
+            text: `${draftCount} draft${draftCount === 1 ? '' : 's'} not sent yet`,
+            onSelect: onOpenInvoices || nav('invoices'),
+          }
+        : null,
+    ].filter(Boolean);
+
+    return (
+      <div className="ui-hero-ground space-y-6">
+        <DashboardHero
+          name={heroName}
+          insights={heroInsights}
+          onCommand={onOpenCommand}
+          actions={quickActions}
+          dateLabel={new Date(now).toLocaleDateString(undefined, {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          })}
+        />
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="min-w-0 space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard
+                tone="red"
+                Icon={FileText}
+                label="Receivables"
+                value={recv.total}
+                company={currentCompany}
+                foot={
+                  recvSplit.overdue > 0
+                    ? { text: `${formatMoney(recvSplit.overdue, currentCompany)} overdue`, Icon: AlertCircle, tone: 'rgb(var(--ov-red))' }
+                    : { text: 'nothing overdue' }
+                }
+                onFoot={onOpenInvoices || nav('invoices')}
+              />
+              <StatCard
+                tone="amber"
+                Icon={Wallet}
+                label="Payables"
+                value={pay.total}
+                company={currentCompany}
+                foot={
+                  paySplit.soon > 0
+                    ? { text: `${formatMoney(paySplit.soon, currentCompany)} due soon`, Icon: Clock, tone: 'rgb(var(--ov-amber))' }
+                    : { text: 'nothing due this week' }
+                }
+                onFoot={nav('bills')}
+              />
+              <StatCard
+                tone="green"
+                Icon={Landmark}
+                label="Cash & Bank"
+                value={cash.total}
+                company={currentCompany}
+                foot={{ text: `${cash.accountCount} account${cash.accountCount === 1 ? '' : 's'}` }}
+                onFoot={onOpenCashBank || nav('cashBank')}
+              />
+              <StatCard
+                tone="violet"
+                Icon={BarChart3}
+                label="Sales this month"
+                value={salesThisMonth.value}
+                company={currentCompany}
+                foot={
+                  salesThisMonth.pct === null
+                    ? { text: 'no month to compare with' }
+                    : {
+                        text: `${salesThisMonth.pct >= 0 ? '+' : ''}${salesThisMonth.pct}% vs last month`,
+                        Icon: TrendingUp,
+                        tone: salesThisMonth.pct >= 0 ? 'rgb(var(--ov-green))' : 'rgb(var(--ov-red))',
+                      }
+                }
+                onFoot={onOpenInvoices || nav('invoices')}
+              />
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+              <RevenueExpenses
+                months={flow.months}
+                peak={flow.peak}
+                any={flow.any}
+                company={currentCompany}
+              />
+              <CashFlowPanel
+                moneyIn={flow.months[flow.months.length - 1]?.inAmt || 0}
+                moneyOut={flow.months[flow.months.length - 1]?.outAmt || 0}
+                company={currentCompany}
+                label="This month"
+              />
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <DueSplitPanel
+                title="Receivables"
+                Icon={FileText}
+                tone="red"
+                company={currentCompany}
+                onViewAll={onOpenInvoices || nav('invoices')}
+                rows={[
+                  { label: 'Overdue', value: recvSplit.overdue, tone: 'red' },
+                  { label: 'Due in 7 days', value: recvSplit.soon },
+                  { label: 'Due later', value: recvSplit.later },
+                ]}
+              />
+              <DueSplitPanel
+                title="Payables"
+                Icon={Wallet}
+                tone="amber"
+                company={currentCompany}
+                onViewAll={nav('bills')}
+                rows={[
+                  { label: 'Overdue', value: paySplit.overdue, tone: 'red' },
+                  { label: 'Due in 7 days', value: paySplit.soon },
+                  { label: 'Due later', value: paySplit.later },
+                ]}
+              />
+              <RecentActivity rows={activity} company={currentCompany} onViewAll={onOpenInvoices || nav('invoices')} />
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <ThingsToDo items={todo} onOpenAll={onOpenInvoices || nav('invoices')} />
+            <QuickLinks
+              links={[
+                { key: 'customer', label: 'Create customer', Icon: Users, tone: 'blue', onSelect: onOpenCustomers || nav('customers') },
+                { key: 'vendor', label: 'Create vendor', Icon: Users, tone: 'violet', onSelect: nav('vendors') },
+                { key: 'item', label: 'Add item or service', Icon: Package, tone: 'amber', onSelect: nav('items') },
+                { key: 'bank', label: 'Bank reconciliation', Icon: Landmark, tone: 'green', onSelect: onOpenCashBank || nav('cashBank') },
+                { key: 'reports', label: 'View reports', Icon: BarChart3, tone: 'blue', onSelect: onOpenReports || nav('reports') },
+              ].filter((l) => l.onSelect)}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="ui-hero-ground space-y-6">
