@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +8,7 @@ import {
   SETTINGS_CATEGORIES,
   SETTINGS_ITEMS,
   breadcrumbFor,
+  isSettingsKey,
   groupedForCategory,
   searchSettings,
   visibleCategories,
@@ -124,5 +126,76 @@ describe('breadcrumbs', () => {
 
   it('falls back to Settings alone for a key it does not know', () => {
     expect(breadcrumbFor('nonsense').map((c) => c.label)).toEqual(['Settings']);
+  });
+});
+
+describe('a whole screen is not framed as a settings panel', () => {
+  /*
+   * Recurring Invoices arrived in Settings with its own title, toolbar, five
+   * summary tiles and a filterable table — and the settings frame added a
+   * breadcrumb and a second copy of the title above it, then squeezed the
+   * table into the column left over beside the settings nav.
+   *
+   * The rule that catches the next one: if the screen a setting opens renders
+   * DocumentListShell, it is a list, not a setting, and must not be framed.
+   */
+  const SRC_DIR = SRC;
+
+  /** The component App returns for a key, read from its case arm. */
+  const componentFor = (key) => {
+    const at = APP.indexOf(`case '${key}':`);
+    if (at < 0) return null;
+    const arm = APP.slice(at, at + 800);
+    const m = arm.match(/return\s*\(?\s*<([A-Z][A-Za-z0-9]*)/);
+    return m ? m[1] : null;
+  };
+
+  /**
+   * Whether that component builds a document list.
+   *
+   * Scoped to the component's own body, not its file: most of these live in
+   * App.jsx, which mentions DocumentListShell in dozens of screens that have
+   * nothing to do with this one. A file-level grep called every one of them a
+   * list.
+   */
+  const isDocumentList = (name) => {
+    if (!name) return false;
+    const files = execSync(
+      `grep -rl "const ${name} = \\|function ${name}(" ${JSON.stringify(SRC_DIR)} --include=*.jsx || true`,
+      { encoding: 'utf8' }
+    )
+      .split('\n')
+      .filter(Boolean);
+
+    return files.some((f) => {
+      const src = readFileSync(f, 'utf8');
+      const at = Math.max(src.indexOf(`const ${name} = `), src.indexOf(`function ${name}(`));
+      if (at < 0) return false;
+      /* To the next top-level declaration, which is where this one ends. */
+      const rest = src.slice(at + 1);
+      const next = rest.search(/\n(?:export )?(?:const|function) [A-Z]/);
+      return (next < 0 ? rest : rest.slice(0, next)).includes('DocumentListShell');
+    });
+  };
+
+  it('no framed setting opens onto a document list', () => {
+    const framed = SETTINGS_ITEMS.filter((i) => !i.standalone);
+    const wrong = framed.filter((i) => isDocumentList(componentFor(i.key)));
+    expect(wrong.map((i) => i.key)).toEqual([]);
+  });
+
+  it('opens the standalone ones outside the frame', () => {
+    expect(isSettingsKey('recurringInvoices')).toBe(false);
+    expect(isSettingsKey('paymentReminders')).toBe(false);
+    /* A real settings panel still gets the frame. */
+    expect(isSettingsKey('settingsTax')).toBe(true);
+  });
+
+  it('still lists and finds them in Settings', () => {
+    /* Leaving the frame must not mean leaving Settings — this is where people
+       look for them. */
+    expect(searchSettings('recurring', all).map((i) => i.key)).toContain('recurringInvoices');
+    const business = visibleCategories(all).find((c) => c.id === 'business');
+    expect(business.items.map((i) => i.key)).toContain('recurringInvoices');
   });
 });

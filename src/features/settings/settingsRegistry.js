@@ -103,7 +103,7 @@ export const SETTINGS_ITEMS = [
   { key: 'settingsInvoiceFields', title: 'Invoice Settings', category: 'business', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Which fields an invoice asks for, and what prints on it.', keywords: ['invoice fields', 'numbering', 'declaration', 'e-invoice'] },
   { key: 'settingsCustomFields', title: 'Custom Fields', category: 'business', icon: Plus, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Your own fields on a document, and where they appear.', keywords: ['extra fields', 'reference', 'udf'] },
   { key: 'discountRules', title: 'Discount Rules', category: 'business', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules', group: 'Documents', description: 'Standing discounts and who they apply to.', keywords: ['discount', 'scheme', 'offer'] },
-  { key: 'recurringInvoices', title: 'Recurring Invoices', category: 'business', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices', group: 'Automation', description: 'Schedules that raise their own invoices — rent, AMC, retainers.', keywords: ['schedule', 'repeat', 'subscription', 'amc'] },
+  { key: 'recurringInvoices', standalone: true, title: 'Recurring Invoices', category: 'business', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices', group: 'Automation', description: 'Schedules that raise their own invoices — rent, AMC, retainers.', keywords: ['schedule', 'repeat', 'subscription', 'amc'] },
 
   // Finance & accounting
   { key: 'settingsAccounting', title: 'Accounting', category: 'finance', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', description: 'Posting rules, rounding and the ledgers documents default to.', keywords: ['ledger', 'posting', 'rounding', 'journal'] },
@@ -126,17 +126,29 @@ export const SETTINGS_ITEMS = [
 
   // Platform & communication
   { key: 'settingsEmail', title: 'Email', category: 'platform', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications', group: 'Communication', description: 'The address documents are sent from, and what they say.', keywords: ['smtp', 'send', 'mail', 'from address'] },
-  { key: 'paymentReminders', title: 'Payment Reminders', category: 'platform', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders', group: 'Communication', description: 'When a customer is chased for an overdue invoice.', keywords: ['reminder', 'dunning', 'chase', 'overdue'] },
-  { key: 'invoiceTemplates', title: 'Invoice Templates', category: 'platform', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW', group: 'Documents', description: 'What a printed document looks like.', keywords: ['template', 'print', 'layout', 'letterhead'] },
+  { key: 'paymentReminders', standalone: true, title: 'Payment Reminders', category: 'platform', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders', group: 'Communication', description: 'When a customer is chased for an overdue invoice.', keywords: ['reminder', 'dunning', 'chase', 'overdue'] },
+  { key: 'invoiceTemplates', standalone: true, title: 'Invoice Templates', category: 'platform', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW', group: 'Documents', description: 'What a printed document looks like.', keywords: ['template', 'print', 'layout', 'letterhead'] },
   { key: 'docNumbering', title: 'Numbering', category: 'platform', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW', group: 'Documents', description: 'The prefix and next number for every kind of document.', keywords: ['prefix', 'series', 'sequence', 'next number'] },
   { key: 'settingsDocuments', title: 'Documents', category: 'platform', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Terms, declarations and the notes documents carry.', keywords: ['terms', 'declaration', 'notes', 'footer'] },
-  { key: 'dataImport', title: 'Data & Import', category: 'platform', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports', group: 'System', description: 'Bring journals, invoices and bills in from a file.', keywords: ['import', 'csv', 'migrate', 'template', 'upload'] },
+  { key: 'dataImport', standalone: true, title: 'Data & Import', category: 'platform', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports', group: 'System', description: 'Bring journals, invoices and bills in from a file.', keywords: ['import', 'csv', 'migrate', 'template', 'upload'] },
 ];
 
-/** Every settings screen key, for deciding whether a screen belongs in here. */
+/**
+ * Every settings screen key, for deciding whether a screen belongs in here.
+ *
+ * `standalone` items are the exception: they are listed and searched here
+ * because this is where people look for them, but they are whole screens, not
+ * settings panels. Recurring Invoices is a document list with its own title,
+ * toolbar, summary tiles and table; Templates and Import are errands with
+ * their own way back. Framing one of those in the settings chrome gave it two
+ * titles, two ways back, and a table squeezed into the column left over beside
+ * the settings nav. They open at full width instead.
+ */
 export const SETTINGS_KEYS = new Set(SETTINGS_ITEMS.map((i) => i.key));
 
-export const isSettingsKey = (key) => SETTINGS_KEYS.has(String(key || ''));
+const FRAMED_KEYS = new Set(SETTINGS_ITEMS.filter((i) => !i.standalone).map((i) => i.key));
+
+export const isSettingsKey = (key) => FRAMED_KEYS.has(String(key || ''));
 
 export const settingFor = (key) => SETTINGS_ITEMS.find((i) => i.key === String(key || '')) || null;
 
