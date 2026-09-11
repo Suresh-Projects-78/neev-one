@@ -133,9 +133,12 @@ describe('the two columns of Basic Details', () => {
      * the GST line and its control on the GSTIN line. Left to stack at their
      * natural heights the two halves drift a few pixels a row.
      */
-    const label = screen.getByText('Customer Group');
-    expect(label.parentElement.className).toMatch(/lg:row-start-1\b/);
-    expect(screen.getByLabelText('Customer Group').closest('div').className).toMatch(/lg:row-start-2\b/);
+    /* Both halves are the same shape — a name beside its control — so the
+       group's row is one row, not a label row and a control row. */
+    const row = screen.getByText('Customer Group').closest('div.grid');
+    expect(row.className).toMatch(/lg:row-start-1\b/);
+    expect(row.className).toMatch(/lg:col-start-2\b/);
+    expect(screen.getByText('Currency').closest('div.grid').className).toMatch(/lg:row-start-2\b/);
 
     /* And a control holding one short word does not run the half-card. */
     /* And both columns' controls are the one width — they differed by

@@ -3734,13 +3734,9 @@ export const ChartAccountForm = ({
         </div>
       </PartyFormRow>
 
-      {/* The other half sits on the same rows: the group's name on the ledger
-          name's line and its control on the opening balance's, so the two
-          columns cannot drift apart. */}
-      <div className="flex w-full items-center sm:max-w-[25rem] lg:col-start-2 lg:row-start-1">
-        <span className="ui-label mb-0 block">Ledger Group *</span>
-      </div>
-      <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-2">
+      {/* The other half is the same shape as this one — a name beside its
+          control — on the grid's own rows, so the two cannot drift apart. */}
+      <PartyFormRow className="lg:col-start-2 lg:row-start-1" label="Ledger Group" required hint="The group decides which statement this ledger lands on, and which tabs the form offers.">
         <PopupSelect
           label={null}
           ariaLabel="Ledger Group *"
@@ -3777,12 +3773,9 @@ export const ChartAccountForm = ({
             Entries have been posted to this ledger, so its group is fixed — moving it would move those figures onto another statement.
           </p>
         ) : null}
-      </div>
+      </PartyFormRow>
 
-      <div className="flex w-full items-center sm:max-w-[25rem] lg:col-start-2 lg:row-start-3">
-        <label className="ui-label mb-0 block" htmlFor="ledger-currency">Currency *</label>
-      </div>
-      <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-4">
+      <PartyFormRow className="lg:col-start-2 lg:row-start-2" label="Currency" required htmlFor="ledger-currency" hint="The currency this ledger is kept in. The books are reported in the company's base currency.">
         <select
           id="ledger-currency"
           value={formData.currency}
@@ -3793,7 +3786,7 @@ export const ChartAccountForm = ({
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </select>
-      </div>
+      </PartyFormRow>
     </div>
   );
 

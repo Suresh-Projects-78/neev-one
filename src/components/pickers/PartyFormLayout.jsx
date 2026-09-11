@@ -231,22 +231,12 @@ export function PartyFormLayout({
           </FormRow>
 
             {/*
-              This side keeps the other side's rows.
-
-              A label and its control are two of the same rows the left uses:
-              the group's name sits on the GST line and its control on the
-              GSTIN line, Currency on the name line and its control on the
-              balance line.
-
-              `max-w-md` because a control holding one short word, run out to
-              the full half-card, reads as a box somebody forgot to fill.
+              Both halves are the same shape: a name, then its control, on the
+              grid's own rows. Stacked with its label above, this side read as a
+              different kind of form from the one beside it, and took two rows
+              to say what the other said in one.
             */}
-              {/* The radios opposite carry their own top padding, so this one
-                  takes the same rather than centring in a row they do not fill. */}
-              <div className="flex w-full items-start pt-1.5 sm:max-w-[25rem] lg:col-start-2 lg:row-start-1">
-                <span className="ui-label mb-0 block">{cfg.noun} Group</span>
-              </div>
-              <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-2">
+              <FormRow className="lg:col-start-2 lg:row-start-1" label={`${cfg.noun} Group`} hint={cfg.groupHint}>
                 <PopupSelect
                   label={null}
                   ariaLabel={`${cfg.noun} Group`}
@@ -260,12 +250,9 @@ export function PartyFormLayout({
                   customActionText="Create new Group"
                   onCustomAction={(typed) => onCreateGroup(String(typed || '').trim())}
                 />
-              </div>
+              </FormRow>
 
-              <div className="flex w-full items-center sm:max-w-[25rem] lg:col-start-2 lg:row-start-3">
-                <span className="ui-label mb-0 block">Currency</span>
-              </div>
-              <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-4">
+              <FormRow className="lg:col-start-2 lg:row-start-2" label="Currency" hint={cfg.currencyHint}>
                 <PopupSelect
                   label={null}
                   ariaLabel="Currency"
@@ -275,7 +262,7 @@ export function PartyFormLayout({
                   options={CURRENCY_OPTIONS}
                   placeholder="Select currency"
                 />
-              </div>
+              </FormRow>
           </div>
         </section>
 

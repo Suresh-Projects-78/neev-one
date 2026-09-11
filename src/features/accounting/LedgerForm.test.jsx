@@ -354,9 +354,10 @@ describe('the two columns of Basic Details', () => {
   it('puts the halves on the same rows', () => {
     renderForm({ fullPage: true });
     expect(rowOf(screen.getByLabelText(/^Ledger Name/).closest('div.grid'))).toBe('1');
-    expect(rowOf(screen.getByText('Ledger Group *').parentElement)).toBe('1');
+    /* The label is beside its control now, so the row is the pair. */
+    expect(rowOf(screen.getByText('Ledger Group').closest('div.grid'))).toBe('1');
     expect(rowOf(screen.getByLabelText('Opening Balance').closest('div.grid'))).toBe('2');
-    expect(rowOf(screen.getByLabelText('Ledger Group *').closest('div'))).toBe('2');
+    expect(rowOf(screen.getByText('Currency').closest('div.grid'))).toBe('2');
   });
 
   it('gives every control the one width', () => {
