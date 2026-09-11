@@ -42,7 +42,14 @@ export default function HeroBand({
           /* Pinned to the foot of the band, clear of the search above it.
              Given the whole height it was squeezed into whatever the band
              happened to be and printed over the search box. */
-          className="pointer-events-none absolute inset-y-0 end-0 hidden w-[28rem] items-stretch justify-end lg:flex"
+          /*
+            Taller than the band, deliberately. The drawing is wider than it is
+            tall, so inside the band it was limited by the band's height and
+            widening its box did nothing at all. It reaches a little above and
+            below instead — the band keeps the height its words need, and the
+            picture gets the size the design draws it at.
+          */
+          className="pointer-events-none absolute -top-6 -bottom-5 end-0 hidden w-[30rem] items-stretch justify-end lg:flex"
           aria-hidden="true"
         >
           {art}
