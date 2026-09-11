@@ -40,9 +40,31 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
   const initial = useMemo(() => {
     const d = initialData && typeof initialData === 'object' ? initialData : null;
+
+    /*
+     * Who the receipt is from, even when the document only knows their name.
+     *
+     * Recording a receipt from an invoice row prefilled the amount and the
+     * reference and left the customer empty, so the one field that decides
+     * which invoices can be settled had to be found again by hand. An invoice
+     * that came back from the server carries `customerName` and no local id —
+     * the id belongs to this browser's copy of the master — so the name is
+     * matched when the id is missing.
+     */
+    const byName = () => {
+      const want = String(d?.customerName || '').trim().toLowerCase();
+      if (!want) return '';
+      const match = (Array.isArray(db?.customers) ? db.customers : []).find(
+        (c) =>
+          String(c?.companyId) === String(companyId) &&
+          [c?.displayName, c?.name].some((n) => String(n || '').trim().toLowerCase() === want)
+      );
+      return match ? String(match.id) : '';
+    };
+
     return {
       date: String(d?.date || '').trim() || new Date().toISOString().slice(0, 10),
-      customerId: d?.customerId !== undefined && d?.customerId !== null ? String(d.customerId) : '',
+      customerId: d?.customerId !== undefined && d?.customerId !== null && String(d.customerId) !== '' ? String(d.customerId) : byName(),
       amount: d?.amount !== undefined && d?.amount !== null ? String(d.amount) : '',
       mode: String(d?.mode || '').trim() || 'Cash',
       ledgerAccountId: String(d?.ledgerAccountId || '').trim(),
@@ -51,7 +73,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       cashBankAccountId: d?.cashBankAccountId,
       sourceBankTransactionId: d?.sourceBankTransactionId,
     };
-  }, [initialData]);
+  }, [initialData, db?.customers, companyId]);
 
   const [formData, setFormData] = useState(() => ({
     date: initial.date,

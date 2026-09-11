@@ -5061,7 +5061,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               </div>
             ) : null}
 
-            <div className="pt-1" hidden={!tdsPickerOpen && !!formData.tdsSection}>
+            {/* Open only while a section is being chosen. Closed, the line
+                above offers to open it and the totals carry the figure — both
+                at once was the chooser and its own opener on screen together. */}
+            <div className="pt-1" hidden={!tdsPickerOpen}>
               <label className="ui-label" htmlFor="invoice-tds-section">
                 TDS deduction <span className="ui-subtle font-normal">(if the customer deducts)</span>
               </label>

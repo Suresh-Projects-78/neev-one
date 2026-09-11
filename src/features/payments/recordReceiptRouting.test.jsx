@@ -84,3 +84,50 @@ describe('recording money against an invoice', () => {
     expect(openModal).toHaveBeenCalled();
   });
 });
+
+describe('a receipt started from an invoice row', () => {
+  /*
+   * The amount and the reference prefilled and the customer did not, so the one
+   * field that decides which invoices can be settled had to be found again by
+   * hand. An invoice that came back from the server carries the customer's name
+   * and no local id — the id belongs to this browser's copy of the master.
+   */
+  const company = { id: 1, name: 'Neev Steels', state: 'Karnataka' };
+  const db = {
+    customers: [{ id: 7, companyId: 1, name: 'Acme Traders', displayName: 'Acme Traders' }],
+    invoices: [],
+    receipts: [],
+    creditNotes: [],
+    chartOfAccounts: [],
+  };
+
+  it('finds the customer by name when the invoice carries no local id', async () => {
+    const { default: RecordReceiptForm } = await import('./RecordReceiptForm');
+    render(
+      <RecordReceiptForm
+        db={db}
+        setDb={() => {}}
+        currentCompany={company}
+        onClose={() => {}}
+        initialData={{ customerName: 'Acme Traders', amount: 11800, reference: 'INV-1' }}
+      />
+    );
+
+    expect(await screen.findByText('Acme Traders')).toBeInTheDocument();
+  });
+
+  it('still prefers the id when the document has one', async () => {
+    const { default: RecordReceiptForm } = await import('./RecordReceiptForm');
+    render(
+      <RecordReceiptForm
+        db={db}
+        setDb={() => {}}
+        currentCompany={company}
+        onClose={() => {}}
+        initialData={{ customerId: 7, customerName: 'Someone else', amount: 100 }}
+      />
+    );
+
+    expect(await screen.findByText('Acme Traders')).toBeInTheDocument();
+  });
+});

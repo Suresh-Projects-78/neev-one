@@ -276,4 +276,27 @@ describe('TDS is chosen once, then out of the way', () => {
     expect(screen.getByRole('button', { name: /TDS deduction/i })).toBeInTheDocument();
     expect(screen.queryByLabelText('invoice-tds-section')).toBeNull();
   });
+
+  /*
+   * One or the other. The chooser was hidden only once a section had been
+   * picked, so on a new invoice the opener and the thing it opens were both on
+   * screen — two ways to do the same thing, six inches apart.
+   */
+  it('does not show the chooser and its own opener at once', async () => {
+    const { InvoiceForm } = await import('./index');
+    render(<InvoiceForm db={baseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+
+    const chooser = document.getElementById('invoice-tds-section');
+    expect(chooser?.closest('[hidden]')).toBeTruthy();
+  });
+
+  it('opens the chooser when the opener is pressed, and hides the opener', async () => {
+    const user = (await import('@testing-library/user-event')).default.setup();
+    const { InvoiceForm } = await import('./index');
+    render(<InvoiceForm db={baseDb()} setDb={() => {}} currentCompany={COMPANY} onClose={() => {}} />);
+
+    await user.click(screen.getByRole('button', { name: /TDS deduction/i }));
+    expect(document.getElementById('invoice-tds-section')?.closest('[hidden]')).toBeFalsy();
+    expect(screen.queryByRole('button', { name: /^\+ TDS deduction/i })).toBeNull();
+  });
 });
