@@ -153,6 +153,9 @@ import { PermissionProvider } from './permissions/PermissionContext';
 import { usePermissions } from './permissions/usePermissions';
 import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
+import SettingsHub from './features/settings/SettingsHub';
+import SettingsWorkspace from './features/settings/SettingsWorkspace';
+import { isSettingsKey, visibleSettings } from './features/settings/settingsRegistry';
 import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
@@ -11839,84 +11842,15 @@ const AppShell = () => {
           { key: 'settingsTerms', label: 'Terms & Conditions', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
         ],
       },
-            {
-        type: 'group',
-        key: 'settingsMenu',
-        label: 'Settings',
-        tone: 'settings',
-        icon: PhSettings,
-        ph: true,
-        /*
-         * Structured to the settings map, so the order and the section names
-         * are the ones the business asked for rather than the order these
-         * screens happened to get built in.
-         *
-         * Only screens that exist are listed. The map also calls for
-         * Automation and Integrations, and for per-module preference panes
-         * under Business — none of which are built. Listing them here as dead
-         * links would make the product look finished and behave broken, so
-         * they are tracked outside the rail until they do something.
-         */
-        items: [
-          { type: 'subgroup', label: 'Organisation' },
-          { key: 'settingsCompany', label: 'Company Profile', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsBranches', label: 'Branches', icon: Building2, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'branches', state: branchCountLabel },
-          { key: 'settingsWarehouses', label: 'Warehouses', icon: Package, perm: 'MASTERS::Company/Branch setup::VIEW', feature: 'warehouses', state: warehouseCountLabel },
-          { key: 'yearEndClose', label: 'Financial Year', icon: Settings, perm: 'ACCOUNTING::Ledger::VIEW' },
-          { key: 'settingsCurrencies', label: 'Currency', icon: Coins, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'multiCurrency' },
-
-          { type: 'subgroup', label: 'Business' },
-          /*
-            Modules sits above Preferences on purpose. It is the same settings
-            asked at the level a business thinks in — do you hold stock — and it
-            is where somebody goes to turn a part of the product on. Preferences
-            is the forty individual switches, for tuning what is already running.
-          */
-          { key: 'settingsModules', label: 'Modules', icon: Boxes, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsFeatures', label: 'Preferences', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', state: featureCountLabel },
-          { key: 'settingsSales', label: 'Sales', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsPurchases', label: 'Purchases', icon: ShoppingCart, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsInventory', label: 'Inventory', icon: Package, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsAccounting', label: 'Accounting', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsPaymentsReceipts', label: 'Payments', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsDocuments', label: 'Documents', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsInvoiceFields', label: 'Invoice Settings', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsCustomFields', label: 'Custom Fields', icon: Plus, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'discountRules', label: 'Discount Rules', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules' },
-
-          { type: 'subgroup', label: 'Tax & Compliance' },
-          { key: 'settingsTax', label: 'GST', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW', state: gstStateLabel },
-          { key: 'gstRates', label: 'Tax Rates', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW' },
-
-          { type: 'subgroup', label: 'Account' },
-          { key: 'settingsAccount', label: 'Overview', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsBilling', label: 'Billing', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW' },
-          { key: 'settingsDataBackup', label: 'Data Backup', icon: Building2, perm: 'SETTINGS::Company data::VIEW' },
-
-          { type: 'subgroup', label: 'Users & Access' },
-          { key: 'settingsUsers', label: 'Users', icon: Users, perm: 'SETTINGS::Users::VIEW' },
-          { key: 'settingsRoles', label: 'Roles', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
-          { key: 'settingsPermissions', label: 'Permissions', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
-          { key: 'settingsGovernance', label: 'Approval Workflows', icon: Shield, perm: 'SETTINGS::Roles::VIEW' },
-          { key: 'settingsSecurity', label: 'Login & Security', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
-          { key: 'settingsAudit', label: 'Audit Trail', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
-          { key: 'settingsSso', label: 'Single Sign-On', icon: Shield, perm: 'SETTINGS::Users::VIEW' },
-
-          { type: 'subgroup', label: 'Communication' },
-          { key: 'settingsEmail', label: 'Email', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', feature: 'notifications', state: emailStateLabel },
-          { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
-
-          { type: 'subgroup', label: 'Documents' },
-          { key: 'invoiceTemplates', label: 'Invoice Templates', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW' },
-          { key: 'docNumbering', label: 'Numbering', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW' },
-
-          { type: 'subgroup', label: 'Automation' },
-          { key: 'recurringInvoices', label: 'Recurring', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices' },
-
-          { type: 'subgroup', label: 'System' },
-          { key: 'dataImport', label: 'Data & Import', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports' },
-        ],
-      },
+            /*
+       * One entry, not a group of thirty-four.
+       *
+       * Expanded, Settings pushed every other module off the screen and became
+       * something you scrolled rather than read. It opens its own workspace
+       * now — a hub of six categories, each with its settings beside the page
+       * they configure — so the rail stays a list of what the product does.
+       */
+      { type: 'item', key: 'settings', label: 'Settings', icon: PhSettings, tone: 'settings', ph: true, perm: 'SETTINGS::Company Profile::VIEW' },
     ],
     [branchCountLabel, warehouseCountLabel, featureCountLabel, gstStateLabel, emailStateLabel]
   );
@@ -11926,19 +11860,20 @@ const AppShell = () => {
    * a back button that names a screen differently from the menu it came from
    * is a back button nobody trusts.
    */
-  const screenLabel = useCallback(
-    (key) => {
-      const want = String(key || '');
-      for (const node of navModel || []) {
-        if (node?.key === want && node.label) return node.label;
-        for (const item of node?.items || []) {
-          if (String(item?.key) === want) return item.label;
-        }
+  /*
+   * A plain function: this is a lookup over a dozen entries, run when a button
+   * needs its label, and nothing about it is worth a memo.
+   */
+  const screenLabel = (key) => {
+    const want = String(key || '');
+    for (const node of navModel || []) {
+      if (node?.key === want && node.label) return node.label;
+      for (const item of node?.items || []) {
+        if (String(item?.key) === want) return item.label;
       }
-      return 'Home';
-    },
-    [navModel]
-  );
+    }
+    return 'Home';
+  };
 
 
   // Hide anything the user cannot open. The server re-checks on every request;
@@ -12087,6 +12022,19 @@ const AppShell = () => {
     { label: 'Customer', run: () => setActive('customers') },
     { label: 'Vendor', run: () => setActive('vendors') },
   ];
+
+  /*
+   * A category opens on its first setting rather than an empty page: the
+   * person has already chosen once, and a category page with nothing selected
+   * is a second menu in front of the one they chose from.
+   */
+  const openSettingsCategory = useCallback(
+    (id) => {
+      const first = visibleSettings({ can, isEnabled }).find((i) => i.category === id);
+      setActive(first ? first.key : 'settings');
+    },
+    [can, isEnabled]
+  );
 
   const visibleNav = useMemo(() => {
     if (permsLoading) return navModel;
@@ -12524,6 +12472,15 @@ const AppShell = () => {
 
   const page = useMemo(() => {
     switch (active) {
+      case 'settings':
+        return (
+          <SettingsHub
+            can={can}
+            isEnabled={isEnabled}
+            onOpenCategory={openSettingsCategory}
+            onOpenSetting={(key) => setActive(key)}
+          />
+        );
       case 'dashboard':
         return (
           <DashboardOverview
@@ -13595,8 +13552,6 @@ const AppShell = () => {
         const orgId = resolveServerOrgId(currentCompany);
         return <SettingsUsersRoles orgId={orgId} />;
       }
-      case 'settings':
-        return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       default:
         return <SalesOverview db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} warehouses={warehousesForUser} onNavigate={setActive} />;
     }
@@ -14374,6 +14329,31 @@ const AppShell = () => {
               </div>
               <Suspense fallback={<SkeletonStats count={4} />}>{page}</Suspense>
             </div>
+          ) : isSettingsKey(active) ? (
+            /*
+              A settings screen keeps its own key — every link, the palette and
+              anything that deep-links into one still lands where it did — and
+              is wrapped in the workspace so it arrives with a breadcrumb and
+              the rest of its category beside it.
+            */
+            <SettingsWorkspace
+              activeKey={active}
+              can={can}
+              isEnabled={isEnabled}
+              onNavigate={(target) => {
+                if (target === 'settings') {
+                  setActive('settings');
+                  return;
+                }
+                if (String(target).startsWith('category:')) {
+                  openSettingsCategory(String(target).slice('category:'.length));
+                  return;
+                }
+                setActive(target);
+              }}
+            >
+              <Suspense fallback={<SkeletonStats count={4} />}>{page}</Suspense>
+            </SettingsWorkspace>
           ) : (
             <Suspense fallback={<SkeletonStats count={4} />}>{page}</Suspense>
           )}

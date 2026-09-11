@@ -38,11 +38,19 @@ describe('the navigation floor', () => {
     }
   });
 
-  /* Without these the choice made at signup could never be changed. */
-  it('never hides the core of Settings', () => {
-    const slice = groupSlice('Settings');
+  /*
+   * Without these the choice made at signup could never be changed.
+   *
+   * Settings is no longer a group in the rail — it is a workspace of its own,
+   * built from the registry — so the floor is checked where the settings now
+   * live rather than where they used to be listed.
+   */
+  it('never hides the core of Settings', async () => {
+    const { SETTINGS_ITEMS } = await import('../features/settings/settingsRegistry');
     for (const key of ['settingsModules', 'settingsFeatures', 'settingsCompany', 'settingsUsers', 'settingsRoles']) {
-      expect(`${key}:${entryHasFeature(slice, key)}`).toBe(`${key}:false`);
+      const item = SETTINGS_ITEMS.find((i) => i.key === key);
+      expect(`${key}:${Boolean(item)}`).toBe(`${key}:true`);
+      expect(`${key}:${item.feature ?? 'none'}`).toBe(`${key}:none`);
     }
   });
 
@@ -51,7 +59,13 @@ describe('the navigation floor', () => {
    * who switched everything off would have no way back — the screen that turns
    * modules on would be the screen they had just turned off.
    */
-  it('never hides the screen that turns modules back on', () => {
-    expect(entryHasFeature(groupSlice('Settings'), 'settingsModules')).toBe(false);
+  it('never hides the screen that turns modules back on', async () => {
+    const { SETTINGS_ITEMS } = await import('../features/settings/settingsRegistry');
+    expect(SETTINGS_ITEMS.find((i) => i.key === 'settingsModules')?.feature ?? 'none').toBe('none');
+  });
+
+  /* And Settings itself is still one entry in the rail, reachable from it. */
+  it('keeps a Settings entry in the rail', () => {
+    expect(APP).toMatch(/key: 'settings', label: 'Settings'/);
   });
 });
