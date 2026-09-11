@@ -232,6 +232,7 @@ import { buildRecordIndex, searchRecords } from './utils/searchIndex';
 import { setSearchSeed } from './utils/searchSeed';
 import { useGlobalShortcuts } from './components/ui/useGlobalShortcuts';
 import { useFitToViewport } from './components/ui/useFitToViewport';
+import { useListKeys } from './components/ui/useListKeys';
 import ShortcutSheet, { useShortcutSheet } from './components/ui/ShortcutSheet';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import { useDocumentFormKeys } from './components/ui/useDocumentFormKeys';
@@ -12060,6 +12061,9 @@ const AppShell = () => {
    */
   /* The rows scroll, the page does not — see useFitToViewport. */
   useFitToViewport(active);
+
+  /* Arrows walk the rows of a list; Enter opens one — see useListKeys. */
+  useListKeys(active);
 
   /* What the keyboard does, on `?`. */
   const shortcutSheet = useShortcutSheet();

@@ -52,6 +52,15 @@ export const GROUPS = [
     ],
   },
   {
+    name: 'In a list',
+    keys: [
+      { combo: ['Tab'], does: 'Into the rows — one stop for the whole table' },
+      { combo: ['↑', '↓'], does: 'The row above or below' },
+      { combo: ['Home', 'End'], does: 'The first or last row' },
+      { combo: ['Enter'], does: 'Open the row you are on' },
+    ],
+  },
+  {
     name: 'In the lines',
     keys: [
       { combo: ['mod', '='], does: 'Add a line' },

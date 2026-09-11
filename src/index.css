@@ -1478,6 +1478,14 @@
      Opt-in, because a line-item grid inside a form has no business scrolling
      separately from the form it belongs to.
   --------------------------------------------------------------------------- */
+  /* The row the arrows are on. A grid with a moving focus has to show where it
+     is, or the keys move something invisible. */
+  .ui-table-scroll tbody tr:focus-visible {
+    outline: 2px solid rgb(var(--brand));
+    outline-offset: -2px;
+    background-color: rgb(var(--brand) / 0.06);
+  }
+
   .ui-table-scroll {
     max-height: var(--table-scroll-h, calc(100dvh - 21rem));
     min-height: 8rem;
