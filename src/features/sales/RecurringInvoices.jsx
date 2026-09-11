@@ -397,6 +397,10 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
   const recSearch = useListSearch(templates, ['name', 'customerName', 'frequency', 'status', 'nextRunDate', 'sourceNumber']);
 
   const [statusFilter, setStatusFilter] = useState('');
+  const [customerFilter, setCustomerFilter] = useState('');
+  const [freqFilter, setFreqFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [page, setPage] = useState(1);
   const perPage = 20;
 
@@ -409,18 +413,42 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
   };
 
   /*
-   * Customer, frequency and the date window used to sit in a band across the
-   * page — which is the one thing the shared shell does not have, and all
-   * three were already in the columns underneath it. They live in the column
-   * headings now, where every other list keeps them; the date window is the
-   * Next invoice date heading.
+   * Customer, frequency and a window over the next run.
+   *
+   * They sat in a band across the page, which is a second toolbar above the
+   * rows somebody came to read. They ride the far end of the status row now —
+   * a line that was already on the screen with nothing in its right half.
+   *
+   * They also exist as column filters underneath, and that is on purpose: the
+   * heading is where you go having seen a value you want more of, this is
+   * where you go knowing what you want before you look.
    */
+  const scheduleCustomers = useMemo(() => {
+    const seen = new Map();
+    for (const t of templates) {
+      const id = String(t.customerId || '');
+      if (id && !seen.has(id)) seen.set(id, t.customerName || id);
+    }
+    return [...seen.entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+  }, [templates]);
+
   const recFilters = useColumnFilters();
 
   const shownTemplates = useMemo(() => {
-    /* scheduleStatus reads only the row it is given. */
-    return recSearch.filtered.filter((t) => !statusFilter || scheduleStatus(t) === statusFilter);
-  }, [recSearch.filtered, statusFilter]);
+    const from = String(fromDate || '').trim();
+    const to = String(toDate || '').trim();
+    return recSearch.filtered.filter((t) => {
+      if (customerFilter && String(t.customerId || '') !== customerFilter) return false;
+      if (freqFilter && String(t.frequency || '') !== freqFilter) return false;
+      if (statusFilter && scheduleStatus(t) !== statusFilter) return false;
+      const next = String(t.nextRunDate || '').slice(0, 10);
+      if (from && (!next || next < from)) return false;
+      if (to && (!next || next > to)) return false;
+      return true;
+    });
+    // scheduleStatus reads only the row it is given.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recSearch.filtered, customerFilter, freqFilter, statusFilter, fromDate, toDate]);
 
   /*
    * The same per-column filter and sort the invoice list carries. Plain <th>s
@@ -911,16 +939,57 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         setStatusFilter(v);
         setPage(1);
       }}
+      tabsExtras={
+        <>
+          <select
+            className="ui-select w-auto"
+            value={customerFilter}
+            onChange={(e) => { setCustomerFilter(e.target.value); setPage(1); }}
+            aria-label="Customer"
+          >
+            <option value="">All customers</option>
+            {scheduleCustomers.map(([id, name]) => (
+              <option key={id} value={id}>{name}</option>
+            ))}
+          </select>
+
+          <select
+            className="ui-select w-auto"
+            value={freqFilter}
+            onChange={(e) => { setFreqFilter(e.target.value); setPage(1); }}
+            aria-label="Frequency"
+          >
+            <option value="">All frequencies</option>
+            {Object.entries(FREQ_LABEL).map(([k, label]) => (
+              <option key={k} value={k}>{label}</option>
+            ))}
+          </select>
+
+          <div className="flex items-center gap-1">
+            <input
+              type="date"
+              className="ui-input w-auto"
+              value={fromDate}
+              onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+              aria-label="Next invoice date from"
+            />
+            <span className="ui-subtle">–</span>
+            <input
+              type="date"
+              className="ui-input w-auto"
+              value={toDate}
+              onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+              aria-label="Next invoice date to"
+            />
+          </div>
+        </>
+      }
       tip={{
         storageKey: 'neev.tip.recurringSchedules',
         text: 'A schedule bills its period once. Pressing Run now twice cannot raise the same month again.',
         Icon: RefreshCw,
       }}
     >
-      {/* Customer, frequency and the date window. Search and status moved to
-          the header and the tabs, where every other list keeps them; what is
-          left is what those two cannot say. */}
-
       <div className="overflow-x-auto ui-table-scroll">
             <table className="ui-table ui-table-wide ui-table-sticky">
               <thead>

@@ -39,6 +39,15 @@ export default function DocumentListShell({
   statusCounts = {},
   onStatusChange = null,
   tabsLabel = 'Status',
+  /*
+   * Controls that ride the far end of the status row.
+   *
+   * A list whose narrowings do not fit in its column headings — a window over
+   * a date, say — had nowhere to put them but a band across the page, which is
+   * a second toolbar above the rows somebody came to read. The status row is
+   * already there and already half empty.
+   */
+  tabsExtras = null,
   above = null,
   /*
    * Where the rows sit. Almost every list is a table and takes the card;
@@ -79,7 +88,7 @@ export default function DocumentListShell({
       {cards?.length ? <StatCards company={company} cards={cards} /> : null}
 
       {tabs?.length ? (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="ui-segmented" role="tablist" aria-label={tabsLabel}>
             {tabs.map((t) => {
               const on = statusValue === t.value;
@@ -104,6 +113,10 @@ export default function DocumentListShell({
               );
             })}
           </div>
+
+          {tabsExtras ? (
+            <div className="flex flex-wrap items-center gap-2 ms-auto">{tabsExtras}</div>
+          ) : null}
         </div>
       ) : null}
 

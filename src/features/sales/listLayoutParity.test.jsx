@@ -175,35 +175,53 @@ describe('an empty list is centred on what you can see', () => {
   });
 });
 
-describe('no list carries a filter band of its own', () => {
+describe('the narrowings ride the status row', () => {
   /*
-   * Recurring Invoices had three controls in a strip above the table —
-   * customer, frequency, a date window — and all three narrowed columns that
-   * were already sitting underneath with their own filter. It read as a second
-   * toolbar, it is the one piece of furniture the shared shell has no slot for,
-   * and it was the only list that had one.
+   * They were a band across the page — a strip of controls in a card of their
+   * own above the table, which is the one piece of furniture the shared shell
+   * has no slot for. The status row was already on the screen with an empty
+   * right half, so that is where they went.
    */
-  it('puts the narrowings in the column headings, not above them', () => {
+  it('keeps customer, frequency and the date window on the screen', () => {
     render(
       <RecurringInvoices db={db} setDb={noop} currentCompany={COMPANY} branches={[]} warehouses={[]} />
     );
-
-    expect(screen.queryByRole('combobox', { name: 'Customer' })).toBeNull();
-    expect(screen.queryByRole('combobox', { name: 'Frequency' })).toBeNull();
-    expect(screen.queryByLabelText('Next invoice date from')).toBeNull();
-
-    /* Each of them is a heading that opens its own panel instead. */
-    for (const col of ['Customer', 'Frequency', 'Next invoice date']) {
-      expect(screen.getByLabelText(`Sort and filter ${col}`)).toBeTruthy();
-    }
+    expect(screen.getByRole('combobox', { name: 'Customer' })).toBeTruthy();
+    expect(screen.getByRole('combobox', { name: 'Frequency' })).toBeTruthy();
+    expect(screen.getByLabelText('Next invoice date from')).toBeTruthy();
+    expect(screen.getByLabelText('Next invoice date to')).toBeTruthy();
   });
 
-  it('opens the date window from the column it narrows', async () => {
+  it('puts them on the same line as the tabs, at its far end', () => {
+    render(
+      <RecurringInvoices db={db} setDb={noop} currentCompany={COMPANY} branches={[]} warehouses={[]} />
+    );
+    const tabs = screen.getByRole('tablist', { name: 'Schedule status' });
+    const row = tabs.parentElement;
+
+    /* The same line, not a band of its own above or below it. */
+    expect(row.contains(screen.getByRole('combobox', { name: 'Customer' }))).toBe(true);
+    expect(row.className).toContain('justify-between');
+    expect(
+      screen.getByRole('combobox', { name: 'Customer' }).closest('div[class*="ms-auto"]')
+    ).toBeTruthy();
+  });
+
+  it('still narrows the list', () => {
+    render(
+      <RecurringInvoices db={db} setDb={noop} currentCompany={COMPANY} branches={[]} warehouses={[]} />
+    );
+    /* The control is bound to the filtering, not decoration: choosing a
+       frequency no schedule has empties the list. */
+    fireEvent.change(screen.getByRole('combobox', { name: 'Frequency' }), { target: { value: 'YEARLY' } });
+    expect(screen.getByText(/No recurring schedules|Nothing matches/i)).toBeTruthy();
+  });
+
+  it('opens the same window from the column it narrows', () => {
     render(
       <RecurringInvoices db={db} setDb={noop} currentCompany={COMPANY} branches={[]} warehouses={[]} />
     );
     fireEvent.click(screen.getByLabelText('Sort and filter Next invoice date'));
-    expect(screen.getByLabelText('Next invoice date from')).toBeTruthy();
-    expect(screen.getByLabelText('Next invoice date to')).toBeTruthy();
+    expect(screen.getAllByLabelText('Next invoice date from')).toHaveLength(2);
   });
 });
