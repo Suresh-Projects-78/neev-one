@@ -112,6 +112,28 @@ describe('the master is a screen, not a dialog', () => {
   });
 });
 
+describe('the two columns of Basic Details', () => {
+  /*
+   * Balance Type sat on the far side of the card from the number it qualifies,
+   * three columns away from the balance it says Dr or Cr about.
+   */
+  it('keeps the balance and its side together', () => {
+    renderCustomer();
+    const balance = screen.getByLabelText('Opening Balance');
+    const row = balance.closest('div.grid');
+    /* The same column, not the same card: both are FormRows in the left half. */
+    expect(row.parentElement.textContent).toContain('Balance Type');
+  });
+
+  it('starts the right column level with the first row on the left', () => {
+    renderCustomer();
+    const group = screen.getByLabelText(`Customer Group`).closest('div').parentElement;
+    /* A label above its control begins higher than one beside it; the padding
+       is what makes the two halves one block instead of two. */
+    expect(group.className).toMatch(/lg:pt-\d/);
+  });
+});
+
 describe('a delete looks like a delete', () => {
   /*
    * The trash on a contact row was the same grey as the field controls beside
@@ -175,6 +197,41 @@ describe('the address cards', () => {
     renderCustomer();
     expect(screen.getByText('Billing Address').className).toContain('font-semibold');
     expect(screen.getByText('Shipping Address').className).toContain('font-semibold');
+  });
+});
+
+describe('the contacts table', () => {
+  /*
+   * The radio sat under the P of PRIMARY and the delete under the last letter
+   * of ACTIONS, so both read as belonging to the column beside them. And the
+   * delete was the smallest target on the tab — 32px in a 36px row — which is
+   * the wrong size for the only control here you cannot undo.
+   */
+  const cellFor = async (user, label) => {
+    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
+    return screen.getByLabelText(label).closest('td');
+  };
+
+  it('centres the primary radio under its heading', async () => {
+    const user = userEvent.setup();
+    renderCustomer();
+    const cell = await cellFor(user, 'Primary contact, row 1');
+    expect(cell.className).toContain('text-center');
+    expect(screen.getByRole('columnheader', { name: 'Primary' }).className).toContain('text-center');
+    /* `.ui-radio` is display:grid, so it is a block and the cell's text-align
+       does not move it — it needs the margin of its own. */
+    expect(screen.getByLabelText('Primary contact, row 1').className).toContain('mx-auto');
+  });
+
+  it('centres the delete under Actions and gives it a real target', async () => {
+    const user = userEvent.setup();
+    renderCustomer();
+    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
+    const button = screen.getByRole('button', { name: 'Remove contact 1' });
+    expect(button.closest('td').className).toContain('text-center');
+    expect(button.className).toMatch(/!h-9/);
+    expect(button.className).toMatch(/!w-9/);
+    expect(screen.getByRole('columnheader', { name: 'Actions' }).className).toContain('text-center');
   });
 });
 

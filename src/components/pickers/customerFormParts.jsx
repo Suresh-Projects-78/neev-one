@@ -327,7 +327,10 @@ export const ContactsTab = ({
         <table className="w-full min-w-[38rem] border-collapse text-sm">
           <thead>
             <tr>
-              {onSetPrimary ? <th className="ui-t-label px-2 py-2 text-left">Primary</th> : null}
+              {/* Centred over the control, not aligned to the word above it:
+                  a radio under the P of PRIMARY reads as belonging to the
+                  column before it. */}
+              {onSetPrimary ? <th className="ui-t-label w-20 px-2 py-2 text-center">Primary</th> : null}
               {['Name', 'Position', 'Email', 'Mobile'].map((c) => (
                 <th key={c} className="ui-t-label px-2 py-2 text-left">
                   {c}
@@ -336,7 +339,7 @@ export const ContactsTab = ({
               {/* Pinned to the right edge so the delete control is on screen
                   however far the table is scrolled. */}
               <th
-                className="ui-t-label sticky end-0 px-2 py-2 text-right"
+                className="ui-t-label sticky end-0 w-20 px-2 py-2 text-center"
                 style={{ backgroundColor: 'rgb(var(--surface))' }}
               >
                 Actions
@@ -353,11 +356,13 @@ export const ContactsTab = ({
                   you actually deal with quietly redirected the correspondence.
                 */}
                 {onSetPrimary ? (
-                  <td className="px-1 py-1">
+                  <td className="px-1 py-1 text-center">
                     <input
                       type="radio"
                       name="party-primary-contact"
-                      className="ui-radio"
+                      /* `.ui-radio` is display:grid, so it is a block and the
+                         cell's text-align does not move it. */
+                      className="ui-radio mx-auto"
                       checked={Boolean(r.isPrimary) || (!rows.some((c) => c?.isPrimary) && i === 0)}
                       onChange={() => onSetPrimary(i)}
                       aria-label={`Primary contact, row ${i + 1}`}
@@ -377,13 +382,21 @@ export const ContactsTab = ({
                   <input value={r.mobile} onChange={(e) => onChange(i, 'mobile', e.target.value)} className="ui-input ui-mono w-full min-w-[7rem]" aria-label={`Mobile, row ${i + 1}`} />
                 </td>
                 <td
-                  className="sticky end-0 px-1 py-1 text-right"
+                  className="sticky end-0 px-1 py-1 text-center"
                   style={{ backgroundColor: 'rgb(var(--surface))' }}
                 >
-                  <button type="button" onClick={() => onRemove(i)} aria-label={`Remove contact ${i + 1}`} className="ui-icon-btn ui-btn-sm !w-8">
+                  {/* A target the size of the fields it sits beside. At 32px
+                      in a 36px row it was the smallest thing to hit on the
+                      tab, and the only one you cannot undo. */}
+                  <button
+                    type="button"
+                    onClick={() => onRemove(i)}
+                    aria-label={`Remove contact ${i + 1}`}
+                    className="ui-icon-btn mx-auto !h-9 !w-9"
+                  >
                     {/* The same red every other delete in the product carries.
                         Grey, it read as one more field control. */}
-                    <Trash2 size={14} aria-hidden="true" className="text-[rgb(var(--neg))]" />
+                    <Trash2 size={17} aria-hidden="true" className="text-[rgb(var(--neg))]" />
                   </button>
                 </td>
               </tr>

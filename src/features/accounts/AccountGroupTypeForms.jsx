@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { notify } from '../../components/ui/notify';
+import MasterFormPage from '../../components/MasterFormPage';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -155,7 +156,7 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
   );
 };
 
-export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null, onClose }) => {
+export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null, onClose, fullPage = false }) => {
   const isEdit = Boolean(initialData && initialData.id);
 
   const accountTypes = useMemo(() => {
@@ -258,8 +259,8 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
     onClose?.();
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  const fields = (
+    <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="ui-label">Group</label>
@@ -303,14 +304,37 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
         />
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
-          Cancel
-        </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
-          {isEdit ? 'Update' : 'Create'}
-        </button>
-      </div>
+      {/* On a screen the bar carries these; in a dialog they are the only way
+          out and stay at the foot. */}
+      {fullPage ? null : (
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border ui-hover-sunken">
+            Cancel
+          </button>
+          <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
+            {isEdit ? 'Update' : 'Create'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className={fullPage ? '' : 'space-y-4'}>
+      {fullPage ? (
+        <MasterFormPage
+          title={isEdit ? 'Edit Group' : 'New Group'}
+          subtitle="A heading in the chart of accounts, and what it rolls up to."
+          onBack={onClose}
+          primaryLabel={isEdit ? 'Update' : 'Create'}
+          heading="Group Details"
+          description="The type and parent decide which statement everything under this group lands on."
+        >
+          {fields}
+        </MasterFormPage>
+      ) : (
+        fields
+      )}
     </form>
   );
 };

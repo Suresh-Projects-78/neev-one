@@ -184,9 +184,37 @@ export function PartyFormLayout({
               />
             </div>
           </FormRow>
+
+          <FormRow label="Balance Type" hint={cfg.openingHint}>
+            {/* Under the balance it qualifies. On the other side of the card
+                it was three columns away from the number it describes. */}
+            <div className="flex items-center gap-6 pt-1.5">
+              {[
+                { v: 'Dr', l: cfg.defaultBalanceType === 'Dr' ? 'Dr (Default)' : 'Dr' },
+                { v: 'Cr', l: cfg.defaultBalanceType === 'Cr' ? 'Cr (Default)' : 'Cr' },
+              ].map((o) => (
+                <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="openingBalanceType"
+                    className="ui-radio"
+                    checked={formData.openingBalanceType === o.v}
+                    onChange={() => setFormData((p) => ({ ...p, openingBalanceType: o.v }))}
+                  />
+                  {o.l}
+                </label>
+              ))}
+            </div>
+          </FormRow>
             </div>
 
-            <div className="space-y-4">
+            {/*
+              A hair of padding, so the first control on this side starts level
+              with the first row on the other. A label sitting above its control
+              begins higher than a label sitting beside one, and the two columns
+              read as two unrelated blocks.
+            */}
+            <div className="space-y-4 lg:pt-2">
           <div>
             <PopupSelect
               label={`${cfg.noun} Group`}
@@ -214,31 +242,6 @@ export function PartyFormLayout({
           </div>
 
 
-          <div>
-            <span className="ui-label inline-flex items-center gap-1.5">
-              Balance Type
-              <span title={cfg.openingHint} aria-label={cfg.openingHint} className="ui-subtle inline-flex cursor-help">
-                <Info size={13} aria-hidden="true" />
-              </span>
-            </span>
-            <div className="mt-2 flex items-center gap-6">
-              {[
-                { v: 'Dr', l: cfg.defaultBalanceType === 'Dr' ? 'Dr (Default)' : 'Dr' },
-                { v: 'Cr', l: cfg.defaultBalanceType === 'Cr' ? 'Cr (Default)' : 'Cr' },
-              ].map((o) => (
-                <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name="openingBalanceType"
-                    className="ui-radio"
-                    checked={formData.openingBalanceType === o.v}
-                    onChange={() => setFormData((p) => ({ ...p, openingBalanceType: o.v }))}
-                  />
-                  {o.l}
-                </label>
-              ))}
-            </div>
-          </div>
             </div>
           </div>
         </section>

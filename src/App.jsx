@@ -177,6 +177,7 @@ const LEDGER_STATES = Object.entries(GST_STATE_BY_CODE)
 import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
+import MasterFormPage from './components/MasterFormPage';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
@@ -1473,7 +1474,12 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   );
 };
 
-const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) => {
+const ItemsList = ({ db, setDb, currentCompany, warehouses = [] }) => {
+  /*
+   * The item master takes the screen, the way a document does. `null`, or the
+   * item being written — true for a new one.
+   */
+  const [itemForm, setItemForm] = useState(null);
   const items = db.items.filter((i) => i.companyId === currentCompany.id);
   const itemSearch = useListSearch(items, ['code', 'name', 'hsnSac', 'category', 'barcode']);
   const itemSearchFilters = useColumnFilters();
@@ -1515,19 +1521,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
     return refs;
   };
 
-  const onEdit = (item) => {
-    openModal(
-      <ItemForm
-        db={db}
-        setDb={setDb}
-        currentCompany={currentCompany}
-        warehouses={warehouses}
-        initialData={item}
-        onClose={() => openModal(null)}
-      />,
-      { title: 'Edit Item', maxWidthClass: 'max-w-3xl' }
-    );
-  };
+  const onEdit = (item) => setItemForm(item);
 
   const onDelete = async (item) => {
     const refs = getItemReferences(item.id);
@@ -1605,11 +1599,21 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
     { key: 'purchasePrice', label: 'Purchase Price', value: (r) => Number(r.purchasePrice || 0) },
   ];
 
-  const openNewItem = () =>
-    openModal(
-      <ItemForm db={db} setDb={setDb} currentCompany={currentCompany} warehouses={warehouses} onClose={() => openModal(null)} />,
-      { title: 'New Item', maxWidthClass: 'max-w-3xl' }
+  const openNewItem = () => setItemForm(true);
+
+  if (itemForm) {
+    return (
+      <ItemForm
+        fullPage
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        warehouses={warehouses}
+        initialData={itemForm === true ? null : itemForm}
+        onClose={() => setItemForm(null)}
+      />
     );
+  }
 
   return (
     <DocumentListShell
@@ -1754,7 +1758,7 @@ const ItemsList = ({ db, setDb, openModal, currentCompany, warehouses = [] }) =>
 
 const NEW_CATEGORY_OPTION = '__new_item_category__';
 
-const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = null, onClose }) => {
+const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = null, onClose, fullPage = false }) => {
   const { isEnabled: itemFeatureEnabled } = useFeatures();
   // Batch and expiry are only offered when the company has switched the
   // capability on; nothing downstream asks for a batch otherwise.
@@ -2000,8 +2004,8 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
     notify.success('Item created!');
   };
 
-  return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+  const fields = (
+    <>
       <div className="grid grid-cols-2 gap-4">
         {/*
           Type first: it decides which code series the item is numbered from
@@ -2333,9 +2337,34 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           <div />
         )}
       </div>
-      <button type="submit" className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg">
-        {isEdit ? 'Update Item' : 'Create Item'}
-      </button>
+      {/* On a screen the bar at the top carries this; a second full-width
+          button under the fields would be the same action twice. */}
+      {fullPage ? null : (
+        <button type="submit" className="w-full px-4 py-2 ui-btn ui-btn-primary rounded-lg">
+          {isEdit ? 'Update Item' : 'Create Item'}
+        </button>
+      )}
+    </>
+  );
+
+  /* A screen names itself and keeps its actions at the top; a dialog is already
+     named by the dialog and keeps them at the foot. */
+  return (
+    <form onSubmit={handleSubmit} noValidate className={fullPage ? '' : 'space-y-4'}>
+      {fullPage ? (
+        <MasterFormPage
+          title={isEdit ? 'Edit Item' : 'New Item'}
+          subtitle="What you sell or stock, and how it is priced and taxed."
+          onBack={onClose}
+          primaryLabel={isEdit ? 'Update Item' : 'Create Item'}
+          heading="Item Details"
+          description="Type decides the code series, whether batches apply, and what tax it carries."
+        >
+          {fields}
+        </MasterFormPage>
+      ) : (
+        fields
+      )}
     </form>
   );
 };
@@ -2606,12 +2635,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     openModal(<LedgerCreateChooser onClose={() => openModal(null)} />, { title: 'Create', maxWidthClass: 'max-w-lg' });
   };
 
-  const openNewGroup = () => {
-    openModal(<SimpleAccountGroupCreateForm db={db} setDb={setDb} currentCompany={currentCompany} onClose={() => openModal(null)} />, {
-      title: 'New Group',
-      maxWidthClass: 'max-w-2xl',
-    });
-  };
+  const openNewGroup = () => setLedgerForm({ mode: 'newGroup' });
 
   const openEditLedger = (ledger) => setLedgerForm({ mode: 'edit', ledger });
 
@@ -2621,18 +2645,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
       return;
     }
 
-    openModal(
-      <div className="ui-surface rounded-xl shadow-sm border p-6">
-        <AccountGroupForm
-          db={db}
-          setDb={setDb}
-          currentCompany={currentCompany}
-          initialData={group}
-          onClose={() => openModal(null)}
-        />
-      </div>,
-      { title: 'Edit Group', maxWidthClass: 'max-w-2xl' }
-    );
+    setLedgerForm({ mode: 'editGroup', group });
   };
 
   const canDeleteLedger = (ledgerId) => {
@@ -2749,6 +2762,31 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
    * The form takes the screen, the way the customer and vendor masters do. Back
    * and Cancel in its own bar return here; there is no dialog to dismiss.
    */
+  if (ledgerForm?.mode === 'editGroup') {
+    return (
+      <AccountGroupForm
+        fullPage
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        initialData={ledgerForm.group}
+        onClose={() => setLedgerForm(null)}
+      />
+    );
+  }
+
+  if (ledgerForm?.mode === 'newGroup') {
+    return (
+      <SimpleAccountGroupCreateForm
+        fullPage
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        onClose={() => setLedgerForm(null)}
+      />
+    );
+  }
+
   if (ledgerForm?.mode === 'newCustomer' || ledgerForm?.mode === 'newVendor') {
     const PartyForm = ledgerForm.mode === 'newCustomer' ? CustomerForm : VendorForm;
     return (
@@ -4078,7 +4116,7 @@ export const ChartAccountForm = ({
   );
 };
 
-const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName = '', onCreated, onClose }) => {
+const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName = '', onCreated, onClose, fullPage = false }) => {
   const groups = useMemo(() => {
     return (Array.isArray(db.accountGroups) ? db.accountGroups : [])
       .filter((g) => g.companyId === currentCompany.id)
@@ -4164,8 +4202,8 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
     onClose?.();
   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  const fields = (
+    <div className="space-y-4">
       <div>
         <label className="ui-label">Group Name</label>
         <input
@@ -4191,14 +4229,37 @@ const SimpleAccountGroupCreateForm = ({ db, setDb, currentCompany, initialName =
         />
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => onClose?.()} className="px-4 py-2 rounded-lg border ui-hover-sunken">
-          Cancel
-        </button>
-        <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
-          Create
-        </button>
-      </div>
+      {/* On a screen the bar carries these; in a dialog they are the only
+          way out and stay at the foot. */}
+      {fullPage ? null : (
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={() => onClose?.()} className="px-4 py-2 rounded-lg border ui-hover-sunken">
+            Cancel
+          </button>
+          <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
+            Create
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <form onSubmit={handleSubmit} className={fullPage ? '' : 'space-y-4'}>
+      {fullPage ? (
+        <MasterFormPage
+          title="New Group"
+          subtitle="A heading in the chart of accounts, and what it rolls up to."
+          onBack={onClose}
+          primaryLabel="Create"
+          heading="Group Details"
+          description="The parent decides which statement this group lands on."
+        >
+          {fields}
+        </MasterFormPage>
+      ) : (
+        fields
+      )}
     </form>
   );
 };
@@ -13325,7 +13386,6 @@ const AppShell = () => {
           <ItemsList
             db={dbForUser}
             setDb={setDb}
-            openModal={openModal}
             currentCompany={currentCompany}
             warehouses={warehousesForActiveBranch}
           />
