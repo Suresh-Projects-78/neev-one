@@ -298,9 +298,18 @@ const PopupSelect = ({
                   /* Filled, not a faint wash. The cursor row was `ui-sunken`
                      alone, which on a white panel is close enough to nothing
                      that pressing the down arrow looked like a dead key. */
+                  /* A light tint with a brand edge, not a solid orange bar.
+                     Filled, the highlighted row was the loudest thing on the
+                     screen and turned a list into a row of warning labels; the
+                     tint alone was what earlier read as a dead key, so the edge
+                     carries the state instead. */
                   style={
                     i === activeIndex
-                      ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
+                      ? {
+                          backgroundColor: 'rgb(var(--brand) / 0.12)',
+                          color: 'rgb(var(--brand-ink))',
+                          boxShadow: 'inset 3px 0 0 rgb(var(--brand))',
+                        }
                       : undefined
                   }
                 >
