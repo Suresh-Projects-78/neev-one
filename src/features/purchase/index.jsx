@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import FormSection from '../../components/ui/FormSection';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 
 import { createPortal } from 'react-dom';
@@ -15,7 +16,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Upload, X } from 'lucide-react';
+import { Ban, Calculator, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Upload, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -2897,7 +2898,12 @@ export const DebitNoteForm = ({
         primaryLabel={initialData?.id ? 'Update Debit Note' : 'Create Debit Note'}
       />
 
-      <div className="grid grid-cols-2 gap-4">
+      <FormSection
+        icon={ShoppingCart}
+        title="Basic Details"
+        description="Enter the key details for this purchase return."
+      >
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div>
           <label className="ui-label">Debit Note Number</label>
           <input
@@ -3006,12 +3012,18 @@ export const DebitNoteForm = ({
         <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
         <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
       </div>
+      </FormSection>
 
-      <div>
-        <div className="mb-2">
-          <label className="ui-label">Line Items</label>
-        </div>
-
+      <FormSection
+        icon={Package}
+        title="Line Items"
+        description="Add the items you are returning to the vendor."
+        action={
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+            <Plus size={15} aria-hidden="true" /> Add Item
+          </button>
+        }
+      >
         <div className="border rounded-lg overflow-hidden">
           <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
@@ -3103,51 +3115,99 @@ export const DebitNoteForm = ({
           </table>
         </div>
 
-        <div className="mt-2 flex items-center gap-3">
-          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
-            <Plus size={15} aria-hidden="true" /> Add Item
+        {/* The next row, rather than a button adrift under the table. */}
+        <div
+          className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-2.5"
+          style={{ borderColor: 'rgb(var(--brand) / 0.4)', backgroundColor: 'rgb(var(--brand) / 0.04)' }}
+        >
+          <button
+            type="button"
+            onClick={addItem}
+            className="inline-flex items-center gap-2 text-sm font-medium"
+            style={{ color: 'rgb(var(--brand-ink))' }}
+          >
+            <Plus size={15} aria-hidden="true" /> Add another item
           </button>
+          {/* The same sentence every document form says. The mockup shortens
+              it; a form that says it differently is the drift the parity test
+              exists to catch. */}
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
         </div>
 
-        <div className="mt-4 flex justify-end">
-          <div className="w-64 space-y-2">
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
+      </FormSection>
+
+      {/*
+        The note and what the return comes to, side by side.
+
+        The totals used to sit under the lines, tucked to the right of the table
+        that produced them and read as one more row of it. They are what the
+        document is worth and are given their own card — and the room the note
+        needed anyway.
+      */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <FormSection
+          icon={NotebookPen}
+          title="Additional Information"
+          description="Add notes or reference for this return (optional)."
+        >
+          <div className="space-y-4">
+            <div>
+              <textarea
+                value={formData.notes || ''}
+                onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value.slice(0, 500) }))}
+                rows={4}
+                maxLength={500}
+                className="ui-input w-full"
+                placeholder="Enter remarks, return reason, or any additional information…"
+                aria-label="Notes"
+              />
+              <div className="ui-caption mt-1 text-end">{String(formData.notes || '').length}/500</div>
+            </div>
+
+            {hasCustomFieldsAt(customFields, 'notes') ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
+              </div>
+            ) : null}
+
+            <AmountInWordsBand words={amountInWordsInr(computed.total)} />
+          </div>
+        </FormSection>
+
+        <FormSection icon={Calculator} title="Summary">
+          <dl className="space-y-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="ui-muted text-sm">Subtotal</dt>
+              <dd className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</dd>
             </div>
             {isIntra ? (
               <>
-                <div className="flex justify-between">
-                  <span>CGST:</span>
-                  <span className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="ui-muted text-sm">CGST</dt>
+                  <dd className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</dd>
                 </div>
-                <div className="flex justify-between">
-                  <span>SGST:</span>
-                  <span className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="ui-muted text-sm">SGST</dt>
+                  <dd className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</dd>
                 </div>
               </>
             ) : (
-              <div className="flex justify-between">
-                <span>IGST:</span>
-                <span className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</span>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="ui-muted text-sm">IGST</dt>
+                <dd className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</dd>
               </div>
             )}
-            <div className="ui-total-row border-t pt-2">
-              <span>Total:</span>
-              <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
-            </div>
+          </dl>
+
+          <div
+            className="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-3"
+            style={{ backgroundColor: 'rgb(var(--brand) / 0.08)' }}
+          >
+            <span className="text-sm font-medium">Total</span>
+            <span className="ui-money-lg">{formatMoney(computed.total, currentCompany)}</span>
           </div>
-        </div>
+        </FormSection>
       </div>
-
-      {hasCustomFieldsAt(customFields, 'notes') ? (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
-        </div>
-      ) : null}
-
-      <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
 
