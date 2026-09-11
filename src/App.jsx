@@ -3684,9 +3684,8 @@ export const ChartAccountForm = ({
    * settings that each have one obvious answer.
    */
   const basicDetails = (
-    <div className="grid gap-x-10 gap-y-4 lg:grid-cols-2">
-      <div className="space-y-4">
-      <PartyFormRow label="Ledger Name" required htmlFor="ledger-name" hint="What this ledger is called in the books and on every posting to it.">
+    <div className="grid gap-x-14 gap-y-4 lg:grid-cols-2">
+      <PartyFormRow className="lg:col-start-1 lg:row-start-1" label="Ledger Name" required htmlFor="ledger-name" hint="What this ledger is called in the books and on every posting to it.">
         <input
           id="ledger-name"
           type="text"
@@ -3700,7 +3699,7 @@ export const ChartAccountForm = ({
 
 
 
-      <PartyFormRow label="Opening Balance" htmlFor="ledger-opening" hint="What this ledger already held on the day the books begin.">
+      <PartyFormRow className="lg:col-start-1 lg:row-start-2" label="Opening Balance" htmlFor="ledger-opening" hint="What this ledger already held on the day the books begin.">
         <div className="relative">
         <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
         <input
@@ -3713,12 +3712,38 @@ export const ChartAccountForm = ({
         />
         </div>
       </PartyFormRow>
-      </div>
 
-      <div className="space-y-4">
-      <div>
+      <PartyFormRow className="lg:col-start-1 lg:row-start-3" label="Balance Type" hint="Which side the balance opens on. It follows the group's nature until you choose otherwise.">
+        {/* Under the balance it qualifies, as on the party masters. */}
+        <div className="flex items-center gap-6 pt-1.5">
+          {[{ v: 'Dr', l: 'Dr (Default)' }, { v: 'Cr', l: 'Cr' }].map((o) => (
+            <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="ledgerOpeningType"
+                className="ui-radio"
+                checked={formData.openingBalanceType === o.v}
+                onChange={() => {
+                  setOpeningTypeTouched(true);
+                  setFormData((p) => ({ ...p, openingBalanceType: o.v }));
+                }}
+              />
+              {o.l}
+            </label>
+          ))}
+        </div>
+      </PartyFormRow>
+
+      {/* The other half sits on the same rows: the group's name on the ledger
+          name's line and its control on the opening balance's, so the two
+          columns cannot drift apart. */}
+      <div className="flex w-full items-center sm:max-w-[25rem] lg:col-start-2 lg:row-start-1">
+        <span className="ui-label mb-0 block">Ledger Group *</span>
+      </div>
+      <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-2">
         <PopupSelect
-          label="Ledger Group *"
+          label={null}
+          ariaLabel="Ledger Group *"
           ariaLabel="Ledger Group *"
           value={formData.groupId}
           disabled={groupLocked}
@@ -3754,8 +3779,10 @@ export const ChartAccountForm = ({
         ) : null}
       </div>
 
-      <div>
-        <label className="ui-label" htmlFor="ledger-currency">Currency *</label>
+      <div className="flex w-full items-center sm:max-w-[25rem] lg:col-start-2 lg:row-start-3">
+        <label className="ui-label mb-0 block" htmlFor="ledger-currency">Currency *</label>
+      </div>
+      <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-4">
         <select
           id="ledger-currency"
           value={formData.currency}
@@ -3766,38 +3793,6 @@ export const ChartAccountForm = ({
             <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </select>
-      </div>
-
-
-      <div>
-        <span className="ui-label inline-flex items-center gap-1.5">
-          Balance Type
-          <span
-            title="Which side the balance opens on. It follows the group's nature until you choose otherwise."
-            aria-label="Which side the balance opens on. It follows the group's nature until you choose otherwise."
-            className="ui-subtle inline-flex cursor-help"
-          >
-            <Info size={13} aria-hidden="true" />
-          </span>
-        </span>
-        <div className="mt-2 flex items-center gap-6">
-          {[{ v: 'Dr', l: 'Dr (Default)' }, { v: 'Cr', l: 'Cr' }].map((o) => (
-            <label key={o.v} className="inline-flex cursor-pointer items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="ledgerOpeningType"
-                className="ui-radio"
-                checked={formData.openingBalanceType === o.v}
-                onChange={() => {
-                  setOpeningTypeTouched(true);
-                  setFormData((p) => ({ ...p, openingBalanceType: o.v }));
-                }}
-              />
-              {o.l}
-            </label>
-          ))}
-        </div>
-      </div>
       </div>
     </div>
   );
@@ -3897,7 +3892,7 @@ export const ChartAccountForm = ({
                       style={{ borderColor: 'rgb(var(--brand))', color: 'rgb(var(--brand))' }}
                     >
                       <Search size={14} aria-hidden="true" />
-                      {gstinFetching ? 'Fetching…' : 'Fetch from GSTN'}
+                      {gstinFetching ? 'Fetching…' : 'Fetch from GSTIN'}
                     </button>
                   </div>
                   <p className="ui-caption mt-1">Optional. A bank ledger does not need one — GST registration is not implied by the group.</p>

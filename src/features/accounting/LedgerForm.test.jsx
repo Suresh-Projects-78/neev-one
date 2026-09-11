@@ -343,6 +343,41 @@ describe('the group list is the chart, in tree order', () => {
   });
 });
 
+describe('the two columns of Basic Details', () => {
+  /*
+   * The same arrangement the party masters carry: both halves on the grid's
+   * own rows, so the group's name sits on the ledger name's line and its
+   * control on the opening balance's, and every control is one width.
+   */
+  const rowOf = (el) => (el.className.match(/lg:row-start-(\d)/) || [])[1];
+
+  it('puts the halves on the same rows', () => {
+    renderForm({ fullPage: true });
+    expect(rowOf(screen.getByLabelText(/^Ledger Name/).closest('div.grid'))).toBe('1');
+    expect(rowOf(screen.getByText('Ledger Group *').parentElement)).toBe('1');
+    expect(rowOf(screen.getByLabelText('Opening Balance').closest('div.grid'))).toBe('2');
+    expect(rowOf(screen.getByLabelText('Ledger Group *').closest('div'))).toBe('2');
+  });
+
+  it('gives every control the one width', () => {
+    renderForm({ fullPage: true });
+    expect(screen.getByLabelText(/^Ledger Name/).parentElement.className).toContain('max-w-[25rem]');
+    expect(screen.getByLabelText('Ledger Group *').closest('div').className).toContain('max-w-[25rem]');
+  });
+
+  it('keeps the balance and its side together', () => {
+    renderForm({ fullPage: true });
+    /* Balance Type is under the balance it qualifies, not across the card. */
+    expect(rowOf(screen.getByRole('radio', { name: /Dr \(Default\)/ }).closest('div.grid'))).toBe('3');
+  });
+
+  it('calls the lookup by the number it takes', () => {
+    renderForm({ fullPage: true });
+    /* GSTIN, not GSTN — the same wording as the party masters. */
+    expect(screen.getByRole('button', { name: /Fetch from GSTIN/i })).toBeInTheDocument();
+  });
+});
+
 describe('as a screen rather than a dialog', () => {
   /*
    * A ledger has five tabs behind it — bank, statutory, TDS, addresses, the
