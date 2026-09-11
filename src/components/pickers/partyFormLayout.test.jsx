@@ -142,6 +142,35 @@ describe('the two columns of Basic Details', () => {
   });
 });
 
+describe('the rows shift when the GSTIN row is not there', () => {
+  /*
+   * A vendor opens unregistered, so there is no GSTIN row — and the rows below
+   * it move up one. Pinned to fixed row numbers, the left column kept a hole
+   * where GSTIN would have been and the two halves came apart again.
+   */
+  const rowOf = (el) => (el.className.match(/lg:row-start-(\d)/) || [])[1];
+
+  it('closes the gap on a party with no GSTIN', () => {
+    render(<VendorForm db={db} setDb={() => {}} currentCompany={company} onClose={() => {}} />);
+    expect(screen.queryByPlaceholderText('Enter 15 digit GSTIN')).toBeNull();
+    /* Name takes the row GSTIN would have had. */
+    expect(rowOf(screen.getByLabelText(/^Vendor Name/).closest('div.grid'))).toBe('2');
+  });
+
+  it('leaves room for it on a party that has one', () => {
+    renderCustomer();
+    expect(screen.getByPlaceholderText('Enter 15 digit GSTIN')).toBeTruthy();
+    expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('3');
+  });
+
+  it('moves the rows as the registration is switched', async () => {
+    const user = userEvent.setup();
+    renderCustomer();
+    await user.click(screen.getByRole('radio', { name: 'Unregistered' }));
+    expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('2');
+  });
+});
+
 describe('a delete looks like a delete', () => {
   /*
    * The trash on a contact row was the same grey as the field controls beside

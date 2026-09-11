@@ -24,6 +24,19 @@ import PopupSelect from './PopupSelect';
  * `db.customers` and a debtor ledger, a vendor to `db.vendors` and a creditor
  * ledger; those are genuinely different and are not the layout's business.
  */
+/*
+ * Which grid row each field of the left column takes.
+ *
+ * The GSTIN row only exists for a registered party — and a vendor opens
+ * unregistered — so the rows below it move up by one when it is absent. Written
+ * as whole class names rather than built from a number, because Tailwind reads
+ * the source for the classes it keeps and never sees one that is concatenated.
+ */
+const LEFT_ROWS = {
+  withGstin: { name: 'lg:col-start-1 lg:row-start-3', opening: 'lg:col-start-1 lg:row-start-4', type: 'lg:col-start-1 lg:row-start-5' },
+  withoutGstin: { name: 'lg:col-start-1 lg:row-start-2', opening: 'lg:col-start-1 lg:row-start-3', type: 'lg:col-start-1 lg:row-start-4' },
+};
+
 export function PartyFormLayout({
   cfg,
   formData,
@@ -54,6 +67,8 @@ export function PartyFormLayout({
   removeContactRow,
   setPrimaryContact,
 }) {
+  const rows = formData.gstRegistration === 'Registered' ? LEFT_ROWS.withGstin : LEFT_ROWS.withoutGstin;
+
   return (
     <div className="space-y-6">
         <DocFormActions
@@ -164,7 +179,7 @@ export function PartyFormLayout({
             </FormRow>
           ) : null}
 
-          <FormRow className="lg:col-start-1 lg:row-start-3" label={`${cfg.noun} Name`} required htmlFor="party-name" hint={cfg.nameHint}>
+          <FormRow className={rows.name} label={`${cfg.noun} Name`} required htmlFor="party-name" hint={cfg.nameHint}>
             <input
               id="party-name"
               type="text"
@@ -176,7 +191,7 @@ export function PartyFormLayout({
             />
           </FormRow>
 
-          <FormRow className="lg:col-start-1 lg:row-start-4" label="Opening Balance" htmlFor="party-opening-balance" hint={cfg.openingBalanceHint}>
+          <FormRow className={rows.opening} label="Opening Balance" htmlFor="party-opening-balance" hint={cfg.openingBalanceHint}>
             {/* The symbol sits in the field rather than in the label: a column
                 of money the eye reads as money before it reads the number. */}
             <div className="relative">
@@ -193,7 +208,7 @@ export function PartyFormLayout({
             </div>
           </FormRow>
 
-          <FormRow className="lg:col-start-1 lg:row-start-5" label="Balance Type" hint={cfg.openingHint}>
+          <FormRow className={rows.type} label="Balance Type" hint={cfg.openingHint}>
             {/* Under the balance it qualifies. On the other side of the card
                 it was three columns away from the number it describes. */}
             <div className="flex items-center gap-6 pt-1.5">
