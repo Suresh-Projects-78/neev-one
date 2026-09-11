@@ -154,7 +154,7 @@ import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import SettingsHub from './features/settings/SettingsHub';
 import SettingsWorkspace from './features/settings/SettingsWorkspace';
-import { isSettingsKey, visibleSettings } from './features/settings/settingsRegistry';
+import { isSettingsKey, visibleSettings, SETTINGS_KEYS } from './features/settings/settingsRegistry';
 import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
@@ -231,6 +231,7 @@ import { setSearchSeed } from './utils/searchSeed';
 import { useGlobalShortcuts } from './components/ui/useGlobalShortcuts';
 import { useFitToViewport } from './components/ui/useFitToViewport';
 import { useListKeys } from './components/ui/useListKeys';
+import { useScreenUrl } from './components/ui/useScreenUrl';
 import ShortcutSheet, { useShortcutSheet } from './components/ui/ShortcutSheet';
 import { useCommandPalette } from './components/ui/useCommandPalette';
 import { useDocumentFormKeys } from './components/ui/useDocumentFormKeys';
@@ -12062,6 +12063,29 @@ const AppShell = () => {
 
   /* Arrows walk the rows of a list; Enter opens one — see useListKeys. */
   useListKeys(active);
+
+  /*
+   * The screen, in the address bar.
+   *
+   * A key counts as a screen if the rail names it or the settings hub does. An
+   * unknown one is ignored rather than rendered: the switch's default is the
+   * sales overview, so a typo in a link would have shown somebody a page they
+   * did not ask for and no error.
+   */
+  const isKnownScreen = useCallback(
+    (key) => {
+      const want = String(key || '');
+      if (isSettingsKey(want) || SETTINGS_KEYS.has(want)) return true;
+      for (const node of navModel || []) {
+        if (node?.key === want) return true;
+        for (const item of node?.items || []) if (String(item?.key) === want) return true;
+      }
+      return false;
+    },
+    [navModel]
+  );
+
+  useScreenUrl({ active, setActive, isKnown: isKnownScreen });
 
   /* What the keyboard does, on `?`. */
   const shortcutSheet = useShortcutSheet();
