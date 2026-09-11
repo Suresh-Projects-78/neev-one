@@ -702,6 +702,11 @@
   .ui-nav-collapse {
     color: rgb(var(--fg));
   }
+  /* Belt and braces: every glyph in the rail keeps its size when the rail is
+     narrow. Flex will otherwise shrink an icon to zero before it wraps. */
+  .ui-nav-item > svg {
+    flex: none;
+  }
   .ui-nav-collapse[data-collapsed='true'] {
     background-color: rgb(var(--surface-sunken));
     border: 1px solid rgb(var(--border));

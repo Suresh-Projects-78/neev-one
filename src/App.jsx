@@ -14097,7 +14097,13 @@ const AppShell = () => {
               aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
               title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
             >
-              {navCollapsed ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelLeftClose size={16} aria-hidden="true" />}
+              {/* shrink-0, or the narrow rail flexes a 16px glyph down to
+                  nothing and the control renders as an empty box. */}
+              {navCollapsed ? (
+                <PanelLeftOpen size={16} aria-hidden="true" className="shrink-0" />
+              ) : (
+                <PanelLeftClose size={16} aria-hidden="true" className="shrink-0" />
+              )}
               <span className={navCollapsed ? 'md:hidden' : ''}>Collapse</span>
             </button>
 
