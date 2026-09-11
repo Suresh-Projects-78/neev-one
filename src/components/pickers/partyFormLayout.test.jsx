@@ -133,12 +133,19 @@ describe('the two columns of Basic Details', () => {
      * the GST line and its control on the GSTIN line. Left to stack at their
      * natural heights the two halves drift a few pixels a row.
      */
-    /* Both halves are the same shape — a name beside its control — so the
-       group's row is one row, not a label row and a control row. */
-    const row = screen.getByText('Customer Group').closest('div.grid');
-    expect(row.className).toMatch(/lg:row-start-1\b/);
-    expect(row.className).toMatch(/lg:col-start-2\b/);
-    expect(screen.getByText('Currency').closest('div.grid').className).toMatch(/lg:row-start-2\b/);
+    /*
+     * Both halves are the same shape — a name beside its control — and each
+     * right-hand field shares a row with the left-hand one it says something
+     * about: the group with the party's name, the currency with the balance it
+     * counts. A registered customer has a GSTIN row above them, so the pair
+     * sits on rows three and four.
+     */
+    const rowOf = (el) => (el.className.match(/lg:row-start-(\d)/) || [])[1];
+    expect(rowOf(screen.getByText('Customer Group').closest('div.grid'))).toBe('3');
+    expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('3');
+    expect(rowOf(screen.getByText('Currency').closest('div.grid'))).toBe('4');
+    expect(rowOf(screen.getByLabelText('Opening Balance').closest('div.grid'))).toBe('4');
+    expect(screen.getByText('Customer Group').closest('div.grid').className).toMatch(/lg:col-start-2\b/);
 
     /* And a control holding one short word does not run the half-card. */
     /* And both columns' controls are the one width — they differed by
@@ -156,6 +163,15 @@ describe('the rows shift when the GSTIN row is not there', () => {
    * where GSTIN would have been and the two halves came apart again.
    */
   const rowOf = (el) => (el.className.match(/lg:row-start-(\d)/) || [])[1];
+
+  it('keeps the pairs together when the GSTIN row goes', () => {
+    render(<VendorForm db={db} setDb={() => {}} currentCompany={company} onClose={() => {}} />);
+    const rowOf = (el) => (el.className.match(/lg:row-start-(\d)/) || [])[1];
+    expect(rowOf(screen.getByLabelText(/^Vendor Name/).closest('div.grid'))).toBe('2');
+    expect(rowOf(screen.getByText('Vendor Group').closest('div.grid'))).toBe('2');
+    expect(rowOf(screen.getByLabelText('Opening Balance').closest('div.grid'))).toBe('3');
+    expect(rowOf(screen.getByText('Currency').closest('div.grid'))).toBe('3');
+  });
 
   it('closes the gap on a party with no GSTIN', () => {
     render(<VendorForm db={db} setDb={() => {}} currentCompany={company} onClose={() => {}} />);

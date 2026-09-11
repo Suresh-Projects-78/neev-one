@@ -33,8 +33,22 @@ import PopupSelect from './PopupSelect';
  * the source for the classes it keeps and never sees one that is concatenated.
  */
 const LEFT_ROWS = {
-  withGstin: { name: 'lg:col-start-1 lg:row-start-3', opening: 'lg:col-start-1 lg:row-start-4', type: 'lg:col-start-1 lg:row-start-5' },
-  withoutGstin: { name: 'lg:col-start-1 lg:row-start-2', opening: 'lg:col-start-1 lg:row-start-3', type: 'lg:col-start-1 lg:row-start-4' },
+  withGstin: {
+    name: 'lg:col-start-1 lg:row-start-3',
+    opening: 'lg:col-start-1 lg:row-start-4',
+    type: 'lg:col-start-1 lg:row-start-5',
+    /* The group is the name's pair and the currency the balance's, so they
+       take those rows rather than the first two. */
+    group: 'lg:col-start-2 lg:row-start-3',
+    currency: 'lg:col-start-2 lg:row-start-4',
+  },
+  withoutGstin: {
+    name: 'lg:col-start-1 lg:row-start-2',
+    opening: 'lg:col-start-1 lg:row-start-3',
+    type: 'lg:col-start-1 lg:row-start-4',
+    group: 'lg:col-start-2 lg:row-start-2',
+    currency: 'lg:col-start-2 lg:row-start-3',
+  },
 };
 
 export function PartyFormLayout({
@@ -231,12 +245,12 @@ export function PartyFormLayout({
           </FormRow>
 
             {/*
-              Both halves are the same shape: a name, then its control, on the
-              grid's own rows. Stacked with its label above, this side read as a
-              different kind of form from the one beside it, and took two rows
-              to say what the other said in one.
+              Both halves are the same shape — a name beside its control — and
+              paired by what they say about each other: the group answers "what
+              kind of party is this" alongside its name, and the currency
+              alongside the balance it is counted in.
             */}
-              <FormRow className="lg:col-start-2 lg:row-start-1" label={`${cfg.noun} Group`} hint={cfg.groupHint}>
+              <FormRow className={rows.group} label={`${cfg.noun} Group`} hint={cfg.groupHint}>
                 <PopupSelect
                   label={null}
                   ariaLabel={`${cfg.noun} Group`}
@@ -252,7 +266,7 @@ export function PartyFormLayout({
                 />
               </FormRow>
 
-              <FormRow className="lg:col-start-2 lg:row-start-2" label="Currency" hint={cfg.currencyHint}>
+              <FormRow className={rows.currency} label="Currency" hint={cfg.currencyHint}>
                 <PopupSelect
                   label={null}
                   ariaLabel="Currency"
