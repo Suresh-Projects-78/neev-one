@@ -107,10 +107,18 @@ export function PartyFormLayout({
             the card twice as tall as the tabs below it and left half the width
             empty.
           */}
-          <div className="mt-5 grid gap-x-10 gap-y-4 lg:grid-cols-2">
-            <div className="space-y-4">
+          {/*
+            One grid, both halves on the same rows.
 
-          <FormRow label="GST Registration Type" hint="Decides whether a GSTIN is required, and whether input credit can be claimed on what you buy from them.">
+            Each side stacking on its own rhythm looked right until measured:
+            the GST row is a pair of radios and shorter than a field row, so
+            the two columns drifted eight to seventeen pixels apart down the
+            card. Placed on shared rows, a row is as tall as the taller of its
+            two cells and the sides cannot drift at all.
+          */}
+          <div className="mt-5 grid gap-x-14 gap-y-4 lg:grid-cols-2">
+
+          <FormRow className="lg:col-start-1 lg:row-start-1" label="GST Registration Type" hint="Decides whether a GSTIN is required, and whether input credit can be claimed on what you buy from them.">
             <div className="flex items-center gap-6 pt-1.5">
               {[
                 { v: 'Registered', l: 'Registered' },
@@ -131,7 +139,7 @@ export function PartyFormLayout({
           </FormRow>
 
           {formData.gstRegistration === 'Registered' ? (
-            <FormRow label="GSTIN" hint="The first two digits are the state code and characters 3–12 are the PAN, so both are filled from the number.">
+            <FormRow className="lg:col-start-1 lg:row-start-2" label="GSTIN" hint="The first two digits are the state code and characters 3–12 are the PAN, so both are filled from the number.">
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -156,7 +164,7 @@ export function PartyFormLayout({
             </FormRow>
           ) : null}
 
-          <FormRow label={`${cfg.noun} Name`} required htmlFor="party-name" hint={cfg.nameHint}>
+          <FormRow className="lg:col-start-1 lg:row-start-3" label={`${cfg.noun} Name`} required htmlFor="party-name" hint={cfg.nameHint}>
             <input
               id="party-name"
               type="text"
@@ -168,7 +176,7 @@ export function PartyFormLayout({
             />
           </FormRow>
 
-          <FormRow label="Opening Balance" htmlFor="party-opening-balance" hint={cfg.openingBalanceHint}>
+          <FormRow className="lg:col-start-1 lg:row-start-4" label="Opening Balance" htmlFor="party-opening-balance" hint={cfg.openingBalanceHint}>
             {/* The symbol sits in the field rather than in the label: a column
                 of money the eye reads as money before it reads the number. */}
             <div className="relative">
@@ -185,7 +193,7 @@ export function PartyFormLayout({
             </div>
           </FormRow>
 
-          <FormRow label="Balance Type" hint={cfg.openingHint}>
+          <FormRow className="lg:col-start-1 lg:row-start-5" label="Balance Type" hint={cfg.openingHint}>
             {/* Under the balance it qualifies. On the other side of the card
                 it was three columns away from the number it describes. */}
             <div className="flex items-center gap-6 pt-1.5">
@@ -206,43 +214,53 @@ export function PartyFormLayout({
               ))}
             </div>
           </FormRow>
-            </div>
 
             {/*
-              A hair of padding, so the first control on this side starts level
-              with the first row on the other. A label sitting above its control
-              begins higher than a label sitting beside one, and the two columns
-              read as two unrelated blocks.
+              This side keeps the other side's rows.
+
+              A label and its control are two of the same rows the left uses:
+              the group's name sits on the GST line and its control on the
+              GSTIN line, Currency on the name line and its control on the
+              balance line.
+
+              `max-w-md` because a control holding one short word, run out to
+              the full half-card, reads as a box somebody forgot to fill.
             */}
-            <div className="space-y-4 lg:pt-2">
-          <div>
-            <PopupSelect
-              label={`${cfg.noun} Group`}
-              value={String(formData.groupId || '').trim()}
-              onChange={(val) => setFormData((p) => ({ ...p, groupId: String(val || '').trim() }))}
-              options={groupOptions}
-              placeholder={`Select ${cfg.noun.toLowerCase()} group`}
-              title={`Select ${cfg.noun} Group`}
-              showValueSubtext={false}
-              allowCustom
-              customActionText="Create new Group"
-              onCustomAction={(typed) => onCreateGroup(String(typed || '').trim())}
-            />
-          </div>
+              {/* The radios opposite carry their own top padding, so this one
+                  takes the same rather than centring in a row they do not fill. */}
+              <div className="flex max-w-md items-start pt-1.5 lg:col-start-2 lg:row-start-1">
+                <span className="ui-label mb-0 block">{cfg.noun} Group</span>
+              </div>
+              <div className="max-w-md lg:col-start-2 lg:row-start-2">
+                <PopupSelect
+                  label={null}
+                  ariaLabel={`${cfg.noun} Group`}
+                  value={String(formData.groupId || '').trim()}
+                  onChange={(val) => setFormData((p) => ({ ...p, groupId: String(val || '').trim() }))}
+                  options={groupOptions}
+                  placeholder={`Select ${cfg.noun.toLowerCase()} group`}
+                  title={`Select ${cfg.noun} Group`}
+                  showValueSubtext={false}
+                  allowCustom
+                  customActionText="Create new Group"
+                  onCustomAction={(typed) => onCreateGroup(String(typed || '').trim())}
+                />
+              </div>
 
-          <div>
-            <PopupSelect
-              label="Currency"
-              title="Select Currency"
-              value={formData.currency}
-              onChange={(v) => setFormData((p) => ({ ...p, currency: v }))}
-              options={CURRENCY_OPTIONS}
-              placeholder="Select currency"
-            />
-          </div>
-
-
-            </div>
+              <div className="flex max-w-md items-center lg:col-start-2 lg:row-start-3">
+                <span className="ui-label mb-0 block">Currency</span>
+              </div>
+              <div className="max-w-md lg:col-start-2 lg:row-start-4">
+                <PopupSelect
+                  label={null}
+                  ariaLabel="Currency"
+                  title="Select Currency"
+                  value={formData.currency}
+                  onChange={(v) => setFormData((p) => ({ ...p, currency: v }))}
+                  options={CURRENCY_OPTIONS}
+                  placeholder="Select currency"
+                />
+              </div>
           </div>
         </section>
 

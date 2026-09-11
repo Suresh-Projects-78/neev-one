@@ -125,12 +125,20 @@ describe('the two columns of Basic Details', () => {
     expect(row.parentElement.textContent).toContain('Balance Type');
   });
 
-  it('starts the right column level with the first row on the left', () => {
+  it('keeps the right column on the left column\'s rows', () => {
     renderCustomer();
-    const group = screen.getByLabelText(`Customer Group`).closest('div').parentElement;
-    /* A label above its control begins higher than one beside it; the padding
-       is what makes the two halves one block instead of two. */
-    expect(group.className).toMatch(/lg:pt-\d/);
+    /*
+     * The left is rows of a fixed height with a fixed gap. Each label on the
+     * right is given a row of its own to sit in, so the group's name lands on
+     * the GST line and its control on the GSTIN line. Left to stack at their
+     * natural heights the two halves drift a few pixels a row.
+     */
+    const label = screen.getByText('Customer Group');
+    expect(label.parentElement.className).toMatch(/lg:row-start-1\b/);
+    expect(screen.getByLabelText('Customer Group').closest('div').className).toMatch(/lg:row-start-2\b/);
+
+    /* And a control holding one short word does not run the half-card. */
+    expect(screen.getByLabelText('Customer Group').closest('div').className).toContain('max-w-md');
   });
 });
 
