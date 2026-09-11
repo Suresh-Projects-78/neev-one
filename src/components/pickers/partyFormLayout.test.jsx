@@ -82,6 +82,41 @@ describe('an address reads as an address', () => {
   });
 });
 
+describe('a delete looks like a delete', () => {
+  /*
+   * The trash on a contact row was the same grey as the field controls beside
+   * it, so the one irreversible thing on the tab read as one more of them.
+   * Every other delete in the product carries the negative token.
+   */
+  it('carries the negative token on the contact row', async () => {
+    const user = userEvent.setup();
+    renderCustomer();
+    await user.click(screen.getByRole('tab', { name: 'Contacts' }));
+    const icon = screen.getByRole('button', { name: 'Remove contact 1' }).querySelector('svg');
+    expect(icon.getAttribute('class')).toContain('--neg');
+  });
+
+  it('carries it on an address card too', async () => {
+    const user = userEvent.setup();
+    renderCustomer();
+    await user.click(screen.getByRole('button', { name: /Add Address/i }));
+    const icon = screen.getByRole('button', { name: /Remove Shipping 2/i }).querySelector('svg');
+    expect(icon.getAttribute('class')).toContain('--neg');
+  });
+});
+
+describe('the statutory tab', () => {
+  /* A box the width of the card under two half-width ones reads as a different
+     kind of field. It is not one. */
+  it('keeps Others in a column with the rest', async () => {
+    const user = userEvent.setup();
+    renderCustomer();
+    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
+    const others = screen.getByLabelText(/^Others/);
+    expect(others.closest('div').className).not.toContain('col-span-2');
+  });
+});
+
 describe('remarks', () => {
   it('gives a note about the party somewhere to go', async () => {
     const user = userEvent.setup();

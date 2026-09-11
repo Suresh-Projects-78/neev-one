@@ -216,7 +216,7 @@ const AddressCard = ({ row, index, states, onChange, onRemove, tone, title, subt
             aria-label={`Remove ${row.label || `address ${index + 1}`}`}
             className="ui-btn ui-btn-ghost ui-btn-sm"
           >
-            <Trash2 size={14} aria-hidden="true" /> Remove
+            <Trash2 size={14} aria-hidden="true" className="text-[rgb(var(--neg))]" /> Remove
           </button>
         </div>
       )}
@@ -376,7 +376,9 @@ export const ContactsTab = ({
                   style={{ backgroundColor: 'rgb(var(--surface))' }}
                 >
                   <button type="button" onClick={() => onRemove(i)} aria-label={`Remove contact ${i + 1}`} className="ui-icon-btn ui-btn-sm !w-8">
-                    <Trash2 size={14} aria-hidden="true" />
+                    {/* The same red every other delete in the product carries.
+                        Grey, it read as one more field control. */}
+                    <Trash2 size={14} aria-hidden="true" className="text-[rgb(var(--neg))]" />
                   </button>
                 </td>
               </tr>

@@ -477,8 +477,19 @@ export function PartyFormLayout({
                 />
                 <p className="ui-caption mt-1">A registered micro or small supplier must be paid within 45 days.</p>
               </div>
-              <div className="sm:col-span-2">
-                <label className="ui-label" htmlFor="cust-stat-other">Others</label>
+              {/* One column, not the width of the card: a full-width box under
+                  two half-width ones reads as a different kind of field. */}
+              <div>
+                <label className="ui-label inline-flex items-center gap-1.5" htmlFor="cust-stat-other">
+                  Others
+                  <span
+                    title="Anything else this party is registered under — an IEC for exports, a LUT number, a licence."
+                    aria-label="Anything else this party is registered under — an IEC for exports, a LUT number, a licence."
+                    className="ui-subtle inline-flex cursor-help"
+                  >
+                    <Info size={13} aria-hidden="true" />
+                  </span>
+                </label>
                 <input
                   id="cust-stat-other"
                   type="text"
