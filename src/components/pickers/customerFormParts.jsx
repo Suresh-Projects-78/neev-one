@@ -51,7 +51,11 @@ export const FormRow = ({ label, hint = '', required = false, htmlFor = '', clas
         </span>
       ) : null}
     </div>
-    <div className="min-w-0">{children}</div>
+    {/* One width for every control on the card.
+        The left column's control took whatever was left after the label
+        gutter and the right column's took its own cap, so the two sides
+        differed by thirty-seven pixels — visible, and for no reason. */}
+    <div className="min-w-0 sm:max-w-[25rem]">{children}</div>
   </div>
 );
 

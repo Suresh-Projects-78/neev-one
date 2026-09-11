@@ -138,7 +138,11 @@ describe('the two columns of Basic Details', () => {
     expect(screen.getByLabelText('Customer Group').closest('div').className).toMatch(/lg:row-start-2\b/);
 
     /* And a control holding one short word does not run the half-card. */
-    expect(screen.getByLabelText('Customer Group').closest('div').className).toContain('max-w-md');
+    /* And both columns' controls are the one width — they differed by
+       thirty-seven pixels, the left taking what the label gutter left it and
+       the right taking its own cap. */
+    expect(screen.getByLabelText('Customer Group').closest('div').className).toContain('max-w-[25rem]');
+    expect(screen.getByLabelText(/^Customer Name/).parentElement.className).toContain('max-w-[25rem]');
   });
 });
 

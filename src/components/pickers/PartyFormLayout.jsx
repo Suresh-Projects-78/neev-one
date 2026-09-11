@@ -243,10 +243,10 @@ export function PartyFormLayout({
             */}
               {/* The radios opposite carry their own top padding, so this one
                   takes the same rather than centring in a row they do not fill. */}
-              <div className="flex max-w-md items-start pt-1.5 lg:col-start-2 lg:row-start-1">
+              <div className="flex w-full items-start pt-1.5 sm:max-w-[25rem] lg:col-start-2 lg:row-start-1">
                 <span className="ui-label mb-0 block">{cfg.noun} Group</span>
               </div>
-              <div className="max-w-md lg:col-start-2 lg:row-start-2">
+              <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-2">
                 <PopupSelect
                   label={null}
                   ariaLabel={`${cfg.noun} Group`}
@@ -262,10 +262,10 @@ export function PartyFormLayout({
                 />
               </div>
 
-              <div className="flex max-w-md items-center lg:col-start-2 lg:row-start-3">
+              <div className="flex w-full items-center sm:max-w-[25rem] lg:col-start-2 lg:row-start-3">
                 <span className="ui-label mb-0 block">Currency</span>
               </div>
-              <div className="max-w-md lg:col-start-2 lg:row-start-4">
+              <div className="w-full sm:max-w-[25rem] lg:col-start-2 lg:row-start-4">
                 <PopupSelect
                   label={null}
                   ariaLabel="Currency"
