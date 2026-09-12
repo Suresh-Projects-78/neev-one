@@ -8,6 +8,7 @@ import BillPreview from './BillPreview';
 import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance, documentOutstanding } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
+import DocNumberingPopover from '../../components/DocNumberingPopover';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -16,7 +17,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, Building2, Calculator, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
+import { Ban, Building2, Calculator, SlidersHorizontal, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -65,7 +66,7 @@ import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 import { useFeatures } from '../../permissions/useFeatures';
 
-export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '', branches = [], screenTitle = '', onBack = null }) => {
+export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '', branches = [], onOpenBillSettings = null, screenTitle = '', onBack = null }) => {
   const fieldErrors = useFieldErrors('bill');
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   const resolveBranchIdFromWarehouseId = (warehouseId) => {
@@ -84,6 +85,31 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
   const formRef = useRef(null);
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
+  const numberingBtnRef = useRef(null);
+  const [numberingOpen, setNumberingOpen] = useState(false);
+
+  /*
+   * Everything the panel does not cover lives on a screen of its own — so this
+   * one does leave, but never silently on a bill with typing in it.
+   */
+  const goToNumberingSettings = async () => {
+    if (typeof onOpenBillSettings !== 'function') {
+      notify.error('Open Settings to change this.');
+      return;
+    }
+    const typing =
+      String(formData.vendorId || '') ||
+      (formData.items || []).some((l) => l.itemId || Number(l.quantity) > 1 || Number(l.rate) > 0);
+    if (typing && !initialData?.id) {
+      const ok = await confirmDialog({
+        title: 'Leave this bill?',
+        message: 'That setting lives on a separate screen. Anything typed here is not saved yet and will be lost.',
+        confirmLabel: 'Leave and open settings',
+      });
+      if (!ok) return;
+    }
+    onOpenBillSettings('docNumbering');
+  };
 
   const [formData, setFormData] = useState(() => {
     const today = todayIso();
@@ -161,6 +187,20 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const isBillAuto = String(billNumbering?.mode || '').toLowerCase() === 'auto';
   const lockBillNumber = isBillAuto && !billNumbering?.allowManualOverride;
   const generatedBillNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'bill', branchId: branchIdForNumbering, takenNumbers: (db.bills || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
+
+  /*
+   * The number in the field follows the series it came from.
+   *
+   * Change the prefix or the next number — from the gear on this very field —
+   * and the bill went on showing the number the old series had already handed
+   * it, right up until it was saved under a different one: the field was
+   * stating something that was no longer true. So an untouched automatic
+   * number is read from the series each render rather than held in state. A
+   * number typed by hand is left alone, and so is an existing bill's.
+   */
+  const [numberTouched, setNumberTouched] = useState(false);
+  const autoNumbered = !initialData?.id && isBillAuto && !numberTouched;
+  const billNumberValue = autoNumbered ? String(generatedBillNumber || '') : formData.number;
 
   /*
    * Only the warehouses of the chosen branch. Goods received onto a shelf that
@@ -275,7 +315,9 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     const wantsDraft = submitAsDraft;
     if (wantsDraft) setSubmitAsDraft(false);
 
-    let billNumber = String(formData.number || '').trim();
+    /* What the field is showing — which for an untouched automatic number is
+       the series as it stands now, not as it stood when the form opened. */
+    let billNumber = String(billNumberValue || '').trim();
     if (isBillAuto) {
       if (lockBillNumber) billNumber = String(generatedBillNumber || '').trim();
       else if (!billNumber) billNumber = String(generatedBillNumber || '').trim();
@@ -537,20 +579,60 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         >
           <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr] gap-3">
         <div>
-          <label className="ui-label">Bill Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => {
-              fieldErrors.clearField('number');
-              setFormData({ ...formData, number: e.target.value });
-            }}
-            className={`w-full px-3 py-2 border rounded-lg ${lockBillNumber ? 'ui-sunken' : ''}`}
-            disabled={lockBillNumber}
-            required
-            {...fieldErrors.props('number')}
-          />
+          <label className="ui-label" htmlFor="bill-number">Bill Number</label>
+          {/* The gear sits on the field it governs, as it does on an invoice.
+              A purchase series is realised to be wrong while a bill is being
+              typed — the year turned over, or the prefix is somebody else's —
+              so it opens over the form rather than sending you to Settings
+              with half a bill on screen. */}
+          <div className="relative">
+            <input
+              id="bill-number"
+              type="text"
+              value={billNumberValue}
+              onChange={(e) => {
+                fieldErrors.clearField('number');
+                setNumberTouched(true);
+                setFormData({ ...formData, number: e.target.value });
+              }}
+              className={`ui-input ui-mono w-full pe-9 ${lockBillNumber ? 'ui-sunken' : ''}`}
+              disabled={lockBillNumber}
+              required
+              {...fieldErrors.props('number')}
+            />
+            <button
+              type="button"
+              ref={numberingBtnRef}
+              onClick={() => setNumberingOpen((v) => !v)}
+              className="absolute end-1 top-1/2 -translate-y-1/2 ui-icon-btn !h-7 !w-7"
+              aria-label="Bill numbering settings"
+              aria-haspopup="dialog"
+              aria-expanded={numberingOpen}
+              title="Numbering"
+            >
+              <SlidersHorizontal size={15} aria-hidden="true" />
+            </button>
+          </div>
           <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
+          {numberingOpen ? (
+            <DocNumberingPopover
+              anchorRef={numberingBtnRef}
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              voucherKey="bill"
+              title="Bill numbering"
+              sampleLabel="Next bill will be"
+              manualLabel="Typed on each bill"
+              branchId={branchIdForNumbering}
+              settings={billNumbering}
+              onClose={() => setNumberingOpen(false)}
+              onOpenFullSettings={() => {
+                setNumberingOpen(false);
+                goToNumberingSettings();
+              }}
+            />
+          ) : null}
         </div>
 
             <div className="min-w-0">
@@ -1757,6 +1839,9 @@ export const BillsList = ({
   onDuplicateBill,
   onEditBill,
   warehouses = [],
+  /* Handed on to a bill form opened from this list, so it can ask which
+     branch the bill belongs to. */
+  branches = [],
   defaultWarehouseId = '',
 }) => {
   const billPeriod = usePeriodFilter();
@@ -2060,6 +2145,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
         currentCompany={currentCompany}
         initialData={copyBill}
         warehouses={warehouses}
+        branches={branches}
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
@@ -2199,6 +2285,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                 setDb={setDb}
                 currentCompany={currentCompany}
                 warehouses={warehouses}
+                branches={branches}
                 defaultWarehouseId={defaultWarehouseId}
                 onClose={() => openModal(null)}
               />

@@ -28,6 +28,7 @@ import { downloadJson } from '../../utils/gstrExport';
 import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 import Popover from '../../components/ui/Popover';
+import DocNumberingPopover from '../../components/DocNumberingPopover';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
@@ -115,6 +116,9 @@ export const InvoicesList = ({
    */
   onNavigate = null,
   warehouses = [],
+  /* Handed on to an invoice form opened from this list, so it can ask which
+     branch the invoice belongs to. */
+  branches = [],
   defaultWarehouseId = '',
 }) => {
   const invoices = db.invoices.filter((i) => i.companyId === currentCompany.id);
@@ -513,6 +517,7 @@ const statusReason = (doc, status, company, nowMs) => {
         setDb={setDb}
         currentCompany={currentCompany}
         warehouses={warehouses}
+        branches={branches}
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
@@ -532,6 +537,7 @@ const statusReason = (doc, status, company, nowMs) => {
         currentCompany={currentCompany}
         initialData={invoice}
         warehouses={warehouses}
+        branches={branches}
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
@@ -644,6 +650,7 @@ const statusReason = (doc, status, company, nowMs) => {
         currentCompany={currentCompany}
         initialOriginalInvoiceId={invoice?.id}
         warehouses={warehouses}
+        branches={branches}
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
@@ -1697,6 +1704,9 @@ export const EstimatesList = ({
   onEditEstimate,
   onConvertToInvoice,
   warehouses = [],
+  /* Handed on to a document form opened from this list, so it can ask which
+     branch the document belongs to. */
+  branches = [],
   defaultWarehouseId = '',
 }) => {
   const [openMenu, setOpenMenu] = useState(null);
@@ -1931,6 +1941,7 @@ export const EstimatesList = ({
         currentCompany={currentCompany}
         initialData={initialInvoice}
         warehouses={warehouses}
+        branches={branches}
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
@@ -2302,6 +2313,9 @@ export const CreditNotesList = ({
   currentCompany,
   onNewCreditNote,
   warehouses = [],
+  /* Handed on to a credit note opened from this list, so it can ask which
+     branch the note belongs to. */
+  branches = [],
   defaultWarehouseId = '',
   onNavigate = null,
 }) => {
@@ -2468,6 +2482,7 @@ export const CreditNotesList = ({
         setDb={setDb}
         currentCompany={currentCompany}
         warehouses={warehouses}
+        branches={branches}
         defaultWarehouseId={defaultWarehouseId}
         onClose={() => openModal(null)}
       />,
@@ -2701,128 +2716,6 @@ export const CreditNotesList = ({
  * branch is in play, company-wide otherwise — so the two can never disagree
  * about what the next invoice is called.
  */
-const InvoiceNumberingPopover = ({ anchorRef, db, setDb, currentCompany, branchId, settings, onClose, onOpenFullSettings }) => {
-  const current = settings && typeof settings === 'object' ? settings : {};
-  const [draft, setDraft] = useState(() => ({
-    mode: String(current.mode || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto',
-    prefix: String(current.prefix ?? ''),
-    suffix: String(current.suffix ?? ''),
-    nextNumber: Number(current.nextNumber ?? 1) || 1,
-    allowManualOverride: current.allowManualOverride !== false,
-  }));
-
-  const set = (patch) => setDraft((p) => ({ ...p, ...patch }));
-
-  const save = () => {
-    const scoped = String(branchId || '').trim();
-    setDb({
-      ...db,
-      companies: (db.companies || []).map((c) => {
-        if (c.id !== currentCompany.id) return c;
-        const baseDoc = c?.docSettings && typeof c.docSettings === 'object' ? c.docSettings : {};
-        const patch = {
-          mode: draft.mode,
-          prefix: draft.prefix,
-          suffix: draft.suffix,
-          nextNumber: Math.max(1, Number(draft.nextNumber) || 1),
-          allowManualOverride: Boolean(draft.allowManualOverride),
-        };
-        if (scoped) {
-          const prevByBranch = baseDoc?.numberingByBranch && typeof baseDoc.numberingByBranch === 'object' ? baseDoc.numberingByBranch : {};
-          const prevBranch = prevByBranch?.[scoped] && typeof prevByBranch[scoped] === 'object' ? prevByBranch[scoped] : {};
-          return {
-            ...c,
-            docSettings: {
-              ...baseDoc,
-              numberingByBranch: {
-                ...prevByBranch,
-                [scoped]: { ...prevBranch, invoice: { ...(prevBranch.invoice || {}), ...patch } },
-              },
-            },
-          };
-        }
-        const prevNum = baseDoc?.numbering && typeof baseDoc.numbering === 'object' ? baseDoc.numbering : {};
-        return {
-          ...c,
-          docSettings: { ...baseDoc, numbering: { ...prevNum, invoice: { ...(prevNum.invoice || {}), ...patch } } },
-        };
-      }),
-    });
-    onClose?.();
-  };
-
-  const sample = `${draft.prefix}${String(Math.max(1, Number(draft.nextNumber) || 1))}${draft.suffix}`;
-
-  return (
-    <Popover anchorRef={anchorRef} onClose={onClose} minWidth={310}>
-      <div className="p-3 space-y-3">
-        <div className="ui-t-label">Invoice numbering</div>
-
-        <div>
-          <label className="ui-label" htmlFor="inv-num-mode">How numbers are issued</label>
-          <select
-            id="inv-num-mode"
-            className="ui-select"
-            value={draft.mode}
-            onChange={(e) => set({ mode: e.target.value })}
-          >
-            <option value="auto">Automatic from the series</option>
-            <option value="manual">Typed on each invoice</option>
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="ui-label" htmlFor="inv-num-prefix">Prefix</label>
-            <input id="inv-num-prefix" className="ui-input ui-mono" value={draft.prefix} onChange={(e) => set({ prefix: e.target.value })} />
-          </div>
-          <div>
-            <label className="ui-label" htmlFor="inv-num-suffix">Suffix</label>
-            <input id="inv-num-suffix" className="ui-input ui-mono" value={draft.suffix} onChange={(e) => set({ suffix: e.target.value })} />
-          </div>
-        </div>
-
-        <div>
-          <label className="ui-label" htmlFor="inv-num-next">Next number</label>
-          <input
-            id="inv-num-next"
-            type="number"
-            min="1"
-            className="ui-input ui-mono"
-            value={draft.nextNumber}
-            onChange={(e) => set({ nextNumber: e.target.value })}
-          />
-        </div>
-
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
-          <input
-            type="checkbox"
-            className="ui-checkbox"
-            checked={draft.allowManualOverride}
-            onChange={(e) => set({ allowManualOverride: e.target.checked })}
-          />
-          Allow typing over the number
-        </label>
-
-        <div className="rounded-lg px-3 py-2" style={{ background: 'rgb(var(--surface-sunken))' }}>
-          <div className="ui-caption">Next invoice will be</div>
-          <div className="ui-mono text-sm font-medium">{sample}</div>
-        </div>
-
-        <div className="flex items-center justify-between gap-2 pt-1">
-          <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm" onClick={onOpenFullSettings}>
-            All numbering
-          </button>
-          <div className="flex items-center gap-2">
-            <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={onClose}>Cancel</button>
-            <button type="button" className="ui-btn ui-btn-primary ui-btn-sm" onClick={save}>Save</button>
-          </div>
-        </div>
-      </div>
-    </Popover>
-  );
-};
-
 export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onClose, warehouses = [], defaultWarehouseId = '', branches = [], onOpenInvoiceSettings = null, onDuplicateInvoice = null, screenTitle = '', screenSubtitle = '', onBack = null }) => {
   const isEdit = Boolean(initialData && (initialData.id !== undefined && initialData.id !== null));
 
@@ -4284,11 +4177,15 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             </div>
             <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
             {numberingOpen ? (
-              <InvoiceNumberingPopover
+              <DocNumberingPopover
                 anchorRef={numberingBtnRef}
                 db={db}
                 setDb={setDb}
                 currentCompany={currentCompany}
+                voucherKey="invoice"
+                title="Invoice numbering"
+                sampleLabel="Next invoice will be"
+                manualLabel="Typed on each invoice"
                 branchId={branchIdForNumbering}
                 settings={invoiceNumbering}
                 onClose={() => setNumberingOpen(false)}

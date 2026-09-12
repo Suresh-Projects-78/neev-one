@@ -4172,6 +4172,10 @@ const LedgerView = ({
   onBack,
   openModal,
   warehouses = [],
+  /* Carried through to the document forms opened from a row: both ask which
+     branch the document belongs to, and a form handed none offers a branch
+     list with nothing on it. */
+  branches = [],
   activeWarehouseId = '',
 }) => {
   const LEDGER_COLUMN_DEFS = [
@@ -4523,6 +4527,7 @@ const LedgerView = ({
           currentCompany={currentCompany}
           initialData={inv}
           warehouses={warehouses}
+          branches={branches}
           defaultWarehouseId={activeWarehouseId}
           onClose={() => openModal(null)}
         />
@@ -4538,6 +4543,7 @@ const LedgerView = ({
           currentCompany={currentCompany}
           initialData={b}
           warehouses={warehouses}
+          branches={branches}
           defaultWarehouseId={activeWarehouseId}
           onClose={() => openModal(null)}
         />
@@ -12273,6 +12279,7 @@ const AppShell = () => {
             openModal={openModal}
             currentCompany={currentCompany}
             warehouses={warehousesForUser}
+            branches={branchesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewInvoice={() => setInvoiceEditor({ open: true, initial: null })}
             onEditInvoice={(inv) => setInvoiceEditor({ open: true, initial: inv })}
@@ -12347,6 +12354,7 @@ const AppShell = () => {
               setActive(screen);
             }}
             warehouses={warehousesForUser}
+            branches={branchesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewEstimate={() => setEstimateEditor({ open: true, initial: null })}
             onEditEstimate={(est) => setEstimateEditor({ open: true, initial: est })}
@@ -12452,6 +12460,7 @@ const AppShell = () => {
             openModal={openModal}
             currentCompany={currentCompany}
             warehouses={warehousesForUser}
+            branches={branchesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewCreditNote={() => setCreditNoteEditor({ open: true, initialOriginalInvoiceId: null })}
             onNavigate={(screen, kind = '') => {
@@ -12776,6 +12785,9 @@ const AppShell = () => {
                   warehouses={warehousesForUser}
                   branches={branchesForUser}
                   defaultWarehouseId={activeWarehouseId}
+                  /* Same detour as the invoice's: the editor stays open behind
+                     the settings screen, so Back returns to the bill. */
+                  onOpenBillSettings={(screen) => setActive(screen)}
                   screenTitle={billEditor.initial?.id ? 'Edit Bill' : 'New Bill'}
                   onBack={() => setBillEditor({ open: false, initial: null })}
                   onClose={() => setBillEditor({ open: false, initial: null })}
@@ -12791,6 +12803,7 @@ const AppShell = () => {
             openModal={openModal}
             currentCompany={currentCompany}
             warehouses={warehousesForUser}
+            branches={branchesForUser}
             defaultWarehouseId={activeWarehouseId}
             onNewBill={() => setBillEditor({ open: true, initial: null })}
             onNavigate={(screen, kind = '') => {
@@ -12888,6 +12901,7 @@ const AppShell = () => {
             ledgerId={ledgerNav.ledgerId}
             openModal={openModal}
             warehouses={warehouses}
+            branches={branchesForUser}
             activeWarehouseId={activeWarehouseId}
             onBack={() => setActive(ledgerNav.returnTo || 'trialBalance')}
           />
