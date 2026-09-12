@@ -215,6 +215,7 @@ const BankReconciliation = lazy(() => import('./features/cashBank/BankReconcilia
 const BankCashAccounts = lazy(() => import('./features/cashBank/BankCashAccounts'));
 const CashBankTransactions = lazy(() => import('./features/cashBank/CashBankTransactions'));
 const TdsModule = lazy(() => import('./features/tds/TdsModule'));
+const TdsChallanForm = lazy(() => import('./features/tds/ChallanForm'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
 const DataBackup = lazy(() => import('./features/account/DataBackup'));
@@ -13405,6 +13406,19 @@ const AppShell = () => {
             db={dbForUser}
             currentCompany={currentCompany}
             onOpenSettings={(screen) => setActive(screen)}
+            onNewChallan={() =>
+              openModal(
+                <Suspense fallback={null}>
+                  <TdsChallanForm
+                    db={dbForUser}
+                    setDb={setDb}
+                    currentCompany={currentCompany}
+                    onClose={() => openModal(null)}
+                  />
+                </Suspense>,
+                { title: 'Record TDS challan', maxWidthClass: 'max-w-4xl' }
+              )
+            }
           />
         );
       case 'tdsTcs':
