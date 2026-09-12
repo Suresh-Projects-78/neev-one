@@ -2103,9 +2103,14 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
         title="Basic Details"
         description="Enter the essential information about the item."
       >
+        {/*
+          One grid, both halves placed on its rows, so each field sits opposite
+          its pair. Stacked as two columns, a caption under the item code pushed
+          the category down past the item type and every row below it drifted —
+          the two sides ended up describing different rows at the same height.
+        */}
         <div className="grid gap-x-14 gap-y-4 lg:grid-cols-2">
-          <div className="space-y-4">
-            <PartyFormRow label="Item Name" required htmlFor="item-name">
+            <PartyFormRow className="lg:col-start-1 lg:row-start-1" label="Item Name" required htmlFor="item-name">
               <input
                 id="item-name"
                 type="text"
@@ -2118,7 +2123,7 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
               <FieldError error={itemErrors.error('name')} id={itemErrors.errorId('name')} />
             </PartyFormRow>
 
-            <PartyFormRow label="Item Type" required hint="Goods are counted and can carry stock; a service is not.">
+            <PartyFormRow className="lg:col-start-1 lg:row-start-2" label="Item Type" required hint="Goods are counted and can carry stock; a service is not.">
               <div className="flex items-center gap-6 pt-1.5">
                 {['Goods', 'Service'].map((t) => (
                   <label key={t} className="inline-flex cursor-pointer items-center gap-2 text-sm">
@@ -2143,7 +2148,7 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
               </div>
             </PartyFormRow>
 
-            <PartyFormRow label="HSN / SAC" required={isTaxable} htmlFor="item-hsn" hint="The code the rate is filed under.">
+            <PartyFormRow className="lg:col-start-1 lg:row-start-3" label="HSN / SAC" required={isTaxable} htmlFor="item-hsn" hint="The code the rate is filed under.">
               <input
                 id="item-hsn"
                 type="text"
@@ -2154,7 +2159,7 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
               />
             </PartyFormRow>
 
-            <PartyFormRow
+            <PartyFormRow className="lg:col-start-1 lg:row-start-4"
               label="Taxability"
               required
               htmlFor="item-taxability"
@@ -2172,7 +2177,7 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
               </select>
             </PartyFormRow>
 
-            <PartyFormRow label="Purchase Price" htmlFor="item-purchase">
+            <PartyFormRow className="lg:col-start-1 lg:row-start-5" label="Purchase Price" htmlFor="item-purchase">
               <div className="relative">
                 <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
                 <input
@@ -2186,10 +2191,8 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
                 />
               </div>
             </PartyFormRow>
-          </div>
 
-          <div className="space-y-4">
-            <PartyFormRow label="Item Code" htmlFor="item-code" hint="Allotted from the series this type is numbered on.">
+            <PartyFormRow className="lg:col-start-2 lg:row-start-1" label="Item Code" htmlFor="item-code" hint="Allotted from the series this type is numbered on.">
               <input
                 id="item-code"
                 type="text"
@@ -2201,7 +2204,7 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
               <p className="ui-caption mt-1">Automatically generated</p>
             </PartyFormRow>
 
-            <PartyFormRow label="Category / Item Group" htmlFor="item-category">
+            <PartyFormRow className="lg:col-start-2 lg:row-start-2" label="Category / Item Group" htmlFor="item-category">
               <div className="flex items-center gap-2">
                 <select
                   id="item-category"
@@ -2257,7 +2260,7 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
               ) : null}
             </PartyFormRow>
 
-            <PartyFormRow label="Unit of Measurement" required htmlFor="item-unit">
+            <PartyFormRow className="lg:col-start-2 lg:row-start-3" label="Unit of Measurement" required htmlFor="item-unit">
               <div className="flex items-center gap-2">
                 <select
                   id="item-unit"
@@ -2309,7 +2312,13 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
             {/* Only a taxable item is asked for a rate; the other three
                 taxabilities answer the question by themselves. */}
             {isTaxable ? (
-              <PartyFormRow label="GST Rate" required htmlFor="item-gst">
+              <PartyFormRow
+                className="lg:col-start-2 lg:row-start-4"
+                label="GST Rate"
+                required
+                htmlFor="item-gst"
+                hint="From the GST Rate master, so a rate nobody maintains cannot be typed in."
+              >
                 <select
                   id="item-gst"
                   value={gstRateValue}
@@ -2326,11 +2335,10 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
                     ))
                   )}
                 </select>
-                <p className="ui-caption mt-1">From the GST Rate master, so a rate nobody maintains cannot be typed in.</p>
               </PartyFormRow>
             ) : null}
 
-            <PartyFormRow label="Selling Price" htmlFor="item-sale">
+            <PartyFormRow className="lg:col-start-2 lg:row-start-5" label="Selling Price" htmlFor="item-sale">
               <div className="relative">
                 <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
                 <input
@@ -2344,7 +2352,6 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
                 />
               </div>
             </PartyFormRow>
-          </div>
         </div>
       </FormSection>
 
