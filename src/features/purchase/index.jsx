@@ -87,12 +87,26 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const [submitAsDraft, setSubmitAsDraft] = useState(false);
   const numberingBtnRef = useRef(null);
   const [numberingOpen, setNumberingOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  /*
+   * The fields this company added to a bill.
+   *
+   * They were defined in Settings and printed nowhere: every other document
+   * asks for them, the bill did not, so a company that needed a transporter or
+   * a PO reference on its purchases had to keep it in the notes. Same three
+   * places as the purchase order — beside the header, beside the reference,
+   * and at the foot.
+   */
+  const customFields = React.useMemo(() => getVisibleCustomFields(currentCompany, 'bill'), [currentCompany]);
+  const setCustomField = (key, value) =>
+    setFormData((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
 
   /*
    * Everything the panel does not cover lives on a screen of its own — so this
    * one does leave, but never silently on a bill with typing in it.
    */
-  const goToNumberingSettings = async () => {
+  const goToNumberingSettings = async (screen = 'docNumbering') => {
     if (typeof onOpenBillSettings !== 'function') {
       notify.error('Open Settings to change this.');
       return;
@@ -108,7 +122,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       });
       if (!ok) return;
     }
-    onOpenBillSettings('docNumbering');
+    onOpenBillSettings(screen);
   };
 
   const [formData, setFormData] = useState(() => {
@@ -309,6 +323,31 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
   const computed = computeGstForLines({ lines: formData.items, isIntra });
 
+  /*
+   * The bill as it stands, for Preview.
+   *
+   * There is nothing saved to look at yet — a preview that waited for a saved
+   * record would only ever open on a document somebody had already committed,
+   * which is the one moment they do not need to check it.
+   */
+  const previewBill = {
+    ...formData,
+    id: initialData?.id ?? null,
+    companyId: currentCompany.id,
+    number: billNumberValue,
+    vendorName: getVendorDisplayName(vendor) || '',
+    vendorGstin,
+    placeOfSupplyState: vendorState,
+    taxType: isIntra ? 'CGST_SGST' : 'IGST',
+    items: computed.lines,
+    subtotal: computed.subtotal,
+    cgstTotal: computed.cgstTotal,
+    sgstTotal: computed.sgstTotal,
+    igstTotal: computed.igstTotal,
+    gstTotal: computed.gstTotal,
+    total: computed.total,
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -420,6 +459,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       number: serverNumber || billNumber,
       warehouseId: String(formData.warehouseId || '').trim(),
       branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
+      /* customFields ride in on the spread of formData above. */
       vendorName: billVendorName,
       vendorGstin: vendorGstin,
       placeOfSupplyState: vendorState,
@@ -491,7 +531,39 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           formRef.current?.requestSubmit();
         }}
         primaryLabel={initialData?.id ? 'Update Bill' : 'Create Bill'}
+        /* Reading this bill and configuring every bill are different acts, so
+           they are different groups — the invoice's rule, and the reason a
+           template is not edited by somebody reaching for Preview. */
+        menu={[
+          { key: 'preview', group: 'This bill', label: 'Preview Bill', icon: Eye, onSelect: () => setPreviewOpen(true) },
+          {
+            key: 'numbering',
+            group: 'Configure — every bill',
+            label: 'Bill numbering',
+            icon: SlidersHorizontal,
+            onSelect: () => setNumberingOpen(true),
+          },
+          {
+            key: 'customFields',
+            group: 'Configure — every bill',
+            label: 'Custom fields',
+            icon: Plus,
+            onSelect: () => goToNumberingSettings('settingsCustomFields'),
+          },
+        ]}
       />
+
+      {previewOpen ? (
+        <Modal
+          onClose={() => setPreviewOpen(false)}
+          title={`Purchase bill ${billNumberValue || ''}`.trim()}
+          maxWidthClass="max-w-5xl"
+        >
+          {/* The bill as it stands, not as it was saved — there is nothing
+              saved yet, and a preview of a blank document helps nobody. */}
+          <BillPreview db={db} currentCompany={currentCompany} bill={previewBill} />
+        </Modal>
+      ) : null}
       {/*
         The head of the document, in the invoice's two columns: who it came from
         and where the goods landed on the left, the paperwork that identifies it
@@ -876,6 +948,14 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           </div>
         </div>
       </div>
+
+      {hasCustomFieldsAt(customFields, 'header', 'reference', 'notes') ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
+        </div>
+      ) : null}
 
       <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
