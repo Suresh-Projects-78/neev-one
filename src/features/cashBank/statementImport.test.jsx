@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -168,5 +168,69 @@ describe('importing the same statement twice', () => {
     expect(await screen.findByText('Review before importing')).toBeInTheDocument();
     expect(screen.getByText('Possible duplicate')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Import row 1' })).toBeChecked();
+  });
+});
+
+describe('allocating an imported line', () => {
+  beforeEach(() => localStorage.clear());
+
+  const openAllocate = async (user) => {
+    await importStatement(user);
+    await waitFor(() => expect((latest.db.bankTransactions || []).length).toBe(2));
+    /* Description and narration both print the text; anchor on the row. */
+    const row = screen.getAllByText('GST Paid').map((el) => el.closest('tr')).find(Boolean);
+    await user.click(within(row).getByTitle('Actions'));
+    await user.click(await screen.findByRole('button', { name: /Allocate \/ split/ }));
+    return screen.findByText('Allocate bank transaction');
+  };
+
+  it('shows the parent read-only with bank, allocated and difference', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await openAllocate(user);
+
+    expect(screen.getByText('Bank amount')).toBeInTheDocument();
+    expect(screen.getByText('Allocated')).toBeInTheDocument();
+    expect(screen.getByText('Difference')).toBeInTheDocument();
+    /* Nothing on the dialog edits the parent's amount. */
+    expect(screen.queryByDisplayValue('10000')).toBeNull();
+  });
+
+  it('refuses to post a partial split, saves it instead', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await openAllocate(user);
+
+    await user.selectOptions(screen.getByLabelText('Ledger'), '610');
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '8000' } });
+
+    expect(screen.getByRole('button', { name: /Allocate & post/ })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect((latest.db.bankAllocations || []).length).toBe(1));
+    expect(latest.db.bankAllocations[0]).toMatchObject({ ledgerId: '610', amount: 8000, journalEntryId: null });
+    expect(latest.db.journalEntries || []).toHaveLength(0);
+  });
+
+  it('posts one balanced journal when the difference reaches zero', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await openAllocate(user);
+
+    await user.selectOptions(screen.getByLabelText('Ledger'), '610');
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '10000' } });
+    await user.click(screen.getByRole('button', { name: /Allocate & post/ }));
+
+    await waitFor(() => expect((latest.db.journalEntries || []).length).toBe(1));
+    const journal = latest.db.journalEntries[0];
+    expect(journal.totalDebit).toBe(10000);
+    expect(journal.totalCredit).toBe(10000);
+    expect(journal.sourceBankTransactionId).toBeTruthy();
+    /* The child rows carry the accounting linkage. */
+    expect(latest.db.bankAllocations[0].journalEntryId).toBe(journal.id);
+    /* And the parent's bank-side facts are exactly as imported. */
+    const parent = latest.db.bankTransactions.find((t) => String(t.id) === String(journal.sourceBankTransactionId));
+    expect(parent.amount).toBe(10000);
+    expect(parent.imported).toBe(true);
   });
 });

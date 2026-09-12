@@ -3,6 +3,8 @@ import { notify, confirmDialog } from '../../components/ui/notify';
 import { CheckCircle2, ClipboardList, Download, FileSpreadsheet, Link2, MoreVertical, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 
 import Modal from '../../components/ui/Modal';
+import AllocationDialog from './AllocationDialog';
+import { allocationSummary, allocationsForTxn } from './allocations';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { formatMoney, round2 } from '../../utils/money';
@@ -300,7 +302,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   const txnSearch = useListSearch(allTxns, ['description', 'narration', 'date', 'status']);
   const txnFilters = useColumnFilters();
-  const statusOf = (t) => (t?.readOnly ? 'Recorded' : t?.ledgerId ? 'Categorised' : 'Uncategorised');
+  const statusOf = (t) => {
+    if (t?.readOnly) return 'Recorded';
+    /* A split line's status comes from its children — derived, never typed. */
+    const split = allocationsForTxn(db, companyId, t?.id);
+    if (split.length) return allocationSummary(t, split).status;
+    return t?.ledgerId ? 'Categorised' : 'Uncategorised';
+  };
   const txns = useMemo(() => {
     const base = txnSearch.filtered;
     const byView =
@@ -499,6 +507,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   const [pasteText, setPasteText] = useState('');
   /* Rows waiting on a human verdict: null, or { rows, unknownAccounts, ... }. */
   const [importReview, setImportReview] = useState(null);
+  /* The bank line being split across the book, or null. */
+  const [allocatingTxn, setAllocatingTxn] = useState(null);
 
   const [pendingAddTxnInitial, setPendingAddTxnInitial] = useState(null);
 
@@ -2109,6 +2119,15 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       onStatusChange={setView}
       above={
         <>
+        {allocatingTxn ? (
+          <AllocationDialog
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            txn={allocatingTxn}
+            onClose={() => setAllocatingTxn(null)}
+          />
+        ) : null}
         {importReview ? (
           <Modal onClose={() => setImportReview(null)} title="Review before importing" maxWidthClass="max-w-4xl">
             <div className="space-y-3">
@@ -2376,6 +2395,17 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
                           {String(openActionId || '') === String(t.id) ? (
                             <div className="absolute right-4 mt-2 w-40 ui-surface border rounded-lg shadow-sm overflow-hidden z-10">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionId(null);
+                                  setAllocatingTxn(t);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken"
+                              >
+                                <Link2 size={16} />
+                                <span>Allocate / split</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => {
