@@ -15,6 +15,7 @@ import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory'
 import React, { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
+  AlertTriangle,
   BadgePercent,
   BarChart3,
   Check,
@@ -277,7 +278,7 @@ const resolveServerOrgId = (company) => {
 };
 
 
-const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
+export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   const expenses = db.expenses.filter((e) => e.companyId === currentCompany.id);
   // This screen had no search at all — the only way to find a voucher was to
   // scroll, or to know its date and narrow the period around it.
@@ -342,6 +343,10 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       refDate: (r) => r.refDate,
       amount: (r) => r.total,
       status: (r) => getDerivedStatus(r),
+      /* The two new columns filter and sort like the rest; without these their
+         headings opened a panel that did nothing. */
+      paidAmount: (r) => Math.min(Number(r.paidAmount || 0), Number(r.total || 0)),
+      balance: (r) => Math.max(0, Number(r.total || 0) - Math.min(Number(r.paidAmount || 0), Number(r.total || 0))),
     }
   );
 
@@ -635,7 +640,21 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     const active = expenses.filter((e) => String(e?.status || '') !== 'Draft');
     const total = active.reduce((sum, e) => sum + Number(e?.total || 0), 0);
     const paid = active.reduce((sum, e) => sum + Math.min(Number(e?.paidAmount || 0), Number(e?.total || 0)), 0);
-    return { total, paid, unpaid: Math.max(0, total - paid), count: active.length };
+
+    /*
+     * What is late, as its own figure.
+     *
+     * Outstanding says what is owed and overdue says what is a problem, and the
+     * two were one number — so a book with nothing late read the same as a book
+     * three months behind.
+     */
+    const overdue = active.reduce((sum, e) => {
+      if (getDerivedStatus(e) !== 'Over due') return sum;
+      const owed = Math.max(0, Number(e?.total || 0) - Number(e?.paidAmount || 0));
+      return sum + owed;
+    }, 0);
+
+    return { total, paid, unpaid: Math.max(0, total - paid), overdue, count: active.length };
   })();
 
 
@@ -671,16 +690,14 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         </PermissionButton>
       }
       cards={[
-        { label: 'Vouchers', value: expenseFlow.count, count: true, tone: 'draft', Icon: ClipboardList },
-        { label: 'Spent', value: expenseFlow.total, tone: 'sent', Icon: Receipt },
-        { label: 'Paid', value: expenseFlow.paid, tone: 'paid', Icon: Check },
-        { label: 'Unpaid', value: expenseFlow.unpaid, tone: 'outstanding', Icon: FileText },
-        {
-          label: 'Average voucher',
-          value: expenseFlow.count ? expenseFlow.total / expenseFlow.count : 0,
-          tone: 'partial',
-          Icon: BadgePercent,
-        },
+        { label: 'Total expenses', value: expenseFlow.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Total expense amount', value: expenseFlow.total, tone: 'sent', Icon: Receipt },
+        { label: 'Paid amount', value: expenseFlow.paid, tone: 'paid', Icon: Check },
+        { label: 'Outstanding amount', value: expenseFlow.unpaid, tone: 'outstanding', Icon: FileText },
+        /* The average voucher stood here and answered nothing anybody asks of a
+           list of expenses; what is late is the figure somebody opens this
+           screen for. */
+        { label: 'Overdue amount', value: expenseFlow.overdue, tone: 'overdue', Icon: AlertTriangle },
       ]}
       tabs={EXPENSE_STATUS_TABS}
       tabsLabel="Expense status"
@@ -743,25 +760,30 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         <table className="ui-table ui-table-wide ui-table-sticky">
           <thead>
             <tr>
-              <ColumnHeader label="Voucher #" col="number" state={expenseColFilters} />
-              <ColumnHeader label="Date" col="date" state={expenseColFilters} />
+              <ColumnHeader label="Expense no." col="number" state={expenseColFilters} />
+              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} />
+              <ColumnHeader label="Expense date" col="date" state={expenseColFilters} />
               <ColumnHeader label="Due date" col="dueDate" state={expenseColFilters} />
               <ColumnHeader label="Narration" col="description" state={expenseColFilters} />
-              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} />
-              <ColumnHeader label="Ref no" col="refNo" state={expenseColFilters} />
+              <ColumnHeader label="Reference no." col="refNo" state={expenseColFilters} />
               {/* Filterable like every column beside it. Left as a plain
                   heading it also wore the table's uppercase, so one column in
                   the row read in a different case from the rest. */}
               <ColumnHeader label="Ref date" col="refDate" state={expenseColFilters} />
               <ColumnHeader label="Amount" col="amount" state={expenseColFilters} className="ui-num" align="right" />
               <ColumnHeader label="Status" col="status" state={expenseColFilters} />
+              {/* What has been paid and what is left. The status said "Partly
+                  paid" and the list made you open the voucher to learn by how
+                  much. */}
+              <ColumnHeader label="Paid amount" col="paidAmount" state={expenseColFilters} className="ui-num" align="right" />
+              <ColumnHeader label="Balance" col="balance" state={expenseColFilters} className="ui-num" align="right" />
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="ui-rows">
             {filteredExpenses.length === 0 ? (
               <tr>
-                <td colSpan="10" className="p-0">
+                <td colSpan="12" className="p-0">
                   {/*
                     Was the bare words "No expenses found", where Bills gets an
                     icon, a sentence explaining what the record is for, and a
@@ -796,6 +818,8 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             ) : (
               filteredExpenses.map((expense) => {
                 const derived = getDerivedStatus(expense);
+                const expensePaid = Math.min(Number(expense.paidAmount || 0), Number(expense.total || 0));
+                const expenseBalance = Math.max(0, Number(expense.total || 0) - expensePaid);
                 return (
                   <tr
                     key={expense.id}
@@ -806,16 +830,18 @@ const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                     }}
                   >
                   <td className="px-4 py-2.5 ui-col-entity">{expense.number || '-'}</td>
+                  <td className="px-4 py-2.5 ui-col-entity">{expense.vendorName || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.date}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.dueDate || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-meta truncate" title={expense.description || ''}>{expense.description}</td>
-                  <td className="px-4 py-2.5 ui-col-entity">{expense.vendorName || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-id">{expense.refNo || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.refDate || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expense.total, currentCompany)}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
                     <StatusPill status={derived} />
                   </td>
+                  <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expensePaid, currentCompany)}</td>
+                  <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expenseBalance, currentCompany)}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
                     <button
                       type="button"
