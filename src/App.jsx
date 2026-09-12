@@ -161,7 +161,9 @@ import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
-import { TDS_NATURES, natureForSection, resolveRule, ruleReference } from './features/tds/ruleMaster';
+import { TDS_NATURES, natureByCode, natureForSection, resolveRule, ruleReference } from './features/tds/ruleMaster';
+import { tdsEventFrom } from './features/tds/engine';
+import { tdsGroupSide } from './utils/tdsLedgers';
 import { todayIso } from './utils/dates';
 import {
   ledgerHasPostings,
@@ -3820,6 +3822,58 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
   const difference = round2(totalDebit - totalCredit);
   const isBalanced = Math.abs(difference) < 0.005 && totalDebit > 0;
 
+  /*
+   * A journal that moves TDS is a TDS event.
+   *
+   * Adjustments happen: a deduction made at the wrong rate, a short deposit
+   * squared off, an opening balance brought in. They are written as journals,
+   * and until now they moved the ledger without ever reaching the register —
+   * so the TDS Payable balance and the return disagreed, and the difference
+   * was invisible until somebody totalled both by hand.
+   *
+   * The line tells us which nature and which side; only the party cannot be
+   * inferred, because a journal has none. So that is the one thing asked for,
+   * and only when a TDS ledger is actually on the entry.
+   */
+  const tdsGroups = useMemo(
+    () => (db.accountGroups || []).filter((g) => Number(g?.companyId) === Number(currentCompany.id)),
+    [db.accountGroups, currentCompany.id]
+  );
+
+  const tdsLine = useMemo(() => {
+    for (const line of formData.lines || []) {
+      const account = accounts.find((a) => String(a.id) === String(line.accountId || ''));
+      if (!account) continue;
+      const side = String(account.tdsSide || '').toUpperCase() || tdsGroupSide(tdsGroups, account.groupId);
+      if (!side) continue;
+      const amount = round2(Number(line.debit || 0) || Number(line.credit || 0));
+      if (amount <= 0) continue;
+      return {
+        account,
+        side,
+        amount,
+        /* Credit raises a payable; debit raises a receivable — and a debit to
+           a payable ledger is the adjustment reducing one, which the register
+           records as a negative event rather than a new deduction. */
+        signed: side === 'PAYABLE'
+          ? round2(Number(line.credit || 0) - Number(line.debit || 0))
+          : round2(Number(line.debit || 0) - Number(line.credit || 0)),
+        natureCode:
+          String(account.tdsNatureCode || '').trim() || natureForSection(account.tdsSection)?.code || '',
+      };
+    }
+    return null;
+  }, [formData.lines, accounts, tdsGroups]);
+
+  const tdsParties = useMemo(() => {
+    if (!tdsLine) return [];
+    const list = tdsLine.side === 'RECEIVABLE' ? db.customers : db.vendors;
+    return (Array.isArray(list) ? list : [])
+      .filter((p) => Number(p?.companyId) === Number(currentCompany.id))
+      .slice()
+      .sort((a, b) => String(a?.displayName || a?.name || '').localeCompare(String(b?.displayName || b?.name || '')));
+  }, [tdsLine, db.customers, db.vendors, currentCompany.id]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -3958,8 +4012,52 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
       ...ledgerPatch,
     };
 
+    /*
+     * The adjustment, in the register as well as the ledger.
+     *
+     * Only where a party was named and the ledger carries a nature: without
+     * either, the return has nothing to say about it, and a row that cannot be
+     * filed is worse in the register than absent from it. A reversal is stored
+     * as a negative amount against the same nature rather than as a deletion,
+     * so the audit trail keeps both halves.
+     */
+    const tdsEventRows = Array.isArray(db.tdsTransactions) ? db.tdsTransactions : [];
+    const tdsParty = tdsLine
+      ? (tdsLine.side === 'RECEIVABLE' ? db.customers : db.vendors)?.find(
+          (p) => String(p.id) === String(formData.tdsPartyId || '')
+        )
+      : null;
+    const tdsRule = tdsLine?.natureCode ? resolveRule(tdsLine.natureCode, formData.date) : null;
+    const tdsEvent =
+      tdsLine && tdsParty && tdsLine.natureCode && Math.abs(tdsLine.signed) > 0.005
+        ? {
+            id: tdsEventRows.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
+            ...tdsEventFrom(
+              {
+                natureCode: tdsLine.natureCode,
+                ruleVersionId: tdsRule?.id || '',
+                statutoryReference: ruleReference(tdsRule),
+                sectionCode: tdsRule?.sectionCode || '',
+                baseAmount: 0,
+                rate: 0,
+                tdsAmount: round2(tdsLine.signed),
+                ledgerId: String(tdsLine.account.id),
+                side: tdsLine.side,
+              },
+              {
+                company: currentCompany,
+                party: tdsParty,
+                source: { type: 'journal', id: nextId, number: jvNumber },
+                branchId: activeBranchId || '',
+                date: formData.date,
+              }
+            ),
+          }
+        : null;
+
     setDb({
       ...db,
+      tdsTransactions: tdsEvent ? [...tdsEventRows, tdsEvent] : db.tdsTransactions,
       journalEntries: [...(Array.isArray(db.journalEntries) ? db.journalEntries : []), newJv],
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'journalEntry', usedNumber: jvNumber, branchId: activeBranchId || null }),
     });
@@ -4004,6 +4102,43 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
         date={formData.date}
         onDateChange={(v) => setFormData((p) => ({ ...p, date: v }))}
       />
+      {tdsLine ? (
+        <div className="ui-sunken rounded-lg border p-3">
+          <div className="ui-t-label">TDS adjustment</div>
+          <p className="ui-caption mt-0.5">
+            This entry moves {tdsLine.account.name}. Naming who it belongs to puts it in the TDS register and the
+            quarter’s return; leaving it blank posts the journal and nothing else.
+          </p>
+          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="ui-label" htmlFor="jv-tds-party">
+                {tdsLine.side === 'RECEIVABLE' ? 'Customer' : 'Vendor'}
+              </label>
+              <select
+                id="jv-tds-party"
+                className="ui-select w-full"
+                value={formData.tdsPartyId || ''}
+                onChange={(e) => setFormData((p) => ({ ...p, tdsPartyId: e.target.value }))}
+              >
+                <option value="">— not reported —</option>
+                {tdsParties.map((party) => (
+                  <option key={party.id} value={String(party.id)}>
+                    {party.displayName || party.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="self-end">
+              <p className="ui-caption">
+                {tdsLine.natureCode
+                  ? `${natureByCode(tdsLine.natureCode)?.name || tdsLine.natureCode} · ${formatMoney(Math.abs(tdsLine.signed), currentCompany)}${tdsLine.signed < 0 ? ' (reversal)' : ''}`
+                  : 'This ledger has no TDS nature mapped, so the entry cannot be reported.'}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
 
       <div>
         <label className="ui-label">Narration</label>
