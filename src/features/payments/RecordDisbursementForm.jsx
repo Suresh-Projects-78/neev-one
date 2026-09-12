@@ -13,6 +13,9 @@ import { formatMoney, round2 } from '../../utils/money';
 import { documentOutstanding } from '../../utils/onAccount';
 import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { DocDate } from '../../components/docs';
+import { priorBaseFor, resolveTds, tdsEventFrom, tdsLedgersFor } from '../tds/engine';
+import { natureForSection } from '../tds/ruleMaster';
+import { tdsGroupSide } from '../../utils/tdsLedgers';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -57,6 +60,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
        * recorded against the payment it belonged to.
        */
       tdsAmount: d?.tdsAmount ? String(d.tdsAmount) : '',
+      tdsLedgerId: String(d?.tdsLedgerId || ''),
       bankCharges: d?.bankCharges ? String(d.bankCharges) : '',
       otherCharges: d?.otherCharges ? String(d.otherCharges) : '',
       notes: String(d?.notes || '').trim(),
@@ -172,6 +176,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         dueDate: b.dueDate || '',
         total: Number(b.total ?? 0),
         balance: getDocBalance(b, debitNotes),
+        /* What the bill itself deducted, and on what — so a payment against it
+           does not deduct the same obligation twice. */
+        taxableValue: Number(b.taxableValue ?? b.subtotal ?? 0),
+        tdsAmount: Number(b.tdsAmount ?? 0),
+        tdsNatureCode: String(b.tdsNatureCode || ''),
       }));
 
     const expenseRows = expenses
@@ -226,6 +235,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         voucherId: d.id,
         documentNumber: d.number,
         amount: round2(capped),
+        /* Carried so the deduction can tell which obligations already had TDS
+           taken at the bill and which did not. */
+        taxableValue: Number(d.taxableValue ?? 0),
+        alreadyDeducted: Number(d.tdsAmount ?? 0),
+        tdsNatureCode: String(d.tdsNatureCode || ''),
       });
     }
 
@@ -268,6 +282,68 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     formData.otherCharges,
     outstandingDocs,
   ]);
+
+  /*
+   * TDS at the payment stage.
+   *
+   * The rule is "credit or payment, whichever is earlier", so the deduction
+   * belongs here only for what was NOT already deducted when the bill was
+   * entered. §16 makes that mandatory: a bill that credited TDS Payable and a
+   * payment that deducted again would take the tax twice from one obligation
+   * and leave the vendor short by it.
+   */
+  const tdsLedgerMaster = useMemo(() => {
+    const groups = (db?.accountGroups || []).filter((g) => Number(g?.companyId) === Number(currentCompany?.id));
+    return (db?.chartOfAccounts || [])
+      .filter((a) => Number(a?.companyId) === Number(currentCompany?.id))
+      .map((a) => ({ ...a, tdsSide: String(a?.tdsSide || '').toUpperCase() || tdsGroupSide(groups, a.groupId) }))
+      .filter((a) => a.tdsSide);
+  }, [db?.chartOfAccounts, db?.accountGroups, currentCompany?.id]);
+
+  const vendorRecord = useMemo(
+    () => (db?.vendors || []).find((v) => Number(v.id) === Number(formData.vendorId)) || null,
+    [db?.vendors, formData.vendorId]
+  );
+
+  /* What the bills being settled already deducted for themselves. */
+  const tdsAtBill = round2(computed.lines.reduce((t, l) => t + Number(l.alreadyDeducted || 0), 0));
+
+  /* And the taxable value of the ones that did not. */
+  const tdsUndeductedBase = round2(
+    computed.lines
+      .filter((l) => Number(l.alreadyDeducted || 0) <= 0)
+      .reduce((t, l) => t + Number(l.taxableValue || 0), 0)
+  );
+
+  const tdsNatureCode =
+    String(vendorRecord?.tdsNatureCode || '').trim() || natureForSection(vendorRecord?.tdsSection)?.code || '';
+
+  const tdsPriorValue = useMemo(
+    () =>
+      priorBaseFor((db?.bills || []).filter((b) => b.companyId === currentCompany?.id), {
+        partyId: formData.vendorId,
+        natureCode: tdsNatureCode,
+        onDate: formData.date,
+      }),
+    [db?.bills, currentCompany?.id, formData.vendorId, tdsNatureCode, formData.date]
+  );
+
+  const tds = resolveTds({
+    company: currentCompany,
+    party: vendorRecord,
+    transactionDate: formData.date,
+    taxableBase: tdsUndeductedBase,
+    side: 'PAYABLE',
+    priorBase: tdsPriorValue,
+    ledgers: tdsLedgerMaster,
+    /* The duplicate check §16 demands, answered from the documents this
+       payment is settling rather than from a flag somebody has to remember. */
+    existingEventFor: () => (tdsAtBill > 0 ? { sourceType: 'bill', tdsAmount: tdsAtBill } : null),
+  });
+
+  const tdsLedgersHere = tds.natureCode
+    ? tdsLedgersFor(tdsLedgerMaster, { natureCode: tds.natureCode, side: 'PAYABLE' })
+    : [];
 
   const toggleDoc = (doc, selected) => {
     setAllocations((prev) => {
@@ -444,6 +520,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
        * cannot be reported, and the 26Q return is built from exactly these.
        */
       tdsAmount: computed.tds || undefined,
+      /* Which nature and ledger it was taken under — the register reads these,
+         and without them a figure on a payment is a number with no tax on it. */
+      tdsNatureCode: computed.tds > 0 ? tds.natureCode || undefined : undefined,
+      tdsLedgerId: computed.tds > 0 ? String(formData.tdsLedgerId || tds.ledgerId || '') || undefined : undefined,
+      tdsRuleVersionId: computed.tds > 0 ? tds.ruleVersionId || undefined : undefined,
       bankCharges: computed.bankCharges || undefined,
       otherCharges: computed.otherCharges || undefined,
       netCash: computed.netCash,
@@ -507,8 +588,33 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       };
     });
 
+    /*
+     * The compliance record for a payment-stage deduction.
+     *
+     * Written only where the payment itself deducted: where the bill already
+     * had, its own event is the one the return reads, and a second event here
+     * would report the same tax twice.
+     */
+    const tdsEvents = safeArray(db.tdsTransactions);
+    const tdsEvent =
+      computed.tds > 0 && tds.natureCode
+        ? {
+            id: tdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
+            ...tdsEventFrom(
+              { ...tds, tdsAmount: computed.tds, ledgerId: String(formData.tdsLedgerId || tds.ledgerId || '') },
+              {
+                company: currentCompany,
+                party: vendorRecord,
+                source: { type: 'payment', id: paymentRecord.id, number: paymentRecord.number },
+                date: formData.date,
+              }
+            ),
+          }
+        : null;
+
     setDb({
       ...db,
+      tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : db.tdsTransactions,
       bills: nextBills,
       expenses: nextExpenses,
       payments: [...safeArray(db.payments), paymentRecord],
@@ -734,8 +840,75 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
             <p className="ui-caption mt-1">What the bills are settled by.</p>
           </div>
 
+          {/*
+            The deduction, and where it posts.
+
+            The figure is the engine's — the same one the bill uses — and it is
+            offered only for what has not already been deducted. A bill that
+            took TDS when it was entered says so here instead, because taking
+            it again would pay the department twice out of one vendor.
+          */}
+          <div className="min-w-0">
+            <label className="ui-label" htmlFor="pay-tdsAmount">TDS deduction</label>
+            <input
+              id="pay-tdsAmount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.tdsAmount}
+              onChange={(e) => setFormData((p) => ({ ...p, tdsAmount: e.target.value }))}
+              className="ui-input ui-money w-full"
+              placeholder="0.00"
+            />
+            {/* The engine's own answer, not a second opinion formed here: it
+                is what decides whether a deduction may be made at all. */}
+            {tds.duplicateOf ? (
+              <p className="ui-caption mt-1">
+                Already deducted on the bills being settled:{' '}
+                {formatMoney(Number(tds.duplicateOf.tdsAmount || tdsAtBill), currentCompany)}. Deducting again here
+                would take it twice.
+              </p>
+            ) : tds.tdsAmount > 0 ? (
+              <p className="ui-caption mt-1">
+                {tds.statutoryReference} suggests {formatMoney(tds.tdsAmount, currentCompany)} at {tds.rate}% on{' '}
+                {formatMoney(tds.baseAmount, currentCompany)}.{' '}
+                <button
+                  type="button"
+                  className="underline underline-offset-2"
+                  onClick={() =>
+                    setFormData((p) => ({
+                      ...p,
+                      tdsAmount: String(tds.tdsAmount),
+                      tdsLedgerId: String(tds.ledgerId || p.tdsLedgerId || ''),
+                    }))
+                  }
+                >
+                  Use it
+                </button>
+              </p>
+            ) : (
+              <p className="ui-caption mt-1">Held back and paid to the department.</p>
+            )}
+
+            {Number(formData.tdsAmount || 0) > 0 && tdsLedgersHere.length ? (
+              <div className="mt-2">
+                <label className="ui-label" htmlFor="pay-tds-ledger">TDS ledger</label>
+                <select
+                  id="pay-tds-ledger"
+                  className="ui-select w-full"
+                  value={formData.tdsLedgerId || tds.ledgerId || ''}
+                  onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
+                >
+                  <option value="">Select ledger</option>
+                  {tdsLedgersHere.map((l) => (
+                    <option key={l.id} value={String(l.id)}>{l.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+          </div>
+
           {[
-            { k: 'tdsAmount', label: 'TDS deduction', hint: 'Held back and paid to the department.' },
             { k: 'bankCharges', label: 'Bank charges', hint: 'What the bank took for the transfer.' },
             { k: 'otherCharges', label: 'Other deductions', hint: 'Anything else withheld.' },
           ].map((f) => (
