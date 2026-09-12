@@ -13362,7 +13362,9 @@ const AppShell = () => {
                   db={dbForUser}
                   setDb={setDb}
                   currentCompany={currentCompany}
-                  screenTitle="Record Payment"
+                  /* What is being made, not what the button does — the button
+                     already says Record Payment right beside it. */
+                  screenTitle="New Payment"
                   onBack={() => setPaymentEditor({ open: false })}
                   onClose={() => setPaymentEditor({ open: false })}
                 />

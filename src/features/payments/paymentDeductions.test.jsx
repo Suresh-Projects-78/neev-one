@@ -32,10 +32,25 @@ const renderForm = (props = {}) =>
 
 const type = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
+describe('the bills table', () => {
+  it('shows the bill, what is left of it, and when it fell due', () => {
+    /* The table is empty until a vendor is chosen — there is nothing to owe
+       until then. */
+    renderForm({ initialData: { vendorId: '3' } });
+    /* A balance on its own cannot tell a part-paid bill from a whole one. */
+    const table = screen.getByText('PUR-1').closest('table');
+    expect(table.textContent).toMatch(/Bill amount/);
+    expect(table.textContent).toMatch(/Due date/);
+    expect(table.textContent).toMatch(/2026-08-25/);
+    /* Total of 10,000 outstanding, under the column it totals. */
+    expect(table.querySelector('tfoot').textContent).toMatch(/10,000/);
+  });
+});
+
 describe('the running bar agrees with the summary', () => {
   it('shows what leaves the account, not what settles the bills', () => {
     renderForm();
-    type(/^Amount Paid/, '10000');
+    type(/^Amount paid/, '10000');
     type('TDS deduction', '1000');
     /* The label says "paid from the account", and 9,000 is what goes. */
     const bar = document.querySelector('.ui-entry-summary');
@@ -47,7 +62,7 @@ describe('the running bar agrees with the summary', () => {
 describe('what is held back', () => {
   it('totals the deductions and shows what actually leaves', () => {
     renderForm();
-    type(/^Amount Paid/, '10000');
+    type(/^Amount paid/, '10000');
     type('TDS deduction', '1000');
     type('Bank charges', '50');
 
@@ -59,7 +74,7 @@ describe('what is held back', () => {
 
   it('says the unallocated part is an advance', () => {
     renderForm();
-    type(/^Amount Paid/, '10000');
+    type(/^Amount paid/, '10000');
     const summary = screen.getByRole('region', { name: 'Payment summary' });
     /* Nothing allocated yet, so the whole payment is sitting on account. */
     expect(summary.textContent).toMatch(/Advance \(unallocated\)/i);
@@ -68,14 +83,14 @@ describe('what is held back', () => {
 
   it('reads the net back in words', () => {
     renderForm();
-    type(/^Amount Paid/, '10000');
+    type(/^Amount paid/, '10000');
     type('TDS deduction', '1000');
     expect(screen.getByText(/Rupees Nine Thousand/i)).toBeInTheDocument();
   });
 
   it('keeps the gross and the net apart', () => {
     renderForm();
-    type(/^Amount Paid/, '5000');
+    type(/^Amount paid/, '5000');
     type('Other deductions', '500');
     const summary = screen.getByRole('region', { name: 'Payment summary' });
     /* Both figures on screen: one settles the bills, the other moves. */

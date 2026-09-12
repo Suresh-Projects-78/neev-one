@@ -137,6 +137,10 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         id: Number(b.id),
         number: b.number,
         date: b.date,
+        /* The bill's own figure and when it falls due: the table shows both, so
+           the row has to carry both rather than the balance alone. */
+        dueDate: b.dueDate || '',
+        total: Number(b.total ?? 0),
         balance: getDocBalance(b, debitNotes),
       }));
 
@@ -149,6 +153,8 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         id: Number(e.id),
         number: e.number,
         date: e.date,
+        dueDate: e.dueDate || '',
+        total: Number(e.total ?? e.amount ?? 0),
         balance: getDocBalance(e, debitNotes),
       }));
 
@@ -566,26 +572,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
                 required
               />
             </div>
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="pay-amount">
-                Amount Paid <span className="text-[rgb(var(--neg-ink))]">*</span>
-              </label>
-              <input
-                id="pay-amount"
-                type="number"
-                value={formData.amount}
-                onChange={(e) => {
-                  fieldErrors.clearField('amount');
-                  setFormData((p) => ({ ...p, amount: e.target.value }));
-                }}
-                className="ui-input ui-money w-full"
-                min="0"
-                step="0.01"
-                required
-                {...fieldErrors.props('amount')}
-              />
-              <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
-            </div>
           </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -625,7 +611,32 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         style={{ backgroundColor: 'rgb(var(--brand) / 0.06)', border: '1px solid rgb(var(--brand) / 0.18)' }}
       >
         <h3 className="ui-t-label">Payment amount and deductions</h3>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {/* The amount leads the band that is named after it; it used to sit
+              up in the header, three fields away from what comes off it. */}
+          <div className="min-w-0">
+            <label className="ui-label" htmlFor="pay-amount">
+              Amount paid <span className="text-[rgb(var(--neg-ink))]">*</span>
+            </label>
+            <input
+              id="pay-amount"
+              type="number"
+              value={formData.amount}
+              onChange={(e) => {
+                fieldErrors.clearField('amount');
+                setFormData((p) => ({ ...p, amount: e.target.value }));
+              }}
+              className="ui-input ui-money w-full"
+              min="0"
+              step="0.01"
+              required
+              placeholder="0.00"
+              {...fieldErrors.props('amount')}
+            />
+            <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
+            <p className="ui-caption mt-1">What the bills are settled by.</p>
+          </div>
+
           {[
             { k: 'tdsAmount', label: 'TDS deduction', hint: 'Held back and paid to the department.' },
             { k: 'bankCharges', label: 'Bank charges', hint: 'What the bank took for the transfer.' },
@@ -658,13 +669,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       </div>
 
 
-      <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
-        <div>
-          <div className="ui-muted">Selected</div>
-          <div className="font-medium">{selectedCount}</div>
-        </div>
-      </div>
-
       {/*
         The bills on the left and what the payment comes to on the right,
         because the summary is read while the allocation is being typed —
@@ -691,6 +695,10 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
                   <th className="ui-th w-24">Type</th>
                   <th className="ui-th">Number</th>
                   <th className="ui-th">Date</th>
+                  <th className="ui-th">Due date</th>
+                  {/* The bill's own figure beside what is left of it: the pair
+                      is what tells a part-paid bill from an untouched one. */}
+                  <th className="ui-th ui-num">Bill amount</th>
                   <th className="ui-th ui-num">Outstanding</th>
                   <th className="ui-th ui-num">Allocate</th>
                 </tr>
@@ -698,13 +706,13 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
               <tbody className="divide-y">
                 {!formData.vendorId ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center ui-muted">
+                    <td colSpan={8} className="px-6 py-8 text-center ui-muted">
                       Select party name to see outstanding bills/expenses
                     </td>
                   </tr>
                 ) : outstandingDocs.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center ui-muted">
+                    <td colSpan={8} className="px-6 py-8 text-center ui-muted">
                       No outstanding documents. This payment will be recorded as advance.
                     </td>
                   </tr>
@@ -721,6 +729,8 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
                         <td className="ui-col-meta px-4 py-3">{d.voucherType === 'bill' ? 'Bill' : 'Expense'}</td>
                         <td className="ui-col-meta px-4 py-3">{d.number || '-'}</td>
                         <td className="ui-col-date px-4 py-3">{d.date || '-'}</td>
+                        <td className="ui-col-date px-4 py-3">{d.dueDate || '-'}</td>
+                        <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.total ?? d.balance, currentCompany)}</td>
                         <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.balance, currentCompany)}</td>
                         <td className="px-4 py-3 text-right">
                           <input
@@ -738,8 +748,27 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
                   })
                 )}
               </tbody>
+
+              {outstandingDocs.length ? (
+                <tfoot>
+                  <tr className="ui-sunken font-medium">
+                    <td className="px-4 py-3" colSpan={5}>Total</td>
+                    <td className="ui-col-amount px-4 py-3 text-right">
+                      {formatMoney(outstandingDocs.reduce((t, d) => t + Number(d.total ?? d.balance ?? 0), 0), currentCompany)}
+                    </td>
+                    <td className="ui-col-amount px-4 py-3 text-right">
+                      {formatMoney(outstandingDocs.reduce((t, d) => t + Number(d.balance ?? 0), 0), currentCompany)}
+                    </td>
+                    <td className="ui-col-amount px-4 py-3 text-right">
+                      {formatMoney(computed.allocated, currentCompany)}
+                    </td>
+                  </tr>
+                </tfoot>
+              ) : null}
             </table>
           </div>
+
+          <p className="ui-caption">You can also allocate the amount directly and adjust later.</p>
         </div>
 
         <div>
@@ -810,7 +839,10 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         </div>
       </div>
 
-      <DocFormFootnote />
+      {/* The footnote already knows how to carry one; a payment against the
+          wrong bill is a dispute six months later, and this is the line that
+          says somebody checked. */}
+      <DocFormFootnote declaration="the payment above is against the documents selected, and the details are correct." />
 
       {/* What actually leaves the account, kept on screen while bills are
           ticked off — the invoice form's running total, for the figure that has
