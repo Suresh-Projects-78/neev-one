@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import PartyFormLayout from './PartyFormLayout';
@@ -7,6 +7,7 @@ import { CUSTOMER_CFG } from './partyFormConfig';
 import { useFeatures } from '../../permissions/useFeatures';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
 import Modal from '../ui/Modal';
+import Popover from '../ui/Popover';
 import { createCustomer, listCustomers, lookupGstin, toServerCustomer } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '../../utils/gst';
@@ -18,7 +19,19 @@ import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 import { useRemoteSearch } from './useRemoteSearch';
 
-export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, seedData = null, onDuplicate = null, onCreated, onClose }) => {
+export const CustomerForm = ({
+  db,
+  setDb,
+  currentCompany,
+  initialData = null,
+  seedData = null,
+  onDuplicate = null,
+  /* What was typed in the field that found no match — the name is the reason
+     this form was opened, so it arrives already filled in. */
+  initialName = '',
+  onCreated,
+  onClose,
+}) => {
   const isEdit = Boolean(initialData);
   const INDIA_COUNTRY = 'India';
   const INDIA_STATES = Object.entries(GST_STATE_BY_CODE)
@@ -136,7 +149,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, se
     }
 
     return {
-      displayName: '',
+      displayName: String(initialName || ''),
       groupId: sundryDebtorsGroup?.id ? String(sundryDebtorsGroup.id) : '',
       openingBalance: isEdit ? Number(initialData?.openingBalance ?? 0) : 0,
       openingBalanceType: isEdit ? (initialData?.openingBalanceType || 'Dr') : 'Dr',
@@ -1004,197 +1017,174 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
     */
     <div className="min-w-0">
       <label className="ui-label">{label}</label>
-      <button
-        ref={triggerRef}
-        type="button"
-        disabled={disabled}
-        title={disabled ? disabledHint || 'Locked' : undefined}
-        onClick={openPopup}
-        onKeyDown={openOnKey(openPopup)}
-        aria-haspopup="listbox"
-        aria-expanded={showCustomerPopup}
-        className={`flex w-full items-center gap-2 px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
-      >
-        {LeadingIcon ? <LeadingIcon size={15} className="ui-subtle shrink-0" aria-hidden="true" /> : null}
-        <span className={`truncate ${selectedCustomerName ? '' : 'ui-subtle'}`}>
-          {selectedCustomerName || 'Select Customer'}
-        </span>
-      </button>
+      {/*
+        A field somebody types a name into, not a button that opens a list.
+
+        The old trigger said "Select Customer" and did nothing until it was
+        clicked; the name was already in the operator's head and in their
+        hands, and it had nowhere to go. Typing here narrows the list as the
+        letters arrive, and a name that matches nothing offers to create it —
+        which is the other half of the same motion.
+      */}
+      <div className="relative">
+        {LeadingIcon ? (
+          <LeadingIcon
+            size={15}
+            aria-hidden="true"
+            className="ui-subtle pointer-events-none absolute start-3 top-1/2 -translate-y-1/2"
+          />
+        ) : null}
+        <input
+          ref={triggerRef}
+          type="text"
+          role="combobox"
+          disabled={disabled}
+          title={disabled ? disabledHint || 'Locked' : undefined}
+          value={showCustomerPopup ? customerSearch : selectedCustomerName}
+          placeholder="Type a customer name"
+          onFocus={() => {
+            if (disabled || showCustomerPopup) return;
+            setCustomerPopupMode('select');
+            setCustomerSearch('');
+            setShowCustomerPopup(true);
+          }}
+          onChange={(e) => {
+            if (disabled) return;
+            if (!showCustomerPopup) {
+              setCustomerPopupMode('select');
+              setShowCustomerPopup(true);
+            }
+            setCustomerSearch(e.target.value);
+            setCustomerActiveIndex(0);
+          }}
+          onKeyDown={(e) => {
+            if (disabled) return;
+            if (!showCustomerPopup) {
+              openOnKey(openPopup)(e);
+              return;
+            }
+            /* Tab commits a name that can only mean one customer — section 9's
+               "a full code should not have to be confirmed" — and otherwise
+               leaves the field alone. */
+            onCustomerSearchTab(e);
+            onCustomerListKeys(e);
+          }}
+          aria-haspopup="listbox"
+          aria-expanded={showCustomerPopup}
+          aria-autocomplete="list"
+          aria-controls={showCustomerPopup ? 'customer-picker-list' : undefined}
+          className={`ui-input w-full${LeadingIcon ? ' ps-9' : ''}${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
+        />
+      </div>
       {disabled && disabledHint ? <div className="text-xs ui-muted mt-1">{disabledHint}</div> : null}
 
-      {showCustomerPopup && (
-        <Modal
-          onClose={() => closePopup()}
-          title={customerPopupMode === 'create' ? 'Create Customer' : 'Select Customer'}
-          /*
-            The picker is a short list and wants a small box; the creation form
-            is the full customer master with tabs and an eight-column address
-            table, and at max-w-lg it was the same cramped form the standalone
-            screen had already outgrown. Same form, same room, wherever it is
-            opened from.
-          */
-          maxWidthClass={customerPopupMode === 'create' ? 'max-w-[80vw]' : 'max-w-lg'}
-        >
-          {customerPopupMode === 'select' ? (
-            <div className="space-y-3">
-              {/* Create is always available, not only after a fruitless search:
-                  the operator usually knows the customer is new. */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={customerSearch}
-                  onChange={(e) => setCustomerSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    /*
-                     * Alt+C — make the master you are missing without leaving
-                     * the field. Tally's reflex, and the biggest saving in the
-                     * whole keyboard: hitting a name that is not on file
-                     * otherwise means abandoning a half-typed document to go
-                     * and create one. Same New button, for hands that never
-                     * left the keys.
-                     */
-                    if (e.altKey && (e.key === 'c' || e.key === 'C')) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setCustomerPopupMode('create');
-                      return;
-                    }
-                    onCustomerSearchTab(e);
-                    onCustomerListKeys(e);
-                  }}
-                  role="combobox"
-                  aria-expanded="true"
-                  aria-controls="customer-picker-list"
-                  aria-activedescendant={
-                    filteredCustomers[customerActiveIndex]
-                      ? `customer-opt-${filteredCustomers[customerActiveIndex].id}`
-                      : undefined
-                  }
-                  className="ui-input"
-                                    /*
-                  * The dialog decides who gets the caret, and it looks for
-                  * this attribute. React's own autoFocus runs first and is
-                  * then overruled: the dialog found nothing claiming focus
-                  * and took it for the panel itself, so every keystroke went
-                  * to a div. The arrows moved nothing and Enter chose
-                  * nothing, while Escape still worked — because the dialog
-                  * listens for that one on the window.
-                  */
-                  data-autofocus="true"
-                  placeholder="Search customer (name, email, phone, GSTIN)"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setCustomerPopupMode('create')}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  New
-                </button>
-              </div>
+      {/*
+        The suggestions hang off the field rather than dimming the page.
 
-              <div
-                id="customer-picker-list"
-                ref={customerListRef}
-                role="listbox"
-                className="max-h-80 overflow-y-auto space-y-1"
-              >
-                {filteredCustomers.length === 0 ? (
-                  <div className="text-sm ui-muted">No customers found.</div>
-                ) : (
-                  filteredCustomers.map((c, i) => {
-                    const on = i === customerActiveIndex;
-                    return (
-                      <React.Fragment key={c.id}>
-                      {/* The habitual names, called what they are. */}
-                      {customerRecentCount && i === 0 ? (
-                        <div className="ui-caption px-1 pt-1 pb-0.5">Recently used</div>
-                      ) : null}
-                      {customerRecentCount && i === customerRecentCount ? (
-                        <div className="ui-caption px-1 pt-2 pb-0.5">All customers</div>
-                      ) : null}
-                      <button
-                        id={`customer-opt-${c.id}`}
-                        type="button"
-                        role="option"
-                        aria-selected={String(c.id) === String(value)}
-                        data-active={on || undefined}
-                        onMouseEnter={() => setCustomerActiveIndex(i)}
-                        onClick={() => chooseCustomer(c)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border ${
-                          on ? '' : 'ui-hover-sunken '
-                        }${String(c.id) === String(value) && !on ? 'ui-sunken ui-border-c' : 'ui-border-c'}`}
-                        /* Filled, not outlined: the cursor row shared `ui-sunken`
-                           with the already-chosen row and differed only by border
-                           colour, so pressing the down arrow looked like nothing
-                           had happened. */
-                        style={
-                          on
-                            ? {
-                                backgroundColor: 'rgb(var(--brand))',
-                                borderColor: 'rgb(var(--brand))',
-                                color: 'rgb(var(--on-brand))',
-                              }
-                            : undefined
-                        }
-                      >
-                        <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{getCustomerDisplayName(c)}</div>
-                        {(c.email || c.mobile || c.phone) && (
-                          <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
-                            {[c.email, c.mobile || c.phone].filter(Boolean).join(' • ')}
-                          </div>
-                        )}
-                      </button>
-                      </React.Fragment>
-                    );
-                  })
-                )}
+        A dialog was the right price for the creation form and far too high for
+        picking a name somebody is already typing: it hid the document behind
+        it, and it put a second search box on screen underneath the one the
+        caret was in.
+      */}
+      {showCustomerPopup && customerPopupMode === 'select' ? (
+        <Popover anchorRef={triggerRef} onClose={() => closePopup()} autoFocus={false} minWidth={320}>
+          <div
+            id="customer-picker-list"
+            ref={customerListRef}
+            role="listbox"
+            className="max-h-80 overflow-y-auto p-1"
+          >
+            {filteredCustomers.length === 0 ? (
+              <div className="px-3 py-4 text-sm ui-muted">
+                {normalizedCustomerSearch ? `No customer matches “${customerSearch.trim()}”.` : 'No customers yet.'}
               </div>
+            ) : (
+              filteredCustomers.map((c, i) => {
+                const on = i === customerActiveIndex;
+                return (
+                  <React.Fragment key={c.id}>
+                    {/* The habitual names, called what they are. */}
+                    {customerRecentCount && i === 0 ? (
+                      <div className="ui-caption px-2 pt-1 pb-0.5">Recently used</div>
+                    ) : null}
+                    {customerRecentCount && i === customerRecentCount ? (
+                      <div className="ui-caption px-2 pt-2 pb-0.5">All customers</div>
+                    ) : null}
+                    <button
+                      id={`customer-opt-${c.id}`}
+                      type="button"
+                      role="option"
+                      aria-selected={String(c.id) === String(value)}
+                      data-active={on || undefined}
+                      onMouseEnter={() => setCustomerActiveIndex(i)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => chooseCustomer(c)}
+                      className={`w-full rounded-lg px-3 py-2 text-left ${on ? '' : 'ui-hover-sunken'}`}
+                      style={
+                        on
+                          ? {
+                              backgroundColor: 'rgb(var(--brand))',
+                              color: 'rgb(var(--on-brand))',
+                            }
+                          : undefined
+                      }
+                    >
+                      <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{getCustomerDisplayName(c)}</div>
+                      {(c.email || c.mobile || c.phone) && (
+                        <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
+                          {[c.email, c.mobile || c.phone].filter(Boolean).join(' • ')}
+                        </div>
+                      )}
+                    </button>
+                  </React.Fragment>
+                );
+              })
+            )}
+          </div>
 
-              {normalizedCustomerSearch && filteredCustomers.length === 0 && (
-                <button
-                  type="button"
-                  onClick={() => setCustomerPopupMode('create')}
-                  className="ui-btn ui-btn-primary w-full"
-                >
-                  Create &ldquo;{customerSearch.trim()}&rdquo;
-                </button>
-              )}
-            </div>
-          ) : (
-            <CustomerForm
-              db={db}
-              setDb={setDb}
-              currentCompany={currentCompany}
-              onCreated={async (customer) => {
-                // Write through to the server so the record exists for every
-                // device, then record the server id ON the local row.
-                //
-                // Selecting the server id directly (what this used to do) broke
-                // every screen that resolves the selection with
-                // Number(customerId) against db.customers: a cuid is NaN there,
-                // so a customer created from this picker came back as
-                // "Party (Customer) is required" and could not be used. Keeping
-                // the local numeric id as the selection and carrying
-                // backendPartyId alongside satisfies both the local lookups and
-                // the API calls that need a real server party.
-                /*
-                 * The form has already written the customer to the server and
-                 * carries the id it came back with. This used to do its own
-                 * create with six of the fields, which — now that the form does
-                 * it properly — would have made a second, thinner row for the
-                 * same customer.
-                 */
-                if (customer?.backendPartyId) {
-                  await serverCustomers.reload();
-                }
-                onChange(String(customer.id));
-              }}
-              onClose={() => closePopup()}
-            />
-          )}
+          {/* Creating is the other half of the same motion, so it sits at the
+              foot of the list rather than behind a separate button — and it
+              carries whatever was typed into the new customer's name. */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setCustomerPopupMode('create')}
+            className="ui-hover-sunken flex w-full items-center gap-2 border-t px-3 py-2 text-left text-sm"
+          >
+            <Plus size={14} aria-hidden="true" />
+            {normalizedCustomerSearch
+              ? `Create “${customerSearch.trim()}”`
+              : 'Create a new customer'}
+          </button>
+        </Popover>
+      ) : null}
+
+      {showCustomerPopup && customerPopupMode === 'create' ? (
+        <Modal onClose={() => closePopup()} title="Create Customer" maxWidthClass="max-w-[80vw]">
+          <CustomerForm
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            /* What was typed is the name they meant. */
+            initialName={customerSearch.trim()}
+            onCreated={async (customer) => {
+              /*
+               * The form has already written the customer to the server and
+               * carries the id it came back with. Selecting that server id
+               * directly would break every screen that resolves the selection
+               * with Number(customerId) against db.customers — a cuid is NaN
+               * there — so the local numeric id stays the selection and
+               * backendPartyId rides alongside for the API.
+               */
+              if (customer?.backendPartyId) {
+                await serverCustomers.reload();
+              }
+              onChange(String(customer.id));
+            }}
+            onClose={() => closePopup()}
+          />
         </Modal>
-      )}
+      ) : null}
     </div>
   );
 };

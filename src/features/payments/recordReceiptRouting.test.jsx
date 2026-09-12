@@ -113,7 +113,8 @@ describe('a receipt started from an invoice row', () => {
       />
     );
 
-    expect(await screen.findByText('Acme Traders')).toBeInTheDocument();
+    /* The customer field is a type-ahead now: the chosen name is its value. */
+    expect(await screen.findByDisplayValue('Acme Traders')).toBeInTheDocument();
   });
 
   it('still prefers the id when the document has one', async () => {
@@ -128,6 +129,6 @@ describe('a receipt started from an invoice row', () => {
       />
     );
 
-    expect(await screen.findByText('Acme Traders')).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('Acme Traders')).toBeInTheDocument();
   });
 });

@@ -414,9 +414,12 @@ describe('the same room, wherever the form is opened from', () => {
     const vendorSrc = readFileSync(join(here, 'VendorPicker.jsx'), 'utf8');
     const customerSrc = readFileSync(join(here, 'CustomerPicker.jsx'), 'utf8');
 
-    /* Wide while creating, small while picking — one rule, both pickers. */
+    /* The creation form gets the full width in both pickers. The customer's
+       list is a panel hanging off its field now, so only its create dialog
+       remains; the vendor's dialog still does both jobs and switches. */
     for (const src of [vendorSrc, customerSrc]) {
-      expect(src).toMatch(/'create' \? 'max-w-\[80vw\]' : 'max-w-lg'/);
+      expect(src).toMatch(/max-w-\[80vw\]/);
     }
+    expect(vendorSrc).toMatch(/'create' \? 'max-w-\[80vw\]' : 'max-w-lg'/);
   });
 });

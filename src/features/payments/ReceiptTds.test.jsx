@@ -73,7 +73,9 @@ const Host = ({ onSaved = () => {} }) => {
 };
 
 const pickCustomer = async (user) => {
-  await user.click(screen.getByRole('button', { name: /Select Customer/ }));
+  /* The customer field is a type-ahead: the name is typed and the suggestion
+     taken, which is the motion the operator actually performs. */
+  await user.type(screen.getByPlaceholderText('Type a customer name'), 'ABC');
   await user.click(await screen.findByRole('option', { name: /ABC Industries/ }));
 };
 
