@@ -497,6 +497,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   /* The paste door: rows copied straight off net-banking. */
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState('');
+  /* Rows waiting on a human verdict: null, or { rows, unknownAccounts, ... }. */
+  const [importReview, setImportReview] = useState(null);
 
   const [pendingAddTxnInitial, setPendingAddTxnInitial] = useState(null);
 
@@ -1567,31 +1569,47 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       return;
     }
 
-      // Duplicate detection (within same cash/bank account)
-      const makeFingerprint = ({ cashBankAccountId, date, direction, amount, narration }) => {
-        const d = String(date || '').trim();
-        const dir = String(direction || '').trim().toUpperCase();
-        const amt = round2(Math.abs(Number(amount || 0)));
-        const nar = String(narration || '').trim().toLowerCase().replace(/\s+/g, ' ');
-        return `${companyId}|${String(cashBankAccountId)}|${d}|${dir}|${amt}|${nar}`;
+      /*
+       * Duplicate detection, at two strengths.
+       *
+       * STRICT — account, date, direction, amount, plus the bank's reference
+       * (or the narration where there is none). A strict match is the same
+       * movement: the statement was imported twice.
+       *
+       * LOOSE — account, date, direction and amount alone. A loose match
+       * without a strict one is a POSSIBLE duplicate: two ₹10,000 payments on
+       * one day are common enough that only a person can say, so the row is
+       * shown with what it collided with rather than decided for them.
+       */
+      const norm = (v) => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      const strictKey = ({ cashBankAccountId, date, direction, amount, narration, reference }) => {
+        const tail = norm(reference) || norm(narration);
+        return `${companyId}|${String(cashBankAccountId)}|${String(date || '').trim()}|${String(direction || '').trim().toUpperCase()}|${round2(Math.abs(Number(amount || 0)))}|${tail}`;
       };
+      const looseKey = ({ cashBankAccountId, date, direction, amount }) =>
+        `${companyId}|${String(cashBankAccountId)}|${String(date || '').trim()}|${String(direction || '').trim().toUpperCase()}|${round2(Math.abs(Number(amount || 0)))}`;
 
-      const existingFingerprints = new Set(
-        safeArray(db.bankTransactions)
-          .filter((t) => t.companyId === companyId)
-          .map((t) =>
-            makeFingerprint({
-              cashBankAccountId: Number(t.cashBankAccountId),
-              date: toIsoDate(t.date) || String(t.date || '').trim(),
-              direction: t.direction,
-              amount: t.amount,
-              narration: t.narration || t.description || '',
-            })
-          )
-      );
+      const describeRow = (t) =>
+        [String(t.date || '').trim(), t.direction === 'IN' ? 'received' : 'paid', `₹${round2(Math.abs(Number(t.amount || 0)))}`, norm(t.reference) || norm(t.narration || t.description) || '—']
+          .join(' · ');
 
-      const incomingFingerprints = new Set();
-      const duplicates = [];
+      const existingStrict = new Map();
+      const existingLoose = new Map();
+      for (const t of safeArray(db.bankTransactions).filter((t) => t.companyId === companyId)) {
+        const shaped = {
+          cashBankAccountId: Number(t.cashBankAccountId),
+          date: toIsoDate(t.date) || String(t.date || '').trim(),
+          direction: t.direction,
+          amount: t.amount,
+          narration: t.narration || t.description || '',
+          reference: t.reference || '',
+        };
+        if (!existingStrict.has(strictKey(shaped))) existingStrict.set(strictKey(shaped), t);
+        if (!existingLoose.has(looseKey(shaped))) existingLoose.set(looseKey(shaped), t);
+      }
+
+      const incomingStrict = new Map();
+      const incomingLoose = new Map();
 
       const accountNameToId = new Map(cashBankAccounts.map((a) => [String(a.name || '').trim().toLowerCase(), Number(a.id)]));
       const fallbackAccountId = Number(selectedAccount?.id || cashBankAccounts[0]?.id || 0);
@@ -1645,13 +1663,29 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
         if (firstImportedAccountId === null) firstImportedAccountId = cashBankAccountId;
 
-        const fp = makeFingerprint({ cashBankAccountId, date: finalDate, direction, amount, narration });
-        if (existingFingerprints.has(fp) || incomingFingerprints.has(fp)) {
-          duplicates.push({ date: finalDate, direction, amount, narration });
-        }
-        incomingFingerprints.add(fp);
+        const shaped = { cashBankAccountId, date: finalDate, direction, amount, narration, reference };
+        const sk = strictKey(shaped);
+        const lk = looseKey(shaped);
 
-        newTxns.push({
+        /* New, Possible Duplicate, or Duplicate — with what it collided with,
+           so the person reviewing sees the collision, not just the verdict. */
+        let classification = 'new';
+        let matchInfo = '';
+        const strictHit = existingStrict.get(sk) || incomingStrict.get(sk);
+        const looseHit = existingLoose.get(lk) || incomingLoose.get(lk);
+        if (strictHit) {
+          classification = 'duplicate';
+          matchInfo = incomingStrict.has(sk)
+            ? `same as row ${incomingStrict.get(sk).sourceRow} of this import`
+            : `already in the book: ${describeRow(strictHit)}`;
+        } else if (looseHit) {
+          classification = 'possible';
+          matchInfo = incomingLoose.has(lk)
+            ? `same amount and day as row ${incomingLoose.get(lk).sourceRow} of this import`
+            : `same amount and day as: ${describeRow(looseHit)}`;
+        }
+
+        const txn = {
           date: finalDate,
           direction,
           amount,
@@ -1661,7 +1695,12 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           /* Which line of the pasted or uploaded statement this came from —
              the trail back to the source when a figure is questioned. */
           sourceRow: rows.indexOf(r) + 1,
-        });
+          classification,
+          matchInfo,
+        };
+        if (!incomingStrict.has(sk)) incomingStrict.set(sk, txn);
+        if (!incomingLoose.has(lk)) incomingLoose.set(lk, txn);
+        newTxns.push(txn);
     }
 
       if (newTxns.length === 0) {
@@ -1669,6 +1708,35 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         return;
       }
 
+      /*
+       * Nothing suspect is imported OR discarded silently.
+       *
+       * A clean statement goes straight in. One with duplicates or
+       * possibles stops at a review: each flagged row beside what it
+       * collided with, duplicates unticked, the decision the operator's.
+       */
+      const flagged = newTxns.filter((t) => t.classification !== 'new');
+      if (flagged.length) {
+        setImportReview({
+          rows: newTxns.map((t, i) => ({ ...t, key: i, take: t.classification !== 'duplicate' })),
+          unknownAccounts: Array.from(unknownAccounts),
+          firstImportedAccountId,
+        });
+        return;
+      }
+
+      commitImport(newTxns, { unknownAccounts, firstImportedAccountId });
+    } catch (err) {
+      // Avoid silent failures when a helper or parse step throws.
+      console.error('Upload/import failed', err);
+      notify.error(`Import failed: ${err?.message || String(err)}`);
+    }
+  };
+
+  /** Writes the rows somebody decided to keep. The batch stamp and the
+      immutability that follows from `imported: true` live here, once. */
+  const commitImport = (txnsToImport, { unknownAccounts = new Set(), firstImportedAccountId = null } = {}) => {
+    const newTxns = txnsToImport;
     /*
      * One batch per import, stamped on every row it brought in.
      *
@@ -1703,36 +1771,16 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     });
 
     setView('all');
-      if (firstImportedAccountId) setSelectedAccountId(String(firstImportedAccountId));
+    if (firstImportedAccountId) setSelectedAccountId(String(firstImportedAccountId));
 
-      if (duplicates.length > 0) {
-        const sample = duplicates
-          .slice(0, 5)
-          .map((d) => `${d.date} ${d.direction} ${formatMoney(Number(d.amount || 0), currentCompany)} ${String(d.narration || '').slice(0, 40)}`)
-          .join('\n');
-        const unknownMsg =
-          unknownAccounts.size > 0
-            ? `\n\nWarning: unknown account name(s) skipped: ${Array.from(unknownAccounts).slice(0, 10).join(', ')}${
-                unknownAccounts.size > 10 ? ' …' : ''
-              }`
-            : '';
-        notify.error(
-          `Imported ${newTxns.length} transaction(s).\nWarning: detected ${duplicates.length} duplicate(s) (imported anyway).${unknownMsg}\n\nSample duplicates:\n${sample}`
-        );
-      } else {
-        const unknownMsg =
-          unknownAccounts.size > 0
-            ? `\n\nWarning: unknown account name(s) skipped: ${Array.from(unknownAccounts).slice(0, 10).join(', ')}${
-                unknownAccounts.size > 10 ? ' …' : ''
-              }`
-            : '';
-        notify.error(`Imported ${newTxns.length} transaction(s).${unknownMsg}`);
-      }
-    } catch (err) {
-      // Avoid silent failures when a helper or parse step throws.
-      console.error('Upload/import failed', err);
-      notify.error(`Import failed: ${err?.message || String(err)}`);
-    }
+    const unknownSet = unknownAccounts instanceof Set ? unknownAccounts : new Set(unknownAccounts);
+    const unknownMsg =
+      unknownSet.size > 0
+        ? `\n\nWarning: unknown account name(s) skipped: ${Array.from(unknownSet).slice(0, 10).join(', ')}${
+            unknownSet.size > 10 ? ' …' : ''
+          }`
+        : '';
+    notify.error(`Imported ${newTxns.length} transaction(s).${unknownMsg}`);
   };
 
   const openUpload = () => {
@@ -2061,6 +2109,90 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       onStatusChange={setView}
       above={
         <>
+        {importReview ? (
+          <Modal onClose={() => setImportReview(null)} title="Review before importing" maxWidthClass="max-w-4xl">
+            <div className="space-y-3">
+              <p className="ui-caption">
+                {importReview.rows.filter((r) => r.classification === 'duplicate').length} duplicate(s) and{' '}
+                {importReview.rows.filter((r) => r.classification === 'possible').length} possible duplicate(s) found.
+                Nothing is imported or discarded without your say — duplicates start unticked, everything else ticked.
+              </p>
+              <div className="ui-table-scroll max-h-96 overflow-y-auto">
+                <table className="ui-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" aria-label="Import" />
+                      <th scope="col">Date</th>
+                      <th scope="col" className="text-end">Amount</th>
+                      <th scope="col">Narration</th>
+                      <th scope="col">Ref / UTR</th>
+                      <th scope="col">Verdict</th>
+                      <th scope="col">Collides with</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importReview.rows.map((r) => (
+                      <tr key={r.key}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            className="ui-checkbox"
+                            checked={r.take}
+                            aria-label={`Import row ${r.sourceRow}`}
+                            onChange={(e) =>
+                              setImportReview((prev) => ({
+                                ...prev,
+                                rows: prev.rows.map((x) => (x.key === r.key ? { ...x, take: e.target.checked } : x)),
+                              }))
+                            }
+                          />
+                        </td>
+                        <td>{r.date}</td>
+                        <td className={`ui-money ${r.direction === 'OUT' ? 'text-[rgb(var(--neg-ink))]' : 'text-[rgb(var(--pos-ink))]'}`}>
+                          {r.direction === 'OUT' ? '−' : ''}{formatMoney(r.amount, currentCompany)}
+                        </td>
+                        <td className="truncate">{r.narration || '—'}</td>
+                        <td className="ui-mono">{r.reference || '—'}</td>
+                        <td>
+                          <StatusPill
+                            status={
+                              r.classification === 'duplicate'
+                                ? 'Duplicate'
+                                : r.classification === 'possible'
+                                  ? 'Possible duplicate'
+                                  : 'New'
+                            }
+                          />
+                        </td>
+                        <td className="ui-caption truncate">{r.matchInfo || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setImportReview(null)}>
+                  Cancel import
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-primary"
+                  disabled={!importReview.rows.some((r) => r.take)}
+                  onClick={() => {
+                    const chosen = importReview.rows.filter((r) => r.take);
+                    commitImport(chosen, {
+                      unknownAccounts: new Set(importReview.unknownAccounts),
+                      firstImportedAccountId: importReview.firstImportedAccountId,
+                    });
+                    setImportReview(null);
+                  }}
+                >
+                  Import {importReview.rows.filter((r) => r.take).length} row(s)
+                </button>
+              </div>
+            </div>
+          </Modal>
+        ) : null}
         {pasteOpen ? (
           <Modal onClose={() => setPasteOpen(false)} title="Paste statement rows" maxWidthClass="max-w-2xl">
             <div className="space-y-3">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,10 +45,14 @@ const STATEMENT = [
   '02-09-2026,,12000,Customer NEFT,UTR900222',
 ].join('\n');
 
-let latest = null;
+/* The test reads state through a box rather than reassigning from render —
+   the compiler is right that a render must not write outer variables. */
+const latest = { db: db0 };
 const Host = () => {
   const [db, setDb] = useState(db0);
-  latest = db;
+  useEffect(() => {
+    latest.db = db;
+  }, [db]);
   return (
     <CashBankModule
       db={db}
@@ -78,8 +82,8 @@ describe('what an import writes', () => {
     render(<Host />);
     await importStatement(user);
 
-    await waitFor(() => expect((latest.bankTransactions || []).length).toBe(2));
-    const [out, into] = latest.bankTransactions;
+    await waitFor(() => expect((latest.db.bankTransactions || []).length).toBe(2));
+    const [out, into] = latest.db.bankTransactions;
     expect(out).toMatchObject({ direction: 'OUT', amount: 10000, reference: 'UTR900111' });
     expect(into).toMatchObject({ direction: 'IN', amount: 12000, reference: 'UTR900222' });
   });
@@ -89,8 +93,8 @@ describe('what an import writes', () => {
     render(<Host />);
     await importStatement(user);
 
-    await waitFor(() => expect((latest.bankTransactions || []).length).toBe(2));
-    const [a, b] = latest.bankTransactions;
+    await waitFor(() => expect((latest.db.bankTransactions || []).length).toBe(2));
+    const [a, b] = latest.db.bankTransactions;
     expect(a.imported).toBe(true);
     expect(a.importBatchId).toBeTruthy();
     expect(a.importBatchId).toBe(b.importBatchId);
@@ -104,9 +108,65 @@ describe('what an import writes', () => {
     render(<Host />);
     await importStatement(user);
 
-    await waitFor(() => expect((latest.bankTransactions || []).length).toBe(2));
-    expect(latest.journalEntries).toHaveLength(0);
-    expect(latest.payments).toHaveLength(0);
-    expect(latest.bankTransactions.every((t) => t.ledgerId === undefined || t.ledgerId === null)).toBe(true);
+    await waitFor(() => expect((latest.db.bankTransactions || []).length).toBe(2));
+    expect(latest.db.journalEntries).toHaveLength(0);
+    expect(latest.db.payments).toHaveLength(0);
+    expect(latest.db.bankTransactions.every((t) => t.ledgerId === undefined || t.ledgerId === null)).toBe(true);
+  });
+});
+
+describe('importing the same statement twice', () => {
+  beforeEach(() => localStorage.clear());
+
+  /* Nothing suspect goes in or out silently: the second import stops at a
+     review, duplicates unticked, the verdict and the collision both shown. */
+  it('stops at a review naming each duplicate', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await importStatement(user);
+    await waitFor(() => expect((latest.db.bankTransactions || []).length).toBe(2));
+
+    await importStatement(user);
+    expect(await screen.findByText('Review before importing')).toBeInTheDocument();
+    expect(screen.getAllByText('Duplicate')).toHaveLength(2);
+    expect(screen.getAllByText(/already in the book/)).toHaveLength(2);
+    /* Nothing imported yet. */
+    expect(latest.db.bankTransactions).toHaveLength(2);
+  });
+
+  it('imports only what was ticked', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await importStatement(user);
+    await waitFor(() => expect((latest.db.bankTransactions || []).length).toBe(2));
+
+    await importStatement(user);
+    await screen.findByText('Review before importing');
+    /* Duplicates start unticked; tick one deliberately. */
+    await user.click(screen.getByRole('checkbox', { name: 'Import row 1' }));
+    await user.click(screen.getByRole('button', { name: /Import 1 row/ }));
+
+    await waitFor(() => expect(latest.db.bankTransactions).toHaveLength(3));
+  });
+
+  it('flags a same-day same-amount row as possible, ticked by default', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await importStatement(user);
+    await waitFor(() => expect((latest.db.bankTransactions || []).length).toBe(2));
+
+    /* Same day and amount as the GST payment, different narration and ref. */
+    const NEAR = [
+      'Date,Payments,Receipts,Narration,Ref No / UTR',
+      '01-09-2026,10000,,Vendor advance,UTR777000',
+    ].join('\n');
+    await user.click(screen.getByRole('button', { name: /More/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /Paste statement rows/i }));
+    fireEvent.change(await screen.findByLabelText('Statement rows'), { target: { value: NEAR } });
+    await user.click(screen.getByRole('button', { name: 'Import rows' }));
+
+    expect(await screen.findByText('Review before importing')).toBeInTheDocument();
+    expect(screen.getByText('Possible duplicate')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Import row 1' })).toBeChecked();
   });
 });
