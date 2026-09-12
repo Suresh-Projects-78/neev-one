@@ -49,7 +49,7 @@ const Row = ({ row, company, right = null }) => (
   </div>
 );
 
-export default function BankReconciliation({ db, setDb, currentCompany }) {
+export default function BankReconciliation({ db, setDb, currentCompany, onImportStatement = null }) {
   const companyId = currentCompany?.id;
   const fileRef = useRef(null);
 
@@ -284,6 +284,13 @@ export default function BankReconciliation({ db, setDb, currentCompany }) {
       <PageHeader
         title="Bank Reconciliation"
         description="Match a statement against the book. Nothing is created — what is left on each side is the answer."
+        actions={
+          onImportStatement ? (
+            <button type="button" onClick={onImportStatement} className="ui-btn ui-btn-primary">
+              <Upload size={16} aria-hidden="true" /> Import Statement
+            </button>
+          ) : null
+        }
       />
 
       <div className="ui-card flex flex-wrap items-end gap-3 p-4">

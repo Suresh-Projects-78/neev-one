@@ -13602,7 +13602,14 @@ const AppShell = () => {
         );
       }
       case 'bankReco':
-        return <BankReconciliation db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
+        return (
+          <BankReconciliation
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            onImportStatement={() => setActive('cashBankImport')}
+          />
+        );
       case 'ledgerTrialBalance':
         return <LedgerTrialBalance currentCompany={currentCompany} />;
       default:

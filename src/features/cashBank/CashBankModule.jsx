@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { CheckCircle2, Download, FileSpreadsheet, Link2, MoreVertical, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { CheckCircle2, ClipboardList, Download, FileSpreadsheet, Link2, MoreVertical, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 
+import Modal from '../../components/ui/Modal';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
 import { formatMoney, round2 } from '../../utils/money';
@@ -493,6 +494,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   };
 
   const uploadInputRef = useRef(null);
+  /* The paste door: rows copied straight off net-banking. */
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState('');
 
   const [pendingAddTxnInitial, setPendingAddTxnInitial] = useState(null);
 
@@ -852,6 +856,20 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             const next = list.map((t) => {
               if (t.companyId !== companyId) return t;
               if (Number(t.id) !== editId) return t;
+              /*
+               * An imported row is the bank's word, not ours. Its date,
+               * amount, direction, narration and reference stay exactly as
+               * they arrived; what an edit may change is the ALLOCATION —
+               * which ledger it belongs to. A row typed by hand stays fully
+               * editable, because there the operator is the source.
+               */
+              if (t.imported) {
+                return {
+                  ...t,
+                  ledgerId: Number(ledgerId),
+                  updatedAt: new Date().toISOString(),
+                };
+              }
               return {
                 ...t,
                 cashBankAccountId: Number(cashBankAccountId),
@@ -1477,20 +1495,31 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   const onUploadStatement = async (file) => {
     if (!file) return;
+    let text = '';
+    try {
+      text = await file.text();
+    } catch {
+      notify.error('Unable to read the statement file.');
+      return;
+    }
+    importStatementText(text);
+  };
+
+  /*
+   * One pipeline for both doors.
+   *
+   * A statement arrives as a file or as rows copied straight off net-banking;
+   * the columns, the dedupe and the batch stamp are identical, so the paste
+   * dialog and the upload button feed the same function rather than two
+   * parsers that drift.
+   */
+  const importStatementText = (text) => {
     if (!cashBankAccounts.length) {
       notify.error('No cash/bank accounts found. Please create one first.');
       return;
     }
 
     try {
-      let text = '';
-      try {
-        text = await file.text();
-      } catch {
-        notify.error('Unable to read the statement file.');
-        return;
-      }
-
     const { headers, rows } = parseCsv(text);
     if (!headers.length || !rows.length) {
       notify.error('No rows found in the uploaded file.');
@@ -1524,6 +1553,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       const receiptsIdx = pickIdx(['receipts', 'receipt', 'received', 'credit', 'deposit', 'cr']);
       const amountIdx = pickIdx(['amount', 'amt', 'transaction amount']);
       const narrationIdx = pickIdx(['narration', 'description', 'particulars', 'remarks', 'details']);
+      /* The bank's own handle on the movement — what reconciliation matches
+         by, and what a dispute is raised with. */
+      const refIdx = pickIdx(['ref no / utr', 'ref no', 'utr', 'reference', 'ref', 'cheque no', 'chq no', 'utr no']);
 
     if (dateIdx < 0 || (amountIdx < 0 && paymentIdx < 0 && receiptsIdx < 0)) {
       notify.error(
@@ -1571,6 +1603,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       const date = normalizeDate(r[dateIdx]);
       const typeText = typeIdx >= 0 ? r[typeIdx] : '';
       const narration = narrationIdx >= 0 ? String(r[narrationIdx] || '').trim() : '';
+      const reference = refIdx >= 0 ? String(r[refIdx] || '').trim() : '';
         const accountText = accountIdx >= 0 ? String(r[accountIdx] || '').trim() : '';
 
         const hasPayRecColumns = paymentIdx >= 0 || receiptsIdx >= 0;
@@ -1623,7 +1656,11 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           direction,
           amount,
           narration,
+          reference,
           cashBankAccountId,
+          /* Which line of the pasted or uploaded statement this came from —
+             the trail back to the source when a figure is questioned. */
+          sourceRow: rows.indexOf(r) + 1,
         });
     }
 
@@ -1632,21 +1669,34 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         return;
       }
 
+    /*
+     * One batch per import, stamped on every row it brought in.
+     *
+     * The batch is how "undo that upload" and "where did this row come from"
+     * are ever answerable. And the rows are marked imported: what the bank
+     * said — date, amount, direction, narration, reference — is evidence, not
+     * data entry, and the edit path refuses to rewrite it. Allocation lives
+     * in its own fields beside it.
+     */
+    const importBatchId = `imp-${companyId}-${Date.now()}`;
     setDb((prev) => {
       const list = safeArray(prev.bankTransactions);
       let nextId = list.reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0) + 1;
       const appended = newTxns.map((t) => ({
         id: nextId++,
         companyId,
-          cashBankAccountId: Number(t.cashBankAccountId),
+        cashBankAccountId: Number(t.cashBankAccountId),
         date: t.date,
         direction: t.direction,
-          ledgerId: undefined,
+        ledgerId: undefined,
         amount: t.amount,
         narration: t.narration,
         description: t.narration,
-          reference: '',
+        reference: t.reference || '',
         linkedPaymentId: null,
+        imported: true,
+        importBatchId,
+        sourceRow: t.sourceRow,
         createdAt: new Date().toISOString(),
       }));
       return { ...prev, bankTransactions: [...list, ...appended] };
@@ -1936,6 +1986,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         exportMenuItem('Export transactions'),
         { key: 'template', label: 'Download statement template', Icon: FileSpreadsheet },
         { key: 'upload', label: 'Upload statement', Icon: Upload },
+        { key: 'paste', label: 'Paste statement rows', Icon: ClipboardList },
         { sep: true },
         { key: 'newAccount', label: 'New cash or bank account', Icon: Landmark, group: 'Accounts' },
       ]}
@@ -1962,6 +2013,15 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             return;
           }
           openUpload();
+          return;
+        }
+        if (k === 'paste') {
+          if (accountsEmpty) {
+            notify.error('Add a cash or bank account first.');
+            return;
+          }
+          setPasteOpen(true);
+          setPasteText('');
           return;
         }
         if (k === 'newAccount') openCreateAccount();
@@ -2000,6 +2060,43 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       statusCounts={{ uncategorised: uncategorisedCount, categorised: categorisedCount, all: allTxns.length }}
       onStatusChange={setView}
       above={
+        <>
+        {pasteOpen ? (
+          <Modal onClose={() => setPasteOpen(false)} title="Paste statement rows" maxWidthClass="max-w-2xl">
+            <div className="space-y-3">
+              <p className="ui-caption">
+                Copy the rows from net-banking or a spreadsheet — header first — and paste them here. Columns
+                understood: Date, Payments, Receipts (or a single Amount), Narration, Ref No / UTR. Rows import as
+                the bank’s side only; nothing posts until each is allocated.
+              </p>
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                rows={10}
+                className="ui-input ui-mono w-full text-xs"
+                placeholder={'Date,Payments,Receipts,Narration,Ref No / UTR\n01-09-2026,10000,,GST Paid,UTR900111'}
+                data-autofocus="true"
+                aria-label="Statement rows"
+              />
+              <div className="flex items-center justify-end gap-2">
+                <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setPasteOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-primary"
+                  disabled={!pasteText.trim()}
+                  onClick={() => {
+                    importStatementText(pasteText);
+                    setPasteOpen(false);
+                  }}
+                >
+                  Import rows
+                </button>
+              </div>
+            </div>
+          </Modal>
+        ) : null}
         <input
           ref={uploadInputRef}
           type="file"
@@ -2011,6 +2108,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             if (f) onUploadStatement(f);
           }}
         />
+        </>
       }
       tip={{
         storageKey: 'neev.tip.cashBank',
