@@ -1,12 +1,9 @@
-/* Fraunces carries the brand voice: a variable serif with real optical sizing,
-   so headings look drawn rather than defaulted. Inter Tight does the working
-   text — narrow enough for dense tables without feeling condensed. Geist Mono
-   Mono is kept for document numbers and codes only.
-   display=swap so text is never invisible while fonts load. */
-/* Inter is the brief's choice and the right one for dense financial UI: it has
-   tabular figures, a large x-height and a wide weight range. JetBrains Mono is
-   kept for document numbers and codes. */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap');
+/* One face: Inter. The Graphite decision, adopted ahead of the rest of that
+   system — it has tabular figures, a large x-height and a wide weight range,
+   which is everything a dense financial UI asks of type. Numbers and codes
+   are Inter too, marked by tabular-nums and alignment rather than a second
+   family. display=swap so text is never invisible while fonts load. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -435,11 +432,8 @@
 
 @layer base {
   html {
-    /* Inter, matching the reference the module overviews are drawn from.
-       Geist stays behind it as the fallback: it was the face here before, so a
-       cold cache renders something built for interfaces rather than
-       system-ui. */
-    font-family: 'Inter', 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    /* Inter, matching the reference the module overviews are drawn from. */
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
     /* Tabular figures everywhere: money columns must not jitter between rows. */
     font-variant-numeric: tabular-nums;
     -webkit-font-smoothing: antialiased;
@@ -524,11 +518,9 @@
     color: rgb(var(--fg-subtle));
   }
   .ui-mono {
-    /* Geist Mono, not JetBrains. Two monospace faces were being downloaded and
-       used side by side — `.ui-mono` was JetBrains while `.ui-money` and the
-       type ramp were Geist Mono, so an invoice number and the amount beside it
-       were set in different typefaces. DESIGN.md names Geist Mono. */
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    /* Inter, like everything else. A code is marked by disabled ligatures
+       and the tabular figures it inherits, not by a second typeface. */
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: 'calt' 0; /* no ligatures in IDs and codes */
   }
   .ui-amount {
@@ -1258,8 +1250,8 @@
 
 @layer components {
   /* --- display type -------------------------------------------------------
-     Fraunces only for headline moments. Body copy stays in Inter Tight: a
-     serif at 15px in a data table is harder to scan, not more characterful. */
+     Inter at display sizes for headline moments — one face, ranked by size
+     and weight rather than by switching family. */
   .ui-display {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: 'ss01', 'cv11';
@@ -1532,7 +1524,7 @@
     font-size: 0.8125rem;
   }
   .ui-table-totals .fig {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     /* 500, per DESIGN.md. At 600 every figure in every table read as
        emphasised, which means none of them did — a column where each cell
@@ -1588,7 +1580,7 @@
     box-shadow: 0 -2px 10px rgb(28 25 23 / 0.06);
   }
   .ui-entry-summary .fig {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     font-weight: 600;
   }
@@ -1919,12 +1911,11 @@
      doing 200 vouchers a day and an owner reading outstandings.
   --------------------------------------------------------------------------- */
   .ui-t-page {
-    font-family: 'Fraunces', 'Iowan Old Style', Palatino, Georgia, serif;
-    font-optical-sizing: auto;
-    font-size: 1.5rem;        /* 24px */
-    line-height: 2rem;        /* 32px */
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    font-size: 1.75rem;       /* 28px — Graphite's title size */
+    line-height: 2.25rem;     /* 36px */
+    font-weight: 700;
+    letter-spacing: -0.025em;
     color: rgb(var(--fg));
     text-wrap: balance;
   }
@@ -2044,7 +2035,7 @@
 
   .ui-money,
   .ui-amount {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-size: 0.8125rem;     /* 13px */
     line-height: 1.125rem;
     font-weight: 400;
@@ -2058,7 +2049,7 @@
      size the scale does not have. One role instead: monospace, tabular, and
      the same 20px everywhere a figure leads a card. */
   .ui-money-lg {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-size: 1.25rem;       /* 20px */
     line-height: 1.75rem;     /* 28px */
     /* A headline figure earns its emphasis from size, not from weight on top
@@ -2085,7 +2076,7 @@
     font-weight: 500;
   }
   .ui-total-row > :last-child {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-size: 1.25rem;       /* 20px */
     line-height: 1.75rem;
     font-weight: 400;
@@ -2156,7 +2147,7 @@
   /* The scan anchor. Mono so digits align down the column and the eye can run
      it like a list of codes rather than prose. */
   .ui-col-id.ui-col-id {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: 'calt' 0;
     font-size: 0.8125rem;
     font-weight: 500;
@@ -2204,7 +2195,7 @@
        tabular-nums, weight and alignment but never the family, so every rupee
        figure in every table rendered in the sans face — the one place the rule
        matters most, and the only place it was not applied. */
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     /* 400. Monospace and right alignment already say "this is money"; a
        weight on top of them made every figure in every table shout, and a
@@ -2223,7 +2214,7 @@
      or a glyph.
   ------------------------------------------------------------------------- */
   .ui-cell-ref {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     color: rgb(var(--doc-link));
     font-weight: 600;
@@ -2276,7 +2267,7 @@
     text-align: center;
   }
   .ui-detail-value.ui-detail-mono {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
   }
 
@@ -2427,7 +2418,7 @@
     box-shadow: 0 1px 2px rgb(0 0 0 / 0.10);
   }
   .ui-segment-count {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     font-size: 0.75rem;
     line-height: 1rem;
@@ -2476,7 +2467,7 @@
      left-aligned, which is why a column of rates did not line up on the
      decimal and had to be read one cell at a time. */
   .ui-grid-dense input[type='number'] {
-    font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
     font-variant-numeric: tabular-nums;
     font-weight: 500;
     text-align: right;

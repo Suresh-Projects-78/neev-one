@@ -16,22 +16,24 @@ Preview (rendered): https://claude.ai/code/artifact/b5f06c26-a4de-4879-979f-fbb1
 - **Removed:** ambient orange orbs (`ui-ambient`) leave product screens. They stay on auth and marketing.
 
 ## Typography
-Loaded from Google Fonts in `src/index.css` (2026-08-24). Inter remains the fallback so a cold cache never drops to system-ui.
+Loaded from Google Fonts in `src/index.css`. **One face: Inter** (2026-09-13, the
+Graphite type decision adopted ahead of the rest of that system). Fraunces and
+both Geists are out; rank comes from size and weight, never from switching
+family.
 
-- **Page titles:** Fraunces (variable serif, optical sizing) — already the brand voice. Keeping it in-product is what stops this looking like every other grotesque-only SaaS.
-- **Body + UI:** Geist — built for interfaces, sharp at 13–14px, real tabular figures. Explicitly not Inter, not Space Grotesk: every AI design tool converges there.
-- **Money:** Geist Mono, `font-variant-numeric: tabular-nums` — columns align to the digit.
-- **Code:** Geist Mono.
+- **Everything:** Inter — tabular figures, large x-height, wide weight range.
+- **Money:** Inter, `font-variant-numeric: tabular-nums` (inherited from `html`) — columns align to the digit, right-aligned.
+- **Code / voucher numbers:** Inter with ligatures off (`.ui-mono`); marked by alignment and context, not a second typeface.
 
-### Scale (this is the fix — today 1,857 of 2,019 usages are 12–14px)
+### Scale
 | Role | Font | Size / line | Weight | Notes |
 |------|------|-------------|--------|-------|
-| Page title | Fraunces | 24 / 32 | 600 | `letter-spacing: -.01em` |
-| Section title | Geist | 16 / 24 | 600 | |
-| Body, UI | Geist | 14 / 20 | 400–500 | |
-| Table cell | Geist | 13 / 18 | 400 | |
-| Money | Geist Mono | 13 / 18 | 400 | tabular-nums, right-aligned |
-| Label, caption | Geist | 12 / 16 | 500 | `.04em`, uppercase |
+| Page title | Inter | 28 / 36 | 700 | `letter-spacing: -.025em` |
+| Section title | Inter | 16 / 24 | 600 | |
+| Body, UI | Inter | 14 / 20 | 400–500 | |
+| Table cell | Inter | 13 / 18 | 400 | |
+| Money | Inter | 13 / 18 | 400 | tabular-nums, right-aligned |
+| Label, caption | Inter | 12 / 16 | 500 | `.04em`, uppercase |
 
 Nothing below 12px. Nothing between 16 and 24.
 
@@ -83,7 +85,7 @@ Rules that hold across every module:
 1. One primary action per screen, top right.
 2. Voucher number and date sit right of the page title on entry forms.
 3. Print / Download / Share, in that order, above a document — never inside it.
-4. Every amount is monospace and right-aligned.
+4. Every amount is set with tabular figures and right-aligned.
 5. Status is a pill; severity is carried by color *and* text, never color alone.
 6. A status hue is a **background**, never type. Pills and filter tabs keep grey
    text on a pale tint; the word carries the meaning and the tint places it.
@@ -159,11 +161,12 @@ because focus, portals and event order cannot be read off the source.
 | 2026-08-24 | Shell + primitives rebuild over a discipline-only pass | The flat type scale is why it reads as a dense tool rather than premium SaaS; discipline alone would not fix it |
 | 2026-09-08 | One vertical rhythm for page blocks | 43 screens at 16px and 20 at 20px meant no two modules agreed, and neither value was on the documented scale |
 | 2026-09-08 | Weight marks structure, not content | 121 values carried semibold or bold. Spending weight on content leaves none for hierarchy — everything emphasised is nothing emphasised |
-| 2026-09-08 | Money drops to weight 400 | Monospace and right alignment already mark a figure as money. A weight on top made every amount in every table an emphasis, and a screen that is mostly amounts then had none |
+| 2026-09-08 | Money drops to weight 400 | Tabular alignment already marks a figure as money. A weight on top made every amount in every table an emphasis, and a screen that is mostly amounts then had none |
 | 2026-09-08 | Status hues move out of type and into the tint | Seven saturated words in the filter strip competed with each other and with the figures beside them. Reverses the 2026-09-01 contrast increase, which raised the wrong thing |
-| 2026-08-24 | Monospace money | Digit-aligned columns; a wrong figure looks wrong. Stripe and Mercury do it, Indian accounting does not |
+| 2026-09-13 | One face: Inter, everywhere | The Graphite type decision, adopted alone while its colors stay parked. Money and codes keep digit alignment through tabular-nums instead of a mono family |
+| 2026-08-24 | Monospace money | Superseded 2026-09-13 — the alignment survives via tabular-nums, the second family does not |
 | 2026-08-24 | No card-in-card on lists | 2–3 more rows per screen, less framing noise. Departs from the Zoho/Tally convention deliberately |
-| 2026-08-24 | Fraunces stays in-product for page titles | Serif-only-for-brand was considered and rejected; the serif is the differentiator |
+| 2026-08-24 | Fraunces stays in-product for page titles | Superseded 2026-09-13 by the one-face decision |
 | 2026-08-24 | Orange kept as the single accent | Already tokenized, and rare against Tally blue / Zoho red / QuickBooks green |
 | 2026-09-07 | Field sizing lives in the token, not at the call site | 390 call sites restated `.ui-input`'s own padding and beat it. Heights were unaffected — `min-height` already governed — but the horizontal metric differed from the rest of the product |
 | 2026-09-07 | Selection is the accent's job | Six list screens marked the chosen row with `bg-stone-100`, a light-palette literal, so a selected row in dark mode was a near-white band across a dark table |
