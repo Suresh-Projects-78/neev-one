@@ -37,6 +37,9 @@ import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/Docume
 import DocumentPrintView from '../../components/DocumentPrintView';
 import PrintDownloadFrame from '../../components/PrintDownloadFrame';
 import { getVisibleCustomFields } from '../../utils/invoicePrefs';
+import { tdsAmountOn, tdsThresholdState, tdsVariesByDeductee, DEDUCTEE_TYPES } from '../../utils/tds';
+import { tdsLedgerLabel, tdsLedgerRate, tdsPayableLedgers } from '../../utils/tdsLedgers';
+import { fyRange } from '../../utils/tdsTcs';
 import {
   computeGstForLine,
   computeGstForLines,
@@ -88,6 +91,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const numberingBtnRef = useRef(null);
   const [numberingOpen, setNumberingOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  /* Open while a deduction is being chosen, folded away once it is. */
+  const [tdsPickerOpen, setTdsPickerOpen] = useState(false);
 
   /*
    * The fields this company added to a bill.
@@ -138,6 +143,9 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       refDate: '',
       vendorId: '',
       warehouseId: String(defaultWarehouseId || '').trim(),
+      tdsLedgerId: '',
+      tdsDeducteeType: 'COMPANY',
+      tdsRate: '',
       items: [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '' }],
     };
 
@@ -163,6 +171,9 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           ? String(initialData.vendorId)
           : '',
       warehouseId: String(initialData?.warehouseId || base.warehouseId || '').trim(),
+      tdsLedgerId: initialData.tdsLedgerId ? String(initialData.tdsLedgerId) : '',
+      tdsDeducteeType: initialData.tdsDeducteeType || 'COMPANY',
+      tdsRate: initialData.tdsRate ?? '',
       // Kept so a saved bill can close the order it came from.
       sourcePurchaseOrderId: initialData.sourcePurchaseOrderId ?? null,
       items: copiedItems.length ? copiedItems : base.items,
@@ -330,6 +341,68 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
    * record would only ever open on a document somebody had already committed,
    * which is the one moment they do not need to check it.
    */
+  /*
+   * TDS on the purchase side.
+   *
+   * Here the deduction is the company's own: the vendor is paid short and the
+   * difference is owed to the government until it is deposited. So which
+   * ledger it lands in is a real question with a real answer — the ledgers the
+   * company keeps under TDS Payable, one per section it deducts under — and
+   * the rate follows from the ledger rather than being typed again.
+   *
+   * The bill total does not move. Reducing it would understate the input GST
+   * and lose part of what is owed to the vendor; what changes is the cash that
+   * leaves. The base is the taxable value, not the total: CBDT Circular
+   * 23/2017 — where GST is shown separately, tax is deducted on the amount
+   * excluding it.
+   */
+  const tdsLedgers = React.useMemo(
+    () => tdsPayableLedgers(db, currentCompany.id),
+    [db, currentCompany.id]
+  );
+  const tdsLedger = React.useMemo(
+    () => tdsLedgers.find((l) => String(l.id) === String(formData.tdsLedgerId || '')) || null,
+    [tdsLedgers, formData.tdsLedgerId]
+  );
+  const tdsSectionCode = String(tdsLedger?.tdsSection || '').trim();
+  /* Typed over on this bill, else whatever the ledger says. */
+  const tdsRateValue =
+    String(formData.tdsRate ?? '').trim() === ''
+      ? tdsLedgerRate(tdsLedger, formData.tdsDeducteeType)
+      : Number(formData.tdsRate) || 0;
+  const tdsBase = Math.max(0, Number(computed.subtotal || 0));
+
+  /*
+   * What this vendor has already been billed under this section this year.
+   *
+   * Nothing is deducted below the threshold, and once one is crossed the whole
+   * aggregate becomes liable — earlier bills included. A figure that did not
+   * know what came before it would under-deduct on the bill that crosses the
+   * line and over-deduct on every small one before it.
+   */
+  const tdsPriorValue = React.useMemo(() => {
+    if (!tdsSectionCode) return 0;
+    const vendorId = formData.vendorId;
+    if (vendorId === '' || vendorId == null) return 0;
+    const fy = fyRange(formData.date);
+    return (db?.bills || [])
+      .filter(
+        (b) =>
+          b.companyId === currentCompany.id &&
+          String(b.vendorId) === String(vendorId) &&
+          String(b.tdsSection || '') === tdsSectionCode &&
+          String(b.status || '').toLowerCase() !== 'cancelled' &&
+          String(b.id) !== String(initialData?.id ?? '') &&
+          String(b.date || '') >= fy.from &&
+          String(b.date || '') <= fy.to
+      )
+      .reduce((sum, b) => sum + (Number(b.taxableValue) || Number(b.subtotal) || 0), 0);
+  }, [db?.bills, currentCompany.id, formData.vendorId, formData.date, tdsSectionCode, initialData?.id]);
+
+  const tdsState = tdsSectionCode ? tdsThresholdState(tdsSectionCode, tdsBase, tdsPriorValue) : null;
+  const tdsAmount = tdsState?.crossed ? tdsAmountOn(tdsState.base, tdsRateValue) : 0;
+  const netPayable = Math.max(0, round2(Number(computed.total || 0) - tdsAmount));
+
   const previewBill = {
     ...formData,
     id: initialData?.id ?? null,
@@ -460,6 +533,14 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       warehouseId: String(formData.warehouseId || '').trim(),
       branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
       /* customFields ride in on the spread of formData above. */
+      tdsLedgerId: formData.tdsLedgerId ? String(formData.tdsLedgerId) : '',
+      tdsSection: tdsSectionCode || '',
+      tdsDeducteeType: tdsSectionCode ? formData.tdsDeducteeType || 'COMPANY' : '',
+      tdsRate: tdsSectionCode ? tdsRateValue : 0,
+      tdsAmount,
+      /* What actually leaves the bank once the deduction is withheld. The
+         bill's own total is untouched — see the computation above. */
+      netPayable,
       vendorName: billVendorName,
       vendorGstin: vendorGstin,
       placeOfSupplyState: vendorState,
@@ -945,6 +1026,155 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               <span>Total:</span>
               <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
             </div>
+
+            {/*
+              The deduction sits under the total it is taken from.
+
+              Which ledger, and at what rate, is how it is chosen — so that
+              lives in the chooser; once chosen the totals say "Less: TDS" and
+              a figure, because that is what a reader of a totals column wants.
+              The ledger and section are on the bill and in the return.
+            */}
+            {!tdsPickerOpen && !formData.tdsLedgerId ? (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setTdsPickerOpen(true)}
+                  className="ui-btn ui-btn-ghost ui-btn-sm !px-0"
+                  disabled={!tdsLedgers.length}
+                  title={tdsLedgers.length ? undefined : 'No TDS Payable ledger in the chart of accounts yet.'}
+                >
+                  + TDS deduction <span className="ui-subtle">(if you deduct on this bill)</span>
+                </button>
+                {!tdsLedgers.length ? (
+                  <p className="ui-caption mt-1">
+                    Create a ledger under TDS Payable in the chart of accounts, naming the section it
+                    accumulates, and it will be offered here.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            <div className="pt-1" hidden={!tdsPickerOpen}>
+              <label className="ui-label" htmlFor="bill-tds-ledger">
+                TDS deduction <span className="ui-subtle font-normal">(deducted from this vendor)</span>
+              </label>
+              <select
+                id="bill-tds-ledger"
+                className="ui-select w-full"
+                value={formData.tdsLedgerId || ''}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  const picked = tdsLedgers.find((l) => String(l.id) === String(id)) || null;
+                  setFormData((p) => ({
+                    ...p,
+                    tdsLedgerId: id,
+                    /* Seeded from the ledger, then editable: a certificate
+                       under section 197, or a vendor with no PAN, is a fact
+                       about this bill rather than about the ledger. */
+                    tdsRate: picked ? String(tdsLedgerRate(picked, p.tdsDeducteeType)) : '',
+                  }));
+                  if (!id) setTdsPickerOpen(false);
+                }}
+              >
+                <option value="">No deduction</option>
+                {tdsLedgers.map((l) => (
+                  <option key={l.id} value={String(l.id)}>
+                    {tdsLedgerLabel(l, formData.tdsDeducteeType)}
+                  </option>
+                ))}
+              </select>
+
+              {formData.tdsLedgerId ? (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="ui-label" htmlFor="bill-tds-rate">Rate (%)</label>
+                    <input
+                      id="bill-tds-rate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      className="ui-input ui-mono w-full"
+                      value={formData.tdsRate}
+                      onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))}
+                    />
+                  </div>
+                  {tdsVariesByDeductee(tdsSectionCode) ? (
+                    <div>
+                      <label className="ui-label" htmlFor="bill-tds-deductee">Payee</label>
+                      <select
+                        id="bill-tds-deductee"
+                        className="ui-select w-full"
+                        value={formData.tdsDeducteeType || 'COMPANY'}
+                        onChange={(e) => {
+                          const type = e.target.value;
+                          setFormData((p) => ({
+                            ...p,
+                            tdsDeducteeType: type,
+                            /* The payee changes the rate under 194C, so the
+                               seeded figure is read again. */
+                            tdsRate: tdsLedger ? String(tdsLedgerRate(tdsLedger, type)) : p.tdsRate,
+                          }));
+                        }}
+                      >
+                        {DEDUCTEE_TYPES.map((d) => (
+                          <option key={d.key} value={d.key}>{d.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {/* Whether the threshold has been reached, and why — without it
+                  the figure appears or does not and nobody can tell a working
+                  deduction from a broken one. */}
+              {tdsState ? (
+                <p className="ui-caption mt-1.5">
+                  {tdsState.crossed
+                    ? `${tdsState.reason}. Deducted on ${formatMoney(tdsState.base, currentCompany)}${
+                        tdsPriorValue > 0
+                          ? ` — this bill plus ${formatMoney(tdsPriorValue, currentCompany)} billed earlier this year`
+                          : ''
+                      }.`
+                    : `No deduction yet. ${tdsState.reason}.`}
+                </p>
+              ) : null}
+
+              {formData.tdsLedgerId ? (
+                <button
+                  type="button"
+                  onClick={() => setTdsPickerOpen(false)}
+                  className="ui-btn ui-btn-ghost ui-btn-sm !px-0 mt-1"
+                >
+                  Done
+                </button>
+              ) : null}
+            </div>
+
+            {tdsAmount > 0 ? (
+              <>
+                <div className="flex justify-between pt-1">
+                  <span>
+                    Less: TDS
+                    {!tdsPickerOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => setTdsPickerOpen(true)}
+                        className="ms-2 text-xs underline ui-muted hover:ui-fg"
+                      >
+                        Change
+                      </button>
+                    ) : null}
+                  </span>
+                  <span className="text-[rgb(var(--neg-ink))]">− {formatMoney(tdsAmount, currentCompany)}</span>
+                </div>
+                <div className="ui-total-row">
+                  <span>Net payable:</span>
+                  <span className="ui-money">{formatMoney(netPayable, currentCompany)}</span>
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       </div>
