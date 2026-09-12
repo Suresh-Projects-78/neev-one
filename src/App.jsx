@@ -154,7 +154,7 @@ import { PermissionButton } from './permissions/ActionGuard';
 import RolePermissionManager from './features/admin/RolePermissionManager';
 import SettingsHub from './features/settings/SettingsHub';
 import SettingsWorkspace from './features/settings/SettingsWorkspace';
-import { isSettingsKey, visibleSettings, SETTINGS_KEYS } from './features/settings/settingsRegistry';
+import { isSettingsKey, isSettingsRoute, visibleSettings, SETTINGS_KEYS } from './features/settings/settingsRegistry';
 import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
@@ -11278,6 +11278,21 @@ const AppShell = () => {
   const [receiptEditor, setReceiptEditor] = useState({ open: false });
   const [paymentEditor, setPaymentEditor] = useState({ open: false });
   const [billEditor, setBillEditor] = useState({ open: false, initial: null });
+
+  /*
+   * Settings is a detour, not a destination.
+   *
+   * Every open editor was torn down the moment the screen key changed, which
+   * included the deliberate hop a document form makes to the screen that
+   * configures it: ⋮ → Custom fields, the numbering panel's All numbering.
+   * Back then returned to the list, having thrown the document away, and the
+   * menu entry that sent you there was the thing that lost it.
+   *
+   * While a settings screen is on show, whatever document was open stays open,
+   * so Back lands on the document again. Leaving for any other module still
+   * closes it — that is a change of subject, not a detour.
+   */
+  const onSettingsDetour = isSettingsRoute(active);
   const [poEditor, setPoEditor] = useState({ open: false, initial: null });
   const [debitNoteEditor, setDebitNoteEditor] = useState({ open: false, initialOriginalBillId: null });
   const [creditNoteEditor, setCreditNoteEditor] = useState({ open: false, initialOriginalInvoiceId: null });
@@ -11285,18 +11300,21 @@ const AppShell = () => {
   const [stockTransferEditor, setStockTransferEditor] = useState({ open: false, initial: null });
 
   useEffect(() => {
+    if (onSettingsDetour) return;
     if (active !== 'invoices') {
       setInvoiceEditor({ open: false, initial: null });
     }
-  }, [active]);
+  }, [active, onSettingsDetour]);
 
   useEffect(() => {
+    if (onSettingsDetour) return;
     if (active !== 'estimates') {
       setEstimateEditor({ open: false, initial: null });
     }
-  }, [active]);
+  }, [active, onSettingsDetour]);
 
   useEffect(() => {
+    if (onSettingsDetour) return;
     if (active !== 'bills') setBillEditor({ open: false, initial: null });
     if (active !== 'debitNotes') setDebitNoteEditor({ open: false, initialOriginalBillId: null });
     if (active !== 'creditNotes') setCreditNoteEditor({ open: false, initialOriginalInvoiceId: null });
@@ -11304,7 +11322,7 @@ const AppShell = () => {
     if (active !== 'payments' && active !== 'paymentsExpense') setPaymentEditor({ open: false });
     if (active !== 'journalEntries') setJournalEditor({ open: false, initial: null });
     if (active !== 'warehouseTransfers' && active !== 'branchTransfers') setStockTransferEditor({ open: false, initial: null });
-  }, [active]);
+  }, [active, onSettingsDetour]);
 
   // What each settings area would tell you if you opened it. Shown beside its
   // name in the rail, so "is email set up?" and "how many branches?" answer

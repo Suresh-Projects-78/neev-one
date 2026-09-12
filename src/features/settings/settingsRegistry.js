@@ -157,6 +157,19 @@ const FRAMED_KEYS = new Set(SETTINGS_ITEMS.filter((i) => !i.standalone).map((i) 
 
 export const isSettingsKey = (key) => FRAMED_KEYS.has(String(key || ''));
 
+/**
+ * Whether a screen key is somewhere in Settings — framed or standalone.
+ *
+ * `isSettingsKey` answers a narrower question: does this one get the settings
+ * chrome. Anything that needs to know "is the user off on a settings errand",
+ * such as whether to keep a half-written document open behind them, wants
+ * both halves.
+ */
+export const isSettingsRoute = (key) => {
+  const want = String(key || '');
+  return isSettingsKey(want) || SETTINGS_KEYS.has(want);
+};
+
 export const settingFor = (key) => SETTINGS_ITEMS.find((i) => i.key === String(key || '')) || null;
 
 export const categoryFor = (id) => SETTINGS_CATEGORIES.find((c) => c.id === String(id || '')) || null;
