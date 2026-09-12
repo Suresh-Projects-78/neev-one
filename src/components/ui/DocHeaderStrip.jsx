@@ -1,4 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { SlidersHorizontal } from 'lucide-react';
+
+import DocNumberingPopover from '../DocNumberingPopover';
 
 /**
  * Compact document header: number and dates on one tight line at the top of an
@@ -23,9 +26,19 @@ export const DocHeaderStrip = ({
   onDueDateChange,
   dueDateLabel = 'Due',
   extra = null,
+  /*
+   * The series behind the number, when the caller has one.
+   *
+   * Same gear as the invoice and the bill carry, on the same field, so a
+   * prefix can be corrected without leaving a half-typed voucher. Absent, the
+   * strip is exactly what it was.
+   */
+  numbering = null,
   autoFocusTarget = 'auto',
 }) => {
   const numberRef = useRef(null);
+  const numberingBtnRef = useRef(null);
+  const [numberingOpen, setNumberingOpen] = React.useState(false);
   const dateRef = useRef(null);
 
   useEffect(() => {
@@ -46,19 +59,54 @@ export const DocHeaderStrip = ({
         <label className="ui-label !mb-0.5 !text-xs" htmlFor="doc-number">
           {numberLabel}
         </label>
-        <input
-          id="doc-number"
-          ref={numberRef}
-          type="text"
-          value={number ?? ''}
-          onChange={(e) => onNumberChange?.(e.target.value)}
-          disabled={numberLocked}
-          required
-          aria-invalid={numberError ? true : undefined}
-          aria-describedby={numberError ? 'doc-number-error' : undefined}
-          data-invalid={numberError ? 'true' : undefined}
-          className="ui-input ui-mono !min-h-0 !py-1 !text-[13px] !w-36"
-        />
+        <div className="relative w-36">
+          <input
+            id="doc-number"
+            ref={numberRef}
+            type="text"
+            value={number ?? ''}
+            onChange={(e) => onNumberChange?.(e.target.value)}
+            disabled={numberLocked}
+            required
+            aria-invalid={numberError ? true : undefined}
+            aria-describedby={numberError ? 'doc-number-error' : undefined}
+            data-invalid={numberError ? 'true' : undefined}
+            className={`ui-input ui-mono !min-h-0 !py-1 !text-[13px] w-full${numbering ? ' pe-8' : ''}`}
+          />
+          {numbering ? (
+            <button
+              type="button"
+              ref={numberingBtnRef}
+              onClick={() => setNumberingOpen((v) => !v)}
+              className="absolute end-0.5 top-1/2 -translate-y-1/2 ui-icon-btn !h-6 !w-6"
+              aria-label={`${numbering.title || 'Document'} settings`}
+              aria-haspopup="dialog"
+              aria-expanded={numberingOpen}
+              title="Numbering"
+            >
+              <SlidersHorizontal size={13} aria-hidden="true" />
+            </button>
+          ) : null}
+          {numbering && numberingOpen ? (
+            <DocNumberingPopover
+              anchorRef={numberingBtnRef}
+              db={numbering.db}
+              setDb={numbering.setDb}
+              currentCompany={numbering.currentCompany}
+              voucherKey={numbering.voucherKey}
+              title={numbering.title}
+              sampleLabel={numbering.sampleLabel}
+              manualLabel={numbering.manualLabel}
+              branchId={numbering.branchId ?? null}
+              settings={numbering.settings}
+              onClose={() => setNumberingOpen(false)}
+              onOpenFullSettings={() => {
+                setNumberingOpen(false);
+                numbering.onOpenFullSettings?.();
+              }}
+            />
+          ) : null}
+        </div>
         {numberError ? (
           <p id="doc-number-error" role="alert" className="ui-field-error">
             {numberError}

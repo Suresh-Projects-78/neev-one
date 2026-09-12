@@ -16,7 +16,8 @@ import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
 import { notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
-import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import DocNumberField from '../../components/DocNumberField';
 import { getCustomerDisplayName } from '../../utils/contacts';
 import { amountInWordsInr, formatMoney } from '../../utils/money';
 import { computeGstForLines } from '../../utils/gst';
@@ -82,6 +83,18 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     setForm((p) => (p.items.length > 1 ? { ...p, items: p.items.filter((_, i) => i !== idx) } : p));
 
   const branchIdForNumbering = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
+  const orderDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering || null });
+  const orderNumbering = orderDocSettings?.numbering?.salesOrder;
+  const nextOrderNumber =
+    nextFreeVoucherNumber({
+      db,
+      company: currentCompany,
+      voucherKey: 'salesOrder',
+      branchId: branchIdForNumbering || null,
+      takenNumbers: (db.salesOrders || [])
+        .filter((x) => x.companyId === currentCompany.id)
+        .map((x) => String(x.number || '').trim()),
+    }) || '';
   // Where this was entered from, so the header's scope can find it later.
   const warehouseIdForEntry = String(localStorage.getItem('activeWarehouseId') || '').trim();
   const selectedCustomer = form.customerId ? customers.find((c) => c.id === parseInt(form.customerId)) : null;
@@ -428,6 +441,26 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
               style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* The number this order will take, and the series it comes
+                    from — an order numbered only at save is a number nobody
+                    can correct until it is too late to. */}
+                <DocNumberField
+                  className="min-w-0"
+                  id="so-number"
+                  label="Order No."
+                  value={nextOrderNumber}
+                  onChange={() => {}}
+                  disabled
+                  voucherKey="salesOrder"
+                  title="Order numbering"
+                  sampleLabel="Next order will be"
+                  manualLabel="Typed on each order"
+                  branchId={branchIdForNumbering || null}
+                  settings={orderNumbering}
+                  db={db}
+                  setDb={setDb}
+                  currentCompany={currentCompany}
+                />
                 <div className="min-w-0">
                   <label className="ui-label" htmlFor="so-date">
                     Date <span className="text-[rgb(var(--neg-ink))]">*</span>

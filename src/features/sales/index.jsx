@@ -31,6 +31,7 @@ import { useGridView } from '../../components/grid/useGridView';
 import GridControls, { BulkBar } from '../../components/grid/GridControls';
 import Popover from '../../components/ui/Popover';
 import DocNumberingPopover from '../../components/DocNumberingPopover';
+import DocNumberField from '../../components/DocNumberField';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/DocumentCustomFields';
@@ -2734,6 +2735,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const customFields = useMemo(() => getVisibleCustomFields(currentCompany), [currentCompany]);
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  /* Which half of the settings drawer a menu entry asked for. */
+  const [prefsPane, setPrefsPane] = useState('fields');
 
   /**
    * Save & New keeps the form open with a fresh invoice instead of closing it.
@@ -2818,15 +2821,18 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * typed — and there was no way back. Somebody switching a field on is in the
    * middle of raising an invoice; that invoice has to survive the detour.
    */
-  const openPreferences = (focusCustomFields = false) => {
+  /*
+   * Two menu entries, two panels — not one panel scrolled to a heading.
+   *
+   * "Custom Field" used to open the whole invoice settings drawer and scroll
+   * it down to the custom-field section, so the thing somebody asked for
+   * arrived surrounded by forty switches they did not. Each entry now opens
+   * what it is named after.
+   */
+  const openPreferences = (pane = 'fields') => {
     setPreviewOpen(false);
+    setPrefsPane(pane === 'custom' ? 'custom' : 'fields');
     setPrefsOpen(true);
-    if (focusCustomFields) {
-      // After the panel paints, not before.
-      window.requestAnimationFrame(() => {
-        document.getElementById('invoice-custom-fields')?.scrollIntoView({ block: 'nearest' });
-      });
-    }
   };
 
   /**
@@ -3976,14 +3982,14 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             group: 'Configure — every invoice',
             label: 'Preferences',
             icon: SlidersHorizontal,
-            onSelect: () => openPreferences(false),
+            onSelect: () => openPreferences('fields'),
           },
           {
             key: 'custom',
             group: 'Configure — every invoice',
             label: 'Custom Field',
             icon: Plus,
-            onSelect: () => openPreferences(true),
+            onSelect: () => openPreferences('custom'),
           },
           {
             key: 'template',
@@ -4024,14 +4030,21 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       <Drawer
         open={prefsOpen}
         onClose={() => setPrefsOpen(false)}
-        title="Invoice settings"
-        description="Applies to every invoice, not just this one. Nothing typed here is lost."
+        title={prefsPane === 'custom' ? 'Invoice custom fields' : 'Invoice settings'}
+        description={
+          prefsPane === 'custom'
+            ? 'Fields of your own, on every invoice. Other documents keep their own.'
+            : 'Applies to every invoice, not just this one. Nothing typed here is lost.'
+        }
       >
         <InvoiceFieldSettings
           db={db}
           setDb={setDb}
           currentCompany={currentCompany}
           embedded
+          pane={prefsPane}
+          docType="invoice"
+          docLabel="Invoice"
           onBack={() => setPrefsOpen(false)}
         />
       </Drawer>
@@ -4475,7 +4488,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             </div>
           ) : null}
 
-          {prefOn('transporter') ? (
+          {/* Switched off by default now — but an invoice that already carries
+              a transporter still shows it, because hiding a value that is on
+              the document is worse than showing a field nobody asked for. */}
+          {prefOn('transporter') || formData.transporterName || formData.vehicleNo ? (
             <div>
               <label className="ui-label">Transporter &amp; vehicle</label>
               <div className="flex gap-2">
@@ -5577,20 +5593,23 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
           style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr] gap-3">
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="estimate-number">
-                Quotation No. <span className="text-[rgb(var(--neg-ink))]">*</span>
-              </label>
-              <input
-                id="estimate-number"
-                type="text"
-                value={formData.number}
-                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-                className={`ui-input ui-mono w-full ${lockEstimateNumberOnCreate ? 'ui-sunken' : ''}`}
-                disabled={lockEstimateNumberOnCreate}
-                required
-              />
-            </div>
+            <DocNumberField
+              className="min-w-0"
+              id="estimate-number"
+              label={<>Quotation No. <span className="text-[rgb(var(--neg-ink))]">*</span></>}
+              value={formData.number}
+              onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+              disabled={lockEstimateNumberOnCreate}
+              required
+              voucherKey="estimate"
+              title="Quotation numbering"
+              sampleLabel="Next quotation will be"
+              manualLabel="Typed on each quotation"
+              settings={estimateNumbering}
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+            />
 
             <div className="min-w-0">
               <label className="ui-label" htmlFor="estimate-date">
@@ -6318,20 +6337,24 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
           style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="cn-number">
-                Credit Note No. <span className="text-[rgb(var(--neg-ink))]">*</span>
-              </label>
-              <input
-                id="cn-number"
-                type="text"
-                value={formData.number}
-                onChange={(e) => setFormData({ ...formData, number: e.target.value })}
-                className={`ui-input ui-mono w-full ${lockCreditNumber ? 'ui-sunken' : ''}`}
-                disabled={lockCreditNumber}
-                required
-              />
-            </div>
+            <DocNumberField
+              className="min-w-0"
+              id="cn-number"
+              label={<>Credit Note No. <span className="text-[rgb(var(--neg-ink))]">*</span></>}
+              value={formData.number}
+              onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+              disabled={lockCreditNumber}
+              required
+              voucherKey="creditNote"
+              title="Sales return numbering"
+              sampleLabel="Next note will be"
+              manualLabel="Typed on each note"
+              branchId={branchIdForNumbering}
+              settings={creditNumbering}
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+            />
             <div className="min-w-0">
               <label className="ui-label" htmlFor="cn-date">
                 Date <span className="text-[rgb(var(--neg-ink))]">*</span>

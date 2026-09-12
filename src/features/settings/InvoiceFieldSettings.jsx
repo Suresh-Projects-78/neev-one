@@ -46,12 +46,23 @@ import {
  * like custom fields somebody else had already created for them. Two
  * destinations, two jobs.
  */
-export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = false, onBack = null, pane = 'fields' }) => {
+export const InvoiceFieldSettings = ({
+  db,
+  setDb,
+  currentCompany,
+  embedded = false,
+  onBack = null,
+  pane = 'fields',
+  /* Which document's fields are being edited. A bill's custom fields are the
+     bill's; the invoice list is not a shared pool every document draws from. */
+  docType = 'invoice',
+  docLabel = '',
+}) => {
   const customOnly = pane === 'custom';
   const bankAccounts = useMemo(() => listBankAccounts(db, currentCompany.id), [db, currentCompany.id]);
   const payment = useMemo(() => getInvoicePaymentDetails(currentCompany), [currentCompany]);
   const prefs = useMemo(() => getInvoicePrefs(currentCompany), [currentCompany]);
-  const customFields = useMemo(() => getCustomFields(currentCompany), [currentCompany]);
+  const customFields = useMemo(() => getCustomFields(currentCompany, docType), [currentCompany, docType]);
   const [pendingIndustry, setPendingIndustry] = useState('');
   const [draft, setDraft] = useState({
     label: '',
@@ -68,7 +79,7 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
     setDb((prev) => ({ ...prev, companies: saveInvoicePaymentDetails(prev, currentCompany.id, patch) }));
 
   const writeCustom = (list) =>
-    setDb((prev) => ({ ...prev, companies: saveCustomFields(prev, currentCompany.id, list) }));
+    setDb((prev) => ({ ...prev, companies: saveCustomFields(prev, currentCompany.id, list, docType) }));
 
   const togglePref = (key, next) => write({ fields: { [key]: next } });
 
@@ -164,10 +175,12 @@ export const InvoiceFieldSettings = ({ db, setDb, currentCompany, embedded = fal
       {header}
       {embedded ? null : (
       <PageHeader
-        title={customOnly ? 'Custom Fields' : 'Invoice Settings'}
+        title={customOnly ? `Custom Fields${docLabel ? ` — ${docLabel}` : ''}` : 'Invoice Settings'}
         description={
           customOnly
-            ? 'Fields you invent, for things this product does not already have a box for. Nothing here exists until you create it.'
+            ? `Fields you invent, for things this product does not already have a box for — kept per document, so these are ${
+                docLabel ? `the ${docLabel.toLowerCase()}'s own` : 'this document’s own'
+              }.`
             : 'What an invoice contains. A field switched off leaves the form and the printed document — it is never greyed out.'
         }
         actions={

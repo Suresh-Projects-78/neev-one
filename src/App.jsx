@@ -180,6 +180,7 @@ import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
 import MasterFormPage from './components/MasterFormPage';
+import DocNumberField from './components/DocNumberField';
 import ItemForm from './features/masters/ItemForm';
 import FormSection from './components/ui/FormSection';
 import EmailSettings from './features/settings/EmailSettings';
@@ -1229,22 +1230,29 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
           )}
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          <div className="w-44">
-            <label className="ui-label">Voucher No.</label>
-            <input
-              type="text"
-              value={formData.number}
-              onChange={(e) => {
-                expenseErrors.clearField('number');
-                setFormData({ ...formData, number: e.target.value });
-              }}
-              className={`ui-input w-full ${lockExpenseNumber ? 'ui-sunken' : ''}`}
-              disabled={lockExpenseNumber}
-              required
-              {...expenseErrors.props('number')}
-            />
+          <DocNumberField
+            className="w-48"
+            id="expense-number"
+            label="Voucher No."
+            value={formData.number}
+            onChange={(e) => {
+              expenseErrors.clearField('number');
+              setFormData({ ...formData, number: e.target.value });
+            }}
+            disabled={lockExpenseNumber}
+            required
+            voucherKey="expense"
+            title="Expense numbering"
+            sampleLabel="Next voucher will be"
+            manualLabel="Typed on each voucher"
+            branchId={activeBranchId || null}
+            settings={expenseNumbering}
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+          >
             <FieldError error={expenseErrors.error('number')} id={expenseErrors.errorId('number')} />
-          </div>
+          </DocNumberField>
           <div className="w-44">
             <label className="ui-label">Date</label>
             <input
@@ -3982,6 +3990,17 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
         onNumberChange={(v) => setFormData((p) => ({ ...p, number: v }))}
         numberLocked={lockJvNumber}
         numberHint={lockJvNumber ? 'Numbered automatically from the series' : ''}
+        numbering={{
+          voucherKey: 'journalEntry',
+          title: 'Journal numbering',
+          sampleLabel: 'Next entry will be',
+          manualLabel: 'Typed on each entry',
+          branchId: activeBranchId || null,
+          settings: jvNumbering,
+          db,
+          setDb,
+          currentCompany,
+        }}
         date={formData.date}
         onDateChange={(v) => setFormData((p) => ({ ...p, date: v }))}
       />

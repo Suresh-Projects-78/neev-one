@@ -85,7 +85,16 @@ export const INVOICE_PREFS = [
   { key: 'customerRef', group: 'party', label: 'Customer PO no. & date', blurb: 'Ref No. / Ref Date on the form', kind: 'Text', core: true, industries: [] },
 
   // --- logistics -----------------------------------------------------------
-  { key: 'transporter', group: 'logistics', label: 'Transporter & vehicle no.', blurb: 'Form and print', kind: 'Text', industries: ['trading', 'manufacturing', 'transport'] },
+  /*
+   * Off unless the business is a transport one.
+   *
+   * It was on for trading and manufacturing — which is the default industry —
+   * so every new invoice carried a Transporter and a vehicle number whether
+   * anything was ever shipped by road or not. A field nobody fills is a field
+   * everybody has to look past. Switch it on here, or add one of your own
+   * under Custom Fields.
+   */
+  { key: 'transporter', group: 'logistics', label: 'Transporter & vehicle no.', blurb: 'Form and print', kind: 'Text', industries: ['transport'] },
   { key: 'lrNumber', group: 'logistics', label: 'LR / GR no. & date', blurb: 'Consignment note from the transporter', kind: 'Text', industries: ['transport'] },
   { key: 'packages', group: 'logistics', label: 'Packages, gross & net weight', blurb: 'Printed under the lines', kind: 'Text', industries: ['exports'] },
   { key: 'challanRef', group: 'logistics', label: 'Delivery challan reference', blurb: 'Links the invoice to what left the gate', kind: 'Ref', industries: [] },
@@ -313,15 +322,25 @@ export const nextCustomFieldKey = (existing, label) => {
   return `${base}_${Date.now()}`;
 };
 
-export const saveCustomFields = (db, companyId, list) => {
+/**
+ * The fields a company added to ONE kind of document.
+ *
+ * Every document type keeps its own list. It used to write `invoice`
+ * regardless of who was editing, so a field added from a bill appeared on
+ * invoices — and the bill's own list could never be built at all. The read
+ * side still falls back to the invoice list for a type nobody has configured,
+ * so nothing a company already defined disappears.
+ */
+export const saveCustomFields = (db, companyId, list, docType = 'invoice') => {
   const companies = db?.companies || [];
+  const key = String(docType || 'invoice');
   return companies.map((company) => {
     if (company.id !== companyId) return company;
     const baseDoc = company.docSettings && typeof company.docSettings === 'object' ? company.docSettings : {};
     const baseCustom = baseDoc.customFields && typeof baseDoc.customFields === 'object' ? baseDoc.customFields : {};
     return {
       ...company,
-      docSettings: { ...baseDoc, customFields: { ...baseCustom, invoice: Array.isArray(list) ? list : [] } },
+      docSettings: { ...baseDoc, customFields: { ...baseCustom, [key]: Array.isArray(list) ? list : [] } },
     };
   });
 };

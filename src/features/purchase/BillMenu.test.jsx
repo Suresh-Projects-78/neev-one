@@ -89,14 +89,17 @@ describe('the bill form menu', () => {
     expect(within(menu).getByRole('menuitem', { name: /Custom fields/ })).toBeInTheDocument();
   });
 
-  it('opens the custom field settings from the menu', async () => {
+  /* The bill's own fields, over the bill — not a walk to a settings screen
+     that would have shown the invoice's. */
+  it('opens the bill’s custom fields from the menu, in place', async () => {
     const user = userEvent.setup();
     const opened = vi.fn();
     render(<Host onOpenBillSettings={opened} />);
     const menu = await openMenu(user);
     await user.click(within(menu).getByRole('menuitem', { name: /Custom fields/ }));
 
-    expect(opened).toHaveBeenCalledWith('settingsCustomFields');
+    expect(await screen.findByText('Bill custom fields')).toBeInTheDocument();
+    expect(opened).not.toHaveBeenCalled();
   });
 
   it('previews the bill being typed, not a saved one', async () => {

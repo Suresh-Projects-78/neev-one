@@ -12,7 +12,8 @@ import { getCustomerDisplayName } from '../../utils/contacts';
 import { formatMoney } from '../../utils/money';
 import { buildEwayBillPayload } from '../../utils/einvoice';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
-import { nextFreeVoucherNumber } from '../../utils/docSettings';
+import { getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import DocNumberField from '../../components/DocNumberField';
 import { useListSearch } from '../../components/ListToolbar';
 import { usePeriodFilter } from '../../components/ListControls';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
@@ -157,6 +158,20 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
 
   const customers = (db.customers || []).filter((c) => c.companyId === companyId);
   const itemsMaster = (db.items || []).filter((i) => i.companyId === companyId);
+
+  /* The series this challan is numbered from, and the number it will take. */
+  const challanBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
+  const challanNumbering = getDocSettings(db, currentCompany, { branchId: challanBranchId || null })?.numbering?.deliveryChallan;
+  const nextChallanNumber =
+    nextFreeVoucherNumber({
+      db,
+      company: currentCompany,
+      voucherKey: 'deliveryChallan',
+      branchId: challanBranchId || null,
+      takenNumbers: (db.deliveryChallans || [])
+        .filter((x) => x.companyId === companyId)
+        .map((x) => String(x.number || '').trim()),
+    }) || '';
 
   const updateLine = (idx, field, value, picked = null) => {
     setForm((p) => {
@@ -364,6 +379,24 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
               style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* The number it will take, and the series behind it. */}
+                <DocNumberField
+                  className="min-w-0"
+                  id="dc-number"
+                  label="Challan No."
+                  value={nextChallanNumber}
+                  onChange={() => {}}
+                  disabled
+                  voucherKey="deliveryChallan"
+                  title="Challan numbering"
+                  sampleLabel="Next challan will be"
+                  manualLabel="Typed on each challan"
+                  branchId={challanBranchId || null}
+                  settings={challanNumbering}
+                  db={db}
+                  setDb={setDb}
+                  currentCompany={currentCompany}
+                />
                 <div className="min-w-0">
                   <label className="ui-label" htmlFor="dc-date">
                     Date <span className="text-[rgb(var(--neg-ink))]">*</span>

@@ -9,6 +9,9 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance, documentOutstanding } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import DocNumberingPopover from '../../components/DocNumberingPopover';
+import DocNumberField from '../../components/DocNumberField';
+import Drawer from '../../components/ui/Drawer';
+import { InvoiceFieldSettings } from '../settings/InvoiceFieldSettings';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -92,6 +95,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
   const numberingBtnRef = useRef(null);
   const [numberingOpen, setNumberingOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
   /* Open while a deduction is being chosen, folded away once it is. */
   const [tdsPickerOpen, setTdsPickerOpen] = useState(false);
 
@@ -701,10 +705,30 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             group: 'Configure — every bill',
             label: 'Custom fields',
             icon: Plus,
-            onSelect: () => goToNumberingSettings('settingsCustomFields'),
+            /* The bill's own fields, in a drawer over the bill — not a walk to
+               a settings screen that shows the invoice's. */
+            onSelect: () => setCustomFieldsOpen(true),
           },
         ]}
       />
+
+      <Drawer
+        open={customFieldsOpen}
+        onClose={() => setCustomFieldsOpen(false)}
+        title="Bill custom fields"
+        description="Fields of your own, on every bill. Other documents keep their own."
+      >
+        <InvoiceFieldSettings
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          embedded
+          pane="custom"
+          docType="bill"
+          docLabel="Bill"
+          onBack={() => setCustomFieldsOpen(false)}
+        />
+      </Drawer>
 
       {previewOpen ? (
         <Modal
@@ -2038,17 +2062,23 @@ export const PurchaseOrderForm = ({
       <DocFormActions primaryLabel={isEditPo ? 'Update PO' : 'Create PO'} />
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="ui-label">PO Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg ${lockPoNumber ? 'ui-sunken' : ''}`}
-            disabled={lockPoNumber}
-            required
-          />
-        </div>
+        <DocNumberField
+          id="po-number"
+          label="PO Number"
+          value={formData.number}
+          onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
+          disabled={lockPoNumber}
+          required
+          voucherKey="purchaseOrder"
+          title="Order numbering"
+          sampleLabel="Next order will be"
+          manualLabel="Typed on each order"
+          branchId={activeBranchId || null}
+          settings={poNumbering}
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+        />
 
         <div>
           <VendorPicker
