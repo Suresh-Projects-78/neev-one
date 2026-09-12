@@ -115,12 +115,37 @@ describe('what is genuinely different', () => {
     expect(screen.queryByLabelText(/^Price List$/)).toBeNull();
   });
 
-  /* A vendor is the party a business deducts TDS from; a customer is not. */
-  it('carries a TDS configuration a customer does not', async () => {
+  /*
+   * Both parties carry a TDS profile now, and it says different things: what
+   * this company deducts from a vendor, and what a customer is expected to
+   * deduct from what they pay. The fields are the same; what the transactions
+   * do with them is not.
+   *
+   * It names a NATURE, never a section or a rate — those follow from the rule
+   * in force on each document's own date.
+   */
+  it('carries a TDS profile that names a nature, not a section', async () => {
     const user = userEvent.setup();
     renderVendor();
     await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
-    expect(screen.getByLabelText('TDS Configuration')).toBeInTheDocument();
+
+    expect(screen.getByLabelText('TDS nature')).toBeInTheDocument();
+    expect(screen.getByLabelText('TDS applicable')).toBeInTheDocument();
+    expect(screen.getByLabelText('Deductee type')).toBeInTheDocument();
+    expect(screen.queryByLabelText('TDS Configuration')).toBeNull();
+    expect(screen.queryByLabelText(/Rate \(%\)/)).toBeNull();
+  });
+
+  /* Most parties hold no certificate, so it stays folded away. */
+  it('keeps the section 197 certificate behind a disclosure', async () => {
+    const user = userEvent.setup();
+    renderVendor();
+    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
+
+    const disclosure = screen.getByText(/Lower \/ nil deduction certificate/);
+    expect(disclosure.closest('details').open).toBe(false);
+    await user.click(disclosure);
+    expect(screen.getByLabelText('Certificate rate (%)')).toBeInTheDocument();
   });
 
   it('does not offer a Vendor Type field, which the spec forbids', () => {

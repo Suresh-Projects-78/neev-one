@@ -3,6 +3,9 @@ import { Info, Search } from 'lucide-react';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow } from './customerFormParts';
 import { DocFormActions } from '../DocumentForm';
 import PopupSelect from './PopupSelect';
+import { TDS_NATURES, resolveRule, ruleReference } from '../../features/tds/ruleMaster';
+import { DEDUCTEE_TYPES } from '../../utils/tds';
+import { todayIso } from '../../utils/dates';
 
 /**
  * The party master, laid out once and used by both customers and vendors.
@@ -480,27 +483,148 @@ export function PartyFormLayout({
                 <p className="ui-caption mt-1">Chosen under Basic Details.</p>
               </div>
               {cfg.showTdsConfig ? (
-                <div>
-                  <label className="ui-label" htmlFor="party-tds">TDS Configuration</label>
-                  <select
-                    id="party-tds"
-                    value={formData.tdsSection || ''}
-                    onChange={(e) => setFormData((p) => ({ ...p, tdsSection: e.target.value }))}
-                    className="ui-select w-full"
-                  >
-                    <option value="">— not deducted —</option>
-                    {(cfg.tdsSections || []).map((t) => (
-                      <option key={t.code} value={t.code}>{t.code} — {t.label}</option>
-                    ))}
-                  </select>
+                <>
+                  <div>
+                    <label className="ui-label" htmlFor="party-tds-applicable">TDS applicable</label>
+                    <select
+                      id="party-tds-applicable"
+                      value={formData.tdsApplicable === undefined || formData.tdsApplicable === null ? '' : String(formData.tdsApplicable)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFormData((p) => ({ ...p, tdsApplicable: v === '' ? undefined : v === 'true' }));
+                      }}
+                      className="ui-select w-full"
+                    >
+                      {/* Three answers, not two: "nobody has said" is not the
+                          same as "no", and only an explicit no stops the
+                          engine from deducting. */}
+                      <option value="">Use the company default</option>
+                      <option value="true">Yes — deduct</option>
+                      <option value="false">No — never deduct</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="ui-label" htmlFor="party-tds-nature">TDS nature</label>
+                    <select
+                      id="party-tds-nature"
+                      value={formData.tdsNatureCode || ''}
+                      onChange={(e) => setFormData((p) => ({ ...p, tdsNatureCode: e.target.value }))}
+                      className="ui-select w-full"
+                    >
+                      <option value="">— none —</option>
+                      {TDS_NATURES.filter((n) => n.active !== false).map((n) => (
+                        <option key={n.code} value={n.code}>{n.name}</option>
+                      ))}
+                    </select>
+                    {/*
+                      What kind of payee this is — not what will be deducted.
+                      The section, rate and threshold follow from the rule in
+                      force on each transaction's own date, which is why this
+                      names a nature and not a section.
+                    */}
+                    <p className="ui-caption mt-1">
+                      {formData.tdsNatureCode
+                        ? `${ruleReference(resolveRule(formData.tdsNatureCode, todayIso())) || ''} today — each document uses the rule in force on its own date.`
+                        : 'The rule in force on each document’s date decides the section, rate and threshold.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="ui-label" htmlFor="party-tds-deductee">Deductee type</label>
+                    <select
+                      id="party-tds-deductee"
+                      value={formData.tdsDeducteeType || 'COMPANY'}
+                      onChange={(e) => setFormData((p) => ({ ...p, tdsDeducteeType: e.target.value }))}
+                      className="ui-select w-full"
+                    >
+                      {DEDUCTEE_TYPES.map((d) => (
+                        <option key={d.key} value={d.key}>{d.label}</option>
+                      ))}
+                    </select>
+                    <p className="ui-caption mt-1">194C deducts 1% from an individual or HUF and 2% from everyone else.</p>
+                  </div>
+
+                  <div>
+                    <label className="ui-label" htmlFor="party-tds-residential">Residential status</label>
+                    <select
+                      id="party-tds-residential"
+                      value={formData.tdsResidentialStatus || 'RESIDENT'}
+                      onChange={(e) => setFormData((p) => ({ ...p, tdsResidentialStatus: e.target.value }))}
+                      className="ui-select w-full"
+                    >
+                      <option value="RESIDENT">Resident</option>
+                      <option value="NON_RESIDENT">Non-resident</option>
+                    </select>
+                  </div>
+
                   {/*
-                    Which section this party's bills fall under. The rate,
-                    threshold and whether anything is due at all come from the
-                    TDS engine — the master says what kind of payee this is, not
-                    what the deduction will be.
+                    A certificate is the exception, not the rule — most parties
+                    have none, so it stays folded away until somebody says
+                    there is one.
                   */}
-                  <p className="ui-caption mt-1">The rate and threshold come from the section master; the TDS engine decides what is deducted.</p>
-                </div>
+                  <details className="sm:col-span-2 ui-sunken rounded-lg border p-3">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      Lower / nil deduction certificate
+                    </summary>
+                    <div className="mt-3 grid gap-4 sm:grid-cols-4">
+                      <div>
+                        <label className="ui-label" htmlFor="party-tds-cert-no">Certificate number</label>
+                        <input
+                          id="party-tds-cert-no"
+                          type="text"
+                          className="ui-input ui-mono w-full"
+                          value={formData.tdsCertificate?.number || ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({ ...p, tdsCertificate: { ...(p.tdsCertificate || {}), number: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="ui-label" htmlFor="party-tds-cert-rate">Certificate rate (%)</label>
+                        <input
+                          id="party-tds-cert-rate"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="ui-input ui-mono w-full"
+                          value={formData.tdsCertificate?.rate ?? ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({ ...p, tdsCertificate: { ...(p.tdsCertificate || {}), rate: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="ui-label" htmlFor="party-tds-cert-from">Valid from</label>
+                        <input
+                          id="party-tds-cert-from"
+                          type="date"
+                          className="ui-input w-full"
+                          value={formData.tdsCertificate?.validFrom || ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({ ...p, tdsCertificate: { ...(p.tdsCertificate || {}), validFrom: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="ui-label" htmlFor="party-tds-cert-to">Valid to</label>
+                        <input
+                          id="party-tds-cert-to"
+                          type="date"
+                          className="ui-input w-full"
+                          value={formData.tdsCertificate?.validTo || ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({ ...p, tdsCertificate: { ...(p.tdsCertificate || {}), validTo: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <p className="ui-caption sm:col-span-4">
+                        A certificate under section 197 replaces the rule’s rate while it is valid, and only while it is
+                        valid — the engine reads the transaction’s date, not today’s.
+                      </p>
+                    </div>
+                  </details>
+                </>
               ) : null}
               <div>
                 <label className="ui-label" htmlFor="cust-msme">MSME / Udyam</label>

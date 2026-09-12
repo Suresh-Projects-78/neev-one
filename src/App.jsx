@@ -7997,6 +7997,9 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
       registrationType: t.registrationType || 'Applicable',
       tan: t.tan || '',
       state: t.state || '',
+      deductorName: t.deductorName || '',
+      deductorType: t.deductorType || '',
+      defaultNatureCode: t.defaultNatureCode || '',
     };
   });
 
@@ -8065,6 +8068,10 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
         registrationType: String(tds.registrationType || 'Applicable').trim() || 'Applicable',
         tan: normalizedTdsTan,
         state: nextTdsState,
+        /* The deductor, as the challan and the return need it named. */
+        deductorName: String(tds.deductorName || '').trim(),
+        deductorType: String(tds.deductorType || '').trim(),
+        defaultNatureCode: String(tds.defaultNatureCode || '').trim().toUpperCase(),
       },
       tcs: {
         enabled: Boolean(tcsEnabled),
@@ -8261,6 +8268,61 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
                 options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
                 placeholder="Select State"
               />
+            </div>
+
+            <div>
+              <label className="ui-label" htmlFor="tds-deductor-name">Deductor name</label>
+              <input
+                id="tds-deductor-name"
+                value={tds.deductorName}
+                onChange={(e) => setTds((p) => ({ ...p, deductorName: e.target.value }))}
+                className="ui-input w-full"
+                placeholder={currentCompany?.name || 'As registered against the TAN'}
+              />
+              <div className="ui-caption mt-1">Printed on challans and carried into the quarterly return.</div>
+            </div>
+
+            <div>
+              <label className="ui-label" htmlFor="tds-deductor-type">Deductor type</label>
+              <select
+                id="tds-deductor-type"
+                value={tds.deductorType}
+                onChange={(e) => setTds((p) => ({ ...p, deductorType: e.target.value }))}
+                className="ui-select w-full ui-surface"
+              >
+                <option value="">Select</option>
+                <option value="COMPANY">Company</option>
+                <option value="FIRM">Firm / LLP</option>
+                <option value="INDIVIDUAL_HUF">Individual or HUF</option>
+                <option value="GOVERNMENT">Government</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+
+            {/*
+              A default nature, for the ordinary case.
+              Most companies deduct under one section far more often than the
+              rest; naming it here means a bill against a vendor nobody has
+              configured still knows what it is. A nature on the vendor, or on
+              the document, still wins over it.
+            */}
+            <div className="sm:col-span-2">
+              <label className="ui-label" htmlFor="tds-default-nature">Default TDS nature</label>
+              <select
+                id="tds-default-nature"
+                value={tds.defaultNatureCode}
+                onChange={(e) => setTds((p) => ({ ...p, defaultNatureCode: e.target.value }))}
+                className="ui-select w-full ui-surface"
+              >
+                <option value="">— none —</option>
+                {TDS_NATURES.filter((n) => n.active !== false).map((n) => (
+                  <option key={n.code} value={n.code}>{n.name}</option>
+                ))}
+              </select>
+              <div className="ui-caption mt-1">
+                Used only where neither the document nor the party names one. The section, rate and threshold come from
+                the rule in force on each document’s own date.
+              </div>
             </div>
           </div>
         )}

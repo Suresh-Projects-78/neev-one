@@ -1,5 +1,4 @@
 import { GST_STATE_BY_CODE } from '../../utils/gst';
-import { TDS_SECTIONS } from '../../utils/tds';
 
 const STATES = Object.entries(GST_STATE_BY_CODE)
   .map(([code, name]) => ({ code, name }))
@@ -25,7 +24,17 @@ export const CUSTOMER_CFG = {
   openingHint: 'Dr means they owe you, which is the usual direction for a customer. Cr means you owe them — an advance they have already paid.',
   defaultBalanceType: 'Dr',
   priceListLabel: 'Price List',
-  showTdsConfig: false,
+  /*
+   * A customer has a TDS profile too, and it means something different.
+   *
+   * On the buy side the profile decides what THIS company deducts. On the sell
+   * side it says what the customer is expected to deduct from what they pay —
+   * shown on the invoice, and recognised as receivable only when a receipt
+   * records that they actually did. Same fields, and the difference is in what
+   * the transactions do with them, not in the master.
+   */
+  showTdsConfig: true,
+  tdsSideLabel: 'expected from this customer',
   /*
    * Whether a credit note may be raised against them at all.
    *
@@ -57,7 +66,7 @@ export const VENDOR_CFG = {
   defaultBalanceType: 'Cr',
   priceListLabel: 'Purchase Price List',
   showTdsConfig: true,
-  tdsSections: TDS_SECTIONS,
+  tdsSideLabel: 'deducted from this vendor',
   noteToggle: {
     title: 'Debit Notes',
     label: 'Allow debit notes for this vendor',

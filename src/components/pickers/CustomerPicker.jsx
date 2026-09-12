@@ -61,6 +61,14 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, se
         gstRegistration: String(initialData.gstRegistration || 'Unregistered'),
         gstin: String(initialData.gstin || ''),
         pan: String(initialData.pan || ''),
+        /* The party's TDS profile, read by the one engine every screen uses.
+           On the sell side it says what the customer is expected to deduct —
+           the receivable itself is only recognised at receipt. */
+        tdsApplicable: initialData.tdsApplicable,
+        tdsNatureCode: String(initialData.tdsNatureCode || ''),
+        tdsDeducteeType: String(initialData.tdsDeducteeType || 'COMPANY'),
+        tdsResidentialStatus: String(initialData.tdsResidentialStatus || 'RESIDENT'),
+        tdsCertificate: initialData.tdsCertificate && typeof initialData.tdsCertificate === 'object' ? initialData.tdsCertificate : null,
         paymentTermDays:
           initialData.paymentTermDays === undefined || initialData.paymentTermDays === null
             ? ''
@@ -146,6 +154,11 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, se
       gstRegistration: 'Registered',
       gstin: '',
       pan: '',
+      tdsApplicable: undefined,
+      tdsNatureCode: '',
+      tdsDeducteeType: 'COMPANY',
+      tdsResidentialStatus: 'RESIDENT',
+      tdsCertificate: null,
       paymentTermDays: '',
       creditLimit: '',
       shipToAddresses: [],
