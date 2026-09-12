@@ -87,6 +87,22 @@ describe('the bills table', () => {
     /* Total of 10,000 outstanding, under the column it totals. */
     expect(table.querySelector('tfoot').textContent).toMatch(/10,000/);
   });
+
+  it('queues the oldest bill first', () => {
+    renderForm({ initialData: { vendorId: '3' } });
+    const rows = [...screen.getByText('PUR-1').closest('table').querySelectorAll('tbody tr')];
+    /* Not a list, a queue: the bill that has waited longest is the one being
+       settled, and it belongs at the top. */
+    expect(rows[0].textContent).toMatch(/PUR-1/);
+  });
+
+  it('ticks and unticks every bill from the header', () => {
+    renderForm({ initialData: { vendorId: '3', amount: '15000' } });
+    const all = screen.getByLabelText('Select every bill');
+    fireEvent.click(all);
+    const boxes = [...screen.getByText('PUR-1').closest('table').querySelectorAll('tbody input[type="checkbox"]')];
+    expect(boxes.every((b) => b.checked)).toBe(true);
+  });
 });
 
 describe('the running bar agrees with the summary', () => {

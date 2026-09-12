@@ -188,11 +188,18 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         balance: getDocBalance(e, debitNotes),
       }));
 
+    /*
+     * Oldest first, which is the order they are paid in.
+     *
+     * A list is usually newest first, and this one is not a list — it is a
+     * queue. The bill that has been waiting longest is the one somebody
+     * settles, and it was at the bottom.
+     */
     return [...billRows, ...expenseRows].sort((a, b) => {
       const da = String(a.date || '');
       const dbb = String(b.date || '');
-      if (da !== dbb) return da < dbb ? 1 : -1;
-      return Number(b.id) - Number(a.id);
+      if (da !== dbb) return da < dbb ? -1 : 1;
+      return Number(a.id) - Number(b.id);
     });
   }, [bills, expenses, debitNotes, formData.vendorId]);
 
@@ -555,29 +562,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
-        <div
-          ref={(el) => fieldErrors.register('vendorId', el)}
-          data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
-        >
-          <VendorPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.vendorId}
-            onChange={(vendorId) => {
-              fieldErrors.clearField('vendorId');
-              setFormData((p) => ({ ...p, vendorId }));
-              setAllocations({});
-            }}
-            label="Vendor"
-          />
-          <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
-        </div>
-
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {!hideMode ? (
           <div>
             <label className="ui-label">
-              Paid from <span className="text-[rgb(var(--neg))]">*</span>
+              Pay from <span className="text-[rgb(var(--neg))]">*</span>
             </label>
             <select
               value={ledgerAccountId}
@@ -607,6 +596,65 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
             ) : null}
           </div>
         ) : null}
+
+          <div className="min-w-0">
+            <label className="ui-label" htmlFor="pay-ref">Reference</label>
+            <input
+              id="pay-ref"
+              type="text"
+              value={formData.reference}
+              onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+              className="ui-input w-full"
+              placeholder="Txn / UTR / Cheque no"
+            />
+          </div>
+        </div>
+
+        <div
+          ref={(el) => fieldErrors.register('vendorId', el)}
+          data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
+        >
+          <VendorPicker
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            value={formData.vendorId}
+            onChange={(vendorId) => {
+              fieldErrors.clearField('vendorId');
+              setFormData((p) => ({ ...p, vendorId }));
+              setAllocations({});
+            }}
+            label="Supplier"
+          />
+          <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="min-w-0">
+            <label className="ui-label" htmlFor="pay-mode">Payment mode</label>
+            <select
+              id="pay-mode"
+              value={formData.mode}
+              onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
+              className="ui-select w-full"
+            >
+              {['Cash', 'Bank Transfer', 'UPI', 'Cheque', 'Card', 'Other'].map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="min-w-0">
+            <label className="ui-label" htmlFor="pay-ref-date">Reference date</label>
+            <input
+              id="pay-ref-date"
+              type="date"
+              value={formData.referenceDate}
+              onChange={(e) => setFormData((p) => ({ ...p, referenceDate: e.target.value }))}
+              className="ui-input w-full"
+            />
+          </div>
+        </div>
         </div>
 
         <div
@@ -646,29 +694,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
             </div>
           </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="min-w-0">
-            <label className="ui-label" htmlFor="pay-ref">Reference</label>
-            <input
-              id="pay-ref"
-              type="text"
-              value={formData.reference}
-              onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-              className="ui-input w-full"
-              placeholder="Txn / UTR / Cheque no"
-            />
-          </div>
-          <div className="min-w-0">
-            <label className="ui-label" htmlFor="pay-ref-date">Reference Date</label>
-            <input
-              id="pay-ref-date"
-              type="date"
-              value={formData.referenceDate}
-              onChange={(e) => setFormData((p) => ({ ...p, referenceDate: e.target.value }))}
-              className="ui-input w-full"
-            />
-          </div>
-        </div>
         </div>
       </div>
 
@@ -683,7 +708,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         style={{ backgroundColor: 'rgb(var(--brand) / 0.06)', border: '1px solid rgb(var(--brand) / 0.18)' }}
       >
         <h3 className="ui-t-label">Payment amount and deductions</h3>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* The amount leads the band that is named after it; it used to sit
               up in the header, three fields away from what comes off it. */}
           <div className="min-w-0">
@@ -730,13 +755,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
             </div>
           ))}
 
-          <div className="min-w-0">
-            <span className="ui-label block">Net payment</span>
-            <output className="ui-input ui-money ui-sunken flex w-full items-center" aria-live="polite">
-              {formatMoney(computed.netCash, currentCompany)}
-            </output>
-            <p className="ui-caption mt-1">What actually leaves the account.</p>
-          </div>
         </div>
       </div>
 
@@ -751,11 +769,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         <div className="min-w-0 space-y-4">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-medium">Outstanding Bills / Expenses</div>
+            <div className="text-sm font-medium">Outstanding bills</div>
             {formData.vendorId ? (
-              <div className="text-sm ui-muted">{outstandingDocs.length} document(s)</div>
+              <div className="text-sm ui-muted">Select bills to allocate</div>
             ) : (
-              <div className="text-sm ui-muted">Select vendor to load documents</div>
+              <div className="text-sm ui-muted">Select a supplier to load bills</div>
             )}
           </div>
 
@@ -763,9 +781,18 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
             <table className="ui-table w-full">
               <thead className="ui-sunken border-b">
                 <tr>
-                  <th className="ui-th w-12">Sel</th>
-                  <th className="ui-th w-24">Type</th>
-                  <th className="ui-th">Number</th>
+                  <th className="ui-th w-12">
+                    <input
+                      type="checkbox"
+                      aria-label="Select every bill"
+                      checked={outstandingDocs.length > 0 && selectedCount === outstandingDocs.length}
+                      onChange={(e) => {
+                        const on = e.target.checked;
+                        for (const d of outstandingDocs) toggleDoc(d, on);
+                      }}
+                    />
+                  </th>
+                  <th className="ui-th">Bill #</th>
                   <th className="ui-th">Date</th>
                   <th className="ui-th">Due date</th>
                   {/* The bill's own figure beside what is left of it: the pair
@@ -778,13 +805,13 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
               <tbody className="divide-y">
                 {!formData.vendorId ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center ui-muted">
+                    <td colSpan={7} className="px-6 py-8 text-center ui-muted">
                       Select party name to see outstanding bills/expenses
                     </td>
                   </tr>
                 ) : outstandingDocs.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center ui-muted">
+                    <td colSpan={7} className="px-6 py-8 text-center ui-muted">
                       No outstanding documents. This payment will be recorded as advance.
                     </td>
                   </tr>
@@ -798,7 +825,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
                         <td className="px-4 py-3">
                           <input type="checkbox" checked={selected} onChange={(e) => toggleDoc(d, e.target.checked)} />
                         </td>
-                        <td className="ui-col-meta px-4 py-3">{d.voucherType === 'bill' ? 'Bill' : 'Expense'}</td>
                         <td className="ui-col-meta px-4 py-3">{d.number || '-'}</td>
                         <td className="ui-col-date px-4 py-3">{d.date || '-'}</td>
                         <td className="ui-col-date px-4 py-3">{d.dueDate || '-'}</td>
@@ -824,7 +850,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
               {outstandingDocs.length ? (
                 <tfoot>
                   <tr className="ui-sunken font-medium">
-                    <td className="px-4 py-3" colSpan={5}>Total</td>
+                    <td className="px-4 py-3" colSpan={4}>Total</td>
                     <td className="ui-col-amount px-4 py-3 text-right">
                       {formatMoney(outstandingDocs.reduce((t, d) => t + Number(d.total ?? d.balance ?? 0), 0), currentCompany)}
                     </td>
