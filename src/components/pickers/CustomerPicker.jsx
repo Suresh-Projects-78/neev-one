@@ -830,7 +830,7 @@ export const CustomerForm = ({ db, setDb, currentCompany, initialData = null, se
   );
 };
 
-const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Customer', disabled = false, disabledHint = '' }) => {
+const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Customer', disabled = false, disabledHint = '', icon: LeadingIcon = null }) => {
   // Customers live on the server now. The local list stays as a fallback so a
   // network failure does not empty the picker in the middle of an invoice.
   const serverCustomers = useServerMasters(
@@ -1000,9 +1000,12 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
         onKeyDown={openOnKey(openPopup)}
         aria-haspopup="listbox"
         aria-expanded={showCustomerPopup}
-        className={`w-full px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
+        className={`flex w-full items-center gap-2 px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
       >
-        {selectedCustomerName || 'Select Customer'}
+        {LeadingIcon ? <LeadingIcon size={15} className="ui-subtle shrink-0" aria-hidden="true" /> : null}
+        <span className={`truncate ${selectedCustomerName ? '' : 'ui-subtle'}`}>
+          {selectedCustomerName || 'Select Customer'}
+        </span>
       </button>
       {disabled && disabledHint ? <div className="text-xs ui-muted mt-1">{disabledHint}</div> : null}
 

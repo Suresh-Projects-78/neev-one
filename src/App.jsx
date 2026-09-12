@@ -13659,6 +13659,7 @@ const AppShell = () => {
                   currentCompany={currentCompany}
                   initialData={billEditor.initial}
                   warehouses={warehousesForUser}
+                  branches={branchesForUser}
                   defaultWarehouseId={activeWarehouseId}
                   screenTitle={billEditor.initial?.id ? 'Edit Bill' : 'New Bill'}
                   onBack={() => setBillEditor({ open: false, initial: null })}

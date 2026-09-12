@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, ChevronDown, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Plus, Printer, Receipt, RefreshCw, Search, Settings2, SlidersHorizontal, Table2, Tag, Trash2, Upload, X } from 'lucide-react';
+import { Ban, Building2, ChevronDown, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Package, Plus, Printer, Receipt, RefreshCw, Search, Settings2, SlidersHorizontal, Table2, Tag, Trash2, Upload, Users, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -4155,6 +4155,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 title="branches"
                 value={String(branchIdInList || '')}
                 onChange={onBranchChange}
+                icon={Building2}
                 options={[
                   { value: '', label: 'All branches' },
                   ...branchOptions.map((b) => ({ value: String(b.id), label: branchLabel(b) })),
@@ -4178,6 +4179,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               options={warehouseOptions}
               activeWarehouseId={defaultWarehouseId}
               isEdit={Boolean(initialData)}
+              icon={Package}
               showSourceHint={false}
               className="ui-select"
             />
@@ -4192,6 +4194,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <CustomerPicker
               db={db}
               setDb={setDb}
+              icon={Users}
               currentCompany={currentCompany}
               value={formData.customerId}
               onChange={(customerId) =>

@@ -16,10 +16,13 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, Calculator, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Upload, X } from 'lucide-react';
+import { Ban, Building2, Calculator, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
+import PopupSelect from '../../components/pickers/PopupSelect';
+import { branchLabel } from '../../utils/branchLabel';
+import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
 import { dueDateFor } from '../../utils/paymentTerms';
 import { plusDaysIso, todayIso } from '../../utils/dates';
 import ItemPicker from '../../components/pickers/ItemPicker';
@@ -62,7 +65,7 @@ import { DocumentNumber, DocDate, MoneyValue } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 import { useFeatures } from '../../permissions/useFeatures';
 
-export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '', screenTitle = '', onBack = null }) => {
+export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '', branches = [], screenTitle = '', onBack = null }) => {
   const fieldErrors = useFieldErrors('bill');
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
   const resolveBranchIdFromWarehouseId = (warehouseId) => {
@@ -126,17 +129,65 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     };
   });
 
-  const branchIdForNumbering = resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
+  /*
+   * The branch this bill belongs to — asked here rather than inferred from
+   * the warehouse.
+   *
+   * The form already needed a branch: it scopes the number series and it is
+   * what a bill is filed under. It was being read out of whichever warehouse
+   * happened to be chosen, so a company that keeps one warehouse for two
+   * branches, or buys something that never touches a shelf, had no way to say
+   * where the purchase belongs. Same control, same order and same fallbacks
+   * as the sales invoice, so the two documents are filled in the same way.
+   */
+  const [branchId, setBranchId] = useState(
+    () => initBranchId || getLastSelection('branch', currentCompany?.id) || activeBranchId || ''
+  );
+
+  /* A remembered branch that no longer exists reads as nothing, not as an id. */
+  const branchIdInList =
+    !branchId || (Array.isArray(branches) ? branches : []).some((b) => String(b?.id || '') === String(branchId))
+      ? branchId
+      : '';
+
+  const branchOptions = React.useMemo(() => {
+    const list = Array.isArray(branches) ? branches : [];
+    return list.slice().sort((a, b) => branchLabel(a).localeCompare(branchLabel(b)));
+  }, [branches]);
+
+  const branchIdForNumbering = String(branchIdInList || '').trim() || resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
   const billDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const billNumbering = billDocSettings?.numbering?.bill;
   const isBillAuto = String(billNumbering?.mode || '').toLowerCase() === 'auto';
   const lockBillNumber = isBillAuto && !billNumbering?.allowManualOverride;
   const generatedBillNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'bill', branchId: branchIdForNumbering, takenNumbers: (db.bills || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
+  /*
+   * Only the warehouses of the chosen branch. Goods received onto a shelf that
+   * belongs to another branch is the mis-post this ordering exists to stop.
+   * With no branch chosen the list is everything, as before.
+   */
   const warehouseOptions = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
-    return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
-  }, [warehouses]);
+    const scope = String(branchIdInList || '').trim();
+    const inScope = scope ? list.filter((w) => String(w?.branchId || '').trim() === scope) : list;
+    return inScope.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+  }, [warehouses, branchIdInList]);
+
+  const onBranchChange = (nextBranchId) => {
+    const next = String(nextBranchId || '').trim();
+    setBranchId(next);
+    setLastSelection('branch', currentCompany?.id, next);
+    // A warehouse left over from the previous branch would receive the stock
+    // in the wrong place, so it is dropped rather than carried across.
+    setFormData((p) => {
+      const held = String(p.warehouseId || '').trim();
+      if (!held || !next) return p;
+      const w = (Array.isArray(warehouses) ? warehouses : []).find((x) => String(x?.id || '').trim() === held);
+      if (w && String(w.branchId || '').trim() === next) return p;
+      return { ...p, warehouseId: '' };
+    });
+  };
 
   const vendors = db.vendors.filter((v) => v.companyId === currentCompany.id);
   const itemsMaster = db.items.filter((i) => i.companyId === currentCompany.id);
@@ -326,6 +377,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       backendDocId,
       number: serverNumber || billNumber,
       warehouseId: String(formData.warehouseId || '').trim(),
+      branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
       vendorName: billVendorName,
       vendorGstin: vendorGstin,
       placeOfSupplyState: vendorState,
@@ -405,50 +457,78 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
-        <div
-          ref={(el) => fieldErrors.register('vendorId', el)}
-          data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
-        >
-          <VendorPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.vendorId}
-            onChange={(vendorId) =>
-              setFormData((prev) => {
-                // Requirement 12: the bill due date follows the vendor's agreed
-                // credit period rather than a blanket +30 days.
-                const picked = vendors.find((v) => String(v.id) === String(vendorId));
-                fieldErrors.clearField('vendorId');
-                return {
-                  ...prev,
-                  vendorId,
-                  dueDate: picked ? dueDateFor(prev.date, picked) || prev.dueDate : prev.dueDate,
-                };
-              })
-            }
-          />
-          <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
-        </div>
+          {/*
+            Where first, then who: the branch, the warehouse under it that the
+            goods land in, and the vendor the bill came from. The place is one
+            question answered on one line, so the vendor — the longest name on
+            the form — gets the full width underneath instead of being squeezed
+            into half of it.
+          */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div id="bill-branch-field">
+              <PopupSelect
+                label="Branch"
+                title="branches"
+                value={String(branchIdInList || '')}
+                onChange={onBranchChange}
+                icon={Building2}
+                options={[
+                  { value: '', label: 'All branches' },
+                  ...branchOptions.map((b) => ({ value: String(b.id), label: branchLabel(b) })),
+                ]}
+                placeholder="Select Branch"
+                showValueSubtext={false}
+              />
+            </div>
 
-        <div
-          ref={(el) => fieldErrors.register('warehouseId', el)}
-          data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
-        >
-          <WarehouseField
-            value={formData.warehouseId}
-            onChange={(warehouseId) => {
-              fieldErrors.clearField('warehouseId');
-              setFormData((p) => ({ ...p, warehouseId }));
-            }}
-            options={warehouseOptions}
-            activeWarehouseId={defaultWarehouseId}
-            isEdit={Boolean(initialData)}
-            className="ui-select w-full ui-surface"
-          />
-          <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
-        </div>
+            <div
+              ref={(el) => fieldErrors.register('warehouseId', el)}
+              data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
+            >
+              <WarehouseField
+                value={formData.warehouseId}
+                onChange={(warehouseId) => {
+                  fieldErrors.clearField('warehouseId');
+                  setLastSelection('warehouse', currentCompany?.id, warehouseId);
+                  setFormData((p) => ({ ...p, warehouseId }));
+                }}
+                options={warehouseOptions}
+                activeWarehouseId={defaultWarehouseId}
+                isEdit={Boolean(initialData)}
+                icon={Package}
+                showSourceHint={false}
+                className="ui-select w-full ui-surface"
+              />
+              <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
+            </div>
+          </div>
 
+          <div
+            ref={(el) => fieldErrors.register('vendorId', el)}
+            data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
+          >
+            <VendorPicker
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              value={formData.vendorId}
+              icon={Truck}
+              onChange={(vendorId) =>
+                setFormData((prev) => {
+                  // Requirement 12: the bill due date follows the vendor's agreed
+                  // credit period rather than a blanket +30 days.
+                  const picked = vendors.find((v) => String(v.id) === String(vendorId));
+                  fieldErrors.clearField('vendorId');
+                  return {
+                    ...prev,
+                    vendorId,
+                    dueDate: picked ? dueDateFor(prev.date, picked) || prev.dueDate : prev.dueDate,
+                  };
+                })
+              }
+            />
+            <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
+          </div>
         </div>
 
         <div

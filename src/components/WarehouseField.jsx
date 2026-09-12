@@ -26,6 +26,10 @@ const WarehouseField = ({
   isEdit = false,
   label = 'Warehouse *',
   showSourceHint = true,
+  /* Drawn inside the control when the field is asking. The locked form keeps
+     the padlock: one glyph in a field, and there it means "not yours to
+     change", which outranks saying "warehouse" twice. */
+  icon = null,
   // Sized and validated by the panel itself now that this is a searchable
   // dropdown rather than a <select>. Call sites still pass both; swallowed
   // here rather than made every caller's problem to remove.
@@ -99,6 +103,7 @@ const WarehouseField = ({
         options={options.map((w) => ({ value: String(w.id), label: w.name || `Warehouse ${w.id}` }))}
         placeholder="Select Warehouse"
         showValueSubtext={false}
+        icon={icon}
       />
     </div>
   );

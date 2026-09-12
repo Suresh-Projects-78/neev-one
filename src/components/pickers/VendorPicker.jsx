@@ -833,6 +833,9 @@ const VendorPicker = ({
   // Renders a "New" button beside the trigger, so creating a vendor is one
   // click from the form rather than hidden inside the select popup.
   showCreateButton = false,
+  /* A lucide component drawn inside the trigger, before the name. Decorative:
+     the label already says what the field is. */
+  icon: LeadingIcon = null,
 }) => {
   // Same pattern as the customer picker: server list, local fallback.
   const serverVendors = useServerMasters(
@@ -978,9 +981,12 @@ const VendorPicker = ({
           onKeyDown={openOnKey(openPopup)}
           aria-haspopup="listbox"
           aria-expanded={showVendorPopup}
-          className={`flex-1 px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
+          className={`flex flex-1 items-center gap-2 px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
         >
-          {selectedVendorName || 'Select Vendor'}
+          {LeadingIcon ? <LeadingIcon size={15} className="ui-subtle shrink-0" aria-hidden="true" /> : null}
+          <span className={`truncate ${selectedVendorName ? '' : 'ui-subtle'}`}>
+            {selectedVendorName || 'Select Vendor'}
+          </span>
         </button>
         {showCreateButton && !disabled ? (
           <button

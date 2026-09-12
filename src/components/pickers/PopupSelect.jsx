@@ -35,6 +35,10 @@ const PopupSelect = ({
   onCustomAction,
   showValueSubtext = true,
   title,
+  /* A lucide component drawn inside the control, before the value — the
+     field says what it is about without being read. Decorative: the label
+     and the aria-label already name the control. */
+  icon: LeadingIcon = null,
   // `maxWidthClass` sized the old dialog. Call sites still pass it; the panel
   // takes its width from the control it hangs off, so it is swallowed here
   // rather than made every caller's problem to remove.
@@ -228,8 +232,11 @@ const PopupSelect = ({
           disabled ? 'ui-sunken ui-muted cursor-not-allowed' : 'ui-hover-sunken'
         }`}
       >
-        <span className={displayLabel ? 'ui-fg' : 'ui-subtle'}>{displayLabel || placeholder}</span>
-        <ChevronDown size={16} className="ui-muted" />
+        <span className="flex min-w-0 items-center gap-2">
+          {LeadingIcon ? <LeadingIcon size={15} className="ui-subtle shrink-0" aria-hidden="true" /> : null}
+          <span className={`truncate ${displayLabel ? 'ui-fg' : 'ui-subtle'}`}>{displayLabel || placeholder}</span>
+        </span>
+        <ChevronDown size={16} className="ui-muted shrink-0" />
       </button>
 
       {open && (
