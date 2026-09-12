@@ -11,6 +11,8 @@ import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { getNextNumericId } from '../../utils/ids';
+import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import DocNumberField from '../../components/DocNumberField';
 import { formatMoney, round2 } from '../../utils/money';
 import { tdsEventFrom, tdsLedgersFor } from '../tds/engine';
 import { natureForSection } from '../tds/ruleMaster';
@@ -80,6 +82,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
   const [formData, setFormData] = useState(() => ({
     date: initial.date,
+    number: String(initialData?.number || ''),
     customerId: initial.customerId,
     amount: initial.amount,
     mode: initial.mode,
@@ -263,6 +266,36 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     ? tdsLedgersFor(tdsLedgerMaster, { natureCode: tdsNatureCode, side: 'RECEIVABLE' })
     : [];
 
+  /*
+   * The receipt's own number, from the company's series.
+   *
+   * It used to be whatever the server minted, so the receipt was the one
+   * document whose numbering nobody could see or change — the gear every other
+   * form carries had nothing to govern. The series is read here and sent with
+   * the receipt; the server honours a number it is given and only allocates
+   * one when none arrives, so there is still exactly one series in play, and
+   * a number the server does return still wins.
+   */
+  const receiptBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
+  const receiptDocSettings = getDocSettings(db, currentCompany, { branchId: receiptBranchId || null });
+  const receiptNumbering = receiptDocSettings?.numbering?.receipt;
+  const isReceiptAuto = String(receiptNumbering?.mode || '').toLowerCase() === 'auto';
+  const lockReceiptNumber = !initialData?.id && isReceiptAuto && !receiptNumbering?.allowManualOverride;
+  const generatedReceiptNumber =
+    nextFreeVoucherNumber({
+      db,
+      company: currentCompany,
+      voucherKey: 'receipt',
+      branchId: receiptBranchId || null,
+      takenNumbers: safeArray(db.payments)
+        .filter((p) => p.companyId === currentCompany?.id)
+        .map((p) => String(p.number || '').trim()),
+    }) || '';
+
+  const [numberTouched, setNumberTouched] = useState(false);
+  const autoNumbered = !initialData?.id && isReceiptAuto && !numberTouched;
+  const receiptNumberValue = autoNumbered ? generatedReceiptNumber : formData.number;
+
   const toggleInvoice = (inv, selected) => {
     const key = String(inv.id);
 
@@ -417,6 +450,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       try {
         posted = await createPayment({
           direction: 'RECEIPT',
+          /* The company's own series. The server allocates one only when it is
+             given none, so the two can no longer disagree. */
+          number: String(receiptNumberValue || '').trim() || undefined,
           date: formData.date,
           partyType: 'CUSTOMER',
           // Only a server party id is meaningful here. The local row carries
@@ -449,7 +485,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
     // Prefer the server's series number over a browser-minted one, which two
     // tabs can duplicate.
-    const receiptNo = String(posted?.number || '').trim() || `RCPT-${paymentId}`;
+    const receiptNo =
+      String(posted?.number || '').trim() || String(receiptNumberValue || '').trim() || `RCPT-${paymentId}`;
 
     const receiptRecord = {
       id: paymentId,
@@ -466,6 +503,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           ? Number(initial.sourceBankTransactionId)
           : undefined,
       receiptNo,
+      /* The same value under the name every other document uses, so the cash
+         book, the register and the numbering series all read one field. */
+      number: receiptNo,
       date: formData.date,
       customerId: customerIdNum,
       customerName,
@@ -563,6 +603,15 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : db.tdsTransactions,
       invoices: nextInvoices,
       payments: [...safeArray(db.payments), receiptRecord],
+      /* The series moves past the number this receipt took, so the next one
+         does not open on a number already in the book. */
+      companies: bumpCompanyNextNumber({
+        db,
+        companyId: currentCompany.id,
+        voucherKey: 'receipt',
+        usedNumber: receiptNo,
+        branchId: receiptBranchId || null,
+      }),
     });
 
     onSaved?.(receiptRecord);
@@ -682,6 +731,27 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <DocNumberField
+              className="min-w-0"
+              id="rcpt-number"
+              label="Receipt No."
+              value={receiptNumberValue}
+              onChange={(e) => {
+                setNumberTouched(true);
+                setFormData((p) => ({ ...p, number: e.target.value }));
+              }}
+              disabled={lockReceiptNumber}
+              voucherKey="receipt"
+              title="Receipt numbering"
+              sampleLabel="Next receipt will be"
+              manualLabel="Typed on each receipt"
+              branchId={receiptBranchId || null}
+              settings={receiptNumbering}
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+            />
+
             <div className="min-w-0">
               <label className="ui-label" htmlFor="rcpt-date">
                 Receipt Date <span className="text-[rgb(var(--neg-ink))]">*</span>

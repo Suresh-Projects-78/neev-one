@@ -34,12 +34,14 @@ const carriesTheGear = (file) => {
 
 describe('the numbering control', () => {
   /*
-   * Receipts are missing on purpose: their number comes back from the server's
-   * own series, so a local series panel would edit something the document does
-   * not use. That is a different fix — see the numbering decision — and a
-   * panel that silently edits the wrong series is worse than none.
+   * Receipts are here too now. Their number used to be whatever the server
+   * minted, which made them the one document whose numbering nobody could see
+   * or change — so the receipt reads the company's series like every other
+   * form and sends it, and the server allocates one only when it is given
+   * none. One series, either way.
    */
   const LOCAL_SERIES = [
+    'receipt',
     'invoice',
     'bill',
     'estimate',

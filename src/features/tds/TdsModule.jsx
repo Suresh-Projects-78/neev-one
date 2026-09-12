@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, FileText, Landmark, Plus, Receipt, Scale, TrendingDown } from 'lucide-react';
+import { AlertTriangle, Download, FileText, Landmark, Plus, Receipt, Scale, TrendingDown } from 'lucide-react';
 
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { LIST_PERIODS, usePeriodFilter } from '../../components/ListControls';
@@ -8,6 +8,7 @@ import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
 import { companyTdsProfile } from './engine';
 import { natureByCode } from './ruleMaster';
+import { quarterValidation, returnCsv, returnDataset } from './returns';
 import {
   challanRegister,
   natureWise,
@@ -38,6 +39,7 @@ const VIEWS = [
   { value: 'challans', label: 'Challans', tone: 'draft' },
   { value: 'exceptions', label: 'Exceptions', tone: 'overdue' },
   { value: 'reconciliation', label: 'Reconciliation', tone: 'outstanding' },
+  { value: 'return', label: 'Return', tone: 'paid' },
 ];
 
 const SEVERITY_STYLE = {
@@ -66,6 +68,28 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
   const recon = useMemo(() => tdsReconciliation(db, companyId, filter), [db, companyId, filter]);
   const unmapped = useMemo(() => unmappedNatures(db, companyId), [db, companyId]);
   const quarters = useMemo(() => quarterWise(db, companyId, {}), [db, companyId]);
+
+  /*
+   * The quarter, checked and set out as it would be filed.
+   *
+   * V1 does not file — but a quarter is either complete or it is not, and that
+   * is a handful of checks somebody would otherwise do by eye in April.
+   */
+  const validation = useMemo(() => quarterValidation(db, companyId, quarter), [db, companyId, quarter]);
+  const dataset = useMemo(() => returnDataset(db, companyId, quarter), [db, companyId, quarter]);
+
+  const downloadReturn = () => {
+    const csv = returnCsv(dataset);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tds-${String(quarter || 'quarter').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const unallocatedChallans = challans.filter((c) => c.unallocated > 0.005);
   const blocking = exceptions.filter((x) => x.severity === 'BLOCK');
@@ -152,6 +176,7 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
         challans: challans.length,
         exceptions: exceptions.length,
         reconciliation: recon.ledgers.length,
+        return: dataset.lines.length,
       }}
       onStatusChange={setView}
     >
@@ -341,6 +366,84 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
               )}
             </tbody>
           </table>
+        ) : null}
+
+        {view === 'return' ? (
+          <div className="space-y-4">
+            {!quarter ? (
+              <EmptyState
+                title="Choose a quarter"
+                message="A return is prepared one quarter at a time. Pick one above and this becomes the return it would file."
+              />
+            ) : (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="ui-t-label">{quarter}</div>
+                    <p className="ui-caption">
+                      {validation.ready
+                        ? `Ready — ${dataset.totals.deductees} deductee(s), ${formatMoney(dataset.totals.tdsAmount, currentCompany)} deducted.`
+                        : validation.blocking.length
+                          ? `${validation.blocking.length} thing(s) must be fixed before this can be filed.`
+                          : 'Nothing deducted in this quarter.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={downloadReturn}
+                    className="ui-btn ui-btn-secondary"
+                    disabled={!dataset.lines.length}
+                  >
+                    <Download size={15} aria-hidden="true" /> Download return data
+                  </button>
+                </div>
+
+                {validation.problems.length ? (
+                  <ul className="space-y-1">
+                    {validation.problems.map((p, i) => (
+                      <li key={`${p.code}-${p.eventId}-${i}`} className="text-sm">
+                        <span className={SEVERITY_STYLE[p.severity] || ''}>{p.severity}</span>{' '}
+                        <span className="ui-muted">{p.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                {/* One line per deductee, section and rate — a 26Q is
+                    deductee-wise, not document-wise. */}
+                <table className="ui-table ui-table-wide">
+                  <thead>
+                    <tr>
+                      <th scope="col">Deductee</th>
+                      <th scope="col">PAN</th>
+                      <th scope="col">Section</th>
+                      <th scope="col" className="text-end">Rate</th>
+                      <th scope="col" className="text-end">Paid / credited</th>
+                      <th scope="col" className="text-end">TDS</th>
+                      <th scope="col" className="text-end">Deposited</th>
+                      <th scope="col">Challans</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dataset.lines.map((l) => (
+                      <tr key={`${l.deducteeId}-${l.sectionCode}-${l.rate}`}>
+                        <td className="truncate">{l.deductee || '—'}</td>
+                        <td className="ui-mono">{l.pan || '—'}</td>
+                        <td className="ui-mono">{l.sectionReference}</td>
+                        <td className="ui-money">{l.rate}%</td>
+                        <td className="ui-money">{formatMoney(l.baseAmount, currentCompany)}</td>
+                        <td className="ui-money">{formatMoney(l.tdsAmount, currentCompany)}</td>
+                        <td className={`ui-money ${l.unpaidAmount > 0.005 ? 'text-[rgb(var(--neg-ink))]' : ''}`}>
+                          {formatMoney(l.paidAmount, currentCompany)}
+                        </td>
+                        <td className="ui-mono truncate">{l.challans.join(', ') || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
         ) : null}
 
         {view === 'reconciliation' ? (
