@@ -211,6 +211,7 @@ const SharedInvoice = lazy(() => import('./features/sales/SharedInvoice'));
 const BankReconciliation = lazy(() => import('./features/cashBank/BankReconciliation'));
 const BankCashAccounts = lazy(() => import('./features/cashBank/BankCashAccounts'));
 const CashBankTransactions = lazy(() => import('./features/cashBank/CashBankTransactions'));
+const TdsModule = lazy(() => import('./features/tds/TdsModule'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
 const DataBackup = lazy(() => import('./features/account/DataBackup'));
@@ -11352,6 +11353,7 @@ const AppShell = () => {
           title: 'Accountant',
           items: [
             { key: 'tallyExport', label: 'Tally Export' },
+            { key: 'tds', label: 'TDS' },
             { key: 'tdsTcs', label: 'TDS / TCS (194Q & 206C)' },
             { key: 'fixedAssets', label: 'Fixed Assets' },
             { key: 'yearEndClose', label: 'Year-End Close' },
@@ -13227,6 +13229,14 @@ const AppShell = () => {
         return <SalesBySalesman db={dbForUser} currentCompany={currentCompany} />;
       case 'tallyExport':
         return <TallyExport db={dbForUser} currentCompany={currentCompany} />;
+      case 'tds':
+        return (
+          <TdsModule
+            db={dbForUser}
+            currentCompany={currentCompany}
+            onOpenSettings={(screen) => setActive(screen)}
+          />
+        );
       case 'tdsTcs':
         return <TdsTcsReport db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'fixedAssets':
