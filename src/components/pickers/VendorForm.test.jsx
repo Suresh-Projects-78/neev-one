@@ -420,6 +420,8 @@ describe('the same room, wherever the form is opened from', () => {
     for (const src of [vendorSrc, customerSrc]) {
       expect(src).toMatch(/max-w-\[80vw\]/);
     }
-    expect(vendorSrc).toMatch(/'create' \? 'max-w-\[80vw\]' : 'max-w-lg'/);
+    /* Both pickers now hang their list off the field, so only the creation
+       dialog remains in each — and it takes the full width outright. */
+    expect(vendorSrc).toMatch(/maxWidthClass="max-w-\[80vw\]"/);
   });
 });

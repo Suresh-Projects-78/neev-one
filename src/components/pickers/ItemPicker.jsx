@@ -1,6 +1,8 @@
 import React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Plus } from 'lucide-react';
 import Modal from '../ui/Modal';
+import Popover from '../ui/Popover';
 import ItemForm from '../../features/masters/ItemForm';
 import { listItems } from '../../api/masters';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
@@ -101,10 +103,13 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
    * snapped back to the field it had just left, so the row appeared to eat
    * the keystroke and the operator had to Tab a second time.
    */
-  const closePopup = ({ advance = false } = {}) => {
+  const closePopup = ({ advance = false, refocus = true } = {}) => {
     setShowItemPopup(false);
     setItemSearch('');
     setMode('select');
+    /* `refocus: false` when the dismissal came from outside the field: pulling
+       the caret back would reopen the list over whatever was just clicked. */
+    if (!refocus) return;
     requestAnimationFrame(() => {
       if (advance) focusNextAfter(triggerRef.current);
       else triggerRef.current?.focus({ preventScroll: true });
@@ -185,179 +190,170 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
   return (
     <>
       {label ? <label className="ui-label">{label}</label> : null}
-      <button
-        type="button"
+      {/*
+        A field to type an item into, as the customer field is.
+
+        On a line grid this matters more than anywhere: an operator reads a
+        code off a delivery note and types it, and a button that had to be
+        clicked to reveal a search box put two actions in front of every line.
+      */}
+      <input
         ref={triggerRef}
-        onClick={openPopup}
-        onKeyDown={openOnKey(openPopup)}
+        type="text"
+        role="combobox"
+        value={showItemPopup ? itemSearch : selectedItemName}
+        placeholder="Type an item name or code"
+        onMouseDown={() => {
+          /* A click or typing opens it — never focus alone, which arrives as
+             the list closes and would reopen it instantly. */
+          if (showItemPopup) return;
+          setItemSearch('');
+          setMode('select');
+          setShowItemPopup(true);
+        }}
+        onChange={(e) => {
+          if (!showItemPopup) {
+            setMode('select');
+            setShowItemPopup(true);
+          }
+          setItemSearch(e.target.value);
+          setItemActiveIndex(0);
+        }}
+        onKeyDown={(e) => {
+          if (!showItemPopup) {
+            openOnKey(openPopup)(e);
+            return;
+          }
+          /* Alt+C makes the item that is not on file — Tally's reflex, and
+             the biggest saving on a line grid. */
+          if (e.altKey && (e.key === 'c' || e.key === 'C')) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (canCreate) setMode('create');
+            return;
+          }
+          onItemSearchTab(e);
+          onItemListKeys(e);
+        }}
         aria-haspopup="listbox"
         aria-expanded={showItemPopup}
-        className="ui-input text-left"
-      >
-        {selectedItemName || 'Select Item'}
-      </button>
+        aria-autocomplete="list"
+        aria-controls={showItemPopup ? 'item-picker-list' : undefined}
+        aria-activedescendant={
+          showItemPopup && filteredItems[itemActiveIndex] ? `item-opt-${filteredItems[itemActiveIndex].id}` : undefined
+        }
+        className="ui-input w-full"
+      />
 
-      {showItemPopup && (
+      {/* The suggestions hang off the field; only the creation form, which is
+          the whole item master, still earns a dialog. */}
+      {showItemPopup && mode === 'select' ? (
+        <Popover
+          anchorRef={triggerRef}
+          onClose={() => closePopup({ refocus: false })}
+          autoFocus={false}
+          minWidth={340}
+        >
+          <div id="item-picker-list" ref={itemListRef} role="listbox" className="max-h-80 overflow-y-auto p-1">
+            {filteredItems.length === 0 ? (
+              <div className="px-3 py-4 text-sm ui-muted">
+                {String(itemSearch || '').trim() ? `No item matches “${itemSearch.trim()}”.` : 'No items yet.'}
+              </div>
+            ) : (
+              filteredItems.map((i, n) => {
+                const on = n === itemActiveIndex;
+                return (
+                  <React.Fragment key={i.id}>
+                    {/* The habitual rows, called what they are. */}
+                    {itemRecentCount && n === 0 ? (
+                      <div className="ui-caption px-2 pt-1 pb-0.5">Recently used</div>
+                    ) : null}
+                    {itemRecentCount && n === itemRecentCount ? (
+                      <div className="ui-caption px-2 pt-2 pb-0.5">All items</div>
+                    ) : null}
+                    <button
+                      id={`item-opt-${i.id}`}
+                      type="button"
+                      role="option"
+                      aria-selected={String(i.id) === String(value)}
+                      data-active={on || undefined}
+                      onMouseEnter={() => setItemActiveIndex(n)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => chooseItem(i)}
+                      className={`w-full rounded-lg px-3 py-2 text-left ${on ? '' : 'ui-hover-sunken'}`}
+                      style={
+                        on
+                          ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
+                          : undefined
+                      }
+                    >
+                      <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{i.name}</div>
+                      <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
+                        {[i.code, i.hsnSac ? `HSN/SAC ${i.hsnSac}` : null, `GST ${Number(i.gstRate || 0)}%`]
+                          .filter(Boolean)
+                          .join(' • ')}
+                      </div>
+                    </button>
+                  </React.Fragment>
+                );
+              })
+            )}
+          </div>
+
+          {canCreate ? (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setMode('create')}
+              className="ui-hover-sunken flex w-full items-center gap-2 border-t px-3 py-2 text-left text-sm"
+            >
+              <Plus size={14} aria-hidden="true" />
+              {String(itemSearch || '').trim() ? `Create “${itemSearch.trim()}”` : 'Create a new item'}
+            </button>
+          ) : null}
+        </Popover>
+      ) : null}
+
+      {showItemPopup && mode === 'create' ? (
         <Modal
           onClose={() => closePopup()}
-          /* One dialog, two jobs: a list to pick from, and — when what you
-             need is not on it — the item form itself, which needs the room. */
-          title={mode === 'create' ? 'Create Item' : 'Select Item'}
+          title="Create Item"
           /* Wide enough for the form's two columns to reach their own field
              width: at 4xl each column was squeezed under its cap, and a long
              category name ran out of the select it sat in. */
-          maxWidthClass={mode === 'create' ? 'max-w-6xl' : 'max-w-lg'}
+          maxWidthClass="max-w-6xl"
         >
           <div className="space-y-3">
-            {mode === 'select' ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={itemSearch}
-                  onChange={(e) => setItemSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    /*
-                     * Alt+C — make the master you are missing without leaving
-                     * the field. Tally's reflex, and the biggest saving in the
-                     * whole keyboard: hitting a name that is not on file
-                     * otherwise means abandoning a half-typed document to go
-                     * and create one. Same New button, for hands that never
-                     * left the keys.
-                     */
-                    if (e.altKey && (e.key === 'c' || e.key === 'C')) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (canCreate) setMode('create');
-                      return;
-                    }
-                    onItemSearchTab(e);
-                    onItemListKeys(e);
-                  }}
-                  role="combobox"
-                  aria-expanded="true"
-                  aria-controls="item-picker-list"
-                  aria-activedescendant={
-                    filteredItems[itemActiveIndex] ? `item-opt-${filteredItems[itemActiveIndex].id}` : undefined
-                  }
-                  className="ui-input w-full"
-                                    /*
-                  * The dialog decides who gets the caret, and it looks for
-                  * this attribute. React's own autoFocus runs first and is
-                  * then overruled: the dialog found nothing claiming focus
-                  * and took it for the panel itself, so every keystroke went
-                  * to a div. The arrows moved nothing and Enter chose
-                  * nothing, while Escape still worked — because the dialog
-                  * listens for that one on the window.
-                  */
-                  data-autofocus="true"
-                  placeholder="Search item (name, code, HSN/SAC)"
-                  autoFocus
-                />
-                {canCreate ? (
-                  <button
-                    type="button"
-                    onClick={() => setMode('create')}
-                    className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
-                  >
-                    New
-                  </button>
-                ) : null}
-              </div>
-            ) : (
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={() => setMode('select')}
-                  className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
-                >
-                  Back to the list
-                </button>
-              </div>
-            )}
-
-            {mode === 'select' ? (
-              <div
-                id="item-picker-list"
-                ref={itemListRef}
-                role="listbox"
-                className="max-h-80 overflow-y-auto space-y-1"
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setMode('select')}
+                className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
               >
-                {filteredItems.length === 0 ? (
-                  <div className="text-sm ui-muted">No items found.</div>
-                ) : (
-                  filteredItems.map((i, n) => {
-                    const on = n === itemActiveIndex;
-                    return (
-                      <React.Fragment key={i.id}>
-                      {/* The habitual rows, called what they are. */}
-                      {itemRecentCount && n === 0 ? (
-                        <div className="ui-caption px-1 pt-1 pb-0.5">Recently used</div>
-                      ) : null}
-                      {itemRecentCount && n === itemRecentCount ? (
-                        <div className="ui-caption px-1 pt-2 pb-0.5">All items</div>
-                      ) : null}
-                      <button
-                        id={`item-opt-${i.id}`}
-                        type="button"
-                        role="option"
-                        aria-selected={String(i.id) === String(value)}
-                        data-active={on || undefined}
-                        onMouseEnter={() => setItemActiveIndex(n)}
-                        onClick={() => chooseItem(i)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border ${
-                          on ? '' : 'ui-hover-sunken '
-                        }${String(i.id) === String(value) && !on ? 'ui-sunken ui-border-c' : 'ui-border-c'}`}
-                        /*
-                         * The cursor row is filled, not merely outlined. It
-                         * previously shared `ui-sunken` with the already-chosen
-                         * row and differed only by border colour, so pressing ↓
-                         * looked like nothing had happened.
-                         */
-                        style={
-                          on
-                            ? {
-                                backgroundColor: 'rgb(var(--brand))',
-                                borderColor: 'rgb(var(--brand))',
-                                color: 'rgb(var(--on-brand))',
-                              }
-                            : undefined
-                        }
-                      >
-                        <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{i.name}</div>
-                        <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
-                          {[i.code, i.hsnSac ? `HSN/SAC ${i.hsnSac}` : null, `GST ${Number(i.gstRate || 0)}%`]
-                            .filter(Boolean)
-                            .join(' • ')}
-                        </div>
-                      </button>
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </div>
-            ) : (
-              <ItemForm
-                db={db}
-                setDb={setDb}
-                currentCompany={currentCompany}
-                warehouses={warehousesForCompany}
-                branches={branchesForCompany}
-                defaultName={itemSearch}
-                onCreated={(created) => {
-                  // Straight onto the line that asked for it, the way the old
-                  // panel did — making the item is a step inside picking one.
-                  if (created?.id) {
-                    recents.remember(created.id);
-                    onChange(String(created.id), created);
-                  }
-                  serverItems.reload?.();
-                }}
-                onClose={() => closePopup()}
-              />
-            )}
+                Back to the list
+              </button>
+            </div>
+            <ItemForm
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              warehouses={warehousesForCompany}
+              branches={branchesForCompany}
+              defaultName={itemSearch}
+              onCreated={(created) => {
+                /* Straight onto the line that asked for it — making the item
+                   is a step inside picking one. */
+                if (created?.id) {
+                  recents.remember(created.id);
+                  onChange(String(created.id), created);
+                }
+                serverItems.reload?.();
+              }}
+              onClose={() => closePopup()}
+            />
           </div>
         </Modal>
-      )}
+      ) : null}
     </>
   );
 };

@@ -943,10 +943,19 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
    * of moving to the next field — which breaks the whole point of picking
    * without the mouse.
    */
-  const closePopup = ({ advance = false } = {}) => {
+  const closePopup = ({ advance = false, refocus = true } = {}) => {
     setShowCustomerPopup(false);
     setCustomerPopupMode('select');
     setCustomerSearch('');
+    /*
+     * `refocus: false` for a dismissal that came from OUTSIDE the field.
+     *
+     * Clicking another control used to close the list and then pull the caret
+     * back to this field — which, when the field opens on focus, reopened the
+     * list over whatever had just been clicked. The field appeared stuck and
+     * nothing else on the form could be reached.
+     */
+    if (!refocus) return;
     requestAnimationFrame(() => {
       // Choosing moves on; cancelling stays put. See focusNextAfter.
       if (advance) focusNextAfter(triggerRef.current);
@@ -1042,7 +1051,16 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
           title={disabled ? disabledHint || 'Locked' : undefined}
           value={showCustomerPopup ? customerSearch : selectedCustomerName}
           placeholder="Type a customer name"
-          onFocus={() => {
+          onMouseDown={() => {
+            /*
+             * Opened by a click or by typing — never by focus alone.
+             *
+             * Focus arrives for reasons that are not a request to choose: the
+             * caret handed back as the list closes, a form restoring focus,
+             * Tab passing through. Opening on any of those put the list back
+             * on screen the instant it was dismissed, over whatever had just
+             * been clicked.
+             */
             if (disabled || showCustomerPopup) return;
             setCustomerPopupMode('select');
             setCustomerSearch('');
@@ -1087,7 +1105,12 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
         caret was in.
       */}
       {showCustomerPopup && customerPopupMode === 'select' ? (
-        <Popover anchorRef={triggerRef} onClose={() => closePopup()} autoFocus={false} minWidth={320}>
+        <Popover
+          anchorRef={triggerRef}
+          onClose={() => closePopup({ refocus: false })}
+          autoFocus={false}
+          minWidth={320}
+        >
           <div
             id="customer-picker-list"
             ref={customerListRef}

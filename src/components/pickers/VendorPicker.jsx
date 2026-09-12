@@ -1,7 +1,9 @@
 import React from 'react';
+import { Plus } from 'lucide-react';
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { notify } from '../ui/notify';
 import Modal from '../ui/Modal';
+import Popover from '../ui/Popover';
 import { createVendor, listVendors, toServerCustomer } from '../../api/masters';
 import { apiFetch } from '../../api/http';
 import { useServerMasters, mirrorServerRows } from '../../hooks/useServerMasters';
@@ -912,10 +914,13 @@ const VendorPicker = ({
 
   // Focus goes back to the field that opened this, so the next Tab continues
   // the form instead of restarting at the top of the page.
-  const closePopup = ({ advance = false } = {}) => {
+  const closePopup = ({ advance = false, refocus = true } = {}) => {
     setShowVendorPopup(false);
     setVendorPopupMode('select');
     setVendorSearch('');
+    /* `refocus: false` when the dismissal came from outside the field: pulling
+       the caret back would reopen the list over whatever was just clicked. */
+    if (!refocus) return;
     requestAnimationFrame(() => {
       // Choosing moves on; cancelling stays put. See focusNextAfter.
       if (advance) focusNextAfter(triggerRef.current);
@@ -983,22 +988,63 @@ const VendorPicker = ({
     <div className="min-w-0">
       <label className="ui-label">{label}</label>
       <div className="flex items-center gap-2">
-        <button
-          ref={triggerRef}
-          type="button"
-          disabled={disabled}
-          title={disabled ? disabledHint || 'Locked' : undefined}
-          onClick={openPopup}
-          onKeyDown={openOnKey(openPopup)}
-          aria-haspopup="listbox"
-          aria-expanded={showVendorPopup}
-          className={`flex flex-1 items-center gap-2 px-3 py-2 border rounded-lg ui-surface text-left${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
-        >
-          {LeadingIcon ? <LeadingIcon size={15} className="ui-subtle shrink-0" aria-hidden="true" /> : null}
-          <span className={`truncate ${selectedVendorName ? '' : 'ui-subtle'}`}>
-            {selectedVendorName || 'Select Vendor'}
-          </span>
-        </button>
+        {/* The same field the customer and item fields are: typed into, with
+            the suggestions hanging off it. */}
+        <div className="relative flex-1">
+          {LeadingIcon ? (
+            <LeadingIcon
+              size={15}
+              aria-hidden="true"
+              className="ui-subtle pointer-events-none absolute start-3 top-1/2 -translate-y-1/2"
+            />
+          ) : null}
+          <input
+            ref={triggerRef}
+            type="text"
+            role="combobox"
+            disabled={disabled}
+            title={disabled ? disabledHint || 'Locked' : undefined}
+            value={showVendorPopup ? vendorSearch : selectedVendorName}
+            placeholder="Type a vendor name"
+            onMouseDown={() => {
+              /* A click or typing opens it — never focus alone, which arrives
+                 as the list closes and would reopen it instantly. */
+              if (disabled || showVendorPopup) return;
+              setVendorPopupMode('select');
+              setVendorSearch('');
+              setShowVendorPopup(true);
+            }}
+            onChange={(e) => {
+              if (disabled) return;
+              if (!showVendorPopup) {
+                setVendorPopupMode('select');
+                setShowVendorPopup(true);
+              }
+              setVendorSearch(e.target.value);
+              setVendorActiveIndex(0);
+            }}
+            onKeyDown={(e) => {
+              if (disabled) return;
+              if (!showVendorPopup) {
+                openOnKey(openPopup)(e);
+                return;
+              }
+              if (e.altKey && (e.key === 'c' || e.key === 'C')) {
+                e.preventDefault();
+                e.stopPropagation();
+                setVendorPopupMode('create');
+                return;
+              }
+              onVendorSearchTab(e);
+              onVendorListKeys(e);
+            }}
+            aria-haspopup="listbox"
+            aria-expanded={showVendorPopup}
+            aria-autocomplete="list"
+            aria-controls={showVendorPopup ? 'vendor-picker-list' : undefined}
+            className={`ui-input w-full${LeadingIcon ? ' ps-9' : ''}${disabled ? ' opacity-60 cursor-not-allowed' : ''}`}
+          />
+        </div>
         {showCreateButton && !disabled ? (
           <button
             type="button"
@@ -1015,140 +1061,81 @@ const VendorPicker = ({
       </div>
       {disabled && disabledHint ? <div className="text-xs ui-muted mt-1">{disabledHint}</div> : null}
 
-      {showVendorPopup && (
+      {/* The suggestions hang off the field; only the creation form, which is
+          the whole vendor master, still earns a dialog. */}
+      {showVendorPopup && vendorPopupMode === 'select' ? (
+        <Popover
+          anchorRef={triggerRef}
+          onClose={() => closePopup({ refocus: false })}
+          autoFocus={false}
+          minWidth={320}
+        >
+          <div id="vendor-picker-list" ref={vendorListRef} role="listbox" className="max-h-80 overflow-y-auto p-1">
+            {filteredVendors.length === 0 ? (
+              <div className="px-3 py-4 text-sm ui-muted">
+                {normalizedVendorSearch ? `No vendor matches “${vendorSearch.trim()}”.` : 'No vendors yet.'}
+              </div>
+            ) : (
+              filteredVendors.map((v, i) => {
+                const on = i === vendorActiveIndex;
+                return (
+                  <React.Fragment key={v.id}>
+                    {/* The habitual rows, called what they are. */}
+                    {vendorRecentCount && i === 0 ? (
+                      <div className="ui-caption px-2 pt-1 pb-0.5">Recently used</div>
+                    ) : null}
+                    {vendorRecentCount && i === vendorRecentCount ? (
+                      <div className="ui-caption px-2 pt-2 pb-0.5">All vendors</div>
+                    ) : null}
+                    <button
+                      id={`vendor-opt-${v.id}`}
+                      type="button"
+                      role="option"
+                      aria-selected={String(v.id) === String(value)}
+                      data-active={on || undefined}
+                      onMouseEnter={() => setVendorActiveIndex(i)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => chooseVendor(v)}
+                      className={`w-full rounded-lg px-3 py-2 text-left ${on ? '' : 'ui-hover-sunken'}`}
+                      style={
+                        on
+                          ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
+                          : undefined
+                      }
+                    >
+                      <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{getVendorDisplayName(v)}</div>
+                      {(v.phone || v.gstin) && (
+                        <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
+                          {[v.phone, v.gstin].filter(Boolean).join(' • ')}
+                        </div>
+                      )}
+                    </button>
+                  </React.Fragment>
+                );
+              })
+            )}
+          </div>
+
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setVendorPopupMode('create')}
+            className="ui-hover-sunken flex w-full items-center gap-2 border-t px-3 py-2 text-left text-sm"
+          >
+            <Plus size={14} aria-hidden="true" />
+            {normalizedVendorSearch ? `Create “${vendorSearch.trim()}”` : 'Create a new vendor'}
+          </button>
+        </Popover>
+      ) : null}
+
+      {showVendorPopup && vendorPopupMode === 'create' ? (
         <Modal
           onClose={() => closePopup()}
-          title={vendorPopupMode === 'create' ? 'Create Vendor' : 'Select Vendor'}
-          /*
-            The picker is a short list and wants a small box; the creation form
-            is the full vendor master — tabs, the two address cards, contacts —
-            and at max-w-lg it was the cramped form the standalone screen had
-            already outgrown, while the customer's had been given its room.
-            Same form, same room, wherever it is opened from.
-          */
-          maxWidthClass={vendorPopupMode === 'create' ? 'max-w-[80vw]' : 'max-w-lg'}
+          title="Create Vendor"
+          /* The full vendor master — tabs, the two address cards, contacts —
+             gets the same room wherever it is opened from. */
+          maxWidthClass="max-w-[80vw]"
         >
-          {vendorPopupMode === 'select' ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={vendorSearch}
-                  onChange={(e) => setVendorSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    /*
-                     * Alt+C — make the master you are missing without leaving
-                     * the field. Tally's reflex, and the biggest saving in the
-                     * whole keyboard: hitting a name that is not on file
-                     * otherwise means abandoning a half-typed document to go
-                     * and create one. Same New button, for hands that never
-                     * left the keys.
-                     */
-                    if (e.altKey && (e.key === 'c' || e.key === 'C')) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setVendorPopupMode('create');
-                      return;
-                    }
-                    onVendorSearchTab(e);
-                    onVendorListKeys(e);
-                  }}
-                  role="combobox"
-                  aria-expanded="true"
-                  aria-controls="vendor-picker-list"
-                  aria-activedescendant={
-                    filteredVendors[vendorActiveIndex] ? `vendor-opt-${filteredVendors[vendorActiveIndex].id}` : undefined
-                  }
-                  className="ui-input"
-                                    /*
-                  * The dialog decides who gets the caret, and it looks for
-                  * this attribute. React's own autoFocus runs first and is
-                  * then overruled: the dialog found nothing claiming focus
-                  * and took it for the panel itself, so every keystroke went
-                  * to a div. The arrows moved nothing and Enter chose
-                  * nothing, while Escape still worked — because the dialog
-                  * listens for that one on the window.
-                  */
-                  data-autofocus="true"
-                  placeholder="Search vendor (name, phone, GSTIN)"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setVendorPopupMode('create')}
-                  className="ui-btn ui-btn-secondary"
-                >
-                  New
-                </button>
-              </div>
-
-              <div
-                id="vendor-picker-list"
-                ref={vendorListRef}
-                role="listbox"
-                className="max-h-80 overflow-y-auto space-y-1"
-              >
-                {filteredVendors.length === 0 ? (
-                  <div className="text-sm ui-muted">No vendors found.</div>
-                ) : (
-                  filteredVendors.map((v, i) => {
-                    const on = i === vendorActiveIndex;
-                    return (
-                      <React.Fragment key={v.id}>
-                      {/* The habitual rows, called what they are. */}
-                      {vendorRecentCount && i === 0 ? (
-                        <div className="ui-caption px-1 pt-1 pb-0.5">Recently used</div>
-                      ) : null}
-                      {vendorRecentCount && i === vendorRecentCount ? (
-                        <div className="ui-caption px-1 pt-2 pb-0.5">All vendors</div>
-                      ) : null}
-                      <button
-                        id={`vendor-opt-${v.id}`}
-                        type="button"
-                        role="option"
-                        aria-selected={String(v.id) === String(value)}
-                        data-active={on || undefined}
-                        onMouseEnter={() => setVendorActiveIndex(i)}
-                        onClick={() => chooseVendor(v)}
-                        className={`w-full text-left px-3 py-2 rounded-lg border ${
-                          on ? '' : 'ui-hover-sunken '
-                        }${String(v.id) === String(value) && !on ? 'ui-sunken ui-border-c' : 'ui-border-c'}`}
-                        /* Filled, not outlined: the cursor row shared `ui-sunken`
-                           with the already-chosen row and differed only by border
-                           colour, so pressing the down arrow looked like nothing
-                           had happened. */
-                        style={
-                          on
-                            ? {
-                                backgroundColor: 'rgb(var(--brand))',
-                                borderColor: 'rgb(var(--brand))',
-                                color: 'rgb(var(--on-brand))',
-                              }
-                            : undefined
-                        }
-                      >
-                        <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{getVendorDisplayName(v)}</div>
-                        {(v.phone || v.gstin) && (
-                          <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>{[v.phone, v.gstin].filter(Boolean).join(' • ')}</div>
-                        )}
-                      </button>
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </div>
-
-              {normalizedVendorSearch && filteredVendors.length === 0 && (
-                <button
-                  type="button"
-                  onClick={() => setVendorPopupMode('create')}
-                  className="w-full px-4 py-2 ui-primary-bg rounded-lg"
-                >
-                  Create new vendor
-                </button>
-              )}
-            </div>
-          ) : (
             <VendorForm
               db={db}
               setDb={setDb}
@@ -1190,9 +1177,8 @@ const VendorPicker = ({
               }}
               onClose={() => closePopup()}
             />
-          )}
         </Modal>
-      )}
+      ) : null}
       </div>
   );
 };

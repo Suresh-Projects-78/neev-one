@@ -147,9 +147,9 @@ describe('the fields a company added to its bills', () => {
     /* A bill needs a vendor, a warehouse and a line before it will save. */
     await user.click(screen.getByRole('combobox', { name: 'Warehouse *' }));
     await user.click(await screen.findByRole('option', { name: 'Main Store' }));
-    await user.click(screen.getByRole('button', { name: /Select Vendor/ }));
+    await user.click(screen.getByPlaceholderText('Type a vendor name'));
     await user.click(await screen.findByRole('option', { name: /Steel Supply Co/ }));
-    await user.click(screen.getByRole('button', { name: /Select Item/ }));
+    await user.click(screen.getByPlaceholderText('Type an item name or code'));
     await user.click(await screen.findByRole('option', { name: /MS Angle 50mm/ }));
     await user.click(screen.getByRole('button', { name: 'Create Bill' }));
 

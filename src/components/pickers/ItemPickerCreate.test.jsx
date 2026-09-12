@@ -55,8 +55,9 @@ const Host = ({ onPick = () => {} }) => {
 };
 
 const openPicker = async (user) => {
-  await user.click(screen.getByRole('button', { name: /select item/i }));
-  return waitFor(() => screen.getByPlaceholderText(/search item/i));
+  /* The item field is a type-ahead: clicking it opens the suggestions. */
+  await user.click(screen.getByRole('combobox'));
+  return waitFor(() => screen.getByRole('listbox'));
 };
 
 const dialog = () => screen.getByRole('dialog');
@@ -66,7 +67,7 @@ describe('creating an item from a document line', () => {
     const user = userEvent.setup();
     render(<Host />);
     await openPicker(user);
-    await user.click(screen.getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('button', { name: /Create a new item/ }));
 
     /* Fields only the real form asks for. */
     expect(within(dialog()).getByText('Basic Details')).toBeInTheDocument();
@@ -78,7 +79,7 @@ describe('creating an item from a document line', () => {
     const user = userEvent.setup();
     render(<Host />);
     await openPicker(user);
-    await user.click(screen.getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('button', { name: /Create a new item/ }));
     /* The dialog renames itself: it is no longer a list to pick from. */
     expect(within(dialog()).getByRole('heading', { name: 'Create Item' })).toBeInTheDocument();
   });
@@ -88,8 +89,8 @@ describe('creating an item from a document line', () => {
   it('carries the name that had no match into the form', async () => {
     const user = userEvent.setup();
     render(<Host />);
-    const search = await openPicker(user);
-    await user.type(search, 'Copper Wire 2.5sqmm');
+    await openPicker(user);
+    await user.type(screen.getByRole('combobox'), 'Copper Wire 2.5sqmm');
     await user.keyboard('{Alt>}c{/Alt}');
 
     expect(within(dialog()).getByLabelText(/Item Name/)).toHaveValue('Copper Wire 2.5sqmm');
@@ -100,7 +101,7 @@ describe('creating an item from a document line', () => {
     const picked = vi.fn();
     render(<Host onPick={picked} />);
     await openPicker(user);
-    await user.click(screen.getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('button', { name: /Create a new item/ }));
 
     await user.type(within(dialog()).getByLabelText(/Item Name/), 'Copper Wire');
     await user.click(within(dialog()).getByRole('button', { name: /Create Item|Save Item/ }));
@@ -115,10 +116,10 @@ describe('creating an item from a document line', () => {
     const user = userEvent.setup();
     render(<Host />);
     await openPicker(user);
-    await user.click(screen.getByRole('button', { name: 'New' }));
+    await user.click(screen.getByRole('button', { name: /Create a new item/ }));
     await user.click(within(dialog()).getByRole('button', { name: /Back to the list/ }));
 
-    expect(screen.getByPlaceholderText(/search item/i)).toBeInTheDocument();
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
     expect(within(dialog()).queryByText('Basic Details')).toBeNull();
   });
 });

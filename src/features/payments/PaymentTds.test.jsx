@@ -82,7 +82,7 @@ const Host = ({ bills = [plainBill], onSaved = () => {} }) => {
 };
 
 const pickVendor = async (user) => {
-  await user.click(screen.getByRole('button', { name: /Select Vendor/ }));
+  await user.click(screen.getByPlaceholderText('Type a vendor name'));
   await user.click(await screen.findByRole('option', { name: /Steel Supply Co/ }));
 };
 

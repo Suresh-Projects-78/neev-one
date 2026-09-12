@@ -32,8 +32,11 @@ const Host = () => {
 };
 
 const openPicker = async (user) => {
-  await user.click(screen.getByRole('button', { name: /select item/i }));
-  return waitFor(() => screen.getByPlaceholderText(/search item/i));
+  /* The item field is the search box now — clicking it opens the list. */
+  const field = screen.getByRole('combobox');
+  await user.click(field);
+  await waitFor(() => screen.getByRole('listbox'));
+  return field;
 };
 
 describe('ItemPicker keyboard', () => {
@@ -54,9 +57,8 @@ describe('ItemPicker keyboard', () => {
     render(<Host />);
     await openPicker(user);
     await user.keyboard('{ArrowDown}{Enter}');
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /MS Plate 10mm/i })).toBeInTheDocument()
-    );
+    /* The chosen item's name is the field's value now, not a button's label. */
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('MS Plate 10mm'));
   });
 
   it('typing filters, then Enter picks the match', async () => {
@@ -65,7 +67,7 @@ describe('ItemPicker keyboard', () => {
     await openPicker(user);
     await user.keyboard('Bolt');
     await user.keyboard('{Enter}');
-    await waitFor(() => expect(screen.getByRole('button', { name: /Bolt M12/i })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue('Bolt M12'));
   });
 
   it('Escape closes without choosing', async () => {
@@ -73,7 +75,8 @@ describe('ItemPicker keyboard', () => {
     render(<Host />);
     await openPicker(user);
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByPlaceholderText(/search item/i)).toBeNull());
-    expect(screen.getByRole('button', { name: /select item/i })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('listbox')).toBeNull());
+    /* Nothing was chosen, so the field is still empty and still asking. */
+    expect(screen.getByRole('combobox')).toHaveValue('');
   });
 });

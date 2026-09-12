@@ -88,9 +88,10 @@ const Host = ({ db: seed = dbWith(), onSaved = () => {} }) => {
 const fillBill = async (user, rate) => {
   await user.click(screen.getByRole('combobox', { name: 'Warehouse *' }));
   await user.click(await screen.findByRole('option', { name: 'Main Store' }));
-  await user.click(screen.getByRole('button', { name: /Select Vendor/ }));
+  await user.click(screen.getByPlaceholderText('Type a vendor name'));
   await user.click(await screen.findByRole('option', { name: /Steel Supply Co/ }));
-  await user.click(screen.getByRole('button', { name: /Select Item/ }));
+  /* The item field is a type-ahead: click it, then take the suggestion. */
+  await user.click(screen.getByPlaceholderText('Type an item name or code'));
   await user.click(await screen.findByRole('option', { name: /MS Angle 50mm/ }));
 
   const row = document.querySelector('[data-line-row="0"]');
