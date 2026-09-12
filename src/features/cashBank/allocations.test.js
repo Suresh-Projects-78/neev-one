@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { allocationJournalLines, allocationSummary, validateAllocation } from './allocations';
+import { allocationJournalLines, allocationSummary, partyForLedger, validateAllocation } from './allocations';
 
 /**
  * The parent/child rule of statement allocation.
@@ -90,5 +90,56 @@ describe('the journal a full allocation becomes', () => {
     const dr = lines.reduce((t, l) => t + l.debit, 0);
     const cr = lines.reduce((t, l) => t + l.credit, 0);
     expect(Math.round((dr - cr) * 100)).toBe(0);
+  });
+});
+
+describe('party ledgers', () => {
+  const db = {
+    customers: [{ id: 3, companyId: 1, name: 'ABC Industries', accountId: 410 }],
+    vendors: [{ id: 7, companyId: 1, name: 'Sharp Contractors', accountId: 610 }],
+  };
+
+  it('finds the vendor or customer behind a chart row', () => {
+    expect(partyForLedger(db, 1, '610')).toMatchObject({ kind: 'vendor', party: { id: 7 } });
+    expect(partyForLedger(db, 1, '410')).toMatchObject({ kind: 'customer', party: { id: 3 } });
+  });
+
+  it('an ordinary ledger belongs to nobody', () => {
+    expect(partyForLedger(db, 1, '620')).toBeNull();
+    expect(partyForLedger(db, 1, '')).toBeNull();
+    /* Another company's vendor is not this company's party. */
+    expect(partyForLedger(db, 2, '610')).toBeNull();
+  });
+});
+
+describe('rows the payment engine already settled', () => {
+  /*
+   * A row with a paymentId went through the disbursement/receipt form: its
+   * voucher posted the bank movement, the party leg and the bill knock-off.
+   * The closing journal must not repeat any of it — its bank leg covers only
+   * the plain rows.
+   */
+  it('excludes engine rows from the journal, bank leg included', () => {
+    const lines = allocationJournalLines(TXN_OUT, [
+      { ledgerId: '610', amount: 8000, paymentId: 12 },
+      { ledgerId: '620', amount: 2000 },
+    ]);
+    expect(lines).toEqual([
+      { accountId: '502', debit: 0, credit: 2000 },
+      { accountId: '620', debit: 2000, credit: 0 },
+    ]);
+  });
+
+  it('still counts engine rows toward the three figures', () => {
+    const s = allocationSummary(TXN_OUT, [
+      { ledgerId: '610', amount: 8000, paymentId: 12 },
+      { ledgerId: '620', amount: 2000 },
+    ]);
+    expect(s).toMatchObject({ allocated: 10000, difference: 0, status: 'Allocated' });
+  });
+
+  it('a fully engine-settled transaction needs no journal at all', () => {
+    const lines = allocationJournalLines(TXN_OUT, [{ ledgerId: '610', amount: 10000, paymentId: 12 }]);
+    expect(lines).toEqual([{ accountId: '502', debit: 0, credit: 0 }]);
   });
 });

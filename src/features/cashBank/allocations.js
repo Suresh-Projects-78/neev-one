@@ -20,6 +20,27 @@
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+/**
+ * Whether a ledger belongs to a party, and to whom.
+ *
+ * A customer or vendor master points at its own chart row via `accountId`.
+ * That link is what turns a bare ledger pick into "this money settled Vendor
+ * A" — and what decides whether the split row offers bills and invoices or
+ * stays a plain ledger line.
+ */
+export const partyForLedger = (db, companyId, ledgerId) => {
+  const cid = Number(companyId);
+  const want = String(ledgerId || '').trim();
+  if (!want) return null;
+  const match = (list, kind) => {
+    const p = safeArray(list).find(
+      (x) => Number(x?.companyId) === cid && String(x?.accountId ?? '') === want
+    );
+    return p ? { kind, party: p } : null;
+  };
+  return match(db?.customers, 'customer') || match(db?.vendors, 'vendor');
+};
+
 /** The child rows of one bank transaction. */
 export const allocationsForTxn = (db, companyId, bankTransactionId) =>
   safeArray(db?.bankAllocations)
@@ -79,16 +100,25 @@ export const validateAllocation = (txn, rows) => {
  * for; money IN debits the bank and credits where it came from. The lines
  * use chart-row ids, the same shape the journal form writes, so the entry is
  * indistinguishable from one typed by hand — because it is one.
+ *
+ * Rows that went through the payment engine (they carry a `paymentId`) are
+ * left out entirely: the payment voucher already posted their bank movement,
+ * their party leg and their bill knock-off, and a journal repeating any of
+ * that would double the books. The bank leg here covers only what the plain
+ * ledger rows account for.
  */
 export const allocationJournalLines = (txn, rows) => {
   const out = String(txn?.direction || '').toUpperCase() === 'OUT';
-  const bankAmount = r2(Math.abs(Number(txn?.amount || 0)));
+  const direct = safeArray(rows).filter((a) => !a?.paymentId);
+  const bankAmount = r2(
+    direct.reduce((t, a) => t + Math.abs(Number(a?.amount || 0)), 0)
+  );
   const bankLeg = {
     accountId: String(txn?.cashBankAccountId || ''),
     debit: out ? 0 : bankAmount,
     credit: out ? bankAmount : 0,
   };
-  const splitLegs = safeArray(rows)
+  const splitLegs = direct
     .filter((a) => Math.abs(Number(a?.amount || 0)) > 0.005)
     .map((a) => ({
       accountId: String(a.ledgerId),

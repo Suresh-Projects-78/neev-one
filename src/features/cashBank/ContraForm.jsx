@@ -137,7 +137,7 @@ const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
   const options = accounts.map((a) => ({ value: String(a.id), label: String(a.name || '') }));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="ui-label" htmlFor="contra-number">Voucher No.</label>

@@ -135,7 +135,7 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* The receipt's face: what the department was told and paid. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="lg:col-span-2">
