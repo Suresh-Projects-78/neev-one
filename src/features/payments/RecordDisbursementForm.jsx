@@ -11,6 +11,7 @@ import { amountInWordsInr } from '../../utils/money';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
 import { documentOutstanding } from '../../utils/onAccount';
+import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { DocDate } from '../../components/docs';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
@@ -44,6 +45,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       amount: d?.amount !== undefined && d?.amount !== null ? String(d.amount) : '',
       mode: String(d?.mode || '').trim() || 'Cash',
       ledgerAccountId: String(d?.ledgerAccountId || '').trim(),
+      number: String(d?.number || '').trim(),
       reference: String(d?.reference || '').trim(),
       referenceDate: String(d?.referenceDate || '').slice(0, 10),
       /*
@@ -63,8 +65,36 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     };
   }, [initialData]);
 
+  /*
+   * The voucher's own number, from the company's series.
+   *
+   * Every other document here is numbered and a payment was not, so the only
+   * way to cite one afterwards was its date and amount. The series — prefix,
+   * next number, width — is the one already configured under Numbering; this
+   * screen does not invent a second scheme.
+   */
+  const takenPaymentNumbers = useMemo(
+    () =>
+      safeArray(db.payments)
+        .filter((x) => x.companyId === currentCompany?.id)
+        .map((x) => String(x.number || '').trim())
+        .filter(Boolean),
+    [db.payments, currentCompany]
+  );
+
   const [formData, setFormData] = useState(() => ({
     date: initial.date,
+    number:
+      initial.number ||
+      nextFreeVoucherNumber({
+        db,
+        company: currentCompany,
+        voucherKey: 'payment',
+        takenNumbers: safeArray(db.payments)
+          .filter((x) => x.companyId === currentCompany?.id)
+          .map((x) => String(x.number || '').trim())
+          .filter(Boolean),
+      }),
     vendorId: initial.vendorId,
     amount: initial.amount,
     mode: initial.mode,
@@ -284,6 +314,22 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     if (!hideMode) {
       fieldErrors.require('ledgerAccountId', ledgerAccountId, 'Choose where the money was paid from');
     }
+    /*
+     * A number, and only one payment wearing it.
+     *
+     * Two payments with the same number cannot be told apart in a ledger or on
+     * a bank statement, and the series can be typed over — so the clash has to
+     * be caught here rather than assumed away.
+     */
+    const paymentNumber = String(formData.number || '').trim();
+    fieldErrors.require('number', paymentNumber, 'A payment number is required');
+    fieldErrors.check(
+      'number',
+      !paymentNumber ||
+        !takenPaymentNumbers.some((n) => n.toLowerCase() === paymentNumber.toLowerCase()),
+      'That number is already used by another payment.'
+    );
+
     if (fieldErrors.failed()) return;
 
     if (computed.allocated > amount + 0.0001) {
@@ -382,6 +428,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       // money actually left from.
       backendPaymentId: posted?.id ? String(posted.id) : undefined,
       ledgerAccountId: String(ledgerAccountId || "").trim() || undefined,
+      number: paymentNumber,
       reference: formData.reference,
       referenceDate: String(formData.referenceDate || '').slice(0, 10) || undefined,
       /*
@@ -458,6 +505,14 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       bills: nextBills,
       expenses: nextExpenses,
       payments: [...safeArray(db.payments), paymentRecord],
+      /* The series moves on past the number this payment just took, so the next
+         one does not open on a number already in the book. */
+      companies: bumpCompanyNextNumber({
+        db,
+        companyId,
+        voucherKey: 'payment',
+        usedNumber: paymentRecord.number,
+      }),
     });
 
     onSaved?.(paymentRecord);
@@ -559,6 +614,23 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
           style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="pay-number">Payment No.</label>
+              <input
+                id="pay-number"
+                type="text"
+                value={formData.number}
+                onChange={(e) => {
+                  fieldErrors.clearField('number');
+                  setFormData((p) => ({ ...p, number: e.target.value }));
+                }}
+                className="ui-input ui-mono w-full"
+                {...fieldErrors.props('number')}
+              />
+              <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
+              <p className="ui-caption mt-1">Auto from settings; type over if needed.</p>
+            </div>
+
             <div className="min-w-0">
               <label className="ui-label" htmlFor="pay-date">
                 Payment Date <span className="text-[rgb(var(--neg-ink))]">*</span>

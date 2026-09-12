@@ -32,6 +32,48 @@ const renderForm = (props = {}) =>
 
 const type = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 
+describe('the payment carries a number', () => {
+  it('opens on the next one in the company series', () => {
+    renderForm();
+    /* PAY- and one, from the series already configured under Numbering — this
+       screen does not invent a second scheme. */
+    expect(screen.getByLabelText('Payment No.').value).toMatch(/^PAY-\d+$/);
+  });
+
+  it('walks past a number already in the book', () => {
+    render(
+      <RecordDisbursementForm
+        db={{ ...db, payments: [{ id: 1, companyId: 1, number: 'PAY-1' }] }}
+        setDb={() => {}}
+        currentCompany={co}
+        onClose={() => {}}
+        screenTitle="New Payment"
+      />
+    );
+    expect(screen.getByLabelText('Payment No.').value).not.toBe('PAY-1');
+  });
+
+  it('refuses a number another payment already wears', () => {
+    const setDb = vi.fn();
+    render(
+      <RecordDisbursementForm
+        db={{ ...db, payments: [{ id: 1, companyId: 1, number: 'PAY-9' }] }}
+        setDb={setDb}
+        currentCompany={co}
+        onClose={() => {}}
+        screenTitle="New Payment"
+        initialData={{ vendorId: '3', amount: '500' }}
+      />
+    );
+    fireEvent.change(screen.getByLabelText('Payment No.'), { target: { value: 'PAY-9' } });
+    fireEvent.submit(screen.getByLabelText('Payment No.').closest('form'));
+    /* Two payments wearing one number cannot be told apart in a ledger or on a
+       bank statement. */
+    expect(setDb).not.toHaveBeenCalled();
+    expect(screen.getByText(/already used by another payment/i)).toBeInTheDocument();
+  });
+});
+
 describe('the bills table', () => {
   it('shows the bill, what is left of it, and when it fell due', () => {
     /* The table is empty until a vendor is chosen — there is nothing to owe
