@@ -1,289 +1,179 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Link2, Link2Off, Lock, Scale, Upload } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { CalendarCheck, Upload, Wand2 } from 'lucide-react';
 
-import { PageHeader, EmptyState } from '../../components/ui/Primitives';
+import { PageHeader, EmptyState, StatusPill } from '../../components/ui/Primitives';
+import PopupSelect from '../../components/pickers/PopupSelect';
+import { LIST_PERIODS, usePeriodFilter } from '../../components/ListControls';
 import { notify } from '../../components/ui/notify';
-import { formatMoney, round2 } from '../../utils/money';
-import { readStatement } from '../../utils/statementImport';
-import { DEFAULT_DATE_WINDOW_DAYS, matchStatement, reconciliationSummary } from '../../utils/bankReco';
 import { reconcilePayment } from '../../api/payments';
-import { reconcileBankBookEntry } from '../../api/bankBook';
+import { formatDateIn } from '../../utils/dates';
+import { formatMoney, round2 } from '../../utils/money';
+import { buildLedgerStatement } from '../../data/db';
+import { cashBankIndex, cashBankTransactions } from './transactions';
 
 /**
- * Reconciling a bank account.
+ * Reconciliation, as the specification defines it — and only that.
  *
- * The product could import a statement — turn its rows into new transactions,
- * warn that some looked like duplicates, and import them anyway. On a book that
- * already records its receipts and payments that is the wrong operation: it
- * doubles the money.
+ * One purpose: record the actual BANK DATE against each of the book's own
+ * movements and mark them reconciled once a person confirms. The screen it
+ * replaces did something else entirely — it matched a pasted statement
+ * against the book line by line — and grew a progress panel and an allocate
+ * side panel that the specification explicitly removes. Import and
+ * allocation live on their own screens now; this one answers a narrower
+ * question: for each movement in the book, when did the bank see it, and has
+ * somebody confirmed that?
  *
- * This is the other one. Nothing is created. The statement and the book are
- * matched, and the two leftovers are the answer: what the bank has seen and the
- * books have not, and what the books hold that has not reached the bank.
- *
- * The difference at the bottom is the number the exercise exists for.
+ * The two dates are different facts and stay separate. Transaction Date is
+ * when the book says it happened and is NEVER overwritten. Bank Date starts
+ * equal to it — most movements clear same-day — and is edited where the
+ * statement disagrees. Until Submit, nothing changes: Auto Reconcile and the
+ * bulk bar only stage drafts, because "reconciled" is a person's confirmation
+ * and not a side effect of touching a row.
  */
 
-const safeArray = (v) => (Array.isArray(v) ? v : []);
-const money = (v, company) => formatMoney(Number(v || 0), company);
-
-const Figure = ({ label, value, company, strong = false, tone = '' }) => (
-  <div className="flex items-baseline justify-between gap-4 py-1">
-    <span className={strong ? 'font-semibold' : ''}>{label}</span>
-    <span
-      className={`ui-money ${strong ? 'font-semibold' : ''}`}
-      style={tone ? { color: `rgb(var(--${tone}-ink))` } : undefined}
-    >
-      {money(value, company)}
-    </span>
-  </div>
-);
-
-const Row = ({ row, company, right = null }) => (
-  <div className="flex items-center gap-3 px-4 py-2.5">
-    <div className="ui-col-date w-24 shrink-0 text-sm">{row.date || '—'}</div>
-    <div className="min-w-0 flex-1 truncate text-sm">{row.narration || row.description || '—'}</div>
-    <div className="w-16 shrink-0 text-xs ui-muted">{row.direction === 'OUT' ? 'Paid' : 'Received'}</div>
-    <div className="ui-col-amount w-32 shrink-0 text-right">{money(row.amount, company)}</div>
-    {right ? <div className="w-28 shrink-0 text-right">{right}</div> : null}
-  </div>
-);
+const TYPE_STYLE = {
+  Payment: 'text-[rgb(var(--neg-ink))]',
+  Receipt: 'text-[rgb(var(--pos-ink))]',
+  Contra: 'text-[rgb(var(--ov-blue))]',
+};
 
 export default function BankReconciliation({ db, setDb, currentCompany, onImportStatement = null }) {
   const companyId = currentCompany?.id;
-  const fileRef = useRef(null);
+  const { accounts } = useMemo(() => cashBankIndex(db, companyId), [db, companyId]);
+  const period = usePeriodFilter();
 
-  const accounts = useMemo(
-    () =>
-      safeArray(db?.chartOfAccounts)
-        .filter((a) => a.companyId === companyId)
-        .filter((a) => /bank|cash/i.test(String(a.groupName || a.group || a.category || ''))),
-    [db?.chartOfAccounts, companyId]
-  );
+  const [accountId, setAccountId] = useState('');
+  const accountInList = accounts.some((a) => String(a.id) === String(accountId)) ? accountId : '';
+  const account = accounts.find((a) => String(a.id) === String(accountInList)) || null;
 
-  const [accountId, setAccountId] = useState(() => String(accounts[0]?.id || ''));
-  const [statement, setStatement] = useState([]);
-  const [statementName, setStatementName] = useState('');
-  const [closingBalance, setClosingBalance] = useState('');
-  const [windowDays, setWindowDays] = useState(String(DEFAULT_DATE_WINDOW_DAYS));
-  const [rejected, setRejected] = useState(() => new Set());
+  const [tab, setTab] = useState('all');
+  /* Drafts: bankDate edits per row key, and which rows are selected. Nothing
+     here reaches the book until Submit. */
+  const [draftDates, setDraftDates] = useState({});
+  const [selected, setSelected] = useState(() => new Set());
   const [saving, setSaving] = useState(false);
 
-  /*
-   * The book side: what this account already holds. Receipts and payments
-   * entered through their own screens, plus anything recorded straight onto the
-   * bank book. Nothing here is created or changed by reconciling.
-   */
-  const book = useMemo(() => {
-    const acct = accounts.find((a) => String(a.id) === String(accountId));
-    const serverLedgerId = String(acct?.serverLedgerAccountId || '').trim();
-    const payments = safeArray(db?.payments)
-      .filter((p) => p.companyId === companyId)
-      .filter((p) => (serverLedgerId ? String(p.ledgerAccountId || '') === serverLedgerId : false))
-      /*
-       * Already reconciled in an earlier session, so it is not outstanding and
-       * must not be offered again. Without this every statement a business ever
-       * loads re-proposes every payment it has ever made.
-       */
-      .filter((p) => p.reconciled !== true)
-      .map((p) => ({
-        paymentId: String(p.id),
-        id: `pay-${p.id}`,
-        date: String(p.date || '').slice(0, 10),
-        direction: p.voucherType === 'receipt' ? 'IN' : 'OUT',
-        amount: round2(Math.abs(Number(p.amount ?? 0))),
-        narration: `${p.number || ''} ${p.customerName || p.vendorName || p.partyName || ''} ${p.notes || ''}`.trim(),
-        source: 'Receipt / payment',
-      }));
-
-    const entered = safeArray(db?.bankTransactions)
-      .filter((t) => t.companyId === companyId)
-      .filter((t) => String(t.cashBankAccountId) === String(accountId))
-      .filter((t) => t.reconciled !== true)
-      .map((t) => ({
-        id: `txn-${t.id}`,
-        bankEntryId: String(t.backendBankEntryId || ''),
-        localId: t.id,
-        date: String(t.date || '').slice(0, 10),
-        direction: String(t.direction || 'IN').toUpperCase(),
-        amount: round2(Math.abs(Number(t.amount ?? 0))),
-        narration: String(t.narration || t.description || ''),
-        source: 'Bank book',
-      }));
-
-    return [...payments, ...entered];
-  }, [db?.payments, db?.bankTransactions, accounts, accountId, companyId]);
-
-  const bookBalance = useMemo(
-    () => round2(book.reduce((s, r) => s + (r.direction === 'OUT' ? -r.amount : r.amount), 0)),
-    [book]
-  );
-
-  const result = useMemo(
-    () => matchStatement({ statement, book, dateWindowDays: Number(windowDays) || 0 }),
-    [statement, book, windowDays]
-  );
-
-  /*
-   * A rejected suggestion is not a match, and both of its sides go back to
-   * being unexplained. Rejecting has to put them in the leftovers or the
-   * difference stops adding up.
-   */
-  const view = useMemo(() => {
-    const kept = result.matched.filter((m) => !rejected.has(m.statement.id));
-    const undone = result.matched.filter((m) => rejected.has(m.statement.id));
-    return {
-      matched: kept,
-      statementOnly: [...result.statementOnly, ...undone.map((m) => m.statement)],
-      bookOnly: [...result.bookOnly, ...undone.map((m) => m.book)],
-    };
-  }, [result, rejected]);
-
-  const summary = useMemo(
+  const rows = useMemo(
     () =>
-      reconciliationSummary({
-        bookBalance,
-        statementBalance: Number(closingBalance || 0),
-        statementOnly: view.statementOnly,
-        bookOnly: view.bookOnly,
+      cashBankTransactions(db, companyId, {
+        accountId: accountInList,
+        from: period.dateFrom,
+        to: period.dateTo,
       }),
-    [bookBalance, closingBalance, view]
+    [db, companyId, accountInList, period.dateFrom, period.dateTo]
   );
 
-  const onFile = useCallback(async (file) => {
-    if (!file) return;
-    let text = '';
-    try {
-      text = await file.text();
-    } catch {
-      notify.error('That file could not be read.');
-      return;
-    }
-    const { rows, error } = readStatement(text);
-    if (error) {
-      notify.error(error);
-      return;
-    }
-    setStatement(rows);
-    setStatementName(file.name || 'statement');
-    setRejected(new Set());
+  const unreconciled = rows.filter((r) => r.status !== 'Reconciled');
+  const reconciled = rows.filter((r) => r.status === 'Reconciled');
+  const shown = tab === 'unreconciled' ? unreconciled : tab === 'reconciled' ? reconciled : rows;
 
-    // The closing balance is the last balance the statement itself carries —
-    // asking for it again when the file already says it is busy-work.
-    const last = [...rows].reverse().find((r) => r.balance !== null && Number.isFinite(Number(r.balance)));
-    if (last && !closingBalance) setClosingBalance(String(last.balance));
-    notify.success(`${rows.length} statement line(s) read.`);
-  }, [closingBalance]);
-
-  /**
-   * Tying the matched pairs off, for good.
-   *
-   * Until this existed the screen worked out the answer and then forgot it: the
-   * matching, the confirming and the unmatching all lived in this component's
-   * state, so closing the tab threw away the reconciliation and the next
-   * statement re-proposed every payment again.
-   *
-   * Only a receipt or payment can be marked. A row entered straight into the
-   * bank book has no server record to mark yet — that is the next thing to fix,
-   * and it is stated below rather than hidden, because a reconciliation that
-   * silently ties off half of what is on screen is worse than one that does
-   * less and says so.
-   */
-  const markable = useMemo(
-    () => view.matched.filter((m) => m.book.paymentId || m.book.bankEntryId),
-    [view.matched]
-  );
   /*
-   * A line the server has never seen — written on this device before the cash
-   * book had a table, or written while offline. It can be matched on screen and
-   * not tied off, and the screen says so rather than quietly leaving it out.
+   * The three balances, all derived.
+   *
+   * Book balance is the ledger's own figure at the period end — the same
+   * statement the Ledgers screen builds, never a number kept here. The bank
+   * statement balance is the book LESS what the bank has not yet confirmed:
+   * exactly the unreconciled movements. Which makes the Difference the net of
+   * the unreconciled rows — the figure this screen exists to drive to zero.
    */
-  const unmarkable = view.matched.length - markable.length;
+  const summary = useMemo(() => {
+    if (!account) return null;
+    const statement = buildLedgerStatement(db, companyId, account.id);
+    const upTo = period.dateTo || '9999-12-31';
+    const inWindow = (statement?.rows || []).filter((r) => String(r.date || '').slice(0, 10) <= upTo);
+    const book = inWindow.length
+      ? Number(inWindow[inWindow.length - 1]?.runningBalance || 0)
+      : Number(statement?.openingBalance || 0);
 
-  const reconcileMatched = async () => {
-    if (!markable.length || saving) return;
-    setSaving(true);
-    const done = [];
-    const failed = [];
+    /* Signed impact on an asset ledger: money in raises it, money out lowers
+       it. Every row carries its own flow — a contra's is taken from this
+       account's side of the transfer. */
+    const net = round2(unreconciled.reduce((t, r) => t + (r.flow === 'IN' ? r.amount : -r.amount), 0));
 
-    const markedEntries = [];
-    for (const m of markable) {
-      const mark = {
-        reconciled: true,
-        bankDate: m.statement.date || null,
-        // What the bank called it. The point of keeping this is that a query
-        // six months later is answered from the statement's own wording.
-        statementRef: `${statementName} · ${m.statement.narration || m.statement.date}`.slice(0, 120),
-      };
-      try {
-        // One at a time on purpose: a refusal on one must not take the rest of
-        // the reconciliation down with it.
-        if (m.book.paymentId) {
-          await reconcilePayment(m.book.paymentId, mark);
-          done.push(m.book.paymentId);
-        } else {
-          await reconcileBankBookEntry(m.book.bankEntryId, mark);
-          markedEntries.push(m.book.localId);
-        }
-      } catch (e) {
-        failed.push(String(e?.message || e));
-      }
-    }
+    return {
+      book: round2(book),
+      bank: round2(book - net),
+      difference: round2(net),
+      unreconciledCount: unreconciled.length,
+      total: rows.length,
+    };
+  }, [db, companyId, account, period.dateTo, rows, unreconciled]);
 
-    /*
-     * Mirrored into the local book so the screen agrees with the server without
-     * a reload — and so a row that was tied off does not come back as
-     * outstanding the moment somebody loads the next statement.
-     */
-    if ((done.length || markedEntries.length) && typeof setDb === 'function') {
-      const marked = new Set(done);
-      const markedTxns = new Set(markedEntries.map(String));
-      setDb((prev) => ({
-        ...prev,
-        payments: safeArray(prev.payments).map((p) => (marked.has(String(p.id)) ? { ...p, reconciled: true } : p)),
-        bankTransactions: safeArray(prev.bankTransactions).map((t) =>
-          markedTxns.has(String(t.id)) ? { ...t, reconciled: true } : t
-        ),
-      }));
-    }
+  const bankDateOf = (r) => draftDates[r.id] ?? r.date;
 
-    const total = done.length + markedEntries.length;
-    setSaving(false);
-    if (failed.length) {
-      notify.error(`${total} reconciled. ${failed.length} could not be saved: ${failed[0]}`);
-      return;
-    }
-    notify.success(`${total} entr${total === 1 ? 'y' : 'ies'} reconciled.`);
-  };
-
-  const toggleReject = (id) =>
-    setRejected((prev) => {
+  const toggle = (id, on) =>
+    setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (on) next.add(String(id));
+      else next.delete(String(id));
       return next;
     });
 
-  if (!accounts.length) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Bank Reconciliation" description="Tie a bank statement to the book." />
-        <div className="ui-card">
-          <EmptyState
-            icon={Scale}
-            title="No bank or cash account yet"
-            description="Add one under Chart of Accounts, then bring a statement here."
-          />
-        </div>
-      </div>
-    );
-  }
+  const allShownSelected = shown.length > 0 && shown.every((r) => r.status === 'Reconciled' || selected.has(String(r.id)));
+
+  /* §9: sets Bank Date = Transaction Date for the unreconciled rows in hand —
+     the selected ones, or all of them when nothing is selected. It stages;
+     it never finalizes. */
+  const autoReconcileSameDate = () => {
+    const targets = unreconciled.filter((r) => (selected.size ? selected.has(String(r.id)) : true));
+    if (!targets.length) return;
+    setDraftDates((prev) => {
+      const next = { ...prev };
+      for (const r of targets) next[r.id] = r.date;
+      return next;
+    });
+    setSelected(new Set(targets.map((r) => String(r.id))));
+    notify.success(`${targets.length} row(s) staged with Bank Date = Transaction Date. Review, then Submit.`);
+  };
+
+  /* Submit is the one write. Everything before it was a draft. */
+  const submit = async () => {
+    const targets = unreconciled.filter((r) => selected.has(String(r.id)));
+    if (!targets.length || saving) return;
+    setSaving(true);
+
+    /* Best-effort server sync for movements the server knows. A refusal on
+       one must not take the rest down; the local book is marked regardless,
+       and the row names the statement date it was confirmed against. */
+    for (const r of targets) {
+      if (r.kind !== 'payment') continue;
+      const payment = (db.payments || []).find((p) => String(p.id) === String(r.sourceId));
+      const serverId = String(payment?.backendPaymentId || '').trim();
+      if (!serverId) continue;
+      try {
+        await reconcilePayment(serverId, { reconciled: true, bankDate: bankDateOf(r) });
+      } catch {
+        /* Offline or refused — the local mark still stands; sync owns catch-up. */
+      }
+    }
+
+    const byKind = { payment: new Map(), contra: new Map(), statement: new Map() };
+    for (const r of targets) byKind[r.kind]?.set(String(r.sourceId), bankDateOf(r));
+
+    setDb((prev) => ({
+      ...prev,
+      payments: (prev.payments || []).map((p) =>
+        byKind.payment.has(String(p.id)) ? { ...p, reconciled: true, bankDate: byKind.payment.get(String(p.id)) } : p
+      ),
+      journalEntries: (prev.journalEntries || []).map((j) =>
+        byKind.contra.has(String(j.id)) ? { ...j, reconciled: true, bankDate: byKind.contra.get(String(j.id)) } : j
+      ),
+      bankTransactions: (prev.bankTransactions || []).map((t) =>
+        byKind.statement.has(String(t.id)) ? { ...t, reconciled: true, bankDate: byKind.statement.get(String(t.id)) } : t
+      ),
+    }));
+
+    setSelected(new Set());
+    setDraftDates({});
+    setSaving(false);
+    notify.success(`${targets.length} transaction(s) reconciled.`);
+  };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Bank Reconciliation"
-        description="Match a statement against the book. Nothing is created — what is left on each side is the answer."
+        description="Record the bank's own date against each transaction and mark it reconciled once confirmed."
         actions={
           onImportStatement ? (
             <button type="button" onClick={onImportStatement} className="ui-btn ui-btn-primary">
@@ -293,203 +183,229 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
         }
       />
 
-      <div className="ui-card flex flex-wrap items-end gap-3 p-4">
-        <div>
-          <label className="ui-label" htmlFor="reco-account">
-            Account
-          </label>
-          <select
-            id="reco-account"
-            value={accountId}
-            onChange={(e) => {
-              setAccountId(e.target.value);
-              setRejected(new Set());
+      {/* Account first, Period second, one line — the specification's order. */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-0 sm:w-72">
+          <PopupSelect
+            label="Account"
+            title="accounts"
+            value={String(accountInList || '')}
+            onChange={(next) => {
+              setAccountId(String(next || ''));
+              setSelected(new Set());
+              setDraftDates({});
             }}
-            className="ui-select"
-          >
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="ui-label" htmlFor="reco-closing">
-            Closing balance per statement
-          </label>
-          <input
-            id="reco-closing"
-            type="number"
-            step="0.01"
-            value={closingBalance}
-            onChange={(e) => setClosingBalance(e.target.value)}
-            className="ui-input text-right"
-            placeholder="0.00"
+            options={accounts.map((a) => ({ value: String(a.id), label: String(a.name || '') }))}
+            placeholder="Select account"
+            showValueSubtext={false}
           />
         </div>
-        <div>
-          <label className="ui-label" htmlFor="reco-window">
-            Clearing window (days)
-          </label>
-          <input
-            id="reco-window"
-            type="number"
-            min="0"
-            max="60"
-            value={windowDays}
-            onChange={(e) => setWindowDays(e.target.value)}
-            className="ui-input w-24 text-right"
+        <div className="min-w-0 sm:w-56">
+          <PopupSelect
+            label="Period"
+            title="periods"
+            value={period.period}
+            onChange={(next) => period.setPeriod(String(next || 'all'))}
+            options={LIST_PERIODS.map((p) => ({ value: p.key, label: p.label }))}
+            placeholder="All time"
+            showValueSubtext={false}
           />
-        </div>
-        <div className="ml-auto">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,.txt"
-            className="hidden"
-            onChange={(e) => {
-              onFile(e.target.files?.[0]);
-              e.target.value = '';
-            }}
-          />
-          <button type="button" onClick={() => fileRef.current?.click?.()} className="ui-btn ui-btn-primary">
-            <Upload size={15} aria-hidden="true" /> {statementName ? 'Load another statement' : 'Load statement'}
-          </button>
         </div>
       </div>
 
-      {!statement.length ? (
-        <div className="ui-card">
-          <EmptyState
-            icon={Scale}
-            title="Bring a statement"
-            description="A CSV from the bank: date, description, and either debit and credit columns or one signed amount."
-          />
-        </div>
+      {!account ? (
+        <EmptyState
+          title="Pick an account"
+          message="Reconciliation is one account at a time — choose the bank or cash account the statement belongs to."
+        />
       ) : (
         <>
-          <div className="ui-card p-4">
-            <div className="ui-label mb-2">Reconciliation — {statementName}</div>
-            <div className="max-w-md text-sm">
-              <Figure label="Balance as per the books" value={summary.bookBalance} company={currentCompany} />
-              <Figure label="Less: not yet on the statement" value={summary.unpresented} company={currentCompany} />
-              <Figure label="Add: not yet in the books" value={summary.unrecorded} company={currentCompany} />
-              <div className="my-1 border-t" />
-              <Figure label="Expected statement balance" value={summary.expected} company={currentCompany} strong />
-              <Figure label="Actual statement balance" value={summary.statementBalance} company={currentCompany} />
-              <div className="my-1 border-t" />
-              <Figure
-                label="Difference"
-                value={summary.difference}
-                company={currentCompany}
-                strong
-                tone={summary.reconciled ? 'pos' : 'neg'}
-              />
+          {/* Book, bank, difference, and how many rows stand between them. */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="ui-card p-4">
+              <div className="ui-caption">Book balance{period.dateTo ? ` (as on ${formatDateIn(period.dateTo)})` : ''}</div>
+              <div className="ui-money-lg mt-1">{formatMoney(summary.book, currentCompany)}</div>
             </div>
-            {summary.reconciled ? (
+            <div className="ui-card p-4">
+              <div className="ui-caption">Bank statement balance</div>
+              <div className="ui-money-lg mt-1">{formatMoney(summary.bank, currentCompany)}</div>
+            </div>
+            <div
+              className="ui-card p-4"
+              style={Math.abs(summary.difference) > 0.005 ? { borderColor: 'rgb(var(--neg))' } : undefined}
+            >
+              <div className="ui-caption">Difference</div>
               <div
-                className="mt-3 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm"
-                style={{ background: 'rgb(var(--pos-soft))', color: 'rgb(var(--pos-ink))' }}
+                className={`ui-money-lg mt-1 ${Math.abs(summary.difference) > 0.005 ? 'text-[rgb(var(--neg-ink))]' : 'text-[rgb(var(--pos-ink))]'}`}
               >
-                <CheckCircle2 size={16} aria-hidden="true" /> This account reconciles.
+                {formatMoney(summary.difference, currentCompany)}
               </div>
-            ) : (
-              <div className="mt-3 text-sm" style={{ color: 'rgb(var(--neg-ink))' }}>
-                {money(summary.difference, currentCompany)} is unexplained. Everything below has to account for it.
-              </div>
-            )}
-          </div>
-
-          <div>
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div className="ui-label">
-                Matched ({view.matched.length}) — the same money on both sides
-              </div>
-              {view.matched.length ? (
-                <div className="flex items-center gap-3">
-                  {unmarkable ? (
-                    <span className="ui-caption ui-muted">
-                      {unmarkable} not on the server yet — matched here, not tied off
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={reconcileMatched}
-                    disabled={saving || !markable.length}
-                    className="ui-btn ui-btn-primary ui-btn-sm"
-                  >
-                    <Lock size={14} aria-hidden="true" />{' '}
-                    {saving ? 'Saving…' : `Reconcile ${markable.length} matched`}
-                  </button>
-                </div>
-              ) : null}
             </div>
-            <div className="ui-card divide-y">
-              {view.matched.length === 0 ? (
-                <div className="px-4 py-3 text-sm ui-muted">Nothing matched yet.</div>
-              ) : (
-                view.matched.map((m) => (
-                  <div key={m.statement.id} className="px-4 py-2.5">
-                    <div className="flex items-center gap-3">
-                      <div className="ui-col-date w-24 shrink-0 text-sm">{m.statement.date}</div>
-                      <div className="min-w-0 flex-1 truncate text-sm">{m.statement.narration || '—'}</div>
-                      <div className="ui-col-amount w-32 shrink-0 text-right">
-                        {money(m.statement.amount, currentCompany)}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => toggleReject(m.statement.id)}
-                        aria-label={`Unmatch ${m.statement.narration || m.statement.date}`}
-                        className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
-                      >
-                        <Link2Off size={13} aria-hidden="true" /> Unmatch
-                      </button>
-                    </div>
-                    <div className="ui-caption ui-muted mt-0.5 flex items-center gap-2">
-                      <Link2 size={12} aria-hidden="true" />
-                      {m.book.source}: {m.book.narration || m.book.date}
-                      {m.dayGap ? ` · cleared ${m.dayGap} day${m.dayGap === 1 ? '' : 's'} later` : ' · same day'}
-                      {m.confident ? '' : ' · confirm this'}
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="ui-card p-4">
+              <div className="ui-caption">Unreconciled transactions</div>
+              <div className="ui-money-lg mt-1">
+                {summary.unreconciledCount} of {summary.total}
+              </div>
             </div>
           </div>
 
-          <div>
-            <div className="ui-label mb-2">
-              On the statement, not in the books ({view.statementOnly.length}) — money that moved and was never recorded
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="ui-segmented" role="tablist" aria-label="Reconciliation view">
+              {[
+                { value: 'all', label: `All Transactions (${rows.length})` },
+                { value: 'unreconciled', label: `Unreconciled (${unreconciled.length})` },
+                { value: 'reconciled', label: `Reconciled (${reconciled.length})` },
+              ].map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === t.value}
+                  data-active={tab === t.value || undefined}
+                  onClick={() => setTab(t.value)}
+                  className="ui-segment"
+                >
+                  {t.label}
+                </button>
+              ))}
             </div>
-            <div className="ui-card divide-y">
-              {view.statementOnly.length === 0 ? (
-                <div className="px-4 py-3 text-sm ui-muted">Nothing outstanding.</div>
-              ) : (
-                view.statementOnly.map((r) => <Row key={r.id} row={r} company={currentCompany} />)
-              )}
+            <button
+              type="button"
+              onClick={autoReconcileSameDate}
+              disabled={!unreconciled.length}
+              className="ui-btn ui-btn-secondary"
+              title="Stage Bank Date = Transaction Date for the rows in hand. Nothing is final until Submit."
+            >
+              <Wand2 size={15} aria-hidden="true" /> Auto Reconcile (Same Date)
+            </button>
+          </div>
+
+          <div className="ui-card overflow-hidden">
+            <div className="ui-table-scroll">
+              <table className="ui-table ui-table-wide">
+                <thead>
+                  <tr>
+                    <th scope="col" className="w-10">
+                      <input
+                        type="checkbox"
+                        className="ui-checkbox"
+                        aria-label="Select every unreconciled row shown"
+                        checked={allShownSelected && shown.some((r) => r.status !== 'Reconciled')}
+                        onChange={(e) =>
+                          setSelected(
+                            e.target.checked
+                              ? new Set(shown.filter((r) => r.status !== 'Reconciled').map((r) => String(r.id)))
+                              : new Set()
+                          )
+                        }
+                      />
+                    </th>
+                    <th scope="col">Description</th>
+                    <th scope="col">Voucher No.</th>
+                    <th scope="col">Type</th>
+                    <th scope="col" className="text-end">Amount</th>
+                    <th scope="col">Transaction date</th>
+                    <th scope="col">Bank date</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.length === 0 ? (
+                    <tr>
+                      <td colSpan={8}>
+                        <EmptyState
+                          title="Nothing here"
+                          message="Payments, receipts, contras and imported lines for this account appear here with their bank dates."
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    shown.map((r) => {
+                      const done = r.status === 'Reconciled';
+                      return (
+                        <tr key={r.id}>
+                          <td>
+                            {done ? null : (
+                              <input
+                                type="checkbox"
+                                className="ui-checkbox"
+                                aria-label={`Select ${r.number || r.ledgerName}`}
+                                checked={selected.has(String(r.id))}
+                                onChange={(e) => toggle(r.id, e.target.checked)}
+                              />
+                            )}
+                          </td>
+                          <td className="truncate">{r.ledgerName}</td>
+                          <td className="ui-mono">{r.number || '—'}</td>
+                          <td>
+                            <span className={TYPE_STYLE[r.type] || ''}>{r.type}</span>
+                          </td>
+                          <td className={`ui-money ${TYPE_STYLE[r.type] || ''}`}>
+                            {r.type === 'Payment' ? '−' : ''}
+                            {formatMoney(r.amount, currentCompany)}
+                          </td>
+                          {/* The book's date. Never overwritten — §8. */}
+                          <td>{formatDateIn(r.date)}</td>
+                          <td>
+                            {done ? (
+                              formatDateIn(r.bankDate || r.date)
+                            ) : (
+                              <input
+                                type="date"
+                                className="ui-input !h-8 !min-h-0 w-36 text-sm"
+                                aria-label={`Bank date for ${r.number || r.ledgerName}`}
+                                value={bankDateOf(r)}
+                                onChange={(e) => setDraftDates((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                              />
+                            )}
+                          </td>
+                          <td>
+                            <StatusPill status={done ? 'Reconciled' : 'Unreconciled'} />
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          <div>
-            <div className="ui-label mb-2">
-              In the books, not on the statement ({view.bookOnly.length}) — cheques that have not cleared
+          {/* The staging bar: visible only while a decision is pending, and
+              Submit is the only thing on the page that writes. */}
+          {selected.size > 0 ? (
+            <div className="ui-card sticky bottom-4 flex flex-wrap items-center gap-3 p-3 shadow-lg">
+              <span className="text-sm font-medium">{selected.size} transaction(s) selected</span>
+              <button
+                type="button"
+                className="ui-btn ui-btn-secondary"
+                onClick={() =>
+                  setDraftDates((prev) => {
+                    const next = { ...prev };
+                    for (const r of unreconciled) if (selected.has(String(r.id))) next[r.id] = r.date;
+                    return next;
+                  })
+                }
+              >
+                <CalendarCheck size={15} aria-hidden="true" /> Set Bank Date = Transaction Date
+              </button>
+              <div className="ms-auto flex items-center gap-2">
+                <button
+                  type="button"
+                  className="ui-btn ui-btn-secondary"
+                  onClick={() => {
+                    setSelected(new Set());
+                    setDraftDates({});
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="button" className="ui-btn ui-btn-primary" disabled={saving} onClick={submit}>
+                  {saving ? 'Submitting…' : `Submit ${selected.size} as reconciled`}
+                </button>
+              </div>
             </div>
-            <div className="ui-card divide-y">
-              {view.bookOnly.length === 0 ? (
-                <div className="px-4 py-3 text-sm ui-muted">Nothing outstanding.</div>
-              ) : (
-                view.bookOnly.map((r) => (
-                  <Row
-                    key={r.id}
-                    row={r}
-                    company={currentCompany}
-                    right={<span className="ui-caption ui-muted">{r.source}</span>}
-                  />
-                ))
-              )}
-            </div>
-          </div>
+          ) : null}
         </>
       )}
     </div>

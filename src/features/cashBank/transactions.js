@@ -101,8 +101,11 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
       ledgerName: partyOf(p) || '—',
       type: lower(p.voucherType) === 'receipt' ? 'Receipt' : 'Payment',
       amount: Math.abs(Number(p.amount ?? 0)),
+      /* Which way the cash moved, for balance arithmetic downstream. */
+      flow: lower(p.voucherType) === 'receipt' ? 'IN' : 'OUT',
       status: p.reconciled === true ? 'Reconciled' : 'Unallocated',
       number: String(p.number || ''),
+      bankDate: day(p.bankDate) || '',
     });
   }
 
@@ -142,8 +145,11 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
       ledgerName: String(other.name || ''),
       type: 'Contra',
       amount: Math.abs(Number(lines[fromIdx]?.credit || 0)),
+      /* From the shown account's side: the debited account received. */
+      flow: shown === target ? 'IN' : 'OUT',
       status: j.reconciled === true ? 'Reconciled' : 'Unallocated',
       number: String(j.number || ''),
+      bankDate: day(j.bankDate) || '',
     });
   }
 
@@ -170,6 +176,8 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
       ledgerName: String(ledger?.name || t.description || '—'),
       type: String(t.direction || '').toUpperCase() === 'IN' ? 'Receipt' : 'Payment',
       amount: Math.abs(Number(t.amount ?? 0)),
+      flow: String(t.direction || '').toUpperCase() === 'IN' ? 'IN' : 'OUT',
+      bankDate: day(t.bankDate) || '',
       /* Allocated to a ledger, and reconciled against the bank, are two
          different questions — a row can be the first without the second. */
       status: t.reconciled === true ? 'Reconciled' : 'Unallocated',
