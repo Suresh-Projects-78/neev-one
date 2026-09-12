@@ -176,6 +176,7 @@ import TermsSettings from './features/settings/TermsSettings';
 import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
 import MasterFormPage from './components/MasterFormPage';
+import FormSection from './components/ui/FormSection';
 import EmailSettings from './features/settings/EmailSettings';
 import SecuritySettings from './features/settings/SecuritySettings';
 import ProfileSettings from './features/settings/ProfileSettings';
@@ -1476,7 +1477,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
   );
 };
 
-const ItemsList = ({ db, setDb, currentCompany, warehouses = [] }) => {
+const ItemsList = ({ db, setDb, currentCompany, warehouses = [], branches = [], onNavigate = null }) => {
   /*
    * The item master takes the screen, the way a document does. `null`, or the
    * item being written — true for a new one.
@@ -1611,6 +1612,8 @@ const ItemsList = ({ db, setDb, currentCompany, warehouses = [] }) => {
         setDb={setDb}
         currentCompany={currentCompany}
         warehouses={warehouses}
+        branches={branches}
+        onNavigate={onNavigate}
         initialData={itemForm === true ? null : itemForm}
         onClose={() => setItemForm(null)}
       />
@@ -1760,7 +1763,7 @@ const ItemsList = ({ db, setDb, currentCompany, warehouses = [] }) => {
 
 const NEW_CATEGORY_OPTION = '__new_item_category__';
 
-const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = null, onClose, fullPage = false }) => {
+export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches = [], initialData = null, onClose, fullPage = false, onNavigate = null }) => {
   const { isEnabled: itemFeatureEnabled } = useFeatures();
   // Batch and expiry are only offered when the company has switched the
   // capability on; nothing downstream asks for a batch otherwise.
@@ -1791,6 +1794,19 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
           : Number.isFinite(Number(initialData.stock))
             ? Number(initialData.stock)
             : 0,
+        /*
+         * Why an item can have no GST rate and still be right.
+         *
+         * A rate of zero used to mean two different things — exempt, and nobody
+         * filled it in — and the return cannot tell them apart. Taxability says
+         * which, and only a taxable item is asked for a rate at all.
+         */
+        taxability: String(initialData.taxability || 'Taxable'),
+        isActive: initialData.isActive !== false,
+        trackInventory: initialData.trackInventory !== false,
+        openingRate: Number.isFinite(Number(initialData.openingRate)) ? Number(initialData.openingRate) : 0,
+        openingDate: String(initialData.openingDate || '').slice(0, 10),
+        openingBranchId: String(initialData.openingBranchId || '').trim(),
       };
     }
 
@@ -1810,8 +1826,15 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
       barcode: '',
       reorderLevel: '',
       openingQty: 0,
-      // Opening stock has to land somewhere. The warehouse the user is already
-      // scoped to is the right guess; the field is editable either way.
+      taxability: 'Taxable',
+      /* Active from the moment it is made. */
+      isActive: true,
+      trackInventory: true,
+      openingRate: 0,
+      openingDate: '',
+      // Opening stock has to land somewhere. The branch and warehouse the user
+      // is already scoped to are the right guess; both stay editable.
+      openingBranchId: String(localStorage.getItem('activeBranchId') || '').trim(),
       openingWarehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
     };
   });
@@ -1858,7 +1881,6 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
 
   const trackingValue = String(formData.trackingType || 'NONE');
   const batchEnabled = trackingValue === 'BATCH' || trackingValue === 'BATCH_EXPIRY';
-  const expiryEnabled = trackingValue === 'BATCH_EXPIRY';
 
   const uoms = (db.uoms || [])
     .filter((u) => u.companyId === currentCompany.id)
@@ -1895,7 +1917,6 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
     .filter((r) => r.companyId === currentCompany.id)
     .slice()
     .sort((a, b) => Number(a.rate) - Number(b.rate));
-  const gstRateValues = gstRates.map((r) => String(Number(r.rate)));
   const gstRateValue = String(formData.gstRate ?? 0);
 
   const handleSubmit = async (e) => {
@@ -1921,6 +1942,29 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
     itemErrors.require('code', code, 'Item code is required');
     itemErrors.check('code', !code || !clash, 'That code is already used by another item.');
     itemErrors.require('name', name, 'Item name is required');
+
+    /*
+     * Opening stock has to be somewhere.
+     *
+     * A quantity with no branch and no warehouse is stock the availability
+     * check cannot see and the valuation cannot place — it used to be allowed
+     * and became a number that existed nowhere. Only asked for when there is
+     * actually an opening quantity to record.
+     */
+    const wantsOpening =
+      String(formData.type || '').toLowerCase() === 'goods' &&
+      formData.trackInventory !== false &&
+      Number(formData.openingQty) > 0;
+
+    if (wantsOpening) {
+      itemErrors.require('openingBranchId', String(formData.openingBranchId || '').trim(), 'Choose the branch this stock is in');
+      itemErrors.require(
+        'openingWarehouseId',
+        String(formData.openingWarehouseId || '').trim(),
+        'Choose the warehouse this stock is in'
+      );
+    }
+
     if (itemErrors.failed()) return;
 
     if (isEdit) {
@@ -1950,6 +1994,18 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
         reorderLevel: Number(formData.reorderLevel) > 0 ? Number(formData.reorderLevel) : null,
         openingQty: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
         openingWarehouseId: String(formData.openingWarehouseId || '').trim(),
+        /*
+         * What the item is for tax, not merely what its rate is. Exempt, nil
+         * rated and non-GST are three different lines on a return and none of
+         * them is a rate of zero — which is what they all used to be stored as.
+         */
+        taxability: String(formData.taxability || 'Taxable'),
+        trackInventory: String(formData.type || '').toLowerCase() === 'goods' ? formData.trackInventory !== false : false,
+        openingRate: Number(formData.openingRate) > 0 ? round2(Number(formData.openingRate)) : 0,
+        openingValue: round2(Number(formData.openingQty || 0) * Number(formData.openingRate || 0)),
+        openingDate: String(formData.openingDate || '').slice(0, 10),
+        openingBranchId: String(formData.openingBranchId || '').trim(),
+        isActive: formData.isActive !== false,
         // keep legacy field in sync (older screens/data)
         stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : Number(existing?.stock ?? 0) || 0,
       };
@@ -1982,6 +2038,18 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
       barcode: String(formData.barcode || '').trim(),
       reorderLevel: Number(formData.reorderLevel) > 0 ? Number(formData.reorderLevel) : null,
       openingQty: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
+      openingWarehouseId: String(formData.openingWarehouseId || '').trim(),
+      /* What the item is for tax, not merely what its rate is — see the edit
+         path above for why a rate of zero could not carry this. */
+      taxability: String(formData.taxability || 'Taxable'),
+      trackInventory: String(formData.type || '').toLowerCase() === 'goods' ? formData.trackInventory !== false : false,
+      openingRate: Number(formData.openingRate) > 0 ? round2(Number(formData.openingRate)) : 0,
+      openingValue: round2(Number(formData.openingQty || 0) * Number(formData.openingRate || 0)),
+      openingDate: String(formData.openingDate || '').slice(0, 10),
+      openingBranchId: String(formData.openingBranchId || '').trim(),
+      /* A new item is in use from the moment it is made; retiring one is a
+         later decision, taken from the menu on the form that edits it. */
+      isActive: true,
       stock: Number.isFinite(openingQty) ? Math.max(0, openingQty) : 0,
     };
 
@@ -2006,339 +2074,527 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
     notify.success('Item created!');
   };
 
+  /*
+   * What the form asks for follows what the item is.
+   *
+   * A service has no stock, so it has no inventory section at all; an item
+   * nobody counts has no opening balance; and an exempt item has no GST rate,
+   * because a rate of zero and "exempt" are different answers that a return
+   * cannot tell apart afterwards.
+   */
+  const isGoods = String(formData.type || '').toLowerCase() === 'goods';
+  const isTaxable = String(formData.taxability || 'Taxable') === 'Taxable';
+  const tracksStock = isGoods && formData.trackInventory !== false;
+
+  /* Warehouses belong to branches: choosing a branch narrows the list, and a
+     warehouse from another branch is not a place this stock can be. */
+  const branchList = Array.isArray(branches) ? branches : [];
+  const openingBranchId = String(formData.openingBranchId || '').trim();
+  const warehousesForOpening = (Array.isArray(warehouses) ? warehouses : []).filter(
+    (w) => !openingBranchId || String(w?.branchId || '') === openingBranchId
+  );
+
+  const openingValue = round2(Number(formData.openingQty || 0) * Number(formData.openingRate || 0));
+
   const fields = (
     <>
-      <div className="grid grid-cols-2 gap-4">
-        {/*
-          Type first: it decides which code series the item is numbered from
-          and whether batch and expiry apply, so asking it last meant the code
-          was already minted from the wrong series.
-        */}
-        <div className="col-span-2">
-          <label className="ui-label">Type</label>
-          <select
-            value={formData.type}
-            onChange={(e) => {
-              const type = e.target.value;
-              setFormData((p) => ({
-                ...p,
-                type,
-                // Only renumber a new item; an existing code is the one on the
-                // shelf label and is not ours to change.
-                code: initialData ? p.code : nextItemCode(db, currentCompany, type),
-                trackingType: type === 'Service' ? 'NONE' : p.trackingType,
-              }));
-            }}
-            className="ui-select w-full"
-          >
-            <option>Goods</option>
-            <option>Service</option>
-          </select>
-          <p className="ui-caption mt-1">
-            {String(formData.type || '').toLowerCase() === 'service'
-              ? 'A service is not stocked, so it has no opening quantity, batch or expiry.'
-              : 'Goods are stocked, and can be tracked by batch and expiry.'}
-          </p>
-        </div>
-        <div>
-          <label className="ui-label">Code</label>
-          <input
-            type="text"
-            value={formData.code}
-            onChange={(e) => {
-              itemErrors.clearField('code');
-              setFormData({ ...formData, code: e.target.value });
-            }}
-            className="ui-input w-full"
-            required
-            {...itemErrors.props('code')}
-          />
-          <FieldError error={itemErrors.error('code')} id={itemErrors.errorId('code')} />
-        </div>
-        <div>
-          <label className="ui-label">Name</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => {
-              itemErrors.clearField('name');
-              setFormData({ ...formData, name: e.target.value });
-            }}
-            className="ui-input w-full"
-            required
-            {...itemErrors.props('name')}
-          />
-          <FieldError error={itemErrors.error('name')} id={itemErrors.errorId('name')} />
-        </div>
-        <div className="col-span-2">
-          <label className="ui-label">Description</label>
-          <textarea
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            className="ui-input w-full"
-            rows={2}
-            placeholder="Shown on documents alongside the item name"
-          />
-        </div>
-        <div className="col-span-2">
-          <label className="ui-label">Category</label>
-          <select
-            value={categoryNames.includes(formData.category) ? formData.category : formData.category ? formData.category : ''}
-            onChange={(e) => {
-              if (e.target.value === NEW_CATEGORY_OPTION) {
-                setNewCategoryOpen(true);
-                return;
-              }
-              setFormData({ ...formData, category: e.target.value });
-            }}
-            className="ui-select w-full"
-          >
-            <option value="">No category</option>
-            {categoryNames.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-            {formData.category && !categoryNames.includes(formData.category) ? (
-              <option value={formData.category}>{formData.category} (not in the master)</option>
-            ) : null}
-            <option value={NEW_CATEGORY_OPTION}>+ Create a new category…</option>
-          </select>
-          <div className="text-xs ui-muted mt-1">Maintained under Master Data → Item Categories.</div>
-
-          {newCategoryOpen ? (
-            <div className="mt-2 rounded-lg border p-3 ui-sunken space-y-2">
-              <label className="ui-label">New category</label>
+      <FormSection
+        icon={FileText}
+        title="Basic Details"
+        description="Enter the essential information about the item."
+      >
+        <div className="grid gap-x-14 gap-y-4 lg:grid-cols-2">
+          <div className="space-y-4">
+            <PartyFormRow label="Item Name" required htmlFor="item-name">
               <input
+                id="item-name"
                 type="text"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 className="ui-input w-full"
-                placeholder="e.g. Beverages"
-                autoFocus
+                placeholder="Enter item name"
+                required
               />
-              <div className="flex gap-2 justify-end">
+              <FieldError error={itemErrors.error('name')} id={itemErrors.errorId('name')} />
+            </PartyFormRow>
+
+            <PartyFormRow label="Item Type" required hint="Goods are counted and can carry stock; a service is not.">
+              <div className="flex items-center gap-6 pt-1.5">
+                {['Goods', 'Service'].map((t) => (
+                  <label key={t} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="itemType"
+                      className="ui-radio"
+                      checked={String(formData.type) === t}
+                      onChange={() => {
+                        /* The code series follows the type, so it is re-minted
+                           here rather than left from the other one. */
+                        setFormData((p) => ({
+                          ...p,
+                          type: t,
+                          code: isEdit ? p.code : nextItemCode(db, currentCompany, t),
+                        }));
+                      }}
+                    />
+                    {t}
+                  </label>
+                ))}
+              </div>
+            </PartyFormRow>
+
+            <PartyFormRow label="HSN / SAC" required={isTaxable} htmlFor="item-hsn" hint="The code the rate is filed under.">
+              <input
+                id="item-hsn"
+                type="text"
+                value={formData.hsnSac}
+                onChange={(e) => setFormData({ ...formData, hsnSac: e.target.value })}
+                className="ui-input ui-mono w-full"
+                placeholder="Enter HSN / SAC code"
+              />
+            </PartyFormRow>
+
+            <PartyFormRow
+              label="Taxability"
+              required
+              htmlFor="item-taxability"
+              hint="Exempt, nil rated and non-GST are three different answers on the return, and none of them is a rate of zero."
+            >
+              <select
+                id="item-taxability"
+                value={formData.taxability || 'Taxable'}
+                onChange={(e) => setFormData({ ...formData, taxability: e.target.value })}
+                className="ui-select w-full"
+              >
+                {['Taxable', 'Exempt', 'Nil Rated', 'Non-GST'].map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </PartyFormRow>
+
+            <PartyFormRow label="Purchase Price" htmlFor="item-purchase">
+              <div className="relative">
+                <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+                <input
+                  id="item-purchase"
+                  type="number"
+                  step="0.01"
+                  value={formData.purchasePrice}
+                  onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
+                  className="ui-input ui-money w-full ps-7"
+                  placeholder="0.00"
+                />
+              </div>
+            </PartyFormRow>
+          </div>
+
+          <div className="space-y-4">
+            <PartyFormRow label="Item Code" htmlFor="item-code" hint="Allotted from the series this type is numbered on.">
+              <input
+                id="item-code"
+                type="text"
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                className="ui-input ui-mono w-full"
+                placeholder="Generated on save"
+              />
+              <p className="ui-caption mt-1">Automatically generated. Type over it if this item is numbered by hand.</p>
+            </PartyFormRow>
+
+            <PartyFormRow label="Category / Item Group" htmlFor="item-category">
+              <div className="flex items-center gap-2">
+                <select
+                  id="item-category"
+                  value={formData.category || ''}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="ui-select min-w-0 flex-1"
+                >
+                  <option value="">Select category</option>
+                  {categoryNames.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                  {formData.category && !categoryNames.includes(formData.category) ? (
+                    <option value={formData.category}>{formData.category} (not in the master)</option>
+                  ) : null}
+                </select>
                 <button
                   type="button"
-                  onClick={() => {
-                    setNewCategoryOpen(false);
-                    setNewCategoryName('');
-                  }}
-                  className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
+                  onClick={() => setNewCategoryOpen(true)}
+                  className="ui-btn ui-btn-secondary shrink-0"
                 >
-                  Cancel
-                </button>
-                <button type="button" onClick={saveNewCategory} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
-                  Add category
+                  <Plus size={14} aria-hidden="true" /> New
                 </button>
               </div>
-            </div>
-          ) : null}
-        </div>
 
-        {String(formData.type || '').toLowerCase() === 'goods' ? (
+              {newCategoryOpen ? (
+                <div className="ui-sunken mt-2 space-y-2 rounded-lg border p-3">
+                  <label className="ui-label" htmlFor="item-new-category">New category</label>
+                  <input
+                    id="item-new-category"
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    className="ui-input w-full"
+                    placeholder="e.g. Beverages"
+                    autoFocus
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewCategoryOpen(false);
+                        setNewCategoryName('');
+                      }}
+                      className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
+                    >
+                      Cancel
+                    </button>
+                    <button type="button" onClick={saveNewCategory} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
+                      Add category
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </PartyFormRow>
+
+            <PartyFormRow label="Unit of Measurement" required htmlFor="item-unit">
+              <div className="flex items-center gap-2">
+                <select
+                  id="item-unit"
+                  value={unitValue}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  className="ui-select min-w-0 flex-1"
+                >
+                  {unitValue && !uomNames.includes(unitValue) ? (
+                    <option value={unitValue}>{unitValue} (legacy)</option>
+                  ) : null}
+                  {uoms.length === 0 ? <option value={unitValue || 'Pcs'}>{unitValue || 'Pcs'}</option> : null}
+                  {uoms.map((u) => (
+                    <option key={u.id} value={u.name}>{u.name}</option>
+                  ))}
+                </select>
+                <button type="button" onClick={() => setNewUnitOpen(true)} className="ui-btn ui-btn-secondary shrink-0">
+                  <Plus size={14} aria-hidden="true" /> New
+                </button>
+              </div>
+
+              {newUnitOpen ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={newUnitName}
+                    onChange={(e) => setNewUnitName(e.target.value)}
+                    className="ui-input min-w-0 flex-1"
+                    placeholder="e.g. Box"
+                    aria-label="New unit"
+                    autoFocus
+                  />
+                  <button type="button" onClick={saveNewUnit} className="ui-btn ui-btn-primary !h-9 text-xs">
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewUnitOpen(false);
+                      setNewUnitName('');
+                    }}
+                    className="ui-btn ui-btn-secondary !h-9 text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
+            </PartyFormRow>
+
+            {/* Only a taxable item is asked for a rate; the other three
+                taxabilities answer the question by themselves. */}
+            {isTaxable ? (
+              <PartyFormRow label="GST Rate" required htmlFor="item-gst">
+                <select
+                  id="item-gst"
+                  value={gstRateValue}
+                  onChange={(e) => setFormData({ ...formData, gstRate: Number(e.target.value) })}
+                  className="ui-select w-full"
+                >
+                  {gstRates.length === 0 ? (
+                    <option value="0">No rates in the master</option>
+                  ) : (
+                    gstRates.map((r) => (
+                      <option key={r.id ?? r.rate} value={String(Number(r.rate))}>
+                        {Number(r.rate)}%
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="ui-caption mt-1">From the GST Rate master, so a rate nobody maintains cannot be typed in.</p>
+              </PartyFormRow>
+            ) : null}
+
+            <PartyFormRow label="Selling Price" htmlFor="item-sale">
+              <div className="relative">
+                <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+                <input
+                  id="item-sale"
+                  type="number"
+                  step="0.01"
+                  value={formData.salePrice}
+                  onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
+                  className="ui-input ui-money w-full ps-7"
+                  placeholder="0.00"
+                />
+              </div>
+            </PartyFormRow>
+          </div>
+        </div>
+      </FormSection>
+
+      {/* A service is not counted, so none of this applies to one. */}
+      {isGoods ? (
+        <FormSection
+          icon={Package}
+          title="Inventory Details"
+          description="Configure inventory settings for this item (applicable for goods only)."
+        >
+          <div className="space-y-4">
+            <PartyFormRow label="Track Inventory" hint="Off, this item is bought and sold without a quantity being kept.">
+              <div className="flex items-center gap-6 pt-1.5">
+                {[
+                  { v: true, l: 'Yes' },
+                  { v: false, l: 'No' },
+                ].map((o) => (
+                  <label key={o.l} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      name="trackInventory"
+                      className="ui-radio"
+                      checked={formData.trackInventory !== false === o.v}
+                      onChange={() => setFormData({ ...formData, trackInventory: o.v })}
+                    />
+                    {o.l}
+                  </label>
+                ))}
+              </div>
+            </PartyFormRow>
+
+            {tracksStock ? (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label className="ui-label" htmlFor="item-open-qty">Opening Stock</label>
+                    <input
+                      id="item-open-qty"
+                      type="number"
+                      step="0.001"
+                      value={formData.openingQty}
+                      onChange={(e) => setFormData({ ...formData, openingQty: e.target.value })}
+                      className="ui-input ui-money w-full"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="ui-label" htmlFor="item-open-rate">Opening Stock Rate</label>
+                    <div className="relative">
+                      <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+                      <input
+                        id="item-open-rate"
+                        type="number"
+                        step="0.01"
+                        value={formData.openingRate}
+                        onChange={(e) => setFormData({ ...formData, openingRate: e.target.value })}
+                        className="ui-input ui-money w-full ps-7"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="ui-label inline-flex items-center gap-1.5">
+                      Opening Stock Value
+                      <span
+                        title="Quantity times rate. Typed by hand it would disagree with the stock it values."
+                        aria-label="Quantity times rate. Typed by hand it would disagree with the stock it values."
+                        className="ui-subtle inline-flex cursor-help"
+                      >
+                        <Info size={13} aria-hidden="true" />
+                      </span>
+                    </span>
+                    <output className="ui-input ui-money ui-sunken mt-0 flex w-full items-center" aria-live="polite">
+                      {formatMoney(openingValue, currentCompany)}
+                    </output>
+                  </div>
+
+                  <div>
+                    <label className="ui-label" htmlFor="item-open-date">Opening Stock Date</label>
+                    <input
+                      id="item-open-date"
+                      type="date"
+                      value={formData.openingDate}
+                      onChange={(e) => setFormData({ ...formData, openingDate: e.target.value })}
+                      className="ui-input w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="ui-label" htmlFor="item-open-branch">
+                      Branch <span style={{ color: 'rgb(var(--neg))' }}>*</span>
+                    </label>
+                    <select
+                      id="item-open-branch"
+                      value={openingBranchId}
+                      onChange={(e) =>
+                        /* The warehouse goes with it: one belonging to the
+                           branch you just left is not a place this stock is. */
+                        setFormData({ ...formData, openingBranchId: e.target.value, openingWarehouseId: '' })
+                      }
+                      className="ui-select w-full"
+                    >
+                      <option value="">Select branch</option>
+                      {branchList.map((b) => (
+                        <option key={b.id} value={String(b.id)}>
+                          {b.branchCode ? `${b.branchCode} - ${b.branchName || ''}`.trim() : b.branchName || `Branch ${b.id}`}
+                        </option>
+                      ))}
+                    </select>
+                    <FieldError error={itemErrors.error('openingBranchId')} id={itemErrors.errorId('openingBranchId')} />
+                  </div>
+
+                  <div>
+                    <label className="ui-label" htmlFor="item-open-warehouse">
+                      Warehouse <span style={{ color: 'rgb(var(--neg))' }}>*</span>
+                    </label>
+                    <select
+                      id="item-open-warehouse"
+                      value={String(formData.openingWarehouseId || '')}
+                      onChange={(e) => setFormData({ ...formData, openingWarehouseId: e.target.value })}
+                      className="ui-select w-full"
+                      disabled={!openingBranchId}
+                    >
+                      <option value="">{openingBranchId ? 'Select warehouse' : 'Choose a branch first'}</option>
+                      {warehousesForOpening.map((w) => (
+                        <option key={w.id} value={String(w.id)}>{w.name || `Warehouse ${w.id}`}</option>
+                      ))}
+                    </select>
+                    <FieldError error={itemErrors.error('openingWarehouseId')} id={itemErrors.errorId('openingWarehouseId')} />
+                  </div>
+                </div>
+
+                <p
+                  className="flex items-start gap-2 rounded-lg px-3 py-2 text-sm"
+                  style={{ backgroundColor: 'rgb(var(--brand) / 0.06)' }}
+                >
+                  <Info size={15} aria-hidden="true" className="mt-0.5 shrink-0" style={{ color: 'rgb(var(--brand))' }} />
+                  Opening stock will be recorded in the selected branch and warehouse.
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="ui-label" htmlFor="item-reorder">Reorder level</label>
+                    <input
+                      id="item-reorder"
+                      type="number"
+                      value={formData.reorderLevel}
+                      onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
+                      className="ui-input ui-money w-full"
+                      placeholder="0"
+                    />
+                    <p className="ui-caption mt-1">Below this, the item is reported as running out.</p>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {batchCapable ? (
+              <div className="space-y-2 border-t pt-4" style={{ borderColor: 'rgb(var(--border))' }}>
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="ui-checkbox mt-0.5"
+                    checked={batchEnabled}
+                    onChange={(e) => setFormData({ ...formData, trackingType: e.target.checked ? 'BATCH' : 'NONE' })}
+                  />
+                  <span>
+                    Track batches
+                    <span className="block text-xs ui-muted">
+                      Purchases, sales and transfers of this item will ask for a batch number.
+                    </span>
+                  </span>
+                </label>
+                <label className={`flex items-start gap-2 text-sm ${batchEnabled ? 'cursor-pointer' : 'ui-subtle cursor-not-allowed'}`}>
+                  <input
+                    type="checkbox"
+                    className="ui-checkbox mt-0.5"
+                    checked={formData.trackingType === 'BATCH_EXPIRY'}
+                    disabled={!batchEnabled}
+                    onChange={(e) => setFormData({ ...formData, trackingType: e.target.checked ? 'BATCH_EXPIRY' : 'BATCH' })}
+                  />
+                  <span>
+                    Track expiry
+                    <span className="block text-xs ui-muted">
+                      Each batch also carries an expiry date, and the oldest is used first.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            ) : null}
+          </div>
+        </FormSection>
+      ) : null}
+
+      <FormSection
+        icon={NotebookPen}
+        title="Additional Information"
+        description="Add any additional notes or description about the item."
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
           <div>
-            <label className="ui-label">Opening Stock (Qty)</label>
-            <input
-              type="number"
-              value={formData.openingQty}
-              onChange={(e) => setFormData({ ...formData, openingQty: e.target.value })}
+            <label className="ui-label" htmlFor="item-description">Description</label>
+            <textarea
+              id="item-description"
+              rows={3}
+              maxLength={500}
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="ui-input w-full"
-              min="0"
-              step="0.01"
+              placeholder="Enter description (optional)"
             />
-            {/* Stock that does not say where it is cannot be sold from
-                anywhere: every availability check is per warehouse. */}
-            <label className="ui-label mt-3">Opening stock is held at</label>
-            <select
-              value={formData.openingWarehouseId || ''}
-              onChange={(e) => setFormData({ ...formData, openingWarehouseId: e.target.value })}
-              className="ui-select w-full"
-            >
-              <option value="">Not assigned — counts in any warehouse</option>
-              {(Array.isArray(warehouses) ? warehouses : []).map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
+            <div className="ui-caption mt-1 text-end">{String(formData.description || '').length}/500</div>
           </div>
-        ) : (
-          <div />
-        )}
-        <div>
-          <label className="ui-label">HSN/SAC</label>
-          <input
-            type="text"
-            value={formData.hsnSac}
-            onChange={(e) => setFormData({ ...formData, hsnSac: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-        <div>
-          <label className="ui-label">GST %</label>
-          <select
-            value={gstRateValue}
-            onChange={(e) => setFormData({ ...formData, gstRate: e.target.value })}
-            className="ui-select w-full"
-          >
-            {!gstRateValues.includes(gstRateValue) && <option value={gstRateValue}>{gstRateValue}% (legacy)</option>}
-            {gstRates.length === 0 ? (
-              <option value="0">0%</option>
-            ) : (
-              gstRates.map((r) => (
-                <option key={r.id} value={String(Number(r.rate))}>
-                  {Number(r.rate)}%
-                </option>
-              ))
-            )}
-          </select>
-        </div>
-        <div>
-          <label className="ui-label">Unit</label>
-          <select
-            value={unitValue}
-            onChange={(e) => {
-              if (e.target.value === '__new__') {
-                setNewUnitOpen(true);
-                return;
-              }
-              setFormData({ ...formData, unit: e.target.value });
-            }}
-            className="ui-select w-full"
-          >
-            {unitValue && !uomNames.includes(unitValue) && <option value={unitValue}>{unitValue} (legacy)</option>}
-            {uoms.length === 0 ? <option value={unitValue || 'Pcs'}>{unitValue || 'Pcs'}</option> : null}
-            {uoms.map((u) => (
-              <option key={u.id} value={u.name}>
-                {u.name}
-              </option>
-            ))}
-            <option value="__new__">+ New unit…</option>
-          </select>
-          {newUnitOpen ? (
-            <div className="mt-2 flex items-center gap-2">
+
+          <div className="space-y-4">
+            <div>
+              <label className="ui-label" htmlFor="item-barcode">Barcode</label>
               <input
+                id="item-barcode"
                 type="text"
-                value={newUnitName}
-                onChange={(e) => setNewUnitName(e.target.value)}
-                className="ui-input flex-1"
-                placeholder="e.g. Box, Kg, Hour"
-                autoFocus
+                value={formData.barcode}
+                onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
+                className="ui-input ui-mono w-full"
+                placeholder="Scanned or typed"
               />
-              <button type="button" onClick={saveNewUnit} className="ui-btn ui-btn-primary !h-9 text-xs">
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewUnitOpen(false);
-                  setNewUnitName('');
-                }}
-                className="ui-btn ui-btn-secondary !h-9 text-xs"
-              >
-                Cancel
-              </button>
             </div>
-          ) : null}
-        </div>
-        <div>
-          <label className="ui-label">Sale Price</label>
-          <input
-            type="number"
-            value={formData.salePrice}
-            onChange={(e) => setFormData({ ...formData, salePrice: e.target.value })}
-            className="ui-input w-full"
-            min="0"
-            step="0.01"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Purchase Price</label>
-          <input
-            type="number"
-            value={formData.purchasePrice}
-            onChange={(e) => setFormData({ ...formData, purchasePrice: e.target.value })}
-            className="ui-input w-full"
-            min="0"
-            step="0.01"
-          />
-        </div>
-        <div>
-          <label className="ui-label">MRP</label>
-          <input
-            type="number"
-            value={formData.mrp}
-            onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
-            className="ui-input w-full"
-            min="0"
-            step="0.01"
-            placeholder="Maximum retail price"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Barcode</label>
-          <input
-            type="text"
-            value={formData.barcode}
-            onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-            className="ui-input w-full"
-            placeholder="Scan or type EAN/UPC"
-          />
-        </div>
-        <div>
-          <label className="ui-label">Reorder level</label>
-          <input
-            type="number"
-            value={formData.reorderLevel}
-            onChange={(e) => setFormData({ ...formData, reorderLevel: e.target.value })}
-            className="ui-input w-full"
-            min="0"
-            step="1"
-            placeholder="Alert when stock falls to this"
-          />
-        </div>
-        {batchCapable && String(formData.type || '').toLowerCase() === 'goods' ? (
-          <div className="col-span-2 rounded-lg border p-3 space-y-2">
-            <div className="text-sm font-medium">Batch &amp; expiry</div>
-            <label className="flex items-start gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                className="ui-checkbox mt-0.5"
-                checked={batchEnabled}
-                onChange={(e) =>
-                  setFormData({ ...formData, trackingType: e.target.checked ? 'BATCH' : 'NONE' })
-                }
-              />
-              <span>
-                Track batches
-                <span className="block text-xs ui-muted">
-                  Purchases, sales and transfers of this item will ask for a batch number.
-                </span>
-              </span>
-            </label>
-            <label className={`flex items-start gap-2 text-sm ${batchEnabled ? 'cursor-pointer' : 'ui-subtle cursor-not-allowed'}`}>
-              <input
-                type="checkbox"
-                className="ui-checkbox mt-0.5"
-                checked={expiryEnabled}
-                disabled={!batchEnabled}
-                onChange={(e) =>
-                  setFormData({ ...formData, trackingType: e.target.checked ? 'BATCH_EXPIRY' : 'BATCH' })
-                }
-              />
-              <span>
-                Track expiry
-                <span className="block text-xs ui-muted">
-                  Each batch also carries an expiry date, and the oldest is used first.
-                </span>
-              </span>
-            </label>
+
+            <div>
+              <label className="ui-label" htmlFor="item-mrp">MRP</label>
+              <div className="relative">
+                <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+                <input
+                  id="item-mrp"
+                  type="number"
+                  step="0.01"
+                  value={formData.mrp}
+                  onChange={(e) => setFormData({ ...formData, mrp: e.target.value })}
+                  className="ui-input ui-money w-full ps-7"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
           </div>
-        ) : (
-          <div />
-        )}
-      </div>
+        </div>
+      </FormSection>
+
       {/* On a screen the bar at the top carries this; a second full-width
           button under the fields would be the same action twice. */}
       {fullPage ? null : (
@@ -2355,12 +2611,28 @@ const ItemForm = ({ db, setDb, currentCompany, warehouses = [], initialData = nu
     <form onSubmit={handleSubmit} noValidate className={fullPage ? '' : 'space-y-4'}>
       {fullPage ? (
         <MasterFormPage
-          title={isEdit ? 'Edit Item' : 'New Item'}
-          subtitle="What you sell or stock, and how it is priced and taxed."
+          title={isEdit ? 'Edit Item' : 'Create Item'}
+          subtitle="Add a new item to manage your inventory, sales and purchase."
           onBack={onClose}
-          primaryLabel={isEdit ? 'Update Item' : 'Create Item'}
-          heading="Item Details"
-          description="Type decides the code series, whether batches apply, and what tax it carries."
+          primaryLabel={isEdit ? 'Save Item' : 'Save Item'}
+          /*
+           * Custom fields always; active or inactive only once there is an item
+           * to retire. A new one is active from the moment it is made, so
+           * offering the switch on the create form asks a question whose answer
+           * is already known.
+           */
+          menu={[
+            ...(isEdit
+              ? [
+                  {
+                    key: 'active',
+                    label: formData.isActive === false ? 'Mark active' : 'Mark inactive',
+                    onSelect: () => setFormData((p) => ({ ...p, isActive: !(p.isActive !== false) })),
+                  },
+                ]
+              : []),
+            { key: 'customFields', label: 'Custom fields', onSelect: () => onNavigate?.('settingsCustomFields') },
+          ]}
         >
           {fields}
         </MasterFormPage>
@@ -13426,7 +13698,12 @@ const AppShell = () => {
             db={dbForUser}
             setDb={setDb}
             currentCompany={currentCompany}
-            warehouses={warehousesForActiveBranch}
+            /* Every branch and every warehouse, not this branch's: opening
+               stock is recorded where the goods are, which is not always where
+               the person entering them is standing. */
+            branches={branchesForUser}
+            warehouses={warehousesForUser}
+            onNavigate={setActive}
           />
         );
       case 'customers':

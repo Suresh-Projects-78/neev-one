@@ -40,6 +40,14 @@ export default function MasterFormPage({
         menu={menu}
       />
 
+      {/*
+        A page that brings its own named sections gets no card of its own — two
+        nested cards is the one thing DESIGN.md says a surface may not be. The
+        shorter masters still pass a heading and keep theirs.
+      */}
+      {!heading && !description ? (
+        children
+      ) : (
       <section className="ui-card p-5 sm:p-6">
         {heading ? (
           <div className="mb-5">
@@ -49,6 +57,7 @@ export default function MasterFormPage({
         ) : null}
         {children}
       </section>
+      )}
     </div>
   );
 }
