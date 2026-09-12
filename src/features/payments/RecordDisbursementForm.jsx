@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
-import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
+import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createPayment } from '../../api/payments';
+import { amountInWordsInr } from '../../utils/money';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
 import { documentOutstanding } from '../../utils/onAccount';
@@ -44,6 +45,18 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       mode: String(d?.mode || '').trim() || 'Cash',
       ledgerAccountId: String(d?.ledgerAccountId || '').trim(),
       reference: String(d?.reference || '').trim(),
+      referenceDate: String(d?.referenceDate || '').slice(0, 10),
+      /*
+       * What comes off the payment before it leaves the bank.
+       *
+       * A vendor bill of 10,000 with 1,000 of TDS settles the bill in full and
+       * moves 9,000 out of the account. Without these the two had to be entered
+       * as different numbers on different screens, or the TDS was simply not
+       * recorded against the payment it belonged to.
+       */
+      tdsAmount: d?.tdsAmount ? String(d.tdsAmount) : '',
+      bankCharges: d?.bankCharges ? String(d.bankCharges) : '',
+      otherCharges: d?.otherCharges ? String(d.otherCharges) : '',
       notes: String(d?.notes || '').trim(),
       cashBankAccountId: d?.cashBankAccountId,
       sourceBankTransactionId: d?.sourceBankTransactionId,
@@ -57,6 +70,10 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     mode: initial.mode,
     ledgerAccountId: initial.ledgerAccountId,
     reference: initial.reference,
+    referenceDate: initial.referenceDate,
+    tdsAmount: initial.tdsAmount,
+    bankCharges: initial.bankCharges,
+    otherCharges: initial.otherCharges,
     notes: initial.notes,
   }));
 
@@ -171,13 +188,43 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
 
     const advance = round2(Math.max(0, totalAmount - allocated));
 
+    /*
+     * Two different figures, and the screen has to show both.
+     *
+     * `totalAmount` is what the bills are being settled by; `netCash` is what
+     * actually leaves the account once TDS and charges are held back. Showing
+     * one and calling it the other is how a bank reconciliation ends up short
+     * by exactly the tax deducted.
+     */
+    const pos = (v) => {
+      const n = Number(v ?? 0);
+      return Number.isFinite(n) && n > 0 ? round2(n) : 0;
+    };
+    const tds = pos(formData.tdsAmount);
+    const bankCharges = pos(formData.bankCharges);
+    const otherCharges = pos(formData.otherCharges);
+    const deductions = round2(tds + bankCharges + otherCharges);
+    const netCash = round2(Math.max(0, totalAmount - deductions));
+
     return {
       totalAmount: round2(totalAmount),
       allocated: round2(allocated),
       advance,
+      tds,
+      bankCharges,
+      otherCharges,
+      deductions,
+      netCash,
       lines,
     };
-  }, [allocations, formData.amount, outstandingDocs]);
+  }, [
+    allocations,
+    formData.amount,
+    formData.tdsAmount,
+    formData.bankCharges,
+    formData.otherCharges,
+    outstandingDocs,
+  ]);
 
   const toggleDoc = (doc, selected) => {
     setAllocations((prev) => {
@@ -282,7 +329,9 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
           partyName: vendorName || null,
           ledgerAccountId: String(ledgerAccountId).trim(),
           instrumentRef: formData.reference || null,
-          amount: round2(amount),
+          /* What left the account, which is the gross less what was held back —
+             posting the gross here overstates the bank by the TDS every time. */
+          amount: round2(computed.netCash),
           notes: formData.notes || null,
         });
       } catch (err) {
@@ -328,6 +377,16 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       backendPaymentId: posted?.id ? String(posted.id) : undefined,
       ledgerAccountId: String(ledgerAccountId || "").trim() || undefined,
       reference: formData.reference,
+      referenceDate: String(formData.referenceDate || '').slice(0, 10) || undefined,
+      /*
+       * Kept with the payment they came off, not merely subtracted from it. A
+       * TDS figure that exists only as the difference between two numbers
+       * cannot be reported, and the 26Q return is built from exactly these.
+       */
+      tdsAmount: computed.tds || undefined,
+      bankCharges: computed.bankCharges || undefined,
+      otherCharges: computed.otherCharges || undefined,
+      netCash: computed.netCash,
       notes: formData.notes,
       createdAt: new Date().toISOString(),
     };
@@ -529,111 +588,226 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
             </div>
           </div>
 
-        <div>
-          <label className="ui-label">Reference</label>
-          <input
-            type="text"
-            value={formData.reference}
-            onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-            className="ui-input w-full"
-            placeholder="Txn / UTR / Cheque no"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="min-w-0">
+            <label className="ui-label" htmlFor="pay-ref">Reference</label>
+            <input
+              id="pay-ref"
+              type="text"
+              value={formData.reference}
+              onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+              className="ui-input w-full"
+              placeholder="Txn / UTR / Cheque no"
+            />
+          </div>
+          <div className="min-w-0">
+            <label className="ui-label" htmlFor="pay-ref-date">Reference Date</label>
+            <input
+              id="pay-ref-date"
+              type="date"
+              value={formData.referenceDate}
+              onChange={(e) => setFormData((p) => ({ ...p, referenceDate: e.target.value }))}
+              className="ui-input w-full"
+            />
+          </div>
         </div>
         </div>
       </div>
 
+      {/*
+        What comes off the payment, beside what it is.
+        Held together in one tinted band because they are read as one figure —
+        the amount, less what is held back — and split across the form they
+        were three unrelated boxes nobody totalled.
+      */}
+      <div
+        className="rounded-xl p-4"
+        style={{ backgroundColor: 'rgb(var(--brand) / 0.06)', border: '1px solid rgb(var(--brand) / 0.18)' }}
+      >
+        <h3 className="ui-t-label">Payment amount and deductions</h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { k: 'tdsAmount', label: 'TDS deduction', hint: 'Held back and paid to the department.' },
+            { k: 'bankCharges', label: 'Bank charges', hint: 'What the bank took for the transfer.' },
+            { k: 'otherCharges', label: 'Other deductions', hint: 'Anything else withheld.' },
+          ].map((f) => (
+            <div key={f.k} className="min-w-0">
+              <label className="ui-label" htmlFor={`pay-${f.k}`}>{f.label}</label>
+              <input
+                id={`pay-${f.k}`}
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData[f.k]}
+                onChange={(e) => setFormData((p) => ({ ...p, [f.k]: e.target.value }))}
+                className="ui-input ui-money w-full"
+                placeholder="0.00"
+              />
+              <p className="ui-caption mt-1">{f.hint}</p>
+            </div>
+          ))}
+
+          <div className="min-w-0">
+            <span className="ui-label block">Net payment</span>
+            <output className="ui-input ui-money ui-sunken flex w-full items-center" aria-live="polite">
+              {formatMoney(computed.netCash, currentCompany)}
+            </output>
+            <p className="ui-caption mt-1">What actually leaves the account.</p>
+          </div>
+        </div>
+      </div>
+
+
       <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
-        <div>
-          <div className="ui-muted">Allocated</div>
-          <div className="ui-money">{formatMoney(computed.allocated, currentCompany)}</div>
-        </div>
-        <div>
-          <div className="ui-muted">Advance</div>
-          <div className="ui-money">{formatMoney(computed.advance, currentCompany)}</div>
-        </div>
         <div>
           <div className="ui-muted">Selected</div>
           <div className="font-medium">{selectedCount}</div>
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium">Outstanding Bills / Expenses</div>
-          {formData.vendorId ? (
-            <div className="text-sm ui-muted">{outstandingDocs.length} document(s)</div>
-          ) : (
-            <div className="text-sm ui-muted">Select vendor to load documents</div>
-          )}
+      {/*
+        The bills on the left and what the payment comes to on the right,
+        because the summary is read while the allocation is being typed —
+        underneath it, the two figures that catch a mistake were off the
+        bottom of the screen exactly when they mattered.
+      */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
+        <div className="min-w-0 space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Outstanding Bills / Expenses</div>
+            {formData.vendorId ? (
+              <div className="text-sm ui-muted">{outstandingDocs.length} document(s)</div>
+            ) : (
+              <div className="text-sm ui-muted">Select vendor to load documents</div>
+            )}
+          </div>
+
+          <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
+            <table className="ui-table w-full">
+              <thead className="ui-sunken border-b">
+                <tr>
+                  <th className="ui-th w-12">Sel</th>
+                  <th className="ui-th w-24">Type</th>
+                  <th className="ui-th">Number</th>
+                  <th className="ui-th">Date</th>
+                  <th className="ui-th ui-num">Outstanding</th>
+                  <th className="ui-th ui-num">Allocate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {!formData.vendorId ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center ui-muted">
+                      Select party name to see outstanding bills/expenses
+                    </td>
+                  </tr>
+                ) : outstandingDocs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center ui-muted">
+                      No outstanding documents. This payment will be recorded as advance.
+                    </td>
+                  </tr>
+                ) : (
+                  outstandingDocs.map((d) => {
+                    const selected = Boolean(allocations[d.key]?.selected);
+                    const allocValue = allocations[d.key]?.amount ?? '';
+
+                    return (
+                      <tr key={d.key} className="ui-hover-sunken">
+                        <td className="px-4 py-3">
+                          <input type="checkbox" checked={selected} onChange={(e) => toggleDoc(d, e.target.checked)} />
+                        </td>
+                        <td className="ui-col-meta px-4 py-3">{d.voucherType === 'bill' ? 'Bill' : 'Expense'}</td>
+                        <td className="ui-col-meta px-4 py-3">{d.number || '-'}</td>
+                        <td className="ui-col-date px-4 py-3">{d.date || '-'}</td>
+                        <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.balance, currentCompany)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <input
+                            type="number"
+                            value={allocValue}
+                            onChange={(e) => setDocAmount(d, e.target.value)}
+                            className="ui-input w-32 px-2 py-1 text-right"
+                            min="0"
+                            step="0.01"
+                            disabled={!formData.amount}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-          <table className="ui-table w-full">
-            <thead className="ui-sunken border-b">
-              <tr>
-                <th className="ui-th w-12">Sel</th>
-                <th className="ui-th w-24">Type</th>
-                <th className="ui-th">Number</th>
-                <th className="ui-th">Date</th>
-                <th className="ui-th ui-num">Outstanding</th>
-                <th className="ui-th ui-num">Allocate</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {!formData.vendorId ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center ui-muted">
-                    Select party name to see outstanding bills/expenses
-                  </td>
-                </tr>
-              ) : outstandingDocs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center ui-muted">
-                    No outstanding documents. This payment will be recorded as advance.
-                  </td>
-                </tr>
-              ) : (
-                outstandingDocs.map((d) => {
-                  const selected = Boolean(allocations[d.key]?.selected);
-                  const allocValue = allocations[d.key]?.amount ?? '';
-
-                  return (
-                    <tr key={d.key} className="ui-hover-sunken">
-                      <td className="px-4 py-3">
-                        <input type="checkbox" checked={selected} onChange={(e) => toggleDoc(d, e.target.checked)} />
-                      </td>
-                      <td className="ui-col-meta px-4 py-3">{d.voucherType === 'bill' ? 'Bill' : 'Expense'}</td>
-                      <td className="ui-col-meta px-4 py-3">{d.number || '-'}</td>
-                      <td className="ui-col-date px-4 py-3">{d.date || '-'}</td>
-                      <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.balance, currentCompany)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <input
-                          type="number"
-                          value={allocValue}
-                          onChange={(e) => setDocAmount(d, e.target.value)}
-                          className="ui-input w-32 px-2 py-1 text-right"
-                          min="0"
-                          step="0.01"
-                          disabled={!formData.amount}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+        <div>
+          <label className="ui-label">Notes</label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+            className="ui-input w-full"
+            rows={3}
+          />
         </div>
-      </div>
 
-      <div>
-        <label className="ui-label">Notes</label>
-        <textarea
-          value={formData.notes}
-          onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-          className="ui-input w-full"
-          rows={3}
-        />
+        </div>
+
+        <div className="min-w-0">
+        {/*
+          The payment in one column: what settles the bills, what is held back,
+          what was put against something, and what is left over. The last two are
+          the ones that catch a mistake — money allocated to nothing, or a payment
+          that settles less than it moves.
+        */}
+        <section className="ui-card p-4" aria-label="Payment summary">
+          <h3 className="ui-t-sec">Payment summary</h3>
+          <dl className="mt-3 space-y-2 text-sm">
+            {[
+              ['Amount paid', computed.totalAmount],
+              ['TDS deduction', computed.tds],
+              ['Bank charges', computed.bankCharges],
+              ['Other deductions', computed.otherCharges],
+            ].map(([label, value]) => (
+              <div key={label} className="flex items-center justify-between gap-3">
+                <dt className="ui-muted">{label}</dt>
+                <dd className="ui-money">{formatMoney(value, currentCompany)}</dd>
+              </div>
+            ))}
+
+            <div
+              className="flex items-center justify-between gap-3 border-t pt-2"
+              style={{ borderColor: 'rgb(var(--border))' }}
+            >
+              <dt className="ui-muted">Total deductions</dt>
+              <dd className="ui-money">{formatMoney(computed.deductions, currentCompany)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="ui-muted">Total allocated</dt>
+              <dd className="ui-money">{formatMoney(computed.allocated, currentCompany)}</dd>
+            </div>
+          </dl>
+
+          <div
+            className="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
+            style={{ backgroundColor: 'rgb(var(--brand) / 0.08)' }}
+          >
+            <span className="text-sm font-medium">Advance (unallocated)</span>
+            <span className="ui-money">{formatMoney(computed.advance, currentCompany)}</span>
+          </div>
+
+          <div
+            className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-3"
+            style={{ backgroundColor: 'rgb(var(--brand) / 0.12)' }}
+          >
+            <span className="text-sm font-medium">Net payment amount</span>
+            <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
+          </div>
+
+          <AmountInWordsBand words={amountInWordsInr(computed.netCash)} />
+        </section>
+        </div>
       </div>
 
       <DocFormFootnote />
@@ -642,8 +816,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
           ticked off — the invoice form's running total, for the figure that has
           to match the bank statement. */}
       <div className="ui-entry-summary">
+        {/* What actually leaves, since that is what the label says. With TDS
+            held back this read the gross and disagreed with the summary a few
+            inches above it. */}
         <span className="ui-t-label">Paid from the account</span>
-        <span className="ui-money-lg">{formatMoney(computed.totalAmount ?? computed.allocated, currentCompany)}</span>
+        <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
         <span className="ui-caption">{selectedCount} bill(s) allocated</span>
         <FieldErrorSummary errors={fieldErrors.errors} />
       </div>
