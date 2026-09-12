@@ -2198,7 +2198,7 @@ export const ItemForm = ({ db, setDb, currentCompany, warehouses = [], branches 
                 className="ui-input ui-mono w-full"
                 placeholder="Generated on save"
               />
-              <p className="ui-caption mt-1">Automatically generated. Type over it if this item is numbered by hand.</p>
+              <p className="ui-caption mt-1">Automatically generated</p>
             </PartyFormRow>
 
             <PartyFormRow label="Category / Item Group" htmlFor="item-category">
