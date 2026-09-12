@@ -44,10 +44,10 @@ const rowFor = (text) => screen.getAllByText(text).map((el) => el.closest('tr'))
 const contraRow = () => screen.getByText('Contra').closest('tr');
 
 describe('the columns the spec asks for', () => {
-  it('are date, account, ledger name, type, amount and status', () => {
+  it('are date, account, ledger name, type, amount, status and action', () => {
     view();
     expect(screen.getAllByRole('columnheader').map((th) => th.textContent.trim())).toEqual([
-      'Date', 'Account', 'Ledger name', 'Type', 'Amount', 'Status',
+      'Date', 'Account', 'Ledger name', 'Type', 'Amount', 'Status', 'Action',
     ]);
   });
 
@@ -104,6 +104,31 @@ describe('the figures above the list', () => {
     const card = (label) => screen.getByText(label).closest('div').parentElement;
     expect(within(card('Total transactions')).getByText('2')).toBeInTheDocument();
     expect(screen.queryByText('ABC Traders')).toBeNull();
+  });
+});
+
+describe('acting on a row', () => {
+  /* A cash-book row is a view of a payment, a journal or an imported line —
+     acting on it means going to the document itself. */
+  it('offers View, which opens the screen that owns the source', async () => {
+    const user = userEvent.setup();
+    const opened = vi.fn();
+    view({ onOpenSource: opened });
+
+    const row = screen.getByText('ABC Traders').closest('tr');
+    await user.click(within(row).getByRole('button', { name: 'View' }));
+
+    expect(opened).toHaveBeenCalledWith(expect.objectContaining({ kind: 'payment', type: 'Payment' }));
+  });
+
+  it('offers the sibling screens under More', async () => {
+    const user = userEvent.setup();
+    const reco = vi.fn();
+    view({ onOpenReconciliation: reco, onOpenAccounts: () => {} });
+
+    await user.click(screen.getByRole('button', { name: /More/ }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Reconciliation' }));
+    expect(reco).toHaveBeenCalled();
   });
 });
 

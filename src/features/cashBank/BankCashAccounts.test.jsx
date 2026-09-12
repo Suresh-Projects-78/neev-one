@@ -65,6 +65,41 @@ describe('the accounts this module is about', () => {
 describe('the screen', () => {
   const view = (props = {}) => render(<BankCashAccounts db={db} currentCompany={COMPANY} {...props} />);
 
+  it('carries a row menu: open, edit, retire', async () => {
+    const user = userEvent.setup();
+    const opened = vi.fn();
+    const edited = vi.fn();
+    view({ onOpenAccount: opened, onEditAccount: edited, setDb: () => {} });
+
+    await user.click(screen.getByRole('button', { name: 'Actions for HDFC Bank - Current A/c' }));
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getAllByRole('menuitem').map((b) => b.textContent)).toEqual([
+      'Open ledger',
+      'Edit account',
+      'Mark inactive',
+    ]);
+
+    await user.click(within(menu).getByRole('menuitem', { name: 'Edit account' }));
+    expect(edited).toHaveBeenCalledWith(11);
+  });
+
+  /* The flag lives on the chart row — the row IS a ledger — so every screen
+     that reads the chart agrees about what is retired. */
+  it('retires an account by flagging its ledger, nothing else', async () => {
+    const user = userEvent.setup();
+    let next = null;
+    view({ setDb: (fn) => { next = typeof fn === 'function' ? fn(db) : fn; } });
+
+    await user.click(screen.getByRole('button', { name: 'Actions for Petty Cash' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Mark inactive' }));
+
+    const row = next.chartOfAccounts.find((a) => a.id === 12);
+    expect(row.isActive).toBe(false);
+    expect(next.chartOfAccounts.filter((a) => a.id !== 12)).toEqual(
+      db.chartOfAccounts.filter((a) => a.id !== 12)
+    );
+  });
+
   it('totals bank and cash separately, and counts what is live', () => {
     view();
     /* One card each, and the closed account counts in neither total. */

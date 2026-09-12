@@ -35,6 +35,12 @@ export default function CashBankTransactions({
   onNewReceipt = null,
   onNewContra = null,
   onImportStatement = null,
+  /* Opens the screen that owns a row's source document — a cash-book row is
+     a view of a payment, a journal or an imported line, never a record of its
+     own, so acting on it means going to the thing itself. */
+  onOpenSource = null,
+  onOpenReconciliation = null,
+  onOpenAccounts = null,
 }) {
   const companyId = currentCompany?.id;
   const { accounts } = useMemo(() => cashBankIndex(db, companyId), [db, companyId]);
@@ -71,6 +77,14 @@ export default function CashBankTransactions({
       title="Transactions"
       description="View all your cash and bank transactions, including payments, receipts, transfers and imported bank statements."
       company={currentCompany}
+      moreItems={[
+        onOpenReconciliation ? { key: 'reco', label: 'Reconciliation' } : null,
+        onOpenAccounts ? { key: 'accounts', label: 'Bank & cash accounts' } : null,
+      ].filter(Boolean)}
+      onMoreSelect={(key) => {
+        if (key === 'reco') onOpenReconciliation?.();
+        if (key === 'accounts') onOpenAccounts?.();
+      }}
       headerExtras={
         onImportStatement ? (
           <button type="button" onClick={onImportStatement} className="ui-btn ui-btn-secondary">
@@ -195,12 +209,13 @@ export default function CashBankTransactions({
               <th scope="col">Type</th>
               <th scope="col" className="text-end">Amount</th>
               <th scope="col">Status</th>
+              <th scope="col" className="text-end">Action</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <EmptyState
                     title="Nothing moved in this window"
                     message="Payments, receipts, transfers between your own accounts and imported bank lines all appear here."
@@ -226,6 +241,18 @@ export default function CashBankTransactions({
                     </td>
                     <td>
                       <StatusPill status={r.status} />
+                    </td>
+                    <td className="text-end">
+                      {onOpenSource ? (
+                        <button
+                          type="button"
+                          onClick={() => onOpenSource(r)}
+                          className="ui-btn ui-btn-ghost ui-btn-sm"
+                          title="Open the document this movement came from"
+                        >
+                          View
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
                 );

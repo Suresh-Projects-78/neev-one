@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
-import { Banknote, Landmark, ListChecks, PieChart, Plus } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Banknote, Landmark, ListChecks, MoreVertical, PieChart, Plus } from 'lucide-react';
 
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { EmptyState, StatusPill } from '../../components/ui/Primitives';
+import Popover from '../../components/ui/Popover';
 import { buildLedgerStatement } from '../../data/db';
 import { formatMoney } from '../../utils/money';
 
@@ -84,8 +85,35 @@ const TABS = [
   { value: 'inactive', label: 'Inactive', tone: 'draft' },
 ];
 
-export default function BankCashAccounts({ db, currentCompany, onAddAccount = null, onOpenAccount = null }) {
+export default function BankCashAccounts({
+  db,
+  setDb = null,
+  currentCompany,
+  onAddAccount = null,
+  onOpenAccount = null,
+  onEditAccount = null,
+}) {
   const [tab, setTab] = useState('all');
+  /* Which row's menu hangs open, and off which button. */
+  const [menuFor, setMenuFor] = useState(null);
+  const menuBtnRef = useRef(null);
+
+  /*
+   * Retiring an account is a ledger fact, not a banking one: the row IS a
+   * ledger, so the flag lives on the chart row and every other screen that
+   * reads it agrees. Nothing else about the ledger moves.
+   */
+  const setAccountActive = (ledgerId, nextActive) => {
+    if (typeof setDb !== 'function') return;
+    setDb((prev) => ({
+      ...prev,
+      chartOfAccounts: (prev.chartOfAccounts || []).map((a) =>
+        a.companyId === currentCompany?.id && String(a.id) === String(ledgerId)
+          ? { ...a, isActive: nextActive }
+          : a
+      ),
+    }));
+  };
 
   const accounts = useMemo(() => cashBankAccounts(db, currentCompany?.id), [db, currentCompany?.id]);
 
@@ -154,12 +182,13 @@ export default function BankCashAccounts({ db, currentCompany, onAddAccount = nu
               <th scope="col">Branch</th>
               <th scope="col" className="text-end">Current balance</th>
               <th scope="col">Status</th>
+              <th scope="col" className="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <EmptyState
                     title="No accounts here yet"
                     message="A bank or cash account is a ledger under Bank Accounts or Cash-in-Hand. Add one and it appears here with its balance."
@@ -195,12 +224,68 @@ export default function BankCashAccounts({ db, currentCompany, onAddAccount = nu
                   <td>
                     <StatusPill status={a.isActive ? 'Active' : 'Inactive'} />
                   </td>
+                  <td className="text-end">
+                    <button
+                      type="button"
+                      ref={String(menuFor) === String(a.id) ? menuBtnRef : undefined}
+                      onClick={(e) => {
+                        menuBtnRef.current = e.currentTarget;
+                        setMenuFor((cur) => (String(cur) === String(a.id) ? null : a.id));
+                      }}
+                      className="ui-icon-btn !h-8 !w-8"
+                      aria-label={`Actions for ${a.name}`}
+                      aria-haspopup="menu"
+                      aria-expanded={String(menuFor) === String(a.id)}
+                    >
+                      <MoreVertical size={16} aria-hidden="true" />
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       </div>
+
+      {menuFor !== null ? (() => {
+        const row = accounts.find((a) => String(a.id) === String(menuFor));
+        if (!row) return null;
+        const items = [
+          onOpenAccount
+            ? { key: 'open', label: 'Open ledger', onSelect: () => onOpenAccount(row.id) }
+            : null,
+          onEditAccount
+            ? { key: 'edit', label: 'Edit account', onSelect: () => onEditAccount(row.id) }
+            : null,
+          setDb
+            ? {
+                key: 'active',
+                label: row.isActive ? 'Mark inactive' : 'Mark active',
+                onSelect: () => setAccountActive(row.id, !row.isActive),
+              }
+            : null,
+        ].filter(Boolean);
+        return (
+          <Popover anchorRef={menuBtnRef} onClose={() => setMenuFor(null)} minWidth={200}>
+            <div className="py-1" role="menu">
+              {items.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuFor(null);
+                    item.onSelect();
+                  }}
+                  className="ui-hover-sunken block w-full px-3 py-2 text-left text-sm"
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </Popover>
+        );
+      })() : null}
     </DocumentListShell>
   );
 }

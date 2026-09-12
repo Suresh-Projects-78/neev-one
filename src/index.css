@@ -736,7 +736,14 @@
   .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse) {
     color: rgb(var(--fg-muted));
     font-weight: 400;
-    padding-inline-start: 2rem;
+    /*
+     * 1rem here plus the children wrapper's pl-5 puts the child's icon at
+     * 36px — exactly under its module's LABEL, which is where a tree's second
+     * level reads from. It was 2rem, stacking with the wrapper to a 52px
+     * indent that read as a third level and left "Bank & Cash Accounts"
+     * truncating to "Bank & Cash Acco…" in a 260px rail.
+     */
+    padding-inline-start: 1rem;
   }
   .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse):hover {
     color: rgb(var(--fg));

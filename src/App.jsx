@@ -11676,7 +11676,13 @@ const AppShell = () => {
         items: [
           { key: 'bankCashAccounts', label: 'Bank & Cash Accounts', icon: Landmark, perm: 'CASHBANK::Cash & Bank::VIEW' },
           { key: 'cashBank', label: 'Transactions', icon: ArrowLeftRight, perm: 'CASHBANK::Cash & Bank::VIEW' },
-          { key: 'bankReco', label: 'Reconciliation', icon: ListChecks, perm: 'CASHBANK::Cash & Bank::VIEW', feature: 'bankReconciliation' },
+          /*
+           * Not feature-gated. The module IS these three screens — where the
+           * money is, what happened to it, and what the bank says — and a
+           * flag that hides the third leaves a two-legged module and a person
+           * asking where reconciliation went. The permission still applies.
+           */
+          { key: 'bankReco', label: 'Reconciliation', icon: ListChecks, perm: 'CASHBANK::Cash & Bank::VIEW' },
         ],
       },
       // A group of one is a menu that opens onto itself. With the duplicate
@@ -12849,6 +12855,16 @@ const AppShell = () => {
               setJournalEditor({ open: true, initial: null });
             }}
             onImportStatement={() => setActive('cashBankImport')}
+            onOpenReconciliation={() => setActive('bankReco')}
+            onOpenAccounts={() => setActive('bankCashAccounts')}
+            onOpenSource={(row) => {
+              /* The row is a view; the document is the thing. Each kind lives
+                 on its own screen, and the ledger drill-down already knows how
+                 to show a journal. */
+              if (row?.kind === 'payment') setActive(row.type === 'Receipt' ? 'receipts' : 'payments');
+              else if (row?.kind === 'contra') setActive('journalEntries');
+              else if (row?.kind === 'statement') setActive('cashBankImport');
+            }}
           />
         );
       case 'cashBankImport': {
@@ -13531,15 +13547,60 @@ const AppShell = () => {
         return <DataBackup currentCompany={currentCompany} />;
       case 'settingsSso':
         return <SsoSettings />;
-      case 'bankCashAccounts':
+      case 'bankCashAccounts': {
+        /*
+         * Add Account opens the ledger form itself, scoped to the bank and
+         * cash groups — not a walk to the Chart of Accounts. There is one
+         * ledger creation flow in this product, and this is a door to it, so
+         * an account made here is a ledger like any other and the balance it
+         * shows is the ledger's own.
+         */
+        const cashBankGroups = (Array.isArray(dbForUser.accountGroups) ? dbForUser.accountGroups : [])
+          .filter((g) => g.companyId === currentCompany.id)
+          .filter((g) => {
+            const name = String(g?.name || '').trim().toLowerCase();
+            return name === 'bank accounts' || name === 'cash-in-hand';
+          })
+          .map((g) => g.id);
         return (
           <BankCashAccounts
             db={dbForUser}
+            setDb={setDb}
             currentCompany={currentCompany}
-            onAddAccount={() => setActive('bankCash')}
+            onAddAccount={() =>
+              openModal(
+                <ChartAccountForm
+                  db={db}
+                  setDb={setDb}
+                  currentCompany={currentCompany}
+                  openModal={openModal}
+                  includeGroupIds={cashBankGroups}
+                  onClose={() => openModal(null)}
+                />,
+                { title: 'New Cash/Bank Account', maxWidthClass: 'max-w-4xl' }
+              )
+            }
+            onEditAccount={(ledgerId) => {
+              const row = (dbForUser.chartOfAccounts || []).find(
+                (a) => a.companyId === currentCompany.id && String(a.id) === String(ledgerId)
+              );
+              if (!row) return;
+              openModal(
+                <ChartAccountForm
+                  db={db}
+                  setDb={setDb}
+                  currentCompany={currentCompany}
+                  openModal={openModal}
+                  initialData={row}
+                  onClose={() => openModal(null)}
+                />,
+                { title: 'Edit Account', maxWidthClass: 'max-w-4xl' }
+              );
+            }}
             onOpenAccount={(ledgerId) => setLedgerNav({ ledgerId: String(ledgerId), returnTo: 'bankCashAccounts' })}
           />
         );
+      }
       case 'bankReco':
         return <BankReconciliation db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':
