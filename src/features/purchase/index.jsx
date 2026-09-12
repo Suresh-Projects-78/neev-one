@@ -37,9 +37,10 @@ import DocumentCustomFields, { hasCustomFieldsAt } from '../../components/Docume
 import DocumentPrintView from '../../components/DocumentPrintView';
 import PrintDownloadFrame from '../../components/PrintDownloadFrame';
 import { getVisibleCustomFields } from '../../utils/invoicePrefs';
-import { tdsAmountOn, tdsThresholdState, tdsVariesByDeductee, DEDUCTEE_TYPES } from '../../utils/tds';
-import { tdsLedgerLabel, tdsLedgerRate, tdsPayableLedgers } from '../../utils/tdsLedgers';
-import { fyRange } from '../../utils/tdsTcs';
+import { tdsVariesByDeductee, DEDUCTEE_TYPES } from '../../utils/tds';
+import { priorBaseFor, resolveTds, tdsEventFrom, tdsLedgersFor } from '../tds/engine';
+import { TDS_NATURES, natureByCode, natureForSection } from '../tds/ruleMaster';
+import { tdsGroupSide } from '../../utils/tdsLedgers';
 import {
   computeGstForLine,
   computeGstForLines,
@@ -144,7 +145,9 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       vendorId: '',
       warehouseId: String(defaultWarehouseId || '').trim(),
       tdsLedgerId: '',
+      tdsNatureCode: '',
       tdsDeducteeType: 'COMPANY',
+      tdsRateTouched: false,
       tdsRate: '',
       items: [{ itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, hsnSac: '' }],
     };
@@ -172,6 +175,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           : '',
       warehouseId: String(initialData?.warehouseId || base.warehouseId || '').trim(),
       tdsLedgerId: initialData.tdsLedgerId ? String(initialData.tdsLedgerId) : '',
+      tdsNatureCode: String(initialData.tdsNatureCode || ''),
       tdsDeducteeType: initialData.tdsDeducteeType || 'COMPANY',
       tdsRate: initialData.tdsRate ?? '',
       // Kept so a saved bill can close the order it came from.
@@ -356,51 +360,90 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
    * 23/2017 — where GST is shown separately, tax is deducted on the amount
    * excluding it.
    */
-  const tdsLedgers = React.useMemo(
-    () => tdsPayableLedgers(db, currentCompany.id),
-    [db, currentCompany.id]
-  );
-  const tdsLedger = React.useMemo(
-    () => tdsLedgers.find((l) => String(l.id) === String(formData.tdsLedgerId || '')) || null,
-    [tdsLedgers, formData.tdsLedgerId]
-  );
-  const tdsSectionCode = String(tdsLedger?.tdsSection || '').trim();
-  /* Typed over on this bill, else whatever the ledger says. */
-  const tdsRateValue =
-    String(formData.tdsRate ?? '').trim() === ''
-      ? tdsLedgerRate(tdsLedger, formData.tdsDeducteeType)
-      : Number(formData.tdsRate) || 0;
-  const tdsBase = Math.max(0, Number(computed.subtotal || 0));
+  /*
+   * Every TDS ledger the company keeps, for the engine to narrow.
+   *
+   * The side is read off the chart where the ledger itself does not carry one
+   * — a row created before the mapping existed is still filed under TDS
+   * Payable or TDS Receivable, and that is the answer.
+   */
+  const tdsLedgerMaster = React.useMemo(() => {
+    const groups = (db?.accountGroups || []).filter((g) => Number(g?.companyId) === Number(currentCompany.id));
+    return (db?.chartOfAccounts || [])
+      .filter((a) => Number(a?.companyId) === Number(currentCompany.id))
+      .map((a) => ({ ...a, tdsSide: String(a?.tdsSide || '').toUpperCase() || tdsGroupSide(groups, a.groupId) }))
+      .filter((a) => a.tdsSide);
+  }, [db?.chartOfAccounts, db?.accountGroups, currentCompany.id]);
 
   /*
-   * What this vendor has already been billed under this section this year.
+   * What the vendor and the nature imply, before any of it is shown.
    *
-   * Nothing is deducted below the threshold, and once one is crossed the whole
-   * aggregate becomes liable — earlier bills included. A figure that did not
-   * know what came before it would under-deduct on the bill that crosses the
-   * line and over-deduct on every small one before it.
+   * The nature comes from the ledger this bill points at, if it points at one,
+   * else from the vendor's own default — and everything after that is the
+   * engine's answer, not this form's arithmetic.
    */
-  const tdsPriorValue = React.useMemo(() => {
-    if (!tdsSectionCode) return 0;
-    const vendorId = formData.vendorId;
-    if (vendorId === '' || vendorId == null) return 0;
-    const fy = fyRange(formData.date);
-    return (db?.bills || [])
-      .filter(
-        (b) =>
-          b.companyId === currentCompany.id &&
-          String(b.vendorId) === String(vendorId) &&
-          String(b.tdsSection || '') === tdsSectionCode &&
-          String(b.status || '').toLowerCase() !== 'cancelled' &&
-          String(b.id) !== String(initialData?.id ?? '') &&
-          String(b.date || '') >= fy.from &&
-          String(b.date || '') <= fy.to
-      )
-      .reduce((sum, b) => sum + (Number(b.taxableValue) || Number(b.subtotal) || 0), 0);
-  }, [db?.bills, currentCompany.id, formData.vendorId, formData.date, tdsSectionCode, initialData?.id]);
+  const tdsLedgerPicked = React.useMemo(
+    () => tdsLedgerMaster.find((l) => String(l.id) === String(formData.tdsLedgerId || '')) || null,
+    [tdsLedgerMaster, formData.tdsLedgerId]
+  );
+  const tdsNatureCode =
+    String(formData.tdsNatureCode || '').trim() ||
+    String(tdsLedgerPicked?.tdsNatureCode || '').trim() ||
+    natureForSection(tdsLedgerPicked?.tdsSection)?.code ||
+    String(vendor?.tdsNatureCode || '').trim() ||
+    natureForSection(vendor?.tdsSection)?.code ||
+    '';
 
-  const tdsState = tdsSectionCode ? tdsThresholdState(tdsSectionCode, tdsBase, tdsPriorValue) : null;
-  const tdsAmount = tdsState?.crossed ? tdsAmountOn(tdsState.base, tdsRateValue) : 0;
+  /* Whether this company deducts at all — §2: with TDS off the controls are
+     not offered and nothing is calculated. */
+  const tdsEnabledHere = Boolean(currentCompany?.profile?.taxCompliances?.tds?.enabled);
+
+  const tdsPriorValue = React.useMemo(
+    () =>
+      priorBaseFor(
+        (db?.bills || []).filter((b) => b.companyId === currentCompany.id),
+        {
+          partyId: formData.vendorId,
+          natureCode: tdsNatureCode,
+          onDate: formData.date,
+          excludeId: initialData?.id ?? null,
+        }
+      ),
+    [db?.bills, currentCompany.id, formData.vendorId, formData.date, tdsNatureCode, initialData?.id]
+  );
+
+  const tds = React.useMemo(
+    () =>
+      resolveTds({
+        company: currentCompany,
+        party: vendor,
+        transactionDate: formData.date,
+        taxableBase: Number(computed.subtotal || 0),
+        explicitNatureCode: tdsNatureCode,
+        explicitRate: formData.tdsRateTouched && String(formData.tdsRate ?? '').trim() !== '' ? formData.tdsRate : null,
+        side: 'PAYABLE',
+        priorBase: tdsPriorValue,
+        ledgers: tdsLedgerMaster,
+      }),
+    [currentCompany, vendor, formData.date, formData.tdsRate, formData.tdsRateTouched, computed.subtotal, tdsNatureCode, tdsPriorValue, tdsLedgerMaster]
+  );
+
+  /* The ledgers this deduction may post to — this nature, payable side, active
+     only. §14: a Contractor deduction never offers the Professional Fees one. */
+  const tdsLedgers = React.useMemo(
+    () =>
+      tdsNatureCode
+        ? tdsLedgersFor(tdsLedgerMaster, { natureCode: tdsNatureCode, side: 'PAYABLE' })
+        : tdsLedgersFor(tdsLedgerMaster, { natureCode: '__none__', side: 'PAYABLE' }),
+    [tdsLedgerMaster, tdsNatureCode]
+  );
+
+  const tdsSectionCode = tds.sectionCode || '';
+  const tdsRateValue = tds.rate;
+  const tdsAmount = tds.tdsAmount;
+  const tdsState = tds.natureCode
+    ? { crossed: tds.thresholdCrossed, base: tds.baseAmount, reason: tds.thresholdReason }
+    : null;
   const netPayable = Math.max(0, round2(Number(computed.total || 0) - tdsAmount));
 
   const previewBill = {
@@ -533,7 +576,11 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       warehouseId: String(formData.warehouseId || '').trim(),
       branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
       /* customFields ride in on the spread of formData above. */
-      tdsLedgerId: formData.tdsLedgerId ? String(formData.tdsLedgerId) : '',
+      tdsLedgerId: tdsAmount > 0 ? String(tds.ledgerId || formData.tdsLedgerId || '') : '',
+      tdsNatureCode: tdsAmount > 0 ? tds.natureCode : '',
+      /* The rule version this deduction was computed under — a later change to
+         the rule master must not restate what was deducted today. */
+      tdsRuleVersionId: tdsAmount > 0 ? tds.ruleVersionId : '',
       tdsSection: tdsSectionCode || '',
       tdsDeducteeType: tdsSectionCode ? formData.tdsDeducteeType || 'COMPANY' : '',
       tdsRate: tdsSectionCode ? tdsRateValue : 0,
@@ -579,8 +626,33 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       }
     }
 
+    /*
+     * The normalized TDS event, written beside the bill.
+     *
+     * The bill is the accounting document; this is the compliance record the
+     * register, the challan allocation and the quarterly return all read. It
+     * carries its own snapshot of the PAN, the rule version, the statutory
+     * reference, the base and the rate, so none of them moves when a master is
+     * edited later.
+     */
+    const tdsEvents = Array.isArray(db.tdsTransactions) ? db.tdsTransactions : [];
+    const tdsEvent =
+      tdsAmount > 0
+        ? {
+            id: tdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
+            ...tdsEventFrom(tds, {
+              company: currentCompany,
+              party: vendorObj,
+              source: { type: 'bill', id: newBill.id, number: newBill.number },
+              branchId: newBill.branchId,
+              date: formData.date,
+            }),
+          }
+        : null;
+
     setDb({
       ...db,
+      tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : db.tdsTransactions,
       bills: [...db.bills, newBill],
       batches: newBatches.length ? [...(db.batches || []), ...newBatches] : db.batches,
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'bill', usedNumber: billNumber, branchId: branchIdForNumbering }),
@@ -1035,57 +1107,79 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               a figure, because that is what a reader of a totals column wants.
               The ledger and section are on the bill and in the return.
             */}
-            {!tdsPickerOpen && !formData.tdsLedgerId ? (
+            {!tdsPickerOpen && !formData.tdsNatureCode ? (
               <div className="pt-1">
                 <button
                   type="button"
                   onClick={() => setTdsPickerOpen(true)}
                   className="ui-btn ui-btn-ghost ui-btn-sm !px-0"
-                  disabled={!tdsLedgers.length}
-                  title={tdsLedgers.length ? undefined : 'No TDS Payable ledger in the chart of accounts yet.'}
+                  disabled={!tdsEnabledHere}
+                  title={tdsEnabledHere ? undefined : 'Switch TDS on under Settings → Tax compliances first.'}
                 >
                   + TDS deduction <span className="ui-subtle">(if you deduct on this bill)</span>
                 </button>
-                {!tdsLedgers.length ? (
+                {!tdsEnabledHere ? (
                   <p className="ui-caption mt-1">
-                    Create a ledger under TDS Payable in the chart of accounts, naming the section it
-                    accumulates, and it will be offered here.
+                    TDS is switched off for this company. Settings → Tax compliances turns it on.
                   </p>
                 ) : null}
               </div>
             ) : null}
 
             <div className="pt-1" hidden={!tdsPickerOpen}>
-              <label className="ui-label" htmlFor="bill-tds-ledger">
+              {/*
+                Nature first, then the ledger it posts to — and the ledger list
+                is narrowed to that nature, which is §14 and the whole reason a
+                deduction cannot land in the wrong account.
+              */}
+              <label className="ui-label" htmlFor="bill-tds-nature">
                 TDS deduction <span className="ui-subtle font-normal">(deducted from this vendor)</span>
               </label>
               <select
-                id="bill-tds-ledger"
+                id="bill-tds-nature"
                 className="ui-select w-full"
-                value={formData.tdsLedgerId || ''}
+                value={formData.tdsNatureCode || ''}
                 onChange={(e) => {
-                  const id = e.target.value;
-                  const picked = tdsLedgers.find((l) => String(l.id) === String(id)) || null;
-                  setFormData((p) => ({
-                    ...p,
-                    tdsLedgerId: id,
-                    /* Seeded from the ledger, then editable: a certificate
-                       under section 197, or a vendor with no PAN, is a fact
-                       about this bill rather than about the ledger. */
-                    tdsRate: picked ? String(tdsLedgerRate(picked, p.tdsDeducteeType)) : '',
-                  }));
-                  if (!id) setTdsPickerOpen(false);
+                  const code = e.target.value;
+                  setFormData((p) => ({ ...p, tdsNatureCode: code, tdsLedgerId: '', tdsRate: '', tdsRateTouched: false }));
+                  if (!code) setTdsPickerOpen(false);
                 }}
               >
                 <option value="">No deduction</option>
-                {tdsLedgers.map((l) => (
-                  <option key={l.id} value={String(l.id)}>
-                    {tdsLedgerLabel(l, formData.tdsDeducteeType)}
-                  </option>
+                {TDS_NATURES.filter((n) => n.active !== false).map((n) => (
+                  <option key={n.code} value={n.code}>{n.name}</option>
                 ))}
               </select>
 
-              {formData.tdsLedgerId ? (
+              {formData.tdsNatureCode ? (
+                <div className="mt-2">
+                  <label className="ui-label" htmlFor="bill-tds-ledger">TDS ledger</label>
+                  <select
+                    id="bill-tds-ledger"
+                    className="ui-select w-full"
+                    value={formData.tdsLedgerId || tds.ledgerId || ''}
+                    onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
+                  >
+                    <option value="">Select ledger</option>
+                    {tdsLedgers.map((l) => (
+                      <option key={l.id} value={String(l.id)}>{l.name}</option>
+                    ))}
+                  </select>
+                  {!tdsLedgers.length ? (
+                    <p className="ui-caption mt-1">
+                      No TDS Payable ledger is mapped to this nature yet. Create one under TDS Payable in the
+                      chart of accounts and map it to {natureByCode(formData.tdsNatureCode)?.name || 'this nature'}.
+                    </p>
+                  ) : null}
+                  {tds.statutoryReference ? (
+                    <p className="ui-caption mt-1">
+                      {tds.statutoryReference} · the rule in force on {formData.date}.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {formData.tdsNatureCode ? (
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <div>
                     <label className="ui-label" htmlFor="bill-tds-rate">Rate (%)</label>
@@ -1095,8 +1189,19 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                       step="0.01"
                       min="0"
                       className="ui-input ui-mono w-full"
-                      value={formData.tdsRate}
-                      onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))}
+                      /*
+                        The rule's rate until somebody types over it — §13 shows
+                        a rate, not an empty box to guess at.
+
+                        "Typed over" is its own flag rather than an empty
+                        string, or clearing the box would show the rule's figure
+                        again and the next keystroke would append to it: 2
+                        becomes 220 instead of 20.
+                      */
+                      value={formData.tdsRateTouched ? formData.tdsRate : tds.rate}
+                      onChange={(e) =>
+                        setFormData((p) => ({ ...p, tdsRate: e.target.value, tdsRateTouched: true }))
+                      }
                     />
                   </div>
                   {tdsVariesByDeductee(tdsSectionCode) ? (
@@ -1108,13 +1213,9 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                         value={formData.tdsDeducteeType || 'COMPANY'}
                         onChange={(e) => {
                           const type = e.target.value;
-                          setFormData((p) => ({
-                            ...p,
-                            tdsDeducteeType: type,
-                            /* The payee changes the rate under 194C, so the
-                               seeded figure is read again. */
-                            tdsRate: tdsLedger ? String(tdsLedgerRate(tdsLedger, type)) : p.tdsRate,
-                          }));
+                          /* The payee changes the rate under 194C — and the
+                             engine reads it, so this only clears the override. */
+                          setFormData((p) => ({ ...p, tdsDeducteeType: type, tdsRate: '', tdsRateTouched: false }));
                         }}
                       >
                         {DEDUCTEE_TYPES.map((d) => (

@@ -124,18 +124,32 @@ describe('Bank Details', () => {
 
 describe('TDS Details', () => {
   /*
-   * The ledger is the accounting destination, not the calculator. It says which
-   * section it accumulates; the rate and threshold come from the section master
-   * the engine already reads, so there is only ever one source for a rate.
+   * The ledger is the accounting destination, not the calculator — and what it
+   * accumulates is a NATURE, not a section number. The section, the rate and
+   * the threshold are then whatever the rule in force on a transaction's date
+   * says they are. Asking for a section here froze one year's answer into the
+   * ledger master, and asking for a rate put a second copy of it in the
+   * product.
    */
-  it('seeds the rate from the section master rather than storing its own', async () => {
+  it('asks for a nature, not a section or a rate', async () => {
     const user = userEvent.setup();
     renderForm();
     await pickGroup(user, 'TDS Payable');
     await user.click(screen.getByRole('tab', { name: 'TDS Details' }));
 
-    await user.selectOptions(screen.getByLabelText('TDS Section'), '194J(b)');
-    expect(screen.getByLabelText('Rate (%)')).toHaveValue(10);
+    expect(screen.getByLabelText('TDS Nature')).toBeInTheDocument();
+    expect(screen.queryByLabelText('TDS Section')).toBeNull();
+    expect(screen.queryByLabelText('Rate (%)')).toBeNull();
+  });
+
+  it('shows the rate the rule gives, without storing one of its own', async () => {
+    const user = userEvent.setup();
+    renderForm();
+    await pickGroup(user, 'TDS Payable');
+    await user.click(screen.getByRole('tab', { name: 'TDS Details' }));
+
+    await user.selectOptions(screen.getByLabelText('TDS Nature'), 'PROFESSIONAL_SERVICES');
+    expect(screen.getByText(/10%/)).toBeInTheDocument();
     expect(screen.getByText(/the TDS engine does the calculation/i)).toBeInTheDocument();
   });
 });
@@ -279,16 +293,18 @@ describe('a ledger that has been posted to', () => {
 });
 
 describe('the TDS tab shows the rule it points at', () => {
-  it('reads threshold, applicability and version from the section master', async () => {
+  it('reads threshold, applicability and the statutory reference from the rule', async () => {
     const user = userEvent.setup();
     renderForm();
     await pickGroup(user, 'TDS Payable');
     await user.click(screen.getByRole('tab', { name: 'TDS Details' }));
-    await user.selectOptions(screen.getByLabelText('TDS Section'), '194C');
+    await user.selectOptions(screen.getByLabelText('TDS Nature'), 'CONTRACTOR_SUB_CONTRACTOR');
 
     expect(screen.getByText(/30,000 per payment/)).toBeInTheDocument();
     expect(screen.getByText(/whole aggregate/i)).toBeInTheDocument();
+    /* The reference the rule in force gives — 393 from April 2026. */
     expect(screen.getByText(/393\(1\)/)).toBeInTheDocument();
+    /* Which side, read from the group rather than asked for twice. */
     expect(screen.getByText('Payable')).toBeInTheDocument();
   });
 });

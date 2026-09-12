@@ -160,7 +160,9 @@ import { isSettingsKey, isSettingsRoute, visibleSettings, SETTINGS_KEYS } from '
 import FeatureSettings from './features/settings/FeatureSettings';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
-import { TDS_SECTIONS, tdsDefaultRate, tdsSection } from './utils/tds';
+import { TDS_SECTIONS, tdsSection } from './utils/tds';
+import { TDS_NATURES, natureForSection, resolveRule, ruleReference } from './features/tds/ruleMaster';
+import { todayIso } from './utils/dates';
 import {
   ledgerHasPostings,
   openingTypeForNature,
@@ -2753,6 +2755,11 @@ export const ChartAccountForm = ({
     pan: isEdit ? String(initialData?.pan || '') : '',
     gstin: isEdit ? String(initialData?.gstin || '') : '',
     tdsSection: isEdit ? String(initialData?.tdsSection || '') : '',
+    /* Rows written before natures existed carry only a section; the nature is
+       read back from it so an old ledger keeps working and is saved forward. */
+    tdsNatureCode: isEdit
+      ? String(initialData?.tdsNatureCode || natureForSection(initialData?.tdsSection)?.code || '')
+      : '',
     tdsRate: isEdit ? String(initialData?.tdsRate ?? '') : '',
     addresses: Array.isArray(initialData?.addresses) ? initialData.addresses : [],
     contacts: Array.isArray(initialData?.contacts) ? initialData.contacts : [],
@@ -2981,6 +2988,12 @@ export const ChartAccountForm = ({
       pan: String(formData.pan || '').trim().toUpperCase() || undefined,
       gstin: String(formData.gstin || '').trim().toUpperCase() || undefined,
       tdsSection: String(formData.tdsSection || '').trim() || undefined,
+      tdsNatureCode: String(formData.tdsNatureCode || '').trim() || undefined,
+      /* Which side this ledger accumulates, decided by its group — the
+         transaction engine offers a payable deduction only payable ledgers. */
+      tdsSide: isTdsGroupSelected
+        ? String(tdsLedgerNature(groupById.get(String(formData.groupId || '').trim())) || '').toUpperCase()
+        : undefined,
       tdsRate: String(formData.tdsRate ?? '').trim() === '' ? undefined : Number(formData.tdsRate),
       addresses: (formData.addresses || []).filter((a) => String(a?.label || '').trim()),
       contacts: (formData.contacts || []).filter((c) => String(c?.name || '').trim()),
@@ -3093,6 +3106,7 @@ export const ChartAccountForm = ({
         pan: '',
         gstin: '',
         tdsSection: '',
+        tdsNatureCode: '',
         tdsRate: '',
         addresses: [],
         contacts: [],
@@ -3324,24 +3338,43 @@ export const ChartAccountForm = ({
               <>
                 <h4 className="ui-t-sec mb-3">TDS Details</h4>
                 <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
-                <PartyFormRow label="TDS Section" htmlFor="ledger-tds-section" hint="Which section this ledger accumulates. The rate and threshold follow from the section master.">
+                {/*
+                  A nature, not a section number.
+                  The nature is what a ledger accumulates for ever — CONTRACTOR
+                  stays CONTRACTOR whatever the Act renames it — and the
+                  section, the rate and the threshold are then whatever the rule
+                  in force says they are. Asking for a section here would freeze
+                  one year's answer into the ledger master.
+                */}
+                <PartyFormRow label="TDS Nature" htmlFor="ledger-tds-nature" hint="What this ledger accumulates. The statutory reference and rate follow from the rule in force on each transaction's date.">
                   <select
-                    id="ledger-tds-section"
-                    value={formData.tdsSection}
+                    id="ledger-tds-nature"
+                    value={formData.tdsNatureCode}
                     onChange={(e) => {
                       const code = e.target.value;
-                      setFormData((p) => ({ ...p, tdsSection: code, tdsRate: code ? String(tdsDefaultRate(code)) : '' }));
+                      const rule = code ? resolveRule(code, todayIso()) : null;
+                      setFormData((p) => ({
+                        ...p,
+                        tdsNatureCode: code,
+                        /* Kept in step for rows read by older code paths. */
+                        tdsSection: rule?.sectionCode || '',
+                        tdsRate: '',
+                      }));
                     }}
                     className="ui-select w-full"
                   >
                     <option value="">— none —</option>
-                    {TDS_SECTIONS.map((t) => (
-                      <option key={t.code} value={t.code}>{t.code} — {t.label}</option>
+                    {TDS_NATURES.filter((n) => n.active !== false).map((n) => (
+                      <option key={n.code} value={n.code}>{n.name}</option>
                     ))}
                   </select>
                 </PartyFormRow>
-                <PartyFormRow label="Rate (%)" htmlFor="ledger-tds-rate">
-                  <input id="ledger-tds-rate" type="number" step="0.01" value={formData.tdsRate} onChange={(e) => setFormData((p) => ({ ...p, tdsRate: e.target.value }))} className="ui-input ui-money w-full" />
+                {/* Which side of the books this ledger is — read from the group
+                    it was filed under, not asked for twice. */}
+                <PartyFormRow label="Side">
+                  <div className="ui-input ui-sunken flex items-center">
+                    {tdsLedgerNature(groupById.get(String(formData.groupId || '').trim()))}
+                  </div>
                 </PartyFormRow>
                 {/*
                   The ledger is the accounting destination, not the calculator.
@@ -3353,14 +3386,14 @@ export const ChartAccountForm = ({
                   copy of a rate is a second answer.
                 */}
                 {(() => {
-                  const summary = tdsSectionSummary(tdsSection(formData.tdsSection));
+                  const activeRule = formData.tdsNatureCode ? resolveRule(formData.tdsNatureCode, todayIso()) : null;
+                  const summary = tdsSectionSummary(tdsSection(activeRule?.sectionCode || formData.tdsSection));
                   if (!summary) return null;
                   const rows = [
+                    ['Statutory reference', ruleReference(activeRule) || summary.version],
                     ['Rate rule', summary.rate],
                     ['Threshold', summary.threshold],
                     ['Applicability', summary.applicability],
-                    ['Effective rule / version', summary.version],
-                    ['TDS ledger nature', tdsLedgerNature(groupById.get(String(formData.groupId || '').trim()))],
                   ];
                   return (
                     <dl className="lg:col-span-2 grid gap-x-5 gap-y-1.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">

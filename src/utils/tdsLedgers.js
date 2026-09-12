@@ -34,10 +34,26 @@ const groupChain = (groups, groupId) => {
 };
 
 /**
+ * Which side of the books a TDS group is, or '' when it is not a TDS group.
+ *
+ * The group already answers this — a ledger filed under TDS Payable is a
+ * liability and one under TDS Receivable is an asset — so the side is read
+ * from the chart rather than asked for a second time on the ledger form, where
+ * the two answers could disagree.
+ */
+export const tdsGroupSide = (groups, groupId) => {
+  const chain = groupChain(groups, groupId);
+  if (!chain.length) return '';
+  const names = chain.map((g) => String(g?.name || '').toLowerCase());
+  if (!names.some((n) => /\btds\b/.test(n))) return '';
+  return names.some((n) => /receivable|asset|advance/.test(n)) ? 'RECEIVABLE' : 'PAYABLE';
+};
+
+/**
  * Whether a group is a TDS *payable* group.
  *
  * The same word test the ledger form uses to decide a ledger needs a TDS
- * section, minus the receivable side: "TDS Receivable" is an asset and has no
+ * mapping, minus the receivable side: "TDS Receivable" is an asset and has no
  * business reducing what a vendor is paid.
  */
 export const isTdsPayableGroup = (groups, groupId) => {
