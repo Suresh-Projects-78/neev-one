@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -368,5 +371,27 @@ describe('a duplicated vendor', () => {
     expect(screen.getByLabelText(/^Vendor Name/)).toHaveValue('Umbrella Chemicals (copy)');
     expect(screen.queryByDisplayValue('29AABCU9603R1ZM')).toBeNull();
     expect(screen.queryByDisplayValue('VEN-000001')).toBeNull();
+  });
+});
+
+describe('the same room, wherever the form is opened from', () => {
+  /*
+   * The vendor master is the customer master re-labelled, and both are opened
+   * the same two ways: from their own screen, and from a document line that
+   * needs a party that is not on file yet. The customer's dialog had been
+   * widened to fit the form; the vendor's was still the small box the picker
+   * list wants, so the same layout arrived squeezed — tabs wrapping, the two
+   * address cards stacked — and read as an older, poorer form.
+   */
+
+  it('gives the create form the full width in both pickers', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const vendorSrc = readFileSync(join(here, 'VendorPicker.jsx'), 'utf8');
+    const customerSrc = readFileSync(join(here, 'CustomerPicker.jsx'), 'utf8');
+
+    /* Wide while creating, small while picking — one rule, both pickers. */
+    for (const src of [vendorSrc, customerSrc]) {
+      expect(src).toMatch(/'create' \? 'max-w-\[80vw\]' : 'max-w-lg'/);
+    }
   });
 });

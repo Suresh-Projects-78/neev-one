@@ -1008,7 +1008,14 @@ const VendorPicker = ({
         <Modal
           onClose={() => closePopup()}
           title={vendorPopupMode === 'create' ? 'Create Vendor' : 'Select Vendor'}
-          maxWidthClass="max-w-lg"
+          /*
+            The picker is a short list and wants a small box; the creation form
+            is the full vendor master — tabs, the two address cards, contacts —
+            and at max-w-lg it was the cramped form the standalone screen had
+            already outgrown, while the customer's had been given its room.
+            Same form, same room, wherever it is opened from.
+          */
+          maxWidthClass={vendorPopupMode === 'create' ? 'max-w-[80vw]' : 'max-w-lg'}
         >
           {vendorPopupMode === 'select' ? (
             <div className="space-y-3">
