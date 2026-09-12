@@ -86,13 +86,30 @@ const Popover = ({
     };
   }, [anchorRef, minWidth, maxWidth]);
 
+  /*
+   * The close handler, kept in a ref rather than in the effect's deps.
+   *
+   * Every caller passes an inline arrow — `onClose={() => setOpen(false)}` —
+   * so the function is a new value on every render of the page behind the
+   * panel. With it in the deps the listener effect tore down and re-ran on
+   * each of those renders, and its cleanup restores focus to whatever opened
+   * the panel. Typing into a panel's search box re-renders it, so the caret
+   * was thrown back onto the trigger after the FIRST letter and every
+   * keystroke after it went to the button: searching any dropdown in the
+   * product accepted exactly one character.
+   */
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   useEffect(() => {
     returnFocusRef.current = document.activeElement;
 
     const onKey = (e) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
       }
     };
     const onDown = (e) => {
@@ -102,7 +119,7 @@ const Popover = ({
       // Clicking the trigger again is a toggle, and the trigger's own handler
       // owns that. Closing here too would close and immediately reopen.
       if (anchor?.contains(e.target)) return;
-      onClose?.();
+      onCloseRef.current?.();
     };
 
     /*
@@ -125,7 +142,7 @@ const Popover = ({
       if (!next) return;
       if (panelRef.current?.contains(next)) return;
       if (anchorRef?.current?.contains(next)) return;
-      onClose?.();
+      onCloseRef.current?.();
     };
 
     const panelNow = panelRef.current;
@@ -140,7 +157,8 @@ const Popover = ({
       if (!claimedFocusRef.current) return;
       if (back && typeof back.focus === 'function' && document.contains(back)) back.focus();
     };
-  }, [anchorRef, onClose]);
+    /* Mount and unmount only: see the ref above. */
+  }, [anchorRef]);
 
   // Only once the panel has been placed — until then it is still hidden, and a
   // hidden element cannot take focus, so the keyboard would be left behind on
