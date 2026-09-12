@@ -208,6 +208,7 @@ const AuditTrail = lazy(() => import('./features/audit/AuditTrail'));
 const SharedInvoice = lazy(() => import('./features/sales/SharedInvoice'));
 const BankReconciliation = lazy(() => import('./features/cashBank/BankReconciliation'));
 const BankCashAccounts = lazy(() => import('./features/cashBank/BankCashAccounts'));
+const CashBankTransactions = lazy(() => import('./features/cashBank/CashBankTransactions'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
 const DataBackup = lazy(() => import('./features/account/DataBackup'));
@@ -12573,7 +12574,33 @@ const AppShell = () => {
         );
       case 'bankCash':
         return <ChartOfAccounts db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} />;
-      case 'cashBank': {
+      /*
+       * The old screen lived at this key and is still reachable at
+       * `cashBankImport` — it is where a statement is imported and its rows
+       * are categorised, which §5 keeps and the new list deliberately does
+       * not do. The key itself now opens the cash book.
+       */
+      case 'cashBank':
+        return (
+          <CashBankTransactions
+            db={dbForUser}
+            currentCompany={currentCompany}
+            onNewPayment={() => {
+              setActive('payments');
+              setPaymentEditor({ open: true });
+            }}
+            onNewReceipt={() => {
+              setActive('receipts');
+              setReceiptEditor({ open: true, initial: null });
+            }}
+            onNewContra={() => {
+              setActive('journalEntries');
+              setJournalEditor({ open: true, initial: null });
+            }}
+            onImportStatement={() => setActive('cashBankImport')}
+          />
+        );
+      case 'cashBankImport': {
         const companyId = currentCompany.id;
 
         const groups = (Array.isArray(db.accountGroups) ? db.accountGroups : [])
