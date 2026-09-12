@@ -35,7 +35,9 @@ import {
   Receipt,
   RefreshCw,
   Info,
+  ArrowLeftRight,
   Landmark,
+  ListChecks,
   LogOut,
   Search,
   Settings,
@@ -205,6 +207,7 @@ const CostCenters = lazy(() => import('./features/accounting/CostCenters'));
 const AuditTrail = lazy(() => import('./features/audit/AuditTrail'));
 const SharedInvoice = lazy(() => import('./features/sales/SharedInvoice'));
 const BankReconciliation = lazy(() => import('./features/cashBank/BankReconciliation'));
+const BankCashAccounts = lazy(() => import('./features/cashBank/BankCashAccounts'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
 const DataBackup = lazy(() => import('./features/account/DataBackup'));
@@ -11405,8 +11408,25 @@ const AppShell = () => {
           { key: 'debitNotes', label: 'Purchase Returns', icon: NotebookPen, perm: 'PURCHASE::Debit Notes::VIEW', feature: 'debitNotes' },
         ],
       },
-      { type: 'item', key: 'cashBank', label: 'Cash & Bank', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW' },
-      { type: 'item', key: 'bankReco', label: 'Bank Reconciliation', icon: PhBank, ph: true, tone: 'cashbank', perm: 'CASHBANK::Cash & Bank::VIEW', feature: 'bankReconciliation' },
+      {
+        /*
+         * Three screens, and only three: where the money is, what happened to
+         * it, and what the bank says. They were two unrelated rail entries —
+         * "Cash & Bank", which was actually the transaction list, and "Bank
+         * Reconciliation" — with no screen at all for the accounts themselves.
+         */
+        type: 'group',
+        key: 'cashBankMenu',
+        label: 'Cash & Bank',
+        tone: 'cashbank',
+        icon: PhBank,
+        ph: true,
+        items: [
+          { key: 'bankCashAccounts', label: 'Bank & Cash Accounts', icon: Landmark, perm: 'CASHBANK::Cash & Bank::VIEW' },
+          { key: 'cashBank', label: 'Transactions', icon: ArrowLeftRight, perm: 'CASHBANK::Cash & Bank::VIEW' },
+          { key: 'bankReco', label: 'Reconciliation', icon: ListChecks, perm: 'CASHBANK::Cash & Bank::VIEW', feature: 'bankReconciliation' },
+        ],
+      },
       // A group of one is a menu that opens onto itself. With the duplicate
       // Payments entry gone, Expenses is a destination, not a section.
       { type: 'item', key: 'expenses', label: 'Expenses', icon: PhExpenses, ph: true, tone: 'expenses', perm: 'EXPENSES::Expenses::VIEW', feature: 'expenses' },
@@ -13225,6 +13245,15 @@ const AppShell = () => {
         return <DataBackup currentCompany={currentCompany} />;
       case 'settingsSso':
         return <SsoSettings />;
+      case 'bankCashAccounts':
+        return (
+          <BankCashAccounts
+            db={dbForUser}
+            currentCompany={currentCompany}
+            onAddAccount={() => setActive('bankCash')}
+            onOpenAccount={(ledgerId) => setLedgerNav({ ledgerId: String(ledgerId), returnTo: 'bankCashAccounts' })}
+          />
+        );
       case 'bankReco':
         return <BankReconciliation db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'ledgerTrialBalance':
