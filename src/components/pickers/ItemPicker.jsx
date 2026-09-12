@@ -203,7 +203,10 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
           /* One dialog, two jobs: a list to pick from, and — when what you
              need is not on it — the item form itself, which needs the room. */
           title={mode === 'create' ? 'Create Item' : 'Select Item'}
-          maxWidthClass={mode === 'create' ? 'max-w-4xl' : 'max-w-lg'}
+          /* Wide enough for the form's two columns to reach their own field
+             width: at 4xl each column was squeezed under its cap, and a long
+             category name ran out of the select it sat in. */
+          maxWidthClass={mode === 'create' ? 'max-w-6xl' : 'max-w-lg'}
         >
           <div className="space-y-3">
             {mode === 'select' ? (

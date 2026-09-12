@@ -486,6 +486,11 @@ const ItemForm = ({
                   id="item-category"
                   value={formData.category || ''}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  /* A category named in full — "Electrical fittings and
+                     switchgear accessories" — is longer than any select that
+                     shares its row with a button. The list shows it whole; this
+                     is for the one already chosen. */
+                  title={formData.category || undefined}
                   className="ui-select min-w-0 flex-1"
                 >
                   <option value="">Select category</option>
