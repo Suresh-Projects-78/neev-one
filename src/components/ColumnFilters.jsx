@@ -249,14 +249,38 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
     onClose();
   };
 
-  const top = Math.min((anchorRect?.bottom || 0) + 6, window.innerHeight - 460);
-  const left = Math.min(Math.max(8, (anchorRect?.left || 0) - 8), window.innerWidth - 300);
+  /*
+   * Under the heading, or over it — whichever there is room for.
+   *
+   * This used to place itself at `min(anchorBottom + 6, viewportHeight - 460)`:
+   * a fixed 460px reservation, subtracted whether the panel needed it or not.
+   * On a laptop with a toolbar, or any table more than half-way down the page,
+   * that second term won and the panel was pulled UP over the column headings
+   * it belongs to — covering the very filters somebody was reading.
+   *
+   * So: below when below fits, above when it does not, and never taller than
+   * the gap it ends up in. The list of values inside scrolls instead.
+   */
+  const GAP = 6;
+  const MARGIN = 8;
+  const viewportH = typeof window === 'undefined' ? 800 : window.innerHeight;
+  const viewportW = typeof window === 'undefined' ? 1200 : window.innerWidth;
+
+  const below = viewportH - (anchorRect?.bottom || 0) - GAP - MARGIN;
+  const above = (anchorRect?.top || 0) - GAP - MARGIN;
+  /* Below unless it is both too tight AND worse than the space above. */
+  const placeAbove = below < 260 && above > below;
+  const maxHeight = Math.max(200, placeAbove ? above : below);
+  const top = placeAbove
+    ? Math.max(MARGIN, (anchorRect?.top || 0) - GAP - maxHeight)
+    : Math.max(MARGIN, (anchorRect?.bottom || 0) + GAP);
+  const left = Math.min(Math.max(MARGIN, (anchorRect?.left || 0) - MARGIN), viewportW - 300);
 
   return (
     <div
       ref={panelRef}
-      className="fixed z-50 w-72 ui-surface border rounded-xl shadow-lg p-3 space-y-3 text-sm"
-      style={{ top: Math.max(8, top), left }}
+      className="fixed z-50 flex w-72 flex-col overflow-hidden ui-surface border rounded-xl shadow-lg p-3 gap-3 text-sm"
+      style={{ top, left, maxHeight }}
       role="dialog"
       aria-label={`Filter ${column.label || key}`}
     >
@@ -343,7 +367,9 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
         />
       </div>
 
-      <div className="max-h-48 overflow-y-auto border rounded-lg p-2 space-y-1">
+      {/* The one part that grows without limit, so it is the part that
+          scrolls — the sort buttons and the footer stay reachable. */}
+      <div className="min-h-16 flex-1 overflow-y-auto border rounded-lg p-2 space-y-1">
         <label className="flex items-center gap-2 cursor-pointer font-medium">
           <input
             type="checkbox"

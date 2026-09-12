@@ -1,5 +1,6 @@
 import { Calendar } from 'lucide-react';
 
+import { formatDateIn } from '../../utils/dates';
 import { formatMoney } from '../../utils/money';
 import { StatusPill } from '../ui/Primitives';
 
@@ -57,13 +58,15 @@ export const InvoiceIdentifier = ({ value, onOpen = null, label = 'document' }) 
 
 /** An issue date. Neutral, because nothing is at stake in it. */
 export const DateCell = ({ value, withIcon = true }) => {
-  const text = String(value || '').slice(0, 10);
-  if (!text) return <span className="ui-cell-date">—</span>;
+  const iso = String(value || '').slice(0, 10);
+  if (!iso) return <span className="ui-cell-date">—</span>;
   return (
-    <span className="ui-cell-date">
+    /* Read as dd/mm/yyyy, stored as ISO — `dateTime` keeps the machine-readable
+       value on the element for anything that copies or scrapes it. */
+    <time className="ui-cell-date" dateTime={iso}>
       {withIcon ? <Calendar size={13} aria-hidden="true" /> : null}
-      {text}
-    </span>
+      {formatDateIn(iso)}
+    </time>
   );
 };
 
@@ -77,11 +80,11 @@ export const DueDateCell = ({ value, balance = 0, todayIso = null, withIcon = tr
   const urgency = dueUrgency(text, { balance, todayIso });
   const note = urgency === 'overdue' ? 'Overdue' : urgency === 'today' ? 'Due today' : '';
   return (
-    <span className="ui-cell-date" data-urgency={urgency} title={note || undefined}>
+    <time className="ui-cell-date" dateTime={text} data-urgency={urgency} title={note || undefined}>
       {withIcon ? <Calendar size={13} aria-hidden="true" /> : null}
-      {text}
+      {formatDateIn(text)}
       {note ? <span className="sr-only"> — {note}</span> : null}
-    </span>
+    </time>
   );
 };
 

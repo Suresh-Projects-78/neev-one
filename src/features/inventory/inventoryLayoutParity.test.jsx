@@ -158,7 +158,8 @@ describe('what the inventory screens count', () => {
     const cells = [...row.querySelectorAll('td')].map((td) => td.textContent);
     expect(cells[1]).toMatch(/Main Store/);
     expect(cells[2]).toMatch(/Yard/);
-    expect(cells[3]).toMatch(/2026-09-02/);
+    /* Read as this country writes it; the ISO value stays on the element. */
+    expect(cells[3]).toMatch(/02\/09\/2026/);
 
     // And the filter behind the label reaches the same column the label names.
     // Reading the header text alone cannot see the mistake: the labels were in
