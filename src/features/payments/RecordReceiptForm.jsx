@@ -12,6 +12,9 @@ import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { getNextNumericId } from '../../utils/ids';
 import { formatMoney, round2 } from '../../utils/money';
+import { tdsEventFrom, tdsLedgersFor } from '../tds/engine';
+import { natureForSection } from '../tds/ruleMaster';
+import { tdsGroupSide } from '../../utils/tdsLedgers';
 import { documentOutstanding } from '../../utils/onAccount';
 import { DocDate } from '../../components/docs';
 
@@ -85,6 +88,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     notes: initial.notes,
     // Deducted on the way: tax the customer withheld, and what the bank took.
     tdsAmount: initialData?.tdsAmount ? String(initialData.tdsAmount) : '',
+    tdsLedgerId: String(initialData?.tdsLedgerId || ''),
     bankCharges: initialData?.bankCharges ? String(initialData.bankCharges) : '',
     otherCharges: initialData?.otherCharges ? String(initialData.otherCharges) : '',
   }));
@@ -195,6 +199,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         invoiceId: Number(inv.id),
         invoiceNumber: inv.number,
         amount: round2(capped),
+        /* What the invoice expected this customer to withhold — offered here,
+           where it either happened or it did not. */
+        tdsExpected: Number(inv.tdsExpectedAmount ?? inv.tdsAmount ?? 0),
       });
     }
 
@@ -220,6 +227,41 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     formData.otherCharges,
     outstandingInvoices,
   ]);
+
+  /*
+   * TDS the customer actually deducted.
+   *
+   * §18, and the distinction the whole sell-side model turns on: the invoice
+   * may have shown an expected figure, but nothing was an asset of ours until
+   * the money arrived short. Here it did — so the difference is recognised
+   * against the mapped TDS Receivable ledger, and the customer's outstanding
+   * comes down by the whole invoice rather than by the cash alone.
+   */
+  const tdsLedgerMaster = useMemo(() => {
+    const groups = (db?.accountGroups || []).filter((g) => Number(g?.companyId) === Number(currentCompany?.id));
+    return (db?.chartOfAccounts || [])
+      .filter((a) => Number(a?.companyId) === Number(currentCompany?.id))
+      .map((a) => ({ ...a, tdsSide: String(a?.tdsSide || '').toUpperCase() || tdsGroupSide(groups, a.groupId) }))
+      .filter((a) => a.tdsSide);
+  }, [db?.chartOfAccounts, db?.accountGroups, currentCompany?.id]);
+
+  const customerRecord = useMemo(
+    () => (db?.customers || []).find((c) => Number(c.id) === Number(formData.customerId)) || null,
+    [db?.customers, formData.customerId]
+  );
+
+  const tdsNatureCode =
+    String(customerRecord?.tdsNatureCode || '').trim() || natureForSection(customerRecord?.tdsSection)?.code || '';
+
+  /* What the invoices being settled expected the customer to withhold — the
+     figure to offer, rather than one this screen works out again. */
+  const tdsExpectedOnAllocated = round2(
+    computed.lines.reduce((t, l) => t + Number(l.tdsExpected || 0), 0)
+  );
+
+  const tdsReceivableLedgers = tdsNatureCode
+    ? tdsLedgersFor(tdsLedgerMaster, { natureCode: tdsNatureCode, side: 'RECEIVABLE' })
+    : [];
 
   const toggleInvoice = (inv, selected) => {
     const key = String(inv.id);
@@ -431,6 +473,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       allocatedAmount: round2(computed.allocated),
       advanceAmount: round2(computed.advance),
       tdsAmount: round2(computed.tds),
+      /* Recognised here, not at the invoice — §18. */
+      tdsNatureCode: computed.tds > 0 ? tdsNatureCode || undefined : undefined,
+      tdsLedgerId: computed.tds > 0 ? String(formData.tdsLedgerId || '') || undefined : undefined,
       bankCharges: round2(computed.bankCharges),
       otherCharges: round2(computed.otherCharges),
       netCashAmount: round2(computed.netCash),
@@ -479,8 +524,43 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       };
     });
 
+    /*
+     * The receivable side of the register.
+     *
+     * Written here and nowhere earlier: the invoice only ever expected this,
+     * and an expectation that never arrives would otherwise sit in the books
+     * as tax somebody else had paid on our behalf.
+     */
+    const tdsEvents = safeArray(db.tdsTransactions);
+    const tdsEvent =
+      computed.tds > 0 && tdsNatureCode
+        ? {
+            id: tdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
+            ...tdsEventFrom(
+              {
+                natureCode: tdsNatureCode,
+                ruleVersionId: '',
+                statutoryReference: '',
+                sectionCode: '',
+                baseAmount: round2(computed.allocated),
+                rate: 0,
+                tdsAmount: round2(computed.tds),
+                ledgerId: String(formData.tdsLedgerId || ''),
+                side: 'RECEIVABLE',
+              },
+              {
+                company: currentCompany,
+                party: customerRecord,
+                source: { type: 'receipt', id: receiptRecord.id, number: receiptRecord.number },
+                date: formData.date,
+              }
+            ),
+          }
+        : null;
+
     setDb({
       ...db,
+      tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : db.tdsTransactions,
       invoices: nextInvoices,
       payments: [...safeArray(db.payments), receiptRecord],
     });
@@ -666,8 +746,63 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         >
           <div className="ui-t-sec mb-2">Deductions</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="ui-label" htmlFor="rcpt-tdsAmount">TDS deducted</label>
+              <input
+                id="rcpt-tdsAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.tdsAmount}
+                onChange={(e) => setFormData((p) => ({ ...p, tdsAmount: e.target.value }))}
+                className="ui-input ui-money w-full"
+                placeholder="0.00"
+              />
+              {tdsExpectedOnAllocated > 0 && Number(formData.tdsAmount || 0) <= 0 ? (
+                <p className="ui-caption mt-1">
+                  The invoices expected {formatMoney(tdsExpectedOnAllocated, currentCompany)}.{' '}
+                  <button
+                    type="button"
+                    className="underline underline-offset-2"
+                    onClick={() =>
+                      setFormData((p) => ({
+                        ...p,
+                        tdsAmount: String(tdsExpectedOnAllocated),
+                        tdsLedgerId: String(p.tdsLedgerId || tdsReceivableLedgers[0]?.id || ''),
+                      }))
+                    }
+                  >
+                    Use it
+                  </button>
+                </p>
+              ) : (
+                <p className="ui-caption mt-1">What the customer withheld and will deposit against our PAN.</p>
+              )}
+
+              {Number(formData.tdsAmount || 0) > 0 ? (
+                <div className="mt-2">
+                  <label className="ui-label" htmlFor="rcpt-tds-ledger">TDS receivable ledger</label>
+                  <select
+                    id="rcpt-tds-ledger"
+                    className="ui-select w-full"
+                    value={formData.tdsLedgerId || ''}
+                    onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
+                  >
+                    <option value="">Select ledger</option>
+                    {tdsReceivableLedgers.map((l) => (
+                      <option key={l.id} value={String(l.id)}>{l.name}</option>
+                    ))}
+                  </select>
+                  {!tdsReceivableLedgers.length ? (
+                    <p className="ui-caption mt-1">
+                      No TDS Receivable ledger is mapped to this customer’s nature yet.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+
             {[
-              { k: 'tdsAmount', label: 'TDS deduction' },
               { k: 'bankCharges', label: 'Bank charges' },
               { k: 'otherCharges', label: 'Other charges' },
             ].map((f) => (

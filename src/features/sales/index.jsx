@@ -16,7 +16,9 @@ import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } f
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
-import { DEDUCTEE_TYPES, TDS_SECTIONS, tdsAmountOn, tdsDefaultRate, tdsThresholdState, tdsVariesByDeductee } from '../../utils/tds';
+import { DEDUCTEE_TYPES, TDS_SECTIONS, tdsDefaultRate, tdsVariesByDeductee } from '../../utils/tds';
+import { resolveTds } from '../tds/engine';
+import { natureForSection } from '../tds/ruleMaster';
 import { fyRange } from '../../utils/tdsTcs';
 import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
 import { branchLabel } from '../../utils/branchLabel';
@@ -3388,8 +3390,32 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       .reduce((sum, i) => sum + (Number(i.taxableValue) || Number(i.subtotal) || 0), 0);
   }, [db?.invoices, currentCompany.id, formData.customerId, formData.tdsSection, formData.date, initialData?.id]);
 
-  const tdsState = formData.tdsSection ? tdsThresholdState(formData.tdsSection, tdsBase, tdsPriorValue) : null;
-  const tdsAmount = tdsState?.crossed ? tdsAmountOn(tdsState.base, tdsRateValue) : 0;
+  /*
+   * Expected, not receivable.
+   *
+   * §17: an invoice may show what the customer is expected to withhold, but
+   * the receivable stays the full invoice amount and nothing is debited to TDS
+   * Receivable here. The asset is recognised when a receipt records that the
+   * customer actually deducted — which is the one thing this screen must not
+   * pre-empt, because an expectation that never arrives would sit in the books
+   * as tax somebody else paid on our behalf.
+   */
+  const tdsExpected = resolveTds({
+    company: currentCompany,
+    party: customer,
+    transactionDate: formData.date,
+    taxableBase: tdsBase,
+    explicitNatureCode: natureForSection(formData.tdsSection)?.code || '',
+    explicitRate: String(formData.tdsRate ?? '').trim() === '' ? null : formData.tdsRate,
+    side: 'RECEIVABLE',
+    priorBase: tdsPriorValue,
+    ledgers: [],
+  });
+
+  const tdsState = formData.tdsSection
+    ? { crossed: tdsExpected.thresholdCrossed, base: tdsExpected.baseAmount, reason: tdsExpected.thresholdReason }
+    : null;
+  const tdsAmount = tdsExpected.tdsAmount;
   const netReceivable = Math.max(0, Number(computed.total || 0) - tdsAmount);
 
   /**
@@ -3587,7 +3613,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       tdsSection: formData.tdsSection || '',
       tdsDeducteeType: formData.tdsSection ? formData.tdsDeducteeType || 'COMPANY' : '',
       tdsRate: formData.tdsSection ? tdsRateValue : 0,
+      /* Expected — the customer's withholding, not an asset of ours until a
+         receipt says they took it. */
       tdsAmount,
+      tdsExpectedAmount: tdsAmount,
+      tdsNatureCode: tdsExpected.natureCode || '',
+      tdsRuleVersionId: tdsExpected.ruleVersionId || '',
     };
 
     const existingPaidAmount = isEdit ? Number(existingInvoice?.paidAmount ?? 0) : 0;
@@ -5073,7 +5104,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       printed on the document; repeating it here made the
                       totals column read like a tax return. */}
                   <span>
-                    Less: TDS
+                    Expected TDS
                     {!tdsPickerOpen ? (
                       <button
                         type="button"
@@ -5086,8 +5117,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   </span>
                   <span className="text-[rgb(var(--neg-ink))]">− {formatMoney(tdsAmount, currentCompany)}</span>
                 </div>
+                {/* The receivable is the whole invoice — §17. What this line
+                    says is what the bank is expected to receive once the
+                    customer withholds, which is a different figure and not an
+                    accounting entry. */}
                 <div className="ui-total-row">
-                  <span>Net receivable:</span>
+                  <span>Expected on receipt:</span>
                   <span className="ui-money">{formatMoney(netReceivable, currentCompany)}</span>
                 </div>
               </>
