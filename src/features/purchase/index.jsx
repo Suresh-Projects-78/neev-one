@@ -2893,7 +2893,9 @@ export const DebitNoteForm = ({
   onClose,
   warehouses = [],
   defaultWarehouseId = '',
+  branches = [],
   initialData = null,
+  onOpenReturnSettings = null,
   screenTitle = '',
   onBack = null,
 }) => {
@@ -2919,10 +2921,74 @@ export const DebitNoteForm = ({
   const isDebitAutoInit = String(debitNumberingInit?.mode || '').toLowerCase() === 'auto';
   const generatedDebitNumberInit = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'debitNote', branchId: initBranchId || null, takenNumbers: (db.debitNotes || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
 
+  /*
+   * The branch this return belongs to — asked, as the bill and the sales
+   * return both ask.
+   *
+   * Goods go back out of a particular godown, under a particular branch, and
+   * the note is numbered on that branch's series. Reading the branch out of
+   * whichever warehouse happened to be selected gave a company with one
+   * warehouse serving two branches no way to say which one the return was for.
+   */
+  const [branchId, setBranchId] = useState(
+    () => initBranchId || getLastSelection('branch', currentCompany?.id) || activeBranchId || ''
+  );
+
+  const branchIdInList =
+    !branchId || (Array.isArray(branches) ? branches : []).some((b) => String(b?.id || '') === String(branchId))
+      ? branchId
+      : '';
+
+  const branchOptions = React.useMemo(() => {
+    const list = Array.isArray(branches) ? branches : [];
+    return list.slice().sort((a, b) => branchLabel(a).localeCompare(branchLabel(b)));
+  }, [branches]);
+
+  /* Only the warehouses of the chosen branch — goods returning from another
+     branch's shelf is the mis-post this ordering exists to stop. */
   const warehouseOptions = React.useMemo(() => {
     const list = Array.isArray(warehouses) ? warehouses : [];
-    return list.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
-  }, [warehouses]);
+    const scope = String(branchIdInList || '').trim();
+    const inScope = scope ? list.filter((w) => String(w?.branchId || '').trim() === scope) : list;
+    return inScope.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+  }, [warehouses, branchIdInList]);
+
+  const onBranchChange = (nextBranchId) => {
+    const next = String(nextBranchId || '').trim();
+    setBranchId(next);
+    setLastSelection('branch', currentCompany?.id, next);
+    setFormData((p) => {
+      const held = String(p.warehouseId || '').trim();
+      if (!held || !next) return p;
+      const w = (Array.isArray(warehouses) ? warehouses : []).find((x) => String(x?.id || '').trim() === held);
+      if (w && String(w.branchId || '').trim() === next) return p;
+      return { ...p, warehouseId: '' };
+    });
+  };
+
+  const numberingBtnRef = useRef(null);
+  const [numberingOpen, setNumberingOpen] = useState(false);
+
+  /* Everything the panel does not cover is a screen of its own — and this note
+     is not thrown away silently to reach it. */
+  const goToReturnSettings = async (screen = 'docNumbering') => {
+    if (typeof onOpenReturnSettings !== 'function') {
+      notify.error('Open Settings to change this.');
+      return;
+    }
+    const typing =
+      String(formData.vendorId || '') ||
+      (formData.items || []).some((l) => l.itemId || Number(l.quantity) > 1 || Number(l.rate) > 0);
+    if (typing && !initialData?.id) {
+      const ok = await confirmDialog({
+        title: 'Leave this return?',
+        message: 'That setting lives on a separate screen. Anything typed here is not saved yet and will be lost.',
+        confirmLabel: 'Leave and open settings',
+      });
+      if (!ok) return;
+    }
+    onOpenReturnSettings(screen);
+  };
 
   const customFields = React.useMemo(() => getVisibleCustomFields(currentCompany, 'debitNote'), [currentCompany]);
   const setCustomField = (key, value) =>
@@ -3006,12 +3072,20 @@ export const DebitNoteForm = ({
     }));
   };
 
-  const branchIdForNumbering = resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
+  const branchIdForNumbering =
+    String(branchIdInList || '').trim() || resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
   const debitDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
   const debitNumbering = debitDocSettings?.numbering?.debitNote;
   const isDebitAuto = String(debitNumbering?.mode || '').toLowerCase() === 'auto';
   const lockDebitNumber = isDebitAuto && !debitNumbering?.allowManualOverride;
   const generatedDebitNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'debitNote', branchId: branchIdForNumbering, takenNumbers: (db.debitNotes || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
+
+  /* The number follows the series, as it does on the bill: change the prefix
+     from the gear on this field and the return in front of you is renumbered,
+     rather than showing the old number until it saves under a new one. */
+  const [numberTouched, setNumberTouched] = useState(false);
+  const autoNumbered = !initialData?.id && isDebitAuto && !numberTouched;
+  const debitNumberValue = autoNumbered ? String(generatedDebitNumber || '') : formData.number;
 
   const vendor = formData.vendorId ? vendors.find((v) => v.id === parseInt(formData.vendorId)) : null;
   const { state: vendorState, gstin: vendorGstin } = getPartyGstProfile(vendor);
@@ -3147,7 +3221,9 @@ export const DebitNoteForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let debitNumber = String(formData.number || '').trim();
+    /* What the field is showing — the series as it stands now for an
+       untouched automatic number. */
+    let debitNumber = String(debitNumberValue || '').trim();
     if (isDebitAuto) {
       if (lockDebitNumber) debitNumber = String(generatedDebitNumber || '').trim();
       else if (!debitNumber) debitNumber = String(generatedDebitNumber || '').trim();
@@ -3373,6 +3449,25 @@ export const DebitNoteForm = ({
         onBack={onBack}
         sticky={Boolean(screenTitle)}
         primaryLabel={initialData?.id ? 'Update Debit Note' : 'Create Debit Note'}
+        /* The bill's menu, for the document that reverses one: read this
+           return under the first heading, configure every return under the
+           second. */
+        menu={[
+          {
+            key: 'numbering',
+            group: 'Configure — every return',
+            label: 'Return numbering',
+            icon: SlidersHorizontal,
+            onSelect: () => setNumberingOpen(true),
+          },
+          {
+            key: 'customFields',
+            group: 'Configure — every return',
+            label: 'Custom fields',
+            icon: Plus,
+            onSelect: () => goToReturnSettings('settingsCustomFields'),
+          },
+        ]}
       />
 
       <FormSection
@@ -3380,20 +3475,54 @@ export const DebitNoteForm = ({
         title="Basic Details"
         description="Enter the key details for this purchase return."
       >
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div>
-          <label className="ui-label">Debit Note Number</label>
-          <input
-            type="text"
-            value={formData.number}
-            onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-            className={`w-full px-3 py-2 border rounded-lg ${lockDebitNumber ? 'ui-sunken' : ''}`}
-            disabled={lockDebitNumber}
-            required
+      <div className="grid gap-4 sm:grid-cols-2">
+        {/* Where the goods are going back from, who they are going back to,
+            then the paperwork — the bill's own order, on the document that
+            reverses a bill. */}
+        <div id="return-branch-field">
+          <PopupSelect
+            label="Branch"
+            title="branches"
+            value={String(branchIdInList || '')}
+            onChange={onBranchChange}
+            icon={Building2}
+            options={[
+              { value: '', label: 'All branches' },
+              ...branchOptions.map((b) => ({ value: String(b.id), label: branchLabel(b) })),
+            ]}
+            placeholder="Select Branch"
+            showValueSubtext={false}
           />
         </div>
 
-        <div className="md:col-span-2">
+        <WarehouseField
+          value={formData.warehouseId}
+          onChange={(warehouseId) => {
+            setLastSelection('warehouse', currentCompany?.id, warehouseId);
+            setFormData((p) => ({ ...p, warehouseId }));
+          }}
+          options={warehouseOptions}
+          activeWarehouseId={defaultWarehouseId}
+          isEdit={Boolean(initialData)}
+          icon={Package}
+          showSourceHint={false}
+          className="ui-select w-full ui-surface"
+        />
+
+        <div>
+          <VendorPicker
+            db={db}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            value={formData.vendorId}
+            icon={Truck}
+            onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
+            disabled={Boolean(String(formData.originalBillId || '').trim()) && Boolean(String(formData.vendorId || '').trim())}
+            disabledHint="Vendor comes from the original bill"
+          />
+        </div>
+
+        <div>
           <div className="flex items-center justify-between mb-1">
             <label className="ui-label">
               {onAccountMode ? 'Bills this return covers' : 'Original Bill # *'}
@@ -3454,14 +3583,54 @@ export const DebitNoteForm = ({
           )}
         </div>
 
-        <WarehouseField
-          value={formData.warehouseId}
-          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
-          options={warehouseOptions}
-          activeWarehouseId={defaultWarehouseId}
-          isEdit={Boolean(initialData)}
-          className="ui-select w-full ui-surface"
-        />
+        <div>
+          <label className="ui-label" htmlFor="return-number">Debit Note Number</label>
+          <div className="relative">
+            <input
+              id="return-number"
+              type="text"
+              value={debitNumberValue}
+              onChange={(e) => {
+                setNumberTouched(true);
+                setFormData((p) => ({ ...p, number: e.target.value }));
+              }}
+              className={`ui-input ui-mono w-full pe-9 ${lockDebitNumber ? 'ui-sunken' : ''}`}
+              disabled={lockDebitNumber}
+              required
+            />
+            <button
+              type="button"
+              ref={numberingBtnRef}
+              onClick={() => setNumberingOpen((v) => !v)}
+              className="absolute end-1 top-1/2 -translate-y-1/2 ui-icon-btn !h-7 !w-7"
+              aria-label="Return numbering settings"
+              aria-haspopup="dialog"
+              aria-expanded={numberingOpen}
+              title="Numbering"
+            >
+              <SlidersHorizontal size={15} aria-hidden="true" />
+            </button>
+          </div>
+          {numberingOpen ? (
+            <DocNumberingPopover
+              anchorRef={numberingBtnRef}
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              voucherKey="debitNote"
+              title="Return numbering"
+              sampleLabel="Next return will be"
+              manualLabel="Typed on each return"
+              branchId={branchIdForNumbering}
+              settings={debitNumbering}
+              onClose={() => setNumberingOpen(false)}
+              onOpenFullSettings={() => {
+                setNumberingOpen(false);
+                goToReturnSettings();
+              }}
+            />
+          ) : null}
+        </div>
 
         <div>
           <label className="ui-label">Debit Note Date</label>
@@ -3471,18 +3640,6 @@ export const DebitNoteForm = ({
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
             className="ui-input w-full"
             required
-          />
-        </div>
-
-        <div>
-          <VendorPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.vendorId}
-            onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
-            disabled={Boolean(String(formData.originalBillId || '').trim()) && Boolean(String(formData.vendorId || '').trim())}
-            disabledHint="Vendor comes from the original bill"
           />
         </div>
 

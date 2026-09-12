@@ -4574,6 +4574,7 @@ const LedgerView = ({
           currentCompany={currentCompany}
           initialData={dn}
           warehouses={warehouses}
+          branches={branches}
           defaultWarehouseId={activeWarehouseId}
           onClose={() => openModal(null)}
         />
@@ -12848,7 +12849,9 @@ const AppShell = () => {
                   currentCompany={currentCompany}
                   initialOriginalBillId={debitNoteEditor.initialOriginalBillId}
                   warehouses={warehousesForUser}
+                  branches={branchesForUser}
                   defaultWarehouseId={activeWarehouseId}
+                  onOpenReturnSettings={(screen) => setActive(screen)}
                   screenTitle="New Purchase Return"
                   onBack={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
                   onClose={() => setDebitNoteEditor({ open: false, initialOriginalBillId: null })}
