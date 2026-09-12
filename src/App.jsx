@@ -216,6 +216,7 @@ const BankCashAccounts = lazy(() => import('./features/cashBank/BankCashAccounts
 const CashBankTransactions = lazy(() => import('./features/cashBank/CashBankTransactions'));
 const TdsModule = lazy(() => import('./features/tds/TdsModule'));
 const TdsChallanForm = lazy(() => import('./features/tds/ChallanForm'));
+const ContraForm = lazy(() => import('./features/cashBank/ContraForm'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
 const DataBackup = lazy(() => import('./features/account/DataBackup'));
@@ -12851,10 +12852,19 @@ const AppShell = () => {
               setActive('receipts');
               setReceiptEditor({ open: true, initial: null });
             }}
-            onNewContra={() => {
-              setActive('journalEntries');
-              setJournalEditor({ open: true, initial: null });
-            }}
+            onNewContra={() =>
+              openModal(
+                <Suspense fallback={null}>
+                  <ContraForm
+                    db={dbForUser}
+                    setDb={setDb}
+                    currentCompany={currentCompany}
+                    onClose={() => openModal(null)}
+                  />
+                </Suspense>,
+                { title: 'Contra — move between accounts', maxWidthClass: 'max-w-2xl' }
+              )
+            }
             onImportStatement={() => setActive('cashBankImport')}
             onOpenReconciliation={() => setActive('bankReco')}
             onOpenAccounts={() => setActive('bankCashAccounts')}
