@@ -108,7 +108,8 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
     for (const bill of live) {
       const total = Number(bill.total || 0);
       const settled = Number(bill.paidAmount || 0);
-      const bal = Math.max(0, total - settled);
+      /* Net of the bill's own source TDS — that slice is the department's. */
+      const bal = Math.max(0, total - Number(bill.tdsAmount || 0) - settled);
       purchases += total;
       paid += settled;
       payable += bal;
@@ -198,7 +199,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
       const settled = Number(bill.paidAmount || 0);
       b.billed += total;
       b.paid += settled;
-      b.payable += Math.max(0, total - settled);
+      b.payable += Math.max(0, total - Number(bill.tdsAmount || 0) - settled);
     }
     return [...buckets.values()];
   }, [current.rows, grain, period.from, period.to]);

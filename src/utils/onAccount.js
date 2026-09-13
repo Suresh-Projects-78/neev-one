@@ -50,6 +50,30 @@ export function openNotesForParty(notes, { companyId, partyKey, partyId }) {
 }
 
 /** What a bill or invoice still owes, after payments and after knock-offs. */
+/**
+ * TDS the document itself already deducted at source.
+ *
+ * On a purchase bill this money is owed to the DEPARTMENT, not the vendor —
+ * it left the vendor's claim the moment the bill posted (the ledger credits
+ * TDS Payable and the vendor net). So the payable side settles at net.
+ * Invoices must NOT come through here: their tdsAmount is the customer's
+ * EXPECTED deduction, unrecognized until a receipt confirms it — which is
+ * why this is a separate reader and not folded into documentOutstanding.
+ */
+export function sourceTdsOf(doc) {
+  return round2(Math.max(0, num(doc?.tdsAmount)));
+}
+
+/** What is still owed TO THE VENDOR on a bill or expense: net of its own
+ *  source deduction, then payments, then debit notes. */
+export function payableOutstanding(doc, notes) {
+  const base = documentOutstanding(doc, notes);
+  return {
+    ...base,
+    outstanding: round2(Math.max(0, base.outstanding - sourceTdsOf(doc))),
+  };
+}
+
 export function documentOutstanding(doc, notes) {
   const total = round2(num(doc?.total));
   const paid = round2(num(doc?.paidAmount));

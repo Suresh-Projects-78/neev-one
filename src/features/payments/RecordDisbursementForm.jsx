@@ -10,7 +10,7 @@ import { createPayment } from '../../api/payments';
 import { amountInWordsInr } from '../../utils/money';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
-import { documentOutstanding } from '../../utils/onAccount';
+import { payableOutstanding, sourceTdsOf } from '../../utils/onAccount';
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import DocNumberField from '../../components/DocNumberField';
 import { DocDate } from '../../components/docs';
@@ -28,7 +28,7 @@ const safeArray = (v) => (Array.isArray(v) ? v : []);
  * amount — so paying "the outstanding balance" paid the vendor a second time
  * for goods that had already gone back.
  */
-const getDocBalance = (doc, notes) => documentOutstanding(doc, notes).outstanding;
+const getDocBalance = (doc, notes) => payableOutstanding(doc, notes).outstanding;
 
 const canPayDoc = (doc, notes) => {
   const rawStatus = String(doc?.status || '').trim();
@@ -426,6 +426,20 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       return;
     }
 
+    /*
+     * §15: double deduction is a BLOCKING error, not a warning. The engine
+     * already answered that these bills deducted at source; a figure typed
+     * over that answer would take the same obligation's tax twice.
+     */
+    if (tds.duplicateOf && computed.tds > 0.005) {
+      notify.error(
+        `TDS was already deducted on the bills being settled (${'\u20B9'}${Number(
+          tds.duplicateOf.tdsAmount || tdsAtBill
+        ).toLocaleString('en-IN')}). Remove the TDS deduction here — deducting again would take it twice.`
+      );
+      return;
+    }
+
     // Validate each allocation against latest balances
     const billsList = safeArray(db.bills).filter((b) => b.companyId === companyId);
     const expensesList = safeArray(db.expenses).filter((x) => x.companyId === companyId);
@@ -462,6 +476,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     if (String(ledgerAccountId || "").trim()) {
       setSaving(true);
       try {
+        const billById = new Map(safeArray(db.bills).map((b) => [Number(b.id), b]));
         posted = await createPayment({
           direction: 'PAYMENT',
           date: formData.date,
@@ -474,6 +489,25 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
              posting the gross here overstates the bank by the TDS every time. */
           amount: round2(computed.netCash),
           notes: formData.notes || null,
+          /* Which bills this settles — for the ones the server knows. */
+          allocations: computed.lines
+            .filter((l) => l.voucherType === 'bill')
+            .map((l) => {
+              const backendId = String(billById.get(Number(l.voucherId))?.backendDocId || '').trim();
+              return backendId ? { docType: 'BILL', docId: backendId, amount: round2(l.amount) } : null;
+            })
+            .filter(Boolean),
+          /*
+           * §15's payment-stage entry, through the central service: the
+           * vendor is debited with what the bills were SETTLED by, the bank
+           * credited with the cash, and each deduction credited to its own
+           * account — TDS to TDS Payable, where the challan later finds it.
+           */
+          deductions: [
+            computed.tds > 0 ? { kind: 'TDS', amount: round2(computed.tds) } : null,
+            computed.bankCharges > 0 ? { kind: 'BANK_CHARGES', amount: round2(computed.bankCharges) } : null,
+            computed.otherCharges > 0 ? { kind: 'OTHER', amount: round2(computed.otherCharges) } : null,
+          ].filter(Boolean),
         });
       } catch (err) {
         setSaving(false);
@@ -546,14 +580,17 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       if (!line) return b;
 
       const total = Number(b.total ?? 0);
+      /* Settled when the NET reaches the vendor: the bill's own source TDS
+         left the vendor's claim the day it posted. */
+      const target = round2(Math.max(0, total - sourceTdsOf(b)));
       const alreadyPaid = Number(b.paidAmount ?? 0);
-      const nextPaid = round2(Math.min(total, alreadyPaid + Number(line.amount ?? 0)));
+      const nextPaid = round2(Math.min(target, alreadyPaid + Number(line.amount ?? 0)));
 
       const rawStatus = String(b.status || '').trim();
       const nextStatus =
         rawStatus === 'Draft'
           ? 'Draft'
-          : total > 0 && nextPaid >= total - 0.0001
+          : target > 0 && nextPaid >= target - 0.0001
             ? 'Paid'
             : nextPaid > 0
               ? 'Partial'

@@ -2558,7 +2558,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
     { key: 'dueDate', label: 'Due Date' },
     { key: 'total', label: 'Amount', align: 'right', value: (r) => Number(r.total || 0) },
     { key: 'status', label: 'Status', value: (r) => getDerivedStatus(r) },
-    { key: 'balance', label: 'Balance', align: 'right', value: (r) => Math.max(0, Number(r.total || 0) - Number(r.paidAmount || 0)) },
+    { key: 'balance', label: 'Balance', align: 'right', value: (r) => Math.max(0, Number(r.total || 0) - Number(r.tdsAmount || 0) - Number(r.paidAmount || 0)) },
   ];
 
   /*
@@ -2605,7 +2605,8 @@ const billStatusReason = (doc, status, company, nowMs) => {
    */
   const billHeadline = useMemo(() => {
     const live = filteredBills.filter((b) => String(b.status || '').toLowerCase() !== 'draft');
-    const bal = (b) => Math.max(0, Number(b.total || 0) - Number(b.paidAmount || 0));
+    /* Net of the bill's own TDS: that slice is owed to the department. */
+    const bal = (b) => Math.max(0, Number(b.total || 0) - Number(b.tdsAmount || 0) - Number(b.paidAmount || 0));
     const today = new Date().toISOString().slice(0, 10);
     return {
       count: filteredBills.length,
@@ -2638,7 +2639,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
     for (const b of filteredBills) {
       const total = Number(b.total || 0);
       booked += total;
-      owed += Math.max(0, total - Number(b.paidAmount || 0));
+      owed += Math.max(0, total - Number(b.tdsAmount || 0) - Number(b.paidAmount || 0));
       gst += Number(b.gstTotal || 0);
     }
     return [
@@ -2659,7 +2660,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
         currentCompany={currentCompany}
         initialData={{
           vendorId: bill?.vendorId,
-          amount: Math.max(0, Number(bill?.total ?? 0) - Number(bill?.paidAmount ?? 0)),
+          amount: Math.max(0, Number(bill?.total ?? 0) - Number(bill?.tdsAmount ?? 0) - Number(bill?.paidAmount ?? 0)),
         }}
         onClose={() => openModal(null)}
       />,

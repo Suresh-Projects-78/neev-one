@@ -2,7 +2,7 @@ import { createPayment } from '../../api/payments';
 import { hasApiSession } from '../../api/purchaseDocs';
 import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
 import { round2 } from '../../utils/money';
-import { documentOutstanding } from '../../utils/onAccount';
+import { payableOutstanding, sourceTdsOf } from '../../utils/onAccount';
 
 /**
  * The payment engine, callable without its form.
@@ -19,8 +19,9 @@ import { documentOutstanding } from '../../utils/onAccount';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
-/** What is still owed on a document, after debit notes — the form's rule. */
-export const docBalance = (doc, notes) => documentOutstanding(doc, notes).outstanding;
+/** What is still owed TO THE VENDOR, after the document's own source TDS
+ *  and debit notes — the deduction is owed to the department, not the party. */
+export const docBalance = (doc, notes) => payableOutstanding(doc, notes).outstanding;
 
 const payable = (doc, notes) => {
   if (String(doc?.status || '').trim() === 'Draft') return false;
@@ -313,12 +314,16 @@ export const applyVendorPayments = (prev, companyId, records) => {
     const add = paidByDoc.get(`${kind}:${Number(doc.id)}`);
     if (!add || doc.companyId !== companyId) return doc;
     const total = Number(doc.total ?? doc.amount ?? 0);
-    const nextPaid = round2(Math.min(total, Number(doc.paidAmount ?? 0) + add));
+    /* A bill that deducted at source is settled when the NET reaches the
+       vendor — the TDS slice was discharged the day it posted. An invoice's
+       tdsAmount is only an expectation, so its target stays the total. */
+    const target = kind === 'invoice' ? total : round2(Math.max(0, total - sourceTdsOf(doc)));
+    const nextPaid = round2(Math.min(target, Number(doc.paidAmount ?? 0) + add));
     const rawStatus = String(doc.status || '').trim();
     const nextStatus =
       rawStatus === 'Draft'
         ? 'Draft'
-        : total > 0 && nextPaid >= total - 0.0001
+        : target > 0 && nextPaid >= target - 0.0001
           ? 'Paid'
           : nextPaid > 0
             ? 'Partial'

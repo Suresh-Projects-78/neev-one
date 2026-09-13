@@ -137,6 +137,47 @@ describe('what the payment offers to deduct', () => {
     expect(screen.queryByRole('button', { name: 'Use it' })).toBeNull();
   });
 
+  /* §15 — double deduction is a BLOCKING error. The engine already said
+     these bills deducted at source; a figure typed over that answer must
+     stop the save, not ride along as a warning. */
+  it('BLOCKS a typed deduction against a bill that already deducted', async () => {
+    const user = userEvent.setup();
+    const saved = vi.fn();
+    render(<Host bills={[deductedBill]} onSaved={saved} />);
+    await pickVendor(user);
+    const row = (await screen.findByText('BILL-2')).closest('tr');
+    await user.click(row.querySelector('input[type="checkbox"]'));
+    fireEvent.change(screen.getByLabelText(/Amount paid|Payment amount|Amount/i), { target: { value: '116000' } });
+
+    fireEvent.change(screen.getByLabelText('TDS deduction'), { target: { value: '2000' } });
+    fireEvent.submit(document.querySelector('form'));
+
+    /* Nothing was written — the boundary held. */
+    await new Promise((r) => setTimeout(r, 20));
+    expect(saved).not.toHaveBeenCalled();
+  });
+
+  /* The vendor is owed the NET of a source-deducting bill: ₹1,18,000 less
+     ₹2,000 already owed to the department. Paying that net settles it. */
+  it('offers the net balance and settles the bill at it', async () => {
+    const user = userEvent.setup();
+    const saved = vi.fn();
+    render(<Host bills={[deductedBill]} onSaved={saved} />);
+    await pickVendor(user);
+
+    const row = (await screen.findByText('BILL-2')).closest('tr');
+    expect(row.textContent).toMatch(/1,16,000\.00/);
+    await user.click(row.querySelector('input[type="checkbox"]'));
+    fireEvent.change(screen.getByLabelText(/Amount paid|Payment amount|Amount/i), { target: { value: '116000' } });
+    fireEvent.submit(document.querySelector('form'));
+
+    await waitFor(() => expect(saved).toHaveBeenCalled());
+    const db = saved.mock.calls.at(-1)[0];
+    const bill = db.bills.find((b) => b.id === 8);
+    expect(bill.status).toBe('Paid');
+    expect(bill.paidAmount).toBe(116000);
+  });
+
   it('offers only the ledgers mapped to the vendor’s nature', async () => {
     const user = userEvent.setup();
     render(<Host />);
