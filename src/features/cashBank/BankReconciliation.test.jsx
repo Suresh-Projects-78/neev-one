@@ -87,6 +87,18 @@ describe('the shape of the screen', () => {
     expect(within(card).getByText(/-\s?₹\s?50,000\.00/)).toBeInTheDocument();
   });
 
+  it('keeps the spec\'s columns, Date first, and Import Statement in the controls row', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    /* Present before an account is picked — it sits with Account and Period,
+       not behind them. */
+    expect(screen.getByRole('button', { name: /Import Statement/ })).toBeInTheDocument();
+
+    await pickAccount(user);
+    const heads = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
+    expect(heads).toEqual(['', 'Date', 'Description', 'Voucher No.', 'Type', 'Amount', 'Transaction date', 'Bank date', 'Status']);
+  });
+
   it('shows both dates, and only the bank date is editable', async () => {
     const user = userEvent.setup();
     render(<Host />);

@@ -174,16 +174,10 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
       <PageHeader
         title="Bank Reconciliation"
         description="Record the bank's own date against each transaction and mark it reconciled once confirmed."
-        actions={
-          onImportStatement ? (
-            <button type="button" onClick={onImportStatement} className="ui-btn ui-btn-primary">
-              <Upload size={16} aria-hidden="true" /> Import Statement
-            </button>
-          ) : null
-        }
       />
 
-      {/* Account first, Period second, one line — the specification's order. */}
+      {/* Account first, Period second, Import Statement third — one line,
+          the specification's order. */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 sm:w-72">
           <PopupSelect
@@ -211,6 +205,11 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
             showValueSubtext={false}
           />
         </div>
+        {onImportStatement ? (
+          <button type="button" onClick={onImportStatement} className="ui-btn ui-btn-primary">
+            <Upload size={16} aria-hidden="true" /> Import Statement
+          </button>
+        ) : null}
       </div>
 
       {!account ? (
@@ -300,6 +299,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                         }
                       />
                     </th>
+                    <th scope="col">Date</th>
                     <th scope="col">Description</th>
                     <th scope="col">Voucher No.</th>
                     <th scope="col">Type</th>
@@ -312,7 +312,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                 <tbody>
                   {shown.length === 0 ? (
                     <tr>
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         <EmptyState
                           title="Nothing here"
                           message="Payments, receipts, contras and imported lines for this account appear here with their bank dates."
@@ -335,6 +335,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                               />
                             )}
                           </td>
+                          <td>{formatDateIn(r.date)}</td>
                           <td className="truncate">{r.ledgerName}</td>
                           <td className="ui-mono">{r.number || '—'}</td>
                           <td>
