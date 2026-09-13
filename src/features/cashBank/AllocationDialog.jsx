@@ -144,6 +144,33 @@ const AllocationDialog = ({ db, setDb, currentCompany, txn, onClose }) => {
   }
   const canPost = check.canPost && rowProblems.length === 0 && !saving;
 
+  /*
+   * The one sanctioned shortcut past a nonzero difference: a company may
+   * CONFIGURE an adjustment ledger (rounding, small bank charges), and then
+   * the residual can be resolved onto it — as a visible row that posts
+   * through the same journal as any other, never as a silent write-off. No
+   * configuration, no shortcut: the difference is closed by hand or not at
+   * all.
+   */
+  const adjustmentLedger = useMemo(() => {
+    const id = String(currentCompany?.profile?.cashBank?.adjustmentLedgerId || '').trim();
+    if (!id) return null;
+    return ledgers.find((l) => String(l.id) === id) || null;
+  }, [currentCompany, ledgers]);
+
+  const resolveDifference = () => {
+    if (!adjustmentLedger || summary.difference <= 0.004) return;
+    setRows((prev) => [
+      ...prev.filter((r) => String(r.ledgerId || '').trim() || Number(r.amount || 0) > 0),
+      {
+        ...emptyRow(),
+        ledgerId: String(adjustmentLedger.id),
+        amount: String(summary.difference),
+        narration: 'Difference adjustment',
+      },
+    ]);
+  };
+
   /** What the receipt engine settled comes back as the row's own facts. */
   const engineSaved = (i, hit) => (payment) => {
     const settled = round2(Number(payment?.netCash ?? payment?.netCashAmount ?? payment?.amount ?? 0));
@@ -543,9 +570,16 @@ const AllocationDialog = ({ db, setDb, currentCompany, txn, onClose }) => {
               </div>
             );
           })}
-          <button type="button" onClick={addRow} className="ui-btn ui-btn-secondary ui-btn-sm">
-            <Plus size={14} aria-hidden="true" /> Add Allocation
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={addRow} className="ui-btn ui-btn-secondary ui-btn-sm">
+              <Plus size={14} aria-hidden="true" /> Add Allocation
+            </button>
+            {adjustmentLedger && summary.difference > 0.004 ? (
+              <button type="button" onClick={resolveDifference} className="ui-btn ui-btn-secondary ui-btn-sm">
+                Resolve {formatMoney(summary.difference, currentCompany)} via {adjustmentLedger.name}
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t pt-3">

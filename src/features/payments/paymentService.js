@@ -167,10 +167,135 @@ export const buildVendorPayment = async ({
   };
 };
 
+/** A customer's collectible invoices, oldest first. */
+export const outstandingInvoicesForCustomer = (db, companyId, customerId) => {
+  const cid = Number(customerId);
+  if (!Number.isFinite(cid) || !cid) return [];
+  const balanceOf = (i) => round2(Math.max(0, Number(i.total ?? 0) - Number(i.paidAmount ?? 0)));
+  return safeArray(db?.invoices)
+    .filter((i) => i.companyId === companyId && Number(i.customerId) === cid)
+    .filter((i) => !['Draft', 'Cancelled'].includes(String(i.status || '').trim()))
+    .filter((i) => balanceOf(i) > 0.0001)
+    .map((i) => ({ key: `invoice:${i.id}`, voucherType: 'invoice', id: Number(i.id), number: i.number, date: i.date, total: Number(i.total ?? 0), balance: balanceOf(i) }))
+    .sort((a, b) => {
+      const da = String(a.date || '');
+      const dbb = String(b.date || '');
+      if (da !== dbb) return da < dbb ? -1 : 1;
+      return Number(a.id) - Number(b.id);
+    });
+};
+
+/**
+ * One customer receipt, the mirror of `buildVendorPayment`: invoice lines
+ * instead of bills, the receipt series instead of the payment series, and the
+ * amount past the invoices staying on record as the customer's advance —
+ * exactly what the receipt form would have written.
+ */
+export const buildCustomerReceipt = async ({
+  db,
+  currentCompany,
+  customerId,
+  date,
+  amount,
+  lines = [],
+  ledgerAccountId = '',
+  cashBankAccountId = undefined,
+  sourceBankTransactionId = undefined,
+  notes = '',
+  nextLocalId,
+  takenNumbers = [],
+}) => {
+  const companyId = currentCompany.id;
+  const customer = safeArray(db.customers).find((c) => Number(c.id) === Number(customerId)) || null;
+  const customerName = customer?.displayName || customer?.name || '';
+
+  const queue = outstandingInvoicesForCustomer(db, companyId, customerId);
+  const cleanLines = safeArray(lines)
+    .map((l) => ({ voucherType: 'invoice', voucherId: Number(l.voucherId), amount: round2(Math.abs(Number(l.amount || 0))) }))
+    .filter((l) => l.amount > 0.005);
+  const allocated = round2(cleanLines.reduce((t, l) => t + l.amount, 0));
+  const total = round2(Math.abs(Number(amount || 0)));
+
+  for (const l of cleanLines) {
+    const doc = queue.find((d) => d.id === l.voucherId);
+    if (!doc) throw new Error('A selected invoice was not found or has no balance.');
+    if (l.amount > doc.balance + 0.0001) {
+      throw new Error(`Allocation exceeds outstanding on ${doc.number || `invoice ${l.voucherId}`}.`);
+    }
+  }
+  if (allocated > total + 0.005) throw new Error(`${customerName || 'A customer'}: invoices exceed the amount allotted to them.`);
+
+  const number = nextFreeVoucherNumber({
+    db,
+    company: currentCompany,
+    voucherKey: 'receipt',
+    takenNumbers: [
+      ...safeArray(db.payments)
+        .filter((x) => x.companyId === companyId)
+        .map((x) => String(x.number || '').trim())
+        .filter(Boolean),
+      ...takenNumbers,
+    ],
+  });
+
+  let posted = null;
+  if (hasApiSession() && String(ledgerAccountId || '').trim()) {
+    const invoiceById = new Map(safeArray(db.invoices).map((i) => [Number(i.id), i]));
+    posted = await createPayment({
+      direction: 'RECEIPT',
+      number: String(number || '').trim() || undefined,
+      date,
+      partyType: 'CUSTOMER',
+      partyId: customer?.backendPartyId ? String(customer.backendPartyId) : null,
+      partyName: customerName || null,
+      ledgerAccountId: String(ledgerAccountId).trim(),
+      amount: total,
+      notes: notes || null,
+      allocations: cleanLines
+        .map((l) => {
+          const backendId = String(invoiceById.get(l.voucherId)?.backendInvoiceId || '').trim();
+          return backendId ? { docType: 'INVOICE', docId: backendId, amount: l.amount } : null;
+        })
+        .filter(Boolean),
+    });
+  }
+
+  const serverNo = String(posted?.number || '').trim();
+  return {
+    id: nextLocalId,
+    companyId,
+    voucherType: 'receipt',
+    voucherId: null,
+    direction: 'IN',
+    cashBankAccountId,
+    sourceBankTransactionId,
+    receiptNo: serverNo || String(number || '').trim() || `RCPT-${nextLocalId}`,
+    number: serverNo || String(number || '').trim() || `RCPT-${nextLocalId}`,
+    date,
+    customerId: Number(customerId),
+    customerName,
+    amount: total,
+    allocatedAmount: allocated,
+    advanceAmount: round2(Math.max(0, total - allocated)),
+    netCashAmount: total,
+    allocations: cleanLines.map((l) => ({
+      ...l,
+      documentNumber: String(safeArray(db.invoices).find((i) => Number(i.id) === l.voucherId)?.number || ''),
+    })),
+    mode: 'Bank',
+    backendPaymentId: posted?.id ? String(posted.id) : undefined,
+    ledgerAccountId: String(ledgerAccountId || '').trim() || undefined,
+    notes,
+    createdAt: new Date().toISOString(),
+  };
+};
+
 /**
  * Writes a batch of built payments into the book: the vouchers themselves,
- * every settled bill's paid amount and status, and the series moved past each
- * number taken. One pass, so a five-vendor settlement is one state change.
+ * every settled document's paid amount and status, and the series moved past
+ * each number taken. One pass, so a five-vendor settlement is one state
+ * change. Handles both sides: bill/expense lines from payments, invoice
+ * lines from receipts.
  */
 export const applyVendorPayments = (prev, companyId, records) => {
   if (!safeArray(records).length) return prev;
@@ -206,7 +331,7 @@ export const applyVendorPayments = (prev, companyId, records) => {
     companies = bumpCompanyNextNumber({
       db: { ...prev, companies },
       companyId,
-      voucherKey: 'payment',
+      voucherKey: String(r.voucherType) === 'receipt' ? 'receipt' : 'payment',
       usedNumber: r.number,
     });
   }
@@ -216,6 +341,7 @@ export const applyVendorPayments = (prev, companyId, records) => {
     payments: [...safeArray(prev.payments), ...records],
     bills: safeArray(prev.bills).map((b) => settle(b, 'bill')),
     expenses: safeArray(prev.expenses).map((e) => settle(e, 'expense')),
+    invoices: safeArray(prev.invoices).map((i) => settle(i, 'invoice')),
     companies,
   };
 };

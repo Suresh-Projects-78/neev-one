@@ -143,3 +143,35 @@ describe('rows the payment engine already settled', () => {
     expect(lines).toEqual([{ accountId: '502', debit: 0, credit: 0 }]);
   });
 });
+
+describe('decimal-safe money', () => {
+  /*
+   * Equality is decided in integer paise, never by float comparison. The sum
+   * below is 9999.999999999998 in doubles — a float-equality engine calls it
+   * Partially allocated and blocks a post the book-keeper can see is whole.
+   */
+  it('calls a float-imprecise full allocation fully allocated', () => {
+    const rows = [
+      { ledgerId: '610', amount: 1000.1 },
+      { ledgerId: '611', amount: 2000.2 },
+      { ledgerId: '620', amount: 6999.7 },
+    ];
+    const s = allocationSummary(TXN_OUT, rows);
+    expect(s.status).toBe('Allocated');
+    expect(s.difference).toBe(0);
+    expect(validateAllocation(TXN_OUT, rows).canPost).toBe(true);
+  });
+
+  /* The specification's own example. */
+  it('₹10,000 less ₹8,000 allocated is a ₹2,000 difference, Partially allocated', () => {
+    const s = allocationSummary(TXN_OUT, [{ ledgerId: '610', amount: 8000 }]);
+    expect(s).toMatchObject({ bankAmount: 10000, allocated: 8000, difference: 2000, status: 'Partially allocated' });
+    expect(validateAllocation(TXN_OUT, [{ ledgerId: '610', amount: 8000 }]).canPost).toBe(false);
+  });
+
+  it('one paisa short is not fully allocated', () => {
+    const rows = [{ ledgerId: '610', amount: 9999.99 }];
+    expect(allocationSummary(TXN_OUT, rows).status).toBe('Partially allocated');
+    expect(validateAllocation(TXN_OUT, rows).canPost).toBe(false);
+  });
+});

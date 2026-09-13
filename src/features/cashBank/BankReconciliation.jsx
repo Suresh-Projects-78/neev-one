@@ -101,6 +101,17 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
 
   const bankDateOf = (r) => draftDates[r.id] ?? r.date;
 
+  /* The latest audit entry per row — later submits overwrite earlier ones in
+     the map, and the full trail stays in db.bankDateAudit. */
+  const auditByRow = useMemo(() => {
+    const m = new Map();
+    for (const a of db?.bankDateAudit || []) {
+      if (Number(a?.companyId) !== Number(companyId)) continue;
+      m.set(`${a.kind}:${a.sourceId}`, a);
+    }
+    return m;
+  }, [db?.bankDateAudit, companyId]);
+
   const toggle = (id, on) =>
     setSelected((prev) => {
       const next = new Set(prev);
@@ -130,6 +141,15 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
   const submit = async () => {
     const targets = unreconciled.filter((r) => selected.has(String(r.id)));
     if (!targets.length || saving) return;
+
+    /* The confirmation boundary validates what it confirms: every row needs
+       a real bank date — "the bank saw it on no date" is not a fact a
+       reconciliation can record. */
+    const dateless = targets.find((r) => !/^\d{4}-\d{2}-\d{2}$/.test(String(bankDateOf(r) || '')));
+    if (dateless) {
+      notify.error(`${dateless.number || dateless.ledgerName}: give it a bank date before submitting.`);
+      return;
+    }
     setSaving(true);
 
     /* Best-effort server sync for movements the server knows. A refusal on
@@ -150,18 +170,47 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
     const byKind = { payment: new Map(), contra: new Map(), statement: new Map() };
     for (const r of targets) byKind[r.kind]?.set(String(r.sourceId), bankDateOf(r));
 
-    setDb((prev) => ({
-      ...prev,
-      payments: (prev.payments || []).map((p) =>
-        byKind.payment.has(String(p.id)) ? { ...p, reconciled: true, bankDate: byKind.payment.get(String(p.id)) } : p
-      ),
-      journalEntries: (prev.journalEntries || []).map((j) =>
-        byKind.contra.has(String(j.id)) ? { ...j, reconciled: true, bankDate: byKind.contra.get(String(j.id)) } : j
-      ),
-      bankTransactions: (prev.bankTransactions || []).map((t) =>
-        byKind.statement.has(String(t.id)) ? { ...t, reconciled: true, bankDate: byKind.statement.get(String(t.id)) } : t
-      ),
+    /*
+     * The audit trail of the one thing this screen is allowed to change.
+     *
+     * A bank date is a claim about the bank's records, and a claim somebody
+     * altered must say from what, to what, by whom and when — or the next
+     * auditor is reading a number with no history. The transaction date is
+     * recorded alongside precisely because it never changes: the pair proves
+     * the accounting date survived the reconciliation.
+     */
+    const stamp = new Date().toISOString();
+    const who = String(localStorage.getItem('userEmail') || '').trim() || 'User';
+    const auditRows = targets.map((r) => ({
+      companyId,
+      kind: r.kind,
+      sourceId: r.sourceId,
+      voucherNo: r.number || '',
+      accountId: r.accountId,
+      transactionDate: r.date,
+      previousBankDate: r.bankDate || r.date,
+      bankDate: bankDateOf(r),
+      action: 'RECONCILED',
+      by: who,
+      at: stamp,
     }));
+
+    setDb((prev) => {
+      let nextAuditId = (prev.bankDateAudit || []).reduce((m, a) => Math.max(m, Number(a?.id || 0)), 0);
+      return {
+        ...prev,
+        payments: (prev.payments || []).map((p) =>
+          byKind.payment.has(String(p.id)) ? { ...p, reconciled: true, bankDate: byKind.payment.get(String(p.id)) } : p
+        ),
+        journalEntries: (prev.journalEntries || []).map((j) =>
+          byKind.contra.has(String(j.id)) ? { ...j, reconciled: true, bankDate: byKind.contra.get(String(j.id)) } : j
+        ),
+        bankTransactions: (prev.bankTransactions || []).map((t) =>
+          byKind.statement.has(String(t.id)) ? { ...t, reconciled: true, bankDate: byKind.statement.get(String(t.id)) } : t
+        ),
+        bankDateAudit: [...(prev.bankDateAudit || []), ...auditRows.map((a) => ({ ...a, id: ++nextAuditId }))],
+      };
+    });
 
     setSelected(new Set());
     setDraftDates({});
@@ -303,9 +352,9 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                     <th scope="col">Description</th>
                     <th scope="col">Voucher No.</th>
                     <th scope="col">Type</th>
-                    <th scope="col" className="text-end">Amount</th>
-                    <th scope="col">Transaction date</th>
-                    <th scope="col">Bank date</th>
+                    <th scope="col" className="text-end">Amount (₹)</th>
+                    <th scope="col">Transaction Date</th>
+                    <th scope="col">Bank Date</th>
                     <th scope="col">Status</th>
                   </tr>
                 </thead>
@@ -349,7 +398,22 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                           <td>{formatDateIn(r.date)}</td>
                           <td>
                             {done ? (
-                              formatDateIn(r.bankDate || r.date)
+                              (() => {
+                                const audit = auditByRow.get(`${r.kind}:${r.sourceId}`);
+                                const moved = String(r.bankDate || r.date) !== String(r.date);
+                                return (
+                                  <span
+                                    title={
+                                      audit
+                                        ? `Reconciled by ${audit.by} on ${formatDateIn(audit.at)} — bank date ${formatDateIn(audit.bankDate)}, transaction date ${formatDateIn(audit.transactionDate)}`
+                                        : undefined
+                                    }
+                                  >
+                                    {formatDateIn(r.bankDate || r.date)}
+                                    {moved ? <span className="ui-caption ms-1">(txn {formatDateIn(r.date)})</span> : null}
+                                  </span>
+                                );
+                              })()
                             ) : (
                               <input
                                 type="date"
@@ -388,7 +452,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                   })
                 }
               >
-                <CalendarCheck size={15} aria-hidden="true" /> Set Bank Date = Transaction Date
+                <CalendarCheck size={15} aria-hidden="true" /> Bulk Reconcile — Bank Date = Transaction Date
               </button>
               <div className="ms-auto flex items-center gap-2">
                 <button

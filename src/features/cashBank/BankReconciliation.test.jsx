@@ -96,7 +96,7 @@ describe('the shape of the screen', () => {
 
     await pickAccount(user);
     const heads = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
-    expect(heads).toEqual(['', 'Date', 'Description', 'Voucher No.', 'Type', 'Amount', 'Transaction date', 'Bank date', 'Status']);
+    expect(heads).toEqual(['', 'Date', 'Description', 'Voucher No.', 'Type', 'Amount (₹)', 'Transaction Date', 'Bank Date', 'Status']);
   });
 
   it('shows both dates, and only the bank date is editable', async () => {
@@ -160,6 +160,52 @@ describe('staging and submitting', () => {
     expect(reconcilePayment).toHaveBeenCalledWith('srv-pay-1', { reconciled: true, bankDate: '2026-09-01' });
   });
 
+  /* The spec's flow: Select → Auto Reconcile → Review → Submit. Staging
+     touches only the selection, and a staged date is still the user's to
+     change before anything is final. */
+  it('Auto Reconcile stages only the selected rows, and the date stays editable', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await pickAccount(user);
+
+    /* Drift PAY-0012's draft away, select only RCPT-0045, auto reconcile. */
+    fireEvent.change(screen.getByLabelText('Bank date for PAY-0012'), { target: { value: '2026-09-20' } });
+    await user.click(screen.getByLabelText('Select RCPT-0045'));
+    await user.click(screen.getByRole('button', { name: /Auto Reconcile \(Same Date\)/ }));
+
+    /* Only the selected row was staged to its transaction date; the other
+       row's draft was not touched. */
+    expect(screen.getByLabelText('Bank date for RCPT-0045')).toHaveValue('2026-09-02');
+    expect(screen.getByLabelText('Bank date for PAY-0012')).toHaveValue('2026-09-20');
+    expect(screen.getByText('1 transaction(s) selected')).toBeInTheDocument();
+    expect(latest.db.payments.find((p) => p.id === 2).reconciled).toBeUndefined();
+
+    /* Review: the staged date can still be changed before Submit... */
+    fireEvent.change(screen.getByLabelText('Bank date for RCPT-0045'), { target: { value: '2026-09-04' } });
+    await user.click(screen.getByRole('button', { name: /Submit 1 as reconciled/ }));
+
+    /* ...and Submit is what makes it Reconciled, at the reviewed date. */
+    await waitFor(() => expect(latest.db.payments.find((p) => p.id === 2).reconciled).toBe(true));
+    expect(latest.db.payments.find((p) => p.id === 2).bankDate).toBe('2026-09-04');
+    /* The unselected row was never touched. */
+    expect(latest.db.payments.find((p) => p.id === 1).reconciled).toBeUndefined();
+  });
+
+  /* Step 7 of the bulk flow: Submit validates before it confirms. */
+  it('refuses to submit a row whose bank date was cleared', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await pickAccount(user);
+
+    await user.click(screen.getByLabelText('Select PAY-0012'));
+    fireEvent.change(screen.getByLabelText('Bank date for PAY-0012'), { target: { value: '' } });
+    await user.click(screen.getByRole('button', { name: /Submit 1 as reconciled/ }));
+
+    /* Nothing was written — the boundary held. */
+    expect(latest.db.payments.find((p) => p.id === 1).reconciled).toBeUndefined();
+    expect(reconcilePayment).not.toHaveBeenCalled();
+  });
+
   it('Auto Reconcile stages every unreconciled row without finalizing', async () => {
     const user = userEvent.setup();
     render(<Host />);
@@ -175,6 +221,45 @@ describe('staging and submitting', () => {
     await waitFor(() => expect(latest.db.payments.find((p) => p.id === 2).reconciled).toBe(true));
   });
 
+  /*
+   * The spec's own example: the user moves the bank date; the accounting
+   * date must not move, the status must flip only at Submit, and the change
+   * must leave an audit entry saying from what, to what, by whom.
+   */
+  it('a changed bank date is audited, and the transaction date survives it', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('userEmail', 'suresh@neev.one');
+    render(<Host />);
+    await pickAccount(user);
+
+    await user.click(screen.getByLabelText('Select PAY-0012'));
+    fireEvent.change(screen.getByLabelText('Bank date for PAY-0012'), { target: { value: '2026-09-15' } });
+
+    /* Still a draft: unreconciled, nothing audited. */
+    expect(latest.db.bankDateAudit).toBeUndefined();
+    await user.click(screen.getByRole('button', { name: /Submit 1 as reconciled/ }));
+
+    await waitFor(() => expect(latest.db.payments.find((p) => p.id === 1).reconciled).toBe(true));
+    const row = latest.db.payments.find((p) => p.id === 1);
+    expect(row.bankDate).toBe('2026-09-15');
+    expect(row.date).toBe('2026-09-01');
+
+    const audit = latest.db.bankDateAudit;
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({
+      kind: 'payment',
+      voucherNo: 'PAY-0012',
+      transactionDate: '2026-09-01',
+      previousBankDate: '2026-09-01',
+      bankDate: '2026-09-15',
+      action: 'RECONCILED',
+      by: 'suresh@neev.one',
+    });
+
+    /* The reconciled row says both dates out loud. */
+    expect(screen.getByText(/\(txn 01\/09\/2026\)/)).toBeInTheDocument();
+  });
+
   it('the bulk bar resets bank dates to transaction dates for the selection', async () => {
     const user = userEvent.setup();
     render(<Host />);
@@ -182,7 +267,7 @@ describe('staging and submitting', () => {
 
     fireEvent.change(screen.getByLabelText('Bank date for PAY-0012'), { target: { value: '2026-09-09' } });
     await user.click(screen.getByLabelText('Select PAY-0012'));
-    await user.click(screen.getByRole('button', { name: /Set Bank Date = Transaction Date/ }));
+    await user.click(screen.getByRole('button', { name: /Bulk Reconcile/ }));
 
     expect(screen.getByLabelText('Bank date for PAY-0012')).toHaveValue('2026-09-01');
   });

@@ -7,6 +7,7 @@ import AllocationDialog from './AllocationDialog';
 import { allocationSummary, allocationsForTxn } from './allocations';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
 import RecordDisbursementForm from '../payments/RecordDisbursementForm';
+import { applyVendorPayments, buildCustomerReceipt, buildVendorPayment } from '../payments/paymentService';
 import { formatMoney, round2 } from '../../utils/money';
 import { useListSearch } from '../../components/ListToolbar';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
@@ -912,197 +913,61 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         const txnId = isCategoriseExisting ? Number(initial?.bankTxnId) : nextNumericId(db.bankTransactions);
 
         let linkedPaymentId = null;
-        let nextInvoices = safeArray(db.invoices);
-        let nextBills = safeArray(db.bills);
-        let nextExpenses = safeArray(db.expenses);
-        let nextPayments = safeArray(db.payments);
 
+        /*
+         * The knock-off goes through the payment service — the same engine
+         * the disbursement and receipt forms drive. This form used to build
+         * its own voucher records and move paidAmount by hand, which was a
+         * second settlement path with hand-minted numbers and no server
+         * posting; that path is gone. One engine, whoever calls it.
+         */
+        let builtRecord = null;
         if (shouldKnockoff) {
           const amountNum = round2(amt);
-          const paymentId = nextNumericId(db.payments);
-          linkedPaymentId = paymentId;
-
-          if (party?.kind === 'customer') {
-            const cid = Number(party.partyId);
-            const customer = safeArray(db.customers).find((c) => c.companyId === companyId && Number(c.id) === cid) || null;
-            const customerName = customer?.name || customer?.displayName || customer?.companyName || customer?.legalName || '';
-
-            // Validate allocations
-            for (const line of knockoffComputed.lines.filter((l) => l.voucherType === 'invoice')) {
-              const inv = safeArray(db.invoices).find((i) => i.companyId === companyId && Number(i.id) === Number(line.voucherId));
-              if (!inv) {
-                notify.error('One of the selected invoices was not found. Please refresh and try again.');
-                return;
-              }
-              if (!canCollectAgainstInvoice(inv)) {
-                notify.error(`Cannot record against invoice ${inv.number || ''} (Draft/Cancelled/No balance).`);
-                return;
-              }
-              const balance = getInvoiceBalance(inv);
-              if (Number(line.amount) > balance + 0.0001) {
-                notify.error(`Allocation exceeds outstanding for invoice ${inv.number || ''}.`);
-                return;
-              }
-            }
-            if (knockoffComputed.allocated > amountNum + 0.0001) {
-              notify.error('Total allocated cannot be more than receipt amount');
-              return;
-            }
-
-            const receiptNo = `RCPT-${paymentId}`;
-            const receiptRecord = {
-              id: paymentId,
-              companyId,
-              voucherType: 'receipt',
-              voucherId: null,
-              direction: 'IN',
-              cashBankAccountId: Number(cashBankAccountId),
-              sourceBankTransactionId: txnId,
-              receiptNo,
-              date: form.date,
-              customerId: cid,
-              customerName,
-              amount: amountNum,
-              allocatedAmount: round2(knockoffComputed.allocated),
-              advanceAmount: round2(knockoffComputed.advance),
-              allocations: knockoffComputed.lines
-                .filter((l) => l.voucherType === 'invoice')
-                .map((l) => ({
-                  voucherType: 'invoice',
-                  voucherId: Number(l.voucherId),
-                  documentNumber: l.documentNumber,
-                  amount: round2(l.amount),
-                })),
-              mode: 'Bank',
-              reference: '',
-              notes: String(form.narration || '').trim(),
-              createdAt: nowIso,
-            };
-
-            nextInvoices = safeArray(db.invoices).map((inv) => {
-              if (inv.companyId !== companyId) return inv;
-              const line = receiptRecord.allocations.find((a) => Number(a.voucherId) === Number(inv.id));
-              if (!line) return inv;
-
-              const total = Number(inv.total ?? 0);
-              const alreadyPaid = Number(inv.paidAmount ?? 0);
-              const nextPaid = round2(Math.min(total, alreadyPaid + Number(line.amount ?? 0)));
-              const rawStatus = String(inv.status || '').trim();
-              const nextStatus =
-                rawStatus === 'Draft'
-                  ? 'Draft'
-                  : total > 0 && nextPaid >= total - 0.0001
-                    ? 'Paid'
-                    : nextPaid > 0
-                      ? 'Partial'
-                      : 'Unpaid';
-              return { ...inv, paidAmount: nextPaid, status: nextStatus, updatedAt: nowIso };
-            });
-
-            nextPayments = [...safeArray(db.payments), receiptRecord];
+          const bankRow = safeArray(db.chartOfAccounts).find(
+            (a) => a.companyId === companyId && String(a.id) === String(cashBankAccountId)
+          );
+          const serverBankLedgerId = String(bankRow?.serverLedgerAccountId || '').trim();
+          const nextLocalId = nextNumericId(db.payments);
+          const knockLines = knockoffComputed.lines.map((l) => ({
+            voucherType: l.voucherType,
+            voucherId: l.voucherId,
+            amount: l.amount,
+          }));
+          try {
+            builtRecord =
+              party?.kind === 'customer'
+                ? await buildCustomerReceipt({
+                    db,
+                    currentCompany,
+                    customerId: party.partyId,
+                    date: form.date,
+                    amount: amountNum,
+                    lines: knockLines.filter((l) => l.voucherType === 'invoice'),
+                    ledgerAccountId: serverBankLedgerId,
+                    cashBankAccountId: Number(cashBankAccountId),
+                    sourceBankTransactionId: txnId,
+                    notes: String(form.narration || '').trim(),
+                    nextLocalId,
+                  })
+                : await buildVendorPayment({
+                    db,
+                    currentCompany,
+                    vendorId: party.partyId,
+                    date: form.date,
+                    amount: amountNum,
+                    lines: knockLines.filter((l) => l.voucherType === 'bill' || l.voucherType === 'expense'),
+                    ledgerAccountId: serverBankLedgerId,
+                    cashBankAccountId: Number(cashBankAccountId),
+                    sourceBankTransactionId: txnId,
+                    notes: String(form.narration || '').trim(),
+                    nextLocalId,
+                  });
+          } catch (e) {
+            notify.error(String(e?.message || e));
+            return;
           }
-
-          if (party?.kind === 'vendor') {
-            const vid = Number(party.partyId);
-            const vendor = safeArray(db.vendors).find((v) => v.companyId === companyId && Number(v.id) === vid) || null;
-            const vendorName = vendor?.name || vendor?.displayName || vendor?.companyName || vendor?.legalName || '';
-
-            if (knockoffComputed.allocated > amountNum + 0.0001) {
-              notify.error('Total allocated cannot be more than payment amount');
-              return;
-            }
-
-            // Validate allocations
-            const billsList = safeArray(db.bills).filter((b) => b.companyId === companyId);
-            const expensesList = safeArray(db.expenses).filter((x) => x.companyId === companyId);
-            for (const line of knockoffComputed.lines.filter((l) => l.voucherType === 'bill' || l.voucherType === 'expense')) {
-              const list = line.voucherType === 'bill' ? billsList : expensesList;
-              const doc = list.find((d) => Number(d.id) === Number(line.voucherId));
-              if (!doc) {
-                notify.error('One of the selected documents was not found. Please refresh and try again.');
-                return;
-              }
-              if (!canPayDoc(doc)) {
-                notify.error(`Cannot record against ${line.voucherType} ${doc.number || ''} (Draft/Cancelled/No balance).`);
-                return;
-              }
-              const balance = getDocBalance(doc);
-              if (Number(line.amount) > balance + 0.0001) {
-                notify.error(`Allocation exceeds outstanding for ${line.voucherType} ${doc.number || ''}.`);
-                return;
-              }
-            }
-
-            const paymentNo = `PAY-${paymentId}`;
-            const paymentRecord = {
-              id: paymentId,
-              companyId,
-              voucherType: 'payment',
-              voucherId: null,
-              direction: 'OUT',
-              cashBankAccountId: Number(cashBankAccountId),
-              sourceBankTransactionId: txnId,
-              paymentNo,
-              date: form.date,
-              vendorId: vid,
-              vendorName,
-              amount: amountNum,
-              allocatedAmount: round2(knockoffComputed.allocated),
-              advanceAmount: round2(knockoffComputed.advance),
-              allocations: knockoffComputed.lines
-                .filter((l) => l.voucherType === 'bill' || l.voucherType === 'expense')
-                .map((l) => ({
-                  voucherType: l.voucherType,
-                  voucherId: Number(l.voucherId),
-                  documentNumber: l.documentNumber,
-                  amount: round2(l.amount),
-                })),
-              mode: 'Bank',
-              reference: '',
-              notes: String(form.narration || '').trim(),
-              createdAt: nowIso,
-            };
-
-            nextBills = safeArray(db.bills).map((b) => {
-              if (b.companyId !== companyId) return b;
-              const line = paymentRecord.allocations.find((a) => a.voucherType === 'bill' && Number(a.voucherId) === Number(b.id));
-              if (!line) return b;
-              const total = Number(b.total ?? 0);
-              const alreadyPaid = Number(b.paidAmount ?? 0);
-              const nextPaid = round2(Math.min(total, alreadyPaid + Number(line.amount ?? 0)));
-              const rawStatus = String(b.status || '').trim();
-              const nextStatus =
-                rawStatus === 'Draft'
-                  ? 'Draft'
-                  : total > 0 && nextPaid >= total - 0.0001
-                    ? 'Paid'
-                    : nextPaid > 0
-                      ? 'Partial'
-                      : 'Unpaid';
-              return { ...b, paidAmount: nextPaid, status: nextStatus, updatedAt: nowIso };
-            });
-
-            nextExpenses = safeArray(db.expenses).map((ex) => {
-              if (ex.companyId !== companyId) return ex;
-              const line = paymentRecord.allocations.find((a) => a.voucherType === 'expense' && Number(a.voucherId) === Number(ex.id));
-              if (!line) return ex;
-              const total = Number(ex.total ?? 0);
-              const alreadyPaid = Number(ex.paidAmount ?? 0);
-              const nextPaid = round2(Math.min(total, alreadyPaid + Number(line.amount ?? 0)));
-              const rawStatus = String(ex.status || '').trim();
-              const nextStatus =
-                rawStatus === 'Draft'
-                  ? 'Draft'
-                  : total > 0 && nextPaid >= total - 0.0001
-                    ? 'Paid'
-                    : nextPaid > 0
-                      ? 'Partial'
-                      : 'Unpaid';
-              return { ...ex, paidAmount: nextPaid, status: nextStatus, updatedAt: nowIso };
-            });
-
-            nextPayments = [...safeArray(db.payments), paymentRecord];
-          }
+          linkedPaymentId = builtRecord.id;
         }
 
         const bankTxnRecord = {
@@ -1134,13 +999,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         Object.assign(bankTxnRecord, bankServerPatch);
 
         setDb((prev) => {
-          const next = { ...prev };
-          if (shouldKnockoff) {
-            next.invoices = nextInvoices;
-            next.bills = nextBills;
-            next.expenses = nextExpenses;
-            next.payments = nextPayments;
-          }
+          const next = builtRecord ? { ...applyVendorPayments(prev, companyId, [builtRecord]) } : { ...prev };
 
           const list = safeArray(prev.bankTransactions);
           if (isCategoriseExisting) {
