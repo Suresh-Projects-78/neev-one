@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import FormSection from '../../components/ui/FormSection';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 
 import { createPortal } from 'react-dom';
@@ -20,7 +19,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, Building2, Calculator, SlidersHorizontal, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
+import { Ban, Building2, SlidersHorizontal, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -1807,6 +1806,7 @@ export const PurchaseOrderForm = ({
   initialData = null,
   warehouses = [],
   defaultWarehouseId = '',
+  branches = [],
 }) => {
   const formRef = useRef(null);
   const isEditPo = Boolean(initialData?.id);
@@ -1814,11 +1814,18 @@ export const PurchaseOrderForm = ({
   const itemsMaster = db.items.filter((i) => i.companyId === currentCompany.id);
 
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
-  const poDocSettings = getDocSettings(db, currentCompany, { branchId: activeBranchId || null });
-  const poNumbering = poDocSettings?.numbering?.purchaseOrder;
-  const isPoAuto = String(poNumbering?.mode || '').toLowerCase() === 'auto';
-  const lockPoNumber = isPoAuto && !poNumbering?.allowManualOverride;
-  const generatedPoNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
+  const resolveBranchIdFromWarehouseId = (warehouseId) => {
+    const wid = String(warehouseId || '').trim();
+    if (!wid) return activeBranchId || '';
+    const w = (Array.isArray(warehouses) ? warehouses : []).find((x) => String(x?.id || '').trim() === wid) || null;
+    return String(w?.branchId || '').trim() || activeBranchId || '';
+  };
+  const initPoBranchId =
+    String(initialData?.branchId || '').trim() ||
+    resolveBranchIdFromWarehouseId(String(initialData?.warehouseId || defaultWarehouseId || '').trim()) ||
+    '';
+  const poDocSettingsInit = getDocSettings(db, currentCompany, { branchId: initPoBranchId || null });
+  const isPoAutoInit = String(poDocSettingsInit?.numbering?.purchaseOrder?.mode || '').toLowerCase() === 'auto';
 
   const customFields = React.useMemo(() => getVisibleCustomFields(currentCompany, 'purchaseOrder'), [currentCompany]);
   const setCustomField = (key, value) =>
@@ -1845,7 +1852,7 @@ export const PurchaseOrderForm = ({
       };
     }
     return {
-      number: isPoAuto ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: activeBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '' : '',
+      number: isPoAutoInit ? nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: initPoBranchId || null, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || '' : '',
       date: new Date().toISOString().split('T')[0],
       vendorId: '',
       warehouseId: String(defaultWarehouseId || '').trim(),
@@ -1853,6 +1860,56 @@ export const PurchaseOrderForm = ({
       notes: '',
     };
   });
+
+  /*
+   * Where the order belongs, asked the way the bill asks it: the branch
+   * first, then only that branch's warehouses, with the series following the
+   * branch. Same control, same order, same fallbacks.
+   */
+  const [branchId, setBranchId] = useState(
+    () => initPoBranchId || getLastSelection('branch', currentCompany?.id) || activeBranchId || ''
+  );
+  const branchIdInList =
+    !branchId || (Array.isArray(branches) ? branches : []).some((b) => String(b?.id || '') === String(branchId))
+      ? branchId
+      : '';
+  const branchOptions = React.useMemo(() => {
+    const list = Array.isArray(branches) ? branches : [];
+    return list.slice().sort((a, b) => branchLabel(a).localeCompare(branchLabel(b)));
+  }, [branches]);
+
+  const branchIdForNumbering =
+    String(branchIdInList || '').trim() || resolveBranchIdFromWarehouseId(formData.warehouseId) || null;
+  const poDocSettings = getDocSettings(db, currentCompany, { branchId: branchIdForNumbering });
+  const poNumbering = poDocSettings?.numbering?.purchaseOrder;
+  const isPoAuto = String(poNumbering?.mode || '').toLowerCase() === 'auto';
+  const lockPoNumber = isPoAuto && !poNumbering?.allowManualOverride;
+  const generatedPoNumber = nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'purchaseOrder', branchId: branchIdForNumbering, takenNumbers: (db.purchaseOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) });
+
+  /* An untouched automatic number follows its series live, as on the bill. */
+  const [numberTouched, setNumberTouched] = useState(false);
+  const autoNumbered = !isEditPo && isPoAuto && !numberTouched;
+  const poNumberValue = autoNumbered ? String(generatedPoNumber || '') : formData.number;
+
+  const warehouseOptions = React.useMemo(() => {
+    const list = Array.isArray(warehouses) ? warehouses : [];
+    const scope = String(branchIdInList || '').trim();
+    const inScope = scope ? list.filter((w) => String(w?.branchId || '').trim() === scope) : list;
+    return inScope.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
+  }, [warehouses, branchIdInList]);
+
+  const onBranchChange = (nextBranchId) => {
+    const next = String(nextBranchId || '').trim();
+    setBranchId(next);
+    setLastSelection('branch', currentCompany?.id, next);
+    setFormData((p) => {
+      const held = String(p.warehouseId || '').trim();
+      if (!held || !next) return p;
+      const w = (Array.isArray(warehouses) ? warehouses : []).find((x) => String(x?.id || '').trim() === held);
+      if (w && String(w.branchId || '').trim() === next) return p;
+      return { ...p, warehouseId: '' };
+    });
+  };
 
   const addItem = () => {
     setFormData((prev) => ({
@@ -1927,7 +1984,7 @@ export const PurchaseOrderForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let poNumber = String(formData.number || '').trim();
+    let poNumber = String(poNumberValue || '').trim();
     if (isPoAuto) {
       if (lockPoNumber) poNumber = String(generatedPoNumber || '').trim();
       else if (!poNumber) poNumber = String(generatedPoNumber || '').trim();
@@ -1989,6 +2046,7 @@ export const PurchaseOrderForm = ({
             ? {
                 ...x,
                 date: formData.date,
+                branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
                 vendorId: formData.vendorId,
                 vendorName: getVendorDisplayName(vendorObj),
                 warehouseId: String(formData.warehouseId || '').trim(),
@@ -2019,6 +2077,7 @@ export const PurchaseOrderForm = ({
       backendDocId,
       number: serverNumber || poNumber,
       date: formData.date,
+      branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
       vendorId: formData.vendorId,
       vendorName: getVendorDisplayName(vendorObj),
       items: formData.items.map((l) => ({
@@ -2041,7 +2100,7 @@ export const PurchaseOrderForm = ({
     setDb({
       ...db,
       purchaseOrders: [...db.purchaseOrders, newPo],
-      companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'purchaseOrder', usedNumber: poNumber, branchId: activeBranchId || null }),
+      companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'purchaseOrder', usedNumber: poNumber, branchId: branchIdForNumbering }),
     });
 
     onClose?.();
@@ -2061,55 +2120,101 @@ export const PurchaseOrderForm = ({
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} className="space-y-6">
       <DocFormActions primaryLabel={isEditPo ? 'Update PO' : 'Create PO'} />
 
-      <div className="grid grid-cols-2 gap-4">
-        <DocNumberField
-          id="po-number"
-          label="PO Number"
-          value={formData.number}
-          onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-          disabled={lockPoNumber}
-          required
-          voucherKey="purchaseOrder"
-          title="Order numbering"
-          sampleLabel="Next order will be"
-          manualLabel="Typed on each order"
-          branchId={activeBranchId || null}
-          settings={poNumbering}
-          db={db}
-          setDb={setDb}
-          currentCompany={currentCompany}
-        />
+      {/*
+        The head of the document, in the bill's two columns: where the goods
+        will land and who supplies them on the left, the paperwork that
+        identifies the order on the right, ruled off between them.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-6 space-y-4">
+          {/* Where first, then who — the branch, the warehouse under it, and
+              the vendor across the full width underneath. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div id="po-branch-field">
+              <PopupSelect
+                label="Branch"
+                title="branches"
+                value={String(branchIdInList || '')}
+                onChange={onBranchChange}
+                icon={Building2}
+                options={[
+                  { value: '', label: 'All branches' },
+                  ...branchOptions.map((b) => ({ value: String(b.id), label: branchLabel(b) })),
+                ]}
+                placeholder="Select Branch"
+                showValueSubtext={false}
+              />
+            </div>
 
-        <div>
-          <VendorPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.vendorId}
-            onChange={(vendorId) => setFormData((p) => ({ ...p, vendorId }))}
-          />
+            <WarehouseField
+              value={formData.warehouseId}
+              onChange={(warehouseId) => {
+                setLastSelection('warehouse', currentCompany?.id, warehouseId);
+                setFormData((p) => ({ ...p, warehouseId }));
+              }}
+              options={warehouseOptions}
+              activeWarehouseId={defaultWarehouseId}
+              isEdit={isEditPo}
+              required={false}
+              icon={Package}
+              showSourceHint={false}
+              className="ui-select w-full ui-surface"
+            />
+          </div>
+
+          <div>
+            <VendorPicker
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              value={formData.vendorId}
+              icon={Truck}
+              onChange={(vendorId) => setFormData((p) => ({ ...p, vendorId }))}
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="ui-label">Date</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
-            className="ui-input w-full"
-            required
-          />
-        </div>
+        <div
+          className="lg:col-span-6 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <DocNumberField
+              id="po-number"
+              label="PO Number"
+              value={poNumberValue}
+              onChange={(e) => {
+                setNumberTouched(true);
+                setFormData((p) => ({ ...p, number: e.target.value }));
+              }}
+              disabled={lockPoNumber}
+              required
+              voucherKey="purchaseOrder"
+              title="Order numbering"
+              sampleLabel="Next order will be"
+              manualLabel="Typed on each order"
+              branchId={branchIdForNumbering}
+              settings={poNumbering}
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+            />
 
-        <WarehouseField
-          value={formData.warehouseId}
-          onChange={(warehouseId) => setFormData((p) => ({ ...p, warehouseId }))}
-          options={Array.isArray(warehouses) ? warehouses : []}
-          activeWarehouseId={defaultWarehouseId}
-          isEdit={isEditPo}
-          required={false}
-          className="ui-select w-full ui-surface"
-        />
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="po-date">
+                Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="po-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
+                className="ui-input w-full"
+                required
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div>
@@ -3601,16 +3706,17 @@ export const DebitNoteForm = ({
         ]}
       />
 
-      <FormSection
-        icon={ShoppingCart}
-        title="Basic Details"
-        description="Enter the key details for this purchase return."
-      >
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Where the goods are going back from, who they are going back to,
-            then the paperwork — the bill's own order, on the document that
-            reverses a bill. */}
-        <div id="return-branch-field">
+      {/*
+        The head of the document, in the bill's two columns: where the goods go
+        back from and who they go back to on the left, the paperwork that
+        identifies the return on the right, ruled off between them.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-6 space-y-4">
+          {/* Where first, then who — the bill's own order, on the document
+              that reverses a bill. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div id="return-branch-field">
           <PopupSelect
             label="Branch"
             title="branches"
@@ -3626,7 +3732,7 @@ export const DebitNoteForm = ({
           />
         </div>
 
-        <WarehouseField
+            <WarehouseField
           value={formData.warehouseId}
           onChange={(warehouseId) => {
             setLastSelection('warehouse', currentCompany?.id, warehouseId);
@@ -3639,8 +3745,9 @@ export const DebitNoteForm = ({
           showSourceHint={false}
           className="ui-select w-full ui-surface"
         />
+          </div>
 
-        <div>
+          <div>
           <VendorPicker
             db={db}
             setDb={setDb}
@@ -3653,7 +3760,7 @@ export const DebitNoteForm = ({
           />
         </div>
 
-        <div>
+          <div>
           <div className="flex items-center justify-between mb-1">
             <label className="ui-label">
               {onAccountMode ? 'Bills this return covers' : 'Original Bill # *'}
@@ -3713,8 +3820,14 @@ export const DebitNoteForm = ({
             </select>
           )}
         </div>
+        </div>
 
-        <div>
+        <div
+          className="lg:col-span-6 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
           <label className="ui-label" htmlFor="return-number">Debit Note Number</label>
           <div className="relative">
             <input
@@ -3763,7 +3876,7 @@ export const DebitNoteForm = ({
           ) : null}
         </div>
 
-        <div>
+            <div>
           <label className="ui-label">Debit Note Date</label>
           <input
             type="date"
@@ -3773,22 +3886,20 @@ export const DebitNoteForm = ({
             required
           />
         </div>
+          </div>
 
-        <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
-        <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="header" />
+            <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="reference" />
+          </div>
+        </div>
       </div>
-      </FormSection>
 
-      <FormSection
-        icon={Package}
-        title="Line Items"
-        description="Add the items you are returning to the vendor."
-        action={
-          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
-            <Plus size={15} aria-hidden="true" /> Add Item
-          </button>
-        }
-      >
+      <div>
+        <div className="mb-2">
+          <label className="ui-label">Line Items</label>
+        </div>
+
         <div className="border rounded-lg overflow-hidden">
           <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
@@ -3880,99 +3991,67 @@ export const DebitNoteForm = ({
           </table>
         </div>
 
-        {/* The next row, rather than a button adrift under the table. */}
-        <div
-          className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-dashed px-4 py-2.5"
-          style={{ borderColor: 'rgb(var(--brand) / 0.4)', backgroundColor: 'rgb(var(--brand) / 0.04)' }}
-        >
-          <button
-            type="button"
-            onClick={addItem}
-            className="inline-flex items-center gap-2 text-sm font-medium"
-            style={{ color: 'rgb(var(--brand-ink))' }}
-          >
-            <Plus size={15} aria-hidden="true" /> Add another item
+        <div className="mt-2 flex items-center gap-3">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+            <Plus size={15} aria-hidden="true" /> Add Item
           </button>
-          {/* The same sentence every document form says. The mockup shortens
-              it; a form that says it differently is the drift the parity test
-              exists to catch. */}
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
         </div>
 
-      </FormSection>
-
-      {/*
-        The note and what the return comes to, side by side.
-
-        The totals used to sit under the lines, tucked to the right of the table
-        that produced them and read as one more row of it. They are what the
-        document is worth and are given their own card — and the room the note
-        needed anyway.
-      */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <FormSection
-          icon={NotebookPen}
-          title="Additional Information"
-          description="Add notes or reference for this return (optional)."
-        >
-          <div className="space-y-4">
-            <div>
-              <textarea
-                value={formData.notes || ''}
-                onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value.slice(0, 500) }))}
-                rows={4}
-                maxLength={500}
-                className="ui-input w-full"
-                placeholder="Enter remarks, return reason, or any additional information…"
-                aria-label="Notes"
-              />
-              <div className="ui-caption mt-1 text-end">{String(formData.notes || '').length}/500</div>
-            </div>
-
-            {hasCustomFieldsAt(customFields, 'notes') ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
-              </div>
-            ) : null}
-
-            <AmountInWordsBand words={amountInWordsInr(computed.total)} />
-          </div>
-        </FormSection>
-
-        <FormSection icon={Calculator} title="Summary">
-          <dl className="space-y-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <dt className="ui-muted text-sm">Subtotal</dt>
-              <dd className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</dd>
+        {/* The totals in the bill's place: right-aligned under the lines that
+            produced them. */}
+        <div className="mt-4 flex justify-end">
+          <div className="w-80 space-y-2">
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
             </div>
             {isIntra ? (
               <>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="ui-muted text-sm">CGST</dt>
-                  <dd className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</dd>
+                <div className="flex justify-between">
+                  <span>CGST:</span>
+                  <span className="ui-money">{formatMoney(computed.cgstTotal, currentCompany)}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <dt className="ui-muted text-sm">SGST</dt>
-                  <dd className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</dd>
+                <div className="flex justify-between">
+                  <span>SGST:</span>
+                  <span className="ui-money">{formatMoney(computed.sgstTotal, currentCompany)}</span>
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-between gap-3">
-                <dt className="ui-muted text-sm">IGST</dt>
-                <dd className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</dd>
+              <div className="flex justify-between">
+                <span>IGST:</span>
+                <span className="ui-money">{formatMoney(computed.igstTotal, currentCompany)}</span>
               </div>
             )}
-          </dl>
-
-          <div
-            className="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-3"
-            style={{ backgroundColor: 'rgb(var(--brand) / 0.08)' }}
-          >
-            <span className="text-sm font-medium">Total</span>
-            <span className="ui-money-lg">{formatMoney(computed.total, currentCompany)}</span>
+            <div className="ui-total-row border-t pt-2">
+              <span>Total:</span>
+              <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
+            </div>
           </div>
-        </FormSection>
+        </div>
       </div>
+
+      <div>
+        <label className="ui-label" htmlFor="return-notes">Notes</label>
+        <textarea
+          id="return-notes"
+          value={formData.notes || ''}
+          onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value.slice(0, 500) }))}
+          rows={3}
+          maxLength={500}
+          className="ui-input w-full"
+          placeholder="Enter remarks, return reason, or any additional information…"
+        />
+        <div className="ui-caption mt-1 text-end">{String(formData.notes || '').length}/500</div>
+      </div>
+
+      {hasCustomFieldsAt(customFields, 'notes') ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <DocumentCustomFields fields={customFields} values={formData.customFields} onChange={setCustomField} where="notes" />
+        </div>
+      ) : null}
+
+      <AmountInWordsBand words={amountInWordsInr(computed.total)} />
 
       <DocFormFootnote />
 

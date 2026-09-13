@@ -13039,6 +13039,7 @@ const AppShell = () => {
                   currentCompany={currentCompany}
                   warehouses={warehousesForUser}
                   defaultWarehouseId={activeWarehouseId}
+                  branches={branchesForUser}
                   initialData={poEditor.initial}
                   onClose={() => setPoEditor({ open: false, initial: null })}
                 />

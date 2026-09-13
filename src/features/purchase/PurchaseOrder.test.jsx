@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
@@ -64,6 +65,50 @@ describe('the purchase order line grid', () => {
     };
     render(<PurchaseOrderForm db={dbWith({ companies: [company] })} setDb={() => {}} currentCompany={company} onClose={() => {}} />);
     expect(screen.getByLabelText('Project code')).toBeInTheDocument();
+  });
+});
+
+describe('the purchase order wears the bill\'s header', () => {
+  const BRANCHES = [
+    { id: 'b-blr', companyId: 1, name: 'Bengaluru', code: 'BLR' },
+    { id: 'b-hyd', companyId: 1, name: 'Hyderabad', code: 'HYD' },
+  ];
+  const WAREHOUSES = [
+    { id: 'w-blr', companyId: 1, name: 'Bengaluru Store', branchId: 'b-blr' },
+    { id: 'w-hyd', companyId: 1, name: 'Hyderabad Store', branchId: 'b-hyd' },
+  ];
+  const renderWithBranches = () =>
+    render(
+      <PurchaseOrderForm
+        db={dbWith()}
+        setDb={() => {}}
+        currentCompany={COMPANY}
+        onClose={() => {}}
+        branches={BRANCHES}
+        warehouses={WAREHOUSES}
+      />
+    );
+
+  it('asks which branch, before the warehouse', () => {
+    renderWithBranches();
+    expect(screen.getByRole('combobox', { name: 'Branch' })).toBeInTheDocument();
+  });
+
+  /* A shelf that belongs to another branch is the mis-post the ordering
+     exists to stop — same rule as the bill and the return. */
+  it('narrows the warehouses to the chosen branch', async () => {
+    const user = userEvent.setup();
+    renderWithBranches();
+    await user.click(screen.getByRole('combobox', { name: 'Branch' }));
+    await user.click(screen.getByRole('option', { name: 'Bengaluru' }));
+    await user.click(screen.getByRole('combobox', { name: /^Warehouse/ }));
+    const panel = screen.getByRole('listbox');
+    expect(within(panel).getAllByRole('option').map((o) => o.textContent.trim())).toEqual(['Bengaluru Store']);
+  });
+
+  it('keeps the series control on the number field', () => {
+    renderWithBranches();
+    expect(screen.getByRole('button', { name: /numbering/i })).toBeInTheDocument();
   });
 });
 
