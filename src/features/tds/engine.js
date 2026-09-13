@@ -47,6 +47,8 @@ export const companyTdsProfile = (company) => {
     deductorName: String(tds?.deductorName || company?.name || '').trim(),
     deductorType: String(tds?.deductorType || '').trim(),
     defaultNatureCode: String(tds?.defaultNatureCode || '').trim().toUpperCase(),
+    defaultPayableLedgerId: String(tds?.defaultPayableLedgerId || '').trim(),
+    defaultReceivableLedgerId: String(tds?.defaultReceivableLedgerId || '').trim(),
   };
 };
 
@@ -200,7 +202,12 @@ export const resolveTds = ({
      is a block, because a deduction with no destination cannot post. */
   const eligible = tdsLedgersFor(ledgers, { natureCode, side });
   const preferred = eligible.find((l) => String(l.id) === partyProfile.defaultLedgerId);
-  const ledger = preferred || (eligible.length === 1 ? eligible[0] : null);
+  /* Party's own mapping first, then the company default from Configuration →
+     Taxation → TDS, then the lone eligible ledger — configuration beats
+     coincidence, and a wrong-nature default is simply not eligible. */
+  const companyDefaultId = side === 'RECEIVABLE' ? profile.defaultReceivableLedgerId : profile.defaultPayableLedgerId;
+  const companyDefault = eligible.find((l) => String(l.id) === companyDefaultId);
+  const ledger = preferred || companyDefault || (eligible.length === 1 ? eligible[0] : null);
   if (!eligible.length) {
     warnings.push({
       severity: BLOCK,

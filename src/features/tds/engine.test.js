@@ -224,6 +224,37 @@ describe('where it posts', () => {
     expect(result.ledgerId).toBe('105');
   });
 
+  /* Configuration → Taxation → TDS names a company default; it stands
+     between the party's own mapping and the lone-eligible fallback. */
+  it('falls back to the company default ledger when the party names none', () => {
+    const two = [...LEDGERS, { id: 105, name: 'TDS Payable - Contractor (site)', tdsNatureCode: CONTRACTOR, tdsSide: 'PAYABLE' }];
+    const result = ask({
+      ledgers: two,
+      company: company({ defaultPayableLedgerId: '105' }),
+      party: vendor({ tdsLedgerId: '' }),
+    });
+    expect(result.ledgerId).toBe('105');
+  });
+
+  it('the party mapping still beats the company default', () => {
+    const two = [...LEDGERS, { id: 105, name: 'TDS Payable - Contractor (site)', tdsNatureCode: CONTRACTOR, tdsSide: 'PAYABLE' }];
+    const result = ask({
+      ledgers: two,
+      company: company({ defaultPayableLedgerId: '105' }),
+      party: vendor({ tdsLedgerId: '101' }),
+    });
+    expect(result.ledgerId).toBe('101');
+  });
+
+  it('a wrong-nature company default is simply not eligible', () => {
+    const result = ask({
+      company: company({ defaultPayableLedgerId: '102' }),
+      party: vendor({ tdsLedgerId: '' }),
+    });
+    /* 102 accumulates PROFESSIONAL; the lone contractor ledger wins. */
+    expect(result.ledgerId).toBe('101');
+  });
+
   /* A deduction with nowhere to post cannot be posted — §22 makes this a
      BLOCK, not a warning. */
   it('blocks when the nature has no mapped ledger', () => {

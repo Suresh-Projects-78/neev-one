@@ -114,6 +114,7 @@ export const SETTINGS_ITEMS = [
 
   // Tax & compliance
   { key: 'settingsTax', title: 'GST', category: 'tax', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW', description: 'Registration type, filing frequency and what the returns read.', keywords: ['gstin', 'composition', 'gstr', 'filing', 'reverse charge'] },
+  { key: 'settingsTds', title: 'TDS', category: 'tax', icon: BadgePercent, perm: 'SETTINGS::Tax Settings::VIEW', description: 'Deductor profile, natures and rules, ledger mapping and party defaults.', keywords: ['tds', 'tan', 'deduction', 'challan', '194', 'deductor', 'nature'] },
   { key: 'gstRates', title: 'Tax Rates', category: 'tax', icon: BadgePercent, perm: 'MASTERS::GST Rates::VIEW', description: 'The rates items can carry, and which is the default.', keywords: ['gst rate', 'hsn', 'cess', 'slab'] },
 
   // Users & security

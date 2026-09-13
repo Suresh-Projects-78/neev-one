@@ -104,7 +104,7 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
           message="Settings → Tax compliances turns it on, along with the TAN and deductor details a challan and a return need."
           routes={
             onOpenSettings
-              ? [{ label: 'Open tax settings', description: 'Enable TDS and record the TAN.', onSelect: () => onOpenSettings('settingsTax') }]
+              ? [{ label: 'Open tax settings', description: 'Enable TDS and record the TAN.', onSelect: () => onOpenSettings('settingsTds') }]
               : undefined
           }
         />

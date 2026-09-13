@@ -216,6 +216,7 @@ const BankCashAccounts = lazy(() => import('./features/cashBank/BankCashAccounts
 const CashBankTransactions = lazy(() => import('./features/cashBank/CashBankTransactions'));
 const TdsModule = lazy(() => import('./features/tds/TdsModule'));
 const TdsChallanForm = lazy(() => import('./features/tds/ChallanForm'));
+const TdsSettings = lazy(() => import('./features/tds/TdsSettings'));
 const ContraForm = lazy(() => import('./features/cashBank/ContraForm'));
 const AccountOverview = lazy(() => import('./features/account/AccountOverview'));
 const BillingPreview = lazy(() => import('./features/account/BillingPreview'));
@@ -13319,6 +13320,17 @@ const AppShell = () => {
         );
       case 'settingsTax':
         return <SettingsView db={dbForUser} setDb={setDb} currentCompany={currentCompany} initialTab="tax" showSidebar={false} />;
+      case 'settingsTds':
+        return (
+          <TdsSettings
+            db={dbForUser}
+            setDb={setDb}
+            currentCompany={currentCompany}
+            onOpenChart={() => setActive('bankCash')}
+            onOpenVendors={() => setActive('vendors')}
+            onOpenCustomers={() => setActive('customers')}
+          />
+        );
       case 'settingsBranches': {
         const orgId = resolveServerOrgId(currentCompany);
         return <SettingsBranches orgId={orgId} onBranchesChanged={() => setBranchesReloadKey((k) => k + 1)} />;
