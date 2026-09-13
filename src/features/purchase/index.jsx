@@ -40,7 +40,7 @@ import DocumentPrintView from '../../components/DocumentPrintView';
 import PrintDownloadFrame from '../../components/PrintDownloadFrame';
 import { getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { tdsVariesByDeductee, DEDUCTEE_TYPES } from '../../utils/tds';
-import { priorBaseFor, resolveTds, tdsEventFrom, tdsLedgersFor } from '../tds/engine';
+import { priorBaseFor, resolveTds, tdsEventFrom, tdsLedgersFor, tdsReversalEventFrom } from '../tds/engine';
 import { TDS_NATURES, natureByCode, natureForSection } from '../tds/ruleMaster';
 import { tdsGroupSide } from '../../utils/tdsLedgers';
 import {
@@ -2736,20 +2736,56 @@ const billStatusReason = (doc, status, company, nowMs) => {
       }
     }
 
-    setDb((prev) => ({
-      ...prev,
-      bills: (prev.bills || []).filter((b) => b.id !== bill.id),
-      payments: (Array.isArray(prev.payments) ? prev.payments : []).filter(
-        (p) => {
-          if (p?.voucherType === 'bill' && Number(p?.voucherId) === Number(bill.id)) return false;
-          if (p?.voucherType === 'payment' && Array.isArray(p?.allocations)) {
-            const hit = p.allocations.some((a) => a?.voucherType === 'bill' && Number(a?.voucherId) === Number(bill.id));
-            if (hit) return false;
+    setDb((prev) => {
+      /*
+       * The compliance events survive the document that raised them — a
+       * deleted deducting bill is answered by REVERSING events, never by
+       * erasing history. The originals are marked Reversed so the register
+       * and the payable skip the pair; the return sees both rows, which is
+       * what an auditor asks for.
+       */
+      const events = Array.isArray(prev.tdsTransactions) ? prev.tdsTransactions : [];
+      const mine = events.filter(
+        (e) =>
+          Number(e?.companyId) === Number(currentCompany.id) &&
+          String(e?.sourceType) === 'bill' &&
+          String(e?.sourceId) === String(bill.id) &&
+          String(e?.status).toLowerCase() === 'posted' &&
+          !e?.reversalOfId
+      );
+      let nextEventId = events.reduce((m, e) => Math.max(m, Number(e?.id) || 0), 0);
+      const stamp = new Date().toISOString();
+      const reversals = mine.map((e) => ({
+        ...tdsReversalEventFrom(e, { reason: `Bill ${bill?.number || bill.id} deleted` }),
+        id: ++nextEventId,
+      }));
+      const nextEvents = mine.length
+        ? [
+            ...events.map((e) =>
+              mine.some((m) => m.id === e.id)
+                ? { ...e, status: 'Reversed', modifiedBy: reversals[0]?.createdBy || 'User', modifiedAt: stamp }
+                : e
+            ),
+            ...reversals,
+          ]
+        : events;
+
+      return {
+        ...prev,
+        tdsTransactions: nextEvents,
+        bills: (prev.bills || []).filter((b) => b.id !== bill.id),
+        payments: (Array.isArray(prev.payments) ? prev.payments : []).filter(
+          (p) => {
+            if (p?.voucherType === 'bill' && Number(p?.voucherId) === Number(bill.id)) return false;
+            if (p?.voucherType === 'payment' && Array.isArray(p?.allocations)) {
+              const hit = p.allocations.some((a) => a?.voucherType === 'bill' && Number(a?.voucherId) === Number(bill.id));
+              if (hit) return false;
+            }
+            return true;
           }
-          return true;
-        }
-      ),
-    }));
+        ),
+      };
+    });
   };
 
   const raiseDebitNote = (bill) => {

@@ -314,7 +314,8 @@ export const priorBaseFor = (documents, { partyId, natureCode, onDate, excludeId
  * the rule version, the statutory reference, the base, the rate and the
  * ledger. Editing a vendor tomorrow must not restate what was deducted today.
  */
-export const tdsEventFrom = (result, { company, party, source, branchId = '', date, deductionDate }) => {
+export const tdsEventFrom = (result, context = {}) => {
+  const { company, party, source, branchId = '', date, deductionDate } = context;
   const profile = companyTdsProfile(company);
   const partyProfile = partyTdsProfile(party);
   const on = day(date);
@@ -351,7 +352,60 @@ export const tdsEventFrom = (result, { company, party, source, branchId = '', da
     side: result.side,
     returnQuarter: returnQuarter(on),
     status: 'Posted',
+    /* Who and when — the compliance event is auditable on its own. */
+    createdBy: String(context?.by ?? readUser()),
     createdAt: new Date().toISOString(),
+    modifiedBy: null,
+    modifiedAt: null,
+    /* Correction lineage. A posted event is never edited: a mistake is
+       answered by a REVERSING event that points back here, and this pair of
+       fields is how the register tells an original from its correction. */
+    reversalOfId: null,
+    correctionOfId: null,
+  };
+};
+
+const readUser = () => {
+  try {
+    return String(localStorage.getItem('userEmail') || '').trim() || 'User';
+  } catch {
+    return 'User';
+  }
+};
+
+/**
+ * The reversing event for a posted TDS transaction.
+ *
+ * History is never rewritten: the original keeps every snapshot it was
+ * posted with, and the reversal is a NEW event carrying the same snapshots
+ * with the amounts negated and `reversalOfId` naming what it undoes. It
+ * reports in the quarter of the reversal's own date — undoing last
+ * quarter's deduction this quarter is this quarter's compliance fact.
+ * The caller marks the original `status: 'Reversed'` (with modifiedBy/At)
+ * so live reports skip the pair; the return still sees both rows.
+ */
+export const tdsReversalEventFrom = (original, { by = '', reason = '', date = '' } = {}) => {
+  const on = day(date) || day(original?.transactionDate);
+  return {
+    ...original,
+    id: undefined,
+    transactionDate: on,
+    deductionDate: on,
+    baseAmount: -Math.abs(Number(original?.baseAmount || 0)),
+    tdsAmount: -Math.abs(Number(original?.tdsAmount || 0)),
+    returnQuarter: returnQuarter(on),
+    /* Not 'Posted': the pair — Reversed original, Reversal row — both leave
+       the live readers, so summaries net the deduction OUT rather than
+       counting a negative beside a skipped original (which would undo it
+       twice). The rows remain as the audit lineage. */
+    status: 'Reversal',
+    reversalOfId: original?.id ?? null,
+    correctionOfId: null,
+    reversalReason: String(reason || ''),
+    createdBy: String(by || readUser()),
+    createdAt: new Date().toISOString(),
+    modifiedBy: null,
+    modifiedAt: null,
   };
 };
 
