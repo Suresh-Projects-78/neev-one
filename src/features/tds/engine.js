@@ -287,6 +287,16 @@ export const tdsEventFrom = (result, { company, party, source, branchId = '', da
   const partyProfile = partyTdsProfile(party);
   const on = day(date);
   return {
+    /*
+     * The regime the event belongs to. Everything downstream — register,
+     * challans, exceptions, the return dataset — reads the same normalized
+     * store, and TCS is the same machinery pointed at collections instead of
+     * deductions (206C sections, collected from the buyer, 27EQ instead of
+     * 26Q). Stamping the regime NOW means TCS arrives later as new rows in
+     * the same store and a filter in the reports, not a second store and a
+     * migration. Until then every event is TDS and readers need not filter.
+     */
+    regime: 'TDS',
     companyId: company?.id ?? null,
     branchId: String(branchId || ''),
     sourceType: String(source?.type || ''),

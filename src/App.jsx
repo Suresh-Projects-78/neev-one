@@ -2774,6 +2774,9 @@ export const ChartAccountForm = ({
       ? String(initialData?.tdsNatureCode || natureForSection(initialData?.tdsSection)?.code || '')
       : '',
     tdsRate: isEdit ? String(initialData?.tdsRate ?? '') : '',
+    /* Availability on transactions — an inactive ledger stays in the chart
+       with its history, and out of every picker. */
+    isActive: isEdit ? initialData?.isActive !== false : true,
     addresses: Array.isArray(initialData?.addresses) ? initialData.addresses : [],
     contacts: Array.isArray(initialData?.contacts) ? initialData.contacts : [],
   });
@@ -2857,7 +2860,7 @@ export const ChartAccountForm = ({
   const ledgerTabs = useMemo(() => {
     const tabs = [];
     if (isBankGroupSelected) tabs.push({ key: 'bank', label: 'Bank Details' });
-    if (isTdsGroupSelected) tabs.push({ key: 'tds', label: 'TDS Details' });
+    if (isTdsGroupSelected) tabs.push({ key: 'tds', label: 'TDS Mapping' });
     if (isTcsGroupSelected) tabs.push({ key: 'tcs', label: 'TCS Details' });
     if (isDutiesGroupSelected && !isTdsGroupSelected && !isTcsGroupSelected) tabs.push({ key: 'gst', label: 'GST Details' });
     if (isExpenseGroupSelected) tabs.push({ key: 'gst', label: 'GST Details' });
@@ -3008,6 +3011,7 @@ export const ChartAccountForm = ({
         ? String(tdsLedgerNature(groupById.get(String(formData.groupId || '').trim())) || '').toUpperCase()
         : undefined,
       tdsRate: String(formData.tdsRate ?? '').trim() === '' ? undefined : Number(formData.tdsRate),
+      isActive: formData.isActive !== false,
       addresses: (formData.addresses || []).filter((a) => String(a?.label || '').trim()),
       contacts: (formData.contacts || []).filter((c) => String(c?.name || '').trim()),
     };
@@ -3349,7 +3353,7 @@ export const ChartAccountForm = ({
 
             {activeLedgerTab === 'tds' ? (
               <>
-                <h4 className="ui-t-sec mb-3">TDS Details</h4>
+                <h4 className="ui-t-sec mb-3">TDS Mapping</h4>
                 <div className="grid gap-x-8 gap-y-3 lg:grid-cols-2">
                 {/*
                   A nature, not a section number.
@@ -3398,15 +3402,22 @@ export const ChartAccountForm = ({
                   they are pointing at — and shown read-only, because a second
                   copy of a rate is a second answer.
                 */}
+                {/*
+                  Everything below is the Rule Master's answer, shown so the
+                  person mapping the ledger can see the rule they are pointing
+                  at — and shown READ-ONLY, because a second copy of a rate,
+                  section or threshold is a second answer. Nothing here is
+                  typed.
+                */}
                 {(() => {
                   const activeRule = formData.tdsNatureCode ? resolveRule(formData.tdsNatureCode, todayIso()) : null;
                   const summary = tdsSectionSummary(tdsSection(activeRule?.sectionCode || formData.tdsSection));
-                  if (!summary) return null;
+                  if (!activeRule) return null;
                   const rows = [
-                    ['Statutory reference', ruleReference(activeRule) || summary.version],
-                    ['Rate rule', summary.rate],
-                    ['Threshold', summary.threshold],
-                    ['Applicability', summary.applicability],
+                    ['TDS Rule', String(activeRule.id || '—')],
+                    ['Statutory Reference', ruleReference(activeRule) || '—'],
+                    ['Default Rate', `${Number(activeRule.rate ?? 0)}%`],
+                    ['Threshold', summary?.threshold || '—'],
                   ];
                   return (
                     <dl className="lg:col-span-2 grid gap-x-5 gap-y-1.5 sm:grid-cols-[minmax(8rem,12rem)_1fr]">
@@ -3420,10 +3431,23 @@ export const ChartAccountForm = ({
                   );
                 })()}
 
+                <PartyFormRow label="Active" htmlFor="ledger-tds-active" hint="Off: the ledger keeps its history and leaves every transaction picker.">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      id="ledger-tds-active"
+                      type="checkbox"
+                      className="ui-checkbox"
+                      checked={formData.isActive !== false}
+                      onChange={(e) => setFormData((p) => ({ ...p, isActive: e.target.checked }))}
+                    />
+                    Available on transactions
+                  </label>
+                </PartyFormRow>
+
                 <p className="ui-caption lg:col-span-2">
-                  {formData.tdsSection
-                    ? `Threshold and rate rules come from the ${formData.tdsSection} master; the TDS engine does the calculation.`
-                    : 'Choose the section this ledger accumulates. The rate and threshold follow from the section master.'}
+                  {formData.tdsNatureCode
+                    ? 'Section, rate and threshold come from the Rule Master and follow each transaction\u2019s date; the engine does the calculation.'
+                    : 'Choose the nature this ledger accumulates. The rule, reference and rate resolve from the master.'}
                 </p>
                 </div>
               </>

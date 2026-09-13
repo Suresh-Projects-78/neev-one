@@ -69,12 +69,12 @@ describe('the group decides the tabs', () => {
     expect(screen.queryByRole('tab', { name: 'TDS Details' })).toBeNull();
   });
 
-  it('offers TDS Details under a TDS group and no bank tab', async () => {
+  it('offers TDS Mapping under a TDS group and no bank tab', async () => {
     const user = userEvent.setup();
     renderForm();
     await pickGroup(user, 'TDS Payable');
 
-    expect(screen.getByRole('tab', { name: 'TDS Details' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'TDS Mapping' })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: 'Bank Details' })).toBeNull();
   });
 
@@ -131,26 +131,33 @@ describe('TDS Details', () => {
    * ledger master, and asking for a rate put a second copy of it in the
    * product.
    */
-  it('asks for a nature, not a section or a rate', async () => {
+  it('asks for a nature — never a section, rate or threshold', async () => {
     const user = userEvent.setup();
     renderForm();
     await pickGroup(user, 'TDS Payable');
-    await user.click(screen.getByRole('tab', { name: 'TDS Details' }));
+    await user.click(screen.getByRole('tab', { name: 'TDS Mapping' }));
 
     expect(screen.getByLabelText('TDS Nature')).toBeInTheDocument();
     expect(screen.queryByLabelText('TDS Section')).toBeNull();
     expect(screen.queryByLabelText('Rate (%)')).toBeNull();
+    expect(screen.queryByLabelText(/threshold/i)).toBeNull();
   });
 
-  it('shows the rate the rule gives, without storing one of its own', async () => {
+  it('shows the rule, reference and default rate read-only, and an Active switch', async () => {
     const user = userEvent.setup();
     renderForm();
     await pickGroup(user, 'TDS Payable');
-    await user.click(screen.getByRole('tab', { name: 'TDS Details' }));
+    await user.click(screen.getByRole('tab', { name: 'TDS Mapping' }));
 
     await user.selectOptions(screen.getByLabelText('TDS Nature'), 'PROFESSIONAL_SERVICES');
-    expect(screen.getByText(/10%/)).toBeInTheDocument();
-    expect(screen.getByText(/the TDS engine does the calculation/i)).toBeInTheDocument();
+    /* The Rule Master's answer, stated, not typed. */
+    expect(screen.getByText('TDS Rule')).toBeInTheDocument();
+    expect(screen.getByText(/PROFESSIONAL_SERVICES@V/)).toBeInTheDocument();
+    expect(screen.getByText('Default Rate')).toBeInTheDocument();
+    expect(screen.getByText(/^10%$/)).toBeInTheDocument();
+    expect(screen.getByText(/the engine does the calculation/i)).toBeInTheDocument();
+    /* Availability on transactions, on by default. */
+    expect(screen.getByLabelText(/Available on transactions/)).toBeChecked();
   });
 });
 
@@ -292,16 +299,15 @@ describe('a ledger that has been posted to', () => {
   });
 });
 
-describe('the TDS tab shows the rule it points at', () => {
-  it('reads threshold, applicability and the statutory reference from the rule', async () => {
+describe('the TDS Mapping shows the rule it points at', () => {
+  it('reads threshold and the statutory reference from the rule', async () => {
     const user = userEvent.setup();
     renderForm();
     await pickGroup(user, 'TDS Payable');
-    await user.click(screen.getByRole('tab', { name: 'TDS Details' }));
+    await user.click(screen.getByRole('tab', { name: 'TDS Mapping' }));
     await user.selectOptions(screen.getByLabelText('TDS Nature'), 'CONTRACTOR_SUB_CONTRACTOR');
 
     expect(screen.getByText(/30,000 per payment/)).toBeInTheDocument();
-    expect(screen.getByText(/whole aggregate/i)).toBeInTheDocument();
     /* The reference the rule in force gives — 393 from April 2026. */
     expect(screen.getByText(/393\(1\)/)).toBeInTheDocument();
     /* Which side, read from the group rather than asked for twice. */

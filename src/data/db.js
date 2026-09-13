@@ -216,6 +216,43 @@ export const normalizeDB = (db) => {
       ensureGroup({ typeId: typeRow.id, name: g.name, groupCategory: g.groupCategory, isLegacy: false });
     }
 
+    /*
+     * The statutory branch of the chart, seeded as system groups:
+     *
+     *   Current Assets → Statutory Receivables → TDS Receivable
+     *   Current Liabilities → Statutory Payables → TDS Payable
+     *
+     * Everything TDS hangs off the chart: the ledger form shows its TDS tab
+     * for ledgers under a TDS group, the engine reads the side (payable /
+     * receivable) from the group chain's own names, and the journal
+     * recognises a deduction by the ledger it touches. Without these groups
+     * a fresh company had to invent them by hand, correctly named, before
+     * any of that worked.
+     *
+     * The Statutory parents are deliberately one level up: TCS and other
+     * statutory heads join them later as siblings, not as a re-parenting.
+     * Users create ORDINARY ledgers underneath ("TDS Payable — Contractor")
+     * through the existing New Ledger flow — the group is the accounting
+     * classification; tax behaviour lives in the nature/rule master, never
+     * in the ledger.
+     */
+    {
+      const liabilities = typeByName.get('Current Liabilities');
+      const assets = typeByName.get('Current Assets');
+      if (liabilities) {
+        templateGroupKeySet.add(`${Number(liabilities.id)}__statutory payables`);
+        templateGroupKeySet.add(`${Number(liabilities.id)}__tds payable`);
+        const statPay = ensureGroup({ typeId: liabilities.id, name: 'Statutory Payables', groupCategory: 'General', isLegacy: false });
+        ensureGroup({ typeId: liabilities.id, name: 'TDS Payable', parentGroupId: statPay.id, groupCategory: 'General', isLegacy: false });
+      }
+      if (assets) {
+        templateGroupKeySet.add(`${Number(assets.id)}__statutory receivables`);
+        templateGroupKeySet.add(`${Number(assets.id)}__tds receivable`);
+        const statRec = ensureGroup({ typeId: assets.id, name: 'Statutory Receivables', groupCategory: 'General', isLegacy: false });
+        ensureGroup({ typeId: assets.id, name: 'TDS Receivable', parentGroupId: statRec.id, groupCategory: 'General', isLegacy: false });
+      }
+    }
+
     // Keep Primary fallback groups (legacy/hidden)
     for (const t of types) {
       ensureGroup({ typeId: t.id, name: 'Primary', groupCategory: 'General', isLegacy: true });
