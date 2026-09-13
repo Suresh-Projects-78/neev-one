@@ -14,7 +14,13 @@ import RecordDisbursementForm from './RecordDisbursementForm';
  * left part-paid or the bank was overstated by exactly the tax deducted.
  */
 
-const co = { id: 1, name: 'Mani beriyanis', state: 'Karnataka' };
+const co = {
+  id: 1,
+  name: 'Mani beriyanis',
+  state: 'Karnataka',
+  /* The TDS control is offered only where the company tracks it. */
+  profile: { taxCompliances: { tds: { enabled: true, tan: 'BLRN12345F' } } },
+};
 const db = {
   companies: [co],
   vendors: [{ id: 3, companyId: 1, name: 'ABC Supplies', displayName: 'ABC Supplies' }],

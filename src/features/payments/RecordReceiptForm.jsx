@@ -39,6 +39,9 @@ const canCollectAgainstInvoice = (inv, notes) => {
 };
 
 const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved, hideMode = false, screenTitle = '', onBack = null }) => {
+  /* §2: a company with TDS off does not track it — the compact control is
+     offered only where it is relevant. */
+  const tdsEnabledHere = Boolean(currentCompany?.profile?.taxCompliances?.tds?.enabled);
   const formRef = useRef(null);
   const fieldErrors = useFieldErrors('receipt');
   const companyId = currentCompany.id;
@@ -816,6 +819,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         >
           <div className="ui-t-sec mb-2">Deductions</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {tdsEnabledHere ? (
             <div>
               <label className="ui-label" htmlFor="rcpt-tdsAmount">TDS deducted</label>
               <input
@@ -871,6 +875,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 </div>
               ) : null}
             </div>
+            ) : null}
 
             {[
               { k: 'bankCharges', label: 'Bank charges' },

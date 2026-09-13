@@ -3053,6 +3053,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
   const [numberingOpen, setNumberingOpen] = useState(false);
   /* Open while a TDS section is being chosen; folded away once one is. */
   const [tdsPickerOpen, setTdsPickerOpen] = useState(false);
+  /* §2: the compact TDS control is offered only where the company tracks
+     TDS at all — with it off, nothing is asked and nothing is calculated. */
+  const tdsEnabledHere = Boolean(currentCompany?.profile?.taxCompliances?.tds?.enabled);
 
   /*
    * Which line, if any, is waiting on a batch.
@@ -5000,7 +5003,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               and a figure — the section is on the document and in the return,
               which is where it is read.
             */}
-            {!tdsPickerOpen && !formData.tdsSection ? (
+            {tdsEnabledHere && !tdsPickerOpen && !formData.tdsSection ? (
               <div className="pt-1">
                 <button
                   type="button"
@@ -5015,7 +5018,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             {/* Open only while a section is being chosen. Closed, the line
                 above offers to open it and the totals carry the figure — both
                 at once was the chooser and its own opener on screen together. */}
-            <div className="pt-1" hidden={!tdsPickerOpen}>
+            <div className="pt-1" hidden={!tdsEnabledHere || !tdsPickerOpen}>
               <label className="ui-label" htmlFor="invoice-tds-section">
                 TDS deduction <span className="ui-subtle font-normal">(if the customer deducts)</span>
               </label>

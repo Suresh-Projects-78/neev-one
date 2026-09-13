@@ -65,7 +65,7 @@ const deductedBill = {
   tdsAmount: 2000, tdsNatureCode: CONTRACTOR, tdsLedgerId: '101',
 };
 
-const Host = ({ bills = [plainBill], onSaved = () => {} }) => {
+const Host = ({ bills = [plainBill], onSaved = () => {}, company = COMPANY }) => {
   const [db, setDb] = useState(() => dbWith(bills));
   return (
     <RecordDisbursementForm
@@ -75,7 +75,7 @@ const Host = ({ bills = [plainBill], onSaved = () => {} }) => {
         onSaved(value);
         setDb(value);
       }}
-      currentCompany={COMPANY}
+      currentCompany={company}
       onClose={() => {}}
     />
   );
@@ -96,6 +96,14 @@ const selectBill = async (user, number) => {
 
 describe('what the payment offers to deduct', () => {
   beforeEach(() => localStorage.clear());
+
+  /* §2: with TDS off the compact control is not offered at all — an
+     ordinary user sees TDS only where it is relevant. */
+  it('offers no TDS control while TDS is switched off for the company', () => {
+    const off = { ...COMPANY, profile: { taxCompliances: { tds: { enabled: false } } } };
+    render(<Host company={off} />);
+    expect(screen.queryByLabelText('TDS deduction')).toBeNull();
+  });
 
   it('suggests the engine’s figure for a bill that never deducted', async () => {
     const user = userEvent.setup();

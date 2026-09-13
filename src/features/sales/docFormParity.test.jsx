@@ -34,7 +34,15 @@ import RecordReceiptForm from '../payments/RecordReceiptForm';
  * what is shared is where things sit, not which fields exist.
  */
 
-const COMPANY = { id: 1, name: 'Neev Steels', gstin: '29ABCDE1234F1Z5', state: 'Karnataka' };
+const COMPANY = {
+  id: 1,
+  name: 'Neev Steels',
+  gstin: '29ABCDE1234F1Z5',
+  state: 'Karnataka',
+  /* TDS on: the chooser tests below exercise the compact control, which is
+     offered only where the company tracks TDS. */
+  profile: { taxCompliances: { tds: { enabled: true, tan: 'BLRN12345F' } } },
+};
 
 const baseDb = (over = {}) => ({
   companies: [COMPANY],

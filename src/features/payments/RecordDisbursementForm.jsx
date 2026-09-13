@@ -37,6 +37,9 @@ const canPayDoc = (doc, notes) => {
 };
 
 const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitle = '', onBack = null, initialData = null, onSaved, hideMode = false }) => {
+  /* §2: a company with TDS off does not deduct — the compact control is
+     offered only where it is relevant. */
+  const tdsEnabledHere = Boolean(currentCompany?.profile?.taxCompliances?.tds?.enabled);
   const formRef = useRef(null);
   const fieldErrors = useFieldErrors('payment');
   const companyId = currentCompany.id;
@@ -856,6 +859,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
             took TDS when it was entered says so here instead, because taking
             it again would pay the department twice out of one vendor.
           */}
+          {tdsEnabledHere ? (
           <div className="min-w-0">
             <label className="ui-label" htmlFor="pay-tdsAmount">TDS deduction</label>
             <input
@@ -915,6 +919,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
               </div>
             ) : null}
           </div>
+          ) : null}
 
           {[
             { k: 'bankCharges', label: 'Bank charges', hint: 'What the bank took for the transfer.' },

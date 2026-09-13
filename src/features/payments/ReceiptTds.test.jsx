@@ -56,7 +56,7 @@ const db0 = {
   tdsTransactions: [],
 };
 
-const Host = ({ onSaved = () => {} }) => {
+const Host = ({ onSaved = () => {}, company = COMPANY }) => {
   const [db, setDb] = useState(db0);
   return (
     <RecordReceiptForm
@@ -66,7 +66,7 @@ const Host = ({ onSaved = () => {} }) => {
         onSaved(value);
         setDb(value);
       }}
-      currentCompany={COMPANY}
+      currentCompany={company}
       onClose={() => {}}
     />
   );
@@ -86,6 +86,13 @@ const selectInvoice = async (user) => {
 };
 
 describe('what the receipt offers', () => {
+  /* §2: with TDS off the compact control is not offered at all. */
+  it('offers no TDS control while TDS is switched off for the company', () => {
+    const off = { ...COMPANY, profile: { taxCompliances: { tds: { enabled: false } } } };
+    render(<Host company={off} />);
+    expect(screen.queryByLabelText('TDS deducted')).toBeNull();
+  });
+
   beforeEach(() => localStorage.clear());
 
   it('offers what the invoice expected the customer to withhold', async () => {
