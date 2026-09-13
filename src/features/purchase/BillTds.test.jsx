@@ -132,6 +132,24 @@ describe('choosing what to deduct against', () => {
     expect(options).toEqual(['Select ledger', 'TDS on Contractors']);
   });
 
+  /* Prompt 13's first trigger: the VENDOR's own applicability. A vendor
+     carrying a default nature deducts without the chooser being opened —
+     the compact panel is for changing the answer, not for getting one. */
+  it('deducts automatically for a vendor whose TDS profile names a nature', async () => {
+    const user = userEvent.setup();
+    const vendors = [
+      { id: 9, companyId: 1, name: 'Steel Supply Co', displayName: 'Steel Supply Co', pan: 'AABCU9603R', tdsApplicable: true, tdsNatureCode: CONTRACTOR },
+    ];
+    render(<Host db={dbWith({ vendors })} />);
+    await fillBill(user, 100000);
+
+    /* No click on the opener — the engine already answered from the party
+       profile: 2% on ₹1,00,000, shown under the total with a Change link. */
+    expect(await screen.findByText(/Less: TDS/)).toBeInTheDocument();
+    expect(screen.getByText(/2,000\.00/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Change' })).toBeInTheDocument();
+  });
+
   it('deducts nothing at all while TDS is switched off for the company', () => {
     const off = { ...COMPANY, profile: { taxCompliances: { tds: { enabled: false } } } };
     render(<Host db={dbWith({ companies: [off] })} />);

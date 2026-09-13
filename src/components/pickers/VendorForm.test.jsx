@@ -136,6 +136,27 @@ describe('what is genuinely different', () => {
     expect(screen.queryByLabelText(/Rate \(%\)/)).toBeNull();
   });
 
+  /* Prompt 9's remaining fields: the party's own ledger default, and the
+     declaration paperwork inside the same disclosure. */
+  it('offers a Default TDS Payable Ledger for the vendor', async () => {
+    const user = userEvent.setup();
+    renderVendor();
+    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
+    expect(screen.getByLabelText('Default TDS Payable Ledger')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Default TDS Receivable Ledger')).toBeNull();
+  });
+
+  it('the certificate disclosure carries number, rate, validity, limit and 15G/15H', async () => {
+    const user = userEvent.setup();
+    renderVendor();
+    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
+    await user.click(screen.getByText(/Lower \/ nil deduction certificate/));
+
+    for (const label of ['Certificate number', 'Certificate rate (%)', 'Valid from', 'Valid to', 'Certificate limit (₹)', '15G / 15H reference', '15G / 15H period']) {
+      expect(screen.getByLabelText(label)).toBeInTheDocument();
+    }
+  });
+
   /* Most parties hold no certificate, so it stays folded away. */
   it('keeps the section 197 certificate behind a disclosure', async () => {
     const user = userEvent.setup();

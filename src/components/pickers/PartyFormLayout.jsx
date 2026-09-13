@@ -55,6 +55,7 @@ const LEFT_ROWS = {
 };
 
 export function PartyFormLayout({
+  tdsLedgerOptions = [],
   cfg,
   formData,
   setFormData,
@@ -558,6 +559,26 @@ export function PartyFormLayout({
                     </select>
                   </div>
 
+                  <div>
+                    <label className="ui-label" htmlFor="party-tds-ledger">
+                      {cfg.kind === 'CUSTOMER' ? 'Default TDS Receivable Ledger' : 'Default TDS Payable Ledger'}
+                    </label>
+                    <select
+                      id="party-tds-ledger"
+                      value={formData.tdsLedgerId || ''}
+                      onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
+                      className="ui-select w-full"
+                    >
+                      <option value="">Follow the nature's mapping</option>
+                      {tdsLedgerOptions.map((l) => (
+                        <option key={l.id} value={String(l.id)}>{l.name}</option>
+                      ))}
+                    </select>
+                    <p className="ui-caption mt-1">
+                      Beats the company default for this party; a ledger of the wrong nature is ignored by the engine.
+                    </p>
+                  </div>
+
                   {/*
                     A certificate is the exception, not the rule — most parties
                     have none, so it stays folded away until somebody says
@@ -618,9 +639,50 @@ export function PartyFormLayout({
                           }
                         />
                       </div>
+                      <div>
+                        <label className="ui-label" htmlFor="party-tds-cert-limit">Certificate limit (₹)</label>
+                        <input
+                          id="party-tds-cert-limit"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="ui-input ui-money w-full"
+                          value={formData.tdsCertificate?.limit ?? ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({ ...p, tdsCertificate: { ...(p.tdsCertificate || {}), limit: e.target.value } }))
+                          }
+                        />
+                        <p className="ui-caption mt-1">The amount the certificate covers, where it names one.</p>
+                      </div>
+                      <div>
+                        <label className="ui-label" htmlFor="party-tds-15gh">15G / 15H reference</label>
+                        <input
+                          id="party-tds-15gh"
+                          type="text"
+                          className="ui-input ui-mono w-full"
+                          value={formData.tdsCertificate?.form15GH || ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({ ...p, tdsCertificate: { ...(p.tdsCertificate || {}), form15GH: e.target.value } }))
+                          }
+                        />
+                      </div>
+                      <div>
+                        <label className="ui-label" htmlFor="party-tds-15gh-period">15G / 15H period</label>
+                        <input
+                          id="party-tds-15gh-period"
+                          type="text"
+                          className="ui-input w-full"
+                          placeholder="FY 2026-27"
+                          value={formData.tdsCertificate?.form15GHPeriod || ''}
+                          onChange={(e) =>
+                            setFormData((p) => ({ ...p, tdsCertificate: { ...(p.tdsCertificate || {}), form15GHPeriod: e.target.value } }))
+                          }
+                        />
+                      </div>
                       <p className="ui-caption sm:col-span-4">
                         A certificate under section 197 replaces the rule’s rate while it is valid, and only while it is
-                        valid — the engine reads the transaction’s date, not today’s.
+                        valid — the engine reads the transaction’s date, not today’s. A 15G/15H declaration is recorded
+                        here for the return; the deduction decision stays with the engine.
                       </p>
                     </div>
                   </details>

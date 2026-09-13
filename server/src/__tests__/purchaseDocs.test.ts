@@ -101,6 +101,25 @@ describe('purchase bills', () => {
     expect(after.totals.balanced).toBe(true);
   });
 
+  /* The specification's entry: Dr Purchases + Input GST; Cr TDS Payable;
+     Cr Vendor NET of the deduction. One validated posting through the
+     central service — no balance is touched by hand anywhere. */
+  it('splits the credit between TDS Payable and the vendor when the bill deducts', async () => {
+    const before = await tb();
+    await request(app)
+      .post(`/api/orgs/${owner.orgId}/bills`)
+      .set(auth(owner))
+      .send(docBody({ date: '2026-04-15', tdsAmount: 20 }))
+      .expect(201);
+    const after = await tb();
+
+    expect(moved(before, after, 'PURCHASES')).toBe(1000);
+    expect(moved(before, after, 'TDS_PAYABLE')).toBe(-20);
+    /* The vendor is owed the total less what the department is owed. */
+    expect(moved(before, after, 'AP')).toBe(-1160);
+    expect(after.totals.balanced).toBe(true);
+  });
+
   it('allocates its own number when none is supplied', async () => {
     const res = await request(app)
       .post(`/api/orgs/${owner.orgId}/bills`)

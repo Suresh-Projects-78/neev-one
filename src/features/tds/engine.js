@@ -103,7 +103,14 @@ const certificateRate = (certificate, onDate) => {
  */
 export const resolveTds = ({
   company,
+  /* Which branch raised the document — carried through to the result and the
+     event snapshot so branch-wise reporting reads one field. */
+  branchId = '',
   party,
+  /* 'bill' | 'payment' | 'invoice' | 'receipt' | 'journal' — what kind of
+     document is asking. The engine's answer is the same either way; the
+     type rides along for the snapshot and the duplicate guard's context. */
+  transactionType = '',
   transactionDate,
   taxableBase = 0,
   explicitNatureCode = '',
@@ -118,6 +125,8 @@ export const resolveTds = ({
   const none = (reason) => ({
     applicable: false,
     reason,
+    branchId: String(branchId || ''),
+    transactionType: String(transactionType || ''),
     natureCode: '',
     ruleVersionId: '',
     statutoryReference: '',
@@ -218,6 +227,8 @@ export const resolveTds = ({
 
   return {
     applicable: tdsAmount > 0,
+    branchId: String(branchId || ''),
+    transactionType: String(transactionType || ''),
     natureCode,
     natureName: nature.name,
     ruleVersionId: rule.id,
@@ -246,6 +257,20 @@ export const resolveTds = ({
  * Fees ledger, or the receivable side of its own nature. Showing every ledger
  * in the group is how a deduction ends up in the wrong one.
  */
+/**
+ * The rule's ledger mapping, realized against a company's chart.
+ *
+ * The specification lists payable and receivable mapping among the rule's
+ * fields; the ledgers themselves are company data, so the mapping is the
+ * join — this rule's nature, each side, through the same eligibility filter
+ * every posting uses. A posted event still snapshots the ledger it actually
+ * used, so history never depends on today's chart.
+ */
+export const ruleLedgerMapping = (rule, ledgers) => ({
+  payable: tdsLedgersFor(ledgers, { natureCode: rule?.natureCode, side: 'PAYABLE' }),
+  receivable: tdsLedgersFor(ledgers, { natureCode: rule?.natureCode, side: 'RECEIVABLE' }),
+});
+
 export const tdsLedgersFor = (ledgers, { natureCode, side = 'PAYABLE' }) => {
   const want = String(natureCode || '').trim().toUpperCase();
   const wantSide = String(side || 'PAYABLE').trim().toUpperCase();

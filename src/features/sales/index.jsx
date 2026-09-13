@@ -16,9 +16,9 @@ import { createDocApi, hasApiSession as hasDocsApiSession, saveSettlementApi } f
 import { buildEInvoicePayload, buildEwayBillPayload } from '../../utils/einvoice';
 import { registerEInvoiceApi, getEInvoiceSettingsApi, generateEwaybillApi } from '../../api/einvoice';
 import { resolveSaleRate } from '../../utils/pricing';
-import { DEDUCTEE_TYPES, TDS_SECTIONS, tdsDefaultRate, tdsVariesByDeductee } from '../../utils/tds';
+import { DEDUCTEE_TYPES, TDS_SECTIONS, tdsVariesByDeductee } from '../../utils/tds';
 import { resolveTds } from '../tds/engine';
-import { natureForSection } from '../tds/ruleMaster';
+import { natureForSection, resolveRule, ruleRate } from '../tds/ruleMaster';
 import { fyRange } from '../../utils/tdsTcs';
 import { getLastSelection, setLastSelection } from '../../utils/lastSelection';
 import { branchLabel } from '../../utils/branchLabel';
@@ -5035,7 +5035,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       tdsRate: code
                         ? p.tdsSection === code && p.tdsRate !== ''
                           ? p.tdsRate
-                          : tdsDefaultRate(code, p.tdsDeducteeType)
+                          : ruleRate(resolveRule(natureForSection(code)?.code, p.date), p.tdsDeducteeType)
                         : '',
                     }));
                     /* Chosen is chosen: the section and rate fold away and the
@@ -5087,7 +5087,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       setFormData((p) => ({
                         ...p,
                         tdsDeducteeType: type,
-                        tdsRate: tdsDefaultRate(p.tdsSection, type),
+                        tdsRate: ruleRate(resolveRule(natureForSection(p.tdsSection)?.code, p.date), type),
                       }));
                     }}
                   >

@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { notify } from '../ui/notify';
 import PartyFormLayout from './PartyFormLayout';
+import { tdsGroupSide } from '../../utils/tdsLedgers';
 import { CUSTOMER_CFG } from './partyFormConfig';
 import { useFeatures } from '../../permissions/useFeatures';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
@@ -82,6 +83,7 @@ export const CustomerForm = ({
         tdsDeducteeType: String(initialData.tdsDeducteeType || 'COMPANY'),
         tdsResidentialStatus: String(initialData.tdsResidentialStatus || 'RESIDENT'),
         tdsCertificate: initialData.tdsCertificate && typeof initialData.tdsCertificate === 'object' ? initialData.tdsCertificate : null,
+        tdsLedgerId: String(initialData.tdsLedgerId || ''),
         paymentTermDays:
           initialData.paymentTermDays === undefined || initialData.paymentTermDays === null
             ? ''
@@ -172,6 +174,7 @@ export const CustomerForm = ({
       tdsDeducteeType: 'COMPANY',
       tdsResidentialStatus: 'RESIDENT',
       tdsCertificate: null,
+      tdsLedgerId: '',
       paymentTermDays: '',
       creditLimit: '',
       shipToAddresses: [],
@@ -781,6 +784,14 @@ export const CustomerForm = ({
           tab={tab}
           setTab={setTab}
           tabs={CUSTOMER_TABS}
+          tdsLedgerOptions={(db?.chartOfAccounts || [])
+            .filter((a) => a.companyId === currentCompany?.id && a.isActive !== false)
+            .filter(
+              (a) =>
+                (String(a.tdsSide || '').toUpperCase() ||
+                  tdsGroupSide((db?.accountGroups || []).filter((g) => g.companyId === currentCompany?.id), a.groupId)) === 'RECEIVABLE'
+            )
+            .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')))}
           groupOptions={customerGroupOptions}
           onCreateGroup={(typed) => {
             setGroupDraftName(typed);

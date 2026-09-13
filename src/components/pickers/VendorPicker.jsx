@@ -12,6 +12,7 @@ import { getVendorDisplayName } from '../../utils/contacts';
 import { activePriceListOptions, mergeGstinFetch, validateParty } from '../../utils/partyMaster';
 import PopupSelect from './PopupSelect';
 import PartyFormLayout from './PartyFormLayout';
+import { tdsPayableLedgers } from '../../utils/tdsLedgers';
 import { VENDOR_CFG } from './partyFormConfig';
 import { CUSTOMER_TABS } from './customerFormParts';
 import { useFeatures } from '../../permissions/useFeatures';
@@ -89,6 +90,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
         tdsDeducteeType: String(initialData.tdsDeducteeType || 'COMPANY'),
         tdsResidentialStatus: String(initialData.tdsResidentialStatus || 'RESIDENT'),
         tdsCertificate: initialData.tdsCertificate && typeof initialData.tdsCertificate === 'object' ? initialData.tdsCertificate : null,
+        tdsLedgerId: String(initialData.tdsLedgerId || ''),
         code: String(initialData.code || ''),
         isActive: initialData.isActive !== false,
         allowCreditNotes: initialData.allowCreditNotes !== false,
@@ -162,6 +164,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
       tdsDeducteeType: 'COMPANY',
       tdsResidentialStatus: 'RESIDENT',
       tdsCertificate: null,
+      tdsLedgerId: '',
       code: '',
       isActive: true,
       /* Allowed unless somebody says otherwise: refusing notes is the exception. */
@@ -757,6 +760,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
           tab={tab}
           setTab={setTab}
           tabs={CUSTOMER_TABS}
+          tdsLedgerOptions={tdsPayableLedgers(db, currentCompany?.id)}
           groupOptions={vendorGroupOptions}
           onCreateGroup={(typed) => {
             setGroupDraftName(typed);

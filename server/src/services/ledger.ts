@@ -543,6 +543,7 @@ export function billPostingLines(bill: {
   sgstTotal?: number | null;
   igstTotal?: number | null;
   total?: number | null;
+  tdsAmount?: number | null;
 }): PostingLine[] {
   const subtotal = Number(bill.subtotal ?? 0);
   const cgst = Number(bill.cgstTotal ?? 0);
@@ -551,6 +552,9 @@ export function billPostingLines(bill: {
   const computed = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
   const total = Number(bill.total ?? 0) || computed;
   const rounding = Math.round((total - computed) * 100) / 100;
+  /* TDS deducted at the bill: credit or payment, whichever is earlier — this
+     is the earlier. Never more than what the vendor is owed. */
+  const tds = Math.min(Math.max(0, Number(bill.tdsAmount ?? 0)), total);
 
   const lines: PostingLine[] = [];
   if (subtotal) lines.push({ controlKind: 'PURCHASES', debit: subtotal, description: 'Purchases' });
@@ -561,9 +565,16 @@ export function billPostingLines(bill: {
   if (rounding > 0) lines.push({ controlKind: 'ROUNDING', debit: rounding, description: 'Rounding difference' });
   if (rounding < 0) lines.push({ controlKind: 'ROUNDING', credit: Math.abs(rounding), description: 'Rounding difference' });
 
+  /* The deduction is owed to the department, not the vendor — so it lands in
+     TDS Payable and the vendor's payable is smaller by exactly that much.
+     One entry, still balanced: debits unchanged, the credit side split. */
+  if (tds) {
+    lines.push({ controlKind: 'TDS_PAYABLE', credit: tds, description: 'TDS deducted at source' });
+  }
+
   lines.push({
     controlKind: 'AP',
-    credit: total,
+    credit: Math.round((total - tds) * 100) / 100,
     partyType: 'VENDOR',
     partyId: bill.partyId || null,
     description: `Bill from ${bill.partyName || 'vendor'}`,
@@ -589,6 +600,7 @@ export function expensePostingLines(expense: {
   sgstTotal?: number | null;
   igstTotal?: number | null;
   total?: number | null;
+  tdsAmount?: number | null;
 }): PostingLine[] {
   const subtotal = Number(expense.subtotal ?? 0);
   const cgst = Number(expense.cgstTotal ?? 0);
@@ -597,6 +609,7 @@ export function expensePostingLines(expense: {
   const computed = Math.round((subtotal + cgst + sgst + igst) * 100) / 100;
   const total = Number(expense.total ?? 0) || computed;
   const rounding = Math.round((total - computed) * 100) / 100;
+  const tds = Math.min(Math.max(0, Number(expense.tdsAmount ?? 0)), total);
 
   const lines: PostingLine[] = [];
   if (subtotal) lines.push({ controlKind: 'EXPENSES', debit: subtotal, description: 'Expense' });
@@ -607,9 +620,15 @@ export function expensePostingLines(expense: {
   if (rounding > 0) lines.push({ controlKind: 'ROUNDING', debit: rounding, description: 'Rounding difference' });
   if (rounding < 0) lines.push({ controlKind: 'ROUNDING', credit: Math.abs(rounding), description: 'Rounding difference' });
 
+  /* Same split as the bill: the deduction to TDS Payable, the vendor
+     credited net. */
+  if (tds) {
+    lines.push({ controlKind: 'TDS_PAYABLE', credit: tds, description: 'TDS deducted at source' });
+  }
+
   lines.push({
     controlKind: 'AP',
-    credit: total,
+    credit: Math.round((total - tds) * 100) / 100,
     partyType: 'VENDOR',
     partyId: expense.partyId || null,
     description: `Expense payable to ${expense.partyName || 'party'}`,

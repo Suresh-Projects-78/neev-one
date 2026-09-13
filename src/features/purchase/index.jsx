@@ -561,6 +561,19 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           total: computed.total,
           status: 'Unpaid',
           items: computed.lines,
+          /*
+           * The deduction rides with the document. The server credits TDS
+           * Payable and the vendor net of it — the specification's entry:
+           * Dr Purchases + Input GST, Cr TDS Payable, Cr Vendor (net) — and
+           * the rest of the snapshot persists through extrasJson so another
+           * browser rebuilds the bill whole.
+           */
+          tdsAmount: tdsAmount > 0 ? tdsAmount : undefined,
+          tdsLedgerId: tdsAmount > 0 ? String(tds.ledgerId || formData.tdsLedgerId || '') || undefined : undefined,
+          tdsNatureCode: tdsAmount > 0 ? tds.natureCode : undefined,
+          tdsSectionCode: tdsAmount > 0 ? tds.sectionCode : undefined,
+          tdsRate: tdsAmount > 0 ? tds.rate : undefined,
+          tdsRuleVersionId: tdsAmount > 0 ? tds.ruleVersionId : undefined,
         });
         backendDocId = saved?.id || null;
         serverNumber = String(saved?.number || '');

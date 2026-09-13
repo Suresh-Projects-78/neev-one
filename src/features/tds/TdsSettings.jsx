@@ -306,20 +306,26 @@ const TdsSettings = ({ db, setDb, currentCompany, onOpenChart = null, onOpenVend
             <thead>
               <tr>
                 <th scope="col">Nature</th>
+                {/* The stable identity everything stores — shown so an
+                    administrator reading an export can tie it back. */}
+                <th scope="col">Internal Code</th>
                 <th scope="col">Reference in force</th>
                 <th scope="col" className="text-end">Rate</th>
                 <th scope="col">Rule version</th>
+                <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
-              {TDS_NATURES.filter((n) => n.active !== false).map((n) => {
+              {TDS_NATURES.map((n) => {
                 const rule = resolveRule(n.code, todayIso());
                 return (
                   <tr key={n.code}>
                     <td className="truncate">{n.name}</td>
+                    <td className="ui-mono truncate">{n.code}</td>
                     <td className="ui-mono">{ruleReference(rule) || '—'}</td>
                     <td className="ui-money">{Number(rule?.rate ?? 0)}%</td>
                     <td className="ui-mono">{rule?.id || '—'}</td>
+                    <td><StatusPill status={n.active === false ? 'Inactive' : 'Active'} /></td>
                   </tr>
                 );
               })}

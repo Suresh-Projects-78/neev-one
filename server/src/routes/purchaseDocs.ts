@@ -348,6 +348,11 @@ function register(kind: DocKind) {
             sgstTotal: toBase(num(body.sgstTotal), fxRate),
             igstTotal: toBase(num(body.igstTotal), fxRate),
             total: toBase(num(body.total), fxRate),
+            /* Read from the raw body on purpose: kept out of docSchema so it
+               still round-trips through extrasJson with the rest of the TDS
+               snapshot, while the posting reads it here. Only the bill and
+               expense builders act on it; the others ignore it. */
+            tdsAmount: toBase(num((req.body as any)?.tdsAmount), fxRate),
           }),
         });
       } catch (e: any) {

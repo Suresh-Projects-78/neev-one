@@ -42,8 +42,39 @@ const OPEN_FROM = '2000-04-01';
 
 const day = (v) => String(v || '').slice(0, 10);
 
-/** CONTRACTOR from "194C", PROFESSIONAL_SERVICES from "Professional services". */
+/**
+ * The FROZEN internal identity of each nature.
+ *
+ * A nature code is a primary business identifier: every posted event, every
+ * ledger mapping and every party default stores one, for ever. It used to be
+ * derived from the section's display label — which meant renaming a label
+ * silently reissued the identifier and orphaned everything that pointed at
+ * the old one. That is exactly what "do not use visible names as primary
+ * identifiers" forbids, one string-transform removed.
+ *
+ * So the codes are frozen here as literals, keyed by the statutory section
+ * (itself stable). The values are today's derived spellings, kept verbatim —
+ * "prettier" codes would orphan the very data the freeze protects. Rename a
+ * label freely; the code does not move. A NEW section must be given a code
+ * here deliberately (the fallback derivation below only keeps an unmapped
+ * dev build rendering — the master test refuses to ship one).
+ */
+export const NATURE_CODES = {
+  '194C': 'CONTRACTOR_SUB_CONTRACTOR',
+  '194J(a)': 'TECHNICAL_SERVICES_CALL_CENTRE_ROYALTY',
+  '194J(b)': 'PROFESSIONAL_SERVICES',
+  '194H': 'COMMISSION_OR_BROKERAGE',
+  '194I(a)': 'RENT_PLANT_MACHINERY_EQUIPMENT',
+  '194I(b)': 'RENT_LAND_BUILDING_FURNITURE',
+  '194A': 'INTEREST_OTHER_THAN_ON_SECURITIES',
+  '194T': 'PARTNER_SALARY_REMUNERATION_OR_INTEREST',
+  '194Q': 'PURCHASE_OF_GOODS',
+};
+
 const natureCodeFor = (section) =>
+  NATURE_CODES[String(section?.code || '').trim()] ||
+  /* Unmapped section: derive so a dev build still renders — the master test
+     fails the build until a literal code is assigned above. */
   String(section?.label || section?.code || '')
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '_')
@@ -80,13 +111,32 @@ export const natureForSection = (sectionCode) => {
  * Every rule version, both sides of the 2026 boundary.
  *
  * Two versions per nature today: the same rate and threshold under the old
- * Act's section, and under the new Act's reference from 1 April 2026. A rate
- * change tomorrow adds a third version — it does not edit either of these.
+ * Act's section, and under the new Act's reference from 1 April 2026.
+ *
+ * CRITICAL — historical rules are never overwritten. A change to the rate,
+ * the threshold, the section reference or the ledger mapping is a NEW
+ * version with its own effective window; the old version keeps its id and
+ * its figures for ever, because posted TDS records name that id and must
+ * replay under it. ruleVersioning.test.js pins the shipped payloads — an
+ * in-place edit fails the build; only appending a version passes.
+ *
+ * Field map against the specification: natureCode (internal nature code),
+ * historicalSection (the pre-2026 section), statutoryReference (current),
+ * sectionCode (section / reporting code), rate + rateIndividual (deductee
+ * category rates — read via ruleDeducteeRates), single/annual/monthly +
+ * wholeOnceCrossed (threshold), calculationBase, deductionTrigger,
+ * returnCategory, effectiveFrom/To, active. Ledger mapping is realized per
+ * company through the chart (ruleLedgerMapping in the engine): the ledgers
+ * are company data and cannot live in a statutory master, and every posted
+ * event snapshots the ledger it actually used alongside the version id.
  */
 export const TDS_RULE_VERSIONS = TDS_SECTIONS.flatMap((s) => {
   const code = natureCodeFor(s);
   const shared = {
     natureCode: code,
+    /* The section the deduction was historically made under — stable even
+       after the 2026 Act renames the current reference. */
+    historicalSection: s.code,
     rate: Number(s.rate ?? 0),
     rateIndividual: s.rateIndividual == null ? null : Number(s.rateIndividual),
     /* Thresholds, as the section master states them. */
@@ -170,3 +220,11 @@ export const ruleRate = (rule, deducteeType = 'COMPANY') => {
 
 /** "194C" before April 2026, "393(1) Table 6(i)" after — for display. */
 export const ruleReference = (rule) => String(rule?.statutoryReference || rule?.sectionCode || '');
+
+/** The rule's rate per deductee category, as the master states them. */
+export const ruleDeducteeRates = (rule) => {
+  if (!rule) return [];
+  const rows = [{ category: 'COMPANY', rate: Number(rule.rate ?? 0) }];
+  if (rule.rateIndividual != null) rows.push({ category: 'INDIVIDUAL', rate: Number(rule.rateIndividual) });
+  return rows;
+};
