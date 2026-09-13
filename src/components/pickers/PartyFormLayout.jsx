@@ -4,6 +4,7 @@ import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow } from './customerFo
 import { DocFormActions } from '../DocumentForm';
 import PopupSelect from './PopupSelect';
 import { TDS_NATURES, resolveRule, ruleReference } from '../../features/tds/ruleMaster';
+import { tdsLedgersFor } from '../../features/tds/engine';
 import { DEDUCTEE_TYPES } from '../../utils/tds';
 import { todayIso } from '../../utils/dates';
 
@@ -570,7 +571,26 @@ export function PartyFormLayout({
                       className="ui-select w-full"
                     >
                       <option value="">Follow the nature's mapping</option>
-                      {tdsLedgerOptions.map((l) => (
+                      {/* §19: with a nature chosen the list is STRICT — that
+                          nature, this side, active — the same filter every
+                          transaction dropdown uses. Without one, the side's
+                          active ledgers stand in until the nature is set. */}
+                      {(formData.tdsNatureCode
+                        ? tdsLedgersFor(
+                            /* The caller already narrowed to this side by
+                               group; rows may not carry tdsSide explicitly,
+                               so it is stated before the strict filter. */
+                            tdsLedgerOptions.map((l) => ({
+                              ...l,
+                              tdsSide: String(l.tdsSide || (cfg.kind === 'CUSTOMER' ? 'RECEIVABLE' : 'PAYABLE')),
+                            })),
+                            {
+                              natureCode: formData.tdsNatureCode,
+                              side: cfg.kind === 'CUSTOMER' ? 'RECEIVABLE' : 'PAYABLE',
+                            }
+                          )
+                        : tdsLedgerOptions
+                      ).map((l) => (
                         <option key={l.id} value={String(l.id)}>{l.name}</option>
                       ))}
                     </select>

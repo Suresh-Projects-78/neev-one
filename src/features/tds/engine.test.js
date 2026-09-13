@@ -210,6 +210,13 @@ describe('where it posts', () => {
     expect(ids).not.toContain(103);
   });
 
+  /* §19's fourth exclusion: filed under TDS Payable but mapped to nothing
+     is not offerable — an unmapped ledger answers no nature's question. */
+  it('leaves out an unmapped ledger, even on the right side', () => {
+    const withUnmapped = [...LEDGERS, { id: 106, name: 'TDS Payable - Misc', tdsSide: 'PAYABLE' }];
+    expect(tdsLedgersFor(withUnmapped, { natureCode: CONTRACTOR, side: 'PAYABLE' }).map((l) => l.id)).toEqual([101]);
+  });
+
   it('leaves out a closed ledger', () => {
     expect(tdsLedgersFor(LEDGERS, { natureCode: CONTRACTOR, side: 'PAYABLE' }).map((l) => l.id)).not.toContain(104);
   });
