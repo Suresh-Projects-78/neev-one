@@ -52,6 +52,12 @@ describe('the numbering control', () => {
     'deliveryChallan',
     'expense',
     'journalEntry',
+    /* The last three to catch up: the payment voucher, the POS counter and
+       the stock adjustment batch. POS and adjustments have no number a person
+       types — the gear rides the header / a series preview instead. */
+    'payment',
+    'pos',
+    'stockAdjustment',
   ];
 
   for (const key of LOCAL_SERIES) {

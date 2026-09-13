@@ -160,9 +160,13 @@ const DocNumberingPopover = ({
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-1">
-          <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm" onClick={onOpenFullSettings}>
-            All numbering
-          </button>
+          {typeof onOpenFullSettings === 'function' ? (
+            <button type="button" className="ui-btn ui-btn-ghost ui-btn-sm" onClick={onOpenFullSettings}>
+              All numbering
+            </button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
           <div className="flex items-center gap-2">
             <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={onClose}>
               Cancel

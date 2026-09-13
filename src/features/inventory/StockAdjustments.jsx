@@ -10,7 +10,8 @@ import { ColumnHeader, useColumnFilters } from '../../components/ColumnFilters';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import { formatMoney, round2 } from '../../utils/money';
 import { isStockItem } from '../../utils/inventory';
-import { generateVoucherNumber } from '../../utils/docSettings';
+import { generateVoucherNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import DocNumberField from '../../components/DocNumberField';
 import { DocumentNumber, DocDate } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 import { DocFormActions } from '../../components/DocumentForm';
@@ -476,7 +477,40 @@ const StockAdjustments = ({
           onPrimary={() => formRef.current?.requestSubmit()}
         />
         <form ref={formRef} onSubmit={saveForm} onKeyDown={onFormKeyDown} className="ui-card p-4 space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4">
+            <div>
+              {/* Numbers are handed out per row when the batch commits, so the
+                  field previews the series rather than taking typing — but the
+                  gear still opens the series itself, as on every other form. */}
+              <DocNumberField
+                id="adj-number"
+                label="Adjustment No."
+                value={String(
+                  nextFreeVoucherNumber({
+                    db,
+                    company: currentCompany,
+                    voucherKey: 'stockAdjustment',
+                    branchId: branchOfWarehouse(form.warehouseId) || activeBranchId || null,
+                    takenNumbers: safeArray(db.stockAdjustments)
+                      .filter((a) => a.companyId === companyId)
+                      .map((a) => String(a.number || '').trim()),
+                  }) || ''
+                )}
+                onChange={() => {}}
+                disabled
+                voucherKey="stockAdjustment"
+                title="Adjustment numbering"
+                sampleLabel="Next adjustment will be"
+                manualLabel="Typed on each adjustment"
+                branchId={branchOfWarehouse(form.warehouseId) || activeBranchId || null}
+                settings={getDocSettings(db, currentCompany, { branchId: branchOfWarehouse(form.warehouseId) || activeBranchId || null })?.numbering?.stockAdjustment}
+                db={db}
+                setDb={setDb}
+                currentCompany={currentCompany}
+              />
+              <p className="ui-caption mt-1">Each row takes the next number in the series.</p>
+            </div>
+
             <div>
               <label className="ui-label" htmlFor="adj-date">Date</label>
               <input

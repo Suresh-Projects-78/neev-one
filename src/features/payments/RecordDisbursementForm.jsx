@@ -11,7 +11,8 @@ import { amountInWordsInr } from '../../utils/money';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
 import { documentOutstanding } from '../../utils/onAccount';
-import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import DocNumberField from '../../components/DocNumberField';
 import { DocDate } from '../../components/docs';
 import { priorBaseFor, resolveTds, tdsEventFrom, tdsLedgersFor } from '../tds/engine';
 import { natureForSection } from '../tds/ruleMaster';
@@ -85,6 +86,8 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         .filter(Boolean),
     [db.payments, currentCompany]
   );
+
+  const paymentNumbering = getDocSettings(db, currentCompany, { branchId: null })?.numbering?.payment;
 
   const [formData, setFormData] = useState(() => ({
     date: initial.date,
@@ -769,17 +772,22 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="min-w-0">
-              <label className="ui-label" htmlFor="pay-number">Payment No.</label>
-              <input
+              <DocNumberField
                 id="pay-number"
-                type="text"
+                label="Payment No."
                 value={formData.number}
                 onChange={(e) => {
                   fieldErrors.clearField('number');
                   setFormData((p) => ({ ...p, number: e.target.value }));
                 }}
-                className="ui-input ui-mono w-full"
-                {...fieldErrors.props('number')}
+                voucherKey="payment"
+                title="Payment numbering"
+                sampleLabel="Next payment will be"
+                manualLabel="Typed on each payment"
+                settings={paymentNumbering}
+                db={db}
+                setDb={setDb}
+                currentCompany={currentCompany}
               />
               <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
               <p className="ui-caption mt-1">Auto from settings; type over if needed.</p>

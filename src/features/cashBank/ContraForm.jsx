@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 
 import PopupSelect from '../../components/pickers/PopupSelect';
+import DocNumberField from '../../components/DocNumberField';
 import { notify } from '../../components/ui/notify';
 import { formatMoney, round2 } from '../../utils/money';
 import { postJournalToLedger } from '../../utils/journalSync';
@@ -139,17 +140,22 @@ const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="ui-label" htmlFor="contra-number">Voucher No.</label>
-          <input
-            id="contra-number"
-            type="text"
-            className="ui-input ui-mono w-full"
-            value={form.number}
-            readOnly={lockNumber}
-            onChange={(e) => set({ number: e.target.value })}
-          />
-        </div>
+        <DocNumberField
+          id="contra-number"
+          label="Voucher No."
+          value={form.number}
+          onChange={(e) => set({ number: e.target.value })}
+          disabled={lockNumber}
+          voucherKey="journalEntry"
+          title="Journal numbering"
+          sampleLabel="Next voucher will be"
+          manualLabel="Typed on each voucher"
+          branchId={branchId || null}
+          settings={numbering}
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+        />
         <div>
           <label className="ui-label" htmlFor="contra-date">Date</label>
           <input

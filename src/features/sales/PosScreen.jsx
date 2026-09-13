@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ShoppingCart, Minus, Plus, X } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { ShoppingCart, Minus, Plus, SlidersHorizontal, X } from 'lucide-react';
 import { PageHeader } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
 import { computeGstForLines } from '../../utils/gst';
@@ -7,7 +7,8 @@ import { formatMoney } from '../../utils/money';
 import { createInvoiceApi } from '../../api/invoices';
 import { createPosDayClose } from '../../api/posDayClose';
 import { hasApiSession } from '../../api/purchaseDocs';
-import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import DocNumberingPopover from '../../components/DocNumberingPopover';
 
 /**
  * Point of sale — the fast lane for counter sales. Search or tap items, take
@@ -15,6 +16,14 @@ import { bumpCompanyNextNumber, nextFreeVoucherNumber } from '../../utils/docSet
  * its receipt, so the books and GST reports see POS sales like any other.
  */
 export default function PosScreen({ db, setDb, currentCompany }) {
+  /* The POS series has no number field to hang its gear on — a sale takes its
+     number the moment it is rung up — so the gear sits in the header and
+     opens the same series panel every numbered form carries. */
+  const numberingBtnRef = useRef(null);
+  const [numberingOpen, setNumberingOpen] = useState(false);
+  const posBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim() || null;
+  const posNumbering = getDocSettings(db, currentCompany, { branchId: posBranchId })?.numbering?.pos;
+
   const companyId = currentCompany.id;
   const items = useMemo(
     () => (db.items || []).filter((i) => i.companyId === companyId && Number(i.salePrice || 0) > 0),
@@ -305,10 +314,40 @@ export default function PosScreen({ db, setDb, currentCompany }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader title="Point of Sale" description="Counter sales — tap items, take payment, invoice and receipt book themselves." />
-        <button type="button" onClick={() => setDayCloseOpen(true)} className="ui-btn ui-btn-secondary">
-          Day Close ({todaysSales.length})
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            ref={numberingBtnRef}
+            onClick={() => setNumberingOpen((v) => !v)}
+            className="ui-icon-btn"
+            aria-label="POS numbering settings"
+            aria-haspopup="dialog"
+            aria-expanded={numberingOpen}
+            title="Numbering"
+          >
+            <SlidersHorizontal size={15} aria-hidden="true" />
+          </button>
+          <button type="button" onClick={() => setDayCloseOpen(true)} className="ui-btn ui-btn-secondary">
+            Day Close ({todaysSales.length})
+          </button>
+        </div>
       </div>
+
+      {numberingOpen ? (
+        <DocNumberingPopover
+          anchorRef={numberingBtnRef}
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          voucherKey="pos"
+          title="POS numbering"
+          sampleLabel="Next sale will be"
+          manualLabel="Typed on each sale"
+          branchId={posBranchId}
+          settings={posNumbering}
+          onClose={() => setNumberingOpen(false)}
+        />
+      ) : null}
 
       {dayCloseOpen ? (
         <div className="ui-card space-y-4 p-5">
