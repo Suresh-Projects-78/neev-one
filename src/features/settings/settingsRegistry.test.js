@@ -122,7 +122,8 @@ describe('local navigation', () => {
     const groups = groupedForCategory('tax', all);
     expect(groups).toHaveLength(1);
     expect(groups[0].name).toBe('');
-    expect(groups[0].items.map((i) => i.key)).toEqual(['settingsTax', 'gstRates']);
+    /* TDS joined the Taxation category with its configuration page. */
+    expect(groups[0].items.map((i) => i.key)).toEqual(['settingsTax', 'settingsTds', 'gstRates']);
   });
 });
 

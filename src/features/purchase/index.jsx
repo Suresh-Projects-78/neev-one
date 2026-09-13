@@ -40,7 +40,7 @@ import DocumentPrintView from '../../components/DocumentPrintView';
 import PrintDownloadFrame from '../../components/PrintDownloadFrame';
 import { getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { tdsVariesByDeductee, DEDUCTEE_TYPES } from '../../utils/tds';
-import { priorBaseFor, resolveTds, tdsEventFrom, tdsLedgersFor, tdsReversalEventFrom } from '../tds/engine';
+import { priorBaseFor, resolveTds, returnQuarter, tdsEventFrom, tdsLedgersFor, tdsReversalEventFrom } from '../tds/engine';
 import { TDS_NATURES, natureByCode, natureForSection } from '../tds/ruleMaster';
 import { tdsGroupSide } from '../../utils/tdsLedgers';
 import {
@@ -652,8 +652,11 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
      * edited later.
      */
     const tdsEvents = Array.isArray(db.tdsTransactions) ? db.tdsTransactions : [];
+    /* §20: a DRAFT is not a deduction. The compliance event exists only for
+       a posted document — a draft bill writes nothing to the register, the
+       challan queue or the return. */
     const tdsEvent =
-      tdsAmount > 0
+      tdsAmount > 0 && !wantsDraft
         ? {
             id: tdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
             ...tdsEventFrom(tds, {
@@ -3703,8 +3706,63 @@ export const DebitNoteForm = ({
       createdAt: new Date().toISOString(),
     };
 
+    /*
+     * §20 — TDS on a purchase return is EVALUATED, never blindly reversed.
+     *
+     * Only a note against ONE bill that actually deducted adjusts anything:
+     * a below-threshold bill wrote no event and there is nothing to give
+     * back; an on-account note names no single obligation, so the operator
+     * corrects by journal where it matters. The adjustment applies the
+     * ORIGINAL EVENT's snapshotted rate to the returned taxable value —
+     * preserving the rule the deduction was made under — and is capped at
+     * what remains of the original deduction after earlier returns. It is a
+     * live negative event linked by correctionOfId: the register, the
+     * challan queue and the return all net it against the original.
+     */
+    const tdsRows = Array.isArray(db.tdsTransactions) ? db.tdsTransactions : [];
+    let tdsAdjustment = null;
+    if (!onAccountMode && originalBill) {
+      const originalEvent = tdsRows.find(
+        (ev) =>
+          Number(ev?.companyId) === Number(currentCompany.id) &&
+          String(ev?.sourceType) === 'bill' &&
+          String(ev?.sourceId) === String(originalBill.id) &&
+          String(ev?.status).toLowerCase() === 'posted' &&
+          !ev?.reversalOfId
+      );
+      if (originalEvent) {
+        const priorGivenBack = tdsRows
+          .filter((ev) => Number(ev?.correctionOfId) === Number(originalEvent.id))
+          .reduce((t, ev) => t + Math.abs(Number(ev?.tdsAmount || 0)), 0);
+        const remaining = round2(Math.max(0, Number(originalEvent.tdsAmount || 0) - priorGivenBack));
+        const evaluated = round2((Number(computed.subtotal || 0) * Number(originalEvent.rate || 0)) / 100);
+        const giveBack = round2(Math.min(remaining, evaluated));
+        if (giveBack > 0.005) {
+          tdsAdjustment = {
+            ...originalEvent,
+            id: tdsRows.reduce((m, ev) => Math.max(m, Number(ev?.id) || 0), 0) + 1,
+            sourceType: 'debitNote',
+            sourceId: newDebitNote.id,
+            sourceNumber: newDebitNote.number,
+            transactionDate: String(formData.date || '').slice(0, 10),
+            deductionDate: String(formData.date || '').slice(0, 10),
+            baseAmount: -round2(Number(computed.subtotal || 0)),
+            tdsAmount: -giveBack,
+            returnQuarter: returnQuarter(formData.date),
+            status: 'Posted',
+            correctionOfId: originalEvent.id,
+            reversalOfId: null,
+            createdAt: new Date().toISOString(),
+            modifiedBy: null,
+            modifiedAt: null,
+          };
+        }
+      }
+    }
+
     setDb({
       ...db,
+      tdsTransactions: tdsAdjustment ? [...tdsRows, tdsAdjustment] : db.tdsTransactions,
       debitNotes: [...db.debitNotes, newDebitNote],
       companies: bumpCompanyNextNumber({
         db,
