@@ -13451,6 +13451,7 @@ const AppShell = () => {
         return (
           <TdsModule
             db={dbForUser}
+            setDb={setDb}
             currentCompany={currentCompany}
             onOpenSettings={(screen) => setActive(screen)}
             onNewChallan={() =>

@@ -183,16 +183,32 @@ export const challanRegister = (db, companyId, filter = {}) => {
         Number(c.taxAmount || 0) + Number(c.interest || 0) + Number(c.lateFee || 0) + Number(c.otherAmount || 0)
       );
       const used = allocated.get(String(c.id)) || 0;
+      /*
+       * The full ladder, decided from the figures rather than typed by hand —
+       * a status somebody can set independently of the facts is a status
+       * that can lie. Unpaid: created, no payment date yet. Paid: money went
+       * to the department, nothing allocated. Partially / Fully allocated:
+       * the tax component covered. Mismatch: allocated past it. Reconciled:
+       * fully allocated AND a person confirmed it against the bank / 26Q.
+       */
+      const tax = Number(c.taxAmount || 0);
+      const status = !String(c.paymentDate || '').trim()
+        ? 'Unpaid'
+        : used > tax + 0.005
+          ? 'Mismatch'
+          : used >= tax - 0.005 && tax > 0
+            ? c.reconciled === true
+              ? 'Reconciled'
+              : 'Fully allocated'
+            : used > 0.005
+              ? 'Partially allocated'
+              : 'Paid';
       return {
         ...c,
         totalAmount: total,
         allocated: used,
         unallocated: r2(total - used),
-        /* §23's ladder, decided from the figures rather than typed by hand —
-           a status somebody can set independently of the allocations is a
-           status that can lie. */
-        status:
-          used <= 0 ? 'Unpaid' : used < total - 0.005 ? 'Partially allocated' : used > total + 0.005 ? 'Mismatch' : 'Fully allocated',
+        status,
       };
     })
     .sort((a, b) => (day(a.paymentDate) < day(b.paymentDate) ? 1 : -1));

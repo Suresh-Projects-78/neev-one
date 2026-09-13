@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Wand2 } from 'lucide-react';
 
 import { notify } from '../../components/ui/notify';
+import { fyRange } from '../../utils/tdsTcs';
+import { companyTdsProfile } from './engine';
 import { formatMoney, round2 } from '../../utils/money';
 import { natureByCode } from './ruleMaster';
 import { allocationsByEvent, isLive, tdsEvents } from './reports';
@@ -22,6 +24,7 @@ import { allocationsByEvent, isLive, tdsEvents } from './reports';
  */
 const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
   const companyId = currentCompany?.id;
+  const profile = companyTdsProfile(currentCompany);
 
   const [head, setHead] = useState({
     number: '',
@@ -76,7 +79,6 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
 
   const problems = [];
   if (!String(head.number || '').trim()) problems.push('The challan needs its number (CIN).');
-  if (!String(head.paymentDate || '').trim()) problems.push('The challan needs its payment date.');
   if (tax <= 0.005) problems.push('The tax amount is what pays the deductions — it cannot be zero.');
   if (allocated > tax + 0.005)
     problems.push('More is allocated than the challan’s tax amount — interest and late fee do not pay deductions.');
@@ -101,7 +103,13 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
         id: challanId,
         companyId,
         number: String(head.number).trim(),
-        paymentDate: String(head.paymentDate).slice(0, 10),
+        /* No date yet is a challan CREATED, not paid — status Unpaid until
+           the department's money actually moves. */
+        paymentDate: String(head.paymentDate || '').slice(0, 10),
+        /* Snapshots, like every compliance row: the TAN the challan was paid
+           under and the tax year it belongs to survive later profile edits. */
+        tan: profile.tan,
+        taxYear: String(head.paymentDate || '').trim() ? fyRange(String(head.paymentDate).slice(0, 10))?.label || '' : '',
         bsrCode: String(head.bsrCode || '').trim(),
         bankName: String(head.bankName || '').trim(),
         taxAmount: tax,
@@ -157,6 +165,16 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
             value={head.paymentDate}
             onChange={(e) => set({ paymentDate: e.target.value })}
           />
+        </div>
+        <div>
+          <label className="ui-label">TAN</label>
+          <div className="ui-input ui-sunken ui-mono flex items-center">{profile.tan || '—'}</div>
+        </div>
+        <div>
+          <label className="ui-label">Tax Year</label>
+          <div className="ui-input ui-sunken flex items-center">
+            {String(head.paymentDate || '').trim() ? fyRange(String(head.paymentDate).slice(0, 10))?.label || '—' : '—'}
+          </div>
         </div>
         <div>
           <label className="ui-label" htmlFor="chl-bsr">BSR code</label>

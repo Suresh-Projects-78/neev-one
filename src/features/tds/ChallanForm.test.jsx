@@ -11,7 +11,11 @@ import ChallanForm from './ChallanForm';
  * deductions — interest and late fee ride along on the record.
  */
 
-const COMPANY = { id: 1, name: 'Neev Steels' };
+const COMPANY = {
+  id: 1,
+  name: 'Neev Steels',
+  profile: { taxCompliances: { tds: { enabled: true, tan: 'BLRN12345F' } } },
+};
 
 const event = (over = {}) => ({
   companyId: 1,
@@ -137,6 +141,19 @@ describe('saving', () => {
       [2, 1000],
     ]);
     expect(closed).toBe(true);
+  });
+
+  /* §21: the challan snapshots the TAN it was paid under and the tax year
+     it belongs to — later profile edits change neither. */
+  it('snapshots TAN and tax year onto the challan', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await fillHead(user, { tax: 500 });
+    await user.click(screen.getByRole('button', { name: 'Record challan' }));
+
+    const challan = latest.db.tdsChallans.find((c) => c.number === 'CHL-2026-091');
+    expect(challan.tan).toBe('BLRN12345F');
+    expect(challan.taxYear).toMatch(/2026/);
   });
 
   it('a challan with nothing allocated still saves, for allocating later', async () => {

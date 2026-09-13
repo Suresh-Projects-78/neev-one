@@ -48,7 +48,7 @@ const SEVERITY_STYLE = {
   INFO: 'ui-muted',
 };
 
-export default function TdsModule({ db, currentCompany, onNewChallan = null, onOpenSettings = null }) {
+export default function TdsModule({ db, setDb = null, currentCompany, onNewChallan = null, onOpenSettings = null }) {
   const companyId = currentCompany?.id;
   const profile = companyTdsProfile(currentCompany);
   const period = usePeriodFilter();
@@ -295,6 +295,8 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
             <thead>
               <tr>
                 <th scope="col">Challan</th>
+                <th scope="col">TAN</th>
+                <th scope="col">Tax Year</th>
                 <th scope="col">Paid on</th>
                 <th scope="col">Bank / BSR</th>
                 <th scope="col" className="text-end">Tax</th>
@@ -303,12 +305,13 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
                 <th scope="col" className="text-end">Total</th>
                 <th scope="col" className="text-end">Allocated</th>
                 <th scope="col">Status</th>
+                <th scope="col"></th>
               </tr>
             </thead>
             <tbody>
               {challans.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={12}>
                     <EmptyState
                       title="No challans recorded"
                       message="Record what was paid to the department, then allocate it against the deductions it covers."
@@ -319,6 +322,8 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
                 challans.map((c) => (
                   <tr key={c.id}>
                     <td className="ui-mono">{c.number || '—'}</td>
+                    <td className="ui-mono">{c.tan || '—'}</td>
+                    <td>{c.taxYear || '—'}</td>
                     <td>{c.paymentDate || '—'}</td>
                     <td className="truncate">{[c.bankName, c.bsrCode].filter(Boolean).join(' · ') || '—'}</td>
                     <td className="ui-money">{formatMoney(c.taxAmount, currentCompany)}</td>
@@ -327,6 +332,29 @@ export default function TdsModule({ db, currentCompany, onNewChallan = null, onO
                     <td className="ui-money">{formatMoney(c.totalAmount, currentCompany)}</td>
                     <td className="ui-money">{formatMoney(c.allocated, currentCompany)}</td>
                     <td><StatusPill status={c.status} /></td>
+                    <td>
+                      {/* The last step before Return Ready: a fully allocated
+                          challan is CONFIRMED against the bank / 26Q by a
+                          person, never marked by arithmetic alone. */}
+                      {setDb && c.status === 'Fully allocated' ? (
+                        <button
+                          type="button"
+                          className="ui-btn ui-btn-secondary ui-btn-sm"
+                          onClick={() =>
+                            setDb((prev) => ({
+                              ...prev,
+                              tdsChallans: (prev.tdsChallans || []).map((row) =>
+                                row.companyId === companyId && String(row.id) === String(c.id)
+                                  ? { ...row, reconciled: true, reconciledAt: new Date().toISOString() }
+                                  : row
+                              ),
+                            }))
+                          }
+                        >
+                          Mark reconciled
+                        </button>
+                      ) : null}
+                    </td>
                   </tr>
                 ))
               )}

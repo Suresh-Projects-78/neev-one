@@ -135,6 +135,30 @@ describe('challans', () => {
     expect(byNumber.get('CHL-2')).toMatchObject({ totalAmount: 5100, allocated: 3000, unallocated: 2100, status: 'Partially allocated' });
   });
 
+  /* §21's full ladder: created→Unpaid, paid→Paid, then the allocation
+     rungs, and Reconciled only when a person confirmed a fully allocated
+     challan. Every rung derived, none typed. */
+  it('walks every status the specification names', () => {
+    const ladder = {
+      ...db,
+      tdsChallans: [
+        { id: 11, companyId: 1, number: 'CH-U', paymentDate: '', taxAmount: 1000 },
+        { id: 12, companyId: 1, number: 'CH-P', paymentDate: '2026-09-07', taxAmount: 1000 },
+        { id: 13, companyId: 1, number: 'CH-R', paymentDate: '2026-09-07', taxAmount: 1000, reconciled: true },
+        { id: 14, companyId: 1, number: 'CH-M', paymentDate: '2026-09-07', taxAmount: 1000 },
+      ],
+      tdsChallanAllocations: [
+        { id: 11, companyId: 1, challanId: 13, tdsTransactionId: 1, amount: 1000 },
+        { id: 12, companyId: 1, challanId: 14, tdsTransactionId: 1, amount: 1500 },
+      ],
+    };
+    const byNumber = new Map(challanRegister(ladder, 1).map((r) => [r.number, r.status]));
+    expect(byNumber.get('CH-U')).toBe('Unpaid');
+    expect(byNumber.get('CH-P')).toBe('Paid');
+    expect(byNumber.get('CH-R')).toBe('Reconciled');
+    expect(byNumber.get('CH-M')).toBe('Mismatch');
+  });
+
   it('counts interest and late fee in the challan total but not in the tax', () => {
     const chl2 = challanRegister(db, 1).find((r) => r.number === 'CHL-2');
     expect(chl2.taxAmount).toBe(5000);
