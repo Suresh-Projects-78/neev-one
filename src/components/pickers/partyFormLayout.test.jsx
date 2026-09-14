@@ -78,7 +78,7 @@ describe('an address reads as an address', () => {
 
   it('keeps the fields of a place together', () => {
     renderCustomer();
-    for (const label of ['Address Line 1', 'Address Line 2', 'City', 'Pincode', 'District']) {
+    for (const label of ['Address Line 1', 'Address Line 2', 'City', 'Pincode']) {
       expect(screen.getAllByLabelText(label).length).toBeGreaterThanOrEqual(2);
     }
     /* The two pickers say which card they belong to, so a screen reader does

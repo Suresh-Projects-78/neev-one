@@ -207,18 +207,6 @@ const AddressCard = ({ row, index, states, onChange, onRemove, tone, title, subt
         </AddrField>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <AddrField label="District" id={id('district')}>
-          <input
-            id={id('district')}
-            value={row.district}
-            onChange={(e) => onChange(index, 'district', e.target.value)}
-            disabled={disabled}
-            className="ui-input w-full"
-            placeholder="Enter district"
-          />
-        </AddrField>
-      </div>
 
       {row.builtIn ? null : (
         <div className="mt-3 flex justify-end">
@@ -248,7 +236,89 @@ export const AddressTab = ({
   /* The ledger master reuses this and has no customers, so the copy is a prop
      rather than the customer wording repeated in a second component. */
   caption = 'Billing and shipping addresses are here by default. Add more places below if you need them.',
+  /* 'cards' for the party masters, where billing and shipping are objects
+     with their own linkage; 'table' for a ledger, where an address is one
+     line of fields the way a contact person is. */
+  variant = 'cards',
 }) => (
+  variant === 'table' ? (
+    <section className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h4 className="ui-t-sec">Address</h4>
+          <p className="ui-caption mt-0.5">{caption}</p>
+        </div>
+        <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary shrink-0">
+          <Plus size={15} aria-hidden="true" /> Add Address
+        </button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[52rem] border-collapse text-sm">
+          <thead>
+            <tr>
+              {['Name of place', 'Address Line 1', 'Address Line 2', 'City', 'State', 'Pincode'].map((c) => (
+                <th key={c} className="ui-t-label px-2 py-2 text-left">
+                  {c}
+                </th>
+              ))}
+              <th
+                className="ui-t-label sticky end-0 w-20 px-2 py-2 text-center"
+                style={{ backgroundColor: 'rgb(var(--surface))' }}
+              >
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, i) => (
+              <tr key={r.key ?? i}>
+                <td className="px-1 py-1">
+                  <input value={r.label} onChange={(e) => onChange(i, 'label', e.target.value)} className="ui-input w-full min-w-[8rem]" aria-label={`Name of place, address ${i + 1}`} placeholder="Registered Office" />
+                </td>
+                <td className="px-1 py-1">
+                  <input value={r.line1} onChange={(e) => onChange(i, 'line1', e.target.value)} className="ui-input w-full min-w-[9rem]" aria-label={`Address line 1, address ${i + 1}`} />
+                </td>
+                <td className="px-1 py-1">
+                  <input value={r.line2} onChange={(e) => onChange(i, 'line2', e.target.value)} className="ui-input w-full min-w-[9rem]" aria-label={`Address line 2, address ${i + 1}`} />
+                </td>
+                <td className="px-1 py-1">
+                  <input value={r.city} onChange={(e) => onChange(i, 'city', e.target.value)} className="ui-input w-full min-w-[7rem]" aria-label={`City, address ${i + 1}`} />
+                </td>
+                <td className="px-1 py-1">
+                  {/* A state typed in from outside the list (a foreign
+                      address) still shows rather than snapping to blank. */}
+                  <select value={r.state} onChange={(e) => onChange(i, 'state', e.target.value)} className="ui-select w-full min-w-[8rem]" aria-label={`State, address ${i + 1}`}>
+                    <option value="">Select</option>
+                    {states.map((st) => (
+                      <option key={st.code} value={st.name}>{st.name}</option>
+                    ))}
+                    {r.state && !states.some((st) => st.name === r.state) ? <option value={r.state}>{r.state}</option> : null}
+                  </select>
+                </td>
+                <td className="px-1 py-1">
+                  <input value={r.pincode} onChange={(e) => onChange(i, 'pincode', e.target.value)} className="ui-input ui-mono w-full min-w-[6rem]" maxLength={10} aria-label={`Pincode, address ${i + 1}`} />
+                </td>
+                <td
+                  className="sticky end-0 px-1 py-1 text-center"
+                  style={{ backgroundColor: 'rgb(var(--surface))' }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => onRemove(i)}
+                    aria-label={`Remove address ${i + 1}`}
+                    className="ui-icon-btn mx-auto"
+                  >
+                    <Trash2 size={15} aria-hidden="true" className="text-[rgb(var(--neg))]" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ) : (
   <section className="space-y-4">
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
@@ -308,6 +378,7 @@ export const AddressTab = ({
       ))}
     </div>
   </section>
+  )
 );
 
 export const ContactsTab = ({

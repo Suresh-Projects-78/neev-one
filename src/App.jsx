@@ -3306,12 +3306,12 @@ export const ChartAccountForm = ({
                       ))}
                     </select>
                   </PartyFormRow>
-                  <PartyFormRow label="Branch Address" htmlFor="ledger-bank-braddr" className="lg:col-span-2">
-                    <textarea id="ledger-bank-braddr" rows={3} maxLength={250} value={formData.bankBranchAddress} onChange={(e) => setFormData((p) => ({ ...p, bankBranchAddress: e.target.value }))} className="ui-input w-full" />
-                    <p className="ui-caption mt-1 text-right">{String(formData.bankBranchAddress || '').length}/250</p>
-                  </PartyFormRow>
                   <PartyFormRow label="IFSC Code" required htmlFor="ledger-bank-ifsc" hint="Four letters, a zero, then six characters — HDFC0001234.">
                     <input id="ledger-bank-ifsc" value={formData.bankIfsc} onChange={(e) => setFormData((p) => ({ ...p, bankIfsc: e.target.value.toUpperCase() }))} className="ui-input ui-mono w-full" maxLength={11} />
+                  </PartyFormRow>
+                  <PartyFormRow label="Branch Address" htmlFor="ledger-bank-braddr">
+                    <textarea id="ledger-bank-braddr" rows={3} maxLength={250} value={formData.bankBranchAddress} onChange={(e) => setFormData((p) => ({ ...p, bankBranchAddress: e.target.value }))} className="ui-input w-full" />
+                    <p className="ui-caption mt-1 text-right">{String(formData.bankBranchAddress || '').length}/250</p>
                   </PartyFormRow>
                   <PartyFormRow label="Branch Name" htmlFor="ledger-bank-branch">
                     <input id="ledger-bank-branch" value={formData.bankBranch} onChange={(e) => setFormData((p) => ({ ...p, bankBranch: e.target.value }))} className="ui-input w-full" />
@@ -3493,6 +3493,7 @@ export const ChartAccountForm = ({
 
             {activeLedgerTab === 'address' ? (
               <AddressTab
+                variant="table"
                 rows={formData.addresses}
                 states={LEDGER_STATES}
                 caption="Where this ledger is. Registered office, a branch, wherever a document has to name a place."

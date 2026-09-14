@@ -123,9 +123,10 @@ describe('addresses', () => {
     expect(screen.getByRole('button', { name: /Remove Shipping 2/i })).toBeEnabled();
   });
 
-  it('carries a District field, which the old two-address shape had nowhere for', () => {
+  it('asks only for what an Indian address prints — district is not one of them', () => {
     renderForm();
-    expect(screen.getAllByLabelText('District')).toHaveLength(2);
+    expect(screen.queryByLabelText('District')).toBeNull();
+    expect(screen.getAllByLabelText('Pincode')).toHaveLength(2);
   });
 });
 
