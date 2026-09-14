@@ -231,7 +231,23 @@ orgMastersRouter.patch('/orgs/:orgId/fixed-assets/:id', ASSET_EDIT, async (req, 
  * giving each of them columns, and six near-identical routes would have to be
  * kept in step by hand.
  */
-const MASTER_KINDS = ['UOM', 'ITEM_CATEGORY', 'PRICE_LIST', 'DISCOUNT_RULE', 'COST_CENTER', 'ACCOUNT_GROUP', 'GST_RATE'] as const;
+const MASTER_KINDS = [
+  'UOM',
+  'ITEM_CATEGORY',
+  'PRICE_LIST',
+  'DISCOUNT_RULE',
+  'COST_CENTER',
+  'ACCOUNT_GROUP',
+  'GST_RATE',
+  /* The TDS compliance stores. Events, challans, allocation links and
+     quarter filings were browser-local; each syncs here as (kind, uid,
+     payload) so every device reads one register. The server stores and
+     isolates; the client owns the shape. */
+  'TDS_EVENT',
+  'TDS_CHALLAN',
+  'TDS_CHALLAN_ALLOC',
+  'TDS_FILING',
+] as const;
 type MasterKind = (typeof MASTER_KINDS)[number];
 
 const masterSchema = z.object({

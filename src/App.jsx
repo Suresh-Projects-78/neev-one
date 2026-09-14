@@ -5,6 +5,7 @@ import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { postJournalToLedger, reverseJournalOnLedger } from './utils/journalSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
+import useTdsSync from './features/tds/useTdsSync';
 import { useCompanyFromServer } from './hooks/useCompanyFromServer';
 import OnboardingWizard, { shouldOnboard, markOnboardingSeen } from './components/OnboardingWizard';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExport';
@@ -11118,6 +11119,9 @@ const AppShell = () => {
 
   // Fresh browser, existing books: pull server documents into the local db.
   useServerDocSync({ enabled: isAuthenticated, currentCompanyId: currentCompany?.id, setDb });
+  /* The TDS compliance stores follow the same rule as every master: local
+     is the working copy, the server is where every device meets. */
+  useTdsSync(db, setDb, isAuthenticated ? currentCompany : null);
 
   const [onboardDismissed, setOnboardDismissed] = useState(false);
   // Latch it. shouldOnboard asks whether there are no customers and no
