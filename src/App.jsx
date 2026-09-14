@@ -11502,6 +11502,9 @@ const AppShell = () => {
   }, [active]);
 
   const [ledgerNav, setLedgerNav] = useState({ ledgerId: null, returnTo: 'trialBalance' });
+  /* The Bank & Cash Accounts screen's ledger form — a full page like the
+     other masters, not a dialog. null | { mode: 'new' } | { mode: 'edit', ledger }. */
+  const [bankAcctForm, setBankAcctForm] = useState(null);
   const openLedger = useCallback(
     (ledgerId) => {
       setLedgerNav({ ledgerId, returnTo: active });
@@ -13638,40 +13641,36 @@ const AppShell = () => {
             return name === 'bank accounts' || name === 'cash-in-hand';
           })
           .map((g) => g.id);
+        /* Creating or editing an account takes the whole screen, the way the
+           other masters do — a dialog was too small for four tabs of fields. */
+        if (bankAcctForm) {
+          return (
+            <div className="space-y-6">
+              <ChartAccountForm
+                fullPage
+                db={db}
+                setDb={setDb}
+                currentCompany={currentCompany}
+                openModal={openModal}
+                includeGroupIds={bankAcctForm.mode === 'edit' ? null : cashBankGroups}
+                initialData={bankAcctForm.mode === 'edit' ? bankAcctForm.ledger : null}
+                onClose={() => setBankAcctForm(null)}
+              />
+            </div>
+          );
+        }
         return (
           <BankCashAccounts
             db={dbForUser}
             setDb={setDb}
             currentCompany={currentCompany}
-            onAddAccount={() =>
-              openModal(
-                <ChartAccountForm
-                  db={db}
-                  setDb={setDb}
-                  currentCompany={currentCompany}
-                  openModal={openModal}
-                  includeGroupIds={cashBankGroups}
-                  onClose={() => openModal(null)}
-                />,
-                { title: 'New Cash/Bank Account', maxWidthClass: 'max-w-4xl' }
-              )
-            }
+            onAddAccount={() => setBankAcctForm({ mode: 'new' })}
             onEditAccount={(ledgerId) => {
               const row = (dbForUser.chartOfAccounts || []).find(
                 (a) => a.companyId === currentCompany.id && String(a.id) === String(ledgerId)
               );
               if (!row) return;
-              openModal(
-                <ChartAccountForm
-                  db={db}
-                  setDb={setDb}
-                  currentCompany={currentCompany}
-                  openModal={openModal}
-                  initialData={row}
-                  onClose={() => openModal(null)}
-                />,
-                { title: 'Edit Account', maxWidthClass: 'max-w-4xl' }
-              );
+              setBankAcctForm({ mode: 'edit', ledger: row });
             }}
             onOpenAccount={(ledgerId) => setLedgerNav({ ledgerId: String(ledgerId), returnTo: 'bankCashAccounts' })}
           />
