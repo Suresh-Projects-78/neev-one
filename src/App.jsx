@@ -12987,7 +12987,7 @@ const AppShell = () => {
         );
       }
       case 'inventory':
-        return <InventoryModule db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} warehouses={warehousesForUser} />;
+        return <InventoryModule db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} warehouses={warehousesForUser} onOpenItems={() => setActive('items')} />;
       case 'warehouseTransfers':
       case 'branchTransfers':
         if (stockTransferEditor.open) {

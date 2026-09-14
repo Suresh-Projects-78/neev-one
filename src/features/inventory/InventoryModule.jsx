@@ -290,7 +290,7 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
   );
 };
 
-const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => {
+const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpenItems = null }) => {
   const companyId = currentCompany.id;
 
   const [viewMode, setViewMode] = useState('qty');
@@ -589,6 +589,25 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
             />
           </div>
         ) : null}
+
+        {/* One click back to the defaults — offered only while a filter is
+            actually narrowing something, right-aligned like every band's
+            trailing control. */}
+        {viewMode !== 'qty' || warehouseId || period !== 'last30' ? (
+          <button
+            type="button"
+            className="ui-btn ui-btn-ghost ui-btn-sm ms-auto"
+            onClick={() => {
+              setViewMode('qty');
+              setWarehouseId('');
+              setPeriod('last30');
+              setCustomFrom('');
+              setCustomTo('');
+            }}
+          >
+            Reset
+          </button>
+        ) : null}
       </ListFilterBand>
 
       <div className="ui-table-scroll">
@@ -622,6 +641,17 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [] }) => 
                       items.length
                         ? 'No item in this filter for the chosen warehouse and period.'
                         : 'An item marked as stock appears here with what it opened at, what moved, and what is left.'
+                    }
+                    routes={
+                      !items.length && onOpenItems
+                        ? [
+                            {
+                              label: 'Add an item',
+                              description: 'Items live in Master Data — mark one as stock and it appears here.',
+                              onSelect: onOpenItems,
+                            },
+                          ]
+                        : undefined
                     }
                   />
                 </td>
