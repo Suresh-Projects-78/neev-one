@@ -8,7 +8,7 @@ import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
 import { companyTdsProfile } from './engine';
 import { TDS_NATURES, natureByCode } from './ruleMaster';
-import { quarterValidation, returnCsv, returnDataset } from './returns';
+import { datasetChecksum, filingFor, quarterValidation, returnCsv, returnDataset } from './returns';
 import {
   challanRegister,
   dueSummary,
@@ -106,13 +106,81 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
   const validation = useMemo(() => quarterValidation(db, companyId, quarter), [db, companyId, quarter]);
   const dataset = useMemo(() => returnDataset(db, companyId, quarter), [db, companyId, quarter]);
 
+  /* The quarter's filing lifecycle: Open → Frozen → Filed. The freeze pins
+     the dataset's signature; the screen says so when the data moves after. */
+  const filing = useMemo(() => filingFor(db, companyId, quarter), [db, companyId, quarter]);
+  const checksumNow = useMemo(() => datasetChecksum(dataset), [dataset]);
+  const frozenDrift = Boolean(filing && filing.checksum && filing.checksum !== checksumNow);
+  const who = () => {
+    try {
+      return String(localStorage.getItem('userEmail') || '').trim() || 'User';
+    } catch {
+      return 'User';
+    }
+  };
+  const [ackNo, setAckNo] = useState('');
+
+  const freezeQuarter = () => {
+    if (!setDb || !quarter || !validation.ready) return;
+    setDb((prev) => {
+      const rows = Array.isArray(prev.tdsFilings) ? prev.tdsFilings : [];
+      if (rows.some((f) => Number(f.companyId) === Number(companyId) && f.quarter === quarter)) return prev;
+      const id = rows.reduce((m, f) => Math.max(m, Number(f?.id) || 0), 0) + 1;
+      return {
+        ...prev,
+        tdsFilings: [
+          ...rows,
+          { id, companyId, quarter, status: 'Frozen', checksum: checksumNow, frozenAt: new Date().toISOString(), frozenBy: who(), exports: [] },
+        ],
+      };
+    });
+  };
+
+  const recordExport = () => {
+    if (!setDb || !filing) return 0;
+    const version = (filing.exports?.length || 0) + 1;
+    setDb((prev) => ({
+      ...prev,
+      tdsFilings: (prev.tdsFilings || []).map((f) =>
+        f.id === filing.id
+          ? {
+              ...f,
+              status: f.status === 'Filed' ? 'Filed' : 'Frozen',
+              exports: [
+                ...(f.exports || []),
+                { version, at: new Date().toISOString(), by: who(), checksum: checksumNow, totals: { ...dataset.totals } },
+              ],
+            }
+          : f
+      ),
+    }));
+    return version;
+  };
+
+  const recordAcknowledgement = () => {
+    if (!setDb || !filing || !String(ackNo).trim()) return;
+    setDb((prev) => ({
+      ...prev,
+      tdsFilings: (prev.tdsFilings || []).map((f) =>
+        f.id === filing.id
+          ? { ...f, status: 'Filed', acknowledgementNo: String(ackNo).trim(), filedAt: new Date().toISOString(), filedBy: who() }
+          : f
+      ),
+    }));
+    setAckNo('');
+  };
+
   const downloadReturn = () => {
+    /* A frozen quarter's export is a VERSION on the filing record; before
+       the freeze it is only a draft preview and says so in its name. */
+    const version = filing ? recordExport() : 0;
     const csv = returnCsv(dataset);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `tds-${String(quarter || 'quarter').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}.csv`;
+    const base = `tds-${String(quarter || 'quarter').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase()}`;
+    link.download = version ? `${base}-v${version}.csv` : `${base}-draft.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -571,24 +639,72 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <div className="ui-t-label">{quarter}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="ui-t-label">{quarter}</div>
+                      <StatusPill status={filing ? filing.status : 'Open'} />
+                    </div>
                     <p className="ui-caption">
                       {validation.ready
                         ? `Ready — ${dataset.totals.deductees} deductee(s), ${formatMoney(dataset.totals.tdsAmount, currentCompany)} deducted.`
                         : validation.blocking.length
                           ? `${validation.blocking.length} thing(s) must be fixed before this can be filed.`
                           : 'Nothing deducted in this quarter.'}
+                      {filing?.exports?.length ? ` ${filing.exports.length} export(s), latest v${filing.exports.length}.` : ''}
+                      {filing?.acknowledgementNo ? ` Filed — acknowledgement ${filing.acknowledgementNo}.` : ''}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={downloadReturn}
-                    className="ui-btn ui-btn-secondary"
-                    disabled={!dataset.lines.length}
-                  >
-                    <Download size={15} aria-hidden="true" /> Download return data
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {!filing && setDb ? (
+                      /* The freeze pins the dataset's signature; exports from
+                         here on are numbered versions of a known state. */
+                      <button
+                        type="button"
+                        onClick={freezeQuarter}
+                        className="ui-btn ui-btn-secondary"
+                        disabled={!validation.ready}
+                        title={validation.ready ? undefined : 'Resolve the blocking problems first.'}
+                      >
+                        Freeze quarter
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={downloadReturn}
+                      className="ui-btn ui-btn-secondary"
+                      disabled={!dataset.lines.length}
+                    >
+                      <Download size={15} aria-hidden="true" />
+                      {filing ? ` Export v${(filing.exports?.length || 0) + 1}` : ' Download draft'}
+                    </button>
+                    {filing && filing.status !== 'Filed' && setDb ? (
+                      <>
+                        <input
+                          type="text"
+                          className="ui-input ui-mono w-44"
+                          placeholder="Acknowledgement no."
+                          aria-label="Acknowledgement number"
+                          value={ackNo}
+                          onChange={(e) => setAckNo(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          onClick={recordAcknowledgement}
+                          className="ui-btn ui-btn-primary"
+                          disabled={!String(ackNo).trim()}
+                        >
+                          Record filing
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
                 </div>
+
+                {frozenDrift ? (
+                  <p className="ui-caption text-[rgb(var(--neg-ink))]">
+                    The quarter has CHANGED since it was frozen on {String(filing.frozenAt || '').slice(0, 10)} — the
+                    next export will be a new version that no longer matches the frozen signature.
+                  </p>
+                ) : null}
 
                 {validation.problems.length ? (
                   <ul className="space-y-1">

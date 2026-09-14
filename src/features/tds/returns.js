@@ -1,6 +1,6 @@
 import { companyTdsProfile } from './engine';
 import { natureByCode } from './ruleMaster';
-import { allocationsByEvent, isLive, tdsEvents, tdsExceptions } from './reports';
+import { allocationsByEvent, isLive, tdsEvents, tdsExceptions, tdsReconciliation } from './reports';
 
 /**
  * Is this quarter fit to file?
@@ -85,6 +85,14 @@ export const quarterValidation = (db, companyId, quarter) => {
   for (const x of tdsExceptions(db, companyId, { quarter })) {
     if (seen.has(`${x.code}:${x.eventId}`)) continue;
     if (x.code === 'DUPLICATE') add('BLOCK', x.code, x.message, x.eventId);
+  }
+
+  /* Ledger reconciliation: a ledger with more challaned against it than was
+     ever deducted onto it is two books telling different stories. */
+  for (const l of tdsReconciliation(db, companyId, { quarter }).ledgers) {
+    if (l.outstanding < -0.005) {
+      add('WARNING', 'LEDGER_RECON', `${l.name}: ${Math.abs(l.outstanding)} more challaned than deducted on this ledger.`);
+    }
   }
 
   const blocking = problems.filter((p) => p.severity === 'BLOCK');
@@ -176,6 +184,28 @@ export const returnDataset = (db, companyId, quarter) => {
     },
   };
 };
+
+/**
+ * A deterministic signature of the dataset — the same events in the same
+ * state give the same string, and one changed paisa changes it. The freeze
+ * stores it; drift between the frozen signature and today's is how the
+ * screen knows the quarter moved after somebody froze it.
+ */
+export const datasetChecksum = (dataset) => {
+  const text = (dataset?.lines || [])
+    .map((l) => [l.deducteeId, l.sectionCode, l.rate, l.baseAmount, l.tdsAmount, l.paidAmount].join('|'))
+    .join(';');
+  /* djb2 — stability matters here, cryptography does not. */
+  let h = 5381;
+  for (let i = 0; i < text.length; i += 1) h = ((h << 5) + h + text.charCodeAt(i)) | 0;
+  return `${(h >>> 0).toString(16)}-${(dataset?.lines || []).length}`;
+};
+
+/** The quarter's filing record, if one has been started. */
+export const filingFor = (db, companyId, quarter) =>
+  (Array.isArray(db?.tdsFilings) ? db.tdsFilings : []).find(
+    (f) => Number(f?.companyId) === Number(companyId) && String(f?.quarter) === String(quarter)
+  ) || null;
 
 /** The dataset as a CSV, which is what a filing agent actually asks for. */
 export const returnCsv = (dataset) => {

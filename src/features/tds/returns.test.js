@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { quarterValidation, returnCsv, returnDataset } from './returns';
+import { datasetChecksum, filingFor, quarterValidation, returnCsv, returnDataset } from './returns';
 
 /**
  * Whether a quarter can be filed, and what it would say.
@@ -163,5 +163,25 @@ describe('what the return would say', () => {
   it('quotes a name that would otherwise break the columns', () => {
     const db = dbWith([{ id: 1, ...event({ partyName: 'Steel, Supply & Co' }) }]);
     expect(returnCsv(returnDataset(db, 1, Q))).toContain('"Steel, Supply & Co"');
+  });
+});
+
+describe('the freeze pins a signature', () => {
+  it('the checksum is stable for the same state and moves with one paisa', () => {
+    const base = dbWith([{ id: 1, ...event() }]);
+    const a = datasetChecksum(returnDataset(base, 1, Q));
+    expect(datasetChecksum(returnDataset(base, 1, Q))).toBe(a);
+
+    const moved = dbWith([{ id: 1, ...event({ tdsAmount: 2000.01 }) }]);
+    expect(datasetChecksum(returnDataset(moved, 1, Q))).not.toBe(a);
+  });
+
+  it('filingFor finds the quarter record and nothing else', () => {
+    const withFiling = dbWith([{ id: 1, ...event() }], {
+      tdsFilings: [{ id: 1, companyId: 1, quarter: Q, status: 'Frozen', checksum: 'x', exports: [] }],
+    });
+    expect(filingFor(withFiling, 1, Q)).toMatchObject({ status: 'Frozen' });
+    expect(filingFor(withFiling, 1, 'FY 2026-27 Q1')).toBeNull();
+    expect(filingFor(withFiling, 2, Q)).toBeNull();
   });
 });
