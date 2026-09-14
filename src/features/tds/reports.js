@@ -30,13 +30,15 @@ export const isLive = (e) => lower(e?.status) === 'posted';
  */
 export const tdsEvents = (db, companyId, filter = {}) => {
   const cid = Number(companyId);
-  const { from = '', to = '', partyId = '', natureCode = '', side = '', quarter = '', status = '' } = filter;
+  const { from = '', to = '', partyId = '', natureCode = '', side = '', quarter = '', status = '', branchId = '', ledgerId = '' } = filter;
   return safeArray(db?.tdsTransactions)
     .filter((e) => Number(e?.companyId) === cid)
     .filter((e) => (status ? lower(e.status) === lower(status) : true))
     .filter((e) => (side ? String(e.side || '').toUpperCase() === String(side).toUpperCase() : true))
     .filter((e) => (partyId === '' || partyId === null ? true : String(e.partyId) === String(partyId)))
     .filter((e) => (natureCode ? String(e.natureCode || '') === String(natureCode) : true))
+    .filter((e) => (branchId ? String(e.branchId || '') === String(branchId) : true))
+    .filter((e) => (ledgerId ? String(e.ledgerId || '') === String(ledgerId) : true))
     .filter((e) => (quarter ? String(e.returnQuarter || '') === String(quarter) : true))
     .filter((e) => (from ? day(e.transactionDate) >= day(from) : true))
     .filter((e) => (to ? day(e.transactionDate) <= day(to) : true))
@@ -138,18 +140,27 @@ export const natureWise = (db, companyId, filter = {}) => {
 };
 
 /** Deducted by month, for the period bar on the dashboard. */
+/** One row per month, both sides — derived from the events, like everything. */
 export const monthWise = (db, companyId, filter = {}) => {
   const rows = tdsEvents(db, companyId, filter).filter(isLive);
   const by = new Map();
   for (const e of rows) {
-    const key = day(e.transactionDate).slice(0, 7);
-    if (!key) continue;
-    by.set(key, r2((by.get(key) || 0) + Number(e.tdsAmount || 0)));
+    const key = `${String(e.transactionDate || '').slice(0, 7)}:${e.side}`;
+    const at = by.get(key) || {
+      month: String(e.transactionDate || '').slice(0, 7),
+      side: e.side,
+      baseAmount: 0,
+      tdsAmount: 0,
+      count: 0,
+    };
+    at.baseAmount = r2(at.baseAmount + Number(e.baseAmount || 0));
+    at.tdsAmount = r2(at.tdsAmount + Number(e.tdsAmount || 0));
+    at.count += 1;
+    by.set(key, at);
   }
-  return [...by.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([month, tdsAmount]) => ({ month, tdsAmount }));
+  return [...by.values()].sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : a.side.localeCompare(b.side)));
 };
 
-/** And by return quarter, which is what the filing is organised around. */
 export const quarterWise = (db, companyId, filter = {}) => {
   const rows = tdsEvents(db, companyId, filter).filter(isLive);
   const by = new Map();

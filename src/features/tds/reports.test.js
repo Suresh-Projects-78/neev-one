@@ -107,7 +107,10 @@ describe('the groupings', () => {
   });
 
   it('totals by month and by return quarter', () => {
-    expect(monthWise(db, 1, { side: 'PAYABLE' })).toEqual([
+    /* The month rows now carry side, base and count for the report view. */
+    expect(
+      monthWise(db, 1, { side: 'PAYABLE' }).map((m) => ({ month: m.month, tdsAmount: m.tdsAmount }))
+    ).toEqual([
       { month: '2026-05', tdsAmount: 5000 },
       { month: '2026-08', tdsAmount: 500 },
       { month: '2026-09', tdsAmount: 2000 },

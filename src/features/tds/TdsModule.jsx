@@ -7,10 +7,11 @@ import PopupSelect from '../../components/pickers/PopupSelect';
 import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
 import { companyTdsProfile } from './engine';
-import { natureByCode } from './ruleMaster';
+import { TDS_NATURES, natureByCode } from './ruleMaster';
 import { quarterValidation, returnCsv, returnDataset } from './returns';
 import {
   challanRegister,
+  monthWise,
   natureWise,
   partyWise,
   payableSummary,
@@ -36,6 +37,7 @@ const VIEWS = [
   { value: 'register', label: 'Register', tone: 'all' },
   { value: 'party', label: 'Party-wise', tone: 'sent' },
   { value: 'nature', label: 'Nature-wise', tone: 'paid' },
+  { value: 'periods', label: 'Periods', tone: 'all' },
   { value: 'challans', label: 'Challans', tone: 'draft' },
   { value: 'exceptions', label: 'Exceptions', tone: 'overdue' },
   { value: 'reconciliation', label: 'Reconciliation', tone: 'outstanding' },
@@ -54,11 +56,36 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
   const period = usePeriodFilter();
   const [view, setView] = useState('register');
   const [quarter, setQuarter] = useState('');
+  const [side, setSide] = useState('');
+  const [partyId, setPartyId] = useState('');
+  const [natureCode, setNatureCode] = useState('');
+  const [status, setStatus] = useState('');
+  const [branchId, setBranchId] = useState('');
+  const [ledgerId, setLedgerId] = useState('');
 
   const filter = useMemo(
-    () => ({ from: period.dateFrom, to: period.dateTo, quarter }),
-    [period.dateFrom, period.dateTo, quarter]
+    () => ({ from: period.dateFrom, to: period.dateTo, quarter, side, partyId, natureCode, status, branchId, ledgerId }),
+    [period.dateFrom, period.dateTo, quarter, side, partyId, natureCode, status, branchId, ledgerId]
   );
+
+  /* Every option list is derived from the events themselves — the report
+     offers only what the data actually contains. */
+  const allEvents = useMemo(() => tdsEvents(db, companyId, {}), [db, companyId]);
+  const partyOptions = useMemo(() => {
+    const by = new Map();
+    for (const e of allEvents) if (e.partyId != null) by.set(String(e.partyId), String(e.partyName || e.partyId));
+    return [...by.entries()].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [allEvents]);
+  const branchOptions = useMemo(() => {
+    const set = new Set(allEvents.map((e) => String(e.branchId || '')).filter(Boolean));
+    return [...set].sort().map((b) => ({ value: b, label: b }));
+  }, [allEvents]);
+  const ledgerOptions = useMemo(() => {
+    const ids = new Set(allEvents.map((e) => String(e.ledgerId || '')).filter(Boolean));
+    return [...ids]
+      .map((id) => ({ value: id, label: String((db?.chartOfAccounts || []).find((a) => String(a.id) === id)?.name || `Ledger ${id}`) }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [allEvents, db?.chartOfAccounts]);
 
   const payable = useMemo(() => payableSummary(db, companyId, filter), [db, companyId, filter]);
   const receivable = useMemo(() => receivableSummary(db, companyId, filter), [db, companyId, filter]);
@@ -159,6 +186,66 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               showValueSubtext={false}
             />
           </div>
+          {/* §22's filters: side, party, nature, status, branch, ledger —
+              every list derived from the events, every choice feeding the
+              one filter the whole report layer reads. */}
+          <div className="min-w-0 w-36">
+            <label className="ui-label" htmlFor="tds-f-side">Side</label>
+            <select id="tds-f-side" className="ui-select w-full" value={side} onChange={(e) => setSide(e.target.value)}>
+              <option value="">Both</option>
+              <option value="PAYABLE">Payable</option>
+              <option value="RECEIVABLE">Receivable</option>
+            </select>
+          </div>
+          <div className="min-w-0 w-48">
+            <label className="ui-label" htmlFor="tds-f-party">Party</label>
+            <select id="tds-f-party" className="ui-select w-full" value={partyId} onChange={(e) => setPartyId(e.target.value)}>
+              <option value="">All parties</option>
+              {partyOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-0 w-48">
+            <label className="ui-label" htmlFor="tds-f-nature">Nature</label>
+            <select id="tds-f-nature" className="ui-select w-full" value={natureCode} onChange={(e) => setNatureCode(e.target.value)}>
+              <option value="">All natures</option>
+              {TDS_NATURES.filter((n) => n.active !== false).map((n) => (
+                <option key={n.code} value={n.code}>{n.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="min-w-0 w-36">
+            <label className="ui-label" htmlFor="tds-f-status">Status</label>
+            <select id="tds-f-status" className="ui-select w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="">All statuses</option>
+              <option value="Posted">Posted</option>
+              <option value="Reversed">Reversed</option>
+              <option value="Reversal">Reversal</option>
+            </select>
+          </div>
+          {branchOptions.length ? (
+            <div className="min-w-0 w-40">
+              <label className="ui-label" htmlFor="tds-f-branch">Branch</label>
+              <select id="tds-f-branch" className="ui-select w-full" value={branchId} onChange={(e) => setBranchId(e.target.value)}>
+                <option value="">All branches</option>
+                {branchOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
+          {ledgerOptions.length ? (
+            <div className="min-w-0 w-48">
+              <label className="ui-label" htmlFor="tds-f-ledger">Ledger</label>
+              <select id="tds-f-ledger" className="ui-select w-full" value={ledgerId} onChange={(e) => setLedgerId(e.target.value)}>
+                <option value="">All ledgers</option>
+                {ledgerOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           {unmapped.length ? (
             <p className="ui-caption">
               No ledger is mapped to {unmapped.map((u) => u.natureName).join(', ')} — deductions under it cannot post.
@@ -173,6 +260,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
         register: events.length,
         party: partyWise(db, companyId, filter).length,
         nature: natureWise(db, companyId, filter).length,
+        periods: quarters.length,
         challans: challans.length,
         exceptions: exceptions.length,
         reconciliation: recon.ledgers.length,
@@ -288,6 +376,57 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               ))}
             </tbody>
           </table>
+        ) : null}
+
+        {view === 'periods' ? (
+          <div className="space-y-6">
+            <div>
+              <div className="ui-t-label mb-2">Quarter-wise</div>
+              <table className="ui-table ui-table-wide">
+                <thead>
+                  <tr>
+                    <th scope="col">Quarter</th>
+                    <th scope="col" className="text-end">TDS</th>
+                    <th scope="col" className="text-end">Entries</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quarters.map((q) => (
+                    <tr key={q.quarter}>
+                      <td>{q.quarter}</td>
+                      <td className="ui-money">{formatMoney(q.tdsAmount, currentCompany)}</td>
+                      <td className="ui-money">{q.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <div className="ui-t-label mb-2">Month-wise</div>
+              <table className="ui-table ui-table-wide">
+                <thead>
+                  <tr>
+                    <th scope="col">Month</th>
+                    <th scope="col">Side</th>
+                    <th scope="col" className="text-end">Base</th>
+                    <th scope="col" className="text-end">TDS</th>
+                    <th scope="col" className="text-end">Entries</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthWise(db, companyId, filter).map((m) => (
+                    <tr key={`${m.month}-${m.side}`}>
+                      <td className="ui-mono">{m.month}</td>
+                      <td>{m.side === 'RECEIVABLE' ? 'Receivable' : 'Payable'}</td>
+                      <td className="ui-money">{formatMoney(m.baseAmount, currentCompany)}</td>
+                      <td className="ui-money">{formatMoney(m.tdsAmount, currentCompany)}</td>
+                      <td className="ui-money">{m.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : null}
 
         {view === 'challans' ? (
