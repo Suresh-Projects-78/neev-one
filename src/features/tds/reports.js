@@ -305,6 +305,21 @@ export const tdsExceptions = (db, companyId, filter = {}) => {
         message: 'No rule version was recorded, so the section it was deducted under cannot be proved.',
       });
     }
+    /* The stored figures must reconcile with each other: the amount IS the
+       rate on the base, to the paisa-and-a-bit a rounding step allows. A row
+       where they disagree was corrupted somewhere and cannot be proved. */
+    {
+      const expected = r2((Number(e.baseAmount || 0) * Number(e.rate || 0)) / 100);
+      if (Number(e.rate || 0) > 0 && Math.abs(Number(e.tdsAmount || 0) - expected) > 0.02) {
+        out.push({
+          severity: 'BLOCK',
+          code: 'CALC_MISMATCH',
+          eventId: e.id,
+          party: e.partyName,
+          message: `The recorded deduction (${e.tdsAmount}) does not reconcile with ${e.rate}% on ${e.baseAmount}.`,
+        });
+      }
+    }
     if (String(e.side).toUpperCase() === 'PAYABLE') {
       const paid = allocations.for(e.id);
       if (paid < Number(e.tdsAmount || 0) - 0.005) {
@@ -340,6 +355,54 @@ export const tdsExceptions = (db, companyId, filter = {}) => {
       });
     } else {
       seen.set(key, e.id);
+    }
+  }
+
+  /*
+   * Expected customer TDS that never arrived: the invoice said the customer
+   * would deduct, the invoice is settled, and no receipt against it recorded
+   * a deduction. The expectation was informational; its non-arrival is the
+   * compliance fact worth chasing (a 26AS that will not show the credit).
+   */
+  const receipts = safeArray(db?.payments).filter(
+    (pmt) => Number(pmt?.companyId) === Number(companyId) && lower(pmt?.voucherType) === 'receipt'
+  );
+  for (const inv of safeArray(db?.invoices)) {
+    if (Number(inv?.companyId) !== Number(companyId)) continue;
+    const expected = Number(inv?.tdsExpectedAmount ?? 0);
+    if (expected <= 0.005) continue;
+    if (lower(inv?.status) !== 'paid') continue;
+    const received = receipts.some(
+      (pmt) =>
+        Number(pmt?.tdsAmount || 0) > 0.005 &&
+        safeArray(pmt?.allocations).some((a) => String(a?.voucherId) === String(inv.id))
+    );
+    if (!received) {
+      out.push({
+        severity: 'WARNING',
+        code: 'EXPECTED_TDS_NOT_RECEIVED',
+        eventId: null,
+        party: String(inv?.customerName || ''),
+        message: `Invoice ${inv?.number || inv?.id}: expected TDS of ${expected} was never recorded on a receipt.`,
+      });
+    }
+  }
+
+  /* A quarter with live deductions and no filing record is work not yet
+     started — a note, never a bar. */
+  const filings = safeArray(db?.tdsFilings).filter((f) => Number(f?.companyId) === Number(companyId));
+  const quartersWithWork = new Set(
+    rows.filter((e) => isLive(e) && String(e.side).toUpperCase() === 'PAYABLE').map((e) => String(e.returnQuarter || '')).filter(Boolean)
+  );
+  for (const q of [...quartersWithWork].sort()) {
+    if (!filings.some((f) => String(f.quarter) === q)) {
+      out.push({
+        severity: 'INFO',
+        code: 'RETURN_NOT_PREPARED',
+        eventId: null,
+        party: '',
+        message: `${q}: deductions exist and the return has not been prepared.`,
+      });
     }
   }
 

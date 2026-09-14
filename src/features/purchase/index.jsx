@@ -642,6 +642,14 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       }
     }
 
+    /* §25 — BLOCK prevents posting. A deduction the engine cannot stand
+       behind (no rule for the date, no mapped ledger) does not enter the
+       books half-described; WARNINGs post and surface as exceptions. */
+    if (tdsAmount > 0 && tds.blocked) {
+      notify.error(tds.warnings?.find((w) => w.severity === 'BLOCK')?.message || 'The TDS on this bill cannot be posted.');
+      return;
+    }
+
     /*
      * The normalized TDS event, written beside the bill.
      *
@@ -3751,6 +3759,15 @@ export const DebitNoteForm = ({
             returnQuarter: returnQuarter(formData.date),
             status: 'Posted',
             correctionOfId: originalEvent.id,
+            /* §26: every correction says why, in the record itself. */
+            reversalReason: `Purchase return ${newDebitNote.number || newDebitNote.id} against ${originalBill.number || originalBill.id}`,
+            createdBy: (() => {
+              try {
+                return String(localStorage.getItem('userEmail') || '').trim() || 'User';
+              } catch {
+                return 'User';
+              }
+            })(),
             reversalOfId: null,
             createdAt: new Date().toISOString(),
             modifiedBy: null,

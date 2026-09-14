@@ -250,3 +250,52 @@ describe('the deposit clock', () => {
     expect(early.due).toBe(2500);
   });
 });
+
+describe('the exception engine names every rule the specification lists', () => {
+  const exDb = (events, over = {}) => ({
+    companies: [{ id: 1, name: 'Neev Steels' }],
+    tdsTransactions: events,
+    tdsChallans: [],
+    tdsChallanAllocations: [],
+    ...over,
+  });
+
+  it('a row whose amount does not reconcile with rate-on-base is a BLOCK', () => {
+    const broken = exDb([{ id: 1, ...event({ tdsAmount: 1234 }) }]);
+    const hit = tdsExceptions(broken, 1, {}).find((x) => x.code === 'CALC_MISMATCH');
+    expect(hit).toMatchObject({ severity: 'BLOCK', eventId: 1 });
+    /* And a clean row raises nothing of the kind. */
+    expect(tdsExceptions(exDb([{ id: 1, ...event() }]), 1, {}).find((x) => x.code === 'CALC_MISMATCH')).toBeUndefined();
+  });
+
+  it('expected customer TDS that never arrived is a WARNING', () => {
+    const base = exDb([]);
+    const withInvoices = {
+      ...base,
+      invoices: [
+        { id: 31, companyId: 1, number: 'INV-31', customerName: 'ABC Industries', total: 118000, paidAmount: 118000, status: 'Paid', tdsExpectedAmount: 1000 },
+        /* Settled WITH a deducting receipt — nothing to chase. */
+        { id: 32, companyId: 1, number: 'INV-32', customerName: 'XYZ Ltd', total: 118000, paidAmount: 118000, status: 'Paid', tdsExpectedAmount: 1000 },
+        /* Still open — the expectation has not failed yet. */
+        { id: 33, companyId: 1, number: 'INV-33', customerName: 'Open Co', total: 118000, paidAmount: 0, status: 'Unpaid', tdsExpectedAmount: 1000 },
+      ],
+      payments: [
+        { id: 9, companyId: 1, voucherType: 'receipt', tdsAmount: 1000, allocations: [{ voucherType: 'invoice', voucherId: 32, amount: 118000 }] },
+      ],
+    };
+    const hits = tdsExceptions(withInvoices, 1, {}).filter((x) => x.code === 'EXPECTED_TDS_NOT_RECEIVED');
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toMatchObject({ severity: 'WARNING', message: expect.stringContaining('INV-31') });
+  });
+
+  it('a quarter with deductions and no filing is an INFO, and only an INFO', () => {
+    const quiet = exDb([{ id: 1, ...event() }]);
+    const note = tdsExceptions(quiet, 1, {}).find((x) => x.code === 'RETURN_NOT_PREPARED');
+    expect(note).toMatchObject({ severity: 'INFO', message: expect.stringContaining('Q2') });
+
+    const prepared = exDb([{ id: 1, ...event() }], {
+      tdsFilings: [{ id: 1, companyId: 1, quarter: 'FY 2026-27 Q2', status: 'Frozen' }],
+    });
+    expect(tdsExceptions(prepared, 1, {}).find((x) => x.code === 'RETURN_NOT_PREPARED')).toBeUndefined();
+  });
+});

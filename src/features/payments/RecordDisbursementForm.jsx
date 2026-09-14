@@ -440,6 +440,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       return;
     }
 
+    if (computed.tds > 0.005 && tds.blocked) {
+      notify.error(tds.warnings?.find((w) => w.severity === 'BLOCK')?.message || 'The TDS on this payment cannot be posted.');
+      return;
+    }
+
     // Validate each allocation against latest balances
     const billsList = safeArray(db.bills).filter((b) => b.companyId === companyId);
     const expensesList = safeArray(db.expenses).filter((x) => x.companyId === companyId);
