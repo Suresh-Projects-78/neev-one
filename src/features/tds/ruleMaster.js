@@ -96,6 +96,23 @@ export const TDS_NATURES = TDS_SECTIONS.map((s) => ({
   active: true,
 }));
 
+/*
+ * §29 — the masters are FROZEN at load, not merely pinned by tests. A rule
+ * version referenced by a posted transaction must never change meaning; with
+ * these three deep-frozen, an attempted in-place edit throws where it
+ * happens instead of silently restating history. Changes ship as NEW
+ * versions appended to the source.
+ */
+const deepFreeze = (v) => {
+  if (v && typeof v === 'object' && !Object.isFrozen(v)) {
+    Object.freeze(v);
+    for (const k of Object.keys(v)) deepFreeze(v[k]);
+  }
+  return v;
+};
+deepFreeze(NATURE_CODES);
+deepFreeze(TDS_NATURES);
+
 export const natureByCode = (code) =>
   TDS_NATURES.find((n) => n.code === String(code || '').trim().toUpperCase()) || null;
 
@@ -177,6 +194,8 @@ export const TDS_RULE_VERSIONS = TDS_SECTIONS.flatMap((s) => {
     },
   ];
 });
+
+deepFreeze(TDS_RULE_VERSIONS);
 
 /**
  * The rule in force for a nature on a date.
