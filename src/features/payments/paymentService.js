@@ -350,3 +350,88 @@ export const applyVendorPayments = (prev, companyId, records) => {
     companies,
   };
 };
+
+
+/**
+ * Reversing a posted payment or receipt: the voucher is marked Reversed
+ * (never deleted), every document it settled gives the settlement back
+ * through the same status ladder, and its TDS event — where one was written
+ * at the payment or receipt stage — is answered by the lineage pair. The
+ * server's own reversal (reversePayment) is the caller's first step; this
+ * applies the local book.
+ */
+export const applyPaymentReversal = (prev, companyId, paymentId, { by = 'User', reason = '' } = {}) => {
+  const payments = safeArray(prev.payments);
+  const target = payments.find((p) => p.companyId === companyId && String(p.id) === String(paymentId));
+  if (!target || target.status === 'Reversed') return prev;
+  const stamp = new Date().toISOString();
+
+  const undoByDoc = new Map();
+  for (const a of safeArray(target.allocations)) {
+    const key = `${a.voucherType}:${a.voucherId}`;
+    undoByDoc.set(key, round2((undoByDoc.get(key) || 0) + Number(a.amount || 0)));
+  }
+
+  const unsettle = (doc, kind) => {
+    const take = undoByDoc.get(`${kind}:${Number(doc.id)}`);
+    if (!take || doc.companyId !== companyId) return doc;
+    const total = Number(doc.total ?? doc.amount ?? 0);
+    const target2 = kind === 'invoice' ? total : round2(Math.max(0, total - sourceTdsOf(doc)));
+    const nextPaid = round2(Math.max(0, Number(doc.paidAmount ?? 0) - take));
+    const rawStatus = String(doc.status || '').trim();
+    const nextStatus =
+      rawStatus === 'Draft'
+        ? 'Draft'
+        : target2 > 0 && nextPaid >= target2 - 0.0001
+          ? 'Paid'
+          : nextPaid > 0
+            ? 'Partial'
+            : 'Unpaid';
+    return { ...doc, paidAmount: nextPaid, status: nextStatus, updatedAt: stamp };
+  };
+
+  /* The TDS lineage pair for events this voucher wrote. */
+  const kindOf = String(target.voucherType || '') === 'receipt' ? 'receipt' : 'payment';
+  const events = safeArray(prev.tdsTransactions);
+  const mine = events.filter(
+    (e) =>
+      Number(e?.companyId) === Number(companyId) &&
+      String(e?.sourceType) === kindOf &&
+      String(e?.sourceId) === String(target.id) &&
+      String(e?.status).toLowerCase() === 'posted' &&
+      !e?.reversalOfId
+  );
+  let nextEventId = events.reduce((m, e) => Math.max(m, Number(e?.id) || 0), 0);
+  const reversals = mine.map((e) => ({
+    ...e,
+    id: ++nextEventId,
+    baseAmount: -Math.abs(Number(e.baseAmount || 0)),
+    tdsAmount: -Math.abs(Number(e.tdsAmount || 0)),
+    status: 'Reversal',
+    reversalOfId: e.id,
+    reversalReason: reason || `${kindOf === 'receipt' ? 'Receipt' : 'Payment'} ${target.number || target.id} reversed`,
+    createdBy: by,
+    createdAt: stamp,
+    modifiedBy: null,
+    modifiedAt: null,
+  }));
+  const nextEvents = mine.length
+    ? [
+        ...events.map((e) => (mine.some((m) => m.id === e.id) ? { ...e, status: 'Reversed', modifiedBy: by, modifiedAt: stamp } : e)),
+        ...reversals,
+      ]
+    : events;
+
+  return {
+    ...prev,
+    payments: payments.map((p) =>
+      p.companyId === companyId && String(p.id) === String(paymentId)
+        ? { ...p, status: 'Reversed', reversedAt: stamp, reversedBy: by }
+        : p
+    ),
+    bills: safeArray(prev.bills).map((b) => unsettle(b, 'bill')),
+    expenses: safeArray(prev.expenses).map((e) => unsettle(e, 'expense')),
+    invoices: safeArray(prev.invoices).map((i) => unsettle(i, 'invoice')),
+    tdsTransactions: nextEvents,
+  };
+};

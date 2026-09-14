@@ -158,8 +158,20 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
    *
    * They stay Unallocated until somebody says which ledger they belong to —
    * §5: an imported row must not become an accounting entry on its own.
+   *
+   * A line that has since been ANSWERED by a voucher — a payment or receipt
+   * created from it, carrying sourceBankTransactionId — steps aside: the
+   * voucher row above already shows the movement with its party and number,
+   * and one movement must be one row, not the fact and its echo.
    */
+  const answeredTxnIds = new Set(
+    safeArray(db?.payments)
+      .filter((pmt) => Number(pmt?.companyId) === cid)
+      .map((pmt) => String(pmt?.sourceBankTransactionId ?? ''))
+      .filter(Boolean)
+  );
   for (const t of safeArray(db?.bankTransactions)) {
+    if (answeredTxnIds.has(String(t?.id)) || (t?.linkedPaymentId !== null && t?.linkedPaymentId !== undefined && String(t.linkedPaymentId) !== '')) continue;
     if (Number(t?.companyId) !== cid) continue;
     const account = byKey.get(String(t?.cashBankAccountId || '').trim());
     if (!account) continue;

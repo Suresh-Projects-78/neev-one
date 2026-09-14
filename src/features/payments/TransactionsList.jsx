@@ -2,6 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { notify } from '../../components/ui/notify';
 
 import RecordPaymentForm from './RecordPaymentForm';
+import { confirmDialog } from '../../components/ui/notify';
+import { reversePayment } from '../../api/payments';
+import { hasApiSession } from '../../api/purchaseDocs';
+import { applyPaymentReversal } from './paymentService';
 import { formatMoney, round2 } from '../../utils/money';
 import { TableTotals } from '../../components/ui/Primitives';
 import { ListToolbar, useListSearch } from '../../components/ListToolbar';
@@ -325,7 +329,7 @@ const TransactionView = ({ title, payload }) => {
   );
 };
 
-const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }) => {
+const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView, onReverse = null }) => {
   const period = usePeriodFilter();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
@@ -467,6 +471,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
           <thead>
             <tr>
               <ColumnHeader label="Date" col="date" state={colFilters} />
+              {onReverse ? <th scope="col" className="w-10"></th> : null}
               <ColumnHeader label="Type" col="typeLabel" state={colFilters} />
               <ColumnHeader label="Document #" col="documentNumber" state={colFilters} />
               <ColumnHeader label="Party" col="partyName" state={colFilters} />
@@ -492,6 +497,23 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
                   }}
                 >
                   <td className="ui-col-date"><SalesDate value={r.date} /></td>
+                  {onReverse ? (
+                    <td className="w-10" onClick={(e) => e.stopPropagation()}>
+                      {r.status === 'Reversed' ? (
+                        <span className="ui-caption">Reversed</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="ui-icon-btn !h-7 !w-7"
+                          aria-label={`Reverse ${r.documentNumber || r.typeLabel}`}
+                          title="Reverse — the voucher stays on record, the settlement is given back"
+                          onClick={() => onReverse(r)}
+                        >
+                          <Undo2 size={14} aria-hidden="true" />
+                        </button>
+                      )}
+                    </td>
+                  ) : null}
                   <td className="ui-col-meta">{r.typeLabel}</td>
                   <td className="ui-col-id"><DocumentNumber value={r.documentNumber} label="receipt" /></td>
                   <td className="ui-col-entity">{r.partyName || '-'}</td>
@@ -527,6 +549,36 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView }
   );
 };
 
+
+/** Reverse a voucher: server first where it is known, then the local book
+ *  through the payment service — voucher kept, settlement given back, TDS
+ *  answered by its lineage pair. */
+const makeReverse = ({ setDb, currentCompany, noun }) => async (row) => {
+  const ok = await confirmDialog({
+    title: `Reverse ${row.documentNumber || `this ${noun}`}?`,
+    message: `The ${noun} stays on record as reversed; every document it settled becomes outstanding again.`,
+    confirmLabel: 'Yes, reverse it',
+  });
+  if (!ok) return;
+  if (row.backendPaymentId && hasApiSession()) {
+    try {
+      await reversePayment(String(row.backendPaymentId));
+    } catch (err) {
+      notify.error(String(err?.message || `The server refused to reverse the ${noun}.`));
+      return;
+    }
+  }
+  const by = (() => {
+    try {
+      return String(localStorage.getItem('userEmail') || '').trim() || 'User';
+    } catch {
+      return 'User';
+    }
+  })();
+  setDb((prev) => applyPaymentReversal(prev, currentCompany.id, row.id, { by }));
+  notify.success(`${row.documentNumber || noun} reversed.`);
+};
+
 export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal, onRecordReceipt }) => {
   const rows = useMemo(() => {
     const companyId = currentCompany.id;
@@ -541,6 +593,8 @@ export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal,
 
         return {
           id: p.id,
+          status: p.status,
+          backendPaymentId: p.backendPaymentId,
           date: p.date,
           amount: Number(p.amount ?? 0),
           mode: p.mode,
@@ -566,6 +620,7 @@ export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal,
       title="Receipts"
       rows={rows}
       currentCompany={currentCompany}
+      onReverse={setDb ? makeReverse({ setDb, currentCompany, noun: 'receipt' }) : null}
       onView={(row) => {
         if (typeof openModal !== 'function') return;
         const title = row?.documentNumber ? `Receipt ${row.documentNumber}` : 'Receipt';
@@ -618,6 +673,8 @@ export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal,
         const partyName = isGroupedPayment ? p.vendorName || '' : voucher?.vendorName || voucher?.partyName || '';
         return {
           id: p.id,
+          status: p.status,
+          backendPaymentId: p.backendPaymentId,
           date: p.date,
           amount: Number(p.amount ?? 0),
           mode: p.mode,
@@ -643,6 +700,7 @@ export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal,
       title="Payments"
       rows={rows}
       currentCompany={currentCompany}
+      onReverse={setDb ? makeReverse({ setDb, currentCompany, noun: 'payment' }) : null}
       onView={(row) => {
         if (typeof openModal !== 'function') return;
         const title = row?.documentNumber ? `Payment ${row.documentNumber}` : 'Payment';

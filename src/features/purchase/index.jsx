@@ -2819,6 +2819,100 @@ const billStatusReason = (doc, status, company, nowMs) => {
     );
   };
 
+  /*
+   * A draft becomes a real bill: the server posting it never had, the TDS
+   * event its snapshot already describes, and the Unpaid status that lets
+   * the payment queue see it. Nothing is recomputed — the draft carries the
+   * figures it was saved with, and finalising is the moment they post.
+   */
+  const finaliseBill = async (bill) => {
+    if (String(bill?.status || '') !== 'Draft') return;
+    let backendDocId = bill.backendDocId || null;
+    if (!backendDocId && hasApiSession()) {
+      try {
+        const saved = await createDocApi('bill', {
+          number: bill.number || undefined,
+          date: bill.date,
+          dueDate: bill.dueDate || null,
+          refNo: bill.refNo || null,
+          refDate: bill.refDate || null,
+          partyName: bill.vendorName || 'Vendor',
+          partyGstin: bill.vendorGstin || null,
+          placeOfSupplyState: bill.placeOfSupplyState || null,
+          taxType: bill.taxType || null,
+          subtotal: Number(bill.subtotal || 0),
+          cgstTotal: Number(bill.cgstTotal || 0),
+          sgstTotal: Number(bill.sgstTotal || 0),
+          igstTotal: Number(bill.igstTotal || 0),
+          gstTotal: Number(bill.gstTotal || 0),
+          total: Number(bill.total || 0),
+          status: 'Unpaid',
+          items: Array.isArray(bill.items) ? bill.items : [],
+          tdsAmount: Number(bill.tdsAmount || 0) > 0 ? Number(bill.tdsAmount) : undefined,
+          tdsLedgerId: Number(bill.tdsAmount || 0) > 0 ? String(bill.tdsLedgerId || '') || undefined : undefined,
+          tdsNatureCode: Number(bill.tdsAmount || 0) > 0 ? bill.tdsNatureCode : undefined,
+          tdsRate: Number(bill.tdsAmount || 0) > 0 ? bill.tdsRate : undefined,
+          tdsRuleVersionId: Number(bill.tdsAmount || 0) > 0 ? bill.tdsRuleVersionId : undefined,
+        });
+        backendDocId = saved?.id || null;
+      } catch (err) {
+        notify.error(String(err?.message || 'The bill could not be posted to the server.'));
+        return;
+      }
+    }
+
+    setDb((prev) => {
+      const events = Array.isArray(prev.tdsTransactions) ? prev.tdsTransactions : [];
+      const vendorObj = (prev.vendors || []).find((v) => Number(v.id) === Number(bill.vendorId)) || null;
+      const wantsEvent =
+        Number(bill.tdsAmount || 0) > 0 &&
+        String(bill.tdsNatureCode || '').trim() &&
+        !events.some(
+          (e) =>
+            Number(e?.companyId) === Number(currentCompany.id) &&
+            String(e?.sourceType) === 'bill' &&
+            String(e?.sourceId) === String(bill.id) &&
+            String(e?.status).toLowerCase() === 'posted'
+        );
+      const tdsEvent = wantsEvent
+        ? {
+            id: events.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
+            ...tdsEventFrom(
+              {
+                natureCode: String(bill.tdsNatureCode || '').trim().toUpperCase(),
+                ruleVersionId: String(bill.tdsRuleVersionId || ''),
+                statutoryReference: String(bill.tdsSectionReference || bill.tdsSectionCode || ''),
+                sectionCode: String(bill.tdsSectionCode || ''),
+                baseAmount: Number(bill.taxableValue ?? bill.subtotal ?? 0),
+                rate: Number(bill.tdsRate || 0),
+                tdsAmount: Number(bill.tdsAmount || 0),
+                ledgerId: String(bill.tdsLedgerId || ''),
+                side: 'PAYABLE',
+              },
+              {
+                company: currentCompany,
+                party: vendorObj,
+                source: { type: 'bill', id: bill.id, number: bill.number },
+                branchId: bill.branchId || '',
+                date: bill.date,
+              }
+            ),
+          }
+        : null;
+
+      return {
+        ...prev,
+        tdsTransactions: tdsEvent ? [...events, tdsEvent] : prev.tdsTransactions,
+        bills: (prev.bills || []).map((b) =>
+          b.companyId === currentCompany.id && String(b.id) === String(bill.id)
+            ? { ...b, status: 'Unpaid', backendDocId, updatedAt: new Date().toISOString() }
+            : b
+        ),
+      };
+    });
+    notify.success(`${bill.number || 'Bill'} finalised.`);
+  };
+
   const openBillMenu = (billId, anchorEl) => {
     if (!anchorEl) {
       setOpenMenu({ id: billId, left: 0, top: 0 });
@@ -3085,6 +3179,18 @@ const billStatusReason = (doc, status, company, nowMs) => {
 
             return (
               <div className="py-1 text-sm">
+                {derived === 'Draft' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpenMenu(null);
+                      finaliseBill(bill);
+                    }}
+                    className="w-full px-4 py-2 text-left ui-hover-sunken flex items-center gap-2"
+                  >
+                    <FileText size={16} /> Finalise bill
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {

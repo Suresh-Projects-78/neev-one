@@ -3,6 +3,8 @@ import { Banknote, Landmark, ListChecks, MoreVertical, PieChart, Plus } from 'lu
 
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { EmptyState, StatusPill } from '../../components/ui/Primitives';
+import Modal from '../../components/ui/Modal';
+import { notify } from '../../components/ui/notify';
 import Popover from '../../components/ui/Popover';
 import { buildLedgerStatement } from '../../data/db';
 import { formatMoney } from '../../utils/money';
@@ -96,6 +98,7 @@ export default function BankCashAccounts({
   const [tab, setTab] = useState('all');
   /* Which row's menu hangs open, and off which button. */
   const [menuFor, setMenuFor] = useState(null);
+
   const menuBtnRef = useRef(null);
 
   /*
@@ -137,6 +140,42 @@ export default function BankCashAccounts({
     [accounts]
   );
 
+  /*
+   * The one Cash & Bank configuration: the ledger a residual allocation
+   * difference may be resolved onto. The allocation dialog READS
+   * profile.cashBank.adjustmentLedgerId and offers its shortcut only where
+   * this names a ledger — until now nothing in the product could write it.
+   */
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const savedAdjustId = String(currentCompany?.profile?.cashBank?.adjustmentLedgerId || '');
+  const [adjustDraft, setAdjustDraft] = useState(savedAdjustId);
+  const adjustCandidates = useMemo(
+    () =>
+      (db?.chartOfAccounts || [])
+        .filter((a) => a.companyId === currentCompany?.id && a.isActive !== false)
+        .filter((a) => !accounts.some((b) => String(b.id) === String(a.id)))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+    [db?.chartOfAccounts, currentCompany?.id, accounts]
+  );
+  const saveAdjustment = () => {
+    setDb((prev) => ({
+      ...prev,
+      companies: (prev.companies || []).map((c) => {
+        if (Number(c.id) !== Number(currentCompany?.id)) return c;
+        const profile = c?.profile && typeof c.profile === 'object' ? c.profile : {};
+        return {
+          ...c,
+          profile: {
+            ...profile,
+            cashBank: { ...(profile.cashBank || {}), adjustmentLedgerId: String(adjustDraft || '').trim() },
+          },
+        };
+      }),
+    }));
+    notify.success(adjustDraft ? 'Adjustment ledger saved.' : 'Adjustment shortcut switched off.');
+    setAdjustOpen(false);
+  };
+
   /* The three live tabs show live accounts only — a closed account belongs
      under Inactive, not in the middle of the list of places money is. */
   const rows = useMemo(() => {
@@ -170,7 +209,50 @@ export default function BankCashAccounts({
       statusValue={tab}
       statusCounts={counts}
       onStatusChange={setTab}
+      moreItems={
+        setDb
+          ? [
+              {
+                key: 'adjustmentLedger',
+                label: 'Difference adjustment ledger…',
+                onSelect: () => {
+                  setAdjustDraft(savedAdjustId);
+                  setAdjustOpen(true);
+                },
+              },
+            ]
+          : null
+      }
     >
+      {adjustOpen ? (
+        <Modal onClose={() => setAdjustOpen(false)} title="Difference adjustment ledger" maxWidthClass="max-w-lg">
+          <div className="space-y-4">
+            <p className="ui-caption">
+              When a bank allocation is left with a small residual, this is the one ledger it may be resolved onto
+              with a click — as a visible row through the same journal, never a silent write-off. Leave it empty and
+              the shortcut is not offered at all.
+            </p>
+            <div>
+              <label className="ui-label" htmlFor="cb-adjust-ledger">Adjustment ledger</label>
+              <select
+                id="cb-adjust-ledger"
+                className="ui-select w-full"
+                value={adjustDraft}
+                onChange={(e) => setAdjustDraft(e.target.value)}
+              >
+                <option value="">— none (no shortcut) —</option>
+                {adjustCandidates.map((l) => (
+                  <option key={l.id} value={String(l.id)}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setAdjustOpen(false)}>Cancel</button>
+              <button type="button" className="ui-btn ui-btn-primary" onClick={saveAdjustment}>Save</button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
       <div className="ui-table-scroll">
         <table className="ui-table ui-table-wide ui-table-sticky">
           <thead>

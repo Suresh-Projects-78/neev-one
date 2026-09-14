@@ -1373,7 +1373,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       notify.error('Unable to read the statement file.');
       return;
     }
-    importStatementText(text);
+    importStatementText(text, String(file?.name || '').trim());
   };
 
   /*
@@ -1384,7 +1384,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
    * dialog and the upload button feed the same function rather than two
    * parsers that drift.
    */
-  const importStatementText = (text) => {
+  const importStatementText = (text, sourceName = '') => {
     if (!cashBankAccounts.length) {
       notify.error('No cash/bank accounts found. Please create one first.');
       return;
@@ -1590,11 +1590,12 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           rows: newTxns.map((t, i) => ({ ...t, key: i, take: t.classification !== 'duplicate' })),
           unknownAccounts: Array.from(unknownAccounts),
           firstImportedAccountId,
+          sourceName,
         });
         return;
       }
 
-      commitImport(newTxns, { unknownAccounts, firstImportedAccountId });
+      commitImport(newTxns, { unknownAccounts, firstImportedAccountId, sourceName });
     } catch (err) {
       // Avoid silent failures when a helper or parse step throws.
       console.error('Upload/import failed', err);
@@ -1604,7 +1605,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   /** Writes the rows somebody decided to keep. The batch stamp and the
       immutability that follows from `imported: true` live here, once. */
-  const commitImport = (txnsToImport, { unknownAccounts = new Set(), firstImportedAccountId = null } = {}) => {
+  const commitImport = (txnsToImport, { unknownAccounts = new Set(), firstImportedAccountId = null, sourceName = '' } = {}) => {
     const newTxns = txnsToImport;
     /*
      * One batch per import, stamped on every row it brought in.
@@ -1633,6 +1634,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         linkedPaymentId: null,
         imported: true,
         importBatchId,
+        /* Where this batch came from — the file's own name, or the paste. */
+        importFileName: String(sourceName || '') || 'pasted rows',
         sourceRow: t.sourceRow,
         createdAt: new Date().toISOString(),
       }));
@@ -2061,6 +2064,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                     commitImport(chosen, {
                       unknownAccounts: new Set(importReview.unknownAccounts),
                       firstImportedAccountId: importReview.firstImportedAccountId,
+                      sourceName: importReview.sourceName,
                     });
                     setImportReview(null);
                   }}
