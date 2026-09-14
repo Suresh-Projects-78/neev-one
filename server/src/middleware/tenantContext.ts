@@ -64,10 +64,39 @@ export async function requireTenantContext(req: Request, res: Response, next: Ne
   // The owning account, established by the membership that just authorised it.
   const accountId = orgMember.accountId;
 
-  const branchMember = await prisma.userBranchMembership.findFirst({
+  let branchMember = await prisma.userBranchMembership.findFirst({
     where: { accountId, orgId, branchId, userId },
     select: { id: true },
   });
+
+  /*
+   * The org creator reaches every branch in their own organisation — the
+   * same safety net the warehouses carry below, for the same reason:
+   * membership is only ever granted by an administrator assigning it to
+   * somebody else, so the creator of a brand-new branch had none and every
+   * route 403ed with no way to grant it to themselves. Narrow on purpose:
+   * the creator of THIS org, a branch that really is in it, nobody else.
+   * The membership row is written so the grant is visible and permanent
+   * rather than re-derived on every request.
+   */
+  if (!branchMember) {
+    const org = await prisma.org.findFirst({
+      where: { accountId, id: orgId },
+      select: { createdByUserId: true },
+    });
+    if (org?.createdByUserId === userId) {
+      const inOrg = await prisma.branch.findFirst({
+        where: { id: branchId, accountId, orgId },
+        select: { id: true },
+      });
+      if (inOrg) {
+        branchMember = await prisma.userBranchMembership.create({
+          data: { accountId, orgId, branchId, userId },
+          select: { id: true },
+        });
+      }
+    }
+  }
   if (!branchMember) return res.status(403).json({ error: 'No access to branch' });
 
   const allowed = await prisma.userBranchMembership.findMany({

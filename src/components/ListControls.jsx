@@ -226,10 +226,47 @@ export default ListControls;
  * rows can never disagree — the preset writes the dates, and the dates are the
  * only thing consulted.
  */
+/**
+ * The financial year chosen top-right, read by every period filter.
+ *
+ * '' means "all years". Anything else is 'YYYY-MM-DD..YYYY-MM-DD' — the
+ * FY's own range — and a list whose period is still 'all' silently narrows
+ * to it, which is what a top-right year selector means: every list and
+ * report answers for that year until the list picks something narrower
+ * itself. Stored per browser; a storage event keeps open tabs in step.
+ */
+export const readGlobalFy = () => {
+  try {
+    return String(localStorage.getItem('globalFy') || '').trim();
+  } catch {
+    return '';
+  }
+};
+export const writeGlobalFy = (range) => {
+  try {
+    if (range) localStorage.setItem('globalFy', String(range));
+    else localStorage.removeItem('globalFy');
+  } catch {
+    /* private mode: the selector simply does not persist */
+  }
+  window.dispatchEvent(new Event('globalFyChanged'));
+};
+
 export const usePeriodFilter = () => {
   const [period, setPeriodState] = React.useState('all');
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
+  const [globalFy, setGlobalFy] = React.useState(readGlobalFy);
+
+  React.useEffect(() => {
+    const sync = () => setGlobalFy(readGlobalFy());
+    window.addEventListener('globalFyChanged', sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener('globalFyChanged', sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, []);
 
   const setPeriod = (key) => {
     setPeriodState(key);
@@ -240,11 +277,18 @@ export const usePeriodFilter = () => {
     setDateTo(range.to);
   };
 
+  /* The FY floor: with no narrower period chosen, the year rules. */
+  const [fyFrom, fyTo] = period === 'all' && !dateFrom && !dateTo && globalFy.includes('..')
+    ? globalFy.split('..')
+    : ['', ''];
+  const effFrom = dateFrom || fyFrom;
+  const effTo = dateTo || fyTo;
+
   const inRange = (value) => {
     const d = String(value || '').slice(0, 10);
-    if (!d) return !dateFrom && !dateTo;
-    if (dateFrom && d < dateFrom) return false;
-    if (dateTo && d > dateTo) return false;
+    if (!d) return !effFrom && !effTo;
+    if (effFrom && d < effFrom) return false;
+    if (effTo && d > effTo) return false;
     return true;
   };
 
@@ -254,5 +298,5 @@ export const usePeriodFilter = () => {
     setDateTo('');
   };
 
-  return { period, setPeriod, dateFrom, dateTo, setDateFrom, setDateTo, inRange, clear };
+  return { period, setPeriod, dateFrom: effFrom, dateTo: effTo, setDateFrom, setDateTo, inRange, clear };
 };

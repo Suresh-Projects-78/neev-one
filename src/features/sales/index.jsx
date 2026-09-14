@@ -528,7 +528,59 @@ const statusReason = (doc, status, company, nowMs) => {
     );
   };
 
+  /*
+   * Item 16 — a settled document is not quietly reshaped.
+   *
+   * An invoice that money or a credit note has answered cannot be edited,
+   * cancelled or deleted while those answers stand: rewriting it would
+   * orphan a receipt's allocation or double a credit note's relief, which
+   * is exactly the corruption this guard exists to prevent. The remediation
+   * is directed, not automated — reverse the receipt (the Receipts list can
+   * now do that in one click) or cancel the credit note, THEN change the
+   * invoice. Deliberately no auto-unlink: an automatic cascade through
+   * payment allocations is how books get corrupted quietly.
+   */
+  const invoiceChangeBlocked = (invoice, verb) => {
+    const safeArray = (v) => (Array.isArray(v) ? v : []);
+    const paid = Number(invoice?.paidAmount || 0);
+    const receipts = safeArray(db.payments).filter(
+      (p) =>
+        p.companyId === currentCompany.id &&
+        ((String(p.voucherType) === 'invoice' && Number(p.voucherId) === Number(invoice?.id)) ||
+          safeArray(p.allocations).some((a) => String(a?.voucherType) === 'invoice' && Number(a?.voucherId) === Number(invoice?.id))) &&
+        p.status !== 'Reversed'
+    );
+    const notes = safeArray(db.creditNotes).filter(
+      (n) =>
+        n.companyId === currentCompany.id &&
+        String(n?.status || '').toLowerCase() !== 'cancelled' &&
+        (String(n?.originalInvoiceId ?? '') === String(invoice?.id) ||
+          safeArray(n?.allocations).some((a) => String(a?.docId ?? a?.voucherId ?? '') === String(invoice?.id)))
+    );
+    if (receipts.length) {
+      return `${invoice?.number || 'This invoice'} has ${receipts.length} receipt(s) against it — reverse ${
+        receipts.length === 1 ? 'it' : 'them'
+      } from the Receipts list before you ${verb} the invoice.`;
+    }
+    if (notes.length) {
+      return `${invoice?.number || 'This invoice'} has ${notes.length} credit note(s) against it — cancel ${
+        notes.length === 1 ? 'it' : 'them'
+      } before you ${verb} the invoice.`;
+    }
+    if (paid > 0.005) {
+      return `${invoice?.number || 'This invoice'} carries ₹${paid.toLocaleString('en-IN')} of settlement — undo it before you ${verb} the invoice.`;
+    }
+    return '';
+  };
+
   const openEditInvoice = (invoice) => {
+    {
+      const blocked = invoiceChangeBlocked(invoice, 'edit');
+      if (blocked) {
+        notify.error(blocked);
+        return;
+      }
+    }
     if (typeof onEditInvoice === 'function') {
       onEditInvoice(invoice);
       return;
@@ -676,6 +728,13 @@ const statusReason = (doc, status, company, nowMs) => {
    * ledger back out of step, which is the bug being fixed.
    */
   const cancelInvoice = async (invoice) => {
+    {
+      const blocked = invoiceChangeBlocked(invoice, 'cancel');
+      if (blocked) {
+        notify.error(blocked);
+        return;
+      }
+    }
     const ok = await confirmDialog({
       title: 'Please confirm',
       message: `Cancel invoice ${invoice?.number || ''}? Its number stays with the record and its ledger entry is reversed.`.trim(),
@@ -743,6 +802,14 @@ const statusReason = (doc, status, company, nowMs) => {
   };
 
   const deleteInvoice = async (invoice) => {
+    {
+      const blocked = invoiceChangeBlocked(invoice, 'delete');
+      if (blocked) {
+        notify.error(blocked);
+        return;
+      }
+    }
+
     const ok = await confirmDialog({ title: 'Please confirm', message: `Delete invoice ${invoice?.number || ''}? This cannot be undone.`.trim(), confirmLabel: 'Yes, continue' });
     if (!ok) return;
     deleteInvoiceCore(invoice);
@@ -6092,6 +6159,13 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    {
+      const closed = blockIfClosed(db, currentCompany.id, formData.date, 'This credit note');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
+    }
     let creditNumber = String(formData.number || '').trim();
     if (isCreditAuto) {
       if (lockCreditNumber) creditNumber = String(generatedCreditNumber || '').trim();

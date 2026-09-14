@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { postJournalToLedger } from '../../utils/journalSync';
 import { notify, confirmDialog } from '../../components/ui/notify';
 import { AlertTriangle, Check, ClipboardCheck, Download, MoreVertical, Package, PackageCheck, Pencil, Plus, Trash2, Truck, X } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
@@ -1681,6 +1682,80 @@ export const StockTransfersList = ({
         notify.error(`Not enough stock for item ${l.itemId} in the source warehouse. Available: ${available}, trying to transfer: ${l.qty}`);
         return;
       }
+    }
+
+    /*
+     * The IGST an inter-state movement carries, POSTED — not merely printed.
+     *
+     * A transfer between two GSTINs is a supply: the sending side owes
+     * Output IGST and the receiving side claims Input IGST. Both sit in one
+     * org's books here, so the entry is Dr Input IGST / Cr Output IGST for
+     * the document's IGST — through the same journal engine as everything,
+     * once per transfer (the journal id is kept on the transfer). Where the
+     * chart has no IGST ledgers the figure stays document-only and says so,
+     * rather than landing somewhere it does not belong.
+     */
+    const igstJournalPatch = (() => {
+      if (transfer?.gstJournalId) return {};
+      const swState = String(warehouseById.get(normalizeId(transfer?.sourceWarehouseId))?.state || '').trim();
+      const twState = String(warehouseById.get(normalizeId(transfer?.targetWarehouseId))?.state || '').trim();
+      const isInter = Boolean(swState && twState && swState.toLowerCase() !== twState.toLowerCase());
+      if (!isInter) return {};
+      const itemsById = new Map(safeArray(db?.items).filter((i) => i.companyId === currentCompany?.id).map((i) => [normalizeId(i.id), i]));
+      const igst = round2(
+        safeArray(transfer?.lines).reduce((sum, l) => {
+          const item = itemsById.get(normalizeId(l?.itemId));
+          const rate = toNum(l?.gstRate ?? item?.gstRate ?? 0);
+          const taxable = toNum(l?.qty || 0) * toNum(l?.rate ?? item?.purchasePrice ?? 0);
+          return sum + (taxable * rate) / 100;
+        }, 0)
+      );
+      if (igst <= 0.005) return {};
+      const chart = safeArray(db?.chartOfAccounts).filter((a) => a.companyId === currentCompany?.id);
+      const inputIgst = chart.find((a) => /input\s*igst/i.test(String(a.name || '')));
+      const outputIgst = chart.find((a) => /output\s*igst/i.test(String(a.name || '')));
+      if (!inputIgst || !outputIgst) {
+        notify.info('IGST on this transfer stays on the document — create Input IGST and Output IGST ledgers to post it.');
+        return {};
+      }
+      return { igst, inputIgst, outputIgst, chart };
+    })();
+
+    if (igstJournalPatch.igst) {
+      const { igst, inputIgst, outputIgst, chart } = igstJournalPatch;
+      const lines2 = [
+        { accountId: String(inputIgst.id), accountName: inputIgst.name, debit: igst, credit: 0 },
+        { accountId: String(outputIgst.id), accountName: outputIgst.name, debit: 0, credit: igst },
+      ];
+      const ledgerPatch = await postJournalToLedger({
+        chartRows: chart,
+        entry: { date, narration: `IGST on transfer ${transfer?.number || ''}`.trim(), lines: lines2 },
+      });
+      setDb((prev) => {
+        const jid = ((prev.journalEntries || []).reduce((m, j) => Math.max(m, Number(j?.id || 0)), 0) || 0) + 1;
+        return {
+          ...prev,
+          journalEntries: [
+            ...(prev.journalEntries || []),
+            {
+              id: jid,
+              companyId: currentCompany?.id,
+              number: `TRF-${transfer?.number || transfer?.id}`,
+              date,
+              narration: `IGST on transfer ${transfer?.number || ''}`.trim(),
+              lines: lines2,
+              totalDebit: igst,
+              totalCredit: igst,
+              sourceTransferId: transfer?.id,
+              createdAt: new Date().toISOString(),
+              ...ledgerPatch,
+            },
+          ],
+          stockTransfers: (prev.stockTransfers || []).map((t) =>
+            normalizeId(t?.id) === normalizeId(transfer?.id) ? { ...t, gstJournalId: jid } : t
+          ),
+        };
+      });
     }
 
     patchTransfer(transfer, { status: TRANSFER_STATUS.OUT, dispatchedAt: new Date().toISOString() });

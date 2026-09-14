@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef } from 'react';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
+import { blockIfClosed } from '../../utils/bookClose';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -440,6 +441,13 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       return;
     }
 
+    {
+      const closed = blockIfClosed(db, currentCompany.id, formData.date, 'This payment');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
+    }
     if (computed.tds > 0.005 && tds.blocked) {
       notify.error(tds.warnings?.find((w) => w.severity === 'BLOCK')?.message || 'The TDS on this payment cannot be posted.');
       return;

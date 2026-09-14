@@ -1,6 +1,8 @@
 import InventoryModule from './features/inventory/InventoryModule';
 import StockAdjustments from './features/inventory/StockAdjustments';
 import { notify, confirmDialog } from './components/ui/notify';
+import { blockIfClosed, fyOptions, fyStartMonth } from './utils/bookClose';
+import { readGlobalFy, writeGlobalFy } from './components/ListControls';
 import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { postJournalToLedger, reverseJournalOnLedger } from './utils/journalSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
@@ -1112,6 +1114,14 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
     if (gstEnabled && !companyState) {
       notify.error('Please set Company State in Tax & Compliances before creating GST expenses.');
       return;
+    }
+
+    {
+      const closed = blockIfClosed(db, currentCompany.id, formData.date, 'This expense');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
     }
 
     const ledgerName = (id) => expenseLedgers.find((l) => String(l.id) === String(id))?.name || '';
@@ -13958,6 +13968,27 @@ const AppShell = () => {
                 <Package size={15} aria-hidden="true" /> Add warehouse
               </button>
             )}
+
+            {/*
+              The financial year, chosen once for every list and report. A
+              screen whose own period is still "All time" answers for this
+              year; a narrower period on the screen always wins. 'All years'
+              turns the floor off.
+            */}
+            <select
+              aria-label="Financial year"
+              className="ui-select hidden md:inline-flex !h-9 !min-h-0 w-36 text-sm"
+              value={readGlobalFy()}
+              onChange={(e) => {
+                writeGlobalFy(e.target.value);
+                setDb((prev) => ({ ...prev }));
+              }}
+            >
+              <option value="">All years</option>
+              {fyOptions(dbForUser, currentCompany?.id, fyStartMonth(currentCompany)).map((f) => (
+                <option key={f.year} value={`${f.from}..${f.to}`}>{f.label}</option>
+              ))}
+            </select>
 
             {/*
               The quick-create button used to sit here. It repeated on all

@@ -4,6 +4,7 @@ import { cashReceiptWarning } from '../../utils/cashLimits';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
+import { blockIfClosed } from '../../utils/bookClose';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 
@@ -378,6 +379,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     e.preventDefault();
 
     const amount = Number(formData.amount ?? 0);
+    {
+      const closed = blockIfClosed(db, currentCompany.id, formData.date, 'This receipt');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
+    }
     const customerIdNum = Number(formData.customerId);
 
     // Collected in one pass and shown at the fields. Allocation problems below

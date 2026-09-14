@@ -3,6 +3,7 @@ import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { ClipboardList, Download, Package, Plus, Trash2, TrendingDown, TrendingUp, Upload } from 'lucide-react';
 
 import { notify } from '../../components/ui/notify';
+import { blockIfClosed } from '../../utils/bookClose';
 import { EmptyState, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { useListSearch } from '../../components/ListToolbar';
@@ -300,6 +301,13 @@ const StockAdjustments = ({
   const saveForm = (e) => {
     e.preventDefault();
 
+    {
+      const closed = blockIfClosed(db, companyId, form.date, 'This adjustment');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
+    }
     const warehouseId = normalizeId(form.warehouseId);
     const reason = String(form.reason || '').trim();
     const lines = safeArray(form.lines).filter((l) => normalizeId(l.itemId) && toNum(l.qtyDelta) !== 0);

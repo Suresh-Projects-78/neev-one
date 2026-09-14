@@ -3626,6 +3626,13 @@ export const DebitNoteForm = ({
 
     /* What the field is showing — the series as it stands now for an
        untouched automatic number. */
+    {
+      const closed = blockIfClosed(db, currentCompany.id, formData.date, 'This purchase return');
+      if (closed) {
+        notify.error(closed);
+        return;
+      }
+    }
     let debitNumber = String(debitNumberValue || '').trim();
     if (isDebitAuto) {
       if (lockDebitNumber) debitNumber = String(generatedDebitNumber || '').trim();
