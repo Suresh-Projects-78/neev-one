@@ -88,6 +88,45 @@ export const allocationsByEvent = (db, companyId) => {
   };
 };
 
+/**
+ * When a deduction must reach the department: the 7th of the following
+ * month — except March, whose deposits get until 30 April.
+ */
+export const tdsDueDate = (transactionDate) => {
+  const d = day(transactionDate);
+  if (!d) return '';
+  const y = Number(d.slice(0, 4));
+  const m = Number(d.slice(5, 7));
+  if (m === 3) return `${y}-04-30`;
+  const ny = m === 12 ? y + 1 : y;
+  const nm = m === 12 ? 1 : m + 1;
+  return `${ny}-${String(nm).padStart(2, '0')}-07`;
+};
+
+/**
+ * What is due and what is late, as of a date. A deduction counts here only
+ * for the part no challan has met — derived from the events and the
+ * allocation links, never from a kept balance.
+ */
+export const dueSummary = (db, companyId, asOf) => {
+  const today = day(asOf) || day(new Date().toISOString());
+  const rows = tdsEvents(db, companyId, { side: 'PAYABLE' }).filter(isLive);
+  const paid = allocationsByEvent(db, companyId);
+  let due = 0;
+  let overdue = 0;
+  let overdueCount = 0;
+  for (const e of rows) {
+    const open = r2(Number(e.tdsAmount || 0) - paid.for(e.id));
+    if (open <= 0.005) continue;
+    due = r2(due + open);
+    if (tdsDueDate(e.transactionDate) < today) {
+      overdue = r2(overdue + open);
+      overdueCount += 1;
+    }
+  }
+  return { due, overdue, overdueCount };
+};
+
 /** One row per party: what was deducted from them, and under what. */
 export const partyWise = (db, companyId, filter = {}) => {
   const rows = tdsEvents(db, companyId, filter).filter(isLive);

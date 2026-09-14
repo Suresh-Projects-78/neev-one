@@ -62,10 +62,27 @@ export function StatCards({ cards, company }) {
    */
   const anyHint = shown.some((c) => c.hint);
 
+  /* A card that names a destination is a control: rendered as a button —
+     focusable, keyboard-operable — while a plain figure stays a div. Same
+     tile either way. */
+  const Tile = ({ card, children }) =>
+    typeof card.onSelect === 'function' ? (
+      <button
+        type="button"
+        onClick={card.onSelect}
+        className="ui-card px-3 py-2.5 flex items-center gap-2.5 text-left w-full cursor-pointer"
+        aria-label={`${card.label} — open`}
+      >
+        {children}
+      </button>
+    ) : (
+      <div className="ui-card px-3 py-2.5 flex items-center gap-2.5">{children}</div>
+    );
+
   return (
     <section className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="Summary">
       {shown.map((c) => (
-        <div key={c.label} className="ui-card px-3 py-2.5 flex items-center gap-2.5">
+        <Tile key={c.label} card={c}>
           {/* Beside the figure rather than floating in the corner. Absolute
               positioning was what forced the tile to be tall enough to have a
               corner to float in. */}
@@ -96,7 +113,7 @@ export function StatCards({ cards, company }) {
               <span className="ui-subtle text-xs block leading-4 truncate">{c.hint || '\u00a0'}</span>
             ) : null}
           </span>
-        </div>
+        </Tile>
       ))}
     </section>
   );

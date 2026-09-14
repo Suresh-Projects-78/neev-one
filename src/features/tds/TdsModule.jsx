@@ -11,6 +11,7 @@ import { TDS_NATURES, natureByCode } from './ruleMaster';
 import { quarterValidation, returnCsv, returnDataset } from './returns';
 import {
   challanRegister,
+  dueSummary,
   monthWise,
   natureWise,
   partyWise,
@@ -120,6 +121,14 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
 
   const unallocatedChallans = challans.filter((c) => c.unallocated > 0.005);
   const blocking = exceptions.filter((x) => x.severity === 'BLOCK');
+  const dues = useMemo(() => dueSummary(db, companyId), [db, companyId]);
+
+  /* A card that can take you somewhere does: figure → the filtered view
+     under it. Same tiles, same visual system as every accounting list. */
+  const goRegister = (wantSide) => {
+    setView('register');
+    setSide(wantSide);
+  };
 
   /* TDS switched off is not an empty register — it is a company that does not
      deduct, and saying so is more use than showing it six empty tables. */
@@ -152,12 +161,28 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
         ) : null
       }
       cards={[
-        { label: 'TDS payable', value: payable.outstanding, tone: 'outstanding', Icon: Landmark },
-        { label: 'TDS receivable', value: receivable.deducted, tone: 'paid', Icon: Receipt },
-        { label: 'Deducted', value: payable.deducted, tone: 'sent', Icon: TrendingDown },
-        { label: 'Unallocated challans', value: unallocatedChallans.length, count: true, tone: 'draft', Icon: FileText },
-        { label: 'Exceptions', value: exceptions.length, count: true, tone: blocking.length ? 'overdue' : 'draft', Icon: AlertTriangle },
-        { label: 'Unmapped natures', value: unmapped.length, count: true, tone: unmapped.length ? 'overdue' : 'draft', Icon: Scale },
+        { label: 'TDS payable', value: payable.outstanding, tone: 'outstanding', Icon: Landmark, onSelect: () => goRegister('PAYABLE') },
+        { label: 'TDS receivable', value: receivable.deducted, tone: 'paid', Icon: Receipt, onSelect: () => goRegister('RECEIVABLE') },
+        /* Deposit discipline: the 7th-of-next-month clock, with March's
+           30 April exception — the part of the payable already late. */
+        {
+          label: 'Due / overdue',
+          value: dues.overdue,
+          tone: dues.overdue > 0.005 ? 'overdue' : 'paid',
+          Icon: TrendingDown,
+          hint: dues.overdue > 0.005 ? `${dues.overdueCount} deduction(s) past deposit date` : 'Nothing past its deposit date',
+          onSelect: () => setView('challans'),
+        },
+        { label: 'Unallocated challans', value: unallocatedChallans.length, count: true, tone: 'draft', Icon: FileText, onSelect: () => setView('challans') },
+        { label: 'Return exceptions', value: exceptions.length, count: true, tone: blocking.length ? 'overdue' : 'draft', Icon: AlertTriangle, onSelect: () => setView('exceptions') },
+        {
+          label: 'Unmapped TDS',
+          value: unmapped.length,
+          count: true,
+          tone: unmapped.length ? 'overdue' : 'draft',
+          Icon: Scale,
+          onSelect: onOpenSettings ? () => onOpenSettings('settingsTds') : undefined,
+        },
       ]}
       above={
         <div className="flex flex-wrap items-end gap-3">

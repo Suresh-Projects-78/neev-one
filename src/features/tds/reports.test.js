@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   challanRegister,
+  dueSummary,
+  tdsDueDate,
   monthWise,
   natureWise,
   partyWise,
@@ -220,5 +222,31 @@ describe('setup faults', () => {
      rather than in the middle of a bill. */
   it('names a nature nobody has mapped a ledger to', () => {
     expect(unmappedNatures(db, 1)).toEqual([{ natureCode: PROFESSIONAL, natureName: 'Professional services' }]);
+  });
+});
+
+describe('the deposit clock', () => {
+  it('a deduction is due the 7th of the next month, March until 30 April', () => {
+    expect(tdsDueDate('2026-09-12')).toBe('2026-10-07');
+    expect(tdsDueDate('2026-12-15')).toBe('2027-01-07');
+    expect(tdsDueDate('2026-03-31')).toBe('2026-04-30');
+  });
+
+  /* Due and overdue are folds over the events and their challan links — the
+     part a challan already met is nobody's liability. */
+  it('counts only the unmet part, and calls late only what is past its date', () => {
+    const clock = dueSummary(db, 1, '2026-09-13');
+    /* Event 1 (₹2,000, July) is fully challaned; event 3 (₹5,000, May) has
+       ₹3,000 challaned → ₹2,000 open, due 7 June — overdue. Event 2 (₹500,
+       2 Aug) is unmet and was due 7 Sep — overdue too. */
+    expect(clock.due).toBe(2500);
+    expect(clock.overdue).toBe(2500);
+    expect(clock.overdueCount).toBe(2);
+
+    /* Rewind the clock before either due date and the same figures are due,
+       not late. */
+    const early = dueSummary(db, 1, '2026-06-01');
+    expect(early.overdue).toBe(0);
+    expect(early.due).toBe(2500);
   });
 });
