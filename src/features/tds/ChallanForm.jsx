@@ -3,6 +3,8 @@ import { Wand2 } from 'lucide-react';
 
 import { notify } from '../../components/ui/notify';
 import { fyRange } from '../../utils/tdsTcs';
+import { postJournalToLedger } from '../../utils/journalSync';
+import { tdsGroupSide } from '../../utils/tdsLedgers';
 import { companyTdsProfile } from './engine';
 import { formatMoney, round2 } from '../../utils/money';
 import { natureByCode } from './ruleMaster';
@@ -52,6 +54,47 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
 
   /* Allocation drafts, keyed by event id. Strings, because they are inputs. */
   const [alloc, setAlloc] = useState({});
+
+  /*
+   * The challan's own bank payment — Dr the TDS ledgers the deductions sat
+   * on (by allocation), Dr an expense ledger for interest and fees, Cr the
+   * bank — one journal through the same engine as every entry, linked both
+   * ways to the challan. Offered, never forced: a payment recorded earlier
+   * from the bank book is linked by hand instead.
+   */
+  const [payFromBank, setPayFromBank] = useState(false);
+  const [bankLedgerId, setBankLedgerId] = useState('');
+  const [feesLedgerId, setFeesLedgerId] = useState('');
+  const groups = useMemo(
+    () => (db?.accountGroups || []).filter((g) => Number(g?.companyId) === Number(companyId)),
+    [db?.accountGroups, companyId]
+  );
+  const bankLedgers = useMemo(
+    () =>
+      (db?.chartOfAccounts || [])
+        .filter((a) => Number(a?.companyId) === Number(companyId) && a?.isActive !== false)
+        .filter((a) => {
+          const chain = [];
+          let cur = groups.find((g) => String(g.id) === String(a.groupId));
+          const seen = new Set();
+          while (cur && !seen.has(String(cur.id))) {
+            seen.add(String(cur.id));
+            chain.push(String(cur.name || '').toLowerCase());
+            cur = groups.find((g) => String(g.id) === String(cur.parentGroupId));
+          }
+          return chain.some((n) => n === 'bank accounts' || n === 'cash-in-hand');
+        })
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+    [db?.chartOfAccounts, companyId, groups]
+  );
+  const expenseLedgers = useMemo(
+    () =>
+      (db?.chartOfAccounts || [])
+        .filter((a) => Number(a?.companyId) === Number(companyId) && a?.isActive !== false)
+        .filter((a) => !tdsGroupSide(groups, a.groupId))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))),
+    [db?.chartOfAccounts, companyId, groups]
+  );
   const setOne = (id, value) => setAlloc((prev) => ({ ...prev, [id]: value }));
 
   const tax = round2(Math.abs(Number(head.taxAmount || 0)));
@@ -88,11 +131,60 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
       break;
     }
   }
+  const fees = round2(Math.abs(Number(head.interest || 0)) + Math.abs(Number(head.lateFee || 0)) + Math.abs(Number(head.otherAmount || 0)));
+  if (payFromBank) {
+    if (!String(bankLedgerId || '').trim()) problems.push('Pick the bank or cash account the challan is paid from.');
+    if (!String(head.paymentDate || '').trim()) problems.push('A bank payment needs the payment date.');
+    if (Math.abs(remaining) > 0.005) problems.push('Allocate the whole tax amount before posting the bank payment — each rupee must know which ledger it clears.');
+    if (fees > 0.005 && !String(feesLedgerId || '').trim()) problems.push('Pick the ledger interest and fees are booked to.');
+  }
 
-  const save = () => {
+  const save = async () => {
     if (problems.length) {
       notify.error(problems[0]);
       return;
+    }
+
+    /*
+     * The challan's bank payment, where asked for: one balanced journal —
+     * Dr each TDS ledger by what this challan clears off it, Dr the fees
+     * ledger for interest/late fee/other, Cr the bank for the total — via
+     * the SAME posting engine as every entry. TDS never touches a bank
+     * balance directly; this is an accounting posting like any other.
+     */
+    let journalPatch = {};
+    let paymentLines = null;
+    const total = round2(tax + fees);
+    if (payFromBank) {
+      const byLedger = new Map();
+      for (const e of outstanding) {
+        const amt = round2(Math.abs(Number(alloc[e.id] || 0)));
+        if (amt <= 0.005) continue;
+        const key = String(e.ledgerId || '');
+        byLedger.set(key, round2((byLedger.get(key) || 0) + amt));
+      }
+      const accounts = (db.chartOfAccounts || []).filter((a) => Number(a.companyId) === Number(companyId));
+      const name = (id) => accounts.find((a) => String(a.id) === String(id))?.name || '';
+      paymentLines = [
+        ...[...byLedger.entries()].map(([ledgerId, amt]) => ({
+          accountId: String(ledgerId),
+          accountName: name(ledgerId),
+          debit: amt,
+          credit: 0,
+        })),
+        ...(fees > 0.005
+          ? [{ accountId: String(feesLedgerId), accountName: name(feesLedgerId), debit: fees, credit: 0 }]
+          : []),
+        { accountId: String(bankLedgerId), accountName: name(bankLedgerId), debit: 0, credit: total },
+      ];
+      journalPatch = await postJournalToLedger({
+        chartRows: accounts,
+        entry: {
+          date: String(head.paymentDate).slice(0, 10),
+          narration: `TDS challan ${String(head.number).trim()}`,
+          lines: paymentLines,
+        },
+      });
     }
 
     setDb((prev) => {
@@ -131,10 +223,30 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
           createdAt: challan.createdAt,
         }));
 
+      const journalId = paymentLines
+        ? ((prev.journalEntries || []).reduce((m, j) => Math.max(m, Number(j?.id || 0)), 0) || 0) + 1
+        : null;
+      const journalEntry = paymentLines
+        ? {
+            id: journalId,
+            companyId,
+            number: `CHL-${challanId}`,
+            date: String(head.paymentDate).slice(0, 10),
+            narration: `TDS challan ${challan.number}`,
+            lines: paymentLines,
+            totalDebit: round2(tax + fees),
+            totalCredit: round2(tax + fees),
+            sourceChallanId: challanId,
+            createdAt: challan.createdAt,
+            ...journalPatch,
+          }
+        : null;
+
       return {
         ...prev,
-        tdsChallans: [...(prev.tdsChallans || []), challan],
+        tdsChallans: [...(prev.tdsChallans || []), { ...challan, paymentJournalId: journalId }],
         tdsChallanAllocations: [...(prev.tdsChallanAllocations || []), ...links],
+        journalEntries: journalEntry ? [...(prev.journalEntries || []), journalEntry] : prev.journalEntries,
       };
     });
 
@@ -272,6 +384,59 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
                 ))}
               </tbody>
             </table>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Bank Account → Payment → TDS Payable clearing → Challan linkage:
+          the cross-module flow, one journal through the central engine. */}
+      <div className="rounded-lg border p-3">
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="ui-checkbox"
+            checked={payFromBank}
+            onChange={(e) => setPayFromBank(e.target.checked)}
+          />
+          Record the bank payment with this challan
+        </label>
+        {payFromBank ? (
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label className="ui-label" htmlFor="chl-bank-ledger">Paid from</label>
+              <select
+                id="chl-bank-ledger"
+                className="ui-select w-full"
+                value={bankLedgerId}
+                onChange={(e) => setBankLedgerId(e.target.value)}
+              >
+                <option value="">Select bank / cash account</option>
+                {bankLedgers.map((l) => (
+                  <option key={l.id} value={String(l.id)}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+            {round2(Math.abs(Number(head.interest || 0)) + Math.abs(Number(head.lateFee || 0)) + Math.abs(Number(head.otherAmount || 0))) > 0.005 ? (
+              <div>
+                <label className="ui-label" htmlFor="chl-fees-ledger">Interest &amp; fees ledger</label>
+                <select
+                  id="chl-fees-ledger"
+                  className="ui-select w-full"
+                  value={feesLedgerId}
+                  onChange={(e) => setFeesLedgerId(e.target.value)}
+                >
+                  <option value="">Select ledger</option>
+                  {expenseLedgers.map((l) => (
+                    <option key={l.id} value={String(l.id)}>{l.name}</option>
+                  ))}
+                </select>
+                <p className="ui-caption mt-1">Interest and late fees are the cost of being late, not TDS.</p>
+              </div>
+            ) : null}
+            <p className="ui-caption sm:col-span-2">
+              Posts one journal: each TDS ledger debited by what this challan clears off it, fees to their ledger,
+              the bank credited with the total. Needs the tax fully allocated, so every rupee knows which ledger it clears.
+            </p>
           </div>
         ) : null}
       </div>

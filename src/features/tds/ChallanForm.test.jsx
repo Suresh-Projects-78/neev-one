@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const postJournalToLedger = vi.fn(async () => ({}));
+vi.mock('../../utils/journalSync', () => ({
+  postJournalToLedger: (...a) => postJournalToLedger(...a),
+}));
 
 import ChallanForm from './ChallanForm';
 
@@ -48,6 +53,18 @@ const db0 = {
     { id: 4, ...event({ partyName: 'Reversed Ltd', status: 'Reversed' }) },
     { id: 5, ...event({ partyName: 'ABC Industries', side: 'RECEIVABLE' }) },
   ],
+  accountGroups: [
+    { id: 21, companyId: 1, name: 'Bank Accounts', parentGroupId: null },
+    { id: 30, companyId: 1, name: 'Statutory Payables', parentGroupId: null },
+    { id: 31, companyId: 1, name: 'TDS Payable', parentGroupId: 30 },
+    { id: 40, companyId: 1, name: 'Indirect Expenses', parentGroupId: null },
+  ],
+  chartOfAccounts: [
+    { id: 502, companyId: 1, name: 'HDFC Bank', groupId: 21 },
+    { id: 200, companyId: 1, name: 'TDS Payable - Contractor', groupId: 31, tdsNatureCode: 'CONTRACT' },
+    { id: 610, companyId: 1, name: 'Interest & Penalties', groupId: 40 },
+  ],
+  journalEntries: [],
   tdsChallans: [{ id: 9, companyId: 1, number: 'CHL-OLD', paymentDate: '2026-07-07', taxAmount: 1000 }],
   tdsChallanAllocations: [{ id: 1, companyId: 1, challanId: 9, tdsTransactionId: 3, amount: 1000 }],
 };
@@ -165,6 +182,44 @@ describe('saving', () => {
     const challan = latest.db.tdsChallans.find((c) => c.number === 'CHL-2026-091');
     expect(challan.taxAmount).toBe(500);
     expect(latest.db.tdsChallanAllocations.filter((a) => a.challanId === challan.id)).toHaveLength(0);
+  });
+
+  /* The cross-module flow: Bank Account → Payment → TDS Payable clearing →
+     Challan linkage — one journal through the central engine, linked both
+     ways, and only when the tax is fully allocated. */
+  it('records the bank payment: TDS ledgers debited, bank credited, challan linked', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await fillHead(user, { tax: 3000 });
+    await user.type(screen.getByLabelText('Interest'), '100');
+    await user.click(screen.getByRole('button', { name: /Auto allocate/ }));
+
+    await user.click(screen.getByLabelText(/Record the bank payment/));
+    await user.selectOptions(screen.getByLabelText('Paid from'), '502');
+    await user.selectOptions(screen.getByLabelText('Interest & fees ledger'), '610');
+    await user.click(screen.getByRole('button', { name: 'Record challan' }));
+
+    const challan = latest.db.tdsChallans.find((c) => c.number === 'CHL-2026-091');
+    const jv = latest.db.journalEntries.find((j) => j.sourceChallanId === challan.id);
+    expect(jv).toBeTruthy();
+    expect(challan.paymentJournalId).toBe(jv.id);
+    /* Dr TDS ledger 3,000 · Dr fees 100 · Cr bank 3,100 — balanced. */
+    expect(jv.lines).toEqual([
+      expect.objectContaining({ accountId: '200', debit: 3000, credit: 0 }),
+      expect.objectContaining({ accountId: '610', debit: 100, credit: 0 }),
+      expect.objectContaining({ accountId: '502', debit: 0, credit: 3100 }),
+    ]);
+    expect(postJournalToLedger).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses the bank payment while any tax rupee is unallocated', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await fillHead(user, { tax: 3000 });
+    /* Nothing allocated — the journal cannot know which ledger it clears. */
+    await user.click(screen.getByLabelText(/Record the bank payment/));
+    await user.selectOptions(screen.getByLabelText('Paid from'), '502');
+    expect(screen.getByRole('button', { name: 'Record challan' })).toBeDisabled();
   });
 
   it('needs a number and a non-zero tax amount before it will save', async () => {
