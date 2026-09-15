@@ -1,3 +1,9 @@
+/**
+ * @vitest-environment node
+ *
+ * Reads source and computes; never renders. A jsdom for it is about
+ * twenty-five seconds of wall clock that nothing touches.
+ */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const listOrgMasters = vi.fn(async () => ({ masters: [] }));

@@ -1,3 +1,9 @@
+/**
+ * @vitest-environment node
+ *
+ * Reads source and computes; never renders. A jsdom for it is about
+ * twenty-five seconds of wall clock that nothing touches.
+ */
 import { describe, expect, it } from 'vitest';
 import { bookState, setupSteps, BOOK_NEW, BOOK_SETUP, BOOK_RUNNING } from './bookState';
 

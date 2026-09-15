@@ -1,3 +1,9 @@
+/**
+ * @vitest-environment node
+ *
+ * Reads source and computes; never renders. A jsdom for it is about
+ * twenty-five seconds of wall clock that nothing touches.
+ */
 import { describe, expect, it } from 'vitest';
 
 import { TDS_NATURES, TDS_RULE_VERSIONS, resolveRule } from './ruleMaster';

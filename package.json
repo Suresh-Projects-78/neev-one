@@ -20,7 +20,8 @@
     "docker:logs": "docker compose logs -f",
     "test": "npm run test:web && npm --prefix server test",
     "env:init": "node scripts/init-env.mjs",
-    "test:web": "vitest run"
+    "test:web": "vitest run",
+    "test:related": "vitest related --run"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

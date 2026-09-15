@@ -1,3 +1,9 @@
+/**
+ * @vitest-environment node
+ *
+ * This file reads source, it does not render it. A jsdom for it costs about
+ * twenty-five seconds of wall clock and is never touched.
+ */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

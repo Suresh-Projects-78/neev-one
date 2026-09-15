@@ -1,3 +1,9 @@
+/**
+ * @vitest-environment node
+ *
+ * This file reads source, it does not render it. A jsdom for it costs about
+ * twenty-five seconds of wall clock and is never touched.
+ */
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,8 +71,12 @@ describe('the landing band is one component', () => {
 
   it('the band owns the shape, so a caller cannot set it', () => {
     const band = read('components/ui/HeroBand.jsx');
-    /* Size, spacing and the actions row live here and take no prop. */
-    expect(band).toMatch(/fontSize: '1\.75rem'/);
+    /* Size, spacing and the actions row live here and take no prop. The
+       module title is 26/32 with the tight tracking a page title takes; the
+       point of the assertion is that the number is in this file and not in a
+       caller's. */
+    expect(band).toMatch(/fontSize: 26/);
+    expect(band).toMatch(/letterSpacing: '-0\.025em'/);
     expect(band).toMatch(/ui-btn ui-btn-primary/);
     expect(band).not.toMatch(/className=\{.*props/);
   });

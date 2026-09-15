@@ -18,5 +18,33 @@ export default defineConfig({
     setupFiles: ['src/test/setup.js'],
     globals: true,
     css: false,
+    /*
+     * Four workers, measured rather than assumed.
+     *
+     * The obvious lever here looked like the worker count, and it was the
+     * wrong one: at eight threads the suite ran at three per cent CPU and two
+     * DOM-heavy files crossed the five-second per-test timeout, because the
+     * cost was never computation. It was 122 jsdom environments being built.
+     * That is what the `@vitest-environment node` banners on the
+     * source-reading tests address — src/test went from 922 seconds to 130 on
+     * the same 64 tests — and with those in place four workers is enough to
+     * keep the slow DOM files inside their timeout.
+     */
+    pool: 'threads',
+    poolOptions: {
+      threads: { minThreads: 1, maxThreads: 4 },
+    },
+    /*
+     * Twenty seconds, not five.
+     *
+     * Two of the heaviest files — the document-form parity check and the
+     * debit-note TDS flow — take seven to eight seconds each on their own,
+     * and the default budget is five. Under one worker they happened to fit;
+     * with four running they do not, and a test that passes alone and times
+     * out beside its neighbours is reporting on the machine rather than on
+     * the code. The budget is what was wrong, so the budget moves. A test
+     * that genuinely hangs still fails, twenty seconds later.
+     */
+    testTimeout: 20000,
   },
 });

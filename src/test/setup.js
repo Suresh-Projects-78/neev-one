@@ -6,6 +6,6 @@ import '@testing-library/jest-dom/vitest';
  * pointing a panel at its anchor — so a no-op is the honest stand-in rather
  * than something that would make a test pass for the wrong reason.
  */
-if (!Element.prototype.scrollIntoView) {
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {};
 }
