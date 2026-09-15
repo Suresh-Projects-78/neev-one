@@ -436,7 +436,12 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
           if (shared) state.setOpenKey(open ? null : col);
           else setLocalOpen(!open);
         }}
-        className={`w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} rounded-lg px-1 -mx-1 ui-hover-sunken`}
+        /* Tall enough to hit. The control was the height of its own text —
+           16px inside a 33px header cell — so half the header was dead to
+           the pointer and the whole of it was under the 24px a pointer
+           target is meant to be. `-my-1.5` gives the padding back to the cell
+           so no row gets taller. */
+        className={`w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} rounded-lg px-1 -mx-1 py-1.5 -my-1.5 ui-hover-sunken`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={`Sort and filter ${typeof label === 'string' ? label : col}`}
