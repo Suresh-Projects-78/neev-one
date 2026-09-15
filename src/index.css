@@ -2618,6 +2618,26 @@
      inputs, indistinguishable from a search box, sitting beside an Add
      warehouse button wearing the brand. Same treatment for all three: they are
      one group and they choose the same thing. */
+  /* Branch and warehouse: what the whole book is scoped to.
+     A native select cannot hold a glyph, so the control is the wrapper — the
+     icon sits in it and the select is padded past it. The icon is the module
+     hue's own neutral rather than the brand, because the brand on this bar
+     already means "the thing you can press"; this says "where you are". */
+  .ui-scope-field {
+    position: relative;
+    align-items: center;
+  }
+  .ui-scope-field > svg {
+    position: absolute;
+    left: 0.625rem;
+    pointer-events: none;   /* the click belongs to the select underneath */
+    color: rgb(var(--brand-ink) / 0.75);
+    flex: none;
+  }
+  .ui-scope-field > .ui-select {
+    padding-inline-start: 2rem;
+  }
+
   .ui-scope-select {
     color: rgb(var(--brand-ink));
     border-color: rgb(var(--brand) / 0.28);

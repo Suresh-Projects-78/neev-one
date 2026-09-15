@@ -78,7 +78,9 @@ import {
   ShieldCheck as PhApprovals,
   ShoppingCartSimple as PhPurchases,
   SquaresFour as PhDashboard,
+  Storefront as PhBranch,
   Wallet as PhExpenses,
+  Warehouse as PhWarehouse,
 } from '@phosphor-icons/react';
 import Modal from './components/ui/Modal';
 import PopupSelect from './components/pickers/PopupSelect';
@@ -14011,10 +14013,12 @@ const AppShell = () => {
                 none, had no warehouse control and no route to make one. They
                 show from the first one now, and say so when there are none. */}
             {branchesForUser.length >= 1 ? (
+              <span className="ui-scope-field hidden md:inline-flex">
+                <PhBranch size={16} weight="fill" aria-hidden="true" />
               <select
                 value={activeBranchId || ''}
                 onChange={(e) => setActiveBranch(e.target.value)}
-                className="ui-select ui-scope-select hidden md:block !h-9 !min-h-0 max-w-[16rem] text-sm"
+                className="ui-select ui-scope-select !h-9 !min-h-0 max-w-[16rem] text-sm"
                 aria-label="Active branch"
               >
                 {branchesForUser.map((b) => (
@@ -14023,13 +14027,16 @@ const AppShell = () => {
                   </option>
                 ))}
               </select>
+              </span>
             ) : null}
 
             {warehousesForActiveBranch.length >= 1 ? (
+              <span className="ui-scope-field hidden md:inline-flex">
+                <PhWarehouse size={16} weight="fill" aria-hidden="true" />
               <select
                 value={activeWarehouseId || ''}
                 onChange={(e) => setActiveWarehouse(e.target.value)}
-                className="ui-select ui-scope-select hidden md:block !h-9 !min-h-0 max-w-[16rem] text-sm"
+                className="ui-select ui-scope-select !h-9 !min-h-0 max-w-[16rem] text-sm"
                 aria-label="Active warehouse"
               >
                 <option value="">All warehouses</option>
@@ -14039,6 +14046,7 @@ const AppShell = () => {
                   </option>
                 ))}
               </select>
+              </span>
             ) : warehousesLoading ? null : (
               /* None yet. Stock, transfers and every document's warehouse field
                  depend on there being one, so this says so and goes there. */
