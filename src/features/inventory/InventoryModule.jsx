@@ -12,7 +12,6 @@ import { buildItemStockLedger, computeInventorySummaryByItemId, isStockItem } fr
 import { DocDate } from '../../components/docs';
 import { csvSafeValue } from '../../utils/csv';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
-import { ListFilterBand } from '../../components/list/ListPageParts';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -505,110 +504,112 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
       statusValue={invFilter}
       statusCounts={invCounts}
       onStatusChange={setInvFilter}
+      /* View, warehouse and period ride the far end of the status row.
+         They changed what every column below means, so they belong to the
+         table — but as a band of their own between the pills and the first
+         row they were a second toolbar over the list, while the status row
+         beside them stood two thirds empty. */
+      tabsExtras={
+        <>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-view">View</label>
+            <select
+              id="inv-view"
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value)}
+              className="ui-select !h-9 !min-h-0 px-2 text-sm"
+            >
+              <option value="qty">Qty</option>
+              <option value="value">Value</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-warehouse">Warehouse</label>
+            <select
+              id="inv-warehouse"
+              value={warehouseId}
+              onChange={(e) => setWarehouseId(e.target.value)}
+              className="ui-select !h-9 !min-h-0 px-2 text-sm"
+            >
+              <option value="">All Warehouses</option>
+              {warehouseOptions.map((w) => (
+                <option key={String(w.id)} value={String(w.id)}>
+                  {w.name || `Warehouse ${w.id}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/*
+            Label and control on one line, like the two beside it.
+            This group wrapped inside itself, so at most widths the word "Period"
+            sat on its own line and pushed its select a row lower than View and
+            Warehouse — three controls that do the same job, sitting at two
+            different heights. The custom dates are their own group now, free to
+            wrap onto the next line without taking the label with them.
+          */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-period">Period</label>
+            <select
+              id="inv-period"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="ui-select !h-9 !min-h-0 px-2 text-sm"
+            >
+              {PERIOD_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {period === 'custom' ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
+                aria-label="From date"
+              />
+              <span className="ui-subtle">to</span>
+              <input
+                type="date"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
+                aria-label="To date"
+              />
+            </div>
+          ) : null}
+
+          {/* One click back to the defaults — offered only while a filter
+              is actually narrowing something. */}
+          {viewMode !== 'qty' || warehouseId || period !== 'last30' ? (
+            <button
+              type="button"
+              className="ui-btn ui-btn-ghost ui-btn-sm"
+              onClick={() => {
+                setViewMode('qty');
+                setWarehouseId('');
+                setPeriod('last30');
+                setCustomFrom('');
+                setCustomTo('');
+              }}
+            >
+              Reset
+            </button>
+          ) : null}
+        </>
+      }
       tip={{
         storageKey: 'neev.tip.inventory',
         Icon: Boxes,
         text: 'Nothing here is stored — every column is worked out from the bills, invoices and adjustments in the period.',
       }}
     >
-      {/* View, warehouse and period at the top of the table they govern — they
-          change what every column below means, so they belong to it. In the
-          shared band, at the shared height, like every other list that needs
-          filters the tabs cannot express. */}
-      <ListFilterBand>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-view">View</label>
-          <select
-            id="inv-view"
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value)}
-            className="ui-select !h-9 !min-h-0 px-2 text-sm"
-          >
-            <option value="qty">Qty</option>
-            <option value="value">Value</option>
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-warehouse">Warehouse</label>
-          <select
-            id="inv-warehouse"
-            value={warehouseId}
-            onChange={(e) => setWarehouseId(e.target.value)}
-            className="ui-select !h-9 !min-h-0 px-2 text-sm"
-          >
-            <option value="">All Warehouses</option>
-            {warehouseOptions.map((w) => (
-              <option key={String(w.id)} value={String(w.id)}>
-                {w.name || `Warehouse ${w.id}`}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/*
-          Label and control on one line, like the two beside it.
-          This group wrapped inside itself, so at most widths the word "Period"
-          sat on its own line and pushed its select a row lower than View and
-          Warehouse — three controls that do the same job, sitting at two
-          different heights. The custom dates are their own group now, free to
-          wrap onto the next line without taking the label with them.
-        */}
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium whitespace-nowrap" htmlFor="inv-period">Period</label>
-          <select
-            id="inv-period"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="ui-select !h-9 !min-h-0 px-2 text-sm"
-          >
-            {PERIOD_OPTIONS.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {period === 'custom' ? (
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
-              aria-label="From date"
-            />
-            <span className="ui-subtle">to</span>
-            <input
-              type="date"
-              value={customTo}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
-              aria-label="To date"
-            />
-          </div>
-        ) : null}
-
-        {/* One click back to the defaults — offered only while a filter is
-            actually narrowing something, right-aligned like every band's
-            trailing control. */}
-        {viewMode !== 'qty' || warehouseId || period !== 'last30' ? (
-          <button
-            type="button"
-            className="ui-btn ui-btn-ghost ui-btn-sm ms-auto"
-            onClick={() => {
-              setViewMode('qty');
-              setWarehouseId('');
-              setPeriod('last30');
-              setCustomFrom('');
-              setCustomTo('');
-            }}
-          >
-            Reset
-          </button>
-        ) : null}
-      </ListFilterBand>
 
       <div className="ui-table-scroll">
         <table className="ui-table ui-table-wide ui-table-sticky">
