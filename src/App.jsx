@@ -1259,7 +1259,6 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
               value={formData.vendorId}
               onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
               label="Vendor"
-              showCreateButton
             />
             {formData.vendorId ? (
               <div className="text-xs ui-muted mt-1">
@@ -1458,13 +1457,18 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                       />
                     </td>
                     <td className="px-3 py-2">
+                      {/* Fills its column like every other cell's control:
+                          a fixed w-28 box sat at the left edge of a column
+                          whose heading and whose figures below are both
+                          right-aligned. */}
                       <input
                         type="number"
                         min="0"
                         step="0.01"
                         value={line.amount}
                         onChange={(e) => updateLine(idx, { amount: e.target.value })}
-                        className="ui-input w-28 px-2 py-1 text-right"
+                        className="ui-input ui-mono w-full px-2 py-1 text-right"
+                        aria-label={`Amount, line ${idx + 1}`}
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -1474,7 +1478,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                         <select
                           value={String(line.gstRate ?? 0)}
                           onChange={(e) => updateLine(idx, { gstRate: Number(e.target.value) })}
-                          className="ui-select w-24 px-2 py-1"
+                          className="ui-select w-full px-2 py-1"
                         >
                           {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
                             <option key={r} value={String(r)}>{r}%</option>
