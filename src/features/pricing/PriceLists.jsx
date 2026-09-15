@@ -524,6 +524,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="category"
         title={editing.name}
         actions={
           <>

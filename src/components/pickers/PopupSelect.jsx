@@ -1,5 +1,6 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createElement, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { fieldIconFor } from '../ui/entityIdentity';
 
 import Popover from '../ui/Popover';
 import { rankedSearch } from '../../utils/rankedSearch';
@@ -38,13 +39,20 @@ const PopupSelect = ({
   /* A lucide component drawn inside the control, before the value — the
      field says what it is about without being read. Decorative: the label
      and the aria-label already name the control. */
-  icon: LeadingIcon = null,
+  icon: LeadingIcon = undefined,
   // `maxWidthClass` sized the old dialog. Call sites still pass it; the panel
   // takes its width from the control it hangs off, so it is swallowed here
   // rather than made every caller's problem to remove.
   ...ignoredLegacyProps
 }) => {
   void ignoredLegacyProps;
+  /* The caller's icon wins; otherwise the label decides. An explicit `null`
+     is a caller saying "no mark on this one" and is left alone. */
+  /* A picker inside a grid row prints its name in the column heading, not in
+     a label of its own, and names itself to a screen reader instead — so the
+     spoken name is what says what it picks. "Ledger, line 1" resolves the same
+     mark as a field labelled "Ledger". */
+  const leading = LeadingIcon === undefined ? fieldIconFor(label || ariaLabel) : LeadingIcon;
   const [open, setOpen] = useState(false);
   // Stable per instance: several of these sit on one form.
   const listId = useId();
@@ -233,7 +241,9 @@ const PopupSelect = ({
         }`}
       >
         <span className="flex min-w-0 items-center gap-2">
-          {LeadingIcon ? <LeadingIcon size={15} className="ui-subtle shrink-0" aria-hidden="true" /> : null}
+          {/* createElement: a capitalised local reads to the linter as a
+              component declared in a render. It is a lookup. */}
+          {leading ? createElement(leading, { size: 15, className: 'ui-subtle shrink-0', 'aria-hidden': 'true' }) : null}
           <span className={`truncate ${displayLabel ? 'ui-fg' : 'ui-subtle'}`}>{displayLabel || placeholder}</span>
         </span>
         <ChevronDown size={16} className="ui-muted shrink-0" />

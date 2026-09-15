@@ -33,7 +33,7 @@ import { resolveStatus } from '../../utils/statusRegistry';
  * `entity` is a key from entityIdentity, so a screen names what it holds
  * rather than choosing an icon and a colour for itself.
  */
-export const EntityMark = ({ entity, size = 17 }) => {
+export const EntityMark = ({ entity, size = 18 }) => {
   const icon = iconFor(entity);
   if (!icon) return null;
   const tone = toneFor(entity);
@@ -46,7 +46,7 @@ export const EntityMark = ({ entity, size = 17 }) => {
       {/* createElement, not <Icon />: the linter reads a capitalised local as
           a component declared inside a render. It is a lookup, not a
           declaration — the same function object comes back every time. */}
-      {React.createElement(icon, { size, strokeWidth: 1.9 })}
+      {React.createElement(icon, { size, strokeWidth: 2.1 })}
     </span>
   );
 };

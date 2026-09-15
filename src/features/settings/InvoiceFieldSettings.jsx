@@ -175,6 +175,7 @@ export const InvoiceFieldSettings = ({
       {header}
       {embedded ? null : (
       <PageHeader
+        entity="settings"
         title={customOnly ? `Custom Fields${docLabel ? ` — ${docLabel}` : ''}` : 'Invoice Settings'}
         description={
           customOnly

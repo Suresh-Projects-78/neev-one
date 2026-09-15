@@ -1,3 +1,4 @@
+import { ENTITY_ICON } from '../ui/entityIdentity';
 import React from 'react';
 import { Plus, Search } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState, useEffect } from 'react';
@@ -867,7 +868,7 @@ export const CustomerForm = ({
   );
 };
 
-const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Customer', disabled = false, disabledHint = '', icon: LeadingIcon = null }) => {
+const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Customer', disabled = false, disabledHint = '', icon: LeadingIcon = ENTITY_ICON.customer }) => {
   // Customers live on the server now. The local list stays as a fallback so a
   // network failure does not empty the picker in the middle of an invoice.
   const serverCustomers = useServerMasters(

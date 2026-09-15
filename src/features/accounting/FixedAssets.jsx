@@ -151,7 +151,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <PageHeader title="Fixed Assets" description={`Register + WDV depreciation schedule for ${fy.label}. Half rate applies automatically under 180 days of use.`} />
+        <PageHeader entity="items" title="Fixed Assets" description={`Register + WDV depreciation schedule for ${fy.label}. Half rate applies automatically under 180 days of use.`} />
         <div className="flex gap-2">
           <button type="button" onClick={draftDepJournal} className="ui-btn ui-btn-secondary">
             Draft depreciation journal ({money(totalDep)})

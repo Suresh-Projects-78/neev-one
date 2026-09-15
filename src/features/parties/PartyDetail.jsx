@@ -134,6 +134,7 @@ export default function PartyDetail({ db, currentCompany, party, kind = 'custome
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="customer"
         title={name}
         description={[
           party?.gstin ? `GSTIN ${party.gstin}` : party?.gstRegistration || null,

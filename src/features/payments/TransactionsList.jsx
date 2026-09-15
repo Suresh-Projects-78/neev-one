@@ -431,6 +431,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView, 
 
   return (
     <DocumentListShell
+      entity="transfer"
       title={title}
       description={`View and manage all ${title.toLowerCase()}`}
       company={currentCompany}

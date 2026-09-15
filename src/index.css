@@ -255,17 +255,21 @@
   /* ---- page identity ---------------------------------------------------
      What area am I in. Worn by the icon beside a page title and nowhere else;
      the brand stays free to mean "do this". */
-  --id-sales: 63 100 140;          --id-sales-soft: 238 243 247;
-  --id-crm: 30 138 145;            --id-crm-soft: 234 246 246;
-  --id-purchase: 117 96 125;       --id-purchase-soft: 244 240 245;
-  --id-banking: 39 118 109;        --id-banking-soft: 234 245 243;
-  --id-inventory: 166 106 0;       --id-inventory-soft: 255 245 223;
-  --id-expense: 176 111 66;        --id-expense-soft: 248 240 234;
-  --id-accounting: 83 109 130;     --id-accounting-soft: 238 243 246;
-  --id-tax: 152 119 134;           --id-tax-soft: 246 241 243;
-  --id-org: 100 116 139;           --id-org-soft: 241 244 246;
-  --id-reports: 92 111 145;        --id-reports-soft: 238 242 247;
-  --id-settings: 113 113 122;      --id-settings-soft: 244 244 245;
+  /* Deepened to 6:1 on their own tile. At the first values four of the eleven
+     sat between 3.5 and 4.1 — fine for a filled shape, thin and washed for a
+     17px stroked glyph standing beside a 700-weight title. The hues are the
+     same; each is the step of it that carries. */
+  --id-sales: 59 94 132;           --id-sales-soft: 238 243 247;
+  --id-crm: 22 102 107;            --id-crm-soft: 234 246 246;
+  --id-purchase: 103 84 110;       --id-purchase-soft: 244 240 245;
+  --id-banking: 34 101 94;         --id-banking-soft: 234 245 243;
+  --id-inventory: 129 83 0;        --id-inventory-soft: 255 245 223;
+  --id-expense: 127 80 48;         --id-expense-soft: 248 240 234;
+  --id-accounting: 71 94 112;      --id-accounting-soft: 238 243 246;
+  --id-tax: 108 84 95;             --id-tax-soft: 246 241 243;
+  --id-org: 80 93 111;             --id-org-soft: 241 244 246;
+  --id-reports: 76 92 120;         --id-reports-soft: 238 242 247;
+  --id-settings: 92 92 99;         --id-settings-soft: 244 244 245;
 
   /* Segmented control. */
   --seg-bg: 243 245 244;

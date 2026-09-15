@@ -1855,6 +1855,7 @@ export const StockTransfersList = ({
 
   return (
     <DocumentListShell
+      entity="stockTransfer"
       title={mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}
       description={
         mode === 'branch'

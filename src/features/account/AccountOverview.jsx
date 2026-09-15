@@ -91,7 +91,7 @@ export default function AccountOverview({ currentCompany, onOpenCompany = null }
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Account" />
+        <PageHeader entity="company" title="Account" />
         <div className="ui-card p-4 text-sm ui-muted">Loading…</div>
       </div>
     );
@@ -100,7 +100,7 @@ export default function AccountOverview({ currentCompany, onOpenCompany = null }
   if (failed) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Account" />
+        <PageHeader entity="company" title="Account" />
         <div className="ui-card p-4 text-sm" style={{ color: 'rgb(var(--neg-ink))' }}>
           The account could not be read: {failed}
         </div>
@@ -115,6 +115,7 @@ export default function AccountOverview({ currentCompany, onOpenCompany = null }
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="company"
         title={data?.account?.name || 'Account'}
             />
 

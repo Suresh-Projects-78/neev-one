@@ -182,3 +182,39 @@ export const ENTITY_TONE = {
 
 export const iconFor = (entity) => ENTITY_ICON[entity] || null;
 export const toneFor = (entity) => ENTITY_TONE[entity] || 'settings';
+
+/**
+ * The icon a labelled field should carry, worked out from its own label.
+ *
+ * A generic picker cannot default an icon the way the customer picker can —
+ * the same component chooses a state, a period and a bank account — but every
+ * call site already states a label, and the label is what says which of those
+ * it is. Entity and reference fields get a mark; a period or a quarter does
+ * not, because a calendar glyph beside "Period" tells nobody anything.
+ */
+const FIELD_ICONS = [
+  [/^branch/i, 'branch'],
+  [/^warehouse/i, 'warehouse'],
+  [/(^|\b)(from |to )?account/i, 'account'],
+  [/^ledger/i, 'ledger'],
+  [/^(customer|party)/i, 'customer'],
+  [/^vendor|^supplier/i, 'vendor'],
+  [/^item|^product/i, 'item'],
+  [/^bank(?! account)/i, 'bank'],
+  [/^bank account/i, 'bankAccount'],
+  [/^(group|category)/i, 'category'],
+  [/^(tax|gst)/i, 'tax'],
+  [/^tds/i, 'tds'],
+  [/^currency/i, 'currency'],
+  [/^salesman|^salesperson/i, 'salesperson'],
+  [/^employee/i, 'employee'],
+  [/^company/i, 'company'],
+  [/^location|^place/i, 'location'],
+];
+
+export const fieldIconFor = (label) => {
+  const t = String(label || '').replace(/\s*\*$/, '').trim();
+  if (!t) return null;
+  for (const [re, key] of FIELD_ICONS) if (re.test(t)) return ENTITY_ICON[key] || null;
+  return null;
+};

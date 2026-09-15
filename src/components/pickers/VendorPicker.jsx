@@ -1,3 +1,4 @@
+import { ENTITY_ICON } from '../ui/entityIdentity';
 import React from 'react';
 import { Plus } from 'lucide-react';
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
@@ -852,7 +853,7 @@ const VendorPicker = ({
   showCreateButton = false,
   /* A lucide component drawn inside the trigger, before the name. Decorative:
      the label already says what the field is. */
-  icon: LeadingIcon = null,
+  icon: LeadingIcon = ENTITY_ICON.vendor,
 }) => {
   // Same pattern as the customer picker: server list, local fallback.
   const serverVendors = useServerMasters(
