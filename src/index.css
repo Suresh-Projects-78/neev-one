@@ -136,7 +136,10 @@
      All" that leaves the panel. Blue because a blue underlined-on-hover word
      is the one convention no user has to be taught, and because the accent is
      spoken for by the primary action. Not used for chrome. */
-  --link: 37 99 235;            /* #2563EB — 5.2:1 on white */
+  /* #375C50 — 6.6:1 on white. Blue was the one hue in the product that meant
+     nothing: not the brand, not money, not a status. A link is now graphite
+     with enough green in it to read as a link and not as body text. */
+  --link: 55 92 80;
   --link-hover: 29 78 216;      /* #1D4ED8 */
 
   /* The overview palette.
@@ -202,6 +205,29 @@
   --ov-violet: 124 58 237;--ov-violet-soft: 237 233 254; --ov-violet-wash: 240 236 255;
   --ov-red: 220 38 38;    --ov-red-soft: 254 226 226;    --ov-red-wash: 254 232 232;
   --ov-orange: 234 88 12; --ov-orange-soft: 255 237 213; --ov-orange-wash: 255 240 222;
+
+  /* ---- Graphite: the dashboard's own palette -----------------------------
+     A KPI row asks two things at once — tell these six apart, and stay out of
+     the way of the figures. Six saturated hues answered the first and lost the
+     second. These tints are 3–6% strength, so the row still reads as one
+     surface and the numbers on it are the loudest thing there.
+
+     Graphite is the structure colour and mauve the brand's second voice; both
+     are stated once here rather than at the call sites that use them. */
+  --graphite: 55 66 63;            /* #37423F — structure, primary control */
+  --mauve: 152 119 134;            /* #987786 — secondary accent, used sparingly */
+
+  --kpi-line: 55 66 63;            /* card hairline, drawn at 7% */
+  --kpi-sales-bg: 241 244 242;     --kpi-sales-ink: 55 66 63;
+  --kpi-invoices-bg: 240 246 242;  --kpi-invoices-ink: 52 112 93;
+  --kpi-received-bg: 247 244 236;  --kpi-received-ink: 136 115 63;
+  --kpi-due-bg: 246 241 243;       --kpi-due-ink: 152 119 134;
+  --kpi-overdue-bg: 251 241 239;   --kpi-overdue-ink: 181 71 60;
+  --kpi-credit-bg: 243 242 244;    --kpi-credit-ink: 112 85 120;
+
+  /* Segmented control, graphite rather than brand. */
+  --seg-bg: 243 245 244;
+  --seg-line: 225 228 226;
 
   /* Column hues — document numbers and party names get their own treatment so
      a row reads as fields, not prose.
@@ -371,7 +397,7 @@
   --info-soft: 39 39 42;
 
   /* Blue at this lightness is unreadable on a dark ground, so links lift. */
-  --link: 96 165 250;           /* #60A5FA — 7.4:1 on the dark card */
+  --link: 122 190 168;          /* #7ABEA8 — 8.1:1 on the dark card */
   --link-hover: 147 197 253;
 
   /* The overview palette, dark. The solids lift so they clear the dark ground;
@@ -412,6 +438,24 @@
   --ov-violet: 167 139 250;--ov-violet-soft: 44 34 72;  --ov-violet-wash: 27 23 40;
   --ov-red: 248 113 113;   --ov-red-soft: 62 26 26;     --ov-red-wash: 36 20 20;
   --ov-orange: 251 146 60; --ov-orange-soft: 61 34 12;  --ov-orange-wash: 35 24 15;
+
+  /* Graphite on a dark ground: the tints invert to near-black surfaces that
+     still differ from each other, and every ink lifts until it clears 4.5:1 on
+     the surface it actually sits on. Tokens only — no component is restyled
+     inside a theme block. */
+  --graphite: 209 214 211;
+  --mauve: 202 168 183;
+
+  --kpi-line: 226 232 229;
+  --kpi-sales-bg: 32 35 33;        --kpi-sales-ink: 203 211 207;
+  --kpi-invoices-bg: 27 36 32;     --kpi-invoices-ink: 110 195 168;
+  --kpi-received-bg: 37 34 26;     --kpi-received-ink: 214 183 111;
+  --kpi-due-bg: 37 32 35;          --kpi-due-ink: 202 168 183;
+  --kpi-overdue-bg: 41 30 28;      --kpi-overdue-ink: 240 145 134;
+  --kpi-credit-bg: 34 31 36;       --kpi-credit-ink: 190 160 199;
+
+  --seg-bg: 38 35 32;
+  --seg-line: 67 62 56;
 
   --col-doc: 214 211 209;   /* stone-300 — an identifier, not a flag */
   --col-party: 94 234 212;  /* teal-300 ~11:1 */

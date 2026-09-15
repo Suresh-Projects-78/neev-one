@@ -39,6 +39,14 @@ const build = () => ({
   ovViolet: readVar('--ov-violet', '#7C3AED'),
   ovRed: readVar('--ov-red', '#DC2626'),
   ovOrange: readVar('--ov-orange', '#EA580C'),
+  /* Graphite and its second voice. An overview chart is drawn in the colours
+     of the cards above it, and on the dashboards those are no longer the
+     categorical six. */
+  graphite: readVar('--graphite', '#37423F'),
+  mauve: readVar('--mauve', '#987786'),
+  kpiInvoices: readVar('--kpi-invoices-ink', '#34705D'),
+  kpiReceived: readVar('--kpi-received-ink', '#88733F'),
+  kpiCredit: readVar('--kpi-credit-ink', '#705578'),
 });
 
 /**

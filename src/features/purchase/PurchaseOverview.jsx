@@ -315,11 +315,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           where Home keeps its search. */}
       <HeroBand
         title="Purchase Overview"
-        subtitle={
-          <p className="ui-t-body" style={{ color: 'rgb(var(--fg-muted))' }}>
-            Get a snapshot of your spending, payables and purchase returns.
-          </p>
-        }
+        /* No caption — see the note on Panel. */
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
           <div className="relative">
@@ -427,7 +423,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           so their arrows are coloured by meaning rather than direction. */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <OverviewCard
-          tone="blue"
+          tone="sales"
           icon={BarChart3}
           label="Total Purchases"
           value={money(current.purchases)}
@@ -435,21 +431,21 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           deltaGoodWhenUp={false}
         />
         <OverviewCard
-          tone="green"
+          tone="invoices"
           icon={FileText}
           label="Bills"
           value={String(current.count)}
           delta={delta(current.count, previous.count)}
         />
         <OverviewCard
-          tone="amber"
+          tone="received"
           icon={Wallet}
           label="Amount Paid"
           value={money(current.paid)}
           delta={delta(current.paid, previous.paid)}
         />
         <OverviewCard
-          tone="violet"
+          tone="due"
           icon={Clock}
           label="Payables"
           value={money(current.payable)}
@@ -457,7 +453,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           deltaGoodWhenUp={false}
         />
         <OverviewCard
-          tone="red"
+          tone="overdue"
           icon={AlertTriangle}
           label="Overdue"
           value={money(current.overdue)}
@@ -465,7 +461,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           deltaGoodWhenUp={false}
         />
         <OverviewCard
-          tone="blue"
+          tone="credit"
           icon={Undo2}
           label="Purchase Returns"
           value={money(current.returned)}
@@ -477,7 +473,6 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
       <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Panel
           title="Purchase Performance"
-          subtitle="What you were billed, and how much of it you have paid."
           control={
             <Segmented
               ariaLabel="Grain"
@@ -522,7 +517,6 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
 
         <Panel
           title="Purchase Breakdowns"
-          subtitle="Where the money went in this period."
           control={
             <Segmented
               ariaLabel="Breakdown"
@@ -576,7 +570,6 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
       <div className="grid gap-4 items-stretch lg:grid-cols-2">
         <Panel
           title="Recent Bills"
-          subtitle="The last five, whatever period is chosen."
           bodyClass="justify-start"
           control={<PanelLink onClick={() => go('bills')}>View all</PanelLink>}
         >
@@ -614,7 +607,6 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
 
         <Panel
           title="Recent Purchase Returns"
-          subtitle="Debit notes raised against your vendors."
           bodyClass="justify-start"
           control={<PanelLink onClick={() => go('debitNotes')}>View all</PanelLink>}
         >

@@ -327,7 +327,9 @@ const SalesOverview = ({
     }
 
     const sorted = [...totals.entries()].sort((a, b) => b[1] - a[1]);
-    const palette = ['ov-blue', 'ov-green', 'ov-amber', 'ov-violet'];
+    /* Graphite first, then its own family — a breakdown is a comparison of
+       sizes, not six unrelated flags. */
+    const palette = ['graphite', 'kpi-invoices-ink', 'kpi-received-ink', 'mauve'];
     const top = sorted.slice(0, 4).map(([name, value], i) => ({
       name,
       value,
@@ -451,17 +453,19 @@ const SalesOverview = ({
   ];
 
   return (
-    <div className="space-y-6">
+    /* 16 between blocks, not 24. A dashboard is read by moving the eye down a
+       column of related things; at 24 the KPI row, the charts and the tables
+       read as three separate pages stacked, and a third of the useful content
+       sat below the fold. */
+    <div className="space-y-4">
       {/* The same band Home opens with. What differs is only what goes
           in it: the module names itself, and the controls that govern
           every figure below sit where Home keeps its search. */}
       <HeroBand
         title="Sales Overview"
-        subtitle={
-          <p className="ui-t-body" style={{ color: 'rgb(var(--fg-muted))' }}>
-            Get a snapshot of your sales performance, receivables and credit notes.
-          </p>
-        }
+        /* No caption. The heading says what the screen is, and the sentence
+           under it repeated that back while costing a line across the top of
+           every module overview. */
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
           <div className="relative">
@@ -562,32 +566,36 @@ const SalesOverview = ({
         }
       />
 
-      {/* The six figures. Overdue and credit notes read as bad-when-rising, so
-          their arrows are coloured by meaning rather than direction. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      {/* The five figures somebody opens this screen for. Credit notes is a
+          month-end number rather than a daily one, so it reads below with the
+          rest of the analysis instead of taking a sixth of the row.
+
+          Overdue and receivables are bad-when-rising, so their arrows are
+          coloured by what the movement means, not which way it points. */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <OverviewCard
-          tone="blue"
+          tone="sales"
           icon={BarChart3}
           label="Total Sales"
           value={money(current.sales)}
           delta={delta(current.sales, previous.sales)}
         />
         <OverviewCard
-          tone="green"
+          tone="invoices"
           icon={FileText}
           label="Invoices"
           value={String(current.count)}
           delta={delta(current.count, previous.count)}
         />
         <OverviewCard
-          tone="amber"
+          tone="received"
           icon={Wallet}
           label="Amount Received"
           value={money(current.received)}
           delta={delta(current.received, previous.received)}
         />
         <OverviewCard
-          tone="violet"
+          tone="due"
           icon={Clock}
           label="Receivables"
           value={money(current.receivable)}
@@ -595,26 +603,18 @@ const SalesOverview = ({
           deltaGoodWhenUp={false}
         />
         <OverviewCard
-          tone="red"
+          tone="overdue"
           icon={AlertTriangle}
           label="Overdue"
           value={money(current.overdue)}
           delta={delta(current.overdue, previous.overdue)}
           deltaGoodWhenUp={false}
         />
-        <OverviewCard
-          tone="orange"
-          icon={FileText}
-          label="Credit Notes"
-          value={money(current.credit)}
-          note={`${current.creditCount} credit note${current.creditCount === 1 ? '' : 's'} this period`}
-        />
       </div>
 
       <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Panel
           title="Sales Performance"
-          subtitle="Track your invoiced, received and outstanding amounts."
           control={
             <Segmented
               ariaLabel="Chart grain"
@@ -630,18 +630,18 @@ const SalesOverview = ({
         >
           {performance.length && periodHasValue ? (
             <>
-              <Suspense fallback={<ChartFallback height={300} />}>
+              <Suspense fallback={<ChartFallback height={228} />}>
                 <LazySeriesBars
                   data={performance}
-                  height={300}
+                  height={228}
                   formatter={(v) => formatMoneyCompact(v, currentCompany)}
                 />
               </Suspense>
               <div className="flex items-center justify-center gap-6 mt-2 text-sm">
                 {[
-                  { label: 'Invoiced', color: 'rgb(var(--ov-blue))' },
-                  { label: 'Received', color: 'rgb(var(--ov-green))' },
-                  { label: 'Outstanding', color: 'rgb(var(--brand))' },
+                  { label: 'Invoiced', color: 'rgb(var(--graphite))' },
+                  { label: 'Received', color: 'rgb(var(--kpi-invoices-ink))' },
+                  { label: 'Outstanding', color: 'rgb(var(--mauve))' },
                 ].map((l) => (
                   <span key={l.label} className="inline-flex items-center gap-2 ui-muted">
                     <span
@@ -655,13 +655,12 @@ const SalesOverview = ({
               </div>
             </>
           ) : (
-            <EmptyPanel height={300} {...(emptyReason || { title: 'Nothing billed in this period' })} />
+            <EmptyPanel height={228} {...(emptyReason || { title: 'Nothing billed in this period' })} />
           )}
         </Panel>
 
         <Panel
           title="Sales Breakdowns"
-          subtitle="View your sales from different perspectives."
           control={
             <Segmented
               ariaLabel="Breakdown"
@@ -707,7 +706,7 @@ const SalesOverview = ({
               </ul>
             </div>
           ) : (
-            <EmptyPanel height={300} {...(emptyReason || { title: 'Nothing billed in this period' })} />
+            <EmptyPanel height={228} {...(emptyReason || { title: 'Nothing billed in this period' })} />
           )}
         </Panel>
       </div>
@@ -718,7 +717,6 @@ const SalesOverview = ({
       <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_15.5rem]">
         <Panel
           title="Recent Invoices"
-          subtitle="Your latest sales invoices."
           bodyClass="justify-start"
           control={<PanelLink onClick={() => go('invoices')}>View All</PanelLink>}
         >
@@ -769,7 +767,6 @@ const SalesOverview = ({
 
         <Panel
           title="Recent Credit Notes"
-          subtitle="Your latest credit notes."
           bodyClass="justify-start"
           control={<PanelLink onClick={() => go('creditNotes')}>View All</PanelLink>}
         >
@@ -815,7 +812,7 @@ const SalesOverview = ({
           )}
         </Panel>
 
-        <Panel title="Quick Actions" subtitle="Create and manage your sales transactions." bodyClass="justify-start">
+        <Panel title="Quick Actions" bodyClass="justify-start">
           {/*
             Five stacked actions in a narrow column had 10px between them and a
             label that wrapped on the two longest, which is what made this read
@@ -832,18 +829,22 @@ const SalesOverview = ({
                 type="button"
                 onClick={a.onClick}
                 className="w-full rounded-lg ps-2 pe-3 py-2 text-sm font-semibold text-left flex items-center gap-2.5 min-h-[2.75rem]"
+                /* Graphite, not the brand. Five brand-coloured buttons stacked
+                   in a column made a list of ordinary shortcuts the loudest
+                   thing on a page of figures, and put four more primaries on a
+                   screen that already has one. */
                 style={
                   a.primary
-                    ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
+                    ? { backgroundColor: 'rgb(var(--graphite))', color: 'rgb(var(--surface))' }
                     : a.outlined
-                      ? { border: '1px solid rgb(var(--brand) / 0.4)', color: 'rgb(var(--brand-ink))' }
-                      : { backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }
+                      ? { border: '1px solid rgb(var(--border-strong))', color: 'rgb(var(--fg))' }
+                      : { backgroundColor: 'rgb(var(--graphite) / 0.06)', color: 'rgb(var(--fg))' }
                 }
               >
                 <span
                   className="h-7 w-7 rounded-md grid place-items-center flex-shrink-0"
                   style={{
-                    backgroundColor: a.primary ? 'rgb(var(--on-brand) / 0.18)' : 'rgb(var(--brand) / 0.12)',
+                    backgroundColor: a.primary ? 'rgb(var(--surface) / 0.18)' : 'rgb(var(--graphite) / 0.10)',
                   }}
                   aria-hidden="true"
                 >

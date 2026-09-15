@@ -101,12 +101,19 @@ export const shortDate = (v) => {
 };
 
 /**
- * One of the six figures across the top.
+ * One of the figures across the top.
  *
- * Hue rather than position tells them apart — six labels is more than anyone
- * reads before finding the number they came for. The delta is the point of the
- * card as much as the figure: a receivables number means nothing until you know
- * whether it is going up.
+ * Tint rather than position tells them apart, at three to six per cent — enough
+ * that the eye can go back to the same card twice, not enough to compete with
+ * the figure on it. Six saturated hues did the first job and lost the second:
+ * the row read as the loudest thing on a page whose whole point is the numbers
+ * underneath it.
+ *
+ * `tone` names the metric, not a colour, so the card cannot be tinted by
+ * whoever places it — overdue is the red one wherever it appears.
+ *
+ * The delta is the point of the card as much as the figure: a receivables
+ * number means nothing until you know which way it is going.
  */
 export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodWhenUp = true, note = '' }) => {
   const up = Number(delta) > 0;
@@ -117,49 +124,84 @@ export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, del
 
   return (
     <div
-      className="rounded-xl p-4"
+      className="flex flex-col"
       style={{
-        backgroundColor: `rgb(var(--ov-${tone}-wash))`,
-        border: `1px solid rgb(var(--ov-${tone}-soft))`,
+        backgroundColor: `rgb(var(--kpi-${tone}-bg))`,
+        border: '1px solid rgb(var(--kpi-line) / 0.07)',
+        borderRadius: 10,
+        padding: '14px 16px',
+        minHeight: 82,
       }}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-2">
         <span
-          className="h-9 w-9 rounded-lg grid place-items-center flex-shrink-0"
-          style={{ backgroundColor: `rgb(var(--ov-${tone}-soft))`, color: `rgb(var(--ov-${tone}))` }}
+          className="grid place-items-center flex-shrink-0"
+          style={{
+            height: 28,
+            width: 28,
+            borderRadius: 8,
+            backgroundColor: `rgb(var(--kpi-${tone}-ink) / 0.10)`,
+            color: `rgb(var(--kpi-${tone}-ink))`,
+          }}
           aria-hidden="true"
         >
-          <Icon size={17} />
+          <Icon size={16} />
         </span>
-        <span className="text-sm" style={{ color: 'rgb(var(--fg-muted))' }}>
+        <span
+          className="truncate"
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            lineHeight: '16px',
+            letterSpacing: '0.035em',
+            textTransform: 'uppercase',
+            color: 'rgb(var(--fg-muted))',
+          }}
+        >
           {label}
         </span>
       </div>
 
-      <div className="ui-money-lg mt-2.5">{value}</div>
+      {/*
+        The figure and its movement share a line.
 
-      <div className="flex items-center gap-1.5 mt-1.5 text-xs min-w-0">
+        Stacked, the card cannot be the 82–88px it is meant to be: 28 of icon
+        row, 26 of figure and 16 of trend is 70, and 14 of padding top and
+        bottom carries it past 100 before a border is drawn. Every one of those
+        numbers is load-bearing — the figure is the point of the card and the
+        icon has to stay a touchable size — so the line that can move is the
+        one that does. The movement sits at the end of the figure's own row,
+        where it reads as belonging to it rather than as a third fact.
+      */}
+      <div className="mt-1 flex items-baseline justify-between gap-2">
+        <div
+          className="truncate"
+          style={{ fontSize: 20, fontWeight: 650, lineHeight: '26px', fontVariantNumeric: 'tabular-nums' }}
+          title={typeof value === 'string' ? value : undefined}
+        >
+          {value}
+        </div>
+
+        <div
+          className="flex items-center gap-1 shrink-0"
+          style={{ fontSize: 11, fontWeight: 500, lineHeight: '16px' }}
+        >
         {flat ? (
-          /* One line, and the muted value rather than the subtle one: on a
-             tinted card `--fg-subtle` measures 4.45:1, just under the 4.5 a
-             12px line needs. "No change on the previous period" also wrapped
-             to two lines on every card that had nothing to compare, which made
-             four of the six tiles taller than the two that did. */
-          <span className="ui-muted truncate">{note || 'No change'}</span>
+          /* The muted value rather than the subtle one: on a tinted card
+             `--fg-subtle` measures 4.45:1, just under the 4.5 an 11px line
+             needs. */
+          <span className="ui-muted truncate" title={note || undefined}>{note || '—'}</span>
         ) : (
-          <>
-            <span
-              className="inline-flex items-center gap-0.5 font-medium"
-              style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
-            >
-              {up ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-              {Math.abs(Number(delta)).toFixed(1)}%
-            </span>
-            {/* Muted, not subtle: on the deepened card tints `--fg-subtle`
-                measures 4.40:1, under the 4.5 a 12px line needs. */}
-            <span className="ui-muted">vs previous period</span>
-          </>
+          <span
+            className="inline-flex items-center gap-0.5 font-medium"
+            style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
+            title="Against the previous period"
+          >
+            {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+            {Math.abs(Number(delta)).toFixed(1)}%
+          </span>
         )}
+        </div>
       </div>
     </div>
   );
@@ -167,11 +209,20 @@ export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, del
 
 /** Two or three choices, one of them on. */
 export const Segmented = ({ options, value, onChange, ariaLabel }) => (
+  /* Graphite, not the brand. Which grain a chart is drawn at is not an action
+     anyone takes twice a day, and painting it the same colour as "New Invoice"
+     put a second primary on the page. */
   <div
-    className="inline-flex items-center p-0.5 rounded-lg"
+    className="inline-flex items-center"
     role="tablist"
     aria-label={ariaLabel}
-    style={{ backgroundColor: 'rgb(var(--surface))', border: '1px solid rgb(var(--border-strong))' }}
+    style={{
+      backgroundColor: 'rgb(var(--seg-bg))',
+      border: '1px solid rgb(var(--seg-line))',
+      borderRadius: 8,
+      padding: 2,
+      height: 32,
+    }}
   >
     {options.map((o) => {
       const on = o.value === value;
@@ -182,12 +233,17 @@ export const Segmented = ({ options, value, onChange, ariaLabel }) => (
           role="tab"
           aria-selected={on}
           onClick={() => onChange(o.value)}
-          className="px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
-          style={
-            on
-              ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
-              : { color: 'rgb(var(--fg-muted))' }
-          }
+          className="transition-colors"
+          style={{
+            height: 26,
+            padding: '0 12px',
+            borderRadius: 6,
+            fontSize: 12,
+            fontWeight: 550,
+            ...(on
+              ? { backgroundColor: 'rgb(var(--graphite))', color: 'rgb(var(--surface))' }
+              : { backgroundColor: 'transparent', color: 'rgb(var(--fg-muted))' }),
+          }}
         >
           {o.label}
         </button>
@@ -196,14 +252,24 @@ export const Segmented = ({ options, value, onChange, ariaLabel }) => (
   </div>
 );
 
-/** A panel with a heading, a subtitle and a control on the right. */
+/**
+ * A panel with a heading and a control on the same row.
+ *
+ * `subtitle` is accepted and ignored. A sentence under "Recent Invoices"
+ * saying it is your latest sales invoices tells a reader what the heading
+ * already told them, and it cost a line of vertical space on every panel of
+ * every screen. The prop stays so no caller breaks; the sentence does not
+ * render. Where a panel genuinely needs to explain something — an empty state,
+ * a warning, a rule about how a figure is worked out — that copy belongs with
+ * the thing it explains, not under the title.
+ */
+// eslint-disable-next-line no-unused-vars -- accepted and deliberately not rendered; see above.
 export const Panel = ({ title, subtitle, control, children, className = '', bodyClass = 'justify-center' }) => (
-  <section className={`ui-card p-5 min-w-0 flex flex-col ${className}`}>
-    <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
-      <div className="min-w-0">
-        <h3 className="ui-t-sec">{title}</h3>
-        {subtitle ? <p className="text-sm ui-muted mt-0.5">{subtitle}</p> : null}
-      </div>
+  <section className={`ui-card min-w-0 flex flex-col ${className}`} style={{ padding: 16 }}>
+    <div className="flex items-center justify-between gap-3 flex-wrap" style={{ minHeight: 32, marginBottom: 12 }}>
+      <h3 className="min-w-0 truncate" style={{ fontSize: 15, fontWeight: 600, lineHeight: '20px' }}>
+        {title}
+      </h3>
       {control}
     </div>
     {/* Fills the card, so two panels sharing a row end the same height. A
@@ -222,11 +288,13 @@ export const Panel = ({ title, subtitle, control, children, className = '', body
  * chart that failed rather than a window with nothing in it. So the reason is
  * stated, and where the data actually is, the way to it is one button.
  */
-export const EmptyPanel = ({ height = 240, title, detail = '', action = null }) => (
-  <div className="flex flex-col items-center justify-center text-center gap-2 px-4" style={{ minHeight: height }}>
-    <Illustration kind="filtered" size={72} />
-    <p className="ui-t-sec mt-1">{title}</p>
-    {detail ? <p className="ui-muted text-sm max-w-sm">{detail}</p> : null}
+export const EmptyPanel = ({ height = 180, title, detail = '', action = null }) => (
+  /* Small enough that an empty period does not cost more of the page than a
+     full one. The illustration was 72px inside a 240px well; both come down. */
+  <div className="flex flex-col items-center justify-center text-center gap-1.5 px-4" style={{ minHeight: height }}>
+    <Illustration kind="filtered" size={48} />
+    <p style={{ fontSize: 14, fontWeight: 600 }}>{title}</p>
+    {detail ? <p className="ui-muted text-xs max-w-sm">{detail}</p> : null}
     {action ? (
       <button type="button" onClick={action.onClick} className="ui-btn ui-btn-secondary mt-1">
         {action.label}

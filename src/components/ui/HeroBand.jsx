@@ -32,7 +32,11 @@ export default function HeroBand({
         in its bottom one — a strip of empty ground between Home's first words
         and the work below them.
       */
-      className={`ui-hero-ground relative pt-1 ${art ? 'lg:min-h-[11.5rem]' : ''}`}
+      /* The tinted ground belongs to Home, which has the drawing and the
+         greeting. A module overview is a page of figures: it takes the band's
+         shape and spacing and leaves the wash behind, so nothing on it is
+         coloured except the things that mean something. */
+      className={`relative pt-1 ${art ? 'ui-hero-ground lg:min-h-[11.5rem]' : ''}`}
       aria-label="Overview"
     >
       {/* Behind the words, never over them: it ends before the text does at
@@ -56,7 +60,7 @@ export default function HeroBand({
         </div>
       ) : null}
 
-      <div className="relative flex items-start justify-between gap-6 flex-wrap">
+      <div className={`relative flex justify-between gap-6 flex-wrap ${art ? 'items-start' : 'items-center'}`}>
         <div className="min-w-0">
           {eyebrow ? <p className="ui-t-body" style={{ color: 'rgb(var(--fg-muted))' }}>{eyebrow}</p> : null}
           {/* The name is the loudest thing on Home and a heading everywhere
@@ -66,7 +70,7 @@ export default function HeroBand({
             style={
               art
                 ? { fontSize: '2.25rem', lineHeight: '2.625rem', letterSpacing: '-0.02em' }
-                : { fontSize: '1.75rem', lineHeight: '2.125rem', letterSpacing: '-0.015em' }
+                : { fontSize: 26, fontWeight: 700, lineHeight: '32px', letterSpacing: '-0.025em' }
             }
           >
             {title}

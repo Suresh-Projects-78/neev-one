@@ -388,7 +388,10 @@ export function SeriesBars({
   const option = useMemo(
     () => ({
       ...common(t),
-      color: [t.ovBlue, t.ovGreen, t.brand],
+      /* Graphite, reconciled green, mauve. The third series was the brand
+         orange, which made the line somebody reads last the loudest mark on
+         the chart. */
+      color: [t.graphite, t.kpiInvoices, t.mauve],
       grid: { left: 8, right: 8, top: 16, bottom: 4, containLabel: true },
       legend: { show: false },
       tooltip: {
