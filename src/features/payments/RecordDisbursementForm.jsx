@@ -5,6 +5,9 @@ import { notify } from '../../components/ui/notify';
 import { blockIfClosed } from '../../utils/bookClose';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
+import AllocationTable from './AllocationTable';
+import { allocationError, allocationJournalLines, emptyAllocationRow, usableRows } from './allocationLines';
+import { postJournalToLedger } from '../../utils/journalSync';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createPayment } from '../../api/payments';
@@ -140,6 +143,9 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
   const [allocations, setAllocations] = useState(() => ({}));
+  /* Where the money goes when it is not a bill: GST, a late fee, a bank
+     charge, an employee reimbursement. One row per account. */
+  const [ledgerRows, setLedgerRows] = useState(() => [emptyAllocationRow()]);
 
   const bills = useMemo(() => {
     return safeArray(db.bills)
@@ -307,6 +313,20 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       .filter((a) => a.tdsSide);
   }, [db?.chartOfAccounts, db?.accountGroups, currentCompany?.id]);
 
+  /*
+   * What an allocation row may point at: any active ledger except the account
+   * the money is leaving from — crediting and debiting the same bank in one
+   * payment is a no-op somebody has to unpick later.
+   */
+  const allocationLedgers = useMemo(() => {
+    const cid = Number(currentCompany?.id);
+    return (db?.chartOfAccounts || [])
+      .filter((a) => Number(a?.companyId) === cid && a?.isActive !== false)
+      .filter((a) => String(a.id) !== String(ledgerAccountId))
+      .map((a) => ({ id: a.id, name: a.name }))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }, [db?.chartOfAccounts, currentCompany?.id, ledgerAccountId]);
+
   const vendorRecord = useMemo(
     () => (db?.vendors || []).find((v) => Number(v.id) === Number(formData.vendorId)) || null,
     [db?.vendors, formData.vendorId]
@@ -400,7 +420,10 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     // specific document, so they keep their toast.
     fieldErrors.reset();
     fieldErrors.check('amount', Number.isFinite(amount) && amount > 0, 'Enter an amount greater than zero');
-    fieldErrors.check('vendorId', Number.isFinite(vendorIdNum) && !!vendorIdNum, 'Vendor is required');
+    /* A payee is not required. A GST challan, a bank charge and a salary
+       advance are all payments with no party on the vendor master, and the
+       form used to refuse every one of them. */
+
     if (!hideMode) {
       fieldErrors.require('ledgerAccountId', ledgerAccountId, 'Choose where the money was paid from');
     }
@@ -424,6 +447,24 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
 
     if (computed.allocated > amount + 0.0001) {
       notify.error('Total allocated cannot be more than payment amount');
+      return;
+    }
+
+    /*
+     * And the entry has to balance before it is written, not after.
+     *
+     * Bills already settled on this form count toward the total, so a payment
+     * that clears ₹10,000 of bills and ₹500 of bank charge is one record with
+     * two kinds of line, not a record plus a mystery.
+     */
+    const allocProblem = allocationError({
+      rows: ledgerRows,
+      documentTotal: computed.allocated,
+      amount,
+      noun: 'payment',
+    });
+    if (allocProblem) {
+      notify.error(allocProblem);
       return;
     }
 
@@ -581,9 +622,52 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       bankCharges: computed.bankCharges || undefined,
       otherCharges: computed.otherCharges || undefined,
       netCash: computed.netCash,
+      /* Kept on the record, so the entry can be read back and the bank
+         transaction that produced it can be matched to its own lines. */
+      ledgerAllocations: usableRows(ledgerRows).map((r) => ({
+        ledgerId: String(r.ledgerId),
+        amount: round2(r.amount),
+        description: String(r.description || '').trim() || undefined,
+      })),
       notes: formData.notes,
       createdAt: new Date().toISOString(),
     };
+
+    /*
+     * The ledger side of a payment that is not only bills.
+     *
+     * Dr every allocated account, Cr the bank once — the same engine every
+     * other entry goes through. The bill lines are already posted by the
+     * party's own settlement, so only the ledger rows are written here.
+     */
+    let allocationJournal = {};
+    const ledgerLines = usableRows(ledgerRows);
+    if (ledgerLines.length && String(ledgerAccountId || '').trim()) {
+      const accounts = safeArray(db.chartOfAccounts).filter((a) => Number(a.companyId) === Number(companyId));
+      const nameOf = (id) => accounts.find((a) => String(a.id) === String(id))?.name || '';
+      const lines = allocationJournalLines({
+        rows: ledgerLines,
+        direction: 'OUT',
+        bankLedgerId: String(ledgerAccountId).trim(),
+        amount: ledgerLines.reduce((t, r) => t + round2(r.amount), 0),
+        nameOf,
+      });
+      try {
+        allocationJournal = await postJournalToLedger({
+          chartRows: accounts,
+          entry: {
+            date: String(formData.date).slice(0, 10),
+            narration: `Payment ${paymentNo}`,
+            lines,
+          },
+        });
+      } catch {
+        /* The payment still stands locally; the entry retries with the rest of
+           the book. Losing the record because the ledger was unreachable is
+           the worse failure. */
+        allocationJournal = {};
+      }
+    }
 
     const nowIso = new Date().toISOString();
 
@@ -670,6 +754,9 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
 
     setDb({
       ...db,
+      /* The allocation's own entry, merged with whatever else the save
+         writes — journalEntries and the chart rows it may have created. */
+      ...allocationJournal,
       tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : db.tdsTransactions,
       bills: nextBills,
       expenses: nextExpenses,
@@ -786,7 +873,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
               setFormData((p) => ({ ...p, vendorId }));
               setAllocations({});
             }}
-            label="Supplier"
+            label="Payee / Party"
           />
           <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
         </div>
@@ -971,28 +1058,25 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
           </div>
           ) : null}
 
-          {[
-            { k: 'bankCharges', label: 'Bank charges', hint: 'What the bank took for the transfer.' },
-            { k: 'otherCharges', label: 'Other deductions', hint: 'Anything else withheld.' },
-          ].map((f) => (
-            <div key={f.k} className="min-w-0">
-              <label className="ui-label" htmlFor={`pay-${f.k}`}>{f.label}</label>
-              <input
-                id={`pay-${f.k}`}
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData[f.k]}
-                onChange={(e) => setFormData((p) => ({ ...p, [f.k]: e.target.value }))}
-                className="ui-input ui-money w-full"
-                placeholder="0.00"
-              />
-              <p className="ui-caption mt-1">{f.hint}</p>
-            </div>
-          ))}
-
+          {/* Bank charges and "other deductions" were two boxes that reduced
+              the cash and posted nowhere a ledger could find them. They are
+              allocation rows now, like everything else that is not a bill —
+              pick the expense account and the amount, and the entry says what
+              the money was. */}
         </div>
       </div>
+
+      <AllocationTable
+        rows={ledgerRows}
+        onChange={setLedgerRows}
+        ledgerOptions={allocationLedgers}
+        amount={Number(formData.amount) || 0}
+        documentTotal={computed.allocated}
+        documentLabel="Bills settled"
+        heading="Payment allocation"
+        noun="payment"
+        money={(v) => formatMoney(v, currentCompany)}
+      />
 
 
       {/*

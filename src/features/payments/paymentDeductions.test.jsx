@@ -128,12 +128,24 @@ describe('what is held back', () => {
     renderForm();
     type(/^Amount paid/, '10000');
     type('TDS deduction', '1000');
-    type('Bank charges', '50');
 
     const summary = screen.getByRole('region', { name: 'Payment summary' });
-    /* 10,000 settles the bill; 1,050 is held back; 8,950 leaves the bank. */
-    expect(summary.textContent).toMatch(/1,050/);
-    expect(summary.textContent).toMatch(/8,950/);
+    /* 10,000 settles the bill; 1,000 is held back; 9,000 leaves the bank. */
+    expect(summary.textContent).toMatch(/1,000/);
+    expect(summary.textContent).toMatch(/9,000/);
+  });
+
+  /*
+   * Bank charges used to be a box beside TDS that reduced the cash and posted
+   * to nothing. It is an allocation row now, so the charge names the expense
+   * account it belongs to and the entry says what the money was.
+   */
+  it('takes a bank charge as an allocation row rather than a deduction box', () => {
+    renderForm();
+    expect(screen.queryByLabelText('Bank charges')).toBeNull();
+    expect(screen.queryByLabelText('Other deductions')).toBeNull();
+    expect(screen.getByLabelText(/Account, allocation row 1/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Amount, allocation row 1/i)).toBeInTheDocument();
   });
 
   it('says the unallocated part is an advance', () => {
@@ -155,7 +167,7 @@ describe('what is held back', () => {
   it('keeps the gross and the net apart', () => {
     renderForm();
     type(/^Amount paid/, '5000');
-    type('Other deductions', '500');
+    type('TDS deduction', '500');
     const summary = screen.getByRole('region', { name: 'Payment summary' });
     /* Both figures on screen: one settles the bills, the other moves. */
     expect(summary.textContent).toMatch(/5,000/);

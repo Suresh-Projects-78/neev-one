@@ -91,7 +91,7 @@ const selectBill = async (user, number) => {
   await user.click(row.querySelector('input[type="checkbox"]'));
   /* The amount paid is its own field — a selected bill proposes it, and the
      form will not record a payment of nothing. */
-  fireEvent.change(screen.getByLabelText(/Amount paid|Payment amount|Amount/i), { target: { value: '118000' } });
+  fireEvent.change(screen.getByLabelText(/Amount paid/i), { target: { value: '118000' } });
 };
 
 describe('what the payment offers to deduct', () => {
@@ -147,7 +147,7 @@ describe('what the payment offers to deduct', () => {
     await pickVendor(user);
     const row = (await screen.findByText('BILL-2')).closest('tr');
     await user.click(row.querySelector('input[type="checkbox"]'));
-    fireEvent.change(screen.getByLabelText(/Amount paid|Payment amount|Amount/i), { target: { value: '116000' } });
+    fireEvent.change(screen.getByLabelText(/Amount paid/i), { target: { value: '116000' } });
 
     fireEvent.change(screen.getByLabelText('TDS deduction'), { target: { value: '2000' } });
     fireEvent.submit(document.querySelector('form'));
@@ -168,7 +168,7 @@ describe('what the payment offers to deduct', () => {
     const row = (await screen.findByText('BILL-2')).closest('tr');
     expect(row.textContent).toMatch(/1,16,000\.00/);
     await user.click(row.querySelector('input[type="checkbox"]'));
-    fireEvent.change(screen.getByLabelText(/Amount paid|Payment amount|Amount/i), { target: { value: '116000' } });
+    fireEvent.change(screen.getByLabelText(/Amount paid/i), { target: { value: '116000' } });
     fireEvent.submit(document.querySelector('form'));
 
     await waitFor(() => expect(saved).toHaveBeenCalled());
