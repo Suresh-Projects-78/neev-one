@@ -91,7 +91,7 @@ export default function Drawer({ open, onClose, title, description = '', childre
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`ui-surface h-full ${widthClass} max-w-full shadow-xl flex flex-col ${closing ? 'ui-out-right' : 'ui-in-right'}`}
+        className={`ui-surface h-full ${widthClass} max-w-full shadow-xl flex flex-col ${closing ? 'ui-out-edge' : 'ui-in-right'}`}
         onAnimationEnd={(e) => {
           if (closing && e.target === e.currentTarget) onClose?.();
         }}
