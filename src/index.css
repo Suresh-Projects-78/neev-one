@@ -42,6 +42,16 @@
   --fg-muted: 75 85 99;         /* #4B5563 — 7.6:1 on white; #6B7280 read as washed out at 13-14px */
   --fg-subtle: 107 114 128;     /* #6B7280 — 4.83:1, the quietest tier that is still AA */
 
+  /* The rail's own text.
+     `--fg` is #111827, a cold blue-black, and against a warm page ground it
+     reads as harsh rather than as strong — the eleven module names looked
+     stamped on. These are the same two tiers at the same contrast, carrying
+     the ground's warmth instead of fighting it. Scoped to the rail because
+     the document surfaces genuinely are cool white and want the cold black. */
+  --nav-fg: 38 38 31;           /* #26261F — 14.4:1 on the rail */
+  --nav-fg-muted: 107 107 99;   /* #6B6B63 — 5.3:1, the child tier */
+  --nav-fg-subtle: 138 138 128; /* #8A8A80 — the child's bullet glyph */
+
   /* Brand — orange. The primary action and the active state. */
   --brand: 255 107 0;           /* #FF6B00 — action, selection, focus. Nothing else. */
   --brand-deep: 194 65 12;      /* #C2410C — the money-out series; same family, unmistakably not the brand bar */
@@ -385,6 +395,11 @@
   --fg: 241 245 249;
   --fg-muted: 148 163 184;
   --fg-subtle: 161 161 170;   /* 6.5:1 on the dark card — was 3.72:1 */
+
+  /* Same two tiers, warmed, against the dark rail. */
+  --nav-fg: 235 235 230;
+  --nav-fg-muted: 150 150 143;
+  --nav-fg-subtle: 128 128 121;
 
   /* Orange lifts slightly in dark so it keeps its contrast against a dark
      surface without turning fluorescent. */
@@ -792,7 +807,7 @@
     font-size: 0.875rem;
     line-height: 1.25rem;
     font-weight: 500;
-    color: rgb(var(--fg-muted));
+    color: rgb(var(--nav-fg-muted));
     text-align: left;
     cursor: pointer;
     transition: background-color var(--dur-surface) ease, color var(--dur-surface) ease;
@@ -800,19 +815,19 @@
   }
   .ui-nav-item:hover {
     background-color: rgb(var(--surface-sunken));
-    color: rgb(var(--fg));
+    color: rgb(var(--nav-fg));
   }
   /* A module name is the strongest text in the rail, but it does not need to
      shout: eleven names at 600 read as eleven headings competing with each
      other. 500 still outranks a child entry, and the colour — near-black
      against the children's grey — is what actually does the ranking. */
   .ui-nav-item[data-level='module'] {
-    color: rgb(var(--fg));
+    color: rgb(var(--nav-fg));
     font-weight: 500;
     letter-spacing: -0.005em;
   }
   .ui-nav-item[data-level='module']:hover {
-    color: rgb(var(--fg));
+    color: rgb(var(--nav-fg));
     background-color: rgb(var(--surface-sunken));
   }
 
@@ -823,7 +838,7 @@
      colour and, once collapsed, a surface of its own so it is visibly a
      button in an otherwise empty strip. */
   .ui-nav-collapse {
-    color: rgb(var(--fg));
+    color: rgb(var(--nav-fg));
   }
   /* Belt and braces: every glyph in the rail keeps its size when the rail is
      narrow. Flex will otherwise shrink an icon to zero before it wraps. */
@@ -836,7 +851,7 @@
   }
   .ui-nav-collapse:hover {
     background-color: rgb(var(--surface-sunken));
-    color: rgb(var(--fg));
+    color: rgb(var(--nav-fg));
   }
 
   /* A child is one muted value, indented under its module.
@@ -850,7 +865,7 @@
      module, and the indent put its icon half an inch right of every other
      glyph in the rail, off the line they all share. */
   .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse) {
-    color: rgb(var(--fg-muted));
+    color: rgb(var(--nav-fg-muted));
     font-weight: 400;
     /*
      * 1rem here plus the children wrapper's pl-5 puts the child's icon at
@@ -862,12 +877,12 @@
     padding-inline-start: 1rem;
   }
   .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse):hover {
-    color: rgb(var(--fg));
+    color: rgb(var(--nav-fg));
   }
   /* A child icon is a bullet, not a landmark. Twelve coloured module glyphs
      are findable; sixty are wallpaper. */
   .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse)[data-tone] svg {
-    color: rgb(var(--fg-subtle));
+    color: rgb(var(--nav-fg-subtle));
   }
 
   /* --- the module hue, on the icon only ------------------------------------

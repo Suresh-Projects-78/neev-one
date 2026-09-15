@@ -14378,7 +14378,7 @@ const AppShell = () => {
                       <Icon
                         size={16}
                         aria-hidden="true"
-                        {...(entry.ph ? { weight: 'duotone' } : {})}
+                        {...(entry.ph ? { weight: 'fill' } : {})}
                         
                       />
                       <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
@@ -14420,7 +14420,7 @@ const AppShell = () => {
                         <GroupIcon
                           size={16}
                           aria-hidden="true"
-                          {...(entry.ph ? { weight: 'duotone' } : {})}
+                          {...(entry.ph ? { weight: 'fill' } : {})}
                           
                         />
                         <span className={navCollapsed ? 'md:hidden' : ''}>{entry.label}</span>
