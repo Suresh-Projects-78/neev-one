@@ -114,93 +114,77 @@ export const shortDate = (v) => {
  * The delta is the point of the card as much as the figure: a receivables
  * number means nothing until you know which way it is going.
  */
+export const OverviewBand = ({ cols = 5, children }) => (
+  /*
+   * The figures across the top, as one object.
+   *
+   * `cols` is the count at the widest breakpoint only — two on a phone and
+   * three on a tablet, because five 19px figures in a 390px viewport is not a
+   * row of figures, it is a column of clipped ones.
+   */
+  <div className="ui-kpi-band" style={{ '--kpi-cols': cols }}>
+    {children}
+  </div>
+);
+
+/**
+ * One of the figures across the top.
+ *
+ * A cell in the band, not a card of its own: the surface, the border and the
+ * radius belong to the band, and what is left here is the one thing the cell
+ * is for. `tone` names the metric rather than a colour, so the caller cannot
+ * tint it — overdue is the red one wherever it appears.
+ *
+ * The delta is the point of the cell as much as the figure: a receivables
+ * number means nothing until you know which way it is going, and which way is
+ * the good way. Rising overdue is bad news wearing the same arrow as rising
+ * sales, so the colour follows what the movement means, not where it points.
+ */
 export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, deltaGoodWhenUp = true, note = '' }) => {
   const up = Number(delta) > 0;
   const flat = delta === null || delta === undefined || Number(delta) === 0;
-  // Rising overdue is bad news wearing the same arrow as rising sales, so the
-  // colour follows what the movement means, not which way it points.
   const good = deltaGoodWhenUp ? up : !up;
 
   return (
-    <div
-      className="flex flex-col"
-      style={{
-        backgroundColor: 'rgb(var(--surface))',
-        border: '1px solid rgb(var(--kpi-line))',
-        borderRadius: 10,
-        padding: '14px 16px',
-        minHeight: 82,
-      }}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className="grid place-items-center flex-shrink-0"
-          style={{
-            height: 28,
-            width: 28,
-            borderRadius: 8,
-            backgroundColor: `rgb(var(--kpi-${tone}-bg))`,
-            color: `rgb(var(--kpi-${tone}-ink))`,
-          }}
-          aria-hidden="true"
-        >
-          <Icon size={16} />
-        </span>
-        <span
-          className="truncate"
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            lineHeight: '16px',
-            letterSpacing: '0.035em',
-            textTransform: 'uppercase',
-            color: 'rgb(var(--fg-muted))',
-          }}
-        >
-          {label}
-        </span>
+    <div className="ui-kpi-cell" style={{ '--kpi-tone': `var(--kpi-${tone}-ink)` }}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="ui-kpi-label truncate">{label}</span>
+        {/* The icon went with the tinted square it used to sit in. The dot is
+            what is left of it: enough to tell two cells apart at a glance,
+            not enough to argue with the figure. `Icon` is still accepted so
+            neither overview page has to change its call sites. */}
+        <span className="ui-kpi-dot" aria-hidden="true" />
       </div>
 
-      {/*
-        The figure and its movement share a line.
+      <div
+        className="ui-kpi-figure truncate"
+        title={typeof value === 'string' ? value : undefined}
+      >
+        {value}
+      </div>
 
-        Stacked, the card cannot be the 82–88px it is meant to be: 28 of icon
-        row, 26 of figure and 16 of trend is 70, and 14 of padding top and
-        bottom carries it past 100 before a border is drawn. Every one of those
-        numbers is load-bearing — the figure is the point of the card and the
-        icon has to stay a touchable size — so the line that can move is the
-        one that does. The movement sits at the end of the figure's own row,
-        where it reads as belonging to it rather than as a third fact.
-      */}
-      <div className="mt-1 flex items-baseline justify-between gap-2">
-        <div
-          className="truncate"
-          style={{ fontSize: 20, fontWeight: 650, lineHeight: '26px', fontVariantNumeric: 'tabular-nums' }}
-          title={typeof value === 'string' ? value : undefined}
-        >
-          {value}
-        </div>
-
-        <div
-          className="flex items-center gap-1 shrink-0"
-          style={{ fontSize: 11, fontWeight: 500, lineHeight: '16px' }}
-        >
+      <div className="ui-kpi-delta flex items-center gap-1 min-w-0">
         {flat ? (
-          /* The muted value rather than the subtle one: on a tinted card
-             `--fg-subtle` measures 4.45:1, just under the 4.5 an 11px line
-             needs. */
           <span className="ui-muted truncate" title={note || undefined}>{note || '—'}</span>
         ) : (
-          <span
-            className="inline-flex items-center gap-0.5 font-medium"
-            style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
-      title="Against the previous period"
-          >
-            {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
-            {Math.abs(Number(delta)).toFixed(1)}%
-          </span>
+          <>
+            <span
+              className="inline-flex items-center gap-0.5 shrink-0"
+              style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
+            >
+              {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
+              {Math.abs(Number(delta)).toFixed(1)}%
+            </span>
+            {/* The comparison was only in a tooltip, which is to say it was
+                only available to a mouse. */}
+            <span
+              className="truncate"
+              style={{ color: 'rgb(var(--fg-subtle))', fontWeight: 400 }}
+            >
+              vs last period
+            </span>
+          </>
         )}
-        </div>
       </div>
     </div>
   );

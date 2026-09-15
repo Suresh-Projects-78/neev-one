@@ -21,6 +21,7 @@ import { csvSafeValue } from '../../utils/csv';
 import { MoneyValue } from '../../components/docs';
 import {
   EmptyPanel,
+  OverviewBand,
   OverviewCard,
   OverviewStatusPill as StatusPill,
   Panel,
@@ -421,7 +422,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
 
       {/* The six figures. Payables, overdue and returns read as bad-when-rising,
           so their arrows are coloured by meaning rather than direction. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <OverviewBand cols={6}>
         <OverviewCard
           tone="sales"
           icon={BarChart3}
@@ -468,7 +469,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           delta={delta(current.returned, previous.returned)}
           note={current.returnedCount ? `${current.returnedCount} debit note(s)` : 'No returns'}
         />
-      </div>
+      </OverviewBand>
 
       <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Panel

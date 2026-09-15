@@ -25,6 +25,7 @@ import { MoneyValue } from '../../components/docs';
 import { csvSafeValue } from '../../utils/csv';
 import {
   EmptyPanel,
+  OverviewBand,
   OverviewCard,
   OverviewStatusPill as StatusPill,
   Panel,
@@ -575,7 +576,7 @@ const SalesOverview = ({
 
           Overdue and receivables are bad-when-rising, so their arrows are
           coloured by what the movement means, not which way it points. */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <OverviewBand cols={5}>
         <OverviewCard
           tone="sales"
           icon={BarChart3}
@@ -613,7 +614,7 @@ const SalesOverview = ({
           delta={delta(current.overdue, previous.overdue)}
           deltaGoodWhenUp={false}
         />
-      </div>
+      </OverviewBand>
 
       <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <Panel
@@ -831,7 +832,7 @@ const SalesOverview = ({
                 key={a.label}
                 type="button"
                 onClick={a.onClick}
-                className="w-full rounded-lg ps-2 pe-3 py-2 text-sm font-semibold text-left flex items-center gap-2.5 min-h-[2.75rem]"
+                className="ui-quick-action w-full rounded-lg ps-2 pe-3 py-2 text-sm font-semibold text-left flex items-center gap-2.5 min-h-[2.75rem]"
                 /* One brand button on the panel — the one that creates
                    something. The rest are shortcuts, and five orange buttons
                    stacked in a column made a list of shortcuts the loudest

@@ -309,6 +309,7 @@
   --pos: 22 132 91;             /* #16845B — 4.8:1 on white */
   --pos-soft: 240 253 244;
   --neg: 194 65 58;             /* #C2413A — 4.9:1 on white */
+  --neg-hover: 168 52 46;       /* #A8342E — one step down, for the press */
   --neg-soft: 254 242 242;
   --warn: 166 106 0;            /* #A66A00 — 4.6:1 on white */
   --warn-ink: 180 83 9;         /* amber-700 — 4.84:1 on warn-soft; --warn itself is 2.07:1 there */
@@ -553,6 +554,7 @@
   --pos: 74 222 128;
   --pos-soft: 5 46 22;
   --neg: 248 113 113;
+  --neg-hover: 252 140 140;   /* lifts in dark, where a darker red recedes */
   --neg-soft: 60 12 12;
   --warn: 251 191 36;
   --warn-ink: 251 191 36;       /* already 9:1 on the dark soft */
@@ -717,14 +719,19 @@
      A filled second button would be a second primary, and the rule is one
      per screen — this reads as "belongs to this product" without competing
      with the action the page actually wants. */
+  /* Secondary is the neutral one.
+     It used to wear the brand ink on a brand-tinted border, which put two
+     orange buttons side by side on every toolbar in the app and left the eye
+     to work out which of them was the primary. There is one primary per
+     screen; this is everything else, and it says so by not being orange. */
   .ui-btn-secondary {
     background-color: rgb(var(--surface));
-    color: rgb(var(--brand-ink));
-    border: 1px solid rgb(var(--brand) / 0.28);
+    color: rgb(var(--fg));
+    border: 1px solid rgb(var(--border-strong));
   }
   .ui-btn-secondary:hover:not(:disabled) {
-    background-color: rgb(var(--accent-soft));
-    border-color: rgb(var(--brand) / 0.45);
+    background-color: rgb(var(--surface-sunken));
+    border-color: rgb(var(--fg-subtle));
   }
   .ui-btn-ghost {
     background-color: transparent;
@@ -735,10 +742,17 @@
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg));
   }
+  /* Danger had no hover and no press: the one button in the app where the
+     user most wants the interface to confirm it heard them was the only one
+     that gave nothing back. */
   .ui-btn-danger {
     background-color: rgb(var(--neg));
     color: #fff;
     border: 1px solid rgb(var(--neg));
+  }
+  .ui-btn-danger:hover:not(:disabled) {
+    background-color: rgb(var(--neg-hover, 168 52 46));
+    border-color: rgb(var(--neg-hover, 168 52 46));
   }
 
   /* --- inputs --- */
@@ -1467,13 +1481,15 @@
   /* Press feedback. Exit (release) is faster than enter, so it feels snappy. */
   .ui-btn:active:not(:disabled),
   .ui-icon-btn:active:not(:disabled),
-  .ui-nav-item:active {
+  .ui-nav-item:active,
+  .ui-quick-action:active:not(:disabled) {
     transform: scale(0.975);
     transition-duration: 90ms;
   }
   .ui-btn,
   .ui-icon-btn,
-  .ui-nav-item {
+  .ui-nav-item,
+  .ui-quick-action {
     transition: background-color var(--dur-surface) ease, border-color var(--dur-surface) ease, color var(--dur-surface) ease,
       transform var(--dur-state) var(--ease-out);
   }
@@ -2623,6 +2639,89 @@
      icon sits in it and the select is padded past it. The icon is the module
      hue's own neutral rather than the brand, because the brand on this bar
      already means "the thing you can press"; this says "where you are". */
+  /* --- the overview figure band -------------------------------------------
+     Five figures across the top of a module's front page used to be five
+     cards: five borders, five radii and five shadows in a row, which is four
+     more objects than there are ideas. They are one card now, divided by the
+     same hairline, which is what the house rule has always said — a list sits
+     on the page under one hairline, and these five are a list.
+
+     The tone moves with them. It was a 28px tinted square holding an icon,
+     which is a lot of colour to say "this one is overdue"; it is now a 2px
+     rule on the cell's own top edge plus a dot beside the label, so the
+     figure keeps the card to itself.
+  --------------------------------------------------------------------------- */
+  .ui-kpi-band {
+    display: grid;
+    /* Two on a phone, three on a tablet, then the caller's own count. Five
+       19px figures in a 390px viewport is not a row of figures, it is a
+       column of clipped ones. The count is set entirely here rather than by
+       utilities on the element, so one rule owns it at every width. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--kpi-line));
+    border-radius: var(--radius);
+    overflow: hidden;   /* the cells' own edges stop at the radius */
+  }
+  @media (min-width: 1024px) {
+    .ui-kpi-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+  @media (min-width: 1280px) {
+    .ui-kpi-band { grid-template-columns: repeat(var(--kpi-cols, 5), minmax(0, 1fr)); }
+  }
+  .ui-kpi-cell {
+    position: relative;
+    padding: 0.9375rem 1rem 0.875rem;
+    min-width: 0;
+    /* Every cell carries both edges and the band's overflow clips the outer
+       two, so the rule holds at any column count without a :first-child rule
+       that breaks the moment the grid wraps to two rows. */
+    border-inline-start: 1px solid rgb(var(--kpi-line));
+    border-block-start: 1px solid rgb(var(--kpi-line));
+    margin-inline-start: -1px;
+    margin-block-start: -1px;
+  }
+  .ui-kpi-cell::before {
+    content: '';
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline: 0;
+    height: 2px;
+    background-color: rgb(var(--kpi-tone, var(--fg-subtle)));
+    opacity: 0.85;
+  }
+  .ui-kpi-label {
+    font-size: 0.65625rem;   /* 10.5px */
+    font-weight: 600;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+    color: rgb(var(--fg-muted));
+  }
+  .ui-kpi-dot {
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 999px;
+    flex: none;
+    background-color: rgb(var(--kpi-tone, var(--fg-subtle)));
+    opacity: 0.55;
+  }
+  /* The figure is the point of the cell, so it takes the width it can get:
+     six columns on a laptop are narrower than five, and a fixed 25px clipped
+     "₹48,62,140" there. */
+  .ui-kpi-figure {
+    font-size: clamp(1.1875rem, 1.5vw, 1.5rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.12;
+    font-variant-numeric: tabular-nums;
+    margin-block: 0.4375rem 0.375rem;
+  }
+  .ui-kpi-delta {
+    font-size: 0.71875rem;   /* 11.5px */
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
   .ui-scope-field {
     position: relative;
     align-items: center;
