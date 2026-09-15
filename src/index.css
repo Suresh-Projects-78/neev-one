@@ -121,16 +121,16 @@
   --brand-panel: 12 18 32;      /* deep neutral for inverted brand surfaces */
 
   /* Primary action == brand, so there is one obvious next step per screen. */
-  --primary: 249 115 22;
+  --primary: var(--brand);
   --on-primary: 26 12 3;        /* ink on orange, same as --on-brand */
-  --primary-hover: 234 88 12;
+  --primary-hover: var(--brand-hover);
 
   /* Accent + focus ring follow the brand rather than introducing a third hue. */
-  --accent: 249 115 22;
-  --accent-hover: 234 88 12;
-  --accent-soft: 255 247 237;
+  --accent: var(--brand);
+  --accent-hover: var(--brand-hover);
+  --accent-soft: var(--brand-soft);
   --on-accent: 26 12 3;
-  --ring: 249 115 22;
+  --ring: var(--brand);
 
   /* No second accent on chrome. Success/warning/danger exist for status. */
   --info: 83 109 130;           /* #536D82 — draft, processing, informational */
@@ -421,15 +421,15 @@
   --brand-ink: 254 215 170;
   --brand-panel: 9 11 17;
 
-  --primary: 249 115 22;
+  --primary: var(--brand);
   --on-primary: 26 12 3;
-  --primary-hover: 251 146 60;
+  --primary-hover: var(--brand-hover);
 
-  --accent: 251 146 60;
-  --accent-hover: 253 186 116;
+  --accent: var(--brand);
+  --accent-hover: var(--brand-hover);
   --accent-soft: 43 26 14;
   --on-accent: 26 12 3;
-  --ring: 251 146 60;
+  --ring: var(--brand);
 
   --info: 147 170 190;          /* the slate blue, lifted */
   --info-soft: 39 39 42;
