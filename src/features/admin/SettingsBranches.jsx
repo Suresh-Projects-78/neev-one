@@ -522,7 +522,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
         ) : filteredBranches.length === 0 ? (
           <div className="px-6 py-10 text-center ui-muted">No branches found.</div>
         ) : (
-          <table className="ui-table w-full">
+          <table className="ui-table w-full ui-settled">
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="ui-th w-32">Branch Code</th>

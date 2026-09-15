@@ -1368,6 +1368,20 @@
     tr[data-entering='true'] > td { animation: none; }
   }
 
+  /*
+   * Content arriving where a skeleton was.
+   *
+   * Once per load, on a table that has been a grey placeholder for a moment —
+   * the one swap in the product where a fade earns its place. Navigation does
+   * not get one; that is a hundred times a day and was deleted.
+   */
+  .ui-settled {
+    animation: ui-fade var(--dur-surface) var(--ease-out) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-settled { animation-duration: 1ms; }
+  }
+
   .ui-out { animation: ui-out-pop var(--dur-exit) var(--ease-in) both; }
   .ui-out-fade { animation: ui-out-fade var(--dur-exit) linear both; }
   .ui-out-edge { animation: ui-out-edge var(--dur-exit) var(--ease-in) both; }

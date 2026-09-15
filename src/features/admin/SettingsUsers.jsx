@@ -840,7 +840,7 @@ export function SettingsUsers({ orgId }) {
         ) : filteredUsers.length === 0 ? (
           <div className="px-6 py-10 text-center ui-muted">No users found.</div>
         ) : (
-          <table className="ui-table w-full">
+          <table className="ui-table w-full ui-settled">
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="ui-th">Name</th>
