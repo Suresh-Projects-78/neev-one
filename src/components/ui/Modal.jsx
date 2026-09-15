@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -10,7 +10,44 @@ import { X } from 'lucide-react';
  * treats it as more page, and a keyboard user carries on tabbing through the
  * list behind it while a form sits open in front.
  */
+/* Matches --dur-exit in index.css. Stated here because the timer cannot read
+   a CSS variable, and drifting apart would show the dialog closing twice. */
+const EXIT_MS = 140;
+
 const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' }) => {
+  /*
+   * Closing is a state, not an event.
+   *
+   * The dialog used to unmount on the click, so it animated in over 200ms and
+   * left in a single frame. `closing` runs the exit and the real onClose fires
+   * on animationend — or immediately if the browser gives us no animation to
+   * wait for, which is what prefers-reduced-motion reduces this to.
+   */
+  const [closing, setClosing] = useState(false);
+  /*
+   * The exit runs, then the dialog closes — but never only on `animationend`.
+   *
+   * That event is the happy path; it does not arrive if the animation is
+   * skipped, if the element is display:none by the time it would fire, or in
+   * a test environment with no animation engine at all. A dialog that cannot
+   * be closed is far worse than one that closes a frame early, so a timer of
+   * the same length closes it regardless and whichever lands first wins.
+   */
+  const beginClose = useCallback(() => setClosing(true), []);
+
+  /*
+   * Once it is closing, it closes — on `animationend` if that arrives, and on
+   * a timer of the same length if it does not. The event is the happy path; it
+   * is absent when the animation is skipped, when the element is display:none
+   * by the time it would fire, and in any environment with no animation
+   * engine. A dialog that cannot be dismissed is far worse than one that
+   * closes a frame early, so the timer is the floor rather than the plan.
+   */
+  useEffect(() => {
+    if (!closing) return undefined;
+    const t = setTimeout(() => onClose?.(), EXIT_MS);
+    return () => clearTimeout(t);
+  }, [closing, onClose]);
   const panelRef = useRef(null);
   const returnFocusRef = useRef(null);
   const titleId = useId();
@@ -53,7 +90,9 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') {
-        onCloseRef.current?.();
+        /* Through the same exit as the button and the backdrop; the ref is
+           still what the close itself goes through. */
+        beginClose();
         return;
       }
       if (e.key !== 'Tab') return;
@@ -79,14 +118,14 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [beginClose]);
 
   return createPortal(
     <div
-      className="ui-scrim fixed inset-0 flex items-center justify-center p-4 z-50"
+      className={`ui-scrim fixed inset-0 flex items-center justify-center p-4 z-50 ${closing ? 'ui-out-fade' : ''}`}
       onMouseDown={(e) => {
         // Backdrop click closes; clicks inside the panel don't bubble here.
-        if (e.target === e.currentTarget) onClose?.();
+        if (e.target === e.currentTarget) beginClose();
       }}
     >
       <div
@@ -103,13 +142,17 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
           moves — which is what "fits the screen" means for a form that is
           genuinely taller than the screen.
         */
-        className={`ui-surface ui-dialog shadow-xl w-full max-h-[90vh] flex flex-col ${maxWidthClass}`}
+        className={`ui-surface ui-dialog shadow-xl w-full max-h-[90vh] flex flex-col ${maxWidthClass} ${closing ? 'ui-out' : ''}`}
+        onAnimationEnd={(e) => {
+          /* Only the panel's own exit, never a child's animation bubbling up. */
+          if (closing && e.target === e.currentTarget) onClose?.();
+        }}
       >
         <div className="shrink-0 ui-surface border-b px-6 py-4 flex items-center justify-between gap-3">
           <h2 id={titleId} className="ui-t-sec">
             {title}
           </h2>
-          <button type="button" onClick={onClose} className="ui-icon-btn" aria-label="Close">
+          <button type="button" onClick={beginClose} className="ui-icon-btn" aria-label="Close">
             <X size={18} />
           </button>
         </div>

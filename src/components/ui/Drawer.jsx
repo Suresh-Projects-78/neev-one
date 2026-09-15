@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -20,6 +20,25 @@ import { X } from 'lucide-react';
  * clipped by it.
  */
 export default function Drawer({ open, onClose, title, description = '', children, widthClass = 'w-[min(40rem,40vw)]' }) {
+  /* Slid in over 200ms and vanished in one frame; it leaves the way it came,
+     toward the edge it lives on. Same machinery as Modal. */
+  const [closing, setClosing] = useState(false);
+  const beginClose = useCallback(() => setClosing(true), []);
+  /* A timer under `animationend`, for the reason spelled out in Modal: the
+     event is absent whenever the animation is skipped, and a drawer that
+     cannot be dismissed is worse than one that closes a frame early. */
+  useEffect(() => {
+    if (!closing) return undefined;
+    const t = setTimeout(() => onClose?.(), 140);
+    return () => clearTimeout(t);
+  }, [closing, onClose]);
+  /* Reset while rendering the reopen, not in an effect after it — an effect
+     here sets state during the commit and costs a second render. */
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open && closing) setClosing(false);
+  }
   const panelRef = useRef(null);
 
   useEffect(() => {
@@ -28,7 +47,7 @@ export default function Drawer({ open, onClose, title, description = '', childre
     const onKey = (e) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose?.();
+        setClosing(true);
         return;
       }
       if (e.key !== 'Tab') return;
@@ -60,10 +79,10 @@ export default function Drawer({ open, onClose, title, description = '', childre
 
   return createPortal(
     <div
-      className="ui-scrim fixed inset-0 z-50 flex justify-end"
+      className={`ui-scrim fixed inset-0 z-50 flex justify-end ${closing ? 'ui-out-fade' : ''}`}
       onMouseDown={(e) => {
         // The scrim closes; a click inside the panel does not reach here.
-        if (e.target === e.currentTarget) onClose?.();
+        if (e.target === e.currentTarget) beginClose();
       }}
     >
       <div
@@ -72,7 +91,10 @@ export default function Drawer({ open, onClose, title, description = '', childre
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className={`ui-surface h-full ${widthClass} max-w-full shadow-xl flex flex-col ui-in-right`}
+        className={`ui-surface h-full ${widthClass} max-w-full shadow-xl flex flex-col ${closing ? 'ui-out-right' : 'ui-in-right'}`}
+        onAnimationEnd={(e) => {
+          if (closing && e.target === e.currentTarget) onClose?.();
+        }}
         style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
       >
         <div
@@ -83,7 +105,7 @@ export default function Drawer({ open, onClose, title, description = '', childre
             <h2 className="ui-t-sec truncate">{title}</h2>
             {description ? <p className="text-sm ui-muted mt-0.5">{description}</p> : null}
           </div>
-          <button type="button" onClick={onClose} className="ui-icon-btn shrink-0" aria-label="Close">
+          <button type="button" onClick={beginClose} className="ui-icon-btn shrink-0" aria-label="Close">
             <X size={18} />
           </button>
         </div>

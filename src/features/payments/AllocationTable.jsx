@@ -123,7 +123,14 @@ export const AllocationTable = ({
           <span className="ui-muted">
             Total allocated <span className="ui-money ms-1">{money(summary.allocated)}</span>
           </span>
-          <span style={{ color: summary.balanced ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}>
+          {/* The one figure on this form the user is steering toward, so the
+              arrival at zero is worth seeing rather than blinking into place. */}
+          <span
+            style={{
+              color: summary.balanced ? 'rgb(var(--pos))' : 'rgb(var(--neg))',
+              transition: 'color var(--dur-surface) var(--ease-out)',
+            }}
+          >
             {summary.balanced ? 'Fully allocated' : 'Unallocated'}
             {summary.balanced ? null : <span className="ui-money ms-1">{money(summary.unallocated)}</span>}
           </span>
