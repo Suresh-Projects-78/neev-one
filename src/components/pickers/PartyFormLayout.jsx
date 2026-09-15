@@ -37,16 +37,26 @@ import { todayIso } from '../../utils/dates';
  * the source for the classes it keeps and never sees one that is concatenated.
  */
 const LEFT_ROWS = {
+  /*
+   * The GSTIN sits beside the registration type that asks for it, in the
+   * right half of the first row — not under it.
+   *
+   * Stacked, it left the whole right half of two rows empty and then had to
+   * share one 256px cell with the Fetch button, which took 171 of them: a
+   * fifteen-character number in a field that showed six. Across the row it
+   * has 400px and the button fits beside it.
+   */
   withGstin: {
-    name: 'lg:col-start-1 lg:row-start-3',
-    opening: 'lg:col-start-1 lg:row-start-4',
-    type: 'lg:col-start-1 lg:row-start-5',
-    /* The group is the name's pair and the currency the balance's, so they
-       take those rows rather than the first two. */
-    group: 'lg:col-start-2 lg:row-start-3',
-    currency: 'lg:col-start-2 lg:row-start-4',
+    gstin: 'lg:col-start-2 lg:row-start-1',
+    name: 'lg:col-start-1 lg:row-start-2',
+    opening: 'lg:col-start-1 lg:row-start-3',
+    type: 'lg:col-start-1 lg:row-start-4',
+    /* The group is the name's pair and the currency the balance's. */
+    group: 'lg:col-start-2 lg:row-start-2',
+    currency: 'lg:col-start-2 lg:row-start-3',
   },
   withoutGstin: {
+    gstin: '',
     name: 'lg:col-start-1 lg:row-start-2',
     opening: 'lg:col-start-1 lg:row-start-3',
     type: 'lg:col-start-1 lg:row-start-4',
@@ -173,13 +183,17 @@ export function PartyFormLayout({
           </FormRow>
 
           {formData.gstRegistration === 'Registered' ? (
-            <FormRow className="lg:col-start-1 lg:row-start-2" label="GSTIN" hint="The first two digits are the state code and characters 3–12 are the PAN, so both are filled from the number.">
-              <div className="flex items-center gap-2">
+            <FormRow className={rows.gstin} label="GSTIN" hint="The first two digits are the state code and characters 3–12 are the PAN, so both are filled from the number.">
+              {/* The field is 15 characters wide or it is not a GSTIN field.
+                  Sharing one 256px cell with the fetch button left it 77px —
+                  six characters of what you type — so the row wraps and the
+                  button drops underneath when the column is that tight. */}
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   type="text"
                   value={formData.gstin}
                   onChange={(e) => setFormData((p) => ({ ...p, gstin: e.target.value.toUpperCase() }))}
-                  className="ui-input min-w-0 flex-1"
+                  className="ui-input min-w-[11rem] flex-1"
                   placeholder="Enter 15 digit GSTIN"
                   maxLength={15}
                   autoComplete="off"

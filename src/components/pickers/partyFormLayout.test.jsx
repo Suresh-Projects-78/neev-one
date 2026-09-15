@@ -136,15 +136,14 @@ describe('the two columns of Basic Details', () => {
     /*
      * Both halves are the same shape — a name beside its control — and each
      * right-hand field shares a row with the left-hand one it says something
-     * about: the group with the party's name, the currency with the balance it
-     * counts. A registered customer has a GSTIN row above them, so the pair
-     * sits on rows three and four.
+     * about: the GSTIN with the registration type that asks for it, the group
+     * with the party's name, the currency with the balance it counts.
      */
     const rowOf = (el) => (el.className.match(/lg:row-start-(\d)/) || [])[1];
-    expect(rowOf(screen.getByText('Customer Group').closest('div.grid'))).toBe('3');
-    expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('3');
-    expect(rowOf(screen.getByText('Currency').closest('div.grid'))).toBe('4');
-    expect(rowOf(screen.getByLabelText('Opening Balance').closest('div.grid'))).toBe('4');
+    expect(rowOf(screen.getByText('Customer Group').closest('div.grid'))).toBe('2');
+    expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('2');
+    expect(rowOf(screen.getByText('Currency').closest('div.grid'))).toBe('3');
+    expect(rowOf(screen.getByLabelText('Opening Balance').closest('div.grid'))).toBe('3');
     expect(screen.getByText('Customer Group').closest('div.grid').className).toMatch(/lg:col-start-2\b/);
 
     /* And a control holding one short word does not run the half-card. */
@@ -156,11 +155,13 @@ describe('the two columns of Basic Details', () => {
   });
 });
 
-describe('the rows shift when the GSTIN row is not there', () => {
+describe('the GSTIN sits beside the question that asks for it', () => {
   /*
-   * A vendor opens unregistered, so there is no GSTIN row — and the rows below
-   * it move up one. Pinned to fixed row numbers, the left column kept a hole
-   * where GSTIN would have been and the two halves came apart again.
+   * It used to stack under the registration type, which left the right half of
+   * two rows empty and then made the field share one narrow cell with the
+   * Fetch button — 77px for a fifteen-character number. Across the row it has
+   * the full control width, and nothing below it moves when a party turns out
+   * to be unregistered.
    */
   const rowOf = (el) => (el.className.match(/lg:row-start-(\d)/) || [])[1];
 
@@ -180,16 +181,19 @@ describe('the rows shift when the GSTIN row is not there', () => {
     expect(rowOf(screen.getByLabelText(/^Vendor Name/).closest('div.grid'))).toBe('2');
   });
 
-  it('leaves room for it on a party that has one', () => {
+  it('puts it in the right half of the first row, beside the registration type', () => {
     renderCustomer();
-    expect(screen.getByPlaceholderText('Enter 15 digit GSTIN')).toBeTruthy();
-    expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('3');
+    const gstin = screen.getByPlaceholderText('Enter 15 digit GSTIN').closest('div.grid');
+    expect(rowOf(gstin)).toBe('1');
+    expect(gstin.className).toMatch(/lg:col-start-2\b/);
+    expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('2');
   });
 
-  it('moves the rows as the registration is switched', async () => {
+  it('leaves the rows where they are when the registration is switched', async () => {
     const user = userEvent.setup();
     renderCustomer();
     await user.click(screen.getByRole('radio', { name: 'Unregistered' }));
+    expect(screen.queryByPlaceholderText('Enter 15 digit GSTIN')).toBeNull();
     expect(rowOf(screen.getByLabelText(/^Customer Name/).closest('div.grid'))).toBe('2');
   });
 });
