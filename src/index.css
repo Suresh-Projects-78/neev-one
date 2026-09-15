@@ -2478,11 +2478,14 @@
      the column now. Reclaiming that space is what lets the item column have
      the width it needs. */
   .ui-grid-dense input[type='number']::-webkit-outer-spin-button,
-  .ui-grid-dense input[type='number']::-webkit-inner-spin-button {
+  .ui-grid-dense input[type='number']::-webkit-inner-spin-button,
+  .ui-input-plain::-webkit-outer-spin-button,
+  .ui-input-plain::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
   }
-  .ui-grid-dense input[type='number'] {
+  .ui-grid-dense input[type='number'],
+  .ui-input-plain {
     -moz-appearance: textfield;
     appearance: textfield;
   }

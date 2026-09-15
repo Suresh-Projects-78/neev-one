@@ -1413,7 +1413,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                 <th className="ui-th w-10">#</th>
                 <th className="ui-th">Expense Ledger</th>
                 <th className="ui-th">Description</th>
-                <th className="ui-th ui-num">Amount</th>
+                <th className="ui-th">Amount</th>
                 <th className="ui-th">GST %</th>
                 <th className="ui-th ui-num">GST Amount</th>
                 <th className="ui-th ui-num">Total</th>
@@ -1457,17 +1457,17 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                       />
                     </td>
                     <td className="px-3 py-2">
-                      {/* Fills its column like every other cell's control:
-                          a fixed w-28 box sat at the left edge of a column
-                          whose heading and whose figures below are both
-                          right-aligned. */}
+                      {/* A box the width of a figure, not of the column, and
+                          with the spin buttons off: they take 20px out of the
+                          right of the field, which is exactly where a
+                          right-set number ends up sitting. */}
                       <input
                         type="number"
                         min="0"
                         step="0.01"
                         value={line.amount}
                         onChange={(e) => updateLine(idx, { amount: e.target.value })}
-                        className="ui-input ui-mono w-full px-2 py-1 text-right"
+                        className="ui-input ui-input-plain ui-mono w-32 px-2 py-1"
                         aria-label={`Amount, line ${idx + 1}`}
                       />
                     </td>
@@ -1478,7 +1478,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                         <select
                           value={String(line.gstRate ?? 0)}
                           onChange={(e) => updateLine(idx, { gstRate: Number(e.target.value) })}
-                          className="ui-select w-full px-2 py-1"
+                          className="ui-select w-24 px-2 py-1"
                         >
                           {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
                             <option key={r} value={String(r)}>{r}%</option>
