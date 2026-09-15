@@ -102,7 +102,7 @@ export default function GridControls({ grid }) {
         ? createPortal(
             <div
               className="ui-card ui-in-pop fixed z-[120] w-72 overflow-y-auto p-2"
-              style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight }}
+              style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight, '--pop-origin': 'top left' }}
               data-layout-pop=""
               role="menu"
             >

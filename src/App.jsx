@@ -14108,7 +14108,7 @@ const AppShell = () => {
                 <div
                   role="menu"
                   className="ui-card ui-in-pop absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden"
-                  style={{ boxShadow: 'var(--shadow-pop)' }}
+                  style={{ boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right' }}
                 >
                   <div className="px-4 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
                     <span className="ui-card-label" style={{ color: 'rgb(var(--fg))' }}>Notifications</span>
@@ -14191,7 +14191,7 @@ const AppShell = () => {
                 <div
                   role="menu"
                   className="ui-card ui-in-pop absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden py-1"
-                  style={{ boxShadow: 'var(--shadow-pop)' }}
+                  style={{ boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right' }}
                 >
                   <div className="flex items-center gap-3 px-3 py-2.5" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
                     {userAvatarUrl ? (
@@ -14514,7 +14514,7 @@ const AppShell = () => {
         <main
           id="main-content"
           key={active}
-          className="min-w-0 flex-1 ui-in-fade ui-content overflow-y-auto overflow-x-hidden min-h-0 px-4 lg:px-6 py-5"
+          className="min-w-0 flex-1 ui-content overflow-y-auto overflow-x-hidden min-h-0 px-4 lg:px-6 py-5"
           /*
            * Two fixes, because the two families of scrollbar break this
            * differently.

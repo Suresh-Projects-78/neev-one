@@ -1418,7 +1418,7 @@ const statusReason = (doc, status, company, nowMs) => {
         <div
           ref={menuRef}
           className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop"
-          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)' }}
+          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -2284,7 +2284,7 @@ export const EstimatesList = ({
         <div
           ref={menuRef}
           className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop"
-          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)' }}
+          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}

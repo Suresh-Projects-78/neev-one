@@ -609,9 +609,11 @@
   }
   /* Opt-in hover lift for cards that are themselves clickable. Never applied
      to plain content cards — a lift promises interactivity. */
+  @media (hover: hover) and (pointer: fine) {
   .ui-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lift);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lift);
+    }
   }
 
   .ui-panel {
@@ -1245,7 +1247,8 @@
      lets .ui-depth-* children ride above the surface for real parallax. */
   .ui-tilt3d {
     transform-style: preserve-3d;
-    transition: transform 350ms var(--ease-out);
+    /* 200ms. The hand has already left; 350 felt like the card catching up. */
+    transition: transform 200ms var(--ease-out);
     will-change: transform;
   }
   .ui-depth-1 { transform: translateZ(18px); }
@@ -1284,6 +1287,23 @@
   }
   @media (prefers-reduced-motion: reduce) {
     .ui-in-left, .ui-in-right { animation: none; }
+  }
+
+  /*
+   * Motion reduced, not removed.
+   *
+   * `ui-rise` and `ui-stagger` are the two entrances the product leans on —
+   * 27 call sites between them — and they were the two the reduced-motion
+   * blocks missed. The opacity stays, because the arrival is still worth
+   * saying; the 10px of travel is what goes, along with the stagger.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .ui-in,
+    .ui-stagger > * {
+      animation-name: ui-fade;
+      animation-duration: 160ms;
+      animation-delay: 0ms !important;
+    }
   }
 
   /* Stagger: 40ms per item, capped so a long list never crawls. */
@@ -1328,15 +1348,19 @@
   .ui-card-interactive {
     transition: transform var(--dur-surface) cubic-bezier(0.16, 1, 0.3, 1), box-shadow var(--dur-surface) ease;
   }
+  @media (hover: hover) and (pointer: fine) {
   .ui-card-interactive:hover {
-    transform: translate3d(0, -2px, 0);
-    box-shadow: var(--shadow-pop);
+      transform: translate3d(0, -2px, 0);
+      box-shadow: var(--shadow-pop);
+    }
   }
 
   /* Progress meter fills from the left on first paint. */
   .ui-bar-fill {
     transform-origin: left center;
-    animation: ui-bar-grow 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    /* 300ms: the sub-300 budget for anything on a UI surface. At 700 the
+       bar was still filling after the figure beside it had been read. */
+    animation: ui-bar-grow 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   /* Loading placeholder: a moving sheen, not a spinner. */
@@ -1804,10 +1828,12 @@
     transition: transform var(--dur-surface) var(--ease-out), box-shadow var(--dur-surface) ease,
       border-color var(--dur-surface) ease;
   }
+  @media (hover: hover) and (pointer: fine) {
   .ui-stat:hover {
-    transform: translate3d(0, -2px, 0);
-    box-shadow: var(--shadow-lift);
-    border-color: rgb(var(--border-strong));
+      transform: translate3d(0, -2px, 0);
+      box-shadow: var(--shadow-lift);
+      border-color: rgb(var(--border-strong));
+    }
   }
   /* A hairline of brand colour on the top edge, revealed on hover. Enough to
      acknowledge the pointer without repainting the card. */
@@ -1821,7 +1847,9 @@
     transform-origin: left center;
     transition: transform 260ms var(--ease-out);
   }
+  @media (hover: hover) and (pointer: fine) {
   .ui-stat:hover::after { transform: scaleX(1); }
+  }
 
   /* --- marketing sections --- */
   .ui-section {
@@ -2139,14 +2167,15 @@
     width: 0.5rem;
     height: 0.5rem;
     border-radius: 999px;
-    transform: scale(0);
-    transition: transform 120ms ease;
+    transform: scale(0.4);
+    opacity: 0;
+    transition: transform 120ms var(--ease-out), opacity 120ms var(--ease-out);
     background: rgb(var(--brand));
   }
   .ui-radio:checked {
     border-color: rgb(var(--brand));
   }
-  .ui-radio:checked::after { transform: scale(1); }
+  .ui-radio:checked::after { transform: scale(1); opacity: 1; }
   .ui-radio:focus-visible {
     outline: 2px solid rgb(var(--brand));
     outline-offset: 2px;
@@ -2231,9 +2260,11 @@
   .ui-hover-raise {
     transition: transform var(--dur-surface) var(--ease-out), box-shadow var(--dur-surface) ease, border-color var(--dur-surface) ease;
   }
+  @media (hover: hover) and (pointer: fine) {
   .ui-hover-raise:hover {
-    transform: scale(1.02);
-    box-shadow: var(--shadow-lift);
+      transform: scale(1.02);
+      box-shadow: var(--shadow-lift);
+    }
   }
 
   /* Content column: wide enough for dense tables, capped so a 27" monitor

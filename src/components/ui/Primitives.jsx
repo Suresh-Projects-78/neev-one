@@ -57,7 +57,7 @@ export const EntityMark = ({ entity, size = 18 }) => {
 };
 
 export const PageHeader = ({ title, description, actions = null, entity = '' }) => (
-  <div className="ui-in-fade flex flex-wrap items-start justify-between gap-3 mb-4">
+  <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
     <div className="flex min-w-0 items-center gap-2.5">
       {entity ? <EntityMark entity={entity} /> : null}
       <div className="min-w-0">

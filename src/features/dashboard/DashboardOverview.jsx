@@ -684,9 +684,14 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
                   aria-selected={i === idx}
                   aria-label={it.label || `Insight ${i + 1}`}
                   onClick={() => setIdx(i)}
-                  className="h-1 rounded-full transition-all"
+                  /* One property, on the GPU. `transition: all` animating
+                     `width` put a layout property on the compositor's critical
+                     path for a 10px dot; the dot is a fixed 16px that scales
+                     down instead, and only transform and background move. */
+                  className="h-1 w-4 origin-left rounded-full"
                   style={{
-                    width: i === idx ? 16 : 6,
+                    transform: i === idx ? 'scaleX(1)' : 'scaleX(0.375)',
+                    transition: 'transform 150ms var(--ease-out), background-color 150ms var(--ease-out)',
                     backgroundColor: i === idx ? 'rgb(var(--brand))' : 'rgb(var(--border-strong))',
                   }}
                 />
