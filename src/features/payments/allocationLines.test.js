@@ -125,3 +125,24 @@ describe('the journal it posts', () => {
     expect(allocationJournalLines({ rows: [{ ledgerId: '', amount: '5' }], direction: 'OUT', bankLedgerId: '99', amount: 5, nameOf })).toEqual([]);
   });
 });
+
+describe('an advance is not a gap', () => {
+  it('lets money sit on a named party without a ledger row', () => {
+    /* The product has always allowed a receipt on account: the money waits on
+       the customer's own control ledger until an invoice claims it. */
+    expect(allocationError({ rows: [], documentTotal: 0, amount: 5000, noun: 'receipt', hasParty: true })).toBeNull();
+  });
+
+  it('still refuses money with nobody to hold it', () => {
+    /* A GST payment has no party account to sit on, so every rupee has to be
+       placed by hand. */
+    expect(allocationError({ rows: [], documentTotal: 0, amount: 5000, noun: 'payment', hasParty: false }))
+      .toMatch(/at least one account/i);
+  });
+
+  it('still refuses an over-allocation, party or not', () => {
+    expect(
+      allocationError({ rows: [{ ledgerId: '1', amount: '6000' }], amount: 5000, hasParty: true })
+    ).toMatch(/over by/i);
+  });
+});

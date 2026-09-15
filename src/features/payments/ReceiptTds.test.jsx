@@ -82,7 +82,7 @@ const pickCustomer = async (user) => {
 const selectInvoice = async (user) => {
   const row = (await screen.findByText('INV-1')).closest('tr');
   await user.click(row.querySelector('input[type="checkbox"]'));
-  fireEvent.change(screen.getByLabelText(/Amount received|Receipt amount|Amount/i), { target: { value: '118000' } });
+  fireEvent.change(screen.getByLabelText(/Amount received/i), { target: { value: '118000' } });
 };
 
 describe('what the receipt offers', () => {

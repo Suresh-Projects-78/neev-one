@@ -55,7 +55,7 @@ export const allocationSummary = ({ rows, documentTotal = 0, amount = 0 }) => {
  * Stated as one sentence naming the figure, because "allocation mismatch" on
  * an accounting screen tells somebody that something is wrong and not what.
  */
-export const allocationError = ({ rows, documentTotal = 0, amount = 0, noun = 'payment' }) => {
+export const allocationError = ({ rows, documentTotal = 0, amount = 0, noun = 'payment', hasParty = false }) => {
   const list = Array.isArray(rows) ? rows : [];
   const target = round2(Number(amount) || 0);
   if (paise(target) <= 0) return `Enter the ${noun} amount first.`;
@@ -70,6 +70,16 @@ export const allocationError = ({ rows, documentTotal = 0, amount = 0, noun = 'p
 
   const { allocated, unallocated, balanced } = allocationSummary({ rows: list, documentTotal, amount });
   if (balanced) return null;
+
+  /*
+   * A remainder against a named party is an advance, not a gap.
+   *
+   * The money sits on that party's account until a document claims it, which
+   * is an allocation — to their control ledger — and the product has always
+   * recorded it that way. Only a remainder with nobody to hold it has to be
+   * placed by hand: a GST payment or a bank charge has no account to sit on.
+   */
+  if (hasParty && unallocated > 0) return null;
   if (paise(allocated) === 0) return `Allocate the ${noun} to at least one account.`;
   return unallocated > 0
     ? `₹${unallocated.toFixed(2)} of this ${noun} is still unallocated.`

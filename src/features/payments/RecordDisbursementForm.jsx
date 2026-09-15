@@ -462,6 +462,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       documentTotal: computed.allocated,
       amount,
       noun: 'payment',
+      hasParty: Number.isFinite(vendorIdNum) && !!vendorIdNum,
     });
     if (allocProblem) {
       notify.error(allocProblem);

@@ -9,6 +9,9 @@ import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
+import AllocationTable from './AllocationTable';
+import { allocationError, allocationJournalLines, emptyAllocationRow, usableRows } from './allocationLines';
+import { postJournalToLedger } from '../../utils/journalSync';
 import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { getNextNumericId } from '../../utils/ids';
@@ -164,6 +167,19 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       .map(([k]) => Number(k))
       .filter((n) => Number.isFinite(n));
   }, [allocations]);
+
+  /* What the money coming in is FOR, when it is not only invoices: other
+     income, interest received, a refund, a director's contribution. */
+  const [ledgerRows, setLedgerRows] = useState(() => [emptyAllocationRow()]);
+
+  const allocationLedgers = useMemo(() => {
+    const cid = Number(currentCompany?.id);
+    return (db?.chartOfAccounts || [])
+      .filter((a) => Number(a?.companyId) === cid && a?.isActive !== false)
+      .filter((a) => String(a.id) !== String(ledgerAccountId))
+      .map((a) => ({ id: a.id, name: a.name }))
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  }, [db?.chartOfAccounts, currentCompany?.id, ledgerAccountId]);
 
   const computed = useMemo(() => {
     const receiptAmount = Number(formData.amount ?? 0);
@@ -393,7 +409,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     // box to point them at.
     fieldErrors.reset();
     fieldErrors.check('amount', Number.isFinite(amount) && amount > 0, 'Enter an amount greater than zero');
-    fieldErrors.check('customerId', Number.isFinite(customerIdNum) && !!customerIdNum, 'Customer is required');
+    /* Not every receipt has a customer. A refund from a supplier, interest
+       credited by the bank, an employee returning an advance — all money in,
+       none of them on the customer master. */
     if (!hideMode) {
       fieldErrors.require('ledgerAccountId', ledgerAccountId, 'Choose where the money was received');
     }
@@ -404,6 +422,26 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     if (cashWarning?.severity === 'block') {
       fieldErrors.check('amount', false, `${cashWarning.section}: ${cashWarning.message}`);
       return;
+    }
+
+    /*
+     * The entry has to balance before it is written. Invoices settled on this
+     * form count toward the total — a receipt of ₹10,500 that clears ₹10,000
+     * of invoices has ₹500 still to place, and that ₹500 is other income or
+     * interest, not a rounding difference.
+     */
+    {
+      const problem = allocationError({
+        rows: ledgerRows,
+        documentTotal: computed.allocated,
+        amount: Number(formData.amount) || 0,
+        noun: 'receipt',
+        hasParty: Number.isFinite(customerIdNum) && !!customerIdNum,
+      });
+      if (problem) {
+        notify.error(problem);
+        return;
+      }
     }
 
     // Validate allocations are within invoice balances
@@ -520,6 +558,11 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       date: formData.date,
       customerId: customerIdNum,
       customerName,
+      ledgerAllocations: usableRows(ledgerRows).map((r) => ({
+        ledgerId: String(r.ledgerId),
+        amount: round2(r.amount),
+        description: String(r.description || '').trim() || undefined,
+      })),
       amount: round2(amount),
       allocatedAmount: round2(computed.allocated),
       advanceAmount: round2(computed.advance),
@@ -609,8 +652,43 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           }
         : null;
 
+    /*
+     * The ledger side of a receipt that is not only invoices.
+     *
+     * Dr the bank once, Cr every allocated account — the mirror of the
+     * payment, through the same engine. The invoice lines are posted by the
+     * customer's own settlement, so only the ledger rows are written here.
+     */
+    let allocationJournal = {};
+    const ledgerLines = usableRows(ledgerRows);
+    if (ledgerLines.length && String(ledgerAccountId || '').trim()) {
+      const accounts = safeArray(db.chartOfAccounts).filter((a) => Number(a.companyId) === Number(companyId));
+      const nameOf = (id) => accounts.find((a) => String(a.id) === String(id))?.name || '';
+      try {
+        allocationJournal = await postJournalToLedger({
+          chartRows: accounts,
+          entry: {
+            date: String(formData.date).slice(0, 10),
+            narration: `Receipt ${receiptNo}`,
+            lines: allocationJournalLines({
+              rows: ledgerLines,
+              direction: 'IN',
+              bankLedgerId: String(ledgerAccountId).trim(),
+              amount: ledgerLines.reduce((t, r) => t + round2(r.amount), 0),
+              nameOf,
+            }),
+          },
+        });
+      } catch {
+        /* The receipt stands locally; the entry retries with the rest of the
+           book rather than the money going unrecorded. */
+        allocationJournal = {};
+      }
+    }
+
     setDb({
       ...db,
+      ...allocationJournal,
       tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : db.tdsTransactions,
       invoices: nextInvoices,
       payments: [...safeArray(db.payments), receiptRecord],
@@ -697,6 +775,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               setFormData((p) => ({ ...p, customerId }));
               setAllocations({});
             }}
+            label="Received from / Party"
           />
           <FieldError error={fieldErrors.error('customerId')} id={fieldErrors.errorId('customerId')} />
         </div>
@@ -885,26 +964,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             </div>
             ) : null}
 
-            {[
-              { k: 'bankCharges', label: 'Bank charges' },
-              { k: 'otherCharges', label: 'Other charges' },
-            ].map((f) => (
-              <div key={f.k}>
-                <label className="ui-label" htmlFor={`rcpt-${f.k}`}>
-                  {f.label}
-                </label>
-                <input
-                  id={`rcpt-${f.k}`}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className="ui-input ui-mono w-full"
-                  value={formData[f.k]}
-                  onChange={(e) => setFormData((p) => ({ ...p, [f.k]: e.target.value }))}
-                />
-              </div>
-            ))}
+            {/* Bank and other charges were boxes that shrank the cash and
+                posted nowhere. They are allocation rows now, naming the
+                account they belong to. */}
           </div>
           {computed.deductions > 0 ? (
             <p className="mt-2 text-xs ui-muted">
@@ -913,6 +975,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             </p>
           ) : null}
         </div>
+
+        <AllocationTable
+          rows={ledgerRows}
+          onChange={setLedgerRows}
+          ledgerOptions={allocationLedgers}
+          amount={Number(formData.amount) || 0}
+          documentTotal={computed.allocated}
+          documentLabel="Invoices settled"
+          heading="Receipt allocation"
+          noun="receipt"
+          money={(v) => formatMoney(v, currentCompany)}
+        />
 
 
 
