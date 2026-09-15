@@ -1857,11 +1857,6 @@ export const StockTransfersList = ({
     <DocumentListShell
       entity="stockTransfer"
       title={mode === 'branch' ? 'Branch Transfers' : 'Warehouse Transfers'}
-      description={
-        mode === 'branch'
-          ? 'Transfer out of one branch, transfer in at the other — stock lands only for the quantities confirmed.'
-          : 'Transfer out of one warehouse, transfer in at the other — stock lands only for the quantities confirmed.'
-      }
       company={currentCompany}
       search={{
         value: searchText,

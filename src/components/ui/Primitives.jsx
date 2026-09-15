@@ -2,7 +2,7 @@ import React from 'react';
 import { Check, Moon, Sun } from 'lucide-react';
 
 import Illustration from './Illustration';
-import { iconFor, toneFor } from './entityIdentity';
+import { iconFor } from './entityIdentity';
 import { useCountUp } from './useCountUp';
 import { resolveStatus } from '../../utils/statusRegistry';
 
@@ -36,11 +36,16 @@ import { resolveStatus } from '../../utils/statusRegistry';
 export const EntityMark = ({ entity, size = 18 }) => {
   const icon = iconFor(entity);
   if (!icon) return null;
-  const tone = toneFor(entity);
   return (
     <span
+      /* The brand, not the area's colour.
+         Eleven category hues told the areas apart and read as grey at 18px on
+         a near-white tile — the mark was doing identity work nobody could see.
+         One orange on a tint of itself is legible at a glance and says
+         "this is Neev One"; which area you are in is what the title beside it
+         and the rail's own coloured icon already say. */
       className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
-      style={{ backgroundColor: `rgb(var(--id-${tone}-soft))`, color: `rgb(var(--id-${tone}))` }}
+      style={{ backgroundColor: 'rgb(var(--brand) / 0.12)', color: 'rgb(var(--brand-ink))' }}
       aria-hidden="true"
     >
       {/* createElement, not <Icon />: the linter reads a capitalised local as
@@ -262,7 +267,17 @@ export const EmptyState = ({
       <Illustration kind={kind} size={104} className="mb-4 opacity-90" />
 
       <div className="ui-t-sec">{headline}</div>
-      {body ? <div className="ui-muted ui-t-body mt-1 max-w-md">{body}</div> : null}
+      {/*
+        The sentence under "No customers yet" is gone.
+
+        On a nothing-yet state it restated the heading and then explained what
+        a customer is to somebody already inside an accounting product — two
+        lines of page on every empty list in the app. A filtered state keeps
+        its line, because there the sentence is the whole point: it says the
+        records exist and the filters are hiding them, which the heading
+        cannot say on its own.
+      */}
+      {body && isFiltered ? <div className="ui-muted ui-t-body mt-1 max-w-md">{body}</div> : null}
 
       {isFiltered && filters.length ? (
         <div className="mt-3 flex flex-wrap gap-1.5 justify-center">

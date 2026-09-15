@@ -124,10 +124,6 @@ export const FeatureSettings = ({ pane = '' }) => {
       <PageHeader
         entity="settings"
         title={paneMeta(pane)?.label || 'General Preferences'}
-        description={
-          paneMeta(pane)?.blurb ||
-          'Capabilities that do not belong to one part of the business. Anything off is hidden from menus and forms.'
-        }
         actions={
           <>
             {dirty ? <span className="ui-pill ui-pill-warn">Unsaved changes</span> : null}

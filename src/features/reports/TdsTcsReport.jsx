@@ -106,7 +106,6 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
       <PageHeader
         entity="tds"
         title="TDS / TCS (194Q & 206C)"
-        description={`Per-party accumulation for ${fy.label} against the threshold — the excess is what you deduct or collect.`}
       />
 
       <div className="ui-card flex flex-wrap items-end gap-3 p-4">

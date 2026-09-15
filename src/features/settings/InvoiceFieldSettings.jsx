@@ -177,13 +177,6 @@ export const InvoiceFieldSettings = ({
       <PageHeader
         entity="settings"
         title={customOnly ? `Custom Fields${docLabel ? ` — ${docLabel}` : ''}` : 'Invoice Settings'}
-        description={
-          customOnly
-            ? `Fields you invent, for things this product does not already have a box for — kept per document, so these are ${
-                docLabel ? `the ${docLabel.toLowerCase()}'s own` : 'this document’s own'
-              }.`
-            : 'What an invoice contains. A field switched off leaves the form and the printed document — it is never greyed out.'
-        }
         actions={
           <>
             {/* The way back to whatever opened this. It was only in `embedded`
