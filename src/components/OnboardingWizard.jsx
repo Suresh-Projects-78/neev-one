@@ -239,6 +239,9 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
           </button>
         </div>
 
+        {/* Keyed on the step so React remounts the panel and the entrance
+            replays — the steps are a sequence and should read as one. */}
+        <div key={step} className="ui-step-in">
         {step === 0 ? (
           <div>
             <h2 id="onboard-title" className="ui-t-sec flex items-center gap-2">
@@ -382,6 +385,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
             </div>
           </div>
         ) : null}
+        </div>
       </div>
     </div>
   );

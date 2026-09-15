@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 import { allocationSummary, emptyAllocationRow } from './allocationLines';
@@ -30,8 +30,33 @@ export const AllocationTable = ({
 }) => {
   const summary = allocationSummary({ rows, documentTotal, amount });
   const set = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
-  const add = () => onChange([...rows, emptyAllocationRow()]);
-  const remove = (i) => onChange(rows.length > 1 ? rows.filter((_, j) => j !== i) : [emptyAllocationRow()]);
+
+  /*
+   * A row arriving or leaving, with a bridge.
+   *
+   * Both used to happen in a single frame, so the rows below a deleted one
+   * jumped up under the cursor — the jarring change motion exists to prevent.
+   * `leaving` holds the row on screen while its cells collapse; `entering`
+   * fades the new one in. Both are indices, because the rows have no id of
+   * their own and the caller owns the array.
+   */
+  const [leaving, setLeaving] = useState(null);
+  const [entering, setEntering] = useState(null);
+
+  const add = () => {
+    setEntering(rows.length);
+    onChange([...rows, emptyAllocationRow()]);
+    setTimeout(() => setEntering(null), 200);
+  };
+
+  const remove = (i) => {
+    if (leaving !== null) return;
+    setLeaving(i);
+    setTimeout(() => {
+      setLeaving(null);
+      onChange(rows.length > 1 ? rows.filter((_, j) => j !== i) : [emptyAllocationRow()]);
+    }, 140);
+  };
 
   return (
     <section>
@@ -56,8 +81,13 @@ export const AllocationTable = ({
           </thead>
           <tbody className="divide-y">
             {rows.map((row, i) => (
-              <tr key={i}>
+              <tr
+                key={i}
+                data-leaving={leaving === i ? 'true' : undefined}
+                data-entering={entering === i ? 'true' : undefined}
+              >
                 <td className="px-3 py-2">
+                  <div className="ui-row-slot"><div>
                   <select
                     value={row.ledgerId || ''}
                     onChange={(e) => set(i, { ledgerId: e.target.value })}
@@ -70,8 +100,10 @@ export const AllocationTable = ({
                       <option key={o.id} value={String(o.id)}>{o.name}</option>
                     ))}
                   </select>
+                  </div></div>
                 </td>
                 <td className="px-3 py-2">
+                  <div className="ui-row-slot"><div>
                   <input
                     type="number"
                     min="0"
@@ -83,8 +115,10 @@ export const AllocationTable = ({
                     aria-label={`Amount, allocation row ${i + 1}`}
                     disabled={disabled}
                   />
+                  </div></div>
                 </td>
                 <td className="px-3 py-2">
+                  <div className="ui-row-slot"><div>
                   <input
                     type="text"
                     value={row.description ?? ''}
@@ -94,6 +128,7 @@ export const AllocationTable = ({
                     aria-label={`Description, allocation row ${i + 1}`}
                     disabled={disabled}
                   />
+                  </div></div>
                 </td>
                 <td className="px-2 py-2 text-center">
                   {!disabled ? (

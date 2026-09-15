@@ -1291,6 +1291,59 @@
    * leaving toast collapses its own height first, so the ones under it are
    * carried rather than teleported.
    */
+  /*
+   * A row leaving a small editable table.
+   *
+   * The 1fr → 0fr trick cannot go on a <tr> — a table row is not a grid
+   * container and a transform on it does not change layout, so the gap would
+   * stay until unmount. It goes on the cell contents instead: every cell
+   * collapses together, which collapses the row, and no height is measured.
+   */
+  /*
+   * A wizard step arriving.
+   *
+   * The only rare, high-emotion moment in the product — first run, once per
+   * company — which is where a little more generosity than the rest of the
+   * app belongs. Sideways, because the steps are a sequence and the motion
+   * should say which way through it you are going.
+   */
+  .ui-step-in {
+    animation: ui-step-forward var(--dur-surface) var(--ease-out) both;
+  }
+  @keyframes ui-step-forward {
+    from { opacity: 0; transform: translate3d(12px, 0, 0); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-step-in { animation-name: ui-fade; }
+  }
+
+  .ui-row-slot {
+    display: grid;
+    grid-template-rows: 1fr;
+    transition: grid-template-rows var(--dur-exit) var(--ease-out);
+  }
+  .ui-row-slot > * {
+    min-height: 0;
+  }
+  tr[data-leaving='true'] .ui-row-slot {
+    grid-template-rows: 0fr;
+  }
+  tr[data-leaving='true'] > td {
+    padding-top: 0;
+    padding-bottom: 0;
+    transition: padding var(--dur-exit) var(--ease-out);
+    pointer-events: none;
+  }
+  /* A row arriving: the same bridge, in the other direction. */
+  tr[data-entering='true'] > td {
+    animation: ui-fade var(--dur-state) var(--ease-out) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-row-slot { transition: none; }
+    tr[data-entering='true'] > td { animation: none; }
+  }
+
   .ui-toast-slot {
     display: grid;
     grid-template-rows: 1fr;
@@ -1378,11 +1431,13 @@
 
   /* Press feedback. Exit (release) is faster than enter, so it feels snappy. */
   .ui-btn:active:not(:disabled),
+  .ui-icon-btn:active:not(:disabled),
   .ui-nav-item:active {
     transform: scale(0.975);
     transition-duration: 90ms;
   }
   .ui-btn,
+  .ui-icon-btn,
   .ui-nav-item {
     transition: background-color var(--dur-surface) ease, border-color var(--dur-surface) ease, color var(--dur-surface) ease,
       transform var(--dur-state) var(--ease-out);
@@ -1507,7 +1562,11 @@
     border-radius: var(--radius-btn);
     color: rgb(var(--fg-muted));
     cursor: pointer;
-    transition: background-color var(--dur-surface) ease, color var(--dur-surface) ease;
+    /* transform included here rather than only in the grouped press rule
+       above: this declaration is later in the file and would otherwise
+       overwrite it, and the press would do nothing. */
+    transition: background-color var(--dur-surface) ease, color var(--dur-surface) ease,
+      transform var(--dur-state) var(--ease-out);
   }
   .ui-icon-btn:hover {
     background-color: rgb(var(--surface-sunken));

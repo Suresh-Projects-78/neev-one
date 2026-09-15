@@ -5482,7 +5482,7 @@ const LedgerView = ({
                       });
 
                       return aggs.map((a, ai) => (
-                        <tr key={`${g.key}:agg:${ai}`} className="ui-sunken">
+                        <tr key={`${g.key}:agg:${ai}`} className="ui-sunken" data-entering="true">
                           {visibleColumns.map((c) => {
                             if (c.key === 'particulars') {
                               return (

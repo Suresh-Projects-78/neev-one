@@ -121,7 +121,10 @@ export default function CommandPalette({ onClose, items = [], onSelect, searchRe
       />
 
       <div
-        className="relative w-full max-w-xl overflow-hidden ui-in-pop"
+        /* No entrance. ⌘K is keyboard-initiated and used dozens of times a day —
+            the tier where animation reads as lag, not polish. Raycast opens
+            instantly and that is the bar. */
+        className="relative w-full max-w-xl overflow-hidden"
         style={{
           backgroundColor: 'rgb(var(--surface))',
           border: '1px solid rgb(var(--border))',
