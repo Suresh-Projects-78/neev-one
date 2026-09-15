@@ -1062,11 +1062,11 @@ const statusReason = (doc, status, company, nowMs) => {
       <StatCards
         company={currentCompany}
         cards={[
-          { label: 'Total invoices', value: headline.count, count: true, tone: 'draft', Icon: FileText },
-          { label: 'Total invoice amount', value: headline.billed, tone: 'sent', Icon: Receipt },
-          { label: 'Paid amount', value: headline.paid, tone: 'paid', Icon: CreditCard },
-          { label: 'Outstanding amount', value: headline.outstanding, tone: 'outstanding', Icon: ClipboardList },
-          { label: 'Overdue amount', value: headline.overdue, tone: 'overdue', Icon: Ban },
+          { label: 'Invoices', value: headline.count, count: true, tone: 'draft', Icon: FileText },
+          { label: 'Invoiced', value: headline.billed, tone: 'sent', Icon: Receipt },
+          { label: 'Paid', value: headline.paid, tone: 'paid', Icon: CreditCard },
+          { label: 'Outstanding', value: headline.outstanding, tone: 'outstanding', Icon: ClipboardList },
+          { label: 'Overdue', value: headline.overdue, tone: 'overdue', Icon: Ban },
         ]}
       />
 
@@ -2104,8 +2104,8 @@ export const EstimatesList = ({
         </PermissionButton>
       }
       cards={[
-        { label: 'Total quotations', value: estHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
-        { label: 'Total quoted', value: estHeadline.value, tone: 'sent', Icon: FileText },
+        { label: 'Quotations', value: estHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Quoted', value: estHeadline.value, tone: 'sent', Icon: FileText },
         { label: 'Open value', value: estHeadline.open, tone: 'outstanding', Icon: Tag },
         { label: 'Converted value', value: estHeadline.converted, tone: 'paid', Icon: Receipt },
         { label: 'Expired value', value: estHeadline.expired, tone: 'cancelled', Icon: Ban },
@@ -2601,8 +2601,8 @@ export const CreditNotesList = ({
         </PermissionButton>
       }
       cards={[
-        { label: 'Total credit notes', value: cnHeadline.count, count: true, tone: 'draft', Icon: Receipt },
-        { label: 'Total credited', value: cnHeadline.value, tone: 'refund', Icon: FileText },
+        { label: 'Credit notes', value: cnHeadline.count, count: true, tone: 'draft', Icon: Receipt },
+        { label: 'Credited', value: cnHeadline.value, tone: 'refund', Icon: FileText },
         { label: 'Against invoices', value: cnHeadline.againstInvoice, tone: 'paid', Icon: CreditCard },
         { label: 'On account, unused', value: cnHeadline.onAccount, tone: 'outstanding', Icon: ClipboardList },
         { label: 'Still in draft', value: cnHeadline.drafted, tone: 'cancelled', Icon: Ban },

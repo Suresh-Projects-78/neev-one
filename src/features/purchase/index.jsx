@@ -1606,7 +1606,7 @@ export const PurchaseOrdersList = ({
         </button>
       }
       cards={[
-        { label: 'Total orders', value: poHeadline.count, count: true, tone: 'draft', Icon: ShoppingCart },
+        { label: 'Orders', value: poHeadline.count, count: true, tone: 'draft', Icon: ShoppingCart },
         { label: 'Ordered', value: poHeadline.ordered, tone: 'sent', Icon: FileText },
         { label: 'Awaiting the goods', value: poHeadline.open, tone: 'outstanding', Icon: ClipboardList },
         { label: 'Billed', value: poHeadline.billed, tone: 'paid', Icon: Receipt },
@@ -2998,10 +2998,10 @@ const billStatusReason = (doc, status, company, nowMs) => {
         </PermissionButton>
       }
       cards={[
-        { label: 'Total bills', value: billHeadline.count, count: true, tone: 'draft', Icon: FileText },
-        { label: 'Total bill amount', value: billHeadline.billed, tone: 'sent', Icon: Receipt },
-        { label: 'Paid amount', value: billHeadline.paid, tone: 'paid', Icon: CreditCard },
-        { label: 'Unpaid amount', value: billHeadline.unpaid, tone: 'outstanding', Icon: ClipboardList },
+        { label: 'Bills', value: billHeadline.count, count: true, tone: 'draft', Icon: FileText },
+        { label: 'Billed', value: billHeadline.billed, tone: 'sent', Icon: Receipt },
+        { label: 'Paid', value: billHeadline.paid, tone: 'paid', Icon: CreditCard },
+        { label: 'Unpaid', value: billHeadline.unpaid, tone: 'outstanding', Icon: ClipboardList },
         { label: 'Overdue bills', value: billHeadline.overdue, tone: 'overdue', Icon: Ban },
       ]}
       tabs={[
@@ -4514,8 +4514,8 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
         </button>
       }
       cards={[
-        { label: 'Total debit notes', value: dnHeadline.count, count: true, tone: 'draft', Icon: NotebookPen },
-        { label: 'Total returned', value: dnHeadline.value, tone: 'refund', Icon: FileText },
+        { label: 'Debit notes', value: dnHeadline.count, count: true, tone: 'draft', Icon: NotebookPen },
+        { label: 'Returned', value: dnHeadline.value, tone: 'refund', Icon: FileText },
         { label: 'Against bills', value: dnHeadline.againstBill, tone: 'paid', Icon: CreditCard },
         { label: 'On account, unused', value: dnHeadline.onAccount, tone: 'outstanding', Icon: ClipboardList },
         { label: 'Still in draft', value: dnHeadline.drafted, tone: 'cancelled', Icon: Ban },

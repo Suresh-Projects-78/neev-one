@@ -451,7 +451,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView, 
       }}
       cards={[
         { label: `Total ${title.toLowerCase()}`, value: headline.count, count: true, tone: 'draft', Icon: FileText },
-        { label: 'Total value', value: headline.total, tone: 'sent', Icon: Receipt },
+        { label: 'Value', value: headline.total, tone: 'sent', Icon: Receipt },
         { label: 'This month', value: headline.thisMonth, tone: 'paid', Icon: CreditCard },
         { label: 'Against documents', value: headline.allocated, tone: 'partial', Icon: Landmark, hint: 'Allocated to invoices or bills' },
         headline.topMode

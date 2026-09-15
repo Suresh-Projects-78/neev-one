@@ -236,7 +236,7 @@ export default function VendorsList({ db, setDb, currentCompany }) {
         </button>
       }
       cards={[
-        { label: 'Total vendors', value: vendHeadline.count, count: true, tone: 'draft', Icon: Truck },
+        { label: 'Vendors', value: vendHeadline.count, count: true, tone: 'draft', Icon: Truck },
         { label: 'You owe', value: vendHeadline.owed, count: true, tone: 'outstanding', Icon: FileText },
         { label: 'Payable', value: vendHeadline.outstanding, tone: 'sent', Icon: Receipt },
         { label: 'Overdue', value: vendHeadline.overdue, tone: 'overdue', Icon: Ban },

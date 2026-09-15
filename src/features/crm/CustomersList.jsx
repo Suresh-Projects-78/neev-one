@@ -234,7 +234,7 @@ export default function CustomersList({ db, setDb, currentCompany }) {
         </button>
       }
       cards={[
-        { label: 'Total customers', value: custHeadline.count, count: true, tone: 'draft', Icon: Users },
+        { label: 'Customers', value: custHeadline.count, count: true, tone: 'draft', Icon: Users },
         { label: 'Owing you', value: custHeadline.owing, count: true, tone: 'outstanding', Icon: FileText },
         { label: 'Outstanding', value: custHeadline.outstanding, tone: 'sent', Icon: Receipt },
         { label: 'Overdue', value: custHeadline.overdue, tone: 'overdue', Icon: Ban },

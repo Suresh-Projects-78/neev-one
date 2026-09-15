@@ -103,11 +103,11 @@ describe('the screen', () => {
   it('totals bank and cash separately, and counts what is live', () => {
     view();
     /* One card each, and the closed account counts in neither total. */
-    const bankCard = screen.getByText('Total bank balance').closest('div').parentElement;
+    const bankCard = screen.getByText('Bank balance').closest('div').parentElement;
     expect(within(bankCard).getByText(/8,45,230\.00/)).toBeInTheDocument();
-    const cashCard = screen.getByText('Total cash balance').closest('div').parentElement;
+    const cashCard = screen.getByText('Cash balance').closest('div').parentElement;
     expect(within(cashCard).getByText(/7,850\.00/)).toBeInTheDocument();
-    const totalCard = screen.getByText('Total accounts').closest('div').parentElement;
+    const totalCard = screen.getByText('Accounts').closest('div').parentElement;
     expect(within(totalCard).getByText('3')).toBeInTheDocument();
     const activeCard = screen.getByText('Active accounts').closest('div').parentElement;
     expect(within(activeCard).getByText('2')).toBeInTheDocument();

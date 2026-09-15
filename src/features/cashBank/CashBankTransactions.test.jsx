@@ -41,7 +41,7 @@ const view = (props = {}) => render(<CashBankTransactions db={db} currentCompany
 const rowFor = (text) => screen.getAllByText(text).map((el) => el.closest('tr')).find(Boolean);
 /* The contra row names the other account, which is also an account row's own
    name elsewhere on the page — so it is found by its type, not its ledger. */
-const contraRow = () => screen.getByText('Contra').closest('tr');
+const contraRow = () => screen.getAllByText('Contra').map((el) => el.closest('tr')).find(Boolean);
 
 describe('the columns the spec asks for', () => {
   it('are date, account, ledger name, type, amount, status and action', () => {
@@ -88,10 +88,10 @@ describe('the figures above the list', () => {
   it('total each type and count the rows', () => {
     view();
     const card = (label) => screen.getByText(label).closest('div').parentElement;
-    expect(within(card('Total payments')).getByText(/1,00,000\.00/)).toBeInTheDocument();
-    expect(within(card('Total receipts')).getByText(/85,000\.00/)).toBeInTheDocument();
-    expect(within(card('Total contra')).getByText(/25,000\.00/)).toBeInTheDocument();
-    expect(within(card('Total transactions')).getByText('4')).toBeInTheDocument();
+    expect(within(card('Payments')).getByText(/1,00,000\.00/)).toBeInTheDocument();
+    expect(within(card('Receipts')).getByText(/85,000\.00/)).toBeInTheDocument();
+    expect(within(card('Contra entries')).getByText(/25,000\.00/)).toBeInTheDocument();
+    expect(within(card('Vouchers')).getByText('4')).toBeInTheDocument();
   });
 
   it('follows the account that was chosen', async () => {
@@ -102,7 +102,7 @@ describe('the figures above the list', () => {
 
     /* The cash account saw one receipt and one leg of the transfer. */
     const card = (label) => screen.getByText(label).closest('div').parentElement;
-    expect(within(card('Total transactions')).getByText('2')).toBeInTheDocument();
+    expect(within(card('Vouchers')).getByText('2')).toBeInTheDocument();
     expect(screen.queryByText('ABC Traders')).toBeNull();
   });
 });

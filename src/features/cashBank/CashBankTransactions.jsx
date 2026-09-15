@@ -135,10 +135,10 @@ export default function CashBankTransactions({
         ) : null
       }
       cards={[
-        { label: 'Total payments', value: totals.payments, tone: 'neg', Icon: ArrowUpRight },
-        { label: 'Total receipts', value: totals.receipts, tone: 'paid', Icon: ArrowDownLeft },
-        { label: 'Total contra', value: totals.contra, tone: 'sent', Icon: ArrowLeftRight },
-        { label: 'Total transactions', value: totals.count, count: true, tone: 'draft', Icon: ListChecks },
+        { label: 'Payments', value: totals.payments, tone: 'neg', Icon: ArrowUpRight },
+        { label: 'Receipts', value: totals.receipts, tone: 'paid', Icon: ArrowDownLeft },
+        { label: 'Contra entries', value: totals.contra, tone: 'sent', Icon: ArrowLeftRight },
+        { label: 'Vouchers', value: totals.count, count: true, tone: 'draft', Icon: ListChecks },
       ]}
       above={
         /* Account, then period, on one line — the order somebody asks the

@@ -680,7 +680,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
         </button>
       }
       cards={[
-        { label: 'Total orders', value: soHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Orders', value: soHeadline.count, count: true, tone: 'draft', Icon: ClipboardList },
         { label: 'Order value', value: soHeadline.value, tone: 'sent', Icon: FileText },
         { label: 'Still to deliver', value: soHeadline.open, tone: 'outstanding', Icon: Package },
         { label: 'Delivered, to bill', value: soHeadline.toBill, tone: 'partial', Icon: Truck },

@@ -199,9 +199,9 @@ export default function BankCashAccounts({
         ) : null
       }
       cards={[
-        { label: 'Total bank balance', value: summary.bank, tone: 'sent', Icon: Landmark },
-        { label: 'Total cash balance', value: summary.cash, tone: 'paid', Icon: Banknote },
-        { label: 'Total accounts', value: summary.total, count: true, tone: 'draft', Icon: ListChecks },
+        { label: 'Bank balance', value: summary.bank, tone: 'sent', Icon: Landmark },
+        { label: 'Cash balance', value: summary.cash, tone: 'paid', Icon: Banknote },
+        { label: 'Accounts', value: summary.total, count: true, tone: 'draft', Icon: ListChecks },
         { label: 'Active accounts', value: summary.active, count: true, tone: 'all', Icon: PieChart },
       ]}
       tabs={TABS}

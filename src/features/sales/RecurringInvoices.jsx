@@ -925,7 +925,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         </button>
       }
       cards={[
-        { label: 'Total schedules', value: recHeadline.count, count: true, tone: 'draft', Icon: RefreshCw },
+        { label: 'Schedules', value: recHeadline.count, count: true, tone: 'draft', Icon: RefreshCw },
         { label: 'Active schedules', value: recHeadline.active, count: true, tone: 'paid', Icon: CalendarClock },
         { label: 'Billing per month', value: recHeadline.monthly, tone: 'sent', Icon: FileText },
         { label: 'Due this month', value: recHeadline.dueThisMonth, tone: 'outstanding', Icon: Receipt },

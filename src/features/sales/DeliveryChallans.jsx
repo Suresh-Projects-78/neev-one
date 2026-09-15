@@ -533,7 +533,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
         </button>
       }
       cards={[
-        { label: 'Total challans', value: dcHeadline.count, count: true, tone: 'draft', Icon: Truck },
+        { label: 'Challans', value: dcHeadline.count, count: true, tone: 'draft', Icon: Truck },
         { label: 'Goods sent out', value: dcHeadline.value, tone: 'sent', Icon: Package },
         { label: 'Out, not billed', value: dcHeadline.unbilled, tone: 'outstanding', Icon: FileText },
         { label: 'Invoiced', value: dcHeadline.invoiced, tone: 'paid', Icon: Receipt },

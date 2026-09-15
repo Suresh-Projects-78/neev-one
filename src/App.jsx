@@ -705,14 +705,14 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         </PermissionButton>
       }
       cards={[
-        { label: 'Total expenses', value: expenseFlow.count, count: true, tone: 'draft', Icon: ClipboardList },
-        { label: 'Total expense amount', value: expenseFlow.total, tone: 'sent', Icon: Receipt },
-        { label: 'Paid amount', value: expenseFlow.paid, tone: 'paid', Icon: Check },
-        { label: 'Outstanding amount', value: expenseFlow.unpaid, tone: 'outstanding', Icon: FileText },
+        { label: 'Expenses', value: expenseFlow.count, count: true, tone: 'draft', Icon: ClipboardList },
+        { label: 'Spend', value: expenseFlow.total, tone: 'sent', Icon: Receipt },
+        { label: 'Paid', value: expenseFlow.paid, tone: 'paid', Icon: Check },
+        { label: 'Outstanding', value: expenseFlow.unpaid, tone: 'outstanding', Icon: FileText },
         /* The average voucher stood here and answered nothing anybody asks of a
            list of expenses; what is late is the figure somebody opens this
            screen for. */
-        { label: 'Overdue amount', value: expenseFlow.overdue, tone: 'overdue', Icon: AlertTriangle },
+        { label: 'Overdue', value: expenseFlow.overdue, tone: 'overdue', Icon: AlertTriangle },
       ]}
       tabs={EXPENSE_STATUS_TABS}
       tabsLabel="Expense status"
