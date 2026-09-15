@@ -122,6 +122,54 @@ import RecordDisbursementForm from './features/payments/RecordDisbursementForm';
 
 const InvoicePreview = lazy(() => import('./features/sales/InvoicePreview'));
 import AuthGate from './components/AuthGate';
+
+/*
+ * Screens reached from inside another screen rather than from the rail.
+ *
+ * Every report lives behind the Reports hub, and so do the master-data,
+ * financials and import screens. The address bar was already being written
+ * for them — opening Trial Balance put `#/trialBalance` in it — and then
+ * refused on the way back in, because the rail had never heard of the key.
+ * The product was handing out links to its own reports that opened something
+ * else, and a reload on any of them lost the screen.
+ *
+ * Listed rather than read off the render switch: a key here is a promise that
+ * the screen stands up from a cold load with nothing selected. The
+ * single-ledger view is absent for that reason — it needs a ledger, and a
+ * link that restores the screen but not the document lies about where it
+ * goes.
+ */
+const HUB_SCREENS = new Set([
+  'accounts',
+  'balanceSheet',
+  'cashBankImport',
+  'cashFlow',
+  'companyProfile',
+  'costCenters',
+  'dataImport',
+  'discountRules',
+  'docTemplates',
+  'financials',
+  'fixedAssets',
+  'gstr1',
+  'gstr2bReco',
+  'gstr3b',
+  'inventoryOverview',
+  'ledgerTrialBalance',
+  'mdm',
+  'paymentsExpense',
+  'profitLoss',
+  'salesBySalesman',
+  'salesReports',
+  'settingsNumbering',
+  'settingsProfile',
+  'stockAdjustment',
+  'tallyExport',
+  'tds',
+  'tdsTcs',
+  'trialBalance',
+  'yearEndClose',
+]);
 import {
   CreditNoteForm,
   CreditNotesList,
@@ -11874,6 +11922,7 @@ const AppShell = () => {
     (key) => {
       const want = String(key || '');
       if (isSettingsKey(want) || SETTINGS_KEYS.has(want)) return true;
+      if (HUB_SCREENS.has(want)) return true;
       for (const node of navModel || []) {
         if (node?.key === want) return true;
         for (const item of node?.items || []) if (String(item?.key) === want) return true;
