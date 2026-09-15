@@ -646,8 +646,13 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
   return (
     <HeroBand
       /* The greeting is the quiet half and the name is the loud one: two
-         lines, not one long sentence trailing off into a name. */
-      eyebrow={`${greetingFor(new Date().getHours())},`}
+         lines, not one long sentence trailing off into a name.
+
+         With no name to be loud — a fresh account, or a profile the server
+         has not answered for — the greeting becomes the title instead of
+         being printed twice, which is what the page did: "Good morning,"
+         over "Good morning". */
+      eyebrow={name ? `${greetingFor(new Date().getHours())},` : ''}
       title={
         name ? (
           <>

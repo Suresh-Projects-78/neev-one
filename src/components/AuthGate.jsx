@@ -85,10 +85,13 @@ const AuthGate = ({ onAuth }) => {
       }
       return { ok: res.ok, status: res.status, data, text };
     } catch (e) {
-      const hint = API_BASE
-        ? `Cannot reach server at ${API_BASE}. Make sure the backend is running.`
-        : 'Cannot reach server. Make sure the backend is running.';
-      throw new Error(`${hint} (${String(e?.message || e)})`);
+      /* The sign-in screen is the one place a stranger meets this product,
+         and it was answering a failed connection with an internal address
+         and an instruction to start a server. Neither is theirs to act on.
+         The technical detail rides along as the cause. */
+      const err = new Error('Could not reach the server. Check your connection and try again.');
+      err.cause = e;
+      throw err;
     }
   };
 

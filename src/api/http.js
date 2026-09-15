@@ -155,7 +155,11 @@ export async function apiFetch(
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (e) {
-    const err = new Error('Failed to fetch. Check that the backend is running and VITE_API_BASE is correct.');
+    /* What a person can act on: their connection, and the fact that the
+       work is not lost. The environment variable that used to be named here
+       means nothing to whoever is looking at the screen — and this string is
+       shown to them, not logged. The cause carries the technical detail. */
+    const err = new Error('Could not reach the server. Check your connection — anything you have entered is still here.');
     err.cause = e;
     throw err;
   }
