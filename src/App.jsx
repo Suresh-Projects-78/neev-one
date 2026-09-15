@@ -767,6 +767,42 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       statusValue={statusFilter}
       statusCounts={expenseStatusCounts}
       onStatusChange={setStatusFilter}
+      /* The period rides the far end of the status row, which was empty
+         across two thirds of the page. As a band of its own between the pills
+         and the rows it was a second toolbar, eighty pixels tall, above the
+         list somebody came to read. */
+      tabsExtras={
+        <>
+          <label className="ui-label mb-0" htmlFor="expense-from">From</label>
+          <input
+            id="expense-from"
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="ui-input !h-9 !min-h-0 w-auto text-sm"
+          />
+          <label className="ui-label mb-0" htmlFor="expense-to">To</label>
+          <input
+            id="expense-to"
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="ui-input !h-9 !min-h-0 w-auto text-sm"
+          />
+          {fromDate || toDate ? (
+            <button
+              type="button"
+              onClick={() => {
+                setFromDate('');
+                setToDate('');
+              }}
+              className="ui-btn ui-btn-ghost ui-btn-sm"
+            >
+              Clear
+            </button>
+          ) : null}
+        </>
+      }
       above={
         <input
           ref={importInputRef}
@@ -781,44 +817,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         />
       }
     >
-      {/* The period, at the top of the table it governs. It used to be a card
-          of its own between the tabs and the rows, carrying three export
-          buttons that belong with the other page-level actions. */}
-      <div className="flex flex-wrap items-end gap-3 px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
-        <div>
-          <label className="ui-label" htmlFor="expense-from">From</label>
-          <input
-            id="expense-from"
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="ui-input !h-9 text-sm"
-          />
-        </div>
-        <div>
-          <label className="ui-label" htmlFor="expense-to">To</label>
-          <input
-            id="expense-to"
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="ui-input !h-9 text-sm"
-          />
-        </div>
-        {fromDate || toDate ? (
-          <button
-            type="button"
-            onClick={() => {
-              setFromDate('');
-              setToDate('');
-            }}
-            className="ui-btn ui-btn-secondary"
-          >
-            Clear period
-          </button>
-        ) : null}
-      </div>
-
       <div className="ui-table-scroll">
         <table className="ui-table ui-table-wide ui-table-sticky">
           <thead>
