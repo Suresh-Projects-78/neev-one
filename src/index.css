@@ -1318,6 +1318,30 @@
     .ui-step-in { animation-name: ui-fade; }
   }
 
+  /*
+   * Sonner, wearing this product's surface.
+   *
+   * The library ships its own light/dark palette; this app has tokens that
+   * already answer both themes, so the toast takes those instead and a
+   * success toast is the same green as a Paid pill.
+   */
+  [data-sonner-toaster] {
+    --normal-bg: rgb(var(--surface));
+    --normal-text: rgb(var(--fg));
+    --normal-border: rgb(var(--border));
+    --success-bg: rgb(var(--surface));
+    --success-text: rgb(var(--pos));
+    --success-border: rgb(var(--border));
+    --error-bg: rgb(var(--surface));
+    --error-text: rgb(var(--neg));
+    --error-border: rgb(var(--border));
+    font-family: inherit;
+  }
+  [data-sonner-toast] {
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-pop);
+  }
+
   .ui-row-slot {
     display: grid;
     grid-template-rows: 1fr;

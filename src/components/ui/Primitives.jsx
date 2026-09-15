@@ -3,7 +3,6 @@ import { Check, Moon, Sun } from 'lucide-react';
 
 import Illustration from './Illustration';
 import { iconFor } from './entityIdentity';
-import { useCountUp } from './useCountUp';
 import { resolveStatus } from '../../utils/statusRegistry';
 
 /**
@@ -77,10 +76,10 @@ export const PageHeader = ({ title, description, actions = null, entity = '' }) 
  */
 export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = null, amount = null, format = null, title = null }) => {
   const toneClass = tone === 'pos' ? 'ui-amount-pos' : tone === 'neg' ? 'ui-amount-neg' : '';
-  // When a raw amount and formatter are supplied the figure counts up on
-  // change; otherwise the pre-formatted value renders as-is.
-  const counted = useCountUp(amount ?? 0);
-  const shown = amount !== null && typeof format === 'function' ? format(counted) : value;
+  /* The figure is printed, not counted up to. An accountant opens this screen
+     to read a number; animating it means the number cannot be read until the
+     animation finishes, and the tile is on screen for seconds at a time. */
+  const shown = amount !== null && typeof format === 'function' ? format(amount ?? 0) : value;
 
   // Same KPI voice as the main dashboard: small quiet label, 42px figure,
   // caption underneath. One language for a number-on-a-card everywhere, so a

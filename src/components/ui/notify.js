@@ -19,6 +19,16 @@ const push = (kind, message) => {
   toastListeners.forEach((l) => l(toast));
 };
 
+/*
+ * Sonner renders the toasts now; this bus still carries them.
+ *
+ * The 180+ handlers that call `notify.error(…)` do not know or care what draws
+ * the result, which is exactly why the bus was built — so the renderer could
+ * be replaced without touching them. What the library brings that the
+ * hand-rolled stack did not: swipe to dismiss, hover to pause, promise
+ * toasts, and a stack that reflows properly when one is taken from the middle.
+ */
+
 export const notify = {
   success: (m) => push('success', m),
   error: (m) => push('error', m),

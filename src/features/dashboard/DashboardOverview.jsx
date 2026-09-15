@@ -67,7 +67,6 @@ import {
   AGEING_BUCKETS,
 } from '../../utils/cashPosition';
 import { computeInventorySummaryByItemId } from '../../utils/inventory';
-import { useCountUp } from '../../components/ui/useCountUp';
 
 /**
  * The dashboard.
@@ -327,7 +326,6 @@ function AgeingBar({ buckets, total, company, onPick }) {
 }
 
 function MetricCard({ label, value, company, deltaValue, invertDelta, hint, series = [], actionLabel, onAction }) {
-  const counted = useCountUp(value);
   // Three degrees, no more: the figure lifts 18px above the card so the
   // number — the point of the tile — is what the depth showcases.
   const { ref: tiltRef, onPointerMove: tiltMove, onPointerLeave: tiltLeave } = useTilt({ maxDeg: 3, scale: 1.008 });
@@ -352,8 +350,8 @@ function MetricCard({ label, value, company, deltaValue, invertDelta, hint, seri
 
       {/* Compact at a glance; the exact figure is one hover away and lives in
           full in the tables below. */}
-      <p className="ui-kpi ui-depth-1 mt-3" title={formatMoney(counted, company)}>
-        {formatMoneyCompact(counted, company)}
+      <p className="ui-kpi ui-depth-1 mt-3" title={formatMoney(value, company)}>
+        {formatMoneyCompact(value, company)}
       </p>
 
       <div className="mt-3 flex items-center gap-2">

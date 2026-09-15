@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { Toaster as SonnerToaster, toast as sonnerToast } from 'sonner';
 
 import { subscribeConfirms, subscribeToasts } from './notify';
 
@@ -16,31 +17,19 @@ import { subscribeConfirms, subscribeToasts } from './notify';
  * delete anything.
  */
 
-const TONE = {
-  success: { icon: CheckCircle2, color: 'var(--pos)' },
-  error: { icon: AlertCircle, color: 'var(--neg)' },
-  info: { icon: Info, color: 'var(--info)' },
-};
-
 export default function Toaster() {
-  const [toasts, setToasts] = useState([]);
+
   const [confirm, setConfirm] = useState(null);
   const cancelRef = useRef(null);
 
   useEffect(() => {
     const offToasts = subscribeToasts((t) => {
-      setToasts((prev) => [...prev.slice(-4), t]); // cap the stack at 5
-      const ttl = t.kind === 'error' ? 7000 : 4000;
-      /*
-       * Marked as leaving, then removed once the exit has played. It used to
-       * be dropped from the array outright, so a toast arrived with a pop and
-       * left in a single frame — and every toast under it jumped up to fill
-       * the gap. See `dismiss` for the same two steps on the close button.
-       */
-      setTimeout(() => {
-        setToasts((prev) => prev.map((x) => (x.id === t.id ? { ...x, leaving: true } : x)));
-        setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== t.id)), 180);
-      }, ttl);
+      /* An error lingers: it usually carries an instruction, and four seconds
+         is not long enough to read one and act on it. */
+      const opts = { duration: t.kind === 'error' ? 7000 : 4000 };
+      if (t.kind === 'success') sonnerToast.success(t.message, opts);
+      else if (t.kind === 'error') sonnerToast.error(t.message, opts);
+      else sonnerToast(t.message, opts);
     });
     const offConfirms = subscribeConfirms((req) => setConfirm(req));
     return () => {
@@ -62,12 +51,6 @@ export default function Toaster() {
     return () => document.removeEventListener('keydown', onKey);
   }, [confirm]);
 
-  /* Leave, then go — the same two steps the timer takes. */
-  const dismiss = (id) => {
-    setToasts((prev) => prev.map((x) => (x.id === id ? { ...x, leaving: true } : x)));
-    setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== id)), 180);
-  };
-
   const settle = (ok) => {
     confirm?.resolve(ok);
     setConfirm(null);
@@ -75,36 +58,27 @@ export default function Toaster() {
 
   return (
     <>
-      {/* --- toast stack --- */}
-      <div
-        className="pointer-events-none fixed bottom-4 right-4 z-[120] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
-        role="status"
-        aria-live="polite"
-      >
-        {toasts.map((t) => {
-          const tone = TONE[t.kind] || TONE.info;
-          const Icon = tone.icon;
-          return (
-            <div key={t.id} className="ui-toast-slot" data-leaving={t.leaving ? 'true' : undefined}>
-            <div
-              className={`ui-card pointer-events-auto flex items-start gap-2.5 p-3 pr-2 ${t.leaving ? 'ui-out-right' : 'ui-in-pop'}`}
-              style={{ boxShadow: 'var(--shadow-pop)' }}
-            >
-              <Icon size={17} className="mt-0.5 flex-shrink-0" style={{ color: `rgb(${tone.color})` }} aria-hidden="true" />
-              <p className="min-w-0 flex-1 break-words text-sm leading-snug">{t.message}</p>
-              <button
-                type="button"
-                onClick={() => dismiss(t.id)}
-                className="ui-icon-btn !h-7 !w-7 flex-shrink-0"
-                aria-label="Dismiss notification"
-              >
-                <X size={13} aria-hidden="true" />
-              </button>
-            </div>
-            </div>
-          );
-        })}
-      </div>
+      {/*
+        Sonner draws the stack. It arrived with swipe-to-dismiss, hover-to-pause
+        and a stack that reflows when one is taken from the middle — all of
+        which had been hand-built here, the last of it this morning.
+        `richColors` is off: the tones come from this product's own tokens so a
+        success toast is the same green as a paid pill.
+      */}
+      <SonnerToaster
+        position="bottom-right"
+        offset={16}
+        gap={8}
+        visibleToasts={5}
+        toastOptions={{
+          duration: 4000,
+          classNames: {
+            toast: 'ui-card ui-sonner',
+            title: 'text-sm leading-snug',
+            closeButton: 'ui-icon-btn',
+          },
+        }}
+      />
 
       {/* --- confirm dialog --- */}
       {confirm ? (
