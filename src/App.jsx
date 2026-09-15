@@ -1233,138 +1233,160 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         onSecondary={submitExpenseAsDraft}
       />
 
-      {/* Voucher number and date sit to the right, so the body of the form
-          keeps the full width for entry. The document's own name is in the bar
-          above rather than repeated here. */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      {screenTitle ? null : (
         <div>
-          {screenTitle ? null : (
-            <>
-              <div className="ui-t-sec">Expense</div>
-              <div className="text-xs ui-muted">Book a spend against one or more expense ledgers.</div>
-            </>
-          )}
+          <div className="ui-t-sec">Expense</div>
+          <div className="text-xs ui-muted">Book a spend against one or more expense ledgers.</div>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <DocNumberField
-            className="w-48"
-            id="expense-number"
-            label="Voucher No."
-            value={formData.number}
-            onChange={(e) => {
-              expenseErrors.clearField('number');
-              setFormData({ ...formData, number: e.target.value });
-            }}
-            disabled={lockExpenseNumber}
-            required
-            voucherKey="expense"
-            title="Expense numbering"
-            sampleLabel="Next voucher will be"
-            manualLabel="Typed on each voucher"
-            branchId={activeBranchId || null}
-            settings={expenseNumbering}
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-          >
-            <FieldError error={expenseErrors.error('number')} id={expenseErrors.errorId('number')} />
-          </DocNumberField>
-          <div className="w-44">
-            <label className="ui-label">Date</label>
-            <input
-              type="date"
-              value={formData.date}
-              onChange={(e) => {
-                expenseErrors.clearField('date');
-                setFormData({ ...formData, date: e.target.value });
-              }}
-              className="ui-input w-full"
-              required
-              {...expenseErrors.props('date')}
-            />
-            <FieldError error={expenseErrors.error('date')} id={expenseErrors.errorId('date')} />
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Vendor gets a line of its own — it drives GST on every line below. */}
-      <div>
-        <VendorPicker
-          db={db}
-          setDb={setDb}
-          currentCompany={currentCompany}
-          value={formData.vendorId}
-          onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
-          label="Vendor"
-          showCreateButton
-        />
-        {formData.vendorId ? (
-          <div className="text-xs ui-muted mt-1">
-            {vendorChargesGst
-              ? `Registered vendor — GST applies at each ledger's rate (${isIntra ? 'CGST + SGST' : 'IGST'}).`
-              : `${String(gstRegistration || 'Unregistered')} vendor — no GST on this expense.`}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div>
-          <label className="ui-label">Vendor Inv No.</label>
-          <input
-            type="text"
-            value={formData.refNo}
-            onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
-            className="ui-input w-full"
-            placeholder="Vendor's invoice number"
-          />
-        </div>
-
-        <div>
-          <label className="ui-label">Vendor Inv Date</label>
-          <input
-            type="date"
-            value={formData.refDate}
-            onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
-            className="ui-input w-full"
-          />
-        </div>
-
-        <div>
-          <label className="ui-label">Due Date</label>
-          <input
-            type="date"
-            value={formData.dueDate}
-            onChange={(e) => {
-              expenseErrors.clearField('dueDate');
-              setFormData({ ...formData, dueDate: e.target.value, dueDateTouched: true });
-            }}
-            className="ui-input w-full"
-            required
-            {...expenseErrors.props('dueDate')}
-          />
-          <FieldError error={expenseErrors.error('dueDate')} id={expenseErrors.errorId('dueDate')} />
-          {vendor ? (
-            <div className="text-xs ui-muted mt-1">
-              {termDaysFor(vendor, 0) > 0 ? termsLabel(vendor, 0) : 'No credit period — due on the expense date'}
-            </div>
-          ) : null}
-        </div>
-
-        {costCenters.length ? (
+      {/*
+        The head of the voucher in the bill's two columns, ruled off between
+        them: who was paid and what they billed on the left, the paperwork
+        that identifies this voucher on the right. Laid out as one grid rather
+        than a right-floated pair over a four-column row — that shape left an
+        empty column beside Due Date and a band of nothing beside the voucher
+        number, and the fields on the two halves lined up with nothing.
+      */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+        <div className="lg:col-span-6 space-y-4">
+          {/* Vendor drives GST on every line below, so it leads. */}
           <div>
-            <label className="ui-label">Cost Center</label>
-            <select
-              value={formData.costCenterId || ''}
-              onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
-              className="ui-select w-full"
-            >
-              <option value="">— none —</option>
-              {costCenters.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <VendorPicker
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              value={formData.vendorId}
+              onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
+              label="Vendor"
+              showCreateButton
+            />
+            {formData.vendorId ? (
+              <div className="text-xs ui-muted mt-1">
+                {vendorChargesGst
+                  ? `Registered vendor — GST applies at each ledger's rate (${isIntra ? 'CGST + SGST' : 'IGST'}).`
+                  : `${String(gstRegistration || 'Unregistered')} vendor — no GST on this expense.`}
+              </div>
+            ) : null}
           </div>
-        ) : null}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="expense-ref-no">Vendor Inv No.</label>
+              <input
+                id="expense-ref-no"
+                type="text"
+                value={formData.refNo}
+                onChange={(e) => setFormData({ ...formData, refNo: e.target.value })}
+                className="ui-input w-full"
+                placeholder="Vendor's invoice number"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="expense-ref-date">Vendor Inv Date</label>
+              <input
+                id="expense-ref-date"
+                type="date"
+                value={formData.refDate}
+                onChange={(e) => setFormData({ ...formData, refDate: e.target.value })}
+                className="ui-input w-full"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="lg:col-span-6 space-y-4 lg:ps-6"
+          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <DocNumberField
+              id="expense-number"
+              label="Voucher No."
+              value={formData.number}
+              onChange={(e) => {
+                expenseErrors.clearField('number');
+                setFormData({ ...formData, number: e.target.value });
+              }}
+              disabled={lockExpenseNumber}
+              required
+              voucherKey="expense"
+              title="Expense numbering"
+              sampleLabel="Next voucher will be"
+              manualLabel="Typed on each voucher"
+              branchId={activeBranchId || null}
+              settings={expenseNumbering}
+              db={db}
+              setDb={setDb}
+              currentCompany={currentCompany}
+            >
+              <FieldError error={expenseErrors.error('number')} id={expenseErrors.errorId('number')} />
+            </DocNumberField>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="expense-date">
+                Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="expense-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => {
+                  expenseErrors.clearField('date');
+                  setFormData({ ...formData, date: e.target.value });
+                }}
+                className="ui-input w-full"
+                required
+                {...expenseErrors.props('date')}
+              />
+              <FieldError error={expenseErrors.error('date')} id={expenseErrors.errorId('date')} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="expense-due-date">
+                Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
+              </label>
+              <input
+                id="expense-due-date"
+                type="date"
+                value={formData.dueDate}
+                onChange={(e) => {
+                  expenseErrors.clearField('dueDate');
+                  setFormData({ ...formData, dueDate: e.target.value, dueDateTouched: true });
+                }}
+                className="ui-input w-full"
+                required
+                {...expenseErrors.props('dueDate')}
+              />
+              <FieldError error={expenseErrors.error('dueDate')} id={expenseErrors.errorId('dueDate')} />
+              {vendor ? (
+                <div className="text-xs ui-muted mt-1">
+                  {termDaysFor(vendor, 0) > 0 ? termsLabel(vendor, 0) : 'No credit period — due on the expense date'}
+                </div>
+              ) : null}
+            </div>
+
+            {costCenters.length ? (
+              <div className="min-w-0">
+                <label className="ui-label" htmlFor="expense-cost-center">Cost Center</label>
+                <select
+                  id="expense-cost-center"
+                  value={formData.costCenterId || ''}
+                  onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
+                  className="ui-select w-full"
+                >
+                  <option value="">— none —</option>
+                  {costCenters.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+          </div>
+        </div>
       </div>
 
       <div>
@@ -1479,20 +1501,24 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         </div>
       </div>
 
-      {/* Narration reads as a summary of the lines, so it comes after them. */}
-      <div>
-        <label className="ui-label">Narration</label>
-        <input
-          type="text"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          className="ui-input w-full"
-          placeholder="What this spend was for"
-        />
-      </div>
+      {/* Narration reads as a summary of the lines, so it comes after them —
+          and it sits beside the totals rather than above them, because a full
+          width field over a right-hand stack leaves a quarter of the page
+          empty under it. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:gap-6">
+        <div className="lg:col-span-7">
+          <label className="ui-label" htmlFor="expense-narration">Narration</label>
+          <input
+            id="expense-narration"
+            type="text"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="ui-input w-full"
+            placeholder="What this spend was for"
+          />
+        </div>
 
-      <div className="flex justify-end">
-        <div className="w-80 space-y-2">
+        <div className="space-y-2 lg:col-span-5">
           <div className="flex justify-between">
             <span>Subtotal:</span>
             <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
