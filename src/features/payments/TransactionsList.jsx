@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { notify } from '../../components/ui/notify';
 
-import RecordPaymentForm from './RecordPaymentForm';
+import RecordDisbursementForm from './RecordDisbursementForm';
+import RecordReceiptForm from './RecordReceiptForm';
 import { confirmDialog } from '../../components/ui/notify';
 import { reversePayment } from '../../api/payments';
 import { hasApiSession } from '../../api/purchaseDocs';
@@ -38,140 +39,6 @@ const resolveVoucher = ({ db, companyId, voucherType, voucherId }) => {
   if (voucherType === 'bill') return safeArray(db.bills).find((d) => d.companyId === companyId && Number(d.id) === id) || null;
   if (voucherType === 'expense') return safeArray(db.expenses).find((d) => d.companyId === companyId && Number(d.id) === id) || null;
   return null;
-};
-
-const getBalanceForVoucher = (voucher) => {
-  const total = Number(voucher?.total ?? 0);
-  const paid = Number(voucher?.paidAmount ?? 0);
-  const balance = total - paid;
-  return Number.isFinite(balance) ? Math.max(0, balance) : 0;
-};
-
-const canRecordAgainstVoucher = ({ voucherType, voucher }) => {
-  if (!voucher) return false;
-
-  const rawStatus = String(voucher?.status || '').trim();
-  if (rawStatus === 'Draft') return false;
-  if (voucherType === 'invoice' && rawStatus === 'Cancelled') return false;
-
-  return getBalanceForVoucher(voucher) > 0.0001;
-};
-
-const SelectAndRecordPrompt = ({ db, setDb, currentCompany, openModal, kind, onClose }) => {
-  // kind: 'receipt' | 'payment'
-  const companyId = currentCompany.id;
-
-  const [voucherType, setVoucherType] = useState(kind === 'receipt' ? 'invoice' : 'bill');
-  const [voucherId, setVoucherId] = useState('');
-
-  const invoices = useMemo(() => safeArray(db.invoices).filter((i) => i.companyId === companyId), [db, companyId]);
-  const bills = useMemo(() => safeArray(db.bills).filter((b) => b.companyId === companyId), [db, companyId]);
-  const expenses = useMemo(() => safeArray(db.expenses).filter((e) => e.companyId === companyId), [db, companyId]);
-
-  const list = voucherType === 'invoice' ? invoices : voucherType === 'bill' ? bills : expenses;
-
-  const eligibleDocs = useMemo(() => {
-    return list.filter((d) => canRecordAgainstVoucher({ voucherType, voucher: d }));
-  }, [list, voucherType]);
-
-  const selected = useMemo(() => {
-    const id = Number(voucherId);
-    if (!Number.isFinite(id)) return null;
-    return list.find((d) => Number(d.id) === id) || null;
-  }, [list, voucherId]);
-
-  const openRecord = () => {
-    if (!selected) return;
-
-    const titlePrefix = voucherType === 'invoice' ? 'Record Receipt' : 'Record Payment';
-    openModal(
-      <RecordPaymentForm
-        db={db}
-        setDb={setDb}
-        currentCompany={currentCompany}
-        voucherType={voucherType}
-        voucher={selected}
-        onClose={() => openModal(null)}
-      />,
-      { title: `${titlePrefix} ${selected?.number || ''}`.trim(), maxWidthClass: 'max-w-3xl' }
-    );
-  };
-
-  const title = kind === 'receipt' ? 'Record Receipt' : 'Record Payment';
-
-  return (
-    <div className="space-y-6">
-      {kind === 'payment' ? (
-        <div>
-          <label className="ui-label">Type</label>
-          <select
-            value={voucherType}
-            onChange={(e) => {
-              setVoucherType(e.target.value);
-              setVoucherId('');
-            }}
-            className="ui-select w-full"
-          >
-            <option value="bill">Bill</option>
-            <option value="expense">Expense</option>
-          </select>
-        </div>
-      ) : null}
-
-      <div>
-        <label className="ui-label">{getVoucherLabel(voucherType)} #</label>
-        <select
-          value={voucherId}
-          onChange={(e) => setVoucherId(e.target.value)}
-          className="ui-select w-full"
-        >
-          <option value="">Select</option>
-          {eligibleDocs.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.number}
-            </option>
-          ))}
-        </select>
-        {eligibleDocs.length === 0 ? (
-          <div className="text-sm ui-muted mt-2">No eligible documents found (needs balance and not Draft).</div>
-        ) : null}
-      </div>
-
-      {selected ? (
-        <div className="grid grid-cols-3 gap-3 text-sm ui-sunken border rounded-lg p-3">
-          <div>
-            <div className="ui-muted">Total</div>
-            <div className="ui-money">{formatMoney(Number(selected.total ?? 0), currentCompany)}</div>
-          </div>
-          <div>
-            <div className="ui-muted">Paid</div>
-            <div className="ui-money">{formatMoney(Number(selected.paidAmount ?? 0), currentCompany)}</div>
-          </div>
-          <div>
-            <div className="ui-muted">Balance</div>
-            <div className="ui-money">{formatMoney(getBalanceForVoucher(selected), currentCompany)}</div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => onClose?.()} className="px-4 py-2 border rounded-lg ui-hover-sunken">
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={openRecord}
-          disabled={!selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })}
-          className={`px-4 py-2 rounded-lg ${ !selected || !canRecordAgainstVoucher({ voucherType, voucher: selected })
-              ? 'ui-sunken ui-muted cursor-not-allowed'
-              : 'ui-btn ui-btn-primary '
-          }`}
-        >
-          {title}
-        </button>
-      </div>
-    </div>
-  );
 };
 
 const TransactionView = ({ title, payload }) => {
@@ -639,16 +506,19 @@ export const ReceiptsTransactionsList = ({ db, setDb, currentCompany, openModal,
             }
 
             if (typeof openModal !== 'function' || typeof setDb !== 'function') return;
+            /* The full receipt, not a document picker.
+               Money can arrive with no invoice behind it — interest, a
+               refund, a director's contribution — and asking which invoice
+               this is before showing the form refused all of them. The
+               invoices are still there to tick once a customer is chosen. */
             openModal(
-              <SelectAndRecordPrompt
+              <RecordReceiptForm
                 db={db}
                 setDb={setDb}
                 currentCompany={currentCompany}
-                openModal={openModal}
-                kind="receipt"
                 onClose={() => openModal(null)}
               />,
-              { title: 'Record Receipt', maxWidthClass: 'max-w-md' }
+              { title: 'Record Receipt', maxWidthClass: 'max-w-4xl' }
             );
           }}
           className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
@@ -719,16 +589,17 @@ export const PaymentsTransactionsList = ({ db, setDb, currentCompany, openModal,
             }
 
             if (typeof openModal !== 'function' || typeof setDb !== 'function') return;
+            /* Likewise: a GST challan, a bank charge and a salary advance
+               are payments with no bill to pick, and this button used to
+               insist on one before it would show the form. */
             openModal(
-              <SelectAndRecordPrompt
+              <RecordDisbursementForm
                 db={db}
                 setDb={setDb}
                 currentCompany={currentCompany}
-                openModal={openModal}
-                kind="payment"
                 onClose={() => openModal(null)}
               />,
-              { title: 'Record Payment', maxWidthClass: 'max-w-md' }
+              { title: 'Record Payment', maxWidthClass: 'max-w-5xl' }
             );
           }}
           className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"

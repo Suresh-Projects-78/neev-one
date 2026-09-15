@@ -640,14 +640,20 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     );
   };
 
+  /* The same payment record as everywhere else, opened with this expense's
+     vendor and balance already in it — so a payment that also carries a bank
+     charge or a TDS deduction is one record, not this one plus a journal. */
   const openRecordPayment = (expense) => {
     openModal(
-      <RecordPaymentForm
+      <RecordDisbursementForm
         db={db}
         setDb={setDb}
         currentCompany={currentCompany}
-        voucherType="expense"
-        voucher={expense}
+        initialData={{
+          vendorId: expense?.vendorId ? String(expense.vendorId) : '',
+          amount: String(Math.max(0, Number(expense?.total ?? 0) - Number(expense?.paidAmount ?? 0)) || ''),
+          date: new Date().toISOString().slice(0, 10),
+        }}
         onClose={() => openModal(null)}
       />
     );
