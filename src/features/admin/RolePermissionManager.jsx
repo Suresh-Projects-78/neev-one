@@ -163,6 +163,7 @@ export const RolePermissionManager = () => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Role Permissions"
         description="Tick what each role may do. Users inherit these through the roles assigned to them."
         actions={

@@ -134,6 +134,7 @@ export const EmailSettings = () => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Email"
               actions={
           notice ? (

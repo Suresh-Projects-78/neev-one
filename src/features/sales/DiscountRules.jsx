@@ -200,7 +200,6 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
         <PageHeader
           entity="tax"
           title="Discount Rules"
-          description="Item, category, customer, quantity-break and promotional discounts — the best matching rule applies itself on the invoice."
         />
         <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
           <Plus size={15} aria-hidden="true" /> New Rule

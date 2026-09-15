@@ -1578,6 +1578,7 @@ export const PurchaseOrdersList = ({
 
   return (
     <DocumentListShell
+      entity="purchaseOrder"
       title="Purchase Orders"
       company={currentCompany}
       search={{
@@ -2937,6 +2938,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
 
   return (
     <DocumentListShell
+      entity="bill"
       title="Purchase Invoices"
       company={currentCompany}
       search={{
@@ -4477,6 +4479,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
 
   return (
     <DocumentListShell
+      entity="purchaseReturn"
       title="Purchase Returns"
       company={currentCompany}
       search={{

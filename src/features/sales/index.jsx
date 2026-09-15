@@ -894,6 +894,7 @@ const statusReason = (doc, status, company, nowMs) => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="invoice"
         title="Sales Invoices"
               actions={
           <>
@@ -2063,6 +2064,7 @@ export const EstimatesList = ({
 
   return (
     <DocumentListShell
+      entity="quotation"
       title="Quotations"
       company={currentCompany}
       search={{
@@ -2560,6 +2562,7 @@ export const CreditNotesList = ({
 
   return (
     <DocumentListShell
+      entity="salesReturn"
       title="Sales Returns"
       company={currentCompany}
       search={{

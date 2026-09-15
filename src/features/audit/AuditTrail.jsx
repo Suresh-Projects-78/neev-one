@@ -136,7 +136,6 @@ export default function AuditTrail() {
         <PageHeader
           entity="report"
           title="Audit Trail"
-          description="Every recorded change, who made it and when. Read-only — nothing here can be edited or removed."
         />
         <button type="button" onClick={() => load()} className="ui-btn ui-btn-secondary" disabled={loading}>
           <RefreshCw size={15} aria-hidden="true" /> {loading ? 'Loading…' : 'Refresh'}

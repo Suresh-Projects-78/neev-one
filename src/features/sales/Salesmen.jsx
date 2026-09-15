@@ -162,7 +162,6 @@ export default function Salesmen({ db, setDb, currentCompany }) {
     <DocumentListShell
       entity="salesperson"
       title="Salesmen"
-      description="Who sold what — every invoice can carry a salesman; commission is computed on pre-GST sales."
       company={currentCompany}
       search={{
         value: smSearch.query,

@@ -218,6 +218,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
 
   return (
     <DocumentListShell
+      entity="tds"
       title="TDS"
       company={currentCompany}
       primary={

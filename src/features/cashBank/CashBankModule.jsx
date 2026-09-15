@@ -1857,6 +1857,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   return (
     <DocumentListShell
+      entity="bank"
       title="Cash & Bank"
       company={currentCompany}
       search={{

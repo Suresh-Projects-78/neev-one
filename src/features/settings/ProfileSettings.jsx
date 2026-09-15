@@ -257,6 +257,7 @@ export const ProfileSettings = () => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="customer"
         title="My profile"
               actions={
           <>

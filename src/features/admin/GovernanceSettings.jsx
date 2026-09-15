@@ -108,8 +108,8 @@ export const GovernanceSettings = () => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Governance"
-        description="Bundle roles, hold large documents for approval, and limit which records a user may touch."
         actions={
           notice ? (
             <span className="ui-pill ui-pill-pos" role="status">

@@ -50,7 +50,12 @@
   --brand-soft: 255 245 236;    /* #FFF5EC — selected nav, selected menu row */
   --brand-subtle: 255 249 245;  /* #FFF9F5 */
   --brand-border: 255 216 186;  /* #FFD8BA */
-  --on-brand: 26 12 3;          /* 6.82:1 on the orange; white was 2.80:1 */
+  /* White, as the brand asks. On #FF6B00 that is 2.9:1, so the filled surface
+     itself steps down to #E85F00 (--brand-hover) wherever text sits on it —
+     see .ui-btn-primary — which buys 3.3:1: AA for the 14px semibold a button
+     label is, and a bright orange rather than the brown brick near-black ink
+     made of it. */
+  --on-brand: 255 255 255;
   /* What is legible on a filled semantic tone. Light mode's greens, reds and
      ambers are dark enough for white (4.8:1 at worst); dark mode lifts the
      same tokens to light tints, where white would be about 1.7:1 and the ink
@@ -122,14 +127,14 @@
 
   /* Primary action == brand, so there is one obvious next step per screen. */
   --primary: var(--brand);
-  --on-primary: 26 12 3;        /* ink on orange, same as --on-brand */
+  --on-primary: var(--on-brand);
   --primary-hover: var(--brand-hover);
 
   /* Accent + focus ring follow the brand rather than introducing a third hue. */
   --accent: var(--brand);
   --accent-hover: var(--brand-hover);
   --accent-soft: var(--brand-soft);
-  --on-accent: 26 12 3;
+  --on-accent: var(--on-brand);
   --ring: var(--brand);
 
   /* No second accent on chrome. Success/warning/danger exist for status. */
@@ -671,14 +676,18 @@
     opacity: 0.45;
     cursor: not-allowed;
   }
+  /* The filled surface is a step deeper than the brand so white text on it
+     reaches 3.3:1 — AA for the semibold 14px a button label is. The bright
+     #FF6B00 stays where nothing sits on top of it: the active nav indicator,
+     a checked box, the focus ring. */
   .ui-btn-primary {
-    background-color: rgb(var(--primary));
-    color: rgb(var(--on-primary));
-    border: 1px solid rgb(var(--primary));
+    background-color: rgb(var(--brand-hover));
+    color: rgb(var(--on-brand));
+    border: 1px solid rgb(var(--brand-hover));
   }
   .ui-btn-primary:hover:not(:disabled) {
-    background-color: rgb(var(--primary-hover));
-    border-color: rgb(var(--primary-hover));
+    background-color: rgb(var(--brand-pressed));
+    border-color: rgb(var(--brand-pressed));
   }
   /* Secondary carries the brand in its text and its edge, not in a fill.
      A filled second button would be a second primary, and the rule is one

@@ -80,8 +80,8 @@ export const TermsSettings = ({ db, setDb, currentCompany }) => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Terms & Conditions"
-        description="Printed at the foot of each document. Only the three documents with a print view are listed — wording set anywhere else would go nowhere."
         actions={
           <>
             {dirty ? <span className="ui-pill ui-pill-warn">Unsaved changes</span> : null}

@@ -111,8 +111,8 @@ export default function DataBackup({ currentCompany }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Data Backup"
-        description="Two copies you can keep: what this company has done, and how it is set up. Both are this company's alone."
       />
 
       <BackupCard

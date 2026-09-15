@@ -223,7 +223,6 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
       <PageHeader
         entity="bank"
         title="Bank Reconciliation"
-        description="Record the bank's own date against each transaction and mark it reconciled once confirmed."
       />
 
       {/* Account first, Period second, Import Statement third — one line,

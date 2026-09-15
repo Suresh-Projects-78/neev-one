@@ -37,6 +37,7 @@ export default function SsoSettings() {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Single Sign-On"
             />
 

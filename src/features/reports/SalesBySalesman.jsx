@@ -76,7 +76,6 @@ export default function SalesBySalesman({ db, currentCompany }) {
       <PageHeader
         entity="report"
         title="Sales by Salesman"
-        description="Invoiced sales, open orders and quotes per salesman — commission on pre-GST sales."
       />
 
       <div className="ui-card p-4 flex flex-wrap items-end gap-3">

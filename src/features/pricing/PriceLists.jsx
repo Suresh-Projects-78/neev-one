@@ -269,7 +269,6 @@ export default function PriceLists({ db, setDb, currentCompany }) {
       <DocumentListShell
         entity="category"
         title="Price Lists"
-        description="Rate cards per customer segment — invoicing reads the customer's list before the item's own price"
         company={currentCompany}
         search={{
           value: plSearch.query,
@@ -526,7 +525,6 @@ export default function PriceLists({ db, setDb, currentCompany }) {
     <div className="space-y-6">
       <PageHeader
         title={editing.name}
-        description="Rates on this list are used before the item's own price, for every customer pointed at it."
         actions={
           <>
             <span className={STATUS_PILL[st].cls}>{STATUS_PILL[st].label}</span>

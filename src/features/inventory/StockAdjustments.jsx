@@ -662,7 +662,6 @@ const StockAdjustments = ({
     <DocumentListShell
       entity="adjustment"
       title="Stock Adjustments"
-      description="What a count found that the books did not. Each one moves stock, so the balance sheet and the P&L move with it."
       company={currentCompany}
       search={{
         value: adjSearch.query,

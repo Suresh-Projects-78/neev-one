@@ -107,8 +107,8 @@ export const NumberingSettings = () => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Document numbering"
-        description="Prefixes, padding and when the counter restarts. Numbers are issued by the server, so two people cannot get the same one."
         actions={
           <>
             {notice ? (

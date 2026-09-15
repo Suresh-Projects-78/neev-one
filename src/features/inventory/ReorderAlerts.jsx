@@ -191,7 +191,6 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
     <DocumentListShell
       entity="items"
       title="Reorder Alerts"
-      description="Stock at or below its reorder level. The suggested order refills to twice the level; one click drafts the PO to the last supplier."
       company={currentCompany}
       search={{
         value: raSearch.query,

@@ -723,6 +723,7 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
 
   return (
     <DocumentListShell
+      entity="expense"
       title="Expenses"
       company={currentCompany}
       search={{
@@ -1753,6 +1754,7 @@ const ItemsList = ({ db, setDb, currentCompany, warehouses = [], branches = [], 
 
   return (
     <DocumentListShell
+      entity="items"
       title="Items"
       company={currentCompany}
       search={{
@@ -2342,6 +2344,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
 
   return (
     <DocumentListShell
+      entity="chartOfAccounts"
       title="Chart of Accounts"
       company={currentCompany}
       search={
@@ -5985,8 +5988,8 @@ const ReportsOverview = ({ sections, onNavigate }) => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="report"
         title="Reports"
-        description="Everything is computed from posted documents — never from a cache."
       />
 
       {sections.map((sec) => (
@@ -7105,6 +7108,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
 
   return (
     <DocumentListShell
+      entity="category"
       title="Item Categories"
       company={currentCompany}
       search={{
@@ -13473,8 +13477,8 @@ const AppShell = () => {
         return (
           <div className="space-y-6">
             <PageHeader
+      entity="settings"
       title="Modules"
-              description="What this business uses. Anything switched off is hidden from menus and forms."
             />
             <ModulePicker submitLabel="Save modules" />
           </div>

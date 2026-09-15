@@ -115,6 +115,7 @@ export const SecuritySettings = () => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Security"
               actions={
           notice ? (

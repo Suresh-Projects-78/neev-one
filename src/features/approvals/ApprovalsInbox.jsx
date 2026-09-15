@@ -68,7 +68,6 @@ export const ApprovalsInbox = ({ currentCompany }) => {
       <PageHeader
         entity="report"
         title="Approvals"
-        description="Documents held above an approval threshold. Nothing here has reached the books yet."
         actions={
           notice ? (
             <span className="ui-pill ui-pill-pos" role="status">

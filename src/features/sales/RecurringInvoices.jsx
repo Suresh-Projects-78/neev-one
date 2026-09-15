@@ -870,7 +870,6 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
     <DocumentListShell
       entity="recurring"
       title="Recurring Invoices"
-      description="Schedules live on the server and raise their drafts hourly, whether or not anyone is signed in. You review and send."
       company={currentCompany}
       search={{
         value: recSearch.query,
