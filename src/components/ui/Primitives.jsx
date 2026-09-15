@@ -271,19 +271,38 @@ export const EmptyState = ({
           centred. A row that centres whatever it is given keeps the block
           symmetrical at one, two or three routes.
         */
-        <div className="mt-4 flex w-full max-w-2xl flex-col flex-wrap justify-center gap-2 text-left sm:flex-row">
-          {routes.map((r) => (
-            <button
-              key={r.label}
-              type="button"
-              onClick={r.onSelect}
-              className="ui-card p-3 hover:border-[rgb(var(--brand))] transition-colors sm:w-[13.5rem]"
-            >
-              <span className="block text-sm font-medium">{r.label}</span>
-              {r.description ? <span className="block ui-muted text-xs mt-0.5 leading-4">{r.description}</span> : null}
+        routes.length === 1 ? (
+          /*
+            One route is an action, not a choice.
+
+            A card is how you offer a decision between two or three ways in.
+            Offered alone it read as a bordered box someone forgot to fill —
+            the same shape as the empty state around it — where every other
+            blank screen in the product puts the button you came to press.
+          */
+          <div className="mt-4 flex flex-col items-center gap-2">
+            <button type="button" onClick={routes[0].onSelect} className="ui-btn ui-btn-primary">
+              {routes[0].label}
             </button>
-          ))}
-        </div>
+            {routes[0].description ? (
+              <span className="ui-muted text-xs max-w-xs leading-4">{routes[0].description}</span>
+            ) : null}
+          </div>
+        ) : (
+          <div className="mt-4 flex w-full max-w-2xl flex-col flex-wrap justify-center gap-2 text-left sm:flex-row">
+            {routes.map((r) => (
+              <button
+                key={r.label}
+                type="button"
+                onClick={r.onSelect}
+                className="ui-card p-3 hover:border-[rgb(var(--brand))] transition-colors sm:w-[13.5rem]"
+              >
+                <span className="block text-sm font-medium">{r.label}</span>
+                {r.description ? <span className="block ui-muted text-xs mt-0.5 leading-4">{r.description}</span> : null}
+              </button>
+            ))}
+          </div>
+        )
       ) : null}
 
       {action ? <div className="mt-4">{action}</div> : null}

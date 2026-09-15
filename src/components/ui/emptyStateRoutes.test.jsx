@@ -26,9 +26,14 @@ describe('the routes under an empty list', () => {
     expect(row.className).not.toMatch(/grid-cols-\d/);
   });
 
-  it('centres one card and three cards the same way', () => {
+  it('offers a single route as a button, and centres it', () => {
+    /* A card is how you offer a choice between two or three ways in. Alone it
+       read as a bordered box someone forgot to fill, in the same shape as the
+       empty state around it. */
     const { unmount } = render(<EmptyState kind="new" title="Nothing" routes={routes.slice(0, 1)} />);
-    expect(rowFor('Quote one now').className).toContain('justify-center');
+    const only = screen.getByText('Quote one now').closest('button');
+    expect(only.className).toContain('ui-btn-primary');
+    expect(only.parentElement.className).toContain('items-center');
     unmount();
 
     render(
