@@ -291,7 +291,15 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   const [view, setView] = useState('uncategorised'); // 'uncategorised' | 'categorised' | 'all'
 
-  const isCategorised = (t) => Boolean(t?.ledgerId);
+  /*
+   * A statement line is allocated once something answers it.
+   *
+   * That used to mean one ledger, because a bank line could only ever be one
+   * posting. A payment now splits across several accounts — tax, late fee,
+   * interest — and there is no single ledger to write back, so the voucher it
+   * produced is what marks it done.
+   */
+  const isCategorised = (t) => Boolean(t?.ledgerId || t?.linkedPaymentId);
 
   const ledgerById = useMemo(() => {
     const m = new Map();
@@ -308,7 +316,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     /* A split line's status comes from its children — derived, never typed. */
     const split = allocationsForTxn(db, companyId, t?.id);
     if (split.length) return allocationSummary(t, split).status;
-    return t?.ledgerId ? 'Categorised' : 'Uncategorised';
+    return isCategorised(t) ? 'Categorised' : 'Uncategorised';
   };
   const txns = useMemo(() => {
     const base = txnSearch.filtered;
@@ -1818,19 +1826,60 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     setOpenActionId(null);
   };
 
+  /*
+   * Clicking an uncategorised line opens the voucher it is.
+   *
+   * Money out is a payment and money in is a receipt — the same two forms used
+   * everywhere else, including their allocation table, so a GST debit on the
+   * statement becomes one payment split across tax, fee and interest instead
+   * of a ledger guess and three records. Everything the statement already
+   * knows is filled in; the only thing left to say is what the money was for.
+   */
   const openCategorise = (txn) => {
     if (!txn) return;
-    if (isCategorised(txn)) return;
-    openAddTxn({
-      bankTxnId: txn.id,
-      cashBankAccountId: txn.cashBankAccountId,
+    if (isCategorised(txn) || txn.readOnly) return;
+    const dir = String(txn.direction || '').toUpperCase();
+    const party = txn.ledgerId ? resolvePartyByLedgerId(txn.ledgerId) : null;
+    const shared = {
       date: txn.date,
-      direction: txn.direction,
-      ledgerId: '',
       amount: String(txn.amount ?? ''),
-      narration: String(txn.narration || txn.description || '').trim(),
-      ledgerSearch: '',
-    });
+      mode: 'Bank',
+      reference: String(txn.reference || '').trim(),
+      notes: String(txn.narration || txn.description || '').trim(),
+      cashBankAccountId: txn.cashBankAccountId,
+      sourceBankTransactionId: txn.id,
+    };
+    const onSaved = (voucher) =>
+      linkBankTxnToPayment({ bankTxnId: txn.id, ledgerId: txn.ledgerId, paymentId: voucher?.id });
+
+    if (dir === 'IN') {
+      openModal(
+        <RecordReceiptForm
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
+          hideMode
+          initialData={{ ...shared, customerId: party?.kind === 'customer' ? String(party.partyId) : '' }}
+          onSaved={onSaved}
+          onClose={() => openModal(null)}
+        />,
+        { title: 'Record Receipt', maxWidthClass: 'max-w-4xl' }
+      );
+      return;
+    }
+
+    openModal(
+      <RecordDisbursementForm
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        hideMode
+        initialData={{ ...shared, vendorId: party?.kind === 'vendor' ? String(party.partyId) : '' }}
+        onSaved={onSaved}
+        onClose={() => openModal(null)}
+      />,
+      { title: 'Record Payment', maxWidthClass: 'max-w-5xl' }
+    );
   };
 
   const deleteTxn = async (txn) => {
@@ -1852,7 +1901,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
     { key: 'narration', label: 'Narration' },
     { key: 'payment', label: 'Payment', value: (t) => (t.direction === 'OUT' ? Number(t.amount || 0) : '') },
     { key: 'receipt', label: 'Receipt', value: (t) => (t.direction === 'OUT' ? '' : Number(t.amount || 0)) },
-    { key: 'status', label: 'Status', value: (t) => (t.readOnly ? 'Recorded' : t.ledgerId ? 'Categorised' : 'Uncategorised') },
+    { key: 'status', label: 'Status', value: (t) => (t.readOnly ? 'Recorded' : isCategorised(t) ? 'Categorised' : 'Uncategorised') },
   ];
 
   return (
@@ -2240,7 +2289,11 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                             <StatusPill status="Categorised" />
                           ) : (
                             /* The one status that is also the way to fix it. */
-                            <button type="button" onClick={() => openCategorise(t)} title="Categorise this line">
+                            <button
+                              type="button"
+                              onClick={() => openCategorise(t)}
+                              title={`Record this as a ${String(t.direction).toUpperCase() === 'IN' ? 'receipt' : 'payment'}`}
+                            >
                               <StatusPill status="Uncategorised" />
                             </button>
                           )}
