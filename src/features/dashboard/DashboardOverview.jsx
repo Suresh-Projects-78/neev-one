@@ -276,7 +276,7 @@ function AgeingBar({ buckets, total, company, onPick }) {
             <span
               key={b.key}
               style={{ width: `${(amt / total) * 100}%`, backgroundColor: tones[b.tone] }}
-              title={`${b.label} — ${formatMoney(amt, company)}`}
+      title={`${b.label} — ${formatMoney(amt, company)}`}
             />
           );
         })}
@@ -1252,7 +1252,7 @@ export default function DashboardOverview({
                 Icon={FileText}
                 label="Receivables"
                 value={recv.total}
-                company={currentCompany}
+      company={currentCompany}
                 foot={
                   recvSplit.overdue > 0
                     ? { text: `${formatMoney(recvSplit.overdue, currentCompany)} overdue`, Icon: AlertCircle, tone: 'rgb(var(--ov-red))' }
@@ -1265,7 +1265,7 @@ export default function DashboardOverview({
                 Icon={Wallet}
                 label="Payables"
                 value={pay.total}
-                company={currentCompany}
+      company={currentCompany}
                 foot={
                   paySplit.soon > 0
                     ? { text: `${formatMoney(paySplit.soon, currentCompany)} due soon`, Icon: Clock, tone: 'rgb(var(--ov-amber))' }
@@ -1278,7 +1278,7 @@ export default function DashboardOverview({
                 Icon={Landmark}
                 label="Cash & Bank"
                 value={cash.total}
-                company={currentCompany}
+      company={currentCompany}
                 foot={{ text: `${cash.accountCount} account${cash.accountCount === 1 ? '' : 's'}` }}
                 onFoot={onOpenCashBank || nav('cashBank')}
               />
@@ -1287,7 +1287,7 @@ export default function DashboardOverview({
                 Icon={BarChart3}
                 label="Sales this month"
                 value={salesThisMonth.value}
-                company={currentCompany}
+      company={currentCompany}
                 foot={
                   salesThisMonth.pct === null
                     ? { text: 'no month to compare with' }
@@ -1306,22 +1306,22 @@ export default function DashboardOverview({
                 months={flow.months}
                 peak={flow.peak}
                 any={flow.any}
-                company={currentCompany}
+      company={currentCompany}
               />
               <CashFlowPanel
                 moneyIn={flow.months[flow.months.length - 1]?.inAmt || 0}
                 moneyOut={flow.months[flow.months.length - 1]?.outAmt || 0}
-                company={currentCompany}
+      company={currentCompany}
                 label="This month"
               />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
               <DueSplitPanel
-                title="Receivables"
+      title="Receivables"
                 Icon={FileText}
                 tone="red"
-                company={currentCompany}
+      company={currentCompany}
                 onViewAll={onOpenInvoices || nav('invoices')}
                 rows={[
                   { label: 'Overdue', value: recvSplit.overdue, tone: 'red' },
@@ -1330,10 +1330,10 @@ export default function DashboardOverview({
                 ]}
               />
               <DueSplitPanel
-                title="Payables"
+      title="Payables"
                 Icon={Wallet}
                 tone="amber"
-                company={currentCompany}
+      company={currentCompany}
                 onViewAll={nav('bills')}
                 rows={[
                   { label: 'Overdue', value: paySplit.overdue, tone: 'red' },
@@ -1485,7 +1485,7 @@ export default function DashboardOverview({
                         height: `${Math.max(m.inAmt ? 3 : 0, (m.inAmt / flow.peak) * 100)}%`,
                         backgroundColor: 'rgb(var(--st-paid-key))',
                       }}
-                      title={`In ${formatMoney(m.inAmt, currentCompany)}`}
+      title={`In ${formatMoney(m.inAmt, currentCompany)}`}
                     />
                     <span
                       className="w-1/3 rounded-t"
@@ -1493,7 +1493,7 @@ export default function DashboardOverview({
                         height: `${Math.max(m.outAmt ? 3 : 0, (m.outAmt / flow.peak) * 100)}%`,
                         backgroundColor: 'rgb(var(--st-overdue-key))',
                       }}
-                      title={`Out ${formatMoney(m.outAmt, currentCompany)}`}
+      title={`Out ${formatMoney(m.outAmt, currentCompany)}`}
                     />
                   </div>
                   <span className="ui-caption block text-center mt-1.5 truncate">{m.label}</span>

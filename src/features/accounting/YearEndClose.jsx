@@ -215,7 +215,7 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Financial Year" description="Close a month once it has been reported, or a whole year once its result has been transferred to capital. Nothing back-dates into closed books." />
+      <PageHeader entity="journal" title="Financial Year" description="Close a month once it has been reported, or a whole year once its result has been transferred to capital. Nothing back-dates into closed books." />
 
       <div className="ui-card space-y-3 p-4">
         <div>

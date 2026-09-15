@@ -1007,7 +1007,7 @@ const VendorPicker = ({
             type="text"
             role="combobox"
             disabled={disabled}
-            title={disabled ? disabledHint || 'Locked' : undefined}
+      title={disabled ? disabledHint || 'Locked' : undefined}
             value={showVendorPopup ? vendorSearch : selectedVendorName}
             placeholder="Type a vendor name"
             onMouseDown={() => {

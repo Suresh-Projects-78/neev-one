@@ -138,8 +138,8 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
 
   return (
     <DocumentListShell
+      entity="journal"
       title="Journal Entries"
-      description="A debit and a matching credit, posted straight to the ledger — for what the documents do not cover"
       company={currentCompany}
       search={{
         value: jvSearch.query,
@@ -212,7 +212,7 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
                   <EmptyState
                     icon={BookOpen}
                     kind="new"
-                    title={journalEntries.length ? 'No entries match' : 'No journal entries yet'}
+      title={journalEntries.length ? 'No entries match' : 'No journal entries yet'}
                     description={
                       journalEntries.length
                         ? 'Nothing in this status for the chosen period.'

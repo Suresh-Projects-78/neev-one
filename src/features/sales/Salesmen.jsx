@@ -160,6 +160,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
 
   return (
     <DocumentListShell
+      entity="salesperson"
       title="Salesmen"
       description="Who sold what — every invoice can carry a salesman; commission is computed on pre-GST sales."
       company={currentCompany}
@@ -268,7 +269,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
                     <EmptyState
                       icon={UserCheck}
                       kind="new"
-                      title={smStatus ? 'Nobody matches' : 'No salesmen yet'}
+      title={smStatus ? 'Nobody matches' : 'No salesmen yet'}
                       description={
                         smStatus
                           ? 'Nobody on the team matches that filter.'

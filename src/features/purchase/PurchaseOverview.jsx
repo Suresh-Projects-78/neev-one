@@ -360,7 +360,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
 
           <span
             className="ui-btn ui-btn-secondary cursor-default"
-            title={`Compared against ${prettyDate(period.prev.from)} – ${prettyDate(period.prev.to)}`}
+      title={`Compared against ${prettyDate(period.prev.from)} – ${prettyDate(period.prev.to)}`}
           >
             Compare: Previous Period
           </span>
@@ -638,7 +638,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           ) : (
             <EmptyPanel
               height={180}
-              title="No purchase returns"
+      title="No purchase returns"
               detail="Nothing has gone back to a vendor — which is the way it should be."
             />
           )}

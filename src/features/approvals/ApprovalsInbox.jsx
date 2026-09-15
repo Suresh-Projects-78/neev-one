@@ -66,6 +66,7 @@ export const ApprovalsInbox = ({ currentCompany }) => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="report"
         title="Approvals"
         description="Documents held above an approval threshold. Nothing here has reached the books yet."
         actions={
@@ -112,7 +113,7 @@ export const ApprovalsInbox = ({ currentCompany }) => {
         <div className="ui-card">
           <EmptyState
             icon={Inbox}
-            title={status === 'PENDING' ? 'Nothing waiting' : 'Nothing here'}
+      title={status === 'PENDING' ? 'Nothing waiting' : 'Nothing here'}
             description={
               status === 'PENDING'
                 ? 'Documents above an approval threshold will appear here for whoever holds the approving role.'

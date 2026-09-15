@@ -173,7 +173,7 @@ const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
         <div className="min-w-0 flex-1">
           <PopupSelect
             label="From account"
-            title="accounts"
+      title="accounts"
             value={form.fromId}
             onChange={(next) => set({ fromId: String(next || '') })}
             options={options}
@@ -185,7 +185,7 @@ const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
         <div className="min-w-0 flex-1">
           <PopupSelect
             label="To account"
-            title="accounts"
+      title="accounts"
             value={form.toId}
             onChange={(next) => set({ toId: String(next || '') })}
             options={options}

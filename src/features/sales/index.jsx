@@ -895,8 +895,7 @@ const statusReason = (doc, status, company, nowMs) => {
     <div className="space-y-6">
       <PageHeader
         title="Sales Invoices"
-        description="Create, view and manage all your sales invoices"
-        actions={
+              actions={
           <>
             {/*
               Search sits in the header rather than in a band of its own.
@@ -1216,7 +1215,7 @@ const statusReason = (doc, status, company, nowMs) => {
                         return returnMark ? (
                           <span
                             className="ml-1 px-2 py-1 rounded-full text-xs bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
-                            title={`${returnMark} against this invoice`}
+      title={`${returnMark} against this invoice`}
                           >
                             {returnMark}
                           </span>
@@ -1228,7 +1227,7 @@ const statusReason = (doc, status, company, nowMs) => {
                     <td className="ui-col-amount">
                       <Balance
                         value={Math.max(0, Number(inv.total || 0) - Number(inv.paidAmount || 0))}
-                        company={currentCompany}
+      company={currentCompany}
                         dueIso={inv.dueDate}
                       />
                     </td>
@@ -1284,7 +1283,7 @@ const statusReason = (doc, status, company, nowMs) => {
                     <EmptyState
                       icon={FileText}
                       kind="new"
-                      title="No invoices yet"
+      title="No invoices yet"
                       description="An invoice is what turns a sale into money owed to you, and into the GST you have collected."
                       routes={[
                         {
@@ -1540,7 +1539,7 @@ const statusReason = (doc, status, company, nowMs) => {
                         openModal(
                           <EInvoiceWorkflow
                             invoice={inv}
-                            company={currentCompany}
+      company={currentCompany}
                             customer={customer}
                             onClose={() => openModal(null)}
                             onRegistered={(d) =>
@@ -2065,7 +2064,6 @@ export const EstimatesList = ({
   return (
     <DocumentListShell
       title="Quotations"
-      description="Quote a price, then turn the ones that land into invoices"
       company={currentCompany}
       search={{
         value: estSearch.query,
@@ -2218,7 +2216,7 @@ export const EstimatesList = ({
                     <EmptyState
                       icon={ClipboardList}
                       kind="new"
-                      title="No quotations yet"
+      title="No quotations yet"
                       description="A quotation is a price you are standing behind until it expires — and an invoice waiting for a yes."
                       routes={[
                         {
@@ -2262,7 +2260,7 @@ export const EstimatesList = ({
           onClose={() => setPreviewEstimate(null)}
         >
           <PrintDownloadFrame
-            title={`Quotation ${previewEstimate.number || ''}`.trim()}
+      title={`Quotation ${previewEstimate.number || ''}`.trim()}
             fileBase={previewEstimate.number || 'quotation'}
           >
             <DocumentPrintView
@@ -2346,7 +2344,7 @@ export const EstimatesList = ({
                   // A disabled control that will not say why is a dead end.
                   // This one is correct to disable — converting twice would
                   // invoice the same quote again — but it was silent about it.
-                  title={isConverted ? 'Already converted to an invoice. Duplicate it if you need to quote this again.' : undefined}
+      title={isConverted ? 'Already converted to an invoice. Duplicate it if you need to quote this again.' : undefined}
                   className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ isConverted ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken'
                   }`}
                 >
@@ -2563,7 +2561,6 @@ export const CreditNotesList = ({
   return (
     <DocumentListShell
       title="Sales Returns"
-      description="A credit note reverses part or all of an invoice when goods come back"
       company={currentCompany}
       search={{
         value: cnSearch.query,
@@ -2640,7 +2637,7 @@ export const CreditNotesList = ({
                     <EmptyState
                       icon={Receipt}
                       kind="new"
-                      title="No sales returns yet"
+      title="No sales returns yet"
                       description="A credit note is what you owe a customer back — goods returned, an overcharge, a discount agreed after the invoice."
                       routes={[
                         {
@@ -2715,7 +2712,7 @@ export const CreditNotesList = ({
                             type="button"
                             onClick={() => openKnockOff(cn)}
                             className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
-                            title="Knock this off against the customer's open invoices"
+      title="Knock this off against the customer's open invoices"
                           >
                             Knock off {formatMoney(noteBalance(cn).unsettled, currentCompany)}
                           </button>
@@ -2747,7 +2744,7 @@ export const CreditNotesList = ({
           onClose={() => setPreviewCreditNote(null)}
         >
           <PrintDownloadFrame
-            title={`Credit Note ${previewCreditNote.number || ''}`.trim()}
+      title={`Credit Note ${previewCreditNote.number || ''}`.trim()}
             fileBase={previewCreditNote.number || 'credit-note'}
           >
             <DocumentPrintView
@@ -4159,7 +4156,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             <div id="invoice-branch-field">
               <PopupSelect
                 label="Branch"
-                title="branches"
+      title="branches"
                 value={String(branchIdInList || '')}
                 onChange={onBranchChange}
                 icon={Building2}
@@ -4284,7 +4281,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 aria-label="Invoice numbering settings"
                 aria-haspopup="dialog"
                 aria-expanded={numberingOpen}
-                title="Numbering"
+      title="Numbering"
               >
                 <SlidersHorizontal size={15} aria-hidden="true" />
               </button>
@@ -4297,7 +4294,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 setDb={setDb}
                 currentCompany={currentCompany}
                 voucherKey="invoice"
-                title="Invoice numbering"
+      title="Invoice numbering"
                 sampleLabel="Next invoice will be"
                 manualLabel="Typed on each invoice"
                 branchId={branchIdForNumbering}
@@ -5672,7 +5669,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
               disabled={lockEstimateNumberOnCreate}
               required
               voucherKey="estimate"
-              title="Quotation numbering"
+      title="Quotation numbering"
               sampleLabel="Next quotation will be"
               manualLabel="Typed on each quotation"
               settings={estimateNumbering}
@@ -6423,7 +6420,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
               disabled={lockCreditNumber}
               required
               voucherKey="creditNote"
-              title="Sales return numbering"
+      title="Sales return numbering"
               sampleLabel="Next note will be"
               manualLabel="Typed on each note"
               branchId={branchIdForNumbering}

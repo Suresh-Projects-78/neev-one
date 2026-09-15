@@ -277,7 +277,7 @@ export function PartyFormLayout({
                   onChange={(val) => setFormData((p) => ({ ...p, groupId: String(val || '').trim() }))}
                   options={groupOptions}
                   placeholder={`Select ${cfg.noun.toLowerCase()} group`}
-                  title={`Select ${cfg.noun} Group`}
+      title={`Select ${cfg.noun} Group`}
                   showValueSubtext={false}
                   allowCustom
                   customActionText="Create new Group"
@@ -289,7 +289,7 @@ export function PartyFormLayout({
                 <PopupSelect
                   label={null}
                   ariaLabel="Currency"
-                  title="Select Currency"
+      title="Select Currency"
                   value={formData.currency}
                   onChange={(v) => setFormData((p) => ({ ...p, currency: v }))}
                   options={CURRENCY_OPTIONS}
@@ -740,7 +740,7 @@ export function PartyFormLayout({
                 <label className="ui-label inline-flex items-center gap-1.5" htmlFor="cust-stat-other">
                   Others
                   <span
-                    title="Anything else this party is registered under — an IEC for exports, a LUT number, a licence."
+      title="Anything else this party is registered under — an IEC for exports, a LUT number, a licence."
                     aria-label="Anything else this party is registered under — an IEC for exports, a LUT number, a licence."
                     className="ui-subtle inline-flex cursor-help"
                   >

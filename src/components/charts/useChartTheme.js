@@ -42,11 +42,13 @@ const build = () => ({
   /* Graphite and its second voice. An overview chart is drawn in the colours
      of the cards above it, and on the dashboards those are no longer the
      categorical six. */
-  graphite: readVar('--graphite', '#37423F'),
-  mauve: readVar('--mauve', '#987786'),
-  kpiInvoices: readVar('--kpi-invoices-ink', '#34705D'),
-  kpiReceived: readVar('--kpi-received-ink', '#88733F'),
-  kpiCredit: readVar('--kpi-credit-ink', '#705578'),
+  chartBlue: readVar('--chart-blue', '#3F648C'),
+  chartTeal: readVar('--chart-teal', '#27766D'),
+  chartMauve: readVar('--chart-mauve', '#987786'),
+  chartGold: readVar('--chart-gold', '#B08A55'),
+  chartClay: readVar('--chart-clay', '#C46F4A'),
+  chartSlate: readVar('--chart-slate', '#7B8492'),
+  chartMuted: readVar('--chart-muted', '#A8AFB6'),
 });
 
 /**

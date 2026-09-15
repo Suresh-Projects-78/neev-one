@@ -724,7 +724,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   return (
     <DocumentListShell
       title="Expenses"
-      description="What the business spent, and the input GST you can claim against it"
       company={currentCompany}
       search={{
         value: expenseSearch.query,
@@ -856,7 +855,7 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                     icon={Receipt}
                     kind={expenses.length ? 'filtered' : 'new'}
                     totalCount={expenses.length}
-                    title={expenses.length ? 'No expenses match these filters' : 'No expenses yet'}
+      title={expenses.length ? 'No expenses match these filters' : 'No expenses yet'}
                     description={
                       expenses.length
                         ? 'Widen the period or clear the status filter to see the rest.'
@@ -1357,7 +1356,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
               disabled={lockExpenseNumber}
               required
               voucherKey="expense"
-              title="Expense numbering"
+      title="Expense numbering"
               sampleLabel="Next voucher will be"
               manualLabel="Typed on each voucher"
               branchId={activeBranchId || null}
@@ -1755,7 +1754,6 @@ const ItemsList = ({ db, setDb, currentCompany, warehouses = [], branches = [], 
   return (
     <DocumentListShell
       title="Items"
-      description="What you buy and sell — with the HSN, tax rate and price every invoice reads"
       company={currentCompany}
       search={{
         value: itemSearch.query,
@@ -1820,7 +1818,7 @@ const ItemsList = ({ db, setDb, currentCompany, warehouses = [], branches = [], 
                   <EmptyState
                     icon={Package}
                     kind="new"
-                    title={items.length ? 'No items match' : 'No items yet'}
+      title={items.length ? 'No items match' : 'No items yet'}
                     description={
                       items.length
                         ? 'Nothing in this company matches that filter.'
@@ -1869,7 +1867,7 @@ const ItemsList = ({ db, setDb, currentCompany, warehouses = [], branches = [], 
                       type="button"
                       onClick={() => onEdit(item)}
                       className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1"
-                      title="Edit"
+      title="Edit"
                     >
                       <Pencil size={16} /> Edit
                     </button>
@@ -1877,7 +1875,7 @@ const ItemsList = ({ db, setDb, currentCompany, warehouses = [], branches = [], 
                       type="button"
                       onClick={() => onDelete(item)}
                       className="px-3 py-1.5 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm flex items-center gap-1 text-[rgb(var(--neg))]"
-                      title="Delete"
+      title="Delete"
                     >
                       <Trash2 size={16} /> Delete
                     </button>
@@ -2345,7 +2343,6 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   return (
     <DocumentListShell
       title="Chart of Accounts"
-      description="Every ledger the books post to, and the groups they roll up through"
       company={currentCompany}
       search={
         coaView === 'ledgers'
@@ -2443,7 +2440,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                       <EmptyState
                         icon={BookOpen}
                         kind="new"
-                        title={ledgerRows.length ? 'No ledgers match' : 'No ledgers yet'}
+      title={ledgerRows.length ? 'No ledgers match' : 'No ledgers yet'}
                         description={
                           ledgerRows.length
                             ? 'Nothing in this chart matches that search.'
@@ -2525,7 +2522,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                       <EmptyState
                         icon={FolderTree}
                         kind="new"
-                        title={groupRows.length ? 'No groups match' : 'No groups yet'}
+      title={groupRows.length ? 'No groups match' : 'No groups yet'}
                         description={
                           groupRows.length
                             ? 'Nothing in this chart matches that search.'
@@ -2671,7 +2668,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                   disabled={deleteDisabled}
                   className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${ deleteDisabled ? 'ui-subtle cursor-not-allowed ui-surface' : 'ui-hover-sunken text-[rgb(var(--neg))]'
                   }`}
-                  title={deleteDisabled ? canDel.reason : ''}
+      title={deleteDisabled ? canDel.reason : ''}
                 >
                   <span>Delete</span>
                 </button>
@@ -4295,7 +4292,7 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
                       onChange={(val) => updateLine(idx, 'accountId', String(val || '').trim())}
                       options={accountOptions}
                       placeholder="Select ledger"
-                      title="Select Ledger"
+      title="Select Ledger"
                       showValueSubtext={false}
                       maxWidthClass="max-w-2xl"
                       allowCustom
@@ -4329,7 +4326,7 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
                       onClick={() => removeLine(idx)}
                       className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]"
                       disabled={formData.lines.length <= 2}
-                      title={formData.lines.length <= 2 ? 'Minimum 2 lines' : 'Remove line'}
+      title={formData.lines.length <= 2 ? 'Minimum 2 lines' : 'Remove line'}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -5288,7 +5285,7 @@ const LedgerView = ({
             type="button"
             onClick={openColumnSettings}
             className="inline-flex items-center gap-2 px-2 py-1 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-xs"
-            title="Configure columns"
+      title="Configure columns"
           >
             <Settings size={14} /> Columns
           </button>
@@ -5297,7 +5294,7 @@ const LedgerView = ({
             type="button"
             onClick={openPeriodModal}
             className="ui-btn ui-btn-secondary text-sm"
-            title="Select period"
+      title="Select period"
           >
             {periodLabel}
           </button>
@@ -5314,7 +5311,7 @@ const LedgerView = ({
             type="button"
             onClick={expandAll}
             className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
-            title="Expand all entries"
+      title="Expand all entries"
           >
             Expand All
           </button>
@@ -5323,7 +5320,7 @@ const LedgerView = ({
             type="button"
             onClick={collapseAll}
             className="px-3 py-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c text-sm"
-            title="Collapse all entries"
+      title="Collapse all entries"
           >
             Collapse All
           </button>
@@ -7109,7 +7106,6 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
   return (
     <DocumentListShell
       title="Item Categories"
-      description="The list every item picks its category from — and what discount rules match on"
       company={currentCompany}
       search={{
         value: catSearch.query,
@@ -7217,7 +7213,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
                     <EmptyState
                       icon={Tags}
                       kind="new"
-                      title="No categories yet"
+      title="No categories yet"
                       description="Name the groups you sort your catalogue into — items pick from this list, and discount rules match on it."
                     />
                   </td>
@@ -8209,7 +8205,7 @@ const CompanyProfile = ({ db, setDb, currentCompany }) => {
             <label className="ui-label">State</label>
             <PopupSelect
               label={null}
-              title="Select State"
+      title="Select State"
               value={formData.state}
               onChange={(next) => setFormData((p) => ({ ...p, state: next }))}
               options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
@@ -8462,7 +8458,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               <label className="ui-label">State</label>
               <PopupSelect
                 label={null}
-                title="Select State"
+      title="Select State"
                 value={gst.state}
                 onChange={(next) => setGst((p) => ({ ...p, state: next }))}
                 options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
@@ -8532,7 +8528,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               <label className="ui-label">State</label>
               <PopupSelect
                 label={null}
-                title="Select State"
+      title="Select State"
                 value={tds.state}
                 onChange={(next) => setTds((p) => ({ ...p, state: next }))}
                 options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
@@ -8649,7 +8645,7 @@ const TaxCompliancesView = ({ db, setDb, currentCompany }) => {
               <label className="ui-label">State</label>
               <PopupSelect
                 label={null}
-                title="Select State"
+      title="Select State"
                 value={tcs.state}
                 onChange={(next) => setTcs((p) => ({ ...p, state: next }))}
                 options={stateOptions.map((s) => ({ value: s, label: s, code: codeForStateName(s) }))}
@@ -13477,7 +13473,7 @@ const AppShell = () => {
         return (
           <div className="space-y-6">
             <PageHeader
-              title="Modules"
+      title="Modules"
               description="What this business uses. Anything switched off is hidden from menus and forms."
             />
             <ModulePicker submitLabel="Save modules" />
@@ -14040,7 +14036,7 @@ const AppShell = () => {
                 type="button"
                 onClick={() => setActive('settingsWarehouses')}
                 className="ui-btn ui-btn-secondary hidden md:inline-flex !h-9 !min-h-0 text-sm"
-                title="No warehouse yet — stock and documents need one"
+      title="No warehouse yet — stock and documents need one"
               >
                 <Package size={15} aria-hidden="true" /> Add warehouse
               </button>
@@ -14159,7 +14155,7 @@ const AppShell = () => {
                 aria-haspopup="menu"
                 aria-expanded={accountMenuOpen}
                 aria-label="Your profile"
-                title={userEmail}
+      title={userEmail}
               >
                 {userAvatarUrl ? (
                   <img
@@ -14329,7 +14325,7 @@ const AppShell = () => {
               data-collapsed={navCollapsed ? 'true' : undefined}
               aria-pressed={navCollapsed}
               aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
-              title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
+      title={navCollapsed ? 'Expand navigation' : 'Collapse navigation'}
             >
               {/* shrink-0, or the narrow rail flexes a 16px glyph down to
                   nothing and the control renders as an empty box. */}
@@ -14367,7 +14363,7 @@ const AppShell = () => {
                       data-tone={entry.tone}
                       data-active={isActive}
                       aria-current={isActive ? 'page' : undefined}
-                      title={navCollapsed ? entry.label : undefined}
+      title={navCollapsed ? entry.label : undefined}
                     >
                       <Icon
                         size={16}
@@ -14408,7 +14404,7 @@ const AppShell = () => {
                       data-tone={entry.tone}
                       data-active={isGroupActive || undefined}
                       aria-expanded={isOpen}
-                      title={navCollapsed ? entry.label : undefined}
+      title={navCollapsed ? entry.label : undefined}
                     >
                       <span className={`flex items-center gap-2.5 ${navCollapsed ? 'md:gap-0' : ''}`}>
                         <GroupIcon

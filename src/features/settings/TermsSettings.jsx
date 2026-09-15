@@ -107,7 +107,7 @@ export const TermsSettings = ({ db, setDb, currentCompany }) => {
                   type="button"
                   onClick={() => copyFromInvoice(v.key)}
                   className="ui-btn ui-btn-ghost ui-btn-sm ml-auto"
-                  title="Use the same wording as the invoice"
+      title="Use the same wording as the invoice"
                 >
                   <Copy size={13} aria-hidden="true" /> Copy from invoice
                 </button>

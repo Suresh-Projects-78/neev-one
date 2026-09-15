@@ -115,7 +115,7 @@ export default function GridControls({ grid }) {
                       className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm ${
                         c.always ? 'opacity-50' : 'cursor-pointer ui-hover-sunken'
                       }`}
-                      title={c.always ? 'This column cannot be hidden' : undefined}
+      title={c.always ? 'This column cannot be hidden' : undefined}
                     >
                       <input
                         type="checkbox"

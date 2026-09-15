@@ -221,6 +221,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="bank"
         title="Bank Reconciliation"
         description="Record the bank's own date against each transaction and mark it reconciled once confirmed."
       />
@@ -231,7 +232,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
         <div className="min-w-0 sm:w-72">
           <PopupSelect
             label="Account"
-            title="accounts"
+      title="accounts"
             value={String(accountInList || '')}
             onChange={(next) => {
               setAccountId(String(next || ''));
@@ -246,7 +247,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
         <div className="min-w-0 sm:w-56">
           <PopupSelect
             label="Period"
-            title="periods"
+      title="periods"
             value={period.period}
             onChange={(next) => period.setPeriod(String(next || 'all'))}
             options={LIST_PERIODS.map((p) => ({ value: p.key, label: p.label }))}
@@ -322,7 +323,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
               onClick={autoReconcileSameDate}
               disabled={!unreconciled.length}
               className="ui-btn ui-btn-secondary"
-              title="Stage Bank Date = Transaction Date for the rows in hand. Nothing is final until Submit."
+      title="Stage Bank Date = Transaction Date for the rows in hand. Nothing is final until Submit."
             >
               <Wand2 size={15} aria-hidden="true" /> Auto Reconcile (Same Date)
             </button>
@@ -363,7 +364,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                     <tr>
                       <td colSpan={9}>
                         <EmptyState
-                          title="Nothing here"
+      title="Nothing here"
                           message="Payments, receipts, contras and imported lines for this account appear here with their bank dates."
                         />
                       </td>
@@ -403,7 +404,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                                 const moved = String(r.bankDate || r.date) !== String(r.date);
                                 return (
                                   <span
-                                    title={
+      title={
                                       audit
                                         ? `Reconciled by ${audit.by} on ${formatDateIn(audit.at)} — bank date ${formatDateIn(audit.bankDate)}, transaction date ${formatDateIn(audit.transactionDate)}`
                                         : undefined

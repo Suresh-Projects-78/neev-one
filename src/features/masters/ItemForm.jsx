@@ -490,7 +490,7 @@ const ItemForm = ({
                      switchgear accessories" — is longer than any select that
                      shares its row with a button. The list shows it whole; this
                      is for the one already chosen. */
-                  title={formData.category || undefined}
+      title={formData.category || undefined}
                   className="ui-select min-w-0 flex-1"
                 >
                   <option value="">Select category</option>
@@ -700,7 +700,7 @@ const ItemForm = ({
                     <span className="ui-label inline-flex items-center gap-1.5">
                       Opening Stock Value
                       <span
-                        title="Quantity times rate. Typed by hand it would disagree with the stock it values."
+      title="Quantity times rate. Typed by hand it would disagree with the stock it values."
                         aria-label="Quantity times rate. Typed by hand it would disagree with the stock it values."
                         className="ui-subtle inline-flex cursor-help"
                       >

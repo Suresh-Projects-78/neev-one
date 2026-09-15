@@ -507,7 +507,7 @@ const StockAdjustments = ({
                 onChange={() => {}}
                 disabled
                 voucherKey="stockAdjustment"
-                title="Adjustment numbering"
+      title="Adjustment numbering"
                 sampleLabel="Next adjustment will be"
                 manualLabel="Typed on each adjustment"
                 branchId={branchOfWarehouse(form.warehouseId) || activeBranchId || null}
@@ -660,6 +660,7 @@ const StockAdjustments = ({
 
   return (
     <DocumentListShell
+      entity="adjustment"
       title="Stock Adjustments"
       description="What a count found that the books did not. Each one moves stock, so the balance sheet and the P&L move with it."
       company={currentCompany}
@@ -729,7 +730,7 @@ const StockAdjustments = ({
                   <EmptyState
                     icon={ClipboardList}
                     kind="new"
-                    title={shown.length ? 'Nothing matches' : 'No adjustments yet'}
+      title={shown.length ? 'Nothing matches' : 'No adjustments yet'}
                     description={
                       shown.length
                         ? 'No adjustment in this filter.'

@@ -103,11 +103,10 @@ export const shortDate = (v) => {
 /**
  * One of the figures across the top.
  *
- * Tint rather than position tells them apart, at three to six per cent — enough
- * that the eye can go back to the same card twice, not enough to compete with
- * the figure on it. Six saturated hues did the first job and lost the second:
- * the row read as the loudest thing on a page whose whole point is the numbers
- * underneath it.
+ * The card is white and the colour is in the icon square beside the label —
+ * enough that the eye can go back to the same card twice, and nowhere near the
+ * figure it would otherwise compete with. Six saturated tiles did the first job
+ * and lost the second.
  *
  * `tone` names the metric, not a colour, so the card cannot be tinted by
  * whoever places it — overdue is the red one wherever it appears.
@@ -126,8 +125,8 @@ export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, del
     <div
       className="flex flex-col"
       style={{
-        backgroundColor: `rgb(var(--kpi-${tone}-bg))`,
-        border: '1px solid rgb(var(--kpi-line) / 0.07)',
+        backgroundColor: 'rgb(var(--surface))',
+        border: '1px solid rgb(var(--kpi-line))',
         borderRadius: 10,
         padding: '14px 16px',
         minHeight: 82,
@@ -140,7 +139,7 @@ export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, del
             height: 28,
             width: 28,
             borderRadius: 8,
-            backgroundColor: `rgb(var(--kpi-${tone}-ink) / 0.10)`,
+            backgroundColor: `rgb(var(--kpi-${tone}-bg))`,
             color: `rgb(var(--kpi-${tone}-ink))`,
           }}
           aria-hidden="true"
@@ -195,7 +194,7 @@ export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, del
           <span
             className="inline-flex items-center gap-0.5 font-medium"
             style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
-            title="Against the previous period"
+      title="Against the previous period"
           >
             {up ? <ArrowUp size={11} /> : <ArrowDown size={11} />}
             {Math.abs(Number(delta)).toFixed(1)}%
@@ -209,9 +208,8 @@ export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, del
 
 /** Two or three choices, one of them on. */
 export const Segmented = ({ options, value, onChange, ariaLabel }) => (
-  /* Graphite, not the brand. Which grain a chart is drawn at is not an action
-     anyone takes twice a day, and painting it the same colour as "New Invoice"
-     put a second primary on the page. */
+  /* The filled active segment is a selection, and selection is what the brand
+     means. The container stays neutral so only the chosen one carries it. */
   <div
     className="inline-flex items-center"
     role="tablist"
@@ -241,7 +239,7 @@ export const Segmented = ({ options, value, onChange, ariaLabel }) => (
             fontSize: 12,
             fontWeight: 550,
             ...(on
-              ? { backgroundColor: 'rgb(var(--graphite))', color: 'rgb(var(--surface))' }
+              ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
               : { backgroundColor: 'transparent', color: 'rgb(var(--fg-muted))' }),
           }}
         >

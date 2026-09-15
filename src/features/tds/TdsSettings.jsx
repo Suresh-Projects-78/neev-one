@@ -142,9 +142,9 @@ const TdsSettings = ({ db, setDb, currentCompany, onOpenChart = null, onOpenVend
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="tds"
         title="TDS"
-        description="Whether this company deducts, who it is as a deductor, and where every deduction lands."
-        actions={
+              actions={
           <button type="button" onClick={save} className="ui-btn ui-btn-primary">
             Save configuration
           </button>

@@ -116,8 +116,7 @@ export const SecuritySettings = () => {
     <div className="space-y-6">
       <PageHeader
         title="Security"
-        description="How people sign in, what the rules are, and what has happened."
-        actions={
+              actions={
           notice ? (
             <span className="ui-pill ui-pill-pos" role="status">
               <Check size={11} aria-hidden="true" /> {notice}

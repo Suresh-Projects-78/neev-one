@@ -345,7 +345,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           className="ui-card p-5 space-y-4"
         >
           <DocFormActions
-            title="New Delivery Challan"
+      title="New Delivery Challan"
             primaryLabel="Create Challan"
             onPrimary={save}
             secondaryLabel="Cancel"
@@ -388,7 +388,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                   onChange={() => {}}
                   disabled
                   voucherKey="deliveryChallan"
-                  title="Challan numbering"
+      title="Challan numbering"
                   sampleLabel="Next challan will be"
                   manualLabel="Typed on each challan"
                   branchId={challanBranchId || null}
@@ -505,8 +505,8 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
 
   return (
     <DocumentListShell
+      entity="deliveryChallan"
       title="Delivery Challans"
-      description="Goods out without an invoice — job work, approval, own use. Convert to invoice when it becomes a sale."
       company={currentCompany}
       search={{
         value: dcSearch.query,
@@ -572,7 +572,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                     <EmptyState
                       icon={Truck}
                       kind="new"
-                      title="No delivery challans"
+      title="No delivery challans"
                       description="A challan is goods leaving the premises before there is an invoice — job work, approval, your own branch."
                       routes={[
                         {
@@ -638,7 +638,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
           onClose={() => setPreviewChallan(null)}
         >
           <PrintDownloadFrame
-            title={`Delivery Challan ${previewChallan.number || ''}`.trim()}
+      title={`Delivery Challan ${previewChallan.number || ''}`.trim()}
             fileBase={previewChallan.number || 'delivery-challan'}
           >
             <DocumentPrintView

@@ -188,8 +188,8 @@ export default function BankCashAccounts({
 
   return (
     <DocumentListShell
+      entity="bankAccount"
       title="Bank & Cash Accounts"
-      description="View and manage all your bank and cash accounts."
       company={currentCompany}
       primary={
         onAddAccount ? (
@@ -272,7 +272,7 @@ export default function BankCashAccounts({
               <tr>
                 <td colSpan={8}>
                   <EmptyState
-                    title="No accounts here yet"
+      title="No accounts here yet"
                     message="A bank or cash account is a ledger under Bank Accounts or Cash-in-Hand. Add one and it appears here with its balance."
                   />
                 </td>

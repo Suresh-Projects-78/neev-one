@@ -198,6 +198,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader
+          entity="tax"
           title="Discount Rules"
           description="Item, category, customer, quantity-break and promotional discounts — the best matching rule applies itself on the invoice."
         />

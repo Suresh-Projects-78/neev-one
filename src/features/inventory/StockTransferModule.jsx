@@ -803,7 +803,7 @@ export const StockTransferEditor = ({
                           min="0"
                           step="0.01"
                           disabled={readOnly}
-                          title={l.rateSource ? `Picked from ${l.rateSource}` : undefined}
+      title={l.rateSource ? `Picked from ${l.rateSource}` : undefined}
                         />
                       </td>
                       <td className="ui-money ui-col-meta px-3 py-2 text-right">{formatMoney(lineTaxable(l), currentCompany)}</td>
@@ -1956,7 +1956,7 @@ export const StockTransfersList = ({
                     <EmptyState
                       icon={Truck}
                       kind="new"
-                      title={transfersInScope.length ? 'No transfers match' : 'No stock transfers yet'}
+      title={transfersInScope.length ? 'No transfers match' : 'No stock transfers yet'}
                       description={
                         transfersInScope.length
                           ? 'Nothing in this status for the chosen period.'
@@ -2111,7 +2111,7 @@ export const StockTransfersList = ({
                         submitTransferOut(t);
                       }}
                       disabled={!atSource}
-                      title={atSource ? undefined : `Only ${locationLabel(t, 'source')} can send this transfer out.`}
+      title={atSource ? undefined : `Only ${locationLabel(t, 'source')} can send this transfer out.`}
                       className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
                         atSource ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed ui-surface'
                       }`}
@@ -2130,7 +2130,7 @@ export const StockTransfersList = ({
                         openReceive(t);
                       }}
                       disabled={!atTarget}
-                      title={atTarget ? undefined : `Only ${locationLabel(t, 'target')} can approve this transfer.`}
+      title={atTarget ? undefined : `Only ${locationLabel(t, 'target')} can approve this transfer.`}
                       className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
                         atTarget ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed ui-surface'
                       }`}
@@ -2185,7 +2185,7 @@ export const StockTransfersList = ({
                         rejectTransfer(t);
                       }}
                       disabled={!atTarget}
-                      title={atTarget ? undefined : `Only ${locationLabel(t, 'target')} can reject this transfer.`}
+      title={atTarget ? undefined : `Only ${locationLabel(t, 'target')} can reject this transfer.`}
                       className={`w-full px-4 py-2 text-left text-sm flex items-center gap-2 ${
                         atTarget ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed ui-surface'
                       }`}

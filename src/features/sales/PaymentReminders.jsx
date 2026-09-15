@@ -182,8 +182,8 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
 
   return (
     <DocumentListShell
+      entity="customer"
       title="Payment Reminders"
-      description="Due → +7 → +15 schedule. WhatsApp opens with the message ready — the fastest collections channel there is."
       company={currentCompany}
       search={{
         value: prSearch.query,
@@ -243,7 +243,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
                     <EmptyState
                       icon={Bell}
                       kind="new"
-                      title={rows.length ? 'Nothing to chase here' : 'Nothing to chase'}
+      title={rows.length ? 'Nothing to chase here' : 'Nothing to chase'}
                       description={
                         rows.length
                           ? 'No open invoice with a balance is at this stage.'

@@ -834,7 +834,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
                   setFormData((p) => ({ ...p, number: e.target.value }));
                 }}
                 voucherKey="payment"
-                title="Payment numbering"
+      title="Payment numbering"
                 sampleLabel="Next payment will be"
                 manualLabel="Typed on each payment"
                 settings={paymentNumbering}

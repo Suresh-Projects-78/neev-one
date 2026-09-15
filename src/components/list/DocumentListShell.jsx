@@ -27,6 +27,9 @@ import { ListSearch, ListTip, MoreButton, StatCards } from './ListPageParts';
 export default function DocumentListShell({
   title,
   description = '',
+  /* Which business object this list holds — see entityIdentity. Draws the
+     mark beside the title in that area's colour family. */
+  entity = '',
   search = null,
   headerExtras = null,
   moreItems = null,
@@ -62,6 +65,7 @@ export default function DocumentListShell({
   return (
     <div className="space-y-6">
       <PageHeader
+        entity={entity}
         title={title}
         description={description}
         actions={

@@ -329,7 +329,7 @@ const SalesOverview = ({
     const sorted = [...totals.entries()].sort((a, b) => b[1] - a[1]);
     /* Graphite first, then its own family — a breakdown is a comparison of
        sizes, not six unrelated flags. */
-    const palette = ['graphite', 'kpi-invoices-ink', 'kpi-received-ink', 'mauve'];
+    const palette = ['chart-blue', 'chart-teal', 'chart-gold', 'chart-clay'];
     const top = sorted.slice(0, 4).map(([name, value], i) => ({
       name,
       value,
@@ -444,12 +444,15 @@ const SalesOverview = ({
     URL.revokeObjectURL(url);
   };
 
+  /* The icon says which part of the book the action belongs to; the button
+     itself stays neutral so the one creation action is the only brand on the
+     panel. */
   const quickActions = [
     { label: 'Create Invoice', icon: Plus, primary: true, onClick: () => (onNewInvoice ? onNewInvoice() : go('invoices')) },
-    { label: 'Create Sales Order', icon: ClipboardList, onClick: () => go('salesOrders') },
-    { label: 'Record Payment', icon: Wallet, onClick: () => (onRecordReceipt ? onRecordReceipt() : go('receipts')) },
-    { label: 'Create Credit Note', icon: FileText, onClick: () => (onNewCreditNote ? onNewCreditNote() : go('creditNotes')) },
-    { label: 'View All Invoices', icon: LayoutList, outlined: true, onClick: () => go('invoices') },
+    { label: 'Create Sales Order', icon: ClipboardList, tone: 'sales', onClick: () => go('salesOrders') },
+    { label: 'Record Payment', icon: Wallet, tone: 'banking', onClick: () => (onRecordReceipt ? onRecordReceipt() : go('receipts')) },
+    { label: 'Create Credit Note', icon: FileText, tone: 'purchase', onClick: () => (onNewCreditNote ? onNewCreditNote() : go('creditNotes')) },
+    { label: 'View All Invoices', icon: LayoutList, outlined: true, tone: 'sales', onClick: () => go('invoices') },
   ];
 
   return (
@@ -514,7 +517,7 @@ const SalesOverview = ({
 
           <span
             className="ui-btn ui-btn-secondary cursor-default"
-            title={`Compared against ${prettyDate(period.prev.from)} – ${prettyDate(period.prev.to)}`}
+      title={`Compared against ${prettyDate(period.prev.from)} – ${prettyDate(period.prev.to)}`}
           >
             Compare: Previous Period
           </span>
@@ -639,9 +642,9 @@ const SalesOverview = ({
               </Suspense>
               <div className="flex items-center justify-center gap-6 mt-2 text-sm">
                 {[
-                  { label: 'Invoiced', color: 'rgb(var(--graphite))' },
-                  { label: 'Received', color: 'rgb(var(--kpi-invoices-ink))' },
-                  { label: 'Outstanding', color: 'rgb(var(--mauve))' },
+                  { label: 'Invoiced', color: 'rgb(var(--chart-teal))' },
+                  { label: 'Received', color: 'rgb(var(--chart-blue))' },
+                  { label: 'Outstanding', color: 'rgb(var(--chart-muted))' },
                 ].map((l) => (
                   <span key={l.label} className="inline-flex items-center gap-2 ui-muted">
                     <span
@@ -829,23 +832,28 @@ const SalesOverview = ({
                 type="button"
                 onClick={a.onClick}
                 className="w-full rounded-lg ps-2 pe-3 py-2 text-sm font-semibold text-left flex items-center gap-2.5 min-h-[2.75rem]"
-                /* Graphite, not the brand. Five brand-coloured buttons stacked
-                   in a column made a list of ordinary shortcuts the loudest
-                   thing on a page of figures, and put four more primaries on a
-                   screen that already has one. */
+                /* One brand button on the panel — the one that creates
+                   something. The rest are shortcuts, and five orange buttons
+                   stacked in a column made a list of shortcuts the loudest
+                   thing on a page of figures. */
                 style={
                   a.primary
-                    ? { backgroundColor: 'rgb(var(--graphite))', color: 'rgb(var(--surface))' }
+                    ? { backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }
                     : a.outlined
                       ? { border: '1px solid rgb(var(--border-strong))', color: 'rgb(var(--fg))' }
-                      : { backgroundColor: 'rgb(var(--graphite) / 0.06)', color: 'rgb(var(--fg))' }
+                      : { backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--fg))' }
                 }
               >
                 <span
                   className="h-7 w-7 rounded-md grid place-items-center flex-shrink-0"
-                  style={{
-                    backgroundColor: a.primary ? 'rgb(var(--surface) / 0.18)' : 'rgb(var(--graphite) / 0.10)',
-                  }}
+                  style={
+                    a.primary
+                      ? { backgroundColor: 'rgb(var(--on-brand) / 0.14)' }
+                      : {
+                          backgroundColor: `rgb(var(--id-${a.tone || 'settings'}-soft))`,
+                          color: `rgb(var(--id-${a.tone || 'settings'}))`,
+                        }
+                  }
                   aria-hidden="true"
                 >
                   <a.icon size={15} />

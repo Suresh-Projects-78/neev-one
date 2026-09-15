@@ -313,7 +313,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <PageHeader title="Point of Sale" description="Counter sales — tap items, take payment, invoice and receipt book themselves." />
+        <PageHeader entity="invoice" title="Point of Sale" />
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -323,7 +323,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             aria-label="POS numbering settings"
             aria-haspopup="dialog"
             aria-expanded={numberingOpen}
-            title="Numbering"
+      title="Numbering"
           >
             <SlidersHorizontal size={15} aria-hidden="true" />
           </button>

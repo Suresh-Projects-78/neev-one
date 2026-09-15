@@ -208,8 +208,8 @@ export default function VendorsList({ db, setDb, currentCompany }) {
 
   return (
     <DocumentListShell
+      entity="vendors"
       title="Vendors"
-      description="Who you buy from, and what you still owe each of them"
       company={currentCompany}
       search={{
         value: vendorSearch.query,
@@ -274,7 +274,7 @@ export default function VendorsList({ db, setDb, currentCompany }) {
                   <EmptyState
                     icon={Truck}
                     kind="new"
-                    title={vendStatus ? 'No vendors match' : 'No vendors yet'}
+      title={vendStatus ? 'No vendors match' : 'No vendors yet'}
                     description={
                       vendStatus
                         ? 'Nothing in this company matches that filter.'

@@ -113,7 +113,7 @@ export function BranchCreateForm({ orgId, onCreated }) {
             }}
             options={stateOptions}
             placeholder="Select state"
-            title="Select State"
+      title="Select State"
             maxWidthClass="max-w-2xl"
           />
         </div>

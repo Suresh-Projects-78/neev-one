@@ -135,8 +135,7 @@ export const EmailSettings = () => {
     <div className="space-y-6">
       <PageHeader
         title="Email"
-        description="Where messages are sent from, which notifications go out, and what was delivered."
-        actions={
+              actions={
           notice ? (
             <span className="ui-pill ui-pill-pos" role="status">
               <Check size={11} aria-hidden="true" /> {notice}

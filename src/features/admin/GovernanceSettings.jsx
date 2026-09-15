@@ -150,7 +150,7 @@ export const GovernanceSettings = () => {
             <div className="ui-card">
               <EmptyState
                 icon={Layers}
-                title="No role profiles yet"
+      title="No role profiles yet"
                 description="A profile bundles several roles so a new joiner gets one assignment instead of five."
               />
             </div>
@@ -279,7 +279,7 @@ export const GovernanceSettings = () => {
             <div className="ui-card">
               <EmptyState
                 icon={ShieldCheck}
-                title="No approval rules"
+      title="No approval rules"
                 description="A rule holds documents above an amount until someone with the approving role signs off."
               />
             </div>

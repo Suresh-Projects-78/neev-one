@@ -178,6 +178,7 @@ export default function BatchSerialManager() {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="items"
         title="Batches and serial numbers"
         description="Receive stock into a lot, or register individual units. How an item is tracked is set on the item itself."
       />

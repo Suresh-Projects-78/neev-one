@@ -506,7 +506,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView, 
                           type="button"
                           className="ui-icon-btn !h-7 !w-7"
                           aria-label={`Reverse ${r.documentNumber || r.typeLabel}`}
-                          title="Reverse — the voucher stays on record, the settlement is given back"
+      title="Reverse — the voucher stays on record, the settlement is given back"
                           onClick={() => onReverse(r)}
                         >
                           <Undo2 size={14} aria-hidden="true" />

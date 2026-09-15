@@ -91,7 +91,7 @@ export default function AccountOverview({ currentCompany, onOpenCompany = null }
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Account" description="Every company on this account, and the people who work in them." />
+        <PageHeader title="Account" />
         <div className="ui-card p-4 text-sm ui-muted">Loading…</div>
       </div>
     );
@@ -100,7 +100,7 @@ export default function AccountOverview({ currentCompany, onOpenCompany = null }
   if (failed) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Account" description="Every company on this account, and the people who work in them." />
+        <PageHeader title="Account" />
         <div className="ui-card p-4 text-sm" style={{ color: 'rgb(var(--neg-ink))' }}>
           The account could not be read: {failed}
         </div>
@@ -116,8 +116,7 @@ export default function AccountOverview({ currentCompany, onOpenCompany = null }
     <div className="space-y-6">
       <PageHeader
         title={data?.account?.name || 'Account'}
-        description="Every company on this account, and the people who work in them."
-      />
+            />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Companies" value={String(companies.length)} />

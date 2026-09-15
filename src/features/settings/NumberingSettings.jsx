@@ -219,7 +219,7 @@ export const NumberingSettings = () => {
         <div className="ui-card">
           <EmptyState
             icon={Hash}
-            title="No series yet"
+      title="No series yet"
             description="A default series is created automatically the first time a document of that type is raised."
           />
         </div>

@@ -340,7 +340,7 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
               <span className="ui-caption block">Outstanding</span>
               <span
                 className={`ui-col-amount tabular-nums ${act.outstanding > 0 ? 'ui-amount-neg' : ''}`}
-                title={formatMoney(act.outstanding, c)}
+      title={formatMoney(act.outstanding, c)}
               >
                 {formatMoneyCompact(act.outstanding, c)}
               </span>
@@ -384,8 +384,8 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
 
   return (
     <DocumentListShell
+      entity="company"
       title="Companies"
-      description="The group at a glance — switch the active company and see who owes what"
       company={currentCompany}
       surface="plain"
       search={{
@@ -547,7 +547,7 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
           <EmptyState
             icon={Building2}
             kind="new"
-            title={companies.length ? 'No company matches' : 'No companies yet'}
+      title={companies.length ? 'No company matches' : 'No companies yet'}
             description={
               companies.length
                 ? 'Nothing in the group matches that search — try the name, the GSTIN or the state.'

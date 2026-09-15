@@ -38,8 +38,7 @@ export default function SsoSettings() {
     <div className="space-y-6">
       <PageHeader
         title="Single Sign-On"
-        description="Let people sign in with the identity provider your organisation already uses."
-      />
+            />
 
       <NotConnected what="single sign-on">
         Everyone signs in with an email and password today. Nothing on this page changes that, and there is no sign-in

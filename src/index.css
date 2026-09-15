@@ -33,8 +33,9 @@
   --surface: 255 255 255;       /* #FFFFFF */
   --surface-raised: 255 255 255;
   --surface-sunken: 250 250 250;
-  --border: 236 236 236;        /* #ECECEC */
-  --border-strong: 218 218 218;
+  --border: 236 236 234;        /* #ECECEA — divider */
+  --border-strong: 212 212 209; /* #D4D4D1 */
+  --border-field: 229 229 227;  /* #E5E5E3 — card and field hairline */
 
   /* Text */
   --fg: 17 24 39;               /* #111827 */
@@ -42,10 +43,13 @@
   --fg-subtle: 107 114 128;     /* #6B7280 — 4.83:1, the quietest tier that is still AA */
 
   /* Brand — orange. The primary action and the active state. */
-  --brand: 249 115 22;          /* #F97316 */
+  --brand: 255 107 0;           /* #FF6B00 — action, selection, focus. Nothing else. */
   --brand-deep: 194 65 12;      /* #C2410C — the money-out series; same family, unmistakably not the brand bar */
-  --brand-hover: 234 88 12;
-  --brand-soft: 255 247 237;
+  --brand-hover: 232 95 0;      /* #E85F00 */
+  --brand-pressed: 201 80 0;    /* #C95000 */
+  --brand-soft: 255 245 236;    /* #FFF5EC — selected nav, selected menu row */
+  --brand-subtle: 255 249 245;  /* #FFF9F5 */
+  --brand-border: 255 216 186;  /* #FFD8BA */
   --on-brand: 26 12 3;          /* 6.82:1 on the orange; white was 2.80:1 */
   /* What is legible on a filled semantic tone. Light mode's greens, reds and
      ambers are dark enough for white (4.8:1 at worst); dark mode lifts the
@@ -61,8 +65,8 @@
      safely legible and no longer recognisably the theme — while the raw
      accent is 3.15:1 and fails as text. Orange-700 is the step that is both:
      unmistakably the brand hue, and 5.16:1 on white. */
-  --doc-link: 194 65 12;        /* orange-700 — 5.16:1 on white */
-  --doc-link-wash: 255 237 213; /* orange-100, a hover ground that shows */
+  --doc-link: 63 100 140;       /* the link colour — INV-1048 navigates, it does not act */
+  --doc-link-wash: 238 243 247; /* #EEF3F7 */
   --credit: 109 40 217;         /* violet-700 — money going the other way */
 
 
@@ -129,18 +133,18 @@
   --ring: 249 115 22;
 
   /* No second accent on chrome. Success/warning/danger exist for status. */
-  --info: 107 114 128;
-  --info-soft: 245 245 245;
+  --info: 83 109 130;           /* #536D82 — draft, processing, informational */
+  --info-soft: 238 243 246;     /* #EEF3F6 */
 
   /* Links inside content — an invoice number that opens the invoice, a "View
      All" that leaves the panel. Blue because a blue underlined-on-hover word
      is the one convention no user has to be taught, and because the accent is
      spoken for by the primary action. Not used for chrome. */
-  /* #375C50 — 6.6:1 on white. Blue was the one hue in the product that meant
-     nothing: not the brand, not money, not a status. A link is now graphite
-     with enough green in it to read as a link and not as body text. */
-  --link: 55 92 80;
-  --link-hover: 29 78 216;      /* #1D4ED8 */
+  /* #3F648C — 5.9:1 on white. Steel blue navigates; orange acts. A document
+     reference, a "View all", a customer name that opens the customer: all of
+     them go somewhere, none of them does anything. */
+  --link: 63 100 140;
+  --link-hover: 48 78 109;      /* #304E6D */
 
   /* The overview palette.
      Six figures across the top of a module overview, each answering a
@@ -217,15 +221,48 @@
   --graphite: 55 66 63;            /* #37423F — structure, primary control */
   --mauve: 152 119 134;            /* #987786 — secondary accent, used sparingly */
 
-  --kpi-line: 55 66 63;            /* card hairline, drawn at 7% */
-  --kpi-sales-bg: 241 244 242;     --kpi-sales-ink: 55 66 63;
-  --kpi-invoices-bg: 240 246 242;  --kpi-invoices-ink: 52 112 93;
-  --kpi-received-bg: 247 244 236;  --kpi-received-ink: 136 115 63;
-  --kpi-due-bg: 246 241 243;       --kpi-due-ink: 152 119 134;
-  --kpi-overdue-bg: 251 241 239;   --kpi-overdue-ink: 181 71 60;
-  --kpi-credit-bg: 243 242 244;    --kpi-credit-ink: 112 85 120;
+  /* The card is white and the colour is in the icon. A tinted card puts the
+     hue behind the figure; a tinted icon square puts it beside the label,
+     which is where it tells one card from the next without competing. */
+  --kpi-line: 229 229 227;         /* #E5E5E3 */
+  --kpi-sales-bg: 238 243 247;     --kpi-sales-ink: 63 100 140;
+  --kpi-invoices-bg: 244 240 245;  --kpi-invoices-ink: 117 96 125;
+  --kpi-received-bg: 234 246 240;  --kpi-received-ink: 22 132 91;
+  --kpi-due-bg: 235 245 243;       --kpi-due-ink: 39 118 109;
+  --kpi-overdue-bg: 251 239 238;   --kpi-overdue-ink: 194 65 58;
+  --kpi-credit-bg: 248 240 234;    --kpi-credit-ink: 176 111 66;
 
-  /* Segmented control, graphite rather than brand. */
+  /* ---- semantic states the four-colour set did not cover ---------------- */
+  --reconciled: 39 118 109;        --reconciled-soft: 234 245 243;  /* #27766D */
+  --adjustment: 117 96 125;        --adjustment-soft: 244 240 245;  /* #75607D */
+  --archived: 116 116 116;         --archived-soft: 241 241 239;    /* #747474 */
+
+  /* ---- analytics -------------------------------------------------------
+     A chart is a dataset, not an action, so none of these is the brand. */
+  --chart-blue: 63 100 140;        /* sales */
+  --chart-teal: 39 118 109;        /* inflow, reconciled */
+  --chart-mauve: 152 119 134;      /* purchases, outflow */
+  --chart-gold: 176 138 85;
+  --chart-clay: 196 111 74;
+  --chart-slate: 123 132 146;
+  --chart-muted: 168 175 182;      /* outstanding */
+
+  /* ---- page identity ---------------------------------------------------
+     What area am I in. Worn by the icon beside a page title and nowhere else;
+     the brand stays free to mean "do this". */
+  --id-sales: 63 100 140;          --id-sales-soft: 238 243 247;
+  --id-crm: 30 138 145;            --id-crm-soft: 234 246 246;
+  --id-purchase: 117 96 125;       --id-purchase-soft: 244 240 245;
+  --id-banking: 39 118 109;        --id-banking-soft: 234 245 243;
+  --id-inventory: 166 106 0;       --id-inventory-soft: 255 245 223;
+  --id-expense: 176 111 66;        --id-expense-soft: 248 240 234;
+  --id-accounting: 83 109 130;     --id-accounting-soft: 238 243 246;
+  --id-tax: 152 119 134;           --id-tax-soft: 246 241 243;
+  --id-org: 100 116 139;           --id-org-soft: 241 244 246;
+  --id-reports: 92 111 145;        --id-reports-soft: 238 242 247;
+  --id-settings: 113 113 122;      --id-settings-soft: 244 244 245;
+
+  /* Segmented control. */
   --seg-bg: 243 245 244;
   --seg-line: 225 228 226;
 
@@ -250,11 +287,11 @@
      now; the active item is the accent, and grouping does the scanning. */
 
   /* Money semantics */
-  --pos: 21 128 61;             /* #15803D — 4.9:1 on white; #16A34A was 3.3:1, washy as a figure colour */
+  --pos: 22 132 91;             /* #16845B — 4.8:1 on white */
   --pos-soft: 240 253 244;
-  --neg: 185 28 28;             /* #B91C1C — 5.9:1 on white; #DC2626 was 4.0:1, under AA for a 13px amount */
+  --neg: 194 65 58;             /* #C2413A — 4.9:1 on white */
   --neg-soft: 254 242 242;
-  --warn: 161 98 7;             /* #A16207 — 4.9:1 on white; #F59E0B was 2.15:1 and unreadable as a figure */
+  --warn: 166 106 0;            /* #A66A00 — 4.6:1 on white */
   --warn-ink: 180 83 9;         /* amber-700 — 4.84:1 on warn-soft; --warn itself is 2.07:1 there */
   --warn-soft: 255 251 235;
 
@@ -339,7 +376,8 @@
 
   /* Orange lifts slightly in dark so it keeps its contrast against a dark
      surface without turning fluorescent. */
-  --brand: 251 146 60;
+  --brand: 255 138 51;          /* #FF8A33 — #FF6B00 lifted; 3.1:1 on the dark card */
+  --brand-pressed: 232 95 0;
   --brand-deep: 253 186 116;    /* orange-300 — reads as the second series on dark, not a duplicate of brand */
   --brand-hover: 253 186 116;
   --brand-soft: 43 26 14;
@@ -393,11 +431,11 @@
   --on-accent: 26 12 3;
   --ring: 251 146 60;
 
-  --info: 161 161 170;
+  --info: 147 170 190;          /* the slate blue, lifted */
   --info-soft: 39 39 42;
 
   /* Blue at this lightness is unreadable on a dark ground, so links lift. */
-  --link: 122 190 168;          /* #7ABEA8 — 8.1:1 on the dark card */
+  --link: 140 176 214;          /* #8CB0D6 — 7.6:1 on the dark card */
   --link-hover: 147 197 253;
 
   /* The overview palette, dark. The solids lift so they clear the dark ground;
@@ -446,13 +484,37 @@
   --graphite: 209 214 211;
   --mauve: 202 168 183;
 
-  --kpi-line: 226 232 229;
-  --kpi-sales-bg: 32 35 33;        --kpi-sales-ink: 203 211 207;
-  --kpi-invoices-bg: 27 36 32;     --kpi-invoices-ink: 110 195 168;
-  --kpi-received-bg: 37 34 26;     --kpi-received-ink: 214 183 111;
-  --kpi-due-bg: 37 32 35;          --kpi-due-ink: 202 168 183;
+  --kpi-line: 49 58 56;
+  --kpi-sales-bg: 26 34 44;        --kpi-sales-ink: 140 176 214;
+  --kpi-invoices-bg: 38 32 41;     --kpi-invoices-ink: 190 160 199;
+  --kpi-received-bg: 21 42 33;     --kpi-received-ink: 90 205 150;
+  --kpi-due-bg: 21 42 39;          --kpi-due-ink: 110 195 180;
   --kpi-overdue-bg: 41 30 28;      --kpi-overdue-ink: 240 145 134;
-  --kpi-credit-bg: 34 31 36;       --kpi-credit-ink: 190 160 199;
+  --kpi-credit-bg: 45 33 25;       --kpi-credit-ink: 219 154 110;
+
+  --reconciled: 110 195 180;       --reconciled-soft: 24 48 44;
+  --adjustment: 190 160 199;       --adjustment-soft: 41 34 44;
+  --archived: 163 163 163;         --archived-soft: 40 40 38;
+
+  --chart-blue: 140 176 214;
+  --chart-teal: 110 195 180;
+  --chart-mauve: 202 168 183;
+  --chart-gold: 212 179 128;
+  --chart-clay: 226 150 116;
+  --chart-slate: 160 170 185;
+  --chart-muted: 133 141 149;
+
+  --id-sales: 140 176 214;         --id-sales-soft: 26 34 44;
+  --id-crm: 94 200 205;            --id-crm-soft: 20 40 41;
+  --id-purchase: 190 160 199;      --id-purchase-soft: 38 32 41;
+  --id-banking: 110 195 180;       --id-banking-soft: 21 42 39;
+  --id-inventory: 214 168 74;      --id-inventory-soft: 44 36 18;
+  --id-expense: 219 154 110;       --id-expense-soft: 45 33 25;
+  --id-accounting: 147 170 190;    --id-accounting-soft: 27 34 40;
+  --id-tax: 202 168 183;           --id-tax-soft: 40 33 36;
+  --id-org: 156 171 191;           --id-org-soft: 30 35 41;
+  --id-reports: 152 171 206;       --id-reports-soft: 27 32 42;
+  --id-settings: 168 168 176;      --id-settings-soft: 38 38 40;
 
   --seg-bg: 38 35 32;
   --seg-line: 67 62 56;

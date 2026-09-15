@@ -90,6 +90,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="gst"
         title="GSTR-2B Reconciliation"
         description="Upload the portal's GSTR-2B JSON — every supplier invoice is matched to your bills so you know exactly which ITC is safe to claim."
       />
@@ -162,7 +163,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
           </div>
 
           <ListToolbar
-            search={recoSearch.query}
+      search={recoSearch.query}
             onSearch={recoSearch.setQuery}
             placeholder="Search this view (invoice, supplier, GSTIN, bill)"
             count={visibleReco.length}

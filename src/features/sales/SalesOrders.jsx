@@ -395,7 +395,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
               every way out of it on the right, pinned so Create stays reachable
               from the last line. */}
           <DocFormActions
-            title="New Sales Order"
+      title="New Sales Order"
             onBack={() => setOpen(false)}
             sticky
             primaryLabel="Create Sales Order"
@@ -409,7 +409,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           */}
           <FormSection
             icon={ClipboardList}
-            title="Basic Details"
+      title="Basic Details"
             description="Who the order is for, and the paperwork that identifies it."
           >
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
@@ -452,7 +452,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                   onChange={() => {}}
                   disabled
                   voucherKey="salesOrder"
-                  title="Order numbering"
+      title="Order numbering"
                   sampleLabel="Next order will be"
                   manualLabel="Typed on each order"
                   branchId={branchIdForNumbering || null}
@@ -487,7 +487,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
 
           <FormSection
             icon={Package}
-            title="Line Items"
+      title="Line Items"
             description="What the customer has ordered."
             action={
               <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary">
@@ -640,8 +640,8 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
 
   return (
     <DocumentListShell
+      entity="salesOrder"
       title="Sales Orders"
-      description="Quote → SO → Challan → Invoice. Delivered and billed track against each order."
       company={currentCompany}
       search={{
         value: soSearch.query,
@@ -722,7 +722,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                     <EmptyState
                       icon={ClipboardList}
                       kind="new"
-                      title={showPending ? 'Nothing pending' : 'No sales orders'}
+      title={showPending ? 'Nothing pending' : 'No sales orders'}
                       description={
                         showPending
                           ? 'Every order here has been delivered and billed.'
@@ -803,7 +803,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           onClose={() => setPreviewOrder(null)}
         >
           <PrintDownloadFrame
-            title={`Sales Order ${previewOrder.number || ''}`.trim()}
+      title={`Sales Order ${previewOrder.number || ''}`.trim()}
             fileBase={previewOrder.number || 'sales-order'}
           >
             <DocumentPrintView

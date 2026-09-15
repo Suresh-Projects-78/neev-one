@@ -388,10 +388,10 @@ export function SeriesBars({
   const option = useMemo(
     () => ({
       ...common(t),
-      /* Graphite, reconciled green, mauve. The third series was the brand
-         orange, which made the line somebody reads last the loudest mark on
-         the chart. */
-      color: [t.graphite, t.kpiInvoices, t.mauve],
+      /* The analytics palette, never the brand: a chart is a dataset, not an
+         action. The third series was the brand orange, which made the line
+         read last the loudest mark on the chart. */
+      color: [t.chartTeal, t.chartBlue, t.chartMuted],
       grid: { left: 8, right: 8, top: 16, bottom: 4, containLabel: true },
       legend: { show: false },
       tooltip: {

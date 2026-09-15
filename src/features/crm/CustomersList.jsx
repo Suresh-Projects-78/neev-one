@@ -206,8 +206,8 @@ export default function CustomersList({ db, setDb, currentCompany }) {
 
   return (
     <DocumentListShell
+      entity="customers"
       title="Customers"
-      description="Who you sell to, and what each of them owes"
       company={currentCompany}
       search={{
         value: customerSearch.query,
@@ -274,7 +274,7 @@ export default function CustomersList({ db, setDb, currentCompany }) {
                   <EmptyState
                     icon={Users}
                     kind="new"
-                    title={custStatus ? 'No customers match' : 'No customers yet'}
+      title={custStatus ? 'No customers match' : 'No customers yet'}
                     description={
                       custStatus
                         ? 'Nothing in this company matches that filter.'

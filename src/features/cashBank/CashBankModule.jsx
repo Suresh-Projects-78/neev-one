@@ -791,7 +791,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                   }}
                   className={`w-full px-4 py-2 rounded-lg ${ showCreate ? 'ui-btn ui-btn-primary ' : 'ui-sunken ui-muted cursor-not-allowed'
                   }`}
-                  title={
+      title={
                     !canAttemptCreate
                       ? 'Type a ledger name to create'
                       : showCreate
@@ -1858,7 +1858,6 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   return (
     <DocumentListShell
       title="Cash & Bank"
-      description="Reconcile bank and cash transactions against receipts and payments"
       company={currentCompany}
       search={{
         value: txnSearch.query,
@@ -2161,7 +2160,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       <EmptyState
                         icon={Landmark}
                         kind="new"
-                        title={accountsEmpty ? 'No cash or bank account yet' : 'Pick an account'}
+      title={accountsEmpty ? 'No cash or bank account yet' : 'Pick an account'}
                         description={
                           accountsEmpty
                             ? 'Every payment and receipt moves through one of these. Name the cash box or the bank account and its book starts here.'
@@ -2187,7 +2186,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       <EmptyState
                         icon={ListTodo}
                         kind="new"
-                        title={view === 'uncategorised' && allTxns.length ? 'Nothing left to categorise' : 'No transactions'}
+      title={view === 'uncategorised' && allTxns.length ? 'Nothing left to categorise' : 'No transactions'}
                         description={
                           view === 'uncategorised' && allTxns.length
                             ? 'Every line in this account has a ledger against it.'
@@ -2251,7 +2250,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                             type="button"
                             onClick={() => setOpenActionId((p) => (String(p) === String(t.id) ? null : t.id))}
                             className="inline-flex items-center justify-center w-9 h-9 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
-                            title="Actions"
+      title="Actions"
                           >
                             <MoreVertical size={18} />
                           </button>

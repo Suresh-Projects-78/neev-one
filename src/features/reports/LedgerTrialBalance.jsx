@@ -77,6 +77,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="ledger"
         title="Trial Balance"
         description="From posted journal entries. Debits and credits must agree exactly."
         actions={
@@ -97,7 +98,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
             />
             <label
               className={`flex items-center gap-2 text-sm ${fromDate && toDate ? 'cursor-pointer' : 'opacity-50'}`}
-              title={fromDate && toDate ? 'Compare with the previous period of the same length' : 'Pick a date range first'}
+      title={fromDate && toDate ? 'Compare with the previous period of the same length' : 'Pick a date range first'}
             >
               <input
                 type="checkbox"
@@ -137,7 +138,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
         <div className="ui-card">
           <EmptyState
             icon={BookOpen}
-            title="Nothing posted yet"
+      title="Nothing posted yet"
             description="Once a document posts to the ledger its accounts appear here."
           />
         </div>
@@ -168,7 +169,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                       key={r.accountId}
                       className="cursor-pointer"
                       onClick={() => openDrill(r)}
-                      title={`Open the ${r.name} ledger`}
+      title={`Open the ${r.name} ledger`}
                     >
                       <td className="ui-col-id">{r.code}</td>
                       <td className="ui-col-entity">{r.name}</td>

@@ -478,8 +478,8 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
 
   return (
     <DocumentListShell
+      entity="inventory"
       title="Inventory"
-      description="Opening, movement and closing stock for the period, by item"
       company={currentCompany}
       search={{
         value: itemSearch.query,
@@ -637,7 +637,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
                   <EmptyState
                     icon={Boxes}
                     kind="new"
-                    title={items.length ? 'Nothing matches' : 'No stock items yet'}
+      title={items.length ? 'Nothing matches' : 'No stock items yet'}
                     description={
                       items.length
                         ? 'No item in this filter for the chosen warehouse and period.'
@@ -682,7 +682,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
                   key={it.id}
                   className="cursor-pointer"
                   onClick={() => openLedger(it)}
-                  title="Click to view ledger"
+      title="Click to view ledger"
                 >
                   <td className="ui-col-entity">
                     <div>{it.name}</div>

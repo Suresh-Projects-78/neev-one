@@ -207,6 +207,7 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="settings"
         title="Import data"
         description="Files are checked before anything is written. You see every problem first, and rows that are fine still go through."
         actions={

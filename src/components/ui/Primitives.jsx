@@ -2,6 +2,7 @@ import React from 'react';
 import { Check, Moon, Sun } from 'lucide-react';
 
 import Illustration from './Illustration';
+import { iconFor, toneFor } from './entityIdentity';
 import { useCountUp } from './useCountUp';
 import { resolveStatus } from '../../utils/statusRegistry';
 
@@ -21,11 +22,43 @@ import { resolveStatus } from '../../utils/statusRegistry';
  * all and its menu was unopenable on a phone. Wrapping costs a row of height;
  * `shrink-0` cost the control.
  */
-export const PageHeader = ({ title, description, actions = null }) => (
+/**
+ * The mark beside a page title.
+ *
+ * It says which part of the book you are in, in the colour family that part
+ * owns — sales blue, purchase violet, inventory ochre. Never the brand: the
+ * brand is on the button to its right, and if both wore it the page and the
+ * thing you can do on it would look the same.
+ *
+ * `entity` is a key from entityIdentity, so a screen names what it holds
+ * rather than choosing an icon and a colour for itself.
+ */
+export const EntityMark = ({ entity, size = 17 }) => {
+  const icon = iconFor(entity);
+  if (!icon) return null;
+  const tone = toneFor(entity);
+  return (
+    <span
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
+      style={{ backgroundColor: `rgb(var(--id-${tone}-soft))`, color: `rgb(var(--id-${tone}))` }}
+      aria-hidden="true"
+    >
+      {/* createElement, not <Icon />: the linter reads a capitalised local as
+          a component declared inside a render. It is a lookup, not a
+          declaration — the same function object comes back every time. */}
+      {React.createElement(icon, { size, strokeWidth: 1.9 })}
+    </span>
+  );
+};
+
+export const PageHeader = ({ title, description, actions = null, entity = '' }) => (
   <div className="ui-in-fade flex flex-wrap items-start justify-between gap-3 mb-4">
-    <div className="min-w-0">
-      <h1 className="ui-t-page">{title}</h1>
-      {description ? <p className="ui-muted ui-t-body mt-1">{description}</p> : null}
+    <div className="flex min-w-0 items-center gap-2.5">
+      {entity ? <EntityMark entity={entity} /> : null}
+      <div className="min-w-0">
+        <h1 className="ui-t-page">{title}</h1>
+        {description ? <p className="ui-muted ui-t-body mt-1">{description}</p> : null}
+      </div>
     </div>
     {actions ? (
       <div className="flex flex-wrap items-center justify-end gap-2 min-w-0 max-w-full">{actions}</div>

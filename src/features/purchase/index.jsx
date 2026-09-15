@@ -782,7 +782,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             <div id="bill-branch-field">
               <PopupSelect
                 label="Branch"
-                title="branches"
+      title="branches"
                 value={String(branchIdInList || '')}
                 onChange={onBranchChange}
                 icon={Building2}
@@ -880,7 +880,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               aria-label="Bill numbering settings"
               aria-haspopup="dialog"
               aria-expanded={numberingOpen}
-              title="Numbering"
+      title="Numbering"
             >
               <SlidersHorizontal size={15} aria-hidden="true" />
             </button>
@@ -893,7 +893,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               setDb={setDb}
               currentCompany={currentCompany}
               voucherKey="bill"
-              title="Bill numbering"
+      title="Bill numbering"
               sampleLabel="Next bill will be"
               manualLabel="Typed on each bill"
               branchId={branchIdForNumbering}
@@ -1161,7 +1161,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                   onClick={() => setTdsPickerOpen(true)}
                   className="ui-btn ui-btn-ghost ui-btn-sm !px-0"
                   disabled={!tdsEnabledHere}
-                  title={tdsEnabledHere ? undefined : 'Switch TDS on under Settings → Tax compliances first.'}
+      title={tdsEnabledHere ? undefined : 'Switch TDS on under Settings → Tax compliances first.'}
                 >
                   + TDS deduction <span className="ui-subtle">(if you deduct on this bill)</span>
                 </button>
@@ -1579,7 +1579,6 @@ export const PurchaseOrdersList = ({
   return (
     <DocumentListShell
       title="Purchase Orders"
-      description="What you have committed to buy, until the bill arrives against it"
       company={currentCompany}
       search={{
         value: poSearch.query,
@@ -1644,7 +1643,7 @@ export const PurchaseOrdersList = ({
                     <EmptyState
                       icon={ClipboardList}
                       kind="new"
-                      title="Nothing ordered yet"
+      title="Nothing ordered yet"
                       description="A purchase order records what you asked a vendor for, so the bill that arrives can be checked against it."
                       routes={[
                         {
@@ -1802,7 +1801,7 @@ export const PurchaseOrdersList = ({
           onClose={() => setPreviewPo(null)}
         >
           <PrintDownloadFrame
-            title={`Purchase Order ${previewPo.number || ''}`.trim()}
+      title={`Purchase Order ${previewPo.number || ''}`.trim()}
             fileBase={previewPo.number || 'purchase-order'}
           >
             <DocumentPrintView
@@ -2157,7 +2156,7 @@ export const PurchaseOrderForm = ({
             <div id="po-branch-field">
               <PopupSelect
                 label="Branch"
-                title="branches"
+      title="branches"
                 value={String(branchIdInList || '')}
                 onChange={onBranchChange}
                 icon={Building2}
@@ -2214,7 +2213,7 @@ export const PurchaseOrderForm = ({
               disabled={lockPoNumber}
               required
               voucherKey="purchaseOrder"
-              title="Order numbering"
+      title="Order numbering"
               sampleLabel="Next order will be"
               manualLabel="Typed on each order"
               branchId={branchIdForNumbering}
@@ -2939,7 +2938,6 @@ const billStatusReason = (doc, status, company, nowMs) => {
   return (
     <DocumentListShell
       title="Purchase Invoices"
-      description="Create, view and manage all your vendor bills"
       company={currentCompany}
       search={{
         value: billSearch.query,
@@ -3053,7 +3051,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                     <EmptyState
                       icon={FileStack}
                       kind="new"
-                      title="No bills yet"
+      title="No bills yet"
                       description="A vendor bill is what you owe and the input GST you can claim against it."
                       action={
                         <button type="button" onClick={() => onNewBill?.()} className="ui-btn ui-btn-primary">
@@ -3091,7 +3089,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                     key={b.id}
                     className="ui-hover-sunken cursor-pointer"
                     onClick={() => openBillDocument(b)}
-                    title="Open this bill as a document"
+      title="Open this bill as a document"
                   >
                     <td className="ui-col-id"><DocumentNumber value={b.number} label="bill" /></td>
                     <td className="ui-col-entity">{b.vendorName}</td>
@@ -3104,7 +3102,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                       {returnMark ? (
                         <span
                           className="ml-1 px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--warn-soft))] text-[rgb(var(--warn-ink))]"
-                          title={`Debit notes of ${formatMoney(debitValue, currentCompany)} raised against this bill`}
+      title={`Debit notes of ${formatMoney(debitValue, currentCompany)} raised against this bill`}
                         >
                           Debit Note {formatMoney(debitValue, currentCompany)}
                         </span>
@@ -3131,7 +3129,7 @@ const billStatusReason = (doc, status, company, nowMs) => {
                           openBillMenu(b.id, e.currentTarget);
                         }}
                         className="inline-flex items-center justify-center w-9 h-9 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
-                        title="Actions"
+      title="Actions"
                       >
                         <MoreVertical size={18} />
                       </button>
@@ -3957,7 +3955,7 @@ export const DebitNoteForm = ({
             <div id="return-branch-field">
           <PopupSelect
             label="Branch"
-            title="branches"
+      title="branches"
             value={String(branchIdInList || '')}
             onChange={onBranchChange}
             icon={Building2}
@@ -4088,7 +4086,7 @@ export const DebitNoteForm = ({
               aria-label="Return numbering settings"
               aria-haspopup="dialog"
               aria-expanded={numberingOpen}
-              title="Numbering"
+      title="Numbering"
             >
               <SlidersHorizontal size={15} aria-hidden="true" />
             </button>
@@ -4100,7 +4098,7 @@ export const DebitNoteForm = ({
               setDb={setDb}
               currentCompany={currentCompany}
               voucherKey="debitNote"
-              title="Return numbering"
+      title="Return numbering"
               sampleLabel="Next return will be"
               manualLabel="Typed on each return"
               branchId={branchIdForNumbering}
@@ -4480,7 +4478,6 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
   return (
     <DocumentListShell
       title="Purchase Returns"
-      description="A debit note reduces what you owe when goods go back to the vendor"
       company={currentCompany}
       search={{
         value: dnSearch.query,
@@ -4553,7 +4550,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                     <EmptyState
                       icon={NotebookPen}
                       kind="new"
-                      title="No purchase returns yet"
+      title="No purchase returns yet"
                       description="A debit note is what the vendor owes you back — goods returned, an overcharge, a discount agreed after the bill."
                       routes={[
                         {
@@ -4619,7 +4616,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                             type="button"
                             onClick={() => openKnockOff(dn)}
                             className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
-                            title="Knock this off against the vendor's open bills"
+      title="Knock this off against the vendor's open bills"
                           >
                             Knock off {formatMoney(noteBalance(dn).unsettled, currentCompany)}
                           </button>
@@ -4651,7 +4648,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
           onClose={() => setPreviewNote(null)}
         >
           <PrintDownloadFrame
-            title={`Debit Note ${previewNote.number || ''}`.trim()}
+      title={`Debit Note ${previewNote.number || ''}`.trim()}
             fileBase={previewNote.number || 'debit-note'}
           >
             <DocumentPrintView

@@ -189,6 +189,7 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
   ];
   return (
     <DocumentListShell
+      entity="items"
       title="Reorder Alerts"
       description="Stock at or below its reorder level. The suggested order refills to twice the level; one click drafts the PO to the last supplier."
       company={currentCompany}
@@ -249,7 +250,7 @@ export default function ReorderAlerts({ db, setDb, currentCompany }) {
                     <EmptyState
                       icon={PackageSearch}
                       kind="new"
-                      title={rows.length ? 'Nothing matches' : 'Nothing below reorder level'}
+      title={rows.length ? 'Nothing matches' : 'Nothing below reorder level'}
                       description={
                         rows.length
                           ? 'No item in this filter has fallen to its level.'

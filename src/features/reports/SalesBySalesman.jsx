@@ -74,6 +74,7 @@ export default function SalesBySalesman({ db, currentCompany }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        entity="report"
         title="Sales by Salesman"
         description="Invoiced sales, open orders and quotes per salesman — commission on pre-GST sales."
       />

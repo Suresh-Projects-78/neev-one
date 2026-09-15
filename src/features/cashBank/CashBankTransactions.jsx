@@ -74,8 +74,8 @@ export default function CashBankTransactions({
 
   return (
     <DocumentListShell
+      entity="transfer"
       title="Transactions"
-      description="View all your cash and bank transactions, including payments, receipts, transfers and imported bank statements."
       company={currentCompany}
       moreItems={[
         onOpenReconciliation ? { key: 'reco', label: 'Reconciliation' } : null,
@@ -147,7 +147,7 @@ export default function CashBankTransactions({
           <div className="min-w-0 sm:w-72">
             <PopupSelect
               label="Account"
-              title="accounts"
+      title="accounts"
               value={String(accountInList || '')}
               onChange={(next) => setAccountId(String(next || ''))}
               options={[
@@ -161,7 +161,7 @@ export default function CashBankTransactions({
           <div className="min-w-0 sm:w-56">
             <PopupSelect
               label="Period"
-              title="periods"
+      title="periods"
               value={period.period}
               onChange={(next) => period.setPeriod(String(next || 'all'))}
               options={LIST_PERIODS.map((p) => ({ value: p.key, label: p.label }))}
@@ -217,7 +217,7 @@ export default function CashBankTransactions({
               <tr>
                 <td colSpan={7}>
                   <EmptyState
-                    title="Nothing moved in this window"
+      title="Nothing moved in this window"
                     message="Payments, receipts, transfers between your own accounts and imported bank lines all appear here."
                   />
                 </td>
@@ -248,7 +248,7 @@ export default function CashBankTransactions({
                           type="button"
                           onClick={() => onOpenSource(r)}
                           className="ui-btn ui-btn-ghost ui-btn-sm"
-                          title="Open the document this movement came from"
+      title="Open the document this movement came from"
                         >
                           View
                         </button>

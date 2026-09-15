@@ -82,7 +82,7 @@ export const DocHeaderStrip = ({
               aria-label={`${numbering.title || 'Document'} settings`}
               aria-haspopup="dialog"
               aria-expanded={numberingOpen}
-              title="Numbering"
+      title="Numbering"
             >
               <SlidersHorizontal size={13} aria-hidden="true" />
             </button>
@@ -94,7 +94,7 @@ export const DocHeaderStrip = ({
               setDb={numbering.setDb}
               currentCompany={numbering.currentCompany}
               voucherKey={numbering.voucherKey}
-              title={numbering.title}
+      title={numbering.title}
               sampleLabel={numbering.sampleLabel}
               manualLabel={numbering.manualLabel}
               branchId={numbering.branchId ?? null}

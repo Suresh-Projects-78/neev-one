@@ -202,7 +202,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
      deduct, and saying so is more use than showing it six empty tables. */
   if (!profile.enabled) {
     return (
-      <DocumentListShell title="TDS" description="Deduction, challans and the quarterly return." company={currentCompany}>
+      <DocumentListShell entity="tds" title="TDS" company={currentCompany}>
         <EmptyState
           title="TDS is switched off for this company"
           message="Settings → Tax compliances turns it on, along with the TAN and deductor details a challan and a return need."
@@ -219,7 +219,6 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
   return (
     <DocumentListShell
       title="TDS"
-      description="What was deducted, what has been paid over, and what stands between here and a filed quarter."
       company={currentCompany}
       primary={
         onNewChallan ? (
@@ -257,7 +256,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
           <div className="min-w-0 sm:w-56">
             <PopupSelect
               label="Period"
-              title="periods"
+      title="periods"
               value={period.period}
               onChange={(next) => period.setPeriod(String(next || 'all'))}
               options={LIST_PERIODS.map((p) => ({ value: p.key, label: p.label }))}
@@ -268,7 +267,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
           <div className="min-w-0 sm:w-64">
             <PopupSelect
               label="Return quarter"
-              title="quarters"
+      title="quarters"
               value={quarter}
               onChange={(next) => setQuarter(String(next || ''))}
               options={[
@@ -384,7 +383,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                 <tr>
                   <td colSpan={11}>
                     <EmptyState
-                      title="Nothing deducted in this window"
+      title="Nothing deducted in this window"
                       message="A bill, a payment or a receipt that deducts writes its record here, with the rule it was computed under."
                     />
                   </td>
@@ -545,7 +544,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                 <tr>
                   <td colSpan={12}>
                     <EmptyState
-                      title="No challans recorded"
+      title="No challans recorded"
                       message="Record what was paid to the department, then allocate it against the deductions it covers."
                     />
                   </td>
@@ -609,7 +608,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                 <tr>
                   <td colSpan={4}>
                     <EmptyState
-                      title="Nothing standing in the way"
+      title="Nothing standing in the way"
                       message="Every deduction in this window has a PAN, a ledger, a rule version and a challan behind it."
                     />
                   </td>
@@ -632,7 +631,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
           <div className="space-y-4">
             {!quarter ? (
               <EmptyState
-                title="Choose a quarter"
+      title="Choose a quarter"
                 message="A return is prepared one quarter at a time. Pick one above and this becomes the return it would file."
               />
             ) : (
@@ -662,7 +661,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                         onClick={freezeQuarter}
                         className="ui-btn ui-btn-secondary"
                         disabled={!validation.ready}
-                        title={validation.ready ? undefined : 'Resolve the blocking problems first.'}
+      title={validation.ready ? undefined : 'Resolve the blocking problems first.'}
                       >
                         Freeze quarter
                       </button>

@@ -99,8 +99,8 @@ export default function BatchStock({ db, currentCompany }) {
   const bsSearchRows = bsSearch.filtered;
   return (
     <DocumentListShell
+      entity="items"
       title="Batch Stock & Expiry"
-      description="Every batch received on a bill and consumed by an invoice — with what expires when"
       company={currentCompany}
       search={{
         value: bsSearch.query,
@@ -161,7 +161,7 @@ export default function BatchStock({ db, currentCompany }) {
                     <EmptyState
                       icon={Boxes}
                       kind="new"
-                      title={rows.length ? 'No batches here' : 'No batches yet'}
+      title={rows.length ? 'No batches here' : 'No batches yet'}
                       description={
                         rows.length
                           ? 'Nothing matches this filter — try All, or widen the expiry window.'

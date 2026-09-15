@@ -74,7 +74,7 @@ const WarehouseField = ({
             type="text"
             readOnly
             value={pinned}
-            title={pinned}
+      title={pinned}
             className="ui-input w-full ui-sunken ps-8 truncate"
           />
         </div>

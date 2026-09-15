@@ -525,7 +525,7 @@ export const InvoiceFieldSettings = ({
                   type="button"
                   onClick={() => toggleHidden(f.key)}
                   className="ui-btn ui-btn-ghost ui-btn-sm"
-                  title={f.hidden ? 'Show on new invoices again' : 'Stop showing on new invoices, keep existing values'}
+      title={f.hidden ? 'Show on new invoices again' : 'Stop showing on new invoices, keep existing values'}
                 >
                   {f.hidden ? <Eye size={14} aria-hidden="true" /> : <EyeOff size={14} aria-hidden="true" />}
                   {f.hidden ? 'Show' : 'Hide'}
@@ -534,7 +534,7 @@ export const InvoiceFieldSettings = ({
                   type="button"
                   onClick={() => removeCustomField(f.key)}
                   className="ui-btn ui-btn-ghost ui-btn-sm"
-                  title="Delete permanently"
+      title="Delete permanently"
                   aria-label={`Delete ${f.label}`}
                 >
                   <Trash2 size={14} aria-hidden="true" />

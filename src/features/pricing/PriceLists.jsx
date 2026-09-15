@@ -267,6 +267,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
   if (!editing) {
     return (
       <DocumentListShell
+        entity="category"
         title="Price Lists"
         description="Rate cards per customer segment — invoicing reads the customer's list before the item's own price"
         company={currentCompany}
@@ -372,7 +373,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                         <EmptyState
                           icon={Tags}
                           kind="new"
-                          title={lists.length ? 'Nothing matches' : 'No price lists yet'}
+      title={lists.length ? 'Nothing matches' : 'No price lists yet'}
                           description={
                             lists.length
                               ? 'No price list matches the search or the status filter.'

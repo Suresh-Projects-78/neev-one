@@ -753,7 +753,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               }}
               disabled={lockReceiptNumber}
               voucherKey="receipt"
-              title="Receipt numbering"
+      title="Receipt numbering"
               sampleLabel="Next receipt will be"
               manualLabel="Typed on each receipt"
               branchId={receiptBranchId || null}

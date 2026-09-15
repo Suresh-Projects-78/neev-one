@@ -186,7 +186,7 @@ export function RevenueExpenses({ months, peak, company, any }) {
               <div key={m.key} className="flex h-full min-w-0 flex-1 flex-col justify-end">
                 <div className="flex h-full items-end justify-center gap-1.5">
                   <span
-                    title={`Revenue ${formatMoney(m.inAmt, company)}`}
+      title={`Revenue ${formatMoney(m.inAmt, company)}`}
                     style={{
                       height: `${Math.max(m.inAmt ? 2 : 0, (m.inAmt / peak) * 100)}%`,
                       backgroundColor: TONES.green.solid,
@@ -195,7 +195,7 @@ export function RevenueExpenses({ months, peak, company, any }) {
                     }}
                   />
                   <span
-                    title={`Expenses ${formatMoney(m.outAmt, company)}`}
+      title={`Expenses ${formatMoney(m.outAmt, company)}`}
                     style={{
                       height: `${Math.max(m.outAmt ? 2 : 0, (m.outAmt / peak) * 100)}%`,
                       backgroundColor: 'rgb(var(--brand))',

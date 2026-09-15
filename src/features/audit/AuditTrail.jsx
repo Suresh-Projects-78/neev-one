@@ -134,6 +134,7 @@ export default function AuditTrail() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3">
         <PageHeader
+          entity="report"
           title="Audit Trail"
           description="Every recorded change, who made it and when. Read-only — nothing here can be edited or removed."
         />
@@ -206,7 +207,7 @@ export default function AuditTrail() {
         <div className="ui-card">
           <EmptyState
             icon={History}
-            title="Nothing recorded yet"
+      title="Nothing recorded yet"
             description="Edits, status changes and deletions appear here as they happen."
           />
         </div>

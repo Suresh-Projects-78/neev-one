@@ -258,8 +258,7 @@ export const ProfileSettings = () => {
     <div className="space-y-6">
       <PageHeader
         title="My profile"
-        description="Your details, and where you have access."
-        actions={
+              actions={
           <>
             {notice ? (
               <span className="ui-pill ui-pill-pos" role="status">
@@ -323,7 +322,7 @@ export const ProfileSettings = () => {
                     className="ui-btn ui-btn-secondary ui-btn-sm"
                     onClick={() => setForm((f) => ({ ...f, avatarUrl: '' }))}
                     aria-label="Remove photo"
-                    title="Remove photo"
+      title="Remove photo"
                   >
                     <Trash2 size={13} aria-hidden="true" />
                   </button>

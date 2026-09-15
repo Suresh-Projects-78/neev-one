@@ -49,7 +49,7 @@ export default function BillingPreview({ currentCompany }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Billing" description="The plan this account is on, and what it is charged." />
+      <PageHeader title="Billing" />
 
       <NotConnected what="billing" sample>
         The plan and the usage below are read from the server and are real. Payments, cards and receipts need a payment

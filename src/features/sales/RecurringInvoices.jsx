@@ -533,7 +533,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               way out of it on the right, pinned so Create stays reachable from
               the bottom of a long schedule. */}
           <DocFormActions
-            title="New Schedule"
+      title="New Schedule"
             onBack={() => setCreatorOpen(false)}
             sticky
             secondaryLabel="Cancel"
@@ -868,6 +868,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
 
   return (
     <DocumentListShell
+      entity="recurring"
       title="Recurring Invoices"
       description="Schedules live on the server and raise their drafts hourly, whether or not anyone is signed in. You review and send."
       company={currentCompany}
@@ -1011,7 +1012,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                       <EmptyState
                         icon={RefreshCw}
                         kind="new"
-                        title="No recurring schedules"
+      title="No recurring schedules"
                         description="A schedule is an invoice that raises itself — rent on the 1st, an AMC every quarter, a retainer every month."
                         routes={[
                           {
