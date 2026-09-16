@@ -360,8 +360,13 @@
   /* Row density. Comfortable is the default; Compact is the setting a
      high-volume operator turns on. One variable, two audiences. */
   --row-pad-y: 0.5625rem;   /* 9px — Comfortable, 36px rows */
-  --radius-btn: 0.5rem;     /* 8px — buttons, inputs, rows */
-  --radius-input: 0.5rem;   /* 8px */
+  --radius-btn: 0.5rem;     /* 8px — buttons and rows */
+  /* Fields are square. A row of controls reads as a grid of cells rather than
+     a row of lozenges, which is what a ledger form is — and at 34px tall, an
+     8px corner takes a quarter of the field's height to round off. 2px rather
+     than a true 0: a 1px border on a hard corner aliases into a dark pixel at
+     each end, and the corner looks chipped rather than sharp. */
+  --radius-input: 0.125rem; /* 2px */
   --radius-sm: 0.5rem;      /* 8px — chips */
   --radius: 0.75rem;        /* 12px — cards, panels */
   --radius-lg: 0.75rem;     /* 12px */
@@ -369,9 +374,6 @@
   /* The figures across an overview. Square on purpose: at 12px five small
      cards in a row read as five pills rather than five panels of figures. */
   --radius-kpi: 0;
-  /* Section headers and their marks. Squarer than a card on purpose: a band
-     at 12px reads as another card floating inside the one it sits in. */
-  --radius-sec: 0.25rem;
 
   /* Layout */
   --sidebar-w: 260px;
@@ -2775,26 +2777,22 @@
     .ui-form-cols > * > * { grid-column: 1 !important; grid-row: auto !important; }
   }
 
+  /* A mark and a name. No band, no tint, no box: a tinted strip across every
+     section turned a form into four coloured slabs and competed with the one
+     thing on the page that is allowed to be orange. The icon is enough to say
+     where a section starts. */
   .ui-sec-head {
     display: flex;
     align-items: center;
-    gap: 0.625rem;
-    padding: 0.5rem 0.75rem;
-    margin-bottom: 0.875rem;
-    border-radius: var(--radius-sec);
-    background-color: rgb(var(--sec-tone, var(--fg-subtle)) / 0.08);
-    border: 1px solid rgb(var(--sec-tone, var(--fg-subtle)) / 0.16);
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
   }
   .ui-sec-head > .ui-sec-mark {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: none;
-    width: 1.625rem;
-    height: 1.625rem;
-    border-radius: var(--radius-sec);
-    background-color: rgb(var(--sec-tone, var(--fg-subtle)) / 0.16);
-    color: rgb(var(--sec-tone, var(--fg-muted)));
+    color: rgb(var(--fg-muted));
   }
   .ui-sec-head h3 {
     font-size: 0.875rem;

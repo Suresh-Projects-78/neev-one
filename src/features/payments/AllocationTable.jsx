@@ -76,15 +76,15 @@ export const AllocationTable = ({
 
   return (
     <section>
-      <div className="ui-sec-head" style={{ '--sec-tone': 'var(--kpi-invoices-ink)' }}>
-        <span className="ui-sec-mark" aria-hidden="true"><ListTree size={15} /></span>
-        <div className="min-w-0">
+      <div className="mb-3">
+        <div className="ui-sec-head" style={{ marginBottom: '0.125rem' }}>
+          <span className="ui-sec-mark" aria-hidden="true"><ListTree size={16} /></span>
           <h3>{heading}</h3>
-          <p>
-            Pick a ledger and enter the amount. Against a customer, the
-            outstanding invoices open so the {noun} can be placed on them.
-          </p>
         </div>
+        <p className="ui-caption">
+          Pick a ledger and enter the amount. Against a customer, the
+          outstanding invoices open so the {noun} can be placed on them.
+        </p>
       </div>
 
       <div className="border ui-border-c rounded-xl overflow-hidden">

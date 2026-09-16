@@ -852,12 +852,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         the fields either side of it no longer lined up with each other.
       */}
       <section>
-        <div className="ui-sec-head" style={{ '--sec-tone': 'var(--kpi-sales-ink)' }}>
-          <span className="ui-sec-mark" aria-hidden="true"><Landmark size={15} /></span>
-          <div className="min-w-0">
-            <h3>Receipt Details</h3>
-            <p>Where the money landed, and the paperwork that names it.</p>
-          </div>
+        <div className="ui-sec-head">
+          <span className="ui-sec-mark" aria-hidden="true"><Landmark size={16} /></span>
+          <h3>Receipt Details</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
         {!hideMode ? (
@@ -1071,11 +1068,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           with a heading and nothing under it.
         */}
         <section>
-          <div className="ui-sec-head" style={{ '--sec-tone': 'var(--kpi-due-ink)' }}>
-            <span className="ui-sec-mark" aria-hidden="true"><Percent size={15} /></span>
-            <div className="min-w-0">
-              <h3>TDS (optional)</h3>
-            </div>
+          <div className="ui-sec-head">
+            <span className="ui-sec-mark" aria-hidden="true"><Percent size={16} /></span>
+            <h3>TDS (optional)</h3>
           </div>
           {/*
             The section is always drawn, and says so when it cannot be used.
