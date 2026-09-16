@@ -128,6 +128,22 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
   /*
+   * The mode, from the account the money landed in.
+   *
+   * It used to be a control of its own, defaulting to Cash — so a transfer
+   * into a bank account was counted as cash against the §269ST two-lakh
+   * limit unless somebody remembered to change a field that said nothing the
+   * account above it had not already said. Cash-in-hand is cash; everything
+   * else is a bank receipt, and the reference line is where the instrument
+   * gets named.
+   */
+  const receiptMode = useMemo(() => {
+    const picked = modes.find((m) => String(m.id) === String(ledgerAccountId));
+    if (!picked) return formData.mode || 'Cash';
+    return String(picked.controlKind || '').toUpperCase() === 'CASH' ? 'Cash' : 'Bank';
+  }, [modes, ledgerAccountId, formData.mode]);
+
+  /*
    * Opened against one invoice, that invoice is already ticked.
    *
    * Recording a receipt from an invoice row used to prefill only the customer
@@ -155,14 +171,76 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
 
   const creditNotes = safeArray(db?.creditNotes);
 
+  /* What the money coming in is FOR, when it is not only invoices: other
+     income, interest received, a refund, a director's contribution. */
+  /*
+   * Seeded with the party when the receipt was started from a document.
+   *
+   * "Record receipt" on an invoice row knows the customer; with the picker
+   * gone, the only place that knowledge can land is the row that now stands
+   * for the party. Without this the form opens against nobody and the invoice
+   * the operator was trying to close is not even listed.
+   */
+  const [ledgerRows, setLedgerRows] = useState(() => {
+    const seededCustomer = safeArray(db?.customers).find((c) => {
+      if (Number(c?.companyId) !== companyId) return false;
+      if (initial.customerId !== '' && Number(c.id) === Number(initial.customerId)) return true;
+      const wantName = String(initialData?.customerName || '').trim().toLowerCase();
+      return Boolean(wantName) && String(c?.name || '').trim().toLowerCase() === wantName;
+    });
+    const accountId = String(seededCustomer?.accountId ?? '').trim();
+    if (!accountId) return [emptyAllocationRow()];
+    return [{ ...emptyAllocationRow(), ledgerId: accountId }];
+  });
+
+  /*
+   * The party is a ledger you pick, not a field above the ledgers.
+   *
+   * Every customer carries the control account it posts to, so choosing
+   * "ABC Traders (Sundry Debtors)" in an allocation row IS choosing the party
+   * — and the separate picker above was asking the same question twice, with
+   * nothing stopping the two answers disagreeing.
+   */
+  const customerByAccountId = useMemo(() => {
+    const out = new Map();
+    for (const c of safeArray(db?.customers)) {
+      if (Number(c?.companyId) !== companyId) continue;
+      const acc = String(c?.accountId ?? '').trim();
+      if (acc) out.set(acc, c);
+    }
+    return out;
+  }, [db?.customers, companyId]);
+
+  /* The first row pointing at a customer's control account. One receipt is
+     from one party, so the first is the one. */
+  const partyRowIndex = useMemo(
+    () => ledgerRows.findIndex((r) => customerByAccountId.has(String(r?.ledgerId ?? '').trim())),
+    [ledgerRows, customerByAccountId]
+  );
+  const partyCustomer =
+    partyRowIndex >= 0 ? customerByAccountId.get(String(ledgerRows[partyRowIndex].ledgerId).trim()) : null;
+  const partyCustomerId = partyCustomer ? Number(partyCustomer.id) : NaN;
+
+  /* The group the control account actually sits in — "Sundry Debtors" was
+     hard-coded, and a book that files its customers elsewhere would have been
+     told a name that was not its own. */
+  const partyGroupName = useMemo(() => {
+    if (partyRowIndex < 0) return '';
+    const acc = safeArray(db?.chartOfAccounts).find(
+      (a) => String(a?.id) === String(ledgerRows[partyRowIndex].ledgerId)
+    );
+    const group = safeArray(db?.accountGroups).find((g) => String(g?.id) === String(acc?.groupId));
+    return String(group?.name || '').trim();
+  }, [db?.chartOfAccounts, db?.accountGroups, ledgerRows, partyRowIndex]);
+
   const outstandingInvoices = useMemo(() => {
-    const cid = Number(formData.customerId);
+    const cid = Number(partyCustomerId);
     if (!Number.isFinite(cid) || !cid) return [];
 
     return invoices
       .filter((inv) => Number(inv.customerId) === cid)
       .filter((inv) => canCollectAgainstInvoice(inv, creditNotes));
-  }, [formData.customerId, invoices]);
+  }, [partyCustomerId, invoices]);
 
   const selectedInvoiceIds = useMemo(() => {
     return Object.entries(allocations)
@@ -171,9 +249,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       .filter((n) => Number.isFinite(n));
   }, [allocations]);
 
-  /* What the money coming in is FOR, when it is not only invoices: other
-     income, interest received, a refund, a director's contribution. */
-  const [ledgerRows, setLedgerRows] = useState(() => [emptyAllocationRow()]);
 
   const allocationLedgers = useMemo(() => {
     const cid = Number(currentCompany?.id);
@@ -184,8 +259,34 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
   }, [db?.chartOfAccounts, currentCompany?.id, ledgerAccountId]);
 
+  /*
+   * What the receipt is for is now what it is worth.
+   *
+   * There used to be an "Amount Received" box at the head of the form and the
+   * allocation had to be made to agree with it — two figures, one of them
+   * typed twice, and a save that refused until they matched. The amount is the
+   * allocation: every ledger line plus whatever the bills settled.
+   */
+  /* Every row except the party's. The party's figure is not typed into the
+     row — it is whatever the bills dialog settled — so counting the row as
+     well would count the invoices twice. */
+  const ledgerRowsTotal = usableRows(ledgerRows)
+    .filter((r, i) => i !== partyRowIndex)
+    .reduce((t, r) => t + (Number(r.amount) || 0), 0);
+  const billsTotal = useMemo(() => {
+    let t = 0;
+    for (const inv of outstandingInvoices) {
+      const row = allocations[String(inv.id)];
+      if (!row?.selected) continue;
+      const amt = Number(row.amount) || 0;
+      if (amt > 0) t += Math.min(getInvoiceBalance(inv, creditNotes), amt);
+    }
+    return round2(t);
+  }, [allocations, outstandingInvoices, creditNotes]);
+  const receiptAmountFromRows = round2(ledgerRowsTotal + billsTotal);
+
   const computed = useMemo(() => {
-    const receiptAmount = Number(formData.amount ?? 0);
+    const receiptAmount = Number(receiptAmountFromRows);
     /*
      * "Amount received" is what the invoice was settled by, not what reached
      * the bank.
@@ -247,7 +348,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
   }, [
     allocations,
     creditNotes,
-    formData.amount,
+    receiptAmountFromRows,
     formData.tdsAmount,
     formData.bankCharges,
     formData.otherCharges,
@@ -271,10 +372,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       .filter((a) => a.tdsSide);
   }, [db?.chartOfAccounts, db?.accountGroups, currentCompany?.id]);
 
-  const customerRecord = useMemo(
-    () => (db?.customers || []).find((c) => Number(c.id) === Number(formData.customerId)) || null,
-    [db?.customers, formData.customerId]
-  );
+  const customerRecord = partyCustomer;
 
   const tdsNatureCode =
     String(customerRecord?.tdsNatureCode || '').trim() || natureForSection(customerRecord?.tdsSection)?.code || '';
@@ -355,9 +453,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
    * as one of two lakh does.
    */
   const cashTakenTodayFromParty = useMemo(() => {
-    if (String(formData.mode || '').toLowerCase() !== 'cash') return 0;
+    if (String(receiptMode).toLowerCase() !== 'cash') return 0;
     const day = String(formData.date || '').slice(0, 10);
-    const customerId = formData.customerId;
+    const customerId = partyCustomerId;
     if (!day || customerId === '' || customerId == null) return 0;
     return (db?.payments || [])
       .filter(
@@ -370,17 +468,17 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           String(p.id) !== String(initialData?.id ?? '')
       )
       .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  }, [db?.payments, currentCompany?.id, formData.mode, formData.date, formData.customerId, initialData?.id]);
+  }, [db?.payments, currentCompany?.id, receiptMode, formData.date, partyCustomerId, initialData?.id]);
 
   const cashWarning =
-    String(formData.mode || '').toLowerCase() === 'cash'
-      ? cashReceiptWarning({ amount: Number(formData.amount ?? 0), alreadyToday: cashTakenTodayFromParty })
+    String(receiptMode).toLowerCase() === 'cash'
+      ? cashReceiptWarning({ amount: receiptAmountFromRows, alreadyToday: cashTakenTodayFromParty })
       : null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const amount = Number(formData.amount ?? 0);
+    const amount = receiptAmountFromRows;
     {
       const closed = blockIfClosed(db, currentCompany.id, formData.date, 'This receipt');
       if (closed) {
@@ -388,7 +486,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         return;
       }
     }
-    const customerIdNum = Number(formData.customerId);
+    const customerIdNum = Number(partyCustomerId);
 
     // Collected in one pass and shown at the fields. Allocation problems below
     // name a specific invoice, so they stay in the corner — there is no single
@@ -420,7 +518,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       const problem = allocationError({
         rows: ledgerRows,
         documentTotal: computed.allocated,
-        amount: Number(formData.amount) || 0,
+        amount: receiptAmountFromRows,
         noun: 'receipt',
         hasParty: Number.isFinite(customerIdNum) && !!customerIdNum,
       });
@@ -565,7 +663,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         documentNumber: l.invoiceNumber,
         amount: round2(l.amount),
       })),
-      mode: formData.mode,
+      mode: receiptMode,
       // Links the local row to the posted server payment and the ledger the
       // money actually landed in.
       backendPaymentId: posted?.id ? String(posted.id) : undefined,
@@ -748,25 +846,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
-        <div
-          ref={(el) => fieldErrors.register('customerId', el)}
-          data-invalid-within={fieldErrors.error('customerId') ? 'true' : undefined}
-        >
-          <CustomerPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.customerId}
-            onChange={(customerId) => {
-              fieldErrors.clearField('customerId');
-              setFormData((p) => ({ ...p, customerId }));
-              setAllocations({});
-            }}
-            label="Received from / Party"
-          />
-          <FieldError error={fieldErrors.error('customerId')} id={fieldErrors.errorId('customerId')} />
-        </div>
-
         {!hideMode ? (
           <div>
             <label className="ui-label">
@@ -792,29 +871,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             </select>
             <FieldError error={fieldErrors.error('ledgerAccountId')} id={fieldErrors.errorId('ledgerAccountId')} />
 
-            {/* The mode was written on every receipt and readable on none of
-                them: it was saved from state, defaulted to Cash, and had no
-                control. §269ST is counted on it, so a bank transfer recorded
-                through this form was being counted as cash against the
-                two-lakh limit. */}
-            <div className="mt-4">
-              <label className="ui-label" htmlFor="rcpt-mode">Receipt Mode</label>
-              <select
-                id="rcpt-mode"
-                value={formData.mode}
-                onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
-                className="ui-select w-full"
-              >
-                <option>Cash</option>
-                <option>Bank</option>
-                <option>Cheque</option>
-                <option>NEFT</option>
-                <option>RTGS</option>
-                <option>UPI</option>
-                <option>Card</option>
-                <option>Other</option>
-              </select>
-            </div>
             {modesError ? (
               <p className="mt-1 text-sm text-[rgb(var(--neg))]">{modesError}</p>
             ) : !modesLoading && modes.length === 0 ? (
@@ -825,6 +881,21 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             ) : null}
           </div>
         ) : null}
+
+        {/* The instrument, under the account it arrived in — a UTR belongs to
+            the bank line it describes, not to the paperwork column across the
+            rule. */}
+        <div>
+          <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
+          <input
+            id="rcpt-reference"
+            type="text"
+            value={formData.reference}
+            onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+            className="ui-input w-full"
+            placeholder="Txn / UTR / Cheque no"
+          />
+        </div>
         </div>
 
         <div
@@ -866,55 +937,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 required
               />
             </div>
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-amount">
-                Amount Received <span className="text-[rgb(var(--neg-ink))]">*</span>
-              </label>
-              <input
-                id="rcpt-amount"
-                type="number"
-                value={formData.amount}
-                onChange={(e) => {
-                  fieldErrors.clearField('amount');
-                  setFormData((p) => ({ ...p, amount: e.target.value }));
-                }}
-                className="ui-input ui-money w-full"
-                min="0"
-                step="0.01"
-                required
-                {...fieldErrors.props('amount')}
-              />
-              <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
-              <p className="mt-1 text-xs ui-muted">What the invoice is settled by, before deductions.</p>
-            </div>
           </div>
 
-          <div>
-            <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
-            <input
-              id="rcpt-reference"
-              type="text"
-              value={formData.reference}
-              onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-              className="ui-input w-full"
-              placeholder="Txn / UTR / Cheque no"
-            />
-          </div>
 
-          {/* What the ledger will read. It was hard-coded to "Receipt <no>",
-              which is the one thing the ledger already shows in the column
-              beside it — so every receipt in the book said nothing. */}
-          <div>
-            <label className="ui-label" htmlFor="rcpt-narration">Narration</label>
-            <input
-              id="rcpt-narration"
-              type="text"
-              value={formData.narration}
-              onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
-              className="ui-input w-full"
-              placeholder="What this receipt is for"
-            />
-          </div>
         </div>
       </div>
 
@@ -1006,17 +1031,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           rows={ledgerRows}
           onChange={setLedgerRows}
           ledgerOptions={allocationLedgers}
-          amount={Number(formData.amount) || 0}
+          amount={receiptAmountFromRows}
           documentTotal={computed.allocated}
           documentLabel="Invoices settled"
           heading="Ledger allocation"
           noun="receipt"
           money={(v) => formatMoney(v, currentCompany)}
           partyRow={
-            formData.customerId
+            partyCustomer
               ? {
-                  name: customerRecord ? getCustomerDisplayName(customerRecord) : 'Selected party',
-                  groupName: 'Sundry Debtors',
+                  name: getCustomerDisplayName(partyCustomer),
+                  groupName: partyGroupName,
+                  rowIndex: partyRowIndex,
                   amount: computed.allocated,
                   count: computed.lines.length,
                   available: billsForModal.length,
@@ -1034,7 +1060,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             noun="invoice"
             bills={billsForModal}
             value={allocations}
-            available={Number(formData.amount) || 0}
+            available={receiptAmountFromRows}
             money={(v) => formatMoney(v, currentCompany)}
             onClose={() => setBillsOpen(false)}
             onApply={(next) => {
@@ -1097,13 +1123,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         </div>
       </div>
 
-      <div>
-        <label className="ui-label">Notes</label>
-        <textarea
-          value={formData.notes}
-          onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
+      {/* One line, half the width, and called what it is: this is the sentence
+          the ledger prints beside the entry, not a notepad. Three rows of
+          textarea invited a paragraph nothing would ever show. */}
+      <div className="sm:w-1/2">
+        <label className="ui-label" htmlFor="rcpt-narration">Narration</label>
+        <input
+          id="rcpt-narration"
+          type="text"
+          value={formData.narration}
+          onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
           className="ui-input w-full"
-          rows={3}
+          placeholder="What this receipt is for"
         />
       </div>
 

@@ -23,6 +23,10 @@ import RecordReceiptForm from './RecordReceiptForm';
 
 const CONTRACTOR = 'CONTRACTOR_SUB_CONTRACTOR';
 
+/* The customer's own control account. Choosing it in an allocation row is how
+   the party is chosen now, so the fixture has to carry the link. */
+const CUSTOMER_ACCOUNT_ID = '301';
+
 const COMPANY = {
   id: 1,
   name: 'Neev Steels',
@@ -40,15 +44,17 @@ const INVOICE = {
 const db0 = {
   companies: [COMPANY],
   customers: [
-    { id: 3, companyId: 1, name: 'ABC Industries', displayName: 'ABC Industries', pan: 'AABCU9603R', tdsNatureCode: CONTRACTOR },
+    { id: 3, companyId: 1, name: 'ABC Industries', displayName: 'ABC Industries', pan: 'AABCU9603R', tdsNatureCode: CONTRACTOR, accountId: Number(CUSTOMER_ACCOUNT_ID) },
   ],
   accountGroups: [
     { id: 11, companyId: 1, name: 'TDS Payable', parentGroupId: null },
     { id: 12, companyId: 1, name: 'TDS Receivable', parentGroupId: null },
+    { id: 13, companyId: 1, name: 'Sundry Debtors', parentGroupId: null },
   ],
   chartOfAccounts: [
     { id: 101, companyId: 1, name: 'TDS Payable - Contractor', groupId: 11, tdsNatureCode: CONTRACTOR },
     { id: 201, companyId: 1, name: 'TDS Receivable - Contractor', groupId: 12, tdsNatureCode: CONTRACTOR },
+    { id: 301, companyId: 1, name: 'ABC Industries', groupId: 13 },
   ],
   invoices: [INVOICE],
   creditNotes: [],
@@ -73,19 +79,19 @@ const Host = ({ onSaved = () => {}, company = COMPANY }) => {
 };
 
 const pickCustomer = async (user) => {
-  /* The customer field is a type-ahead: the name is typed and the suggestion
-     taken, which is the motion the operator actually performs. */
-  await user.type(screen.getByPlaceholderText('Type a customer name'), 'ABC');
-  await user.click(await screen.findByRole('option', { name: /ABC Industries/ }));
+  /* The party is a ledger now, not a picker above the ledgers: choosing the
+     customer's control account in the first allocation row IS choosing the
+     party, which is the motion the operator performs. */
+  const select = screen.getByLabelText(/Account, allocation row 1/i);
+  await user.selectOptions(select, CUSTOMER_ACCOUNT_ID);
 };
 
 const selectInvoice = async (user) => {
   /*
-   * The bills are a dialog now, not a table halfway down the receipt, so the
-   * motion is the operator's: open it from the party's allocation row, tick
-   * the invoice, apply.
+   * The bills are a dialog now, and the receipt is worth what is allocated —
+   * there is no "amount received" to type first. Open the dialog from the
+   * party's row, tick the invoice, apply, and the receipt is 118,000.
    */
-  fireEvent.change(screen.getByLabelText(/Amount received/i), { target: { value: '118000' } });
   await user.click(await screen.findByRole('button', { name: /View Bills/i }));
   const row = (await screen.findByText('INV-1')).closest('tr');
   await user.click(row.querySelector('input[type="checkbox"]'));

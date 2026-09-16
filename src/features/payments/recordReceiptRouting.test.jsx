@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
@@ -94,11 +94,12 @@ describe('a receipt started from an invoice row', () => {
    */
   const company = { id: 1, name: 'Neev Steels', state: 'Karnataka' };
   const db = {
-    customers: [{ id: 7, companyId: 1, name: 'Acme Traders', displayName: 'Acme Traders' }],
+    customers: [{ id: 7, companyId: 1, name: 'Acme Traders', displayName: 'Acme Traders', accountId: 301 }],
     invoices: [],
     receipts: [],
     creditNotes: [],
-    chartOfAccounts: [],
+    accountGroups: [{ id: 13, companyId: 1, name: 'Sundry Debtors', parentGroupId: null }],
+    chartOfAccounts: [{ id: 301, companyId: 1, name: 'Acme Traders', groupId: 13 }],
   };
 
   it('finds the customer by name when the invoice carries no local id', async () => {
@@ -113,8 +114,11 @@ describe('a receipt started from an invoice row', () => {
       />
     );
 
-    /* The customer field is a type-ahead now: the chosen name is its value. */
-    expect(await screen.findByDisplayValue('Acme Traders')).toBeInTheDocument();
+    /* The party is a ledger row now, so the prefill has to land there — on
+       the row that stands for the party, named. (The name is also in the
+       ledger select's options, so the assertion is scoped to that row.) */
+    const partyRow = (await screen.findByRole('button', { name: /View Bills/i })).closest('tr');
+    expect(within(partyRow).getByText('Acme Traders')).toBeInTheDocument();
   });
 
   it('still prefers the id when the document has one', async () => {
@@ -129,6 +133,7 @@ describe('a receipt started from an invoice row', () => {
       />
     );
 
-    expect(await screen.findByDisplayValue('Acme Traders')).toBeInTheDocument();
+    const partyRow = (await screen.findByRole('button', { name: /View Bills/i })).closest('tr');
+    expect(within(partyRow).getByText('Acme Traders')).toBeInTheDocument();
   });
 });

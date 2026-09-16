@@ -36,7 +36,7 @@ const db0 = {
   companies: [COMPANY],
   customers: [{ id: 3, companyId: 1, name: 'ABC Industries', displayName: 'ABC Industries' }],
   accountGroups: [],
-  chartOfAccounts: [],
+  chartOfAccounts: [{ id: 401, companyId: 1, name: 'Interest Received', groupId: 21 }],
   invoices: [],
   creditNotes: [],
   payments: [],
@@ -60,9 +60,10 @@ const Host = ({ onSaved = () => {} }) => {
 };
 
 const fill = async (user) => {
-  await user.click(screen.getByPlaceholderText('Type a customer name'));
-  await user.click(await screen.findByRole('option', { name: /ABC Industries/ }));
-  fireEvent.change(screen.getByLabelText(/Amount Received/i), { target: { value: '5000' } });
+  /* No party picker and no amount box: the receipt is worth whatever is
+     allocated, so a ledger and a figure on one row is the whole entry. */
+  await user.selectOptions(screen.getByLabelText(/Account, allocation row 1/i), '401');
+  fireEvent.change(screen.getByLabelText(/Amount, allocation row 1/i), { target: { value: '5000' } });
 };
 
 describe('the receipt number', () => {

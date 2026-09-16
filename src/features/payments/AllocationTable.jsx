@@ -78,11 +78,6 @@ export const AllocationTable = ({
             {partyRow ? ' Open the outstanding bills to allocate against invoices.' : ''}
           </p>
         </div>
-        {!disabled ? (
-          <button type="button" onClick={add} className="ui-btn ui-btn-secondary ui-btn-sm flex-none">
-            <Plus size={15} aria-hidden="true" /> Add Row
-          </button>
-        ) : null}
       </div>
 
       <div className="border ui-border-c rounded-xl overflow-hidden">
@@ -91,7 +86,7 @@ export const AllocationTable = ({
             <tr>
               <th className="ui-th w-12">#</th>
               <th className="ui-th">Ledger <span className="text-[rgb(var(--neg))]">*</span></th>
-              <th className="ui-th">Amount <span className="text-[rgb(var(--neg))]">*</span></th>
+              <th className="ui-th ui-num">Amount <span className="text-[rgb(var(--neg))]">*</span></th>
               <th className="ui-th w-16 text-center">Action</th>
             </tr>
           </thead>
@@ -107,11 +102,7 @@ export const AllocationTable = ({
                   <div className="ui-caption">{partyRow.groupName || 'Sundry Debtors'}</div>
                 </td>
                 <td className="px-3 py-2">
-                  <div className="flex items-center justify-between gap-3">
-                    {/* Read-only: the figure is the sum of what was ticked in
-                        the dialog, and a box you can type into that the next
-                        Apply overwrites is a lie. */}
-                    <span className="ui-money tabular-nums">{money(partyRow.amount)}</span>
+                  <div className="flex items-center justify-end gap-4">
                     <button
                       type="button"
                       onClick={partyRow.onViewBills}
@@ -120,6 +111,10 @@ export const AllocationTable = ({
                     >
                       View Bills{partyRow.available > 0 ? ` (${partyRow.available})` : ''}
                     </button>
+                    {/* Read-only: the figure is the sum of what was ticked in
+                        the dialog, and a box you can type into that the next
+                        Apply overwrites is a lie. */}
+                    <span className="ui-money tabular-nums w-36 text-right">{money(partyRow.amount)}</span>
                   </div>
                 </td>
                 <td className="px-2 py-2 text-center">
@@ -170,7 +165,7 @@ export const AllocationTable = ({
                     step="0.01"
                     value={row.amount ?? ''}
                     onChange={(e) => set(i, { amount: e.target.value })}
-                    className="ui-input ui-input-plain ui-mono w-full text-right"
+                    className="ui-input ui-input-plain ui-mono w-36 ms-auto text-right block"
                     placeholder="0.00"
                     aria-label={`Amount, allocation row ${i + 1}`}
                     disabled={disabled}
@@ -218,6 +213,15 @@ export const AllocationTable = ({
           </span>
         </div>
       </div>
+
+      {/* Under the rows it adds to, where the next row will appear — it was
+          up in the heading, as far from the thing it does as the section is
+          tall. */}
+      {!disabled ? (
+        <button type="button" onClick={add} className="ui-btn ui-btn-secondary ui-btn-sm mt-3">
+          <Plus size={15} aria-hidden="true" /> Add Row
+        </button>
+      ) : null}
 
       <p className="ui-caption mt-1.5">
         One {noun} is one line against the bank and as many lines as it needs against everything else. The

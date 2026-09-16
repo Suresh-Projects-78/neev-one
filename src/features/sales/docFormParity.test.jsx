@@ -150,7 +150,9 @@ describe('the receipt wears the invoice layout', () => {
   it('marks its mandatory fields and says what the marker means', () => {
     renderReceipt();
     expect(screen.getByLabelText(/^Receipt Date \*$/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Amount Received \*$/)).toBeInTheDocument();
+    /* "Amount Received" is gone: the receipt is worth what the allocation
+       comes to, so the required figure is the ledger and amount on a row. */
+    expect(screen.getByLabelText(/Account, allocation row 1/i)).toBeInTheDocument();
     expect(screen.getByText(/Indicates mandatory fields/i)).toBeInTheDocument();
   });
 
