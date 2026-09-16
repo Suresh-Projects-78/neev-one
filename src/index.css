@@ -36,10 +36,13 @@
   --border: 236 236 234;        /* #ECECEA — divider */
   --border-strong: 212 212 209; /* #D4D4D1 */
   --border-field: 229 229 227;  /* #E5E5E3 — card and field hairline */
-  /* The ground a block of fields sits on. A real step down from the page, not
-     the one-unit shift `--surface-sunken` gives against a warm #FAFAF9 — that
-     separated nothing and the panel read as a bare border. */
-  --doc-section: 242 242 239;   /* #F2F2EF */
+  /* The ground a block of fields sits on.
+     Measured against WHITE, not against the page: a document form renders
+     inside a `ui-surface` card, so white is what this sits on. #F2F2EF was
+     chosen against the page ground and lands 24 away from white — a heavy
+     slab where the drawing has a whisper. The hairline does the structural
+     work; this only has to stop the white fields floating on nothing. */
+  --doc-section: 250 250 248;   /* #FAFAF8 — 9.9 from white */
 
   /* Text */
   --fg: 17 24 39;               /* #111827 */
@@ -423,7 +426,7 @@
   /* Borders stay quiet in dark; separation comes from surface, not outline. */
   --border: 49 58 56;
   --border-strong: 70 83 80;
-  --doc-section: 31 37 36;      /* the well, a step above the dark ground */
+  --doc-section: 26 31 30;      /* the same whisper against the dark card */
 
   --fg: 241 245 249;
   --fg-muted: 148 163 184;

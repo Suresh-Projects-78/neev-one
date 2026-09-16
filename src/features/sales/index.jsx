@@ -4695,7 +4695,6 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
       <div>
         <div className="ui-sec-head">
-          <span className="ui-sec-mark" aria-hidden="true"><Package size={16} /></span>
           <h3>Line Items</h3>
         </div>
 
@@ -5009,7 +5008,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           </div>
           <div className="flex justify-end">
-            <div className="w-64 space-y-2">
+            {/* The totals sit in the same well the head does, so the figure a
+                document is worth is an object rather than a column of text
+                trailing off the right edge. */}
+            <div className="ui-doc-section w-80 space-y-2">
             <div className="flex justify-between">
               <span>Subtotal:</span>
               <span className="ui-money">{formatMoney(computed.subtotal, currentCompany)}</span>
@@ -5727,7 +5729,6 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 
       <div>
         <div className="ui-sec-head">
-          <span className="ui-sec-mark" aria-hidden="true"><Package size={16} /></span>
           <h3>Line Items</h3>
         </div>
 
@@ -6570,7 +6571,6 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
       <div>
         <div className="ui-sec-head">
-          <span className="ui-sec-mark" aria-hidden="true"><Package size={16} /></span>
           <h3>Line Items</h3>
         </div>
 
