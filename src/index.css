@@ -2747,6 +2747,34 @@
      typographic — which is what the reference drawing does, and why its long
      form reads as four parts instead of one scroll.
   --------------------------------------------------------------------------- */
+  /* --- a two-column form that measures its own box -------------------------
+     The ledger form's columns were `lg:grid-cols-2`, and a Tailwind
+     breakpoint asks the VIEWPORT how wide things are. Inside a dialog on a
+     wide screen that is the wrong question: the viewport said 1440 and the
+     dialog was 672, so two columns were drawn into a box that could not hold
+     one and a half — labels landed on top of each other and the right-hand
+     column fell off the edge.
+
+     Each row is an 11rem label, a 1.25rem gap and a 16rem control, so a
+     column cannot go below 28.25rem; two of them plus the 3.5rem gutter is
+     60rem. Below that this asks for one column, whatever the screen is doing.
+  --------------------------------------------------------------------------- */
+  .ui-form-cols { container-type: inline-size; }
+  .ui-form-cols > * {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    column-gap: 3.5rem;
+    row-gap: 1rem;
+  }
+  @container (min-width: 60rem) {
+    .ui-form-cols > * { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  /* One column, so the explicit placements that pair the two sides would
+     otherwise leave holes down the middle. */
+  @container (max-width: 59.999rem) {
+    .ui-form-cols > * > * { grid-column: 1 !important; grid-row: auto !important; }
+  }
+
   .ui-sec-head {
     display: flex;
     align-items: center;

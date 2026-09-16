@@ -240,7 +240,7 @@ export const LedgerField = ({
          * it is an errand in the middle of an entry, and taking the entry off
          * the screen to name a ledger is how you lose the entry.
          */
-        <Modal onClose={() => close()} title="New Ledger" maxWidthClass="max-w-2xl">
+        <Modal onClose={() => close()} title="New Ledger" maxWidthClass="max-w-5xl">
           <Suspense fallback={<div className="ui-skel rounded-xl" style={{ height: 320 }} aria-hidden="true" />}>
           <ChartAccountForm
             db={db}

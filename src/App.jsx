@@ -3237,7 +3237,7 @@ export const ChartAccountForm = ({
    * settings that each have one obvious answer.
    */
   const basicDetails = (
-    <div className="grid gap-x-14 gap-y-4 lg:grid-cols-2">
+    <div className="ui-form-cols"><div>
       <PartyFormRow className="lg:col-start-1 lg:row-start-1" label="Ledger Name" required htmlFor="ledger-name" hint="What this ledger is called in the books and on every posting to it.">
         <input
           id="ledger-name"
@@ -3340,7 +3340,7 @@ export const ChartAccountForm = ({
           ))}
         </select>
       </PartyFormRow>
-    </div>
+    </div></div>
   );
 
   const detailTabs = ledgerTabs.length ? (
@@ -3936,7 +3936,7 @@ export const JournalEntryForm = ({ db, setDb, currentCompany, openModal, onClose
         }}
         onClose={() => openModal(null)}
       />,
-      { title: 'New Ledger', maxWidthClass: 'max-w-4xl' }
+      { title: 'New Ledger', maxWidthClass: 'max-w-5xl' }
     );
   };
 
@@ -13045,7 +13045,7 @@ const AppShell = () => {
               onCreated={onCreated}
               onClose={() => openModal(null)}
             />,
-            { title: 'New Cash/Bank Account', maxWidthClass: 'max-w-2xl' }
+            { title: 'New Cash/Bank Account', maxWidthClass: 'max-w-5xl' }
           );
         };
 
@@ -13060,7 +13060,7 @@ const AppShell = () => {
               onCreated={onCreated}
               onClose={() => openModal(null)}
             />,
-            { title: 'New Ledger', maxWidthClass: 'max-w-4xl' }
+            { title: 'New Ledger', maxWidthClass: 'max-w-5xl' }
           );
         };
 
