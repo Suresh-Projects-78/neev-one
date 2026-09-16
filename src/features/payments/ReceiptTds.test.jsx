@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -88,10 +88,10 @@ const pickCustomer = async (user) => {
 
 const selectInvoice = async (user) => {
   /*
-   * The bills are a dialog now, and the receipt is worth what is allocated —
-   * there is no "amount received" to type first. Open the dialog from the
-   * party's row, tick the invoice, apply, and the receipt is 118,000.
+   * The order the screen asks for: ledger, then the amount, then which of that
+   * customer's invoices it settles. `pickCustomer` has chosen the ledger.
    */
+  fireEvent.change(screen.getByLabelText(/Amount, allocation row 1/i), { target: { value: '118000' } });
   await user.click(await screen.findByRole('button', { name: /View Bills/i }));
   const row = (await screen.findByText('INV-1')).closest('tr');
   await user.click(row.querySelector('input[type="checkbox"]'));
@@ -178,5 +178,94 @@ describe('what the receipt records', () => {
 
     await waitFor(() => expect((saved?.payments || []).length).toBe(1));
     expect(saved.tdsTransactions || []).toHaveLength(0);
+  });
+});
+
+/**
+ * The order the screen asks in: a ledger, an amount, then which of that
+ * customer's invoices the amount settles — and what it means when the answer
+ * to the last one is "none of them".
+ */
+describe('money against a customer', () => {
+  beforeEach(() => localStorage.clear());
+
+  const partyRow = () =>
+    screen.getByRole('button', { name: /View Bills/i }).closest('tr');
+
+  it('offers the bills once the amount on a customer row is named', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await pickCustomer(user);
+
+    expect(screen.queryByText('Allocate Outstanding Bills')).toBeNull();
+
+    const amount = screen.getByLabelText(/Amount, allocation row 1/i);
+    fireEvent.change(amount, { target: { value: '50000' } });
+    fireEvent.blur(amount);
+
+    expect(await screen.findByText('Allocate Outstanding Bills')).toBeInTheDocument();
+  });
+
+  it('does not reopen the dialog while the figure is corrected', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await pickCustomer(user);
+
+    const amount = screen.getByLabelText(/Amount, allocation row 1/i);
+    fireEvent.change(amount, { target: { value: '50000' } });
+    fireEvent.blur(amount);
+    const dialog = (await screen.findByText('Allocate Outstanding Bills')).closest('[role="dialog"]');
+    await user.click(within(dialog).getByRole('button', { name: /^Cancel$/i }));
+
+    /* A typo corrected on the way past must not trap the operator in a dialog
+       they have just dismissed. */
+    fireEvent.change(amount, { target: { value: '60000' } });
+    fireEvent.blur(amount);
+    expect(screen.queryByText('Allocate Outstanding Bills')).toBeNull();
+  });
+
+  it('calls it on account when the money is placed on nobody’s invoice', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await pickCustomer(user);
+
+    const amount = screen.getByLabelText(/Amount, allocation row 1/i);
+    fireEvent.change(amount, { target: { value: '50000' } });
+    fireEvent.blur(amount);
+    await screen.findByText('Allocate Outstanding Bills');
+    await user.click(screen.getByRole('button', { name: /Apply Allocation/i }));
+
+    expect(within(partyRow()).getByText('On account')).toBeInTheDocument();
+  });
+
+  it('names the part left over when only some of it lands on an invoice', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await pickCustomer(user);
+
+    const amount = screen.getByLabelText(/Amount, allocation row 1/i);
+    fireEvent.change(amount, { target: { value: '150000' } });
+    fireEvent.blur(amount);
+    await screen.findByText('Allocate Outstanding Bills');
+
+    const inv = (await screen.findByText('INV-1')).closest('tr');
+    await user.click(inv.querySelector('input[type="checkbox"]'));
+    await user.click(screen.getByRole('button', { name: /Apply Allocation/i }));
+
+    /* 118,000 of the 150,000 settles the invoice; the rest waits on them. */
+    expect(within(partyRow()).getByText(/1 invoice · .*32,000/)).toBeInTheDocument();
+  });
+
+  it('takes the allocation as the amount when the dialog is used first', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await pickCustomer(user);
+
+    await user.click(screen.getByRole('button', { name: /View Bills/i }));
+    const inv = (await screen.findByText('INV-1')).closest('tr');
+    await user.click(inv.querySelector('input[type="checkbox"]'));
+    await user.click(screen.getByRole('button', { name: /Apply Allocation/i }));
+
+    expect(screen.getByLabelText(/Amount, allocation row 1/i).value).toBe('118000');
   });
 });

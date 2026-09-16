@@ -221,17 +221,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     partyRowIndex >= 0 ? customerByAccountId.get(String(ledgerRows[partyRowIndex].ledgerId).trim()) : null;
   const partyCustomerId = partyCustomer ? Number(partyCustomer.id) : NaN;
 
-  /* The group the control account actually sits in — "Sundry Debtors" was
-     hard-coded, and a book that files its customers elsewhere would have been
-     told a name that was not its own. */
-  const partyGroupName = useMemo(() => {
-    if (partyRowIndex < 0) return '';
-    const acc = safeArray(db?.chartOfAccounts).find(
-      (a) => String(a?.id) === String(ledgerRows[partyRowIndex].ledgerId)
-    );
-    const group = safeArray(db?.accountGroups).find((g) => String(g?.id) === String(acc?.groupId));
-    return String(group?.name || '').trim();
-  }, [db?.chartOfAccounts, db?.accountGroups, ledgerRows, partyRowIndex]);
 
   const outstandingInvoices = useMemo(() => {
     const cid = Number(partyCustomerId);
@@ -267,12 +256,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
    * typed twice, and a save that refused until they matched. The amount is the
    * allocation: every ledger line plus whatever the bills settled.
    */
-  /* Every row except the party's. The party's figure is not typed into the
-     row — it is whatever the bills dialog settled — so counting the row as
-     well would count the invoices twice. */
-  const ledgerRowsTotal = usableRows(ledgerRows)
-    .filter((r, i) => i !== partyRowIndex)
-    .reduce((t, r) => t + (Number(r.amount) || 0), 0);
+  const ledgerRowsTotal = usableRows(ledgerRows).reduce((t, r) => t + (Number(r.amount) || 0), 0);
   const billsTotal = useMemo(() => {
     let t = 0;
     for (const inv of outstandingInvoices) {
@@ -283,7 +267,21 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     }
     return round2(t);
   }, [allocations, outstandingInvoices, creditNotes]);
-  const receiptAmountFromRows = round2(ledgerRowsTotal + billsTotal);
+  /*
+   * The receipt is worth what its rows say.
+   *
+   * The bills are not added on top: they are a breakdown of the party row's
+   * own figure, saying which of that customer's invoices the money settled.
+   * Whatever the operator does not place on an invoice stays with the party —
+   * an advance, on account — which is the oldest behaviour in the product and
+   * the reason this screen cannot simply demand the two agree.
+   */
+  const receiptAmountFromRows = round2(ledgerRowsTotal);
+
+  /* What the party row is holding, and what of it has been placed. */
+  const partyRowAmount =
+    partyRowIndex >= 0 ? round2(Number(ledgerRows[partyRowIndex]?.amount) || 0) : 0;
+  const onAccount = round2(Math.max(0, partyRowAmount - billsTotal));
 
   const computed = useMemo(() => {
     const receiptAmount = Number(receiptAmountFromRows);
@@ -425,6 +423,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
    * lets Cancel mean cancel.
    */
   const [billsOpen, setBillsOpen] = useState(false);
+  /* The dialog offers itself once per party row, not on every blur. */
+  const [billsPrompted, setBillsPrompted] = useState(false);
 
   /* The bills as the dialog needs them. Assembled here because what is still
      owed on an invoice depends on credit notes, which the dialog has no
@@ -509,15 +509,19 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     }
 
     /*
-     * The entry has to balance before it is written. Invoices settled on this
-     * form count toward the total — a receipt of ₹10,500 that clears ₹10,000
-     * of invoices has ₹500 still to place, and that ₹500 is other income or
-     * interest, not a rounding difference.
+     * The entry has to balance before it is written — and since the receipt is
+     * now worth exactly what its rows say, balancing is a matter of every row
+     * having a ledger and a figure, not of two independent totals agreeing.
+     *
+     * `documentTotal` is nought on purpose. The invoices are a breakdown of
+     * the party row's own figure rather than a second allocation beside it, so
+     * counting them here would count them twice and refuse every receipt as
+     * over-allocated by exactly the amount it settled.
      */
     {
       const problem = allocationError({
         rows: ledgerRows,
-        documentTotal: computed.allocated,
+        documentTotal: 0,
         amount: receiptAmountFromRows,
         noun: 'receipt',
         hasParty: Number.isFinite(customerIdNum) && !!customerIdNum,
@@ -944,20 +948,24 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       </div>
 
         {/*
-          What came off the payment on the way.
+          What the customer withheld on the way.
 
-          None of these reached the bank and all of them settled the invoice,
-          so they are stated here and posted as their own ledger lines — TDS to
-          the receivable it is, charges to the expense they are — with the
-          customer credited for the whole amount above.
+          It never reached the bank and it still settled the invoice, so it is
+          stated here and posted as its own ledger line against the TDS
+          receivable, with the customer credited for the whole amount.
+
+          This used to be a tinted "Deductions" band holding three boxes. Bank
+          and other charges became allocation rows, which left TDS alone in it
+          — and with TDS switched off for a company, an empty orange rectangle
+          with a heading and nothing under it.
         */}
-        <div
-          className="rounded-xl p-3"
-          style={{ backgroundColor: 'rgb(var(--accent-soft))', border: '1px solid rgb(var(--brand) / 0.18)' }}
-        >
-          <div className="ui-t-sec mb-2">Deductions</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {tdsEnabledHere ? (
+        {tdsEnabledHere ? (
+        <section>
+          <h3 className="ui-t-sec">TDS <span className="ui-caption font-normal">(optional)</span></h3>
+          <p className="ui-caption mt-0.5 mb-2">
+            If the customer withheld tax, name the ledger it is recognised against and what they withheld.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="ui-label" htmlFor="rcpt-tdsAmount">TDS deducted</label>
               <input
@@ -1013,7 +1021,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 </div>
               ) : null}
             </div>
-            ) : null}
 
             {/* Bank and other charges were boxes that shrank the cash and
                 posted nowhere. They are allocation rows now, naming the
@@ -1025,33 +1032,50 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               {formatMoney(computed.netCash, currentCompany)} actually received into the account.
             </p>
           ) : null}
-        </div>
+        </section>
+        ) : null}
 
         <AllocationTable
           rows={ledgerRows}
           onChange={setLedgerRows}
           ledgerOptions={allocationLedgers}
           amount={receiptAmountFromRows}
-          documentTotal={computed.allocated}
+          documentTotal={0}
           documentLabel="Invoices settled"
           heading="Ledger allocation"
           noun="receipt"
           money={(v) => formatMoney(v, currentCompany)}
-          partyRow={
-            partyCustomer
-              ? {
-                  name: getCustomerDisplayName(partyCustomer),
-                  groupName: partyGroupName,
-                  rowIndex: partyRowIndex,
-                  amount: computed.allocated,
-                  count: computed.lines.length,
-                  available: billsForModal.length,
-                  noun: 'invoice',
-                  onViewBills: () => setBillsOpen(true),
-                  onClear: () => setAllocations({}),
-                }
-              : null
-          }
+          rowMeta={(i) => {
+            if (i !== partyRowIndex || !partyCustomer) return {};
+            return {
+              isParty: true,
+              available: billsForModal.length,
+              /* Money against a customer with nothing ticked is not an error:
+                 it sits on their account until an invoice claims it. Saying so
+                 on the row is the difference between a deliberate advance and
+                 a step somebody forgot. */
+              status:
+                computed.lines.length > 0
+                  ? onAccount > 0
+                    ? `${computed.lines.length} invoice${computed.lines.length === 1 ? '' : 's'} · ${formatMoney(onAccount, currentCompany)} on account`
+                    : `Against ${computed.lines.length} invoice${computed.lines.length === 1 ? '' : 's'}`
+                  : partyRowAmount > 0
+                    ? 'On account'
+                    : '',
+              onViewBills: () => setBillsOpen(true),
+              /* Entering the amount is the cue to ask what it settles — the
+                 operator has said who and how much, and the next question is
+                 always which invoices. It asks once: reopening on every blur
+                 would trap anybody trying to correct a typo. */
+              onAmountSettled: () => {
+                if (billsPrompted) return;
+                if (!(Number(ledgerRows[i]?.amount) > 0)) return;
+                if (!billsForModal.length) return;
+                setBillsPrompted(true);
+                setBillsOpen(true);
+              },
+            };
+          }}
         />
 
         {billsOpen ? (
@@ -1060,12 +1084,27 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             noun="invoice"
             bills={billsForModal}
             value={allocations}
-            available={receiptAmountFromRows}
+            available={partyRowAmount}
             money={(v) => formatMoney(v, currentCompany)}
             onClose={() => setBillsOpen(false)}
-            onApply={(next) => {
+            onApply={(next, total) => {
               setAllocations(next);
               setBillsOpen(false);
+              /*
+               * Allocating before naming the figure fills the figure in.
+               *
+               * The intended order is ledger, amount, then the bills — but
+               * somebody who opens the dialog first and ticks two invoices has
+               * said what the receipt is worth just as plainly, and making
+               * them type the sum of two numbers already on screen is work the
+               * form can do. An amount already typed is left alone: the
+               * remainder is their advance, not a mistake.
+               */
+              if (partyRowIndex >= 0 && !(Number(ledgerRows[partyRowIndex]?.amount) > 0) && total > 0) {
+                setLedgerRows((rows) =>
+                  rows.map((r, i) => (i === partyRowIndex ? { ...r, amount: String(total) } : r))
+                );
+              }
             }}
           />
         ) : null}

@@ -28,16 +28,16 @@ export const AllocationTable = ({
   money,
   disabled = false,
   /*
-   * The party's own line, when there is a party.
+   * What a given row is, asked per row.
    *
-   * Presentational: it is not one of `rows` and never reaches the journal,
-   * because settling invoices already credits the customer through the
-   * document side. It is here so the one allocation a receipt usually makes
-   * appears in the list of allocations rather than only as a total under it —
-   * and so the link that opens the bills has an obvious place to live.
+   * A row whose ledger is a customer's control account can say which of that
+   * customer's invoices the money settled, so it carries the link that opens
+   * the dialog and a word for where the money went. Every other row is
+   * already the whole answer. Returning `{}` is the ordinary case.
    */
-  partyRow = null,
+  rowMeta = null,
 }) => {
+  const meta = (i) => (typeof rowMeta === 'function' ? rowMeta(i) || {} : {});
   const summary = allocationSummary({ rows, documentTotal, amount });
   const set = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
@@ -74,8 +74,8 @@ export const AllocationTable = ({
         <div className="min-w-0">
           <h3 className="ui-t-sec">{heading}</h3>
           <p className="ui-caption mt-0.5">
-            Add ledger(s) to allocate the {noun} amount.
-            {partyRow ? ' Open the outstanding bills to allocate against invoices.' : ''}
+            Pick a ledger and enter the amount. Against a customer, the
+            outstanding invoices open so the money can be placed on them.
           </p>
         </div>
       </div>
@@ -91,47 +91,6 @@ export const AllocationTable = ({
             </tr>
           </thead>
           <tbody className="divide-y">
-            {partyRow ? (
-              <tr data-party-row="true">
-                <td className="px-3 py-2 ui-muted text-sm">1</td>
-                <td className="px-3 py-2">
-                  {/* The party is not chosen here — it is the party the receipt
-                      is from — so this states it rather than offering a list
-                      that could contradict the head of the document. */}
-                  <div className="text-sm font-medium truncate">{partyRow.name}</div>
-                  <div className="ui-caption">{partyRow.groupName || 'Sundry Debtors'}</div>
-                </td>
-                <td className="px-3 py-2">
-                  <div className="flex items-center justify-end gap-4">
-                    <button
-                      type="button"
-                      onClick={partyRow.onViewBills}
-                      className="text-sm font-medium underline underline-offset-2 flex-none"
-                      style={{ color: 'rgb(var(--brand-ink))' }}
-                    >
-                      View Bills{partyRow.available > 0 ? ` (${partyRow.available})` : ''}
-                    </button>
-                    {/* Read-only: the figure is the sum of what was ticked in
-                        the dialog, and a box you can type into that the next
-                        Apply overwrites is a lie. */}
-                    <span className="ui-money tabular-nums w-36 text-right">{money(partyRow.amount)}</span>
-                  </div>
-                </td>
-                <td className="px-2 py-2 text-center">
-                  {partyRow.count > 0 && !disabled ? (
-                    <button
-                      type="button"
-                      onClick={partyRow.onClear}
-                      className="ui-icon-btn"
-                      aria-label="Clear the invoice allocation"
-                    >
-                      <Trash2 size={15} className="text-[rgb(var(--neg))]" aria-hidden="true" />
-                    </button>
-                  ) : null}
-                </td>
-              </tr>
-            ) : null}
-
             {rows.map((row, i) => (
               <tr
                 key={i}
@@ -139,7 +98,7 @@ export const AllocationTable = ({
                 data-entering={entering === i ? 'true' : undefined}
               >
                 <td className="px-3 py-2 ui-muted text-sm">
-                  <div className="ui-row-slot"><div>{i + (partyRow ? 2 : 1)}</div></div>
+                  <div className="ui-row-slot"><div>{i + 1}</div></div>
                 </td>
                 <td className="px-3 py-2">
                   <div className="ui-row-slot"><div>
@@ -159,17 +118,37 @@ export const AllocationTable = ({
                 </td>
                 <td className="px-3 py-2">
                   <div className="ui-row-slot"><div>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={row.amount ?? ''}
-                    onChange={(e) => set(i, { amount: e.target.value })}
-                    className="ui-input ui-input-plain ui-mono w-36 ms-auto text-right block"
-                    placeholder="0.00"
-                    aria-label={`Amount, allocation row ${i + 1}`}
-                    disabled={disabled}
-                  />
+                  <div className="flex items-center justify-end gap-4">
+                    {/* A party row says where its money went, and offers the
+                        dialog that decides it. An ordinary ledger row is the
+                        whole answer already, so it shows neither. */}
+                    {meta(i).isParty ? (
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-sm ui-muted truncate">{meta(i).status}</span>
+                        <button
+                          type="button"
+                          onClick={meta(i).onViewBills}
+                          className="text-sm font-medium underline underline-offset-2 flex-none"
+                          style={{ color: 'rgb(var(--brand-ink))' }}
+                          disabled={disabled}
+                        >
+                          View Bills{meta(i).available > 0 ? ` (${meta(i).available})` : ''}
+                        </button>
+                      </div>
+                    ) : null}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={row.amount ?? ''}
+                      onChange={(e) => set(i, { amount: e.target.value })}
+                      onBlur={() => meta(i).onAmountSettled?.()}
+                      className="ui-input ui-input-plain ui-mono w-36 text-right flex-none"
+                      placeholder="0.00"
+                      aria-label={`Amount, allocation row ${i + 1}`}
+                      disabled={disabled}
+                    />
+                  </div>
                   </div></div>
                 </td>
                 <td className="px-2 py-2 text-center">
