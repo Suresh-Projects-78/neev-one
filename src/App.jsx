@@ -7750,7 +7750,11 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       type="number"
                       value={cfg?.nextNumber ?? 1}
                       onChange={(e) => updateNumberingSetting(v.key, { nextNumber: Number(e.target.value || 1) })}
-                      className={`w-full px-2 py-2 border rounded-lg ${isManual ? 'ui-sunken' : ''}`}
+                      /* The shared field, not a hand-rolled one: this box
+                         was the only input in the product still drawing its
+                         own border and radius, so it kept the old 8px corner
+                         after every other field squared. */
+                      className={`ui-input w-full ${isManual ? 'ui-sunken' : ''}`}
                       disabled={isManual}
                       min="1"
                       step="1"
