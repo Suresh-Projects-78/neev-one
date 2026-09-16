@@ -29,7 +29,10 @@
      colour, and the difference between the accent looking placed and looking
      pasted on. Warm now that the brand is warm again; it was biased green
      while the brand was pine. */
-  --app-bg: 250 250 249;        /* #FAFAF9 */
+  --app-bg: 243 243 240;        /* #F3F3F0 — 22.6 from white, the reference's
+                                   page is 18.2; ours is warm where theirs is
+                                   slate, and the extra step keeps the same
+                                   separation in a warmer ramp */
   --surface: 255 255 255;       /* #FFFFFF */
   --surface-raised: 255 255 255;
   --surface-sunken: 250 250 250;
@@ -42,7 +45,8 @@
      chosen against the page ground and lands 24 away from white — a heavy
      slab where the drawing has a whisper. The hairline does the structural
      work; this only has to stop the white fields floating on nothing. */
-  --doc-section: 250 250 248;   /* #FAFAF8 — 9.9 from white */
+  --doc-section: 253 253 252;   /* #FDFDFC — 4.1 from white; the reference's
+                                   is 5.1, and its border does the rest */
 
   /* Text */
   --fg: 17 24 39;               /* #111827 */
@@ -368,12 +372,7 @@
      high-volume operator turns on. One variable, two audiences. */
   --row-pad-y: 0.5625rem;   /* 9px — Comfortable, 36px rows */
   --radius-btn: 0.5rem;     /* 8px — buttons and rows */
-  /* Fields are square. A row of controls reads as a grid of cells rather than
-     a row of lozenges, which is what a ledger form is — and at 34px tall, an
-     8px corner takes a quarter of the field's height to round off. 2px rather
-     than a true 0: a 1px border on a hard corner aliases into a dark pixel at
-     each end, and the corner looks chipped rather than sharp. */
-  --radius-input: 0.125rem; /* 2px */
+  --radius-input: 0.5rem;   /* 8px — measured off the reference's own controls */
   --radius-sm: 0.5rem;      /* 8px — chips */
   --radius: 0.75rem;        /* 12px — cards, panels */
   --radius-lg: 0.75rem;     /* 12px */
