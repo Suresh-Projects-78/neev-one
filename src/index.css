@@ -240,10 +240,28 @@
      hue behind the figure; a tinted icon square puts it beside the label,
      which is where it tells one card from the next without competing. */
   --kpi-line: 229 229 227;         /* #E5E5E3 */
-  --kpi-sales-bg: 238 243 247;     --kpi-sales-ink: 63 100 140;
-  --kpi-invoices-bg: 244 240 245;  --kpi-invoices-ink: 117 96 125;
-  --kpi-received-bg: 234 246 240;  --kpi-received-ink: 22 132 91;
-  --kpi-due-bg: 235 245 243;       --kpi-due-ink: 39 118 109;
+  /* Each card's colour says what its figure is, not which position it sits
+     in. Reading left to right on a sales page: the headline in blue, the
+     document count in purple, money in as green, money owed as amber, money
+     late as red. The same five hold on the purchase page, where the figures
+     are the mirror image.
+
+     The count's purple is `--chart-purple`, the same hue the Invoiced bar
+     takes in the chart below it, because they are the same quantity drawn
+     twice. It was a mauve that meant nothing, then a slate — and a
+     desaturated slate beside a desaturated blue measured nine points apart in
+     RGB, which is to say the first two cards were the same card.
+
+     Five hues spaced around the wheel, not five points along one arc: at
+     these tint strengths anything closer reads as a printing error. */
+  --kpi-sales-bg: 238 243 247;     --kpi-sales-ink: 63 100 140;   /* headline */
+  --kpi-invoices-bg: 243 240 249;  --kpi-invoices-ink: 106 79 158; /* a count */
+  --kpi-received-bg: 234 246 240;  --kpi-received-ink: 22 132 91;  /* money in */
+  /* Receivables is amber, not teal. It sat one card away from Amount
+     Received's green and, once the cards were filled rather than white, the
+     two were the same card twice. Amber also says the right thing: money
+     owed to you is not money you have. */
+  --kpi-due-bg: 255 247 232;       --kpi-due-ink: 166 106 0;
   --kpi-overdue-bg: 251 239 238;   --kpi-overdue-ink: 194 65 58;
   --kpi-credit-bg: 248 240 234;    --kpi-credit-ink: 176 111 66;
 
@@ -257,6 +275,7 @@
   --chart-blue: 63 100 140;        /* sales */
   --chart-teal: 39 118 109;        /* inflow, reconciled */
   --chart-mauve: 152 119 134;      /* purchases, outflow */
+  --chart-purple: 106 79 158;      /* #6A4F9E — the invoiced bar */
   --chart-gold: 176 138 85;
   --chart-clay: 196 111 74;
   --chart-slate: 123 132 146;
@@ -347,6 +366,9 @@
   --radius: 0.75rem;        /* 12px — cards, panels */
   --radius-lg: 0.75rem;     /* 12px */
   --radius-xl: 0.875rem;    /* 14px — large modals, the one exception */
+  /* The figures across an overview. Square on purpose: at 12px five small
+     cards in a row read as five pills rather than five panels of figures. */
+  --radius-kpi: 0;
 
   /* Layout */
   --sidebar-w: 260px;
@@ -514,9 +536,9 @@
 
   --kpi-line: 49 58 56;
   --kpi-sales-bg: 26 34 44;        --kpi-sales-ink: 140 176 214;
-  --kpi-invoices-bg: 38 32 41;     --kpi-invoices-ink: 190 160 199;
+  --kpi-invoices-bg: 34 29 46;     --kpi-invoices-ink: 178 154 224;
   --kpi-received-bg: 21 42 33;     --kpi-received-ink: 90 205 150;
-  --kpi-due-bg: 21 42 39;          --kpi-due-ink: 110 195 180;
+  --kpi-due-bg: 44 36 18;          --kpi-due-ink: 214 168 74;
   --kpi-overdue-bg: 41 30 28;      --kpi-overdue-ink: 240 145 134;
   --kpi-credit-bg: 45 33 25;       --kpi-credit-ink: 219 154 110;
 
@@ -527,6 +549,7 @@
   --chart-blue: 140 176 214;
   --chart-teal: 110 195 180;
   --chart-mauve: 202 168 183;
+  --chart-purple: 178 154 224;     /* lifts in dark, where #6A4F9E disappears */
   --chart-gold: 212 179 128;
   --chart-clay: 226 150 116;
   --chart-slate: 160 170 185;
@@ -2639,29 +2662,26 @@
      icon sits in it and the select is padded past it. The icon is the module
      hue's own neutral rather than the brand, because the brand on this bar
      already means "the thing you can press"; this says "where you are". */
-  /* --- the overview figure band -------------------------------------------
-     Five figures across the top of a module's front page used to be five
-     cards: five borders, five radii and five shadows in a row, which is four
-     more objects than there are ideas. They are one card now, divided by the
-     same hairline, which is what the house rule has always said — a list sits
-     on the page under one hairline, and these five are a list.
+  /* --- the figures across an overview -------------------------------------
+     Separate cards, square, with square corners.
 
-     The tone moves with them. It was a 28px tinted square holding an icon,
-     which is a lot of colour to say "this one is overdue"; it is now a 2px
-     rule on the cell's own top edge plus a dot beside the label, so the
-     figure keeps the card to itself.
+     They were one banded card for a while, which is what the house rule says
+     about lists — but these are not a list, they are five different questions
+     about the same period, and a divided band asked the reader to accept them
+     as one thing. Apart, each is its own object and can carry its own colour.
+
+     The corners are the deliberate exception to the two-radius rule: at 12px
+     five small cards in a row read as five pills, and the point of the row is
+     that they are panels of figures. `--radius-kpi` exists so the exception
+     is named and findable rather than a bare 0 somebody later "fixes".
   --------------------------------------------------------------------------- */
   .ui-kpi-band {
     display: grid;
+    gap: 0.75rem;
     /* Two on a phone, three on a tablet, then the caller's own count. Five
-       19px figures in a 390px viewport is not a row of figures, it is a
-       column of clipped ones. The count is set entirely here rather than by
-       utilities on the element, so one rule owns it at every width. */
+       figures in a 390px viewport is not a row of figures, it is a column of
+       clipped ones. */
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    background-color: rgb(var(--surface));
-    border: 1px solid rgb(var(--kpi-line));
-    border-radius: var(--radius);
-    overflow: hidden;   /* the cells' own edges stop at the radius */
   }
   @media (min-width: 1024px) {
     .ui-kpi-band { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -2669,26 +2689,21 @@
   @media (min-width: 1280px) {
     .ui-kpi-band { grid-template-columns: repeat(var(--kpi-cols, 5), minmax(0, 1fr)); }
   }
+
   .ui-kpi-cell {
     position: relative;
-    padding: 0.9375rem 1rem 0.875rem;
+    display: flex;
+    flex-direction: column;
     min-width: 0;
-    /* Every cell carries both edges and the band's overflow clips the outer
-       two, so the rule holds at any column count without a :first-child rule
-       that breaks the moment the grid wraps to two rows. */
-    border-inline-start: 1px solid rgb(var(--kpi-line));
-    border-block-start: 1px solid rgb(var(--kpi-line));
-    margin-inline-start: -1px;
-    margin-block-start: -1px;
-  }
-  .ui-kpi-cell::before {
-    content: '';
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline: 0;
-    height: 2px;
-    background-color: rgb(var(--kpi-tone, var(--fg-subtle)));
-    opacity: 0.85;
+    padding: 0.875rem 1rem 0.9375rem;
+    border-radius: var(--radius-kpi);
+    /* Filled in the metric's own hue, edged in the same at twice the strength.
+       Derived from the one ink rather than from a second background token, so
+       the fill cannot drift from the edge and dark mode needs no second set:
+       the ink already lifts there, and a percentage of a lifted ink lifts
+       with it. 18% is as far as it goes and still leaves `--fg` above 7:1. */
+    background-color: rgb(var(--kpi-tone, var(--fg-subtle)) / 0.18);
+    border: 1px solid rgb(var(--kpi-tone, var(--fg-subtle)) / 0.34);
   }
   .ui-kpi-label {
     font-size: 0.65625rem;   /* 10.5px */
@@ -2703,23 +2718,23 @@
     border-radius: 999px;
     flex: none;
     background-color: rgb(var(--kpi-tone, var(--fg-subtle)));
-    opacity: 0.55;
+    opacity: 0.7;
   }
-  /* The figure is the point of the cell, so it takes the width it can get:
-     six columns on a laptop are narrower than five, and a fixed 25px clipped
-     "₹48,62,140" there. */
+  /* The figure takes the width it can get: six columns on a laptop are
+     narrower than five, and a fixed size clipped the lakhs. */
   .ui-kpi-figure {
     font-size: clamp(1.1875rem, 1.5vw, 1.5rem);
     font-weight: 600;
     letter-spacing: -0.025em;
     line-height: 1.12;
     font-variant-numeric: tabular-nums;
-    margin-block: 0.4375rem 0.375rem;
+    margin-block: 0.5rem 0.4375rem;
   }
   .ui-kpi-delta {
     font-size: 0.71875rem;   /* 11.5px */
     font-weight: 500;
     font-variant-numeric: tabular-nums;
+    margin-block-start: auto;
   }
 
   .ui-scope-field {

@@ -390,8 +390,14 @@ export function SeriesBars({
       ...common(t),
       /* The analytics palette, never the brand: a chart is a dataset, not an
          action. The third series was the brand orange, which made the line
-         read last the loudest mark on the chart. */
-      color: [t.chartTeal, t.chartBlue, t.chartMuted],
+         read last the loudest mark on the chart.
+
+         Purple leads because it is the one hue on the page that nothing else
+         claims — the module identities run blue, green, amber and red, and
+         the brand is orange — so the bar a reader is meant to follow cannot
+         be mistaken for a status or a thing to press. Blue pairs with it for
+         the second bar; the line stays muted so it sits behind both. */
+      color: [t.chartPurple, t.chartBlue, t.chartMuted],
       grid: { left: 8, right: 8, top: 16, bottom: 4, containLabel: true },
       legend: { show: false },
       tooltip: {

@@ -45,6 +45,7 @@ const build = () => ({
   chartBlue: readVar('--chart-blue', '#3F648C'),
   chartTeal: readVar('--chart-teal', '#27766D'),
   chartMauve: readVar('--chart-mauve', '#987786'),
+  chartPurple: readVar('--chart-purple', '#6A4F9E'),
   chartGold: readVar('--chart-gold', '#B08A55'),
   chartClay: readVar('--chart-clay', '#C46F4A'),
   chartSlate: readVar('--chart-slate', '#7B8492'),

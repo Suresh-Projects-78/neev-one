@@ -116,7 +116,7 @@ export const shortDate = (v) => {
  */
 export const OverviewBand = ({ cols = 5, children }) => (
   /*
-   * The figures across the top, as one object.
+   * The row the figures sit in.
    *
    * `cols` is the count at the widest breakpoint only — two on a phone and
    * three on a tablet, because five 19px figures in a 390px viewport is not a
@@ -130,10 +130,11 @@ export const OverviewBand = ({ cols = 5, children }) => (
 /**
  * One of the figures across the top.
  *
- * A cell in the band, not a card of its own: the surface, the border and the
- * radius belong to the band, and what is left here is the one thing the cell
- * is for. `tone` names the metric rather than a colour, so the caller cannot
- * tint it — overdue is the red one wherever it appears.
+ * Its own square card, carrying its own tint: a subtle wash of the metric's
+ * hue with a slightly stronger edge of the same, which is enough to tell five
+ * cards apart at a glance and nowhere near enough to argue with the figure
+ * each one holds. `tone` names the metric rather than a colour, so the caller
+ * cannot tint it — overdue is the red one wherever it appears.
  *
  * The delta is the point of the cell as much as the figure: a receivables
  * number means nothing until you know which way it is going, and which way is
@@ -146,7 +147,10 @@ export const OverviewCard = ({ tone, icon: Icon, label, value, delta = null, del
   const good = deltaGoodWhenUp ? up : !up;
 
   return (
-    <div className="ui-kpi-cell" style={{ '--kpi-tone': `var(--kpi-${tone}-ink)` }}>
+    <div
+      className="ui-kpi-cell"
+      style={{ '--kpi-tone': `var(--kpi-${tone}-ink)` }}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="ui-kpi-label truncate">{label}</span>
         {/* The icon went with the tinted square it used to sit in. The dot is
