@@ -769,7 +769,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         and where the goods landed on the left, the paperwork that identifies it
         on the right, ruled off between them.
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+      <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
           {/*
             Where first, then who: the branch, the warehouse under it that the
@@ -2149,7 +2149,7 @@ export const PurchaseOrderForm = ({
         will land and who supplies them on the left, the paperwork that
         identifies the order on the right, ruled off between them.
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+      <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
           {/* Where first, then who — the branch, the warehouse under it, and
               the vendor across the full width underneath. */}
@@ -3949,7 +3949,7 @@ export const DebitNoteForm = ({
         back from and who they go back to on the left, the paperwork that
         identifies the return on the right, ruled off between them.
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+      <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
           {/* Where first, then who — the bill's own order, on the document
               that reverses a bill. */}

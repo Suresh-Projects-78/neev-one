@@ -356,7 +356,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             goods are going to on the left, the paperwork that identifies the
             movement on the right, ruled off between them.
           */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+          <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
             <div className="lg:col-span-6 space-y-4">
               <div>
                 <label className="ui-label">Customer</label>

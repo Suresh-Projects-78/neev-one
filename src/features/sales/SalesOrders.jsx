@@ -412,7 +412,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       title="Basic Details"
             description="Who the order is for, and the paperwork that identifies it."
           >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+          <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
             <div className="lg:col-span-6 space-y-4">
               <div>
                 <label className="ui-label">Customer</label>

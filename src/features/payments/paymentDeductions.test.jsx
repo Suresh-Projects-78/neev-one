@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../api/payments', () => ({ createPayment: vi.fn(async () => ({ id: 'srv-1' })) }));
@@ -23,12 +24,15 @@ const co = {
 };
 const db = {
   companies: [co],
-  vendors: [{ id: 3, companyId: 1, name: 'ABC Supplies', displayName: 'ABC Supplies' }],
+  /* The payee is chosen by picking its control account in an allocation row,
+     so the fixture carries the link. */
+  vendors: [{ id: 3, companyId: 1, name: 'ABC Supplies', displayName: 'ABC Supplies', accountId: 301 }],
   bills: [{ id: 1, companyId: 1, vendorId: 3, number: 'PUR-1', date: '2026-08-10', dueDate: '2026-08-25', total: 10000, paidAmount: 0, status: 'Open' }],
   expenses: [],
   debitNotes: [],
   payments: [],
-  chartOfAccounts: [],
+  accountGroups: [{ id: 12, companyId: 1, name: 'Sundry Creditors', parentGroupId: null }],
+  chartOfAccounts: [{ id: 301, companyId: 1, name: 'ABC Supplies', groupId: 12 }],
 };
 
 const renderForm = (props = {}) =>
@@ -37,6 +41,18 @@ const renderForm = (props = {}) =>
   );
 
 const type = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+
+/*
+ * A payment is worth what its rows say, and a row counts only once it has both
+ * a ledger and a figure — so naming the amount means naming where it goes.
+ */
+const allocate = async (user, value) => {
+  const field = screen.getByLabelText(/Account, allocation row 1/i);
+  await user.click(field);
+  await user.type(field, 'ABC');
+  await user.click(await screen.findByRole('option', { name: /ABC Supplies/ }));
+  fireEvent.change(screen.getByLabelText(/Amount, allocation row 1/i), { target: { value } });
+};
 
 describe('the payment carries a number', () => {
   it('opens on the next one in the company series', () => {
@@ -80,41 +96,55 @@ describe('the payment carries a number', () => {
   });
 });
 
-describe('the bills table', () => {
-  it('shows the bill, what is left of it, and when it fell due', () => {
-    /* The table is empty until a vendor is chosen — there is nothing to owe
-       until then. */
+describe('the bills a payment can settle', () => {
+  /* They are a dialog now, opened from the payee's own allocation row, rather
+     than a permanent table halfway down the form. */
+  const openBills = async (user) => {
+    await user.click(await screen.findByRole('button', { name: /View Bills/i }));
+    return (await screen.findByText('PUR-1')).closest('table');
+  };
+
+  it('shows the bill, what is left of it, and when it fell due', async () => {
+    const user = userEvent.setup();
     renderForm({ initialData: { vendorId: '3' } });
-    /* A balance on its own cannot tell a part-paid bill from a whole one. */
-    const table = screen.getByText('PUR-1').closest('table');
-    expect(table.textContent).toMatch(/Bill amount/);
-    expect(table.textContent).toMatch(/Due date/);
-    expect(table.textContent).toMatch(/2026-08-25/);
-    /* Total of 10,000 outstanding, under the column it totals. */
-    expect(table.querySelector('tfoot').textContent).toMatch(/10,000/);
+    const table = await openBills(user);
+    expect(table.textContent).toMatch(/Bill Amount/);
+    expect(table.textContent).toMatch(/Outstanding/);
+    /* The bill's own date. The permanent table this replaced showed the DUE
+       date instead, which is the more useful of the two when deciding what to
+       settle — noted rather than smuggled back in, because the column set is
+       the one the drawing specifies. */
+    expect(table.textContent).toMatch(/2026-08-10/);
   });
 
-  it('queues the oldest bill first', () => {
+  it('queues the oldest bill first', async () => {
+    const user = userEvent.setup();
     renderForm({ initialData: { vendorId: '3' } });
-    const rows = [...screen.getByText('PUR-1').closest('table').querySelectorAll('tbody tr')];
+    const table = await openBills(user);
+    const rows = [...table.querySelectorAll('tbody tr')];
     /* Not a list, a queue: the bill that has waited longest is the one being
        settled, and it belongs at the top. */
     expect(rows[0].textContent).toMatch(/PUR-1/);
   });
 
-  it('ticks and unticks every bill from the header', () => {
-    renderForm({ initialData: { vendorId: '3', amount: '15000' } });
-    const all = screen.getByLabelText('Select every bill');
-    fireEvent.click(all);
-    const boxes = [...screen.getByText('PUR-1').closest('table').querySelectorAll('tbody input[type="checkbox"]')];
-    expect(boxes.every((b) => b.checked)).toBe(true);
+  it('ticks and unticks every bill from the header', async () => {
+    const user = userEvent.setup();
+    renderForm({ initialData: { vendorId: '3' } });
+    fireEvent.change(screen.getByLabelText(/Amount, allocation row 1/i), { target: { value: '15000' } });
+    const table = await openBills(user);
+    await user.click(screen.getByLabelText(/Select every bill/i));
+    const boxes = [...table.querySelectorAll('tbody input[type="checkbox"]')];
+    expect(boxes.some((b) => b.checked)).toBe(true);
+    await user.click(screen.getByLabelText(/Clear every bill/i));
+    expect([...table.querySelectorAll('tbody input[type="checkbox"]')].every((b) => !b.checked)).toBe(true);
   });
 });
 
 describe('the running bar agrees with the summary', () => {
-  it('shows what leaves the account, not what settles the bills', () => {
+  it('shows what leaves the account, not what settles the bills', async () => {
+    const user = userEvent.setup();
     renderForm();
-    type(/^Amount paid/, '10000');
+    await allocate(user, '10000');
     type('TDS deduction', '1000');
     /* The label says "paid from the account", and 9,000 is what goes. */
     const bar = document.querySelector('.ui-entry-summary');
@@ -124,9 +154,10 @@ describe('the running bar agrees with the summary', () => {
 });
 
 describe('what is held back', () => {
-  it('totals the deductions and shows what actually leaves', () => {
+  it('totals the deductions and shows what actually leaves', async () => {
+    const user = userEvent.setup();
     renderForm();
-    type(/^Amount paid/, '10000');
+    await allocate(user, '10000');
     type('TDS deduction', '1000');
 
     const summary = screen.getByRole('region', { name: 'Payment summary' });
@@ -148,25 +179,28 @@ describe('what is held back', () => {
     expect(screen.getByLabelText(/Amount, allocation row 1/i)).toBeInTheDocument();
   });
 
-  it('says the unallocated part is an advance', () => {
+  it('says the unallocated part is an advance', async () => {
+    const user = userEvent.setup();
     renderForm();
-    type(/^Amount paid/, '10000');
+    await allocate(user, '10000');
     const summary = screen.getByRole('region', { name: 'Payment summary' });
     /* Nothing allocated yet, so the whole payment is sitting on account. */
     expect(summary.textContent).toMatch(/Advance \(unallocated\)/i);
     expect(summary.textContent).toMatch(/10,000/);
   });
 
-  it('reads the net back in words', () => {
+  it('reads the net back in words', async () => {
+    const user = userEvent.setup();
     renderForm();
-    type(/^Amount paid/, '10000');
+    await allocate(user, '10000');
     type('TDS deduction', '1000');
     expect(screen.getByText(/Rupees Nine Thousand/i)).toBeInTheDocument();
   });
 
-  it('keeps the gross and the net apart', () => {
+  it('keeps the gross and the net apart', async () => {
+    const user = userEvent.setup();
     renderForm();
-    type(/^Amount paid/, '5000');
+    await allocate(user, '5000');
     type('TDS deduction', '500');
     const summary = screen.getByRole('region', { name: 'Payment summary' });
     /* Both figures on screen: one settles the bills, the other moves. */

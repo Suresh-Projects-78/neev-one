@@ -42,11 +42,18 @@ const dbWith = (bills) => ({
       pan: 'AABCU9603R',
       tdsApplicable: true,
       tdsNatureCode: CONTRACTOR,
+      /* The payee is chosen by picking its control account in a row, so the
+         fixture has to carry the link. */
+      accountId: 301,
     },
   ],
-  accountGroups: [{ id: 11, companyId: 1, name: 'TDS Payable', parentGroupId: null }],
+  accountGroups: [
+    { id: 11, companyId: 1, name: 'TDS Payable', parentGroupId: null },
+    { id: 12, companyId: 1, name: 'Sundry Creditors', parentGroupId: null },
+  ],
   chartOfAccounts: [
     { id: 101, companyId: 1, name: 'TDS on Contractors', groupId: 11, tdsNatureCode: CONTRACTOR },
+    { id: 301, companyId: 1, name: 'Steel Supply Co', groupId: 12 },
   ],
   bills,
   expenses: [],
@@ -82,16 +89,24 @@ const Host = ({ bills = [plainBill], onSaved = () => {}, company = COMPANY }) =>
 };
 
 const pickVendor = async (user) => {
-  await user.click(screen.getByPlaceholderText('Type a vendor name'));
+  /* The payee is a ledger now, and the ledger is typed: the operator types a
+     name, the list narrows, and the suggestion is taken. */
+  const field = screen.getByLabelText(/Account, allocation row 1/i);
+  await user.click(field);
+  await user.type(field, 'Steel');
   await user.click(await screen.findByRole('option', { name: /Steel Supply Co/ }));
 };
 
 const selectBill = async (user, number) => {
+  /* The bills are a dialog, opened from the payee's own allocation row, and
+     the payment is worth whatever is allocated — there is no "amount paid" to
+     type first. */
+  fireEvent.change(screen.getByLabelText(/Amount, allocation row 1/i), { target: { value: '118000' } });
+  const open = await screen.findByRole('button', { name: /View Bills/i });
+  if (!screen.queryByText('Allocate Outstanding Bills')) await user.click(open);
   const row = (await screen.findByText(number)).closest('tr');
   await user.click(row.querySelector('input[type="checkbox"]'));
-  /* The amount paid is its own field — a selected bill proposes it, and the
-     form will not record a payment of nothing. */
-  fireEvent.change(screen.getByLabelText(/Amount paid/i), { target: { value: '118000' } });
+  await user.click(screen.getByRole('button', { name: /Apply Allocation/i }));
 };
 
 describe('what the payment offers to deduct', () => {
@@ -145,9 +160,7 @@ describe('what the payment offers to deduct', () => {
     const saved = vi.fn();
     render(<Host bills={[deductedBill]} onSaved={saved} />);
     await pickVendor(user);
-    const row = (await screen.findByText('BILL-2')).closest('tr');
-    await user.click(row.querySelector('input[type="checkbox"]'));
-    fireEvent.change(screen.getByLabelText(/Amount paid/i), { target: { value: '116000' } });
+    await selectBill(user, 'BILL-2');
 
     fireEvent.change(screen.getByLabelText('TDS deduction'), { target: { value: '2000' } });
     fireEvent.submit(document.querySelector('form'));
@@ -165,10 +178,13 @@ describe('what the payment offers to deduct', () => {
     render(<Host bills={[deductedBill]} onSaved={saved} />);
     await pickVendor(user);
 
+    /* The vendor is owed the net, and the dialog is where that is read. */
+    fireEvent.change(screen.getByLabelText(/Amount, allocation row 1/i), { target: { value: '116000' } });
+    await user.click(await screen.findByRole('button', { name: /View Bills/i }));
     const row = (await screen.findByText('BILL-2')).closest('tr');
     expect(row.textContent).toMatch(/1,16,000\.00/);
     await user.click(row.querySelector('input[type="checkbox"]'));
-    fireEvent.change(screen.getByLabelText(/Amount paid/i), { target: { value: '116000' } });
+    await user.click(screen.getByRole('button', { name: /Apply Allocation/i }));
     fireEvent.submit(document.querySelector('form'));
 
     await waitFor(() => expect(saved).toHaveBeenCalled());

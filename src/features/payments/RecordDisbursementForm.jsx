@@ -4,8 +4,8 @@ import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '../../compon
 import { notify } from '../../components/ui/notify';
 import { blockIfClosed } from '../../utils/bookClose';
 
-import VendorPicker from '../../components/pickers/VendorPicker';
 import AllocationTable from './AllocationTable';
+import OutstandingBillsModal from './OutstandingBillsModal';
 import { allocationError, allocationJournalLines, emptyAllocationRow, usableRows } from './allocationLines';
 import { postJournalToLedger } from '../../utils/journalSync';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -145,7 +145,25 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
   const [allocations, setAllocations] = useState(() => ({}));
   /* Where the money goes when it is not a bill: GST, a late fee, a bank
      charge, an employee reimbursement. One row per account. */
-  const [ledgerRows, setLedgerRows] = useState(() => [emptyAllocationRow()]);
+  /*
+   * Seeded with the payee when the payment was started from a document.
+   *
+   * "Record payment" on a bill row knows the vendor; with the picker gone,
+   * the only place that knowledge can land is the row that now stands for the
+   * payee. Without it the form opens against nobody and the bill the operator
+   * was trying to settle is not even listed.
+   */
+  const [ledgerRows, setLedgerRows] = useState(() => {
+    const seeded = safeArray(db?.vendors).find((v) => {
+      if (Number(v?.companyId) !== companyId) return false;
+      if (initial.vendorId !== '' && Number(v.id) === Number(initial.vendorId)) return true;
+      const want = String(initialData?.vendorName || '').trim().toLowerCase();
+      return Boolean(want) && String(v?.name || '').trim().toLowerCase() === want;
+    });
+    const accountId = String(seeded?.accountId ?? '').trim();
+    if (!accountId) return [emptyAllocationRow()];
+    return [{ ...emptyAllocationRow(), ledgerId: accountId }];
+  });
 
   const bills = useMemo(() => {
     return safeArray(db.bills)
@@ -171,8 +189,35 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
 
   const debitNotes = safeArray(db?.debitNotes);
 
+  /*
+   * The payee is a ledger you pick, not a field above the ledgers.
+   *
+   * Every vendor carries the control account it posts to, so choosing
+   * "Acme Supplies (Sundry Creditors)" in an allocation row IS choosing the
+   * payee. The separate picker asked the same question twice with nothing
+   * stopping the two answers disagreeing.
+   */
+  const vendorByAccountId = useMemo(() => {
+    const out = new Map();
+    for (const v of safeArray(db?.vendors)) {
+      if (Number(v?.companyId) !== companyId) continue;
+      const acc = String(v?.accountId ?? '').trim();
+      if (acc) out.set(acc, v);
+    }
+    return out;
+  }, [db?.vendors, companyId]);
+
+  const partyRowIndex = useMemo(
+    () => ledgerRows.findIndex((r) => vendorByAccountId.has(String(r?.ledgerId ?? '').trim())),
+    [ledgerRows, vendorByAccountId]
+  );
+  const partyVendor =
+    partyRowIndex >= 0 ? vendorByAccountId.get(String(ledgerRows[partyRowIndex].ledgerId).trim()) : null;
+
+  const partyVendorId = partyVendor ? Number(partyVendor.id) : NaN;
+
   const outstandingDocs = useMemo(() => {
-    const vid = Number(formData.vendorId);
+    const vid = Number(partyVendorId);
     if (!Number.isFinite(vid) || !vid) return [];
 
     const billRows = bills
@@ -223,10 +268,22 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       if (da !== dbb) return da < dbb ? -1 : 1;
       return Number(a.id) - Number(b.id);
     });
-  }, [bills, expenses, debitNotes, formData.vendorId]);
+  }, [bills, expenses, debitNotes, partyVendorId]);
+
+  /*
+   * What the payment is for is what it is worth.
+   *
+   * There used to be an "Amount paid" box and the allocation had to be made
+   * to agree with it — two figures, one typed twice, and a save that refused
+   * until they matched. The bills are a breakdown of the payee row rather
+   * than an addition to it.
+   */
+  const paymentAmountFromRows = round2(
+    usableRows(ledgerRows).reduce((t, r) => t + (Number(r.amount) || 0), 0)
+  );
 
   const computed = useMemo(() => {
-    const payAmountRaw = Number(formData.amount ?? 0);
+    const payAmountRaw = paymentAmountFromRows;
     const totalAmount = Number.isFinite(payAmountRaw) ? Math.max(0, payAmountRaw) : 0;
 
     let allocated = 0;
@@ -289,7 +346,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     };
   }, [
     allocations,
-    formData.amount,
+    paymentAmountFromRows,
     formData.tdsAmount,
     formData.bankCharges,
     formData.otherCharges,
@@ -328,8 +385,8 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
   }, [db?.chartOfAccounts, currentCompany?.id, ledgerAccountId]);
 
   const vendorRecord = useMemo(
-    () => (db?.vendors || []).find((v) => Number(v.id) === Number(formData.vendorId)) || null,
-    [db?.vendors, formData.vendorId]
+    () => partyVendor || (db?.vendors || []).find((v) => Number(v.id) === Number(formData.vendorId)) || null,
+    [partyVendor, db?.vendors, formData.vendorId]
   );
 
   /* What the bills being settled already deducted for themselves. */
@@ -348,11 +405,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
   const tdsPriorValue = useMemo(
     () =>
       priorBaseFor((db?.bills || []).filter((b) => b.companyId === currentCompany?.id), {
-        partyId: formData.vendorId,
+        partyId: partyVendorId,
         natureCode: tdsNatureCode,
         onDate: formData.date,
       }),
-    [db?.bills, currentCompany?.id, formData.vendorId, tdsNatureCode, formData.date]
+    [db?.bills, currentCompany?.id, partyVendorId, tdsNatureCode, formData.date]
   );
 
   const tds = resolveTds({
@@ -372,49 +429,35 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     ? tdsLedgersFor(tdsLedgerMaster, { natureCode: tds.natureCode, side: 'PAYABLE' })
     : [];
 
-  const toggleDoc = (doc, selected) => {
-    setAllocations((prev) => {
-      const next = { ...prev };
-      const existing = next[doc.key] || { selected: false, amount: 0 };
+  /*
+   * The dialog that fills the payee's allocation in — the receipt's, from the
+   * other side of the book. A payment has one payee, so one boolean and one
+   * set of bills.
+   */
+  const [billsOpen, setBillsOpen] = useState(false);
+  const [billsPrompted, setBillsPrompted] = useState(false);
 
-      const nextSelected = Boolean(selected);
-      let nextAmount = existing.amount;
-
-      if (nextSelected && (!Number(nextAmount) || Number(nextAmount) <= 0)) {
-        const payAmountRaw = Number(formData.amount ?? 0);
-        const totalAmount = Number.isFinite(payAmountRaw) ? Math.max(0, payAmountRaw) : 0;
-
-        const alreadyAllocated = Object.entries(prev)
-          .filter(([k, v]) => k !== doc.key && v?.selected)
-          .reduce((sum, [, v]) => {
-            const amt = Number(v?.amount ?? 0);
-            return sum + (Number.isFinite(amt) ? Math.max(0, amt) : 0);
-          }, 0);
-
-        const remaining = Math.max(0, totalAmount - alreadyAllocated);
-        const suggested = Math.min(doc.balance, remaining || doc.balance);
-        nextAmount = round2(suggested);
-      }
-
-      next[doc.key] = { ...existing, selected: nextSelected, amount: nextAmount };
-      return next;
-    });
-  };
-
-  const setDocAmount = (doc, amount) => {
-    setAllocations((prev) => {
-      const next = { ...prev };
-      const existing = next[doc.key] || { selected: true, amount: 0 };
-      next[doc.key] = { ...existing, selected: true, amount };
-      return next;
-    });
-  };
+  /* The bills as the dialog needs them. Assembled here because what is still
+     owed on a bill depends on debit notes, which the dialog has no business
+     knowing about. */
+  const billsForModal = useMemo(
+    () =>
+      outstandingDocs.map((d) => ({
+        id: d.key,
+        number: d.number,
+        date: d.date,
+        total: Number(d.total ?? 0),
+        tdsExpected: Number(sourceTdsOf(d) || 0),
+        outstanding: d.balance,
+      })),
+    [outstandingDocs]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const amount = Number(formData.amount ?? 0);
-    const vendorIdNum = Number(formData.vendorId);
+    const amount = paymentAmountFromRows;
+    const vendorIdNum = Number(partyVendorId);
 
     // One pass, each failure at its own field. Allocation problems below name a
     // specific document, so they keep their toast.
@@ -459,7 +502,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
      */
     const allocProblem = allocationError({
       rows: ledgerRows,
-      documentTotal: computed.allocated,
+      /* Nought on purpose: the bills are a breakdown of the payee row's own
+         figure, not a second allocation beside it. Counting them here counts
+         them twice and refuses every payment as over-allocated by exactly the
+         amount it just settled. */
+      documentTotal: 0,
       amount,
       noun: 'payment',
       hasParty: Number.isFinite(vendorIdNum) && !!vendorIdNum,
@@ -810,7 +857,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         where the money left from on the left, the paperwork — date and amount —
         on the right, ruled off between them.
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+      <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {!hideMode ? (
@@ -858,25 +905,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
               placeholder="Txn / UTR / Cheque no"
             />
           </div>
-        </div>
-
-        <div
-          ref={(el) => fieldErrors.register('vendorId', el)}
-          data-invalid-within={fieldErrors.error('vendorId') ? 'true' : undefined}
-        >
-          <VendorPicker
-            db={db}
-            setDb={setDb}
-            currentCompany={currentCompany}
-            value={formData.vendorId}
-            onChange={(vendorId) => {
-              fieldErrors.clearField('vendorId');
-              setFormData((p) => ({ ...p, vendorId }));
-              setAllocations({});
-            }}
-            label="Payee / Party"
-          />
-          <FieldError error={fieldErrors.error('vendorId')} id={fieldErrors.errorId('vendorId')} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -966,28 +994,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* The amount leads the band that is named after it; it used to sit
               up in the header, three fields away from what comes off it. */}
-          <div className="min-w-0">
-            <label className="ui-label" htmlFor="pay-amount">
-              Amount paid <span className="text-[rgb(var(--neg-ink))]">*</span>
-            </label>
-            <input
-              id="pay-amount"
-              type="number"
-              value={formData.amount}
-              onChange={(e) => {
-                fieldErrors.clearField('amount');
-                setFormData((p) => ({ ...p, amount: e.target.value }));
-              }}
-              className="ui-input ui-money w-full"
-              min="0"
-              step="0.01"
-              required
-              placeholder="0.00"
-              {...fieldErrors.props('amount')}
-            />
-            <FieldError error={fieldErrors.error('amount')} id={fieldErrors.errorId('amount')} />
-            <p className="ui-caption mt-1">What the bills are settled by.</p>
-          </div>
 
           {/*
             The deduction, and where it posts.
@@ -1071,13 +1077,62 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         rows={ledgerRows}
         onChange={setLedgerRows}
         ledgerOptions={allocationLedgers}
-        amount={Number(formData.amount) || 0}
-        documentTotal={computed.allocated}
+        amount={paymentAmountFromRows}
+        documentTotal={0}
         documentLabel="Bills settled"
-        heading="Payment allocation"
+        heading="Ledger allocation"
         noun="payment"
         money={(v) => formatMoney(v, currentCompany)}
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        rowMeta={(i) => {
+          if (i !== partyRowIndex || !partyVendor) return {};
+          const rowAmount = round2(Number(ledgerRows[i]?.amount) || 0);
+          const onAccount = round2(Math.max(0, rowAmount - computed.allocated));
+          return {
+            isParty: true,
+            available: billsForModal.length,
+            status:
+              computed.lines.length > 0
+                ? onAccount > 0
+                  ? `${computed.lines.length} bill${computed.lines.length === 1 ? '' : 's'} · ${formatMoney(onAccount, currentCompany)} on account`
+                  : `Against ${computed.lines.length} bill${computed.lines.length === 1 ? '' : 's'}`
+                : rowAmount > 0
+                  ? 'On account'
+                  : '',
+            onViewBills: () => setBillsOpen(true),
+            onAmountSettled: () => {
+              if (billsPrompted) return;
+              if (!(Number(ledgerRows[i]?.amount) > 0)) return;
+              if (!billsForModal.length) return;
+              setBillsPrompted(true);
+              setBillsOpen(true);
+            },
+          };
+        }}
       />
+
+      {billsOpen ? (
+        <OutstandingBillsModal
+          partyName={vendorRecord ? (vendorRecord.displayName || vendorRecord.name || '') : ''}
+          noun="bill"
+          bills={billsForModal}
+          value={allocations}
+          available={round2(Number(ledgerRows[partyRowIndex]?.amount) || 0)}
+          money={(v) => formatMoney(v, currentCompany)}
+          onClose={() => setBillsOpen(false)}
+          onApply={(next, total) => {
+            setAllocations(next);
+            setBillsOpen(false);
+            if (partyRowIndex >= 0 && !(Number(ledgerRows[partyRowIndex]?.amount) > 0) && total > 0) {
+              setLedgerRows((rows) =>
+                rows.map((r, i) => (i === partyRowIndex ? { ...r, amount: String(total) } : r))
+              );
+            }
+          }}
+        />
+      ) : null}
 
 
       {/*
@@ -1088,108 +1143,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium">Outstanding bills</div>
-            {formData.vendorId ? (
-              <div className="text-sm ui-muted">Select bills to allocate</div>
-            ) : (
-              <div className="text-sm ui-muted">Select a supplier to load bills</div>
-            )}
-          </div>
-
-          <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-            <table className="ui-table w-full">
-              <thead className="ui-sunken border-b">
-                <tr>
-                  <th className="ui-th w-12">
-                    <input
-                      type="checkbox"
-                      aria-label="Select every bill"
-                      checked={outstandingDocs.length > 0 && selectedCount === outstandingDocs.length}
-                      onChange={(e) => {
-                        const on = e.target.checked;
-                        for (const d of outstandingDocs) toggleDoc(d, on);
-                      }}
-                    />
-                  </th>
-                  <th className="ui-th">Bill #</th>
-                  <th className="ui-th">Date</th>
-                  <th className="ui-th">Due date</th>
-                  {/* The bill's own figure beside what is left of it: the pair
-                      is what tells a part-paid bill from an untouched one. */}
-                  <th className="ui-th ui-num">Bill amount</th>
-                  <th className="ui-th ui-num">Outstanding</th>
-                  <th className="ui-th ui-num">Allocate</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {!formData.vendorId ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center ui-muted">
-                      Select party name to see outstanding bills/expenses
-                    </td>
-                  </tr>
-                ) : outstandingDocs.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center ui-muted">
-                      No outstanding documents. This payment will be recorded as advance.
-                    </td>
-                  </tr>
-                ) : (
-                  outstandingDocs.map((d) => {
-                    const selected = Boolean(allocations[d.key]?.selected);
-                    const allocValue = allocations[d.key]?.amount ?? '';
-
-                    return (
-                      <tr key={d.key} className="ui-hover-sunken">
-                        <td className="px-4 py-3">
-                          <input type="checkbox" checked={selected} onChange={(e) => toggleDoc(d, e.target.checked)} />
-                        </td>
-                        <td className="ui-col-meta px-4 py-3">{d.number || '-'}</td>
-                        <td className="ui-col-date px-4 py-3">{d.date || '-'}</td>
-                        <td className="ui-col-date px-4 py-3">{d.dueDate || '-'}</td>
-                        <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.total ?? d.balance, currentCompany)}</td>
-                        <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(d.balance, currentCompany)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <input
-                            type="number"
-                            value={allocValue}
-                            onChange={(e) => setDocAmount(d, e.target.value)}
-                            className="ui-input w-32 px-2 py-1 text-right"
-                            min="0"
-                            step="0.01"
-                            disabled={!formData.amount}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-
-              {outstandingDocs.length ? (
-                <tfoot>
-                  <tr className="ui-sunken font-medium">
-                    <td className="px-4 py-3" colSpan={4}>Total</td>
-                    <td className="ui-col-amount px-4 py-3 text-right">
-                      {formatMoney(outstandingDocs.reduce((t, d) => t + Number(d.total ?? d.balance ?? 0), 0), currentCompany)}
-                    </td>
-                    <td className="ui-col-amount px-4 py-3 text-right">
-                      {formatMoney(outstandingDocs.reduce((t, d) => t + Number(d.balance ?? 0), 0), currentCompany)}
-                    </td>
-                    <td className="ui-col-amount px-4 py-3 text-right">
-                      {formatMoney(computed.allocated, currentCompany)}
-                    </td>
-                  </tr>
-                </tfoot>
-              ) : null}
-            </table>
-          </div>
-
-          <p className="ui-caption">You can also allocate the amount directly and adjust later.</p>
-        </div>
-
         <div>
           <label className="ui-label">Notes</label>
           <textarea

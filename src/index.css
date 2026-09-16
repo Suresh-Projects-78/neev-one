@@ -2862,7 +2862,12 @@
     align-items: center;
     justify-content: center;
     flex: none;
-    color: rgb(var(--fg-muted));
+    /* Coloured, not grey. A grey glyph beside a bold heading reads as a
+       smudge the eye skips; the brand ink is the one hue this product already
+       uses to say "this is a thing, and it is ours". It is the ink rather
+       than the brand itself, so a section heading cannot be confused with the
+       one button on the page that commits the document. */
+    color: rgb(var(--brand-ink));
   }
   .ui-sec-head h3 {
     font-size: 0.875rem;
