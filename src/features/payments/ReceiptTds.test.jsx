@@ -103,7 +103,7 @@ describe('what the receipt offers', () => {
   it('offers no TDS control while TDS is switched off for the company', () => {
     const off = { ...COMPANY, profile: { taxCompliances: { tds: { enabled: false } } } };
     render(<Host company={off} />);
-    expect(screen.queryByLabelText('TDS deducted')).toBeNull();
+    expect(screen.queryByLabelText('TDS Amount')).toBeNull();
   });
 
   beforeEach(() => localStorage.clear());
@@ -124,8 +124,8 @@ describe('what the receipt offers', () => {
     await selectInvoice(user);
     await user.click(await screen.findByRole('button', { name: 'Use it' }));
 
-    expect(screen.getByLabelText('TDS deducted')).toHaveValue(1000);
-    expect(screen.getByLabelText('TDS receivable ledger')).toHaveValue('201');
+    expect(screen.getByLabelText('TDS Amount')).toHaveValue(1000);
+    expect(screen.getByLabelText('TDS Ledger')).toHaveValue('201');
   });
 
   /* The receivable side only — a payable ledger is what we owe, and cannot
@@ -135,10 +135,10 @@ describe('what the receipt offers', () => {
     render(<Host />);
     await pickCustomer(user);
     await selectInvoice(user);
-    fireEvent.change(screen.getByLabelText('TDS deducted'), { target: { value: '1000' } });
+    fireEvent.change(screen.getByLabelText('TDS Amount'), { target: { value: '1000' } });
 
-    const options = [...screen.getByLabelText('TDS receivable ledger').options].map((o) => o.textContent);
-    expect(options).toEqual(['Select ledger', 'TDS Receivable - Contractor']);
+    const options = [...screen.getByLabelText('TDS Ledger').options].map((o) => o.textContent);
+    expect(options).toEqual(['Select TDS ledger', 'TDS Receivable - Contractor']);
   });
 });
 

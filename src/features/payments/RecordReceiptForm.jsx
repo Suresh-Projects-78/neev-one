@@ -128,20 +128,25 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
   /*
-   * The mode, from the account the money landed in.
+   * The mode is the operator's, but the account picks its opening guess.
    *
-   * It used to be a control of its own, defaulting to Cash — so a transfer
-   * into a bank account was counted as cash against the §269ST two-lakh
-   * limit unless somebody remembered to change a field that said nothing the
-   * account above it had not already said. Cash-in-hand is cash; everything
-   * else is a bank receipt, and the reference line is where the instrument
-   * gets named.
+   * §269ST is counted on this field, and a form that defaults every receipt to
+   * Cash counts a bank transfer against the two-lakh limit for anybody who
+   * does not think to change it. So the account chosen above sets it — cash
+   * in hand means Cash, anything else means Bank Transfer — until somebody
+   * says otherwise, and then their answer stands.
    */
-  const receiptMode = useMemo(() => {
+  const [modeTouched, setModeTouched] = useState(Boolean(initialData?.mode));
+  const impliedMode = useMemo(() => {
     const picked = modes.find((m) => String(m.id) === String(ledgerAccountId));
-    if (!picked) return formData.mode || 'Cash';
-    return String(picked.controlKind || '').toUpperCase() === 'CASH' ? 'Cash' : 'Bank';
-  }, [modes, ledgerAccountId, formData.mode]);
+    if (!picked) return '';
+    return String(picked.controlKind || '').toUpperCase() === 'CASH' ? 'Cash' : 'Bank Transfer';
+  }, [modes, ledgerAccountId]);
+  const receiptMode = modeTouched ? formData.mode : impliedMode || formData.mode || 'Cash';
+
+  /* Free text on the wire, so the list can grow without a migration. Only
+     "Cash" carries meaning — it is what §269ST is counted on. */
+  const RECEIPT_MODES = ['Cash', 'Bank Transfer', 'Cheque', 'UPI', 'NEFT', 'RTGS', 'IMPS', 'Card', 'Other'];
 
   /*
    * Opened against one invoice, that invoice is already ticked.
@@ -919,8 +924,30 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               />
             </div>
 
-            {/* Fourth cell, so it falls directly under "Received into" — a UTR
-                belongs to the account line it describes. */}
+            {/*
+              Row two, in the same three columns, so each field sits under the
+              one it qualifies: the mode under the account the money landed in,
+              the instrument's number under the receipt's own number, and the
+              sentence under the date.
+            */}
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-mode">Receipt Mode</label>
+              <select
+                id="rcpt-mode"
+                value={receiptMode}
+                onChange={(e) => {
+                  setModeTouched(true);
+                  setFormData((p) => ({ ...p, mode: e.target.value }));
+                }}
+                className="ui-select w-full"
+              >
+                {/* A record saved under an older label still shows its own. */}
+                {(RECEIPT_MODES.includes(receiptMode) ? RECEIPT_MODES : [receiptMode, ...RECEIPT_MODES]).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
             <div className="min-w-0">
               <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
               <input
@@ -930,6 +957,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
                 className="ui-input w-full"
                 placeholder="Txn / UTR / Cheque no"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-narration">Narration / Description</label>
+              <input
+                id="rcpt-narration"
+                type="text"
+                value={formData.narration}
+                onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
+                className="ui-input w-full"
+                placeholder="E.g. Payment received, UTR, remarks etc."
               />
             </div>
         </div>
@@ -949,13 +988,41 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         */}
         {tdsEnabledHere ? (
         <section>
-          <h3 className="ui-t-sec">TDS <span className="ui-caption font-normal">(optional)</span></h3>
+          <h3 className="ui-t-sec">TDS (optional)</h3>
           <p className="ui-caption mt-0.5 mb-2">
-            If the customer withheld tax, name the ledger it is recognised against and what they withheld.
+            If TDS is deducted from the receipt, select the TDS ledger and enter the amount.
           </p>
+          {/*
+            Two fields, side by side, both always here.
+
+            The ledger used to appear only once an amount had been typed, which
+            made the section look like one field until you filled it in and
+            hid the very thing that decides where the tax lands. They are one
+            question asked in two parts.
+          */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="ui-label" htmlFor="rcpt-tdsAmount">TDS deducted</label>
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-tds-ledger">TDS Ledger</label>
+              <select
+                id="rcpt-tds-ledger"
+                className="ui-select w-full"
+                value={formData.tdsLedgerId || ''}
+                onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
+              >
+                <option value="">Select TDS ledger</option>
+                {tdsReceivableLedgers.map((l) => (
+                  <option key={l.id} value={String(l.id)}>{l.name}</option>
+                ))}
+              </select>
+              {Number(formData.tdsAmount || 0) > 0 && !tdsReceivableLedgers.length ? (
+                <p className="ui-caption mt-1">
+                  No TDS Receivable ledger is mapped to this customer’s nature yet.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-tdsAmount">TDS Amount</label>
               <input
                 id="rcpt-tdsAmount"
                 type="number"
@@ -983,36 +1050,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                     Use it
                   </button>
                 </p>
-              ) : (
-                <p className="ui-caption mt-1">What the customer withheld and will deposit against our PAN.</p>
-              )}
-
-              {Number(formData.tdsAmount || 0) > 0 ? (
-                <div className="mt-2">
-                  <label className="ui-label" htmlFor="rcpt-tds-ledger">TDS receivable ledger</label>
-                  <select
-                    id="rcpt-tds-ledger"
-                    className="ui-select w-full"
-                    value={formData.tdsLedgerId || ''}
-                    onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
-                  >
-                    <option value="">Select ledger</option>
-                    {tdsReceivableLedgers.map((l) => (
-                      <option key={l.id} value={String(l.id)}>{l.name}</option>
-                    ))}
-                  </select>
-                  {!tdsReceivableLedgers.length ? (
-                    <p className="ui-caption mt-1">
-                      No TDS Receivable ledger is mapped to this customer’s nature yet.
-                    </p>
-                  ) : null}
-                </div>
               ) : null}
             </div>
-
-            {/* Bank and other charges were boxes that shrank the cash and
-                posted nowhere. They are allocation rows now, naming the
-                account they belong to. */}
           </div>
           {computed.deductions > 0 ? (
             <p className="mt-2 text-xs ui-muted">
@@ -1147,18 +1186,19 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         </div>
       </div>
 
-      {/* One line, half the width, and called what it is: this is the sentence
-          the ledger prints beside the entry, not a notepad. Three rows of
-          textarea invited a paragraph nothing would ever show. */}
-      <div className="sm:w-1/2">
-        <label className="ui-label" htmlFor="rcpt-narration">Narration</label>
-        <input
-          id="rcpt-narration"
-          type="text"
-          value={formData.narration}
-          onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
+      {/* Notes and narration are two different things kept apart: the narration
+          is the line the ledger prints beside the entry, up in the head with
+          the rest of the document; this is whatever else the operator wants to
+          record against it. */}
+      <div>
+        <label className="ui-label" htmlFor="rcpt-notes">Notes</label>
+        <textarea
+          id="rcpt-notes"
+          value={formData.notes}
+          onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
           className="ui-input w-full"
-          placeholder="What this receipt is for"
+          rows={3}
+          placeholder="Add any additional notes here..."
         />
       </div>
 
