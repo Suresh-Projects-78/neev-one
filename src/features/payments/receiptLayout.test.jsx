@@ -139,6 +139,32 @@ describe('the receipt summary', () => {
 });
 
 describe('the allocation table', () => {
+  const headers = () =>
+    [...screen.getByText(/Ledger allocation/i).closest('section').querySelectorAll('th')]
+      .map((th) => th.textContent.replace('*', '').trim());
+
+  it('gives the bills a column of their own, between the amount and the action', () => {
+    render(<Host />);
+    /* The amount used to be pushed to the far right of whatever the ledger
+       column left over, so a figure sat half a screen from its own row, and
+       the bills link shared the amount's cell. */
+    expect(headers()).toEqual(['#', 'Ledger', 'Amount', 'Outstanding Bills', 'Action']);
+  });
+
+  it('keeps the ledger from eating the row', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    render(<Host />);
+    const table = screen.getByText(/Ledger allocation/i).closest('section').querySelector('table');
+    const [, ledger, amount] = [...table.querySelectorAll('th')];
+    expect(ledger.style.width).toBe('34%');
+    expect(amount.style.width).toBe('20%');
+
+    /* And the amount fills its cell rather than hugging one edge of it. */
+    await user.selectOptions(screen.getByLabelText(/Account, allocation row 1/i), '401');
+    expect(screen.getByLabelText(/Amount, allocation row 1/i).className).toMatch(/w-full/);
+  });
+
   it('does not cry unallocated before anything has been entered', () => {
     render(<Host />);
     expect(screen.queryByText('Unallocated')).toBeNull();
@@ -160,6 +186,27 @@ describe('the allocation table', () => {
  * things that kept going missing were never the ones under test, and a list
  * checked by eye is a list that drifts.
  */
+describe('the page reads in the order it is worked in', () => {
+  it('goes details, allocation, TDS, summary, notes', () => {
+    render(<Host tds />);
+    const sections = [...document.querySelectorAll('h3')].map((h) => h.textContent.trim());
+    /* TDS used to sit above the allocation, asking what was withheld from a
+       figure that had not been named yet. */
+    expect(sections).toEqual([
+      'New Receipt',
+      'Receipt Details',
+      'Ledger allocation',
+      'TDS (optional)',
+    ]);
+    const order = ['Receipt Details', 'Ledger allocation', 'TDS (optional)', 'Receipt Summary', 'Notes'];
+    const tops = order.map((t) => {
+      const el = t === 'Notes' ? screen.getByLabelText('Notes') : screen.getByText(t);
+      return [...document.querySelectorAll('*')].indexOf(el);
+    });
+    expect(tops).toEqual([...tops].sort((a, b) => a - b));
+  });
+});
+
 describe('nothing on the screen has gone missing', () => {
   const CHECKS = [
     ['Receipt Details', () => screen.getByText('Receipt Details')],

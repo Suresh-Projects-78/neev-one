@@ -85,12 +85,19 @@ export const AllocationTable = ({
           <thead className="ui-sunken">
             <tr>
               <th className="ui-th w-12">#</th>
-              <th className="ui-th" style={{ width: '42%' }}>
+              {/*
+                The ledger used to take 42% and the amount was pushed to the
+                far right of whatever was left, so a figure sat half a screen
+                from the row it belonged to. Fixed widths, and the bills get a
+                column of their own rather than sharing the amount's cell.
+              */}
+              <th className="ui-th" style={{ width: '34%' }}>
                 Ledger <span className="text-[rgb(var(--neg))]">*</span>
               </th>
-              <th className="ui-th ui-num">
+              <th className="ui-th ui-num" style={{ width: '20%' }}>
                 Amount <span className="text-[rgb(var(--neg))]">*</span>
               </th>
+              <th className="ui-th" style={{ width: '24%' }}>Outstanding Bills</th>
               <th className="ui-th w-16 text-center">Action</th>
             </tr>
           </thead>
@@ -122,37 +129,43 @@ export const AllocationTable = ({
                 </td>
                 <td className="px-3 py-2">
                   <div className="ui-row-slot"><div>
-                  <div className="flex items-center justify-end gap-4">
-                    {/* A party row says where its money went, and offers the
-                        dialog that decides it. An ordinary ledger row is the
-                        whole answer already, so it shows neither. */}
-                    {meta(i).isParty ? (
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span className="text-sm ui-muted truncate">{meta(i).status}</span>
-                        <button
-                          type="button"
-                          onClick={meta(i).onViewBills}
-                          className="text-sm font-medium underline underline-offset-2 flex-none"
-                          style={{ color: 'rgb(var(--brand-ink))' }}
-                          disabled={disabled}
-                        >
-                          View Bills{meta(i).available > 0 ? ` (${meta(i).available})` : ''}
-                        </button>
-                      </div>
-                    ) : null}
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={row.amount ?? ''}
-                      onChange={(e) => set(i, { amount: e.target.value })}
-                      onBlur={() => meta(i).onAmountSettled?.()}
-                      className="ui-input ui-input-plain ui-mono w-36 text-right flex-none"
-                      placeholder="0.00"
-                      aria-label={`Amount, allocation row ${i + 1}`}
-                      disabled={disabled}
-                    />
-                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={row.amount ?? ''}
+                    onChange={(e) => set(i, { amount: e.target.value })}
+                    onBlur={() => meta(i).onAmountSettled?.()}
+                    className="ui-input ui-input-plain ui-mono w-full text-right"
+                    placeholder="0.00"
+                    aria-label={`Amount, allocation row ${i + 1}`}
+                    disabled={disabled}
+                  />
+                  </div></div>
+                </td>
+
+                {/* A customer's row can say which of their invoices the money
+                    settled. Every other ledger is the whole answer already, so
+                    its cell stays empty rather than offering a dialog with
+                    nothing to put in it. */}
+                <td className="px-3 py-2">
+                  <div className="ui-row-slot"><div>
+                  {meta(i).isParty ? (
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <button
+                        type="button"
+                        onClick={meta(i).onViewBills}
+                        className="text-sm font-medium underline underline-offset-2 text-start w-fit"
+                        style={{ color: 'rgb(var(--brand-ink))' }}
+                        disabled={disabled}
+                      >
+                        View Bills{meta(i).available > 0 ? ` (${meta(i).available})` : ''}
+                      </button>
+                      {meta(i).status ? (
+                        <span className="ui-caption truncate">{meta(i).status}</span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   </div></div>
                 </td>
                 <td className="px-2 py-2 text-center">

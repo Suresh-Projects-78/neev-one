@@ -100,10 +100,18 @@ const selectInvoice = async (user) => {
 
 describe('what the receipt offers', () => {
   /* §2: with TDS off the compact control is not offered at all. */
-  it('offers no TDS control while TDS is switched off for the company', () => {
+  it('shows the TDS section but will not take a figure while TDS is off', () => {
+    /*
+     * It used to vanish entirely, which is defensible until somebody looks for
+     * it, finds nothing, and cannot tell a missing feature from a setting. The
+     * section states the setting and its controls do not take input.
+     */
     const off = { ...COMPANY, profile: { taxCompliances: { tds: { enabled: false } } } };
     render(<Host company={off} />);
-    expect(screen.queryByLabelText('TDS Amount')).toBeNull();
+    expect(screen.getByText('TDS (optional)')).toBeInTheDocument();
+    expect(screen.getByLabelText('TDS Amount').disabled).toBe(true);
+    expect(screen.getByLabelText('TDS Ledger').disabled).toBe(true);
+    expect(screen.getByText(/Settings → Tax & Compliance/)).toBeInTheDocument();
   });
 
   beforeEach(() => localStorage.clear());

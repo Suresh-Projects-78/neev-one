@@ -974,94 +974,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         </div>
       </section>
 
-        {/*
-          What the customer withheld on the way.
-
-          It never reached the bank and it still settled the invoice, so it is
-          stated here and posted as its own ledger line against the TDS
-          receivable, with the customer credited for the whole amount.
-
-          This used to be a tinted "Deductions" band holding three boxes. Bank
-          and other charges became allocation rows, which left TDS alone in it
-          — and with TDS switched off for a company, an empty orange rectangle
-          with a heading and nothing under it.
-        */}
-        {tdsEnabledHere ? (
-        <section>
-          <h3 className="ui-t-sec">TDS (optional)</h3>
-          <p className="ui-caption mt-0.5 mb-2">
-            If TDS is deducted from the receipt, select the TDS ledger and enter the amount.
-          </p>
-          {/*
-            Two fields, side by side, both always here.
-
-            The ledger used to appear only once an amount had been typed, which
-            made the section look like one field until you filled it in and
-            hid the very thing that decides where the tax lands. They are one
-            question asked in two parts.
-          */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-tds-ledger">TDS Ledger</label>
-              <select
-                id="rcpt-tds-ledger"
-                className="ui-select w-full"
-                value={formData.tdsLedgerId || ''}
-                onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
-              >
-                <option value="">Select TDS ledger</option>
-                {tdsReceivableLedgers.map((l) => (
-                  <option key={l.id} value={String(l.id)}>{l.name}</option>
-                ))}
-              </select>
-              {Number(formData.tdsAmount || 0) > 0 && !tdsReceivableLedgers.length ? (
-                <p className="ui-caption mt-1">
-                  No TDS Receivable ledger is mapped to this customer’s nature yet.
-                </p>
-              ) : null}
-            </div>
-
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-tdsAmount">TDS Amount</label>
-              <input
-                id="rcpt-tdsAmount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.tdsAmount}
-                onChange={(e) => setFormData((p) => ({ ...p, tdsAmount: e.target.value }))}
-                className="ui-input ui-money w-full"
-                placeholder="0.00"
-              />
-              {tdsExpectedOnAllocated > 0 && Number(formData.tdsAmount || 0) <= 0 ? (
-                <p className="ui-caption mt-1">
-                  The invoices expected {formatMoney(tdsExpectedOnAllocated, currentCompany)}.{' '}
-                  <button
-                    type="button"
-                    className="underline underline-offset-2"
-                    onClick={() =>
-                      setFormData((p) => ({
-                        ...p,
-                        tdsAmount: String(tdsExpectedOnAllocated),
-                        tdsLedgerId: String(p.tdsLedgerId || tdsReceivableLedgers[0]?.id || ''),
-                      }))
-                    }
-                  >
-                    Use it
-                  </button>
-                </p>
-              ) : null}
-            </div>
-          </div>
-          {computed.deductions > 0 ? (
-            <p className="mt-2 text-xs ui-muted">
-              {formatMoney(computed.deductions, currentCompany)} deducted ·{' '}
-              {formatMoney(computed.netCash, currentCompany)} actually received into the account.
-            </p>
-          ) : null}
-        </section>
-        ) : null}
-
         <AllocationTable
           rows={ledgerRows}
           onChange={setLedgerRows}
@@ -1136,7 +1048,101 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           />
         ) : null}
 
+        {/*
+          What the customer withheld on the way.
 
+          It never reached the bank and it still settled the invoice, so it is
+          stated here and posted as its own ledger line against the TDS
+          receivable, with the customer credited for the whole amount.
+
+          This used to be a tinted "Deductions" band holding three boxes. Bank
+          and other charges became allocation rows, which left TDS alone in it
+          — and with TDS switched off for a company, an empty orange rectangle
+          with a heading and nothing under it.
+        */}
+        <section>
+          <h3 className="ui-t-sec">TDS (optional)</h3>
+          {/*
+            The section is always drawn, and says so when it cannot be used.
+            It used to vanish entirely for a company with TDS switched off,
+            which is defensible — until somebody looks for it, finds nothing,
+            and has no way to tell a missing feature from a setting.
+          */}
+          <p className="ui-caption mt-0.5 mb-2">
+            {tdsEnabledHere
+              ? 'If TDS is deducted from the receipt, select the TDS ledger and enter the amount.'
+              : 'TDS is switched off for this company. Turn it on under Settings → Tax & Compliance to record what a customer withheld.'}
+          </p>
+          {/*
+            Two fields, side by side, both always here.
+
+            The ledger used to appear only once an amount had been typed, which
+            made the section look like one field until you filled it in and
+            hid the very thing that decides where the tax lands. They are one
+            question asked in two parts.
+          */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-tds-ledger">TDS Ledger</label>
+              <select
+                id="rcpt-tds-ledger"
+                className="ui-select w-full"
+                value={formData.tdsLedgerId || ''}
+                onChange={(e) => setFormData((p) => ({ ...p, tdsLedgerId: e.target.value }))}
+                disabled={!tdsEnabledHere}
+              >
+                <option value="">Select TDS ledger</option>
+                {tdsReceivableLedgers.map((l) => (
+                  <option key={l.id} value={String(l.id)}>{l.name}</option>
+                ))}
+              </select>
+              {Number(formData.tdsAmount || 0) > 0 && !tdsReceivableLedgers.length ? (
+                <p className="ui-caption mt-1">
+                  No TDS Receivable ledger is mapped to this customer’s nature yet.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-tdsAmount">TDS Amount</label>
+              <input
+                id="rcpt-tdsAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.tdsAmount}
+                onChange={(e) => setFormData((p) => ({ ...p, tdsAmount: e.target.value }))}
+                className="ui-input ui-money w-full"
+                placeholder="0.00"
+                disabled={!tdsEnabledHere}
+              />
+              {tdsExpectedOnAllocated > 0 && Number(formData.tdsAmount || 0) <= 0 ? (
+                <p className="ui-caption mt-1">
+                  The invoices expected {formatMoney(tdsExpectedOnAllocated, currentCompany)}.{' '}
+                  <button
+                    type="button"
+                    className="underline underline-offset-2"
+                    onClick={() =>
+                      setFormData((p) => ({
+                        ...p,
+                        tdsAmount: String(tdsExpectedOnAllocated),
+                        tdsLedgerId: String(p.tdsLedgerId || tdsReceivableLedgers[0]?.id || ''),
+                      }))
+                    }
+                  >
+                    Use it
+                  </button>
+                </p>
+              ) : null}
+            </div>
+          </div>
+          {computed.deductions > 0 ? (
+            <p className="mt-2 text-xs ui-muted">
+              {formatMoney(computed.deductions, currentCompany)} deducted ·{' '}
+              {formatMoney(computed.netCash, currentCompany)} actually received into the account.
+            </p>
+          ) : null}
+        </section>
 
       {/*
         The receipt in one column: what settled the invoice, what came off it,
