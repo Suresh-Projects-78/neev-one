@@ -151,9 +151,7 @@ describe('the allocation table', () => {
     expect(headers()).toEqual(['#', 'Ledger', 'Amount', 'Outstanding Bills', 'Action']);
   });
 
-  it('keeps the ledger from eating the row', async () => {
-    const { default: userEvent } = await import('@testing-library/user-event');
-    const user = userEvent.setup();
+  it('keeps the ledger from eating the row', () => {
     render(<Host />);
     const table = screen.getByText(/Ledger allocation/i).closest('section').querySelector('table');
     const [, ledger, amount] = [...table.querySelectorAll('th')];
@@ -161,7 +159,6 @@ describe('the allocation table', () => {
     expect(amount.style.width).toBe('20%');
 
     /* And the amount fills its cell rather than hugging one edge of it. */
-    await user.selectOptions(screen.getByLabelText(/Account, allocation row 1/i), '401');
     expect(screen.getByLabelText(/Amount, allocation row 1/i).className).toMatch(/w-full/);
   });
 

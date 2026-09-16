@@ -117,8 +117,9 @@ describe('a receipt started from an invoice row', () => {
     /* The party is a ledger row now, so the prefill has to land there — on
        the row that stands for the party, named. (The name is also in the
        ledger select's options, so the assertion is scoped to that row.) */
+    /* The ledger field is a type-ahead, so the chosen party is its value. */
     const partyRow = (await screen.findByRole('button', { name: /View Bills/i })).closest('tr');
-    expect(within(partyRow).getByText('Acme Traders')).toBeInTheDocument();
+    expect(within(partyRow).getByRole('combobox').value).toBe('Acme Traders');
   });
 
   it('still prefers the id when the document has one', async () => {
@@ -133,7 +134,8 @@ describe('a receipt started from an invoice row', () => {
       />
     );
 
+    /* The ledger field is a type-ahead, so the chosen party is its value. */
     const partyRow = (await screen.findByRole('button', { name: /View Bills/i })).closest('tr');
-    expect(within(partyRow).getByText('Acme Traders')).toBeInTheDocument();
+    expect(within(partyRow).getByRole('combobox').value).toBe('Acme Traders');
   });
 });

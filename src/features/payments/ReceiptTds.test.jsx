@@ -79,11 +79,11 @@ const Host = ({ onSaved = () => {}, company = COMPANY }) => {
 };
 
 const pickCustomer = async (user) => {
-  /* The party is a ledger now, not a picker above the ledgers: choosing the
-     customer's control account in the first allocation row IS choosing the
-     party, which is the motion the operator performs. */
-  const select = screen.getByLabelText(/Account, allocation row 1/i);
-  await user.selectOptions(select, CUSTOMER_ACCOUNT_ID);
+  /* The party is a ledger now, and the ledger is typed: the operator types a
+     name, the list narrows, and the suggestion is taken. */
+  await user.click(screen.getByLabelText(/Account, allocation row 1/i));
+  await user.type(screen.getByLabelText(/Account, allocation row 1/i), 'ABC');
+  await user.click(await screen.findByRole('option', { name: /ABC Industries/ }));
 };
 
 const selectInvoice = async (user) => {

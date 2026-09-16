@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
+import LedgerField from '../../components/pickers/LedgerField';
 import { allocationSummary, emptyAllocationRow } from './allocationLines';
 
 /**
@@ -27,6 +28,11 @@ export const AllocationTable = ({
   noun = 'payment',
   money,
   disabled = false,
+  /* Only needed to create a ledger from the row; without them the field is a
+     type-ahead over `ledgerOptions` and nothing more. */
+  db = null,
+  setDb = null,
+  currentCompany = null,
   /*
    * What a given row is, asked per row.
    *
@@ -113,18 +119,21 @@ export const AllocationTable = ({
                 </td>
                 <td className="px-3 py-2">
                   <div className="ui-row-slot"><div>
-                  <select
+                  {/* Typed, not hunted for. A select holding every ledger in
+                      the book is a scroll through a hundred names to reach one
+                      you already knew, and it cannot offer the ledger that
+                      does not exist yet. */}
+                  <LedgerField
+                    db={db}
+                    setDb={setDb}
+                    currentCompany={currentCompany}
+                    options={ledgerOptions}
                     value={row.ledgerId || ''}
-                    onChange={(e) => set(i, { ledgerId: e.target.value })}
-                    className="ui-select w-full"
-                    aria-label={`Account, allocation row ${i + 1}`}
+                    onChange={(id) => set(i, { ledgerId: id })}
+                    ariaLabel={`Account, allocation row ${i + 1}`}
                     disabled={disabled}
-                  >
-                    <option value="">Select ledger</option>
-                    {ledgerOptions.map((o) => (
-                      <option key={o.id} value={String(o.id)}>{o.name}</option>
-                    ))}
-                  </select>
+                    canCreate={Boolean(setDb && currentCompany)}
+                  />
                   </div></div>
                 </td>
                 <td className="px-3 py-2">

@@ -62,7 +62,9 @@ const Host = ({ onSaved = () => {} }) => {
 const fill = async (user) => {
   /* No party picker and no amount box: the receipt is worth whatever is
      allocated, so a ledger and a figure on one row is the whole entry. */
-  await user.selectOptions(screen.getByLabelText(/Account, allocation row 1/i), '401');
+  await user.click(screen.getByLabelText(/Account, allocation row 1/i));
+  await user.type(screen.getByLabelText(/Account, allocation row 1/i), 'Interest');
+  await user.click(await screen.findByRole('option', { name: /Interest Received/ }));
   fireEvent.change(screen.getByLabelText(/Amount, allocation row 1/i), { target: { value: '5000' } });
 };
 

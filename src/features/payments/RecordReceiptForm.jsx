@@ -978,6 +978,9 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           rows={ledgerRows}
           onChange={setLedgerRows}
           ledgerOptions={allocationLedgers}
+          db={db}
+          setDb={setDb}
+          currentCompany={currentCompany}
           amount={receiptAmountFromRows}
           documentTotal={0}
           documentLabel="Invoices settled"
