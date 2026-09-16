@@ -12909,7 +12909,7 @@ const AppShell = () => {
                   setDb={setDb}
                   currentCompany={currentCompany}
                   initialData={receiptEditor.initial || null}
-                  screenTitle="Record Receipt"
+                  screenTitle={receiptEditor.initial?.id ? 'Edit Receipt' : 'New Receipt'}
                   onBack={() => setReceiptEditor({ open: false })}
                   onClose={() => setReceiptEditor({ open: false })}
                 />

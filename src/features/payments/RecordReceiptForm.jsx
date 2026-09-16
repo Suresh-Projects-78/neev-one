@@ -231,12 +231,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       .filter((inv) => canCollectAgainstInvoice(inv, creditNotes));
   }, [partyCustomerId, invoices]);
 
-  const selectedInvoiceIds = useMemo(() => {
-    return Object.entries(allocations)
-      .filter(([, v]) => Boolean(v?.selected))
-      .map(([k]) => Number(k))
-      .filter((n) => Number.isFinite(n));
-  }, [allocations]);
 
 
   const allocationLedgers = useMemo(() => {
@@ -813,6 +807,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           bottom of a long list of outstanding invoices. */}
       <DocFormActions
         title={screenTitle}
+        subtitle={screenTitle ? 'Record money received into your business' : ''}
         onBack={onBack}
         sticky={Boolean(screenTitle)}
         primaryLabel={saving ? 'Recording…' : 'Record Receipt'}
@@ -842,16 +837,19 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       ) : null}
 
       {/*
-        The head of the document, in the invoice's two columns: who paid and
-        where the money landed on the left, the paperwork — date and amount —
-        on the right, ruled off between them. It was a flat two-across band in
-        which the date sat beside the amount and the account beside the
-        reference, so nothing said which of them described what.
+        The head of the document, on one three-column grid.
+
+        It used to be two six-column halves with a rule down the middle —
+        "who paid and where it landed" on the left, "the paperwork" on the
+        right. That split earned its rule when the left half held a party and
+        an amount. With both gone it was dividing three fields from two, and
+        the fields either side of it no longer lined up with each other.
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
-        <div className="lg:col-span-6 space-y-4">
+      <section>
+        <h3 className="ui-t-sec mb-3">Receipt Details</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
         {!hideMode ? (
-          <div>
+          <div className="min-w-0">
             <label className="ui-label">
               Received into <span className="text-[rgb(var(--neg))]">*</span>
             </label>
@@ -886,27 +884,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           </div>
         ) : null}
 
-        {/* The instrument, under the account it arrived in — a UTR belongs to
-            the bank line it describes, not to the paperwork column across the
-            rule. */}
-        <div>
-          <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
-          <input
-            id="rcpt-reference"
-            type="text"
-            value={formData.reference}
-            onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-            className="ui-input w-full"
-            placeholder="Txn / UTR / Cheque no"
-          />
-        </div>
-        </div>
-
-        <div
-          className="lg:col-span-6 space-y-4 lg:ps-6"
-          style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <DocNumberField
               className="min-w-0"
               id="rcpt-number"
@@ -941,11 +918,22 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 required
               />
             </div>
-          </div>
 
-
+            {/* Fourth cell, so it falls directly under "Received into" — a UTR
+                belongs to the account line it describes. */}
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
+              <input
+                id="rcpt-reference"
+                type="text"
+                value={formData.reference}
+                onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+                className="ui-input w-full"
+                placeholder="Txn / UTR / Cheque no"
+              />
+            </div>
         </div>
-      </div>
+      </section>
 
         {/*
           What the customer withheld on the way.
@@ -1117,46 +1105,43 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         should match the bank statement, so it is the one set apart.
       */}
       <div className="ui-card p-4">
-        <div className="ui-t-sec mb-3">Receipt summary</div>
+        <div className="ui-t-sec mb-3">Receipt Summary</div>
+        {/*
+          Three figures, because there are three.
+
+          It used to list eight — amount received, TDS, bank charges, other
+          charges, total allocated, advance, invoices selected, net — of which
+          two named boxes that no longer exist and three were the same number
+          under different words. What is left is what the allocation came to,
+          what the customer withheld, and what the bank will therefore show.
+        */}
         <div className="space-y-1.5 text-sm">
           <div className="flex justify-between">
-            <span className="ui-muted">Amount received</span>
+            <span className="ui-muted">Total allocation</span>
             <span className="ui-money">{formatMoney(computed.totalAmount, currentCompany)}</span>
           </div>
-          {computed.tds > 0 ? (
+          <div className="flex justify-between">
+            <span className="ui-muted">TDS deducted</span>
+            <span className="ui-money">{formatMoney(computed.tds, currentCompany)}</span>
+          </div>
+          {computed.advance > 0 ? (
+            /* Only when there is one: money waiting on a party is worth saying,
+               and a line reading nought on every other receipt is not. */
             <div className="flex justify-between">
-              <span className="ui-muted">TDS deduction</span>
-              <span className="ui-mono">− {formatMoney(computed.tds, currentCompany)}</span>
-            </div>
-          ) : null}
-          {computed.bankCharges > 0 ? (
-            <div className="flex justify-between">
-              <span className="ui-muted">Bank charges</span>
-              <span className="ui-mono">− {formatMoney(computed.bankCharges, currentCompany)}</span>
-            </div>
-          ) : null}
-          {computed.otherCharges > 0 ? (
-            <div className="flex justify-between">
-              <span className="ui-muted">Other charges</span>
-              <span className="ui-mono">− {formatMoney(computed.otherCharges, currentCompany)}</span>
+              <span className="ui-muted">On account (unallocated)</span>
+              <span className="ui-money">{formatMoney(computed.advance, currentCompany)}</span>
             </div>
           ) : null}
 
-          <div className="flex justify-between pt-1.5" style={{ borderTop: '1px solid rgb(var(--border))' }}>
-            <span className="ui-muted">Total allocated</span>
-            <span className="ui-money">{formatMoney(computed.allocated, currentCompany)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="ui-muted">Advance (unallocated)</span>
-            <span className="ui-money">{formatMoney(computed.advance, currentCompany)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="ui-muted">Invoices selected</span>
-            <span className="ui-mono">{selectedInvoiceIds.length}</span>
-          </div>
-
-          <div className="ui-total-row pt-2" style={{ borderTop: '1px solid rgb(var(--border))' }}>
-            <span>Net into the account</span>
+          <div
+            className="flex justify-between items-center mt-2 rounded-lg px-3 py-2"
+            style={{
+              backgroundColor: 'rgb(var(--brand) / 0.08)',
+              color: 'rgb(var(--brand-ink))',
+              fontWeight: 600,
+            }}
+          >
+            <span>Bank amount (Total receipt)</span>
             <span className="ui-money">{formatMoney(computed.netCash, currentCompany)}</span>
           </div>
         </div>

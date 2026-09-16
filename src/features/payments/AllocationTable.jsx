@@ -75,7 +75,7 @@ export const AllocationTable = ({
           <h3 className="ui-t-sec">{heading}</h3>
           <p className="ui-caption mt-0.5">
             Pick a ledger and enter the amount. Against a customer, the
-            outstanding invoices open so the money can be placed on them.
+            outstanding invoices open so the {noun} can be placed on them.
           </p>
         </div>
       </div>
@@ -85,8 +85,12 @@ export const AllocationTable = ({
           <thead className="ui-sunken">
             <tr>
               <th className="ui-th w-12">#</th>
-              <th className="ui-th">Ledger <span className="text-[rgb(var(--neg))]">*</span></th>
-              <th className="ui-th ui-num">Amount <span className="text-[rgb(var(--neg))]">*</span></th>
+              <th className="ui-th" style={{ width: '42%' }}>
+                Ledger <span className="text-[rgb(var(--neg))]">*</span>
+              </th>
+              <th className="ui-th ui-num">
+                Amount <span className="text-[rgb(var(--neg))]">*</span>
+              </th>
               <th className="ui-th w-16 text-center">Action</th>
             </tr>
           </thead>
@@ -181,15 +185,17 @@ export const AllocationTable = ({
           </span>
           {/* The one figure on this form the user is steering toward, so the
               arrival at zero is worth seeing rather than blinking into place. */}
-          <span
-            style={{
-              color: summary.balanced ? 'rgb(var(--pos))' : 'rgb(var(--neg))',
-              transition: 'color var(--dur-surface) var(--ease-out)',
-            }}
-          >
-            {summary.balanced ? 'Fully allocated' : 'Unallocated'}
-            {summary.balanced ? null : <span className="ui-money ms-1">{money(summary.unallocated)}</span>}
-          </span>
+          {summary.allocated > 0 || summary.unallocated > 0 ? (
+            <span
+              style={{
+                color: summary.balanced ? 'rgb(var(--pos))' : 'rgb(var(--neg))',
+                transition: 'color var(--dur-surface) var(--ease-out)',
+              }}
+            >
+              {summary.balanced ? 'Fully allocated' : 'Unallocated'}
+              {summary.balanced ? null : <span className="ui-money ms-1">{money(summary.unallocated)}</span>}
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -202,10 +208,7 @@ export const AllocationTable = ({
         </button>
       ) : null}
 
-      <p className="ui-caption mt-1.5">
-        One {noun} is one line against the bank and as many lines as it needs against everything else. The
-        allocation has to come to the {noun} before it can be recorded.
-      </p>
+
     </section>
   );
 };
