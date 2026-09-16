@@ -27,6 +27,16 @@ export const AllocationTable = ({
   noun = 'payment',
   money,
   disabled = false,
+  /*
+   * The party's own line, when there is a party.
+   *
+   * Presentational: it is not one of `rows` and never reaches the journal,
+   * because settling invoices already credits the customer through the
+   * document side. It is here so the one allocation a receipt usually makes
+   * appears in the list of allocations rather than only as a total under it —
+   * and so the link that opens the bills has an obvious place to live.
+   */
+  partyRow = null,
 }) => {
   const summary = allocationSummary({ rows, documentTotal, amount });
   const set = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -80,6 +90,40 @@ export const AllocationTable = ({
             </tr>
           </thead>
           <tbody className="divide-y">
+            {partyRow ? (
+              <tr data-party-row="true">
+                <td className="px-3 py-2">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-sm font-medium truncate">{partyRow.name}</span>
+                    <button
+                      type="button"
+                      onClick={partyRow.onViewBills}
+                      className="text-xs text-start underline underline-offset-2 w-fit"
+                      style={{ color: 'rgb(var(--link))' }}
+                    >
+                      {partyRow.count > 0
+                        ? `View outstanding ${partyRow.noun}s · ${partyRow.count} allocated`
+                        : `View outstanding ${partyRow.noun}s`}
+                    </button>
+                  </div>
+                </td>
+                <td className="px-3 py-2">
+                  {/* Read-only on purpose: this figure is the sum of what was
+                      ticked in the dialog, and a box that can be typed into
+                      but is overwritten by the next Apply is a lie. */}
+                  <div className="ui-money text-right tabular-nums">{money(partyRow.amount)}</div>
+                </td>
+                <td className="px-3 py-2">
+                  <span className="text-sm ui-muted">
+                    {partyRow.count > 0
+                      ? `Against ${partyRow.count} ${partyRow.noun}${partyRow.count === 1 ? '' : 's'}`
+                      : 'Nothing allocated yet'}
+                  </span>
+                </td>
+                <td className="px-2 py-2" />
+              </tr>
+            ) : null}
+
             {rows.map((row, i) => (
               <tr
                 key={i}

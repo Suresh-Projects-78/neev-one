@@ -14,10 +14,12 @@ import { allocationError, allocationJournalLines, emptyAllocationRow, usableRows
 import { postJournalToLedger } from '../../utils/journalSync';
 import { createPayment } from '../../api/payments';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
+import OutstandingBillsModal from './OutstandingBillsModal';
 import { getNextNumericId } from '../../utils/ids';
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
 import DocNumberField from '../../components/DocNumberField';
 import { formatMoney, round2 } from '../../utils/money';
+import { getCustomerDisplayName } from '../../utils/contacts';
 import { tdsEventFrom, tdsLedgersFor } from '../tds/engine';
 import { natureForSection } from '../tds/ruleMaster';
 import { tdsGroupSide } from '../../utils/tdsLedgers';
@@ -95,6 +97,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     mode: initial.mode,
     ledgerAccountId: initial.ledgerAccountId,
     reference: initial.reference,
+    narration: String(initialData?.narration || ''),
     notes: initial.notes,
     // Deducted on the way: tax the customer withheld, and what the bank took.
     tdsAmount: initialData?.tdsAmount ? String(initialData.tdsAmount) : '',
@@ -316,47 +319,30 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
   const autoNumbered = !initialData?.id && isReceiptAuto && !numberTouched;
   const receiptNumberValue = autoNumbered ? generatedReceiptNumber : formData.number;
 
-  const toggleInvoice = (inv, selected) => {
-    const key = String(inv.id);
+  /*
+   * The dialog that fills the party's allocation in.
+   *
+   * A receipt has one party, so there is one set of bills and one boolean. The
+   * ticking and the figures live inside the dialog until Apply, which is what
+   * lets Cancel mean cancel.
+   */
+  const [billsOpen, setBillsOpen] = useState(false);
 
-    setAllocations((prev) => {
-      const next = { ...prev };
-      const existing = next[key] || { selected: false, amount: 0 };
-
-      const nextSelected = Boolean(selected);
-      let nextAmount = existing.amount;
-
-      if (nextSelected && (!Number(nextAmount) || Number(nextAmount) <= 0)) {
-        // Default allocation to remaining (or full outstanding if no amount entered).
-        const receiptAmount = Number(formData.amount ?? 0);
-        const totalAmount = Number.isFinite(receiptAmount) ? Math.max(0, receiptAmount) : 0;
-
-        const alreadyAllocated = Object.entries(prev)
-          .filter(([entryKey, v]) => entryKey !== key && v?.selected)
-          .reduce((sum, [, v]) => {
-            const amt = Number(v?.amount ?? 0);
-            return sum + (Number.isFinite(amt) ? Math.max(0, amt) : 0);
-          }, 0);
-
-        const remaining = Math.max(0, totalAmount - alreadyAllocated);
-        const suggested = Math.min(getInvoiceBalance(inv, creditNotes), remaining || getInvoiceBalance(inv, creditNotes));
-        nextAmount = round2(suggested);
-      }
-
-      next[key] = { ...existing, selected: nextSelected, amount: nextAmount };
-      return next;
-    });
-  };
-
-  const setInvoiceAmount = (inv, amount) => {
-    const key = String(inv.id);
-    setAllocations((prev) => {
-      const next = { ...prev };
-      const existing = next[key] || { selected: true, amount: 0 };
-      next[key] = { ...existing, selected: true, amount };
-      return next;
-    });
-  };
+  /* The bills as the dialog needs them. Assembled here because what is still
+     owed on an invoice depends on credit notes, which the dialog has no
+     business knowing about. */
+  const billsForModal = useMemo(
+    () =>
+      outstandingInvoices.map((inv) => ({
+        id: inv.id,
+        number: inv.number,
+        date: inv.date,
+        total: Number(inv.total ?? inv.grandTotal ?? 0),
+        tdsExpected: Number(inv.tdsExpectedAmount ?? inv.tdsAmount ?? 0),
+        outstanding: getInvoiceBalance(inv, creditNotes),
+      })),
+    [outstandingInvoices, creditNotes]
+  );
 
   /*
    * Section 269ST: two lakh or more in cash from one person in one day, or
@@ -585,6 +571,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       backendPaymentId: posted?.id ? String(posted.id) : undefined,
       ledgerAccountId: String(ledgerAccountId || "").trim() || undefined,
       reference: formData.reference,
+      narration: String(formData.narration || '').trim() || undefined,
       notes: formData.notes,
       createdAt: new Date().toISOString(),
     };
@@ -669,7 +656,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           chartRows: accounts,
           entry: {
             date: String(formData.date).slice(0, 10),
-            narration: `Receipt ${receiptNo}`,
+            narration: String(formData.narration || '').trim() || `Receipt ${receiptNo}`,
             lines: allocationJournalLines({
               rows: ledgerLines,
               direction: 'IN',
@@ -804,6 +791,30 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               ))}
             </select>
             <FieldError error={fieldErrors.error('ledgerAccountId')} id={fieldErrors.errorId('ledgerAccountId')} />
+
+            {/* The mode was written on every receipt and readable on none of
+                them: it was saved from state, defaulted to Cash, and had no
+                control. §269ST is counted on it, so a bank transfer recorded
+                through this form was being counted as cash against the
+                two-lakh limit. */}
+            <div className="mt-4">
+              <label className="ui-label" htmlFor="rcpt-mode">Receipt Mode</label>
+              <select
+                id="rcpt-mode"
+                value={formData.mode}
+                onChange={(e) => setFormData((p) => ({ ...p, mode: e.target.value }))}
+                className="ui-select w-full"
+              >
+                <option>Cash</option>
+                <option>Bank</option>
+                <option>Cheque</option>
+                <option>NEFT</option>
+                <option>RTGS</option>
+                <option>UPI</option>
+                <option>Card</option>
+                <option>Other</option>
+              </select>
+            </div>
             {modesError ? (
               <p className="mt-1 text-sm text-[rgb(var(--neg))]">{modesError}</p>
             ) : !modesLoading && modes.length === 0 ? (
@@ -879,7 +890,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           </div>
 
           <div>
-            <label className="ui-label" htmlFor="rcpt-reference">Reference</label>
+            <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
             <input
               id="rcpt-reference"
               type="text"
@@ -887,6 +898,21 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
               className="ui-input w-full"
               placeholder="Txn / UTR / Cheque no"
+            />
+          </div>
+
+          {/* What the ledger will read. It was hard-coded to "Receipt <no>",
+              which is the one thing the ledger already shows in the column
+              beside it — so every receipt in the book said nothing. */}
+          <div>
+            <label className="ui-label" htmlFor="rcpt-narration">Narration</label>
+            <input
+              id="rcpt-narration"
+              type="text"
+              value={formData.narration}
+              onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
+              className="ui-input w-full"
+              placeholder="What this receipt is for"
             />
           </div>
         </div>
@@ -983,10 +1009,37 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           amount={Number(formData.amount) || 0}
           documentTotal={computed.allocated}
           documentLabel="Invoices settled"
-          heading="Receipt allocation"
+          heading="Ledger allocation"
           noun="receipt"
           money={(v) => formatMoney(v, currentCompany)}
+          partyRow={
+            formData.customerId
+              ? {
+                  name: customerRecord ? getCustomerDisplayName(customerRecord) : 'Selected party',
+                  amount: computed.allocated,
+                  count: computed.lines.length,
+                  noun: 'invoice',
+                  onViewBills: () => setBillsOpen(true),
+                }
+              : null
+          }
         />
+
+        {billsOpen ? (
+          <OutstandingBillsModal
+            partyName={customerRecord ? getCustomerDisplayName(customerRecord) : ''}
+            noun="invoice"
+            bills={billsForModal}
+            value={allocations}
+            available={Number(formData.amount) || 0}
+            money={(v) => formatMoney(v, currentCompany)}
+            onClose={() => setBillsOpen(false)}
+            onApply={(next) => {
+              setAllocations(next);
+              setBillsOpen(false);
+            }}
+          />
+        ) : null}
 
 
 
@@ -1038,79 +1091,6 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             <span>Net into the account</span>
             <span className="ui-money">{formatMoney(computed.netCash, currentCompany)}</span>
           </div>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-medium">Outstanding Invoices</div>
-          {formData.customerId ? (
-            <div className="text-sm ui-muted">{outstandingInvoices.length} invoice(s)</div>
-          ) : (
-            <div className="text-sm ui-muted">Select party to load invoices</div>
-          )}
-        </div>
-
-        <div className="ui-surface rounded-xl shadow-sm overflow-hidden border">
-          <table className="ui-table w-full">
-            <thead className="ui-sunken border-b">
-              <tr>
-                <th className="ui-th w-12">Sel</th>
-                <th className="ui-th">Invoice #</th>
-                <th className="ui-th">Date</th>
-                <th className="ui-th ui-num">Outstanding</th>
-                <th className="ui-th ui-num">Allocate</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {!formData.customerId ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center ui-muted">
-                    Select party name to see outstanding invoices
-                  </td>
-                </tr>
-              ) : outstandingInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center ui-muted">
-                    No outstanding invoices. This receipt will be recorded as advance.
-                  </td>
-                </tr>
-              ) : (
-                outstandingInvoices.map((inv) => {
-                  const key = String(inv.id);
-                  const selected = Boolean(allocations[key]?.selected);
-                  const allocValue = allocations[key]?.amount ?? '';
-                  const bal = getInvoiceBalance(inv, creditNotes);
-
-                  return (
-                    <tr key={inv.id} className="ui-hover-sunken">
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          onChange={(e) => toggleInvoice(inv, e.target.checked)}
-                        />
-                      </td>
-                      <td className="ui-col-meta px-4 py-3">{inv.number || '-'}</td>
-                      <td className="ui-col-date px-4 py-3">{inv.date || '-'}</td>
-                      <td className="ui-col-amount px-4 py-3 text-right">{formatMoney(bal, currentCompany)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <input
-                          type="number"
-                          value={allocValue}
-                          onChange={(e) => setInvoiceAmount(inv, e.target.value)}
-                          className="ui-input w-32 px-2 py-1 text-right"
-                          min="0"
-                          step="0.01"
-                          disabled={!formData.amount}
-                        />
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
         </div>
       </div>
 

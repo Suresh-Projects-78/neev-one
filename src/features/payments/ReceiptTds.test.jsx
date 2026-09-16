@@ -80,9 +80,16 @@ const pickCustomer = async (user) => {
 };
 
 const selectInvoice = async (user) => {
+  /*
+   * The bills are a dialog now, not a table halfway down the receipt, so the
+   * motion is the operator's: open it from the party's allocation row, tick
+   * the invoice, apply.
+   */
+  fireEvent.change(screen.getByLabelText(/Amount received/i), { target: { value: '118000' } });
+  await user.click(await screen.findByRole('button', { name: /View outstanding invoices/i }));
   const row = (await screen.findByText('INV-1')).closest('tr');
   await user.click(row.querySelector('input[type="checkbox"]'));
-  fireEvent.change(screen.getByLabelText(/Amount received/i), { target: { value: '118000' } });
+  await user.click(screen.getByRole('button', { name: /Apply Allocation/i }));
 };
 
 describe('what the receipt offers', () => {
