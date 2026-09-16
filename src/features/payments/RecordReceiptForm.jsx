@@ -1016,10 +1016,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             formData.customerId
               ? {
                   name: customerRecord ? getCustomerDisplayName(customerRecord) : 'Selected party',
+                  groupName: 'Sundry Debtors',
                   amount: computed.allocated,
                   count: computed.lines.length,
+                  available: billsForModal.length,
                   noun: 'invoice',
                   onViewBills: () => setBillsOpen(true),
+                  onClear: () => setAllocations({}),
                 }
               : null
           }

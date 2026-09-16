@@ -70,11 +70,17 @@ export const AllocationTable = ({
 
   return (
     <section>
-      <div className="flex items-center justify-between gap-3 mb-2">
-        <h3 className="ui-t-label">{heading}</h3>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <h3 className="ui-t-sec">{heading}</h3>
+          <p className="ui-caption mt-0.5">
+            Add ledger(s) to allocate the {noun} amount.
+            {partyRow ? ' Open the outstanding bills to allocate against invoices.' : ''}
+          </p>
+        </div>
         {!disabled ? (
-          <button type="button" onClick={add} className="ui-btn ui-btn-ghost ui-btn-sm">
-            <Plus size={14} aria-hidden="true" /> Add row
+          <button type="button" onClick={add} className="ui-btn ui-btn-secondary ui-btn-sm flex-none">
+            <Plus size={15} aria-hidden="true" /> Add Row
           </button>
         ) : null}
       </div>
@@ -83,44 +89,51 @@ export const AllocationTable = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken">
             <tr>
-              <th className="ui-th">Account / Ledger</th>
-              <th className="ui-th ui-num w-40">Amount</th>
-              <th className="ui-th">Description</th>
-              <th className="px-2 py-2 w-10"><span className="sr-only">Remove</span></th>
+              <th className="ui-th w-12">#</th>
+              <th className="ui-th">Ledger <span className="text-[rgb(var(--neg))]">*</span></th>
+              <th className="ui-th">Amount <span className="text-[rgb(var(--neg))]">*</span></th>
+              <th className="ui-th w-16 text-center">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {partyRow ? (
               <tr data-party-row="true">
+                <td className="px-3 py-2 ui-muted text-sm">1</td>
                 <td className="px-3 py-2">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-sm font-medium truncate">{partyRow.name}</span>
+                  {/* The party is not chosen here — it is the party the receipt
+                      is from — so this states it rather than offering a list
+                      that could contradict the head of the document. */}
+                  <div className="text-sm font-medium truncate">{partyRow.name}</div>
+                  <div className="ui-caption">{partyRow.groupName || 'Sundry Debtors'}</div>
+                </td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    {/* Read-only: the figure is the sum of what was ticked in
+                        the dialog, and a box you can type into that the next
+                        Apply overwrites is a lie. */}
+                    <span className="ui-money tabular-nums">{money(partyRow.amount)}</span>
                     <button
                       type="button"
                       onClick={partyRow.onViewBills}
-                      className="text-xs text-start underline underline-offset-2 w-fit"
-                      style={{ color: 'rgb(var(--link))' }}
+                      className="text-sm font-medium underline underline-offset-2 flex-none"
+                      style={{ color: 'rgb(var(--brand-ink))' }}
                     >
-                      {partyRow.count > 0
-                        ? `View outstanding ${partyRow.noun}s · ${partyRow.count} allocated`
-                        : `View outstanding ${partyRow.noun}s`}
+                      View Bills{partyRow.available > 0 ? ` (${partyRow.available})` : ''}
                     </button>
                   </div>
                 </td>
-                <td className="px-3 py-2">
-                  {/* Read-only on purpose: this figure is the sum of what was
-                      ticked in the dialog, and a box that can be typed into
-                      but is overwritten by the next Apply is a lie. */}
-                  <div className="ui-money text-right tabular-nums">{money(partyRow.amount)}</div>
+                <td className="px-2 py-2 text-center">
+                  {partyRow.count > 0 && !disabled ? (
+                    <button
+                      type="button"
+                      onClick={partyRow.onClear}
+                      className="ui-icon-btn"
+                      aria-label="Clear the invoice allocation"
+                    >
+                      <Trash2 size={15} className="text-[rgb(var(--neg))]" aria-hidden="true" />
+                    </button>
+                  ) : null}
                 </td>
-                <td className="px-3 py-2">
-                  <span className="text-sm ui-muted">
-                    {partyRow.count > 0
-                      ? `Against ${partyRow.count} ${partyRow.noun}${partyRow.count === 1 ? '' : 's'}`
-                      : 'Nothing allocated yet'}
-                  </span>
-                </td>
-                <td className="px-2 py-2" />
               </tr>
             ) : null}
 
@@ -130,6 +143,9 @@ export const AllocationTable = ({
                 data-leaving={leaving === i ? 'true' : undefined}
                 data-entering={entering === i ? 'true' : undefined}
               >
+                <td className="px-3 py-2 ui-muted text-sm">
+                  <div className="ui-row-slot"><div>{i + (partyRow ? 2 : 1)}</div></div>
+                </td>
                 <td className="px-3 py-2">
                   <div className="ui-row-slot"><div>
                   <select
@@ -157,19 +173,6 @@ export const AllocationTable = ({
                     className="ui-input ui-input-plain ui-mono w-full text-right"
                     placeholder="0.00"
                     aria-label={`Amount, allocation row ${i + 1}`}
-                    disabled={disabled}
-                  />
-                  </div></div>
-                </td>
-                <td className="px-3 py-2">
-                  <div className="ui-row-slot"><div>
-                  <input
-                    type="text"
-                    value={row.description ?? ''}
-                    onChange={(e) => set(i, { description: e.target.value })}
-                    className="ui-input w-full"
-                    placeholder="Optional"
-                    aria-label={`Description, allocation row ${i + 1}`}
                     disabled={disabled}
                   />
                   </div></div>

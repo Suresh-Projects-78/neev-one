@@ -52,7 +52,9 @@ describe('the dialog itself', () => {
   it('shows the seven columns the allocation is decided from', () => {
     open();
     const heads = screen.getAllByRole('columnheader').map((th) => th.textContent.trim());
-    expect(heads).toEqual(['Select', 'Inv No.', 'Inv Date', 'Inv Amount', 'TDS', 'Outstanding', 'Allocation']);
+    /* The first cell is the select-all box rather than the word "Select". */
+    expect(heads.slice(1)).toEqual(['Inv No.', 'Inv Date', 'Inv Amount', 'TDS', 'Outstanding', 'Allocation']);
+    expect(within(screen.getAllByRole('columnheader')[0]).getByRole('checkbox')).toBeTruthy();
   });
 
   it('says so, rather than showing an empty table, when nothing is owed', () => {
@@ -102,8 +104,30 @@ describe('the running total at the foot', () => {
     open();
     await tick(user, 'INV-2');
     await tick(user, 'INV-3');
-    expect(screen.getByText('2')).toBeTruthy();
+    expect(screen.getByText(/2 invoices/)).toBeTruthy();
     expect(screen.getByText(money(29000))).toBeTruthy();
+  });
+});
+
+describe('select all', () => {
+  it('fills top-down until the receipt runs out, rather than over-allocating', async () => {
+    const user = userEvent.setup();
+    open({ available: 130000 });
+    await user.click(within(screen.getAllByRole('columnheader')[0]).getByRole('checkbox'));
+    /* 118,000 + 20,000 would be 138,000 against a 130,000 receipt, so the
+       second bill takes what is left and the third takes nothing. */
+    expect(within(rowFor('INV-1')).getByRole('spinbutton').value).toBe('118000');
+    expect(within(rowFor('INV-2')).getByRole('spinbutton').value).toBe('12000');
+    expect(within(rowFor('INV-3')).getByRole('spinbutton').value).toBe('');
+  });
+
+  it('clears every row when unticked', async () => {
+    const user = userEvent.setup();
+    open();
+    const all = () => within(screen.getAllByRole('columnheader')[0]).getByRole('checkbox');
+    await user.click(all());
+    await user.click(all());
+    expect(within(rowFor('INV-1')).getByRole('spinbutton').value).toBe('');
   });
 });
 

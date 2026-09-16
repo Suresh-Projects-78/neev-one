@@ -86,7 +86,7 @@ const selectInvoice = async (user) => {
    * the invoice, apply.
    */
   fireEvent.change(screen.getByLabelText(/Amount received/i), { target: { value: '118000' } });
-  await user.click(await screen.findByRole('button', { name: /View outstanding invoices/i }));
+  await user.click(await screen.findByRole('button', { name: /View Bills/i }));
   const row = (await screen.findByText('INV-1')).closest('tr');
   await user.click(row.querySelector('input[type="checkbox"]'));
   await user.click(screen.getByRole('button', { name: /Apply Allocation/i }));

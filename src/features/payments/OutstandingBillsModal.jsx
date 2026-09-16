@@ -62,6 +62,29 @@ export const OutstandingBillsModal = ({
     set(bill.id, { selected: true, amount: String(Math.round(fill * 100) / 100) });
   };
 
+  const selectedCount = bills.filter((b) => draft[String(b.id)]?.selected).length;
+  const allSelected = bills.length > 0 && selectedCount === bills.length;
+  const someSelected = selectedCount > 0;
+
+  /*
+   * Select-all fills top-down until the receipt runs out, rather than filling
+   * every row to its balance and leaving the operator to find the over-
+   * allocation. The oldest bill is first because that is the order they are
+   * listed in and the order money is usually applied.
+   */
+  const toggleAll = (on) => {
+    if (!on) return setDraft({});
+    let room = Number(available || 0);
+    const next = {};
+    for (const bill of bills) {
+      const take = room > 0 ? Math.min(bill.outstanding, room) : 0;
+      if (take <= 0) continue;
+      next[String(bill.id)] = { selected: true, amount: String(Math.round(take * 100) / 100) };
+      room = Math.round((room - take) * 100) / 100;
+    }
+    setDraft(next);
+  };
+
   const summary = useMemo(() => {
     let count = 0;
     let total = 0;
@@ -99,10 +122,9 @@ export const OutstandingBillsModal = ({
     <Modal onClose={onClose} title="Allocate Outstanding Bills" maxWidthClass="max-w-5xl">
       <div className="space-y-4">
         {partyName ? (
-          <div>
-            <span className="ui-t-label block mb-0.5">Party</span>
-            <span className="text-sm font-medium">{partyName}</span>
-          </div>
+          <p className="text-sm ui-muted -mt-2">
+            Ledger: <span className="font-medium" style={{ color: 'rgb(var(--fg))' }}>{partyName}</span>
+          </p>
         ) : null}
 
         <div className="border ui-border-c rounded-xl overflow-hidden">
@@ -110,7 +132,19 @@ export const OutstandingBillsModal = ({
             <table className="ui-table w-full">
               <thead className="ui-sunken">
                 <tr>
-                  <th className="ui-th w-12">Select</th>
+                  <th className="ui-th w-12">
+                    {/* Four bills and one part payment is the common case, but
+                        "settle everything outstanding" is the other one, and it
+                        was four clicks. */}
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                      onChange={(e) => toggleAll(e.target.checked)}
+                      aria-label={allSelected ? 'Clear every bill' : 'Select every bill'}
+                      disabled={!bills.length}
+                    />
+                  </th>
                   <th className="ui-th">{noun === 'bill' ? 'Bill No.' : 'Inv No.'}</th>
                   <th className="ui-th">{noun === 'bill' ? 'Bill Date' : 'Inv Date'}</th>
                   <th className="ui-th ui-num">{noun === 'bill' ? 'Bill Amount' : 'Inv Amount'}</th>
@@ -181,17 +215,22 @@ export const OutstandingBillsModal = ({
         ) : null}
 
         <div
-          className="flex flex-wrap items-center justify-between gap-3 pt-3"
+          className="ui-sunken rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-sm"
+        >
+          <span className="ui-muted">
+            Selected: <span style={{ color: 'rgb(var(--fg))' }}>
+              {summary.count} {noun}{summary.count === 1 ? '' : 's'}
+            </span>
+          </span>
+          <span className="ui-muted">
+            Total Allocation <span className="ui-money ms-2" style={{ color: 'rgb(var(--fg))' }}>{money(summary.total)}</span>
+          </span>
+        </div>
+
+        <div
+          className="flex items-center justify-end gap-2 pt-3"
           style={{ borderTop: '1px solid rgb(var(--border))' }}
         >
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
-            <span className="ui-muted">
-              Selected <span className="ui-mono ms-1">{summary.count}</span>
-            </span>
-            <span className="ui-muted">
-              Total allocation <span className="ui-money ms-1">{money(summary.total)}</span>
-            </span>
-          </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary">
               Cancel
