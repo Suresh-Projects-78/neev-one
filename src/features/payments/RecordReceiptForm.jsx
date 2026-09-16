@@ -856,7 +856,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           <span className="ui-sec-mark" aria-hidden="true"><Landmark size={16} /></span>
           <h3>Receipt Details</h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+        <div className="ui-doc-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
         {!hideMode ? (
           <div className="min-w-0">
             <label className="ui-label">

@@ -4150,7 +4150,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         four-across band before, which put the number between the warehouse and
         the customer and read as neither.
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+      <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
         <div className="lg:col-span-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* The same searchable dropdown as every other selection on this
@@ -4694,8 +4694,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       ) : null}
 
       <div>
-        <div className="mb-2">
-          <label className="ui-label">Line Items</label>
+        <div className="ui-sec-head">
+          <span className="ui-sec-mark" aria-hidden="true"><Package size={16} /></span>
+          <h3>Line Items</h3>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -4847,7 +4848,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         </div>
 
         <div className="mt-2 flex items-center gap-3">
-          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-soft">
             <Plus size={15} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
@@ -5725,8 +5726,9 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
       </div>
 
       <div>
-        <div className="mb-2">
-          <label className="ui-label">Line Items</label>
+        <div className="ui-sec-head">
+          <span className="ui-sec-mark" aria-hidden="true"><Package size={16} /></span>
+          <h3>Line Items</h3>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -5828,7 +5830,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
         </div>
 
         <div className="mt-2 flex items-center gap-3">
-          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-soft">
             <Plus size={15} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
@@ -6567,8 +6569,9 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
       </div>
 
       <div>
-        <div className="mb-2">
-          <label className="ui-label">Line Items</label>
+        <div className="ui-sec-head">
+          <span className="ui-sec-mark" aria-hidden="true"><Package size={16} /></span>
+          <h3>Line Items</h3>
         </div>
 
         <div className="border rounded-lg overflow-hidden">
@@ -6665,7 +6668,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
         </div>
 
         <div className="mt-2 flex items-center gap-3">
-          <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
+          <button type="button" onClick={addItem} className="ui-btn ui-btn-soft">
             <Plus size={15} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>

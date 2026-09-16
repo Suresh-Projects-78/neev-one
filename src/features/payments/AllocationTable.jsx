@@ -242,7 +242,7 @@ export const AllocationTable = ({
           up in the heading, as far from the thing it does as the section is
           tall. */}
       {!disabled ? (
-        <button type="button" onClick={add} className="ui-btn ui-btn-secondary ui-btn-sm mt-3">
+        <button type="button" onClick={add} className="ui-btn ui-btn-soft ui-btn-sm mt-3">
           <Plus size={15} aria-hidden="true" /> Add Row
         </button>
       ) : null}

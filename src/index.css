@@ -761,6 +761,21 @@
     background-color: rgb(var(--surface-sunken));
     border-color: rgb(var(--fg-subtle));
   }
+  /* The additive one.
+     "Add row" is not the primary action of a document and it is not a neutral
+     one either — it is the brand's own job, done quietly. Tinted rather than
+     filled, so it cannot be mistaken for the one button on the page that
+     commits the entry. */
+  .ui-btn-soft {
+    background-color: rgb(var(--brand) / 0.08);
+    color: rgb(var(--brand-ink));
+    border: 1px solid rgb(var(--brand) / 0.22);
+  }
+  .ui-btn-soft:hover:not(:disabled) {
+    background-color: rgb(var(--brand) / 0.14);
+    border-color: rgb(var(--brand) / 0.34);
+  }
+
   .ui-btn-ghost {
     background-color: transparent;
     color: rgb(var(--fg-muted));
@@ -2781,6 +2796,26 @@
      section turned a form into four coloured slabs and competed with the one
      thing on the page that is allowed to be orange. The icon is enough to say
      where a section starts. */
+  /* --- a section of a document --------------------------------------------
+     The head of an invoice used to sit straight on the page, so a block of
+     eight fields had nothing holding it together and the eye had to find the
+     edges from the fields' own alignment. A faint sunken ground and one
+     hairline make the group an object — which is what the reference drawing
+     does, and the reason its long form reads as parts rather than a scroll.
+
+     The reference sinks this block below a white page. Ours cannot: the page
+     ground is #FAFAF9 and the sunken tone is #FAFAFA, which differ by one
+     unit of blue and separate nothing. On a warm off-white page the block has
+     to lift instead, so it takes the surface white — the same move every
+     other card in the product makes, and the reason the convention exists.
+  --------------------------------------------------------------------------- */
+  .ui-doc-section {
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius);
+    padding: 1.25rem;
+  }
+
   .ui-sec-head {
     display: flex;
     align-items: center;
