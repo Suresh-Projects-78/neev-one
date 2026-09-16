@@ -48,7 +48,7 @@ describe('the head of the receipt', () => {
   it('is one grid of three columns, not two halves with a rule', () => {
     render(<Host />);
     const heading = screen.getByText('Receipt Details');
-    const grid = heading.parentElement.querySelector('.grid');
+    const grid = heading.closest('section').querySelector('.grid');
     expect(grid.className).toMatch(/lg:grid-cols-3/);
     /* The rule belonged to a two-column split that no longer exists. */
     expect(grid.className).not.toMatch(/grid-cols-12/);
@@ -62,7 +62,7 @@ describe('the head of the receipt', () => {
    */
   it('carries all six fields', () => {
     render(<Host />);
-    const grid = screen.getByText('Receipt Details').parentElement.querySelector('.grid');
+    const grid = screen.getByText('Receipt Details').closest('section').querySelector('.grid');
     for (const label of [
       /Received into/, /Receipt No\./, /Receipt Date/,
       /Receipt Mode/, /Reference \/ UTR \/ Cheque No\./, /Narration \/ Description/,
@@ -74,7 +74,7 @@ describe('the head of the receipt', () => {
 
   it('puts each second-row field under the one it qualifies', () => {
     render(<Host />);
-    const grid = screen.getByText('Receipt Details').parentElement.querySelector('.grid');
+    const grid = screen.getByText('Receipt Details').closest('section').querySelector('.grid');
     const cells = [...grid.children];
     const at = (re) => cells.findIndex((c) => within(c).queryByText(re));
 

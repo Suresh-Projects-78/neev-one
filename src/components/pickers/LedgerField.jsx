@@ -1,14 +1,26 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useMemo, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 
 import Modal from '../ui/Modal';
 import Popover from '../ui/Popover';
-import { AccountForm } from './AccountPicker';
+
 import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
+
+/*
+ * The masters' own ledger form, fetched only when one is being made.
+ *
+ * It lives in App.jsx, so importing it outright would pull the entire
+ * application into the module graph of every screen that holds a ledger field
+ * — which is most of them. Lazily, the create route costs nothing until it is
+ * taken, and nothing else has to know this field can open a master form.
+ */
+const ChartAccountForm = lazy(() =>
+  import('../../App').then((m) => ({ default: m.ChartAccountForm }))
+);
 
 /**
  * A ledger, typed rather than hunted for.
@@ -36,6 +48,9 @@ export const LedgerField = ({
   ariaLabel = 'Ledger',
   disabled = false,
   canCreate = true,
+  /* The masters' own modal host, so a group can be created from inside the
+     ledger form the way it can on the Chart of Accounts screen. */
+  openModal = null,
 }) => {
   const ledgers = useMemo(() => {
     if (Array.isArray(options)) return options;
@@ -215,14 +230,26 @@ export const LedgerField = ({
       ) : null}
 
       {open && mode === 'create' ? (
-        <Modal onClose={() => close()} title="Create Ledger" maxWidthClass="max-w-3xl">
-          <AccountForm
+        /*
+         * The Chart of Accounts form itself, not a second one.
+         *
+         * There are two ledger forms in this codebase — this is the one the
+         * master screen opens, so a ledger made from a receipt is made by the
+         * same code, with the same groups and the same validation, as one made
+         * from Master Data. A quick create inside a document stays a dialog:
+         * it is an errand in the middle of an entry, and taking the entry off
+         * the screen to name a ledger is how you lose the entry.
+         */
+        <Modal onClose={() => close()} title="New Ledger" maxWidthClass="max-w-2xl">
+          <Suspense fallback={<div className="ui-skel rounded-xl" style={{ height: 320 }} aria-hidden="true" />}>
+          <ChartAccountForm
             db={db}
             setDb={setDb}
             currentCompany={currentCompany}
-            /* What was typed is the name — retyping it into the form the
-               search just failed to match is the whole point of this route. */
-            initialData={typed ? { name: typed } : null}
+            openModal={openModal}
+            /* What was typed is the name. Retyping it into the form the search
+               just failed to match is the whole point of this route. */
+            initialName={typed}
             onCreated={(account) => {
               if (account?.id) {
                 recents.remember(account.id);
@@ -232,6 +259,7 @@ export const LedgerField = ({
             }}
             onClose={() => setMode('select')}
           />
+          </Suspense>
         </Modal>
       ) : null}
     </>

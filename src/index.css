@@ -369,6 +369,9 @@
   /* The figures across an overview. Square on purpose: at 12px five small
      cards in a row read as five pills rather than five panels of figures. */
   --radius-kpi: 0;
+  /* Section headers and their marks. Squarer than a card on purpose: a band
+     at 12px reads as another card floating inside the one it sits in. */
+  --radius-sec: 0.25rem;
 
   /* Layout */
   --sidebar-w: 260px;
@@ -2735,6 +2738,48 @@
     font-weight: 500;
     font-variant-numeric: tabular-nums;
     margin-block-start: auto;
+  }
+
+  /* --- a section's own header ----------------------------------------------
+     A document is a stack of sections, and a bare bold line above a table
+     leaves the eye to work out where one ends and the next begins. A tinted
+     band with the section's own mark makes that structural rather than
+     typographic — which is what the reference drawing does, and why its long
+     form reads as four parts instead of one scroll.
+  --------------------------------------------------------------------------- */
+  .ui-sec-head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.875rem;
+    border-radius: var(--radius-sec);
+    background-color: rgb(var(--sec-tone, var(--fg-subtle)) / 0.08);
+    border: 1px solid rgb(var(--sec-tone, var(--fg-subtle)) / 0.16);
+  }
+  .ui-sec-head > .ui-sec-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.625rem;
+    height: 1.625rem;
+    border-radius: var(--radius-sec);
+    background-color: rgb(var(--sec-tone, var(--fg-subtle)) / 0.16);
+    color: rgb(var(--sec-tone, var(--fg-muted)));
+  }
+  .ui-sec-head h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    line-height: 1.25rem;
+    margin: 0;
+  }
+  .ui-sec-head p {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: rgb(var(--fg-muted));
+    margin: 0.0625rem 0 0;
   }
 
   .ui-scope-field {

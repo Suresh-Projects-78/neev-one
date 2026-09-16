@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { ListTree, Plus, ReceiptText, Trash2 } from 'lucide-react';
 
 import LedgerField from '../../components/pickers/LedgerField';
 import { allocationSummary, emptyAllocationRow } from './allocationLines';
@@ -76,10 +76,11 @@ export const AllocationTable = ({
 
   return (
     <section>
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="ui-sec-head" style={{ '--sec-tone': 'var(--kpi-invoices-ink)' }}>
+        <span className="ui-sec-mark" aria-hidden="true"><ListTree size={15} /></span>
         <div className="min-w-0">
-          <h3 className="ui-t-sec">{heading}</h3>
-          <p className="ui-caption mt-0.5">
+          <h3>{heading}</h3>
+          <p>
             Pick a ledger and enter the amount. Against a customer, the
             outstanding invoices open so the {noun} can be placed on them.
           </p>
@@ -161,14 +162,30 @@ export const AllocationTable = ({
                   <div className="ui-row-slot"><div>
                   {meta(i).isParty ? (
                     <div className="flex flex-col gap-0.5 min-w-0">
+                      {/* A button rather than a link: it opens a dialog that
+                          changes the row, which is an action, and the drawing
+                          gives it a mark so the one row that has this is
+                          findable without reading every row. */}
                       <button
                         type="button"
                         onClick={meta(i).onViewBills}
-                        className="text-sm font-medium underline underline-offset-2 text-start w-fit"
-                        style={{ color: 'rgb(var(--brand-ink))' }}
+                        className="ui-btn ui-btn-secondary ui-btn-sm w-fit"
                         disabled={disabled}
                       >
-                        View Bills{meta(i).available > 0 ? ` (${meta(i).available})` : ''}
+                        <ReceiptText size={14} aria-hidden="true" />
+                        View Bills
+                        {meta(i).available > 0 ? (
+                          <span
+                            className="ms-0.5 inline-flex items-center justify-center rounded-full px-1.5 text-[11px] ui-mono"
+                            style={{
+                              backgroundColor: 'rgb(var(--brand))',
+                              color: 'rgb(var(--on-brand))',
+                              minWidth: '1.125rem',
+                            }}
+                          >
+                            {meta(i).available}
+                          </span>
+                        ) : null}
                       </button>
                       {meta(i).status ? (
                         <span className="ui-caption truncate">{meta(i).status}</span>

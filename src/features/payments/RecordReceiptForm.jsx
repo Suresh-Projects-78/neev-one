@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
+import { Landmark, Percent } from 'lucide-react';
 
 import { cashReceiptWarning } from '../../utils/cashLimits';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
@@ -851,7 +852,13 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
         the fields either side of it no longer lined up with each other.
       */}
       <section>
-        <h3 className="ui-t-sec mb-3">Receipt Details</h3>
+        <div className="ui-sec-head" style={{ '--sec-tone': 'var(--kpi-sales-ink)' }}>
+          <span className="ui-sec-mark" aria-hidden="true"><Landmark size={15} /></span>
+          <div className="min-w-0">
+            <h3>Receipt Details</h3>
+            <p>Where the money landed, and the paperwork that names it.</p>
+          </div>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
         {!hideMode ? (
           <div className="min-w-0">
@@ -1064,14 +1071,19 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           with a heading and nothing under it.
         */}
         <section>
-          <h3 className="ui-t-sec">TDS (optional)</h3>
+          <div className="ui-sec-head" style={{ '--sec-tone': 'var(--kpi-due-ink)' }}>
+            <span className="ui-sec-mark" aria-hidden="true"><Percent size={15} /></span>
+            <div className="min-w-0">
+              <h3>TDS (optional)</h3>
+            </div>
+          </div>
           {/*
             The section is always drawn, and says so when it cannot be used.
             It used to vanish entirely for a company with TDS switched off,
             which is defensible — until somebody looks for it, finds nothing,
             and has no way to tell a missing feature from a setting.
           */}
-          <p className="ui-caption mt-0.5 mb-2">
+          <p className="ui-caption -mt-2 mb-3">
             {tdsEnabledHere
               ? 'If TDS is deducted from the receipt, select the TDS ledger and enter the amount.'
               : 'TDS is switched off for this company. Turn it on under Settings → Tax & Compliance to record what a customer withheld.'}

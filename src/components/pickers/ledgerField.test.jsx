@@ -92,7 +92,7 @@ describe('when nothing matches', () => {
     /* The whole point of this route: the form opens on the name the search
        just failed to find, rather than asking for it a second time. */
     await user.click(screen.getByRole('button', { name: /Create “Zephyr”/ }));
-    expect(await screen.findByText('Create Ledger')).toBeInTheDocument();
+    expect(await screen.findByText('New Ledger')).toBeInTheDocument();
   });
 
   it('offers creation before anything is typed, too', async () => {
