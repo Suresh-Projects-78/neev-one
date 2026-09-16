@@ -36,6 +36,10 @@
   --border: 236 236 234;        /* #ECECEA — divider */
   --border-strong: 212 212 209; /* #D4D4D1 */
   --border-field: 229 229 227;  /* #E5E5E3 — card and field hairline */
+  /* The ground a block of fields sits on. A real step down from the page, not
+     the one-unit shift `--surface-sunken` gives against a warm #FAFAF9 — that
+     separated nothing and the panel read as a bare border. */
+  --doc-section: 242 242 239;   /* #F2F2EF */
 
   /* Text */
   --fg: 17 24 39;               /* #111827 */
@@ -419,6 +423,7 @@
   /* Borders stay quiet in dark; separation comes from surface, not outline. */
   --border: 49 58 56;
   --border-strong: 70 83 80;
+  --doc-section: 31 37 36;      /* the well, a step above the dark ground */
 
   --fg: 241 245 249;
   --fg-muted: 148 163 184;
@@ -2803,17 +2808,45 @@
      hairline make the group an object — which is what the reference drawing
      does, and the reason its long form reads as parts rather than a scroll.
 
-     The reference sinks this block below a white page. Ours cannot: the page
-     ground is #FAFAF9 and the sunken tone is #FAFAFA, which differ by one
-     unit of blue and separate nothing. On a warm off-white page the block has
-     to lift instead, so it takes the surface white — the same move every
-     other card in the product makes, and the reason the convention exists.
+     Grey, and enough of it to see. The first cut used `--surface-sunken`,
+     which is #FAFAFA against a #FAFAF9 page — one unit of blue apart, so the
+     panel was a border with nothing inside it. The second lifted to white,
+     which reads on a warm ground but is not what the drawing does. This is
+     the drawing's move done in our ramp: the fields sit in a grey well and
+     the white controls inside it are what the eye lands on.
   --------------------------------------------------------------------------- */
   .ui-doc-section {
-    background-color: rgb(var(--surface));
+    background-color: rgb(var(--doc-section));
     border: 1px solid rgb(var(--border));
     border-radius: var(--radius);
     padding: 1.25rem;
+  }
+  /* Inside the well every control is white, which is what makes the well
+     read as one — a transparent field on a grey ground is a grey field. */
+  .ui-doc-section .ui-input,
+  .ui-doc-section .ui-select {
+    background-color: rgb(var(--surface));
+  }
+  /*
+   * The label above a field in a well is a column heading, not a sentence.
+   *
+   * At 13px sentence case it sat at nearly the weight of the value beneath it
+   * and the block read as thirteen lines of prose. The drawing sets these as
+   * 11px uppercase with tracking — the same treatment this product already
+   * gives a table's column headers, which is the right comparison: six fields
+   * in a row are six columns.
+   *
+   * Scoped to the well on purpose. Every other label in the product stays a
+   * sentence, because a lone field on a settings page is not a column.
+   */
+  .ui-doc-section .ui-label {
+    font-size: 0.6875rem;   /* 11px */
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+    color: rgb(var(--fg-subtle));
+    margin-bottom: 0.375rem;
   }
 
   .ui-sec-head {
