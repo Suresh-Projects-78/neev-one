@@ -310,6 +310,20 @@ export const FEATURE_CATALOG: FeatureDef[] = [
     category: 'Operations',
   },
   {
+    /*
+     * Cost centres already have a screen and a field on every expense and
+     * journal line; what they never had was a switch, so a company that does
+     * not use them was asked for one anyway. On by default, because the books
+     * of anyone already tagging costs must not change under them.
+     */
+    key: 'costCenters',
+    label: 'Cost centres',
+    description:
+      'Tag expenses and journal lines to a department, project or site, and read the ledger back by any of them. A single-location business can leave this off and stop being asked.',
+    defaultEnabled: true,
+    category: 'Accounting',
+  },
+  {
     key: 'insights',
     label: 'Dashboard insights',
     description:

@@ -13496,7 +13496,7 @@ const AppShell = () => {
           </div>
         );
       case 'settingsFeatures':
-        return <FeatureSettings />;
+        return <FeatureSettings onNavigate={setActive} />;
       // The Business panes are the same screen filtered to one part of the
       // business, not six copies of it.
       case 'settingsSales':

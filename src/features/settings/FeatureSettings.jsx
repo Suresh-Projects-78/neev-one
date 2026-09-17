@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Lock, RotateCcw, Save } from 'lucide-react';
+import { ArrowRight, Check, Lock, RotateCcw, Save } from 'lucide-react';
 
 import { getFeatureCatalog, setFeatures } from '../../api/features';
 import { PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 import { useFeatures } from '../../permissions/useFeatures';
-import { paneForFeature, isGeneralFeature, paneMeta } from './businessPanes';
+import { paneForFeature, paneMeta } from './businessPanes';
+import { FEATURE_GROUPS, groupForFeature, settingsLinkFor } from './featureGroups';
 
 const CATEGORY_ORDER = ['Operations', 'Accounting', 'Inventory', 'Governance', 'Communication', 'Data'];
 
@@ -23,7 +24,7 @@ const CATEGORY_BLURB = {
  * Everything switched off here disappears from navigation and from forms, so a
  * single-shop customer is not asked for a branch on every invoice.
  */
-export const FeatureSettings = ({ pane = '' }) => {
+export const FeatureSettings = ({ pane = '', onNavigate = null }) => {
   const { reload: reloadFeatures } = useFeatures();
 
   const [catalog, setCatalog] = useState([]);
@@ -70,19 +71,31 @@ export const FeatureSettings = ({ pane = '' }) => {
    * not been given a home of its own — so a capability added on the server
    * later appears here rather than nowhere.
    */
+  /*
+   * On a pane, the switches that belong to it. On the Features screen itself,
+   * everything — the whole catalogue grouped the way the business thinks about
+   * it, rather than the leftovers that no pane claimed.
+   */
   const shown = useMemo(
-    () => catalog.filter((f) => (pane ? paneForFeature(f.key) === pane : isGeneralFeature(f.key))),
+    () => (pane ? catalog.filter((f) => paneForFeature(f.key) === pane) : catalog),
     [catalog, pane]
   );
 
-  const byCategory = useMemo(() => {
+  /* A pane is one subject already, so its own categories are the finer cut.
+     The Features screen groups by the business's six headings instead. */
+  const sections = useMemo(() => {
+    const order = pane
+      ? CATEGORY_ORDER.map((c) => ({ key: c, label: c, blurb: CATEGORY_BLURB[c] }))
+      : FEATURE_GROUPS;
+    const keyOf = pane ? (f) => f.category : (f) => groupForFeature(f.key);
     const map = new Map();
     for (const f of shown) {
-      if (!map.has(f.category)) map.set(f.category, []);
-      map.get(f.category).push(f);
+      const k = keyOf(f);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k).push(f);
     }
-    return map;
-  }, [shown]);
+    return order.filter((o) => map.has(o.key)).map((o) => ({ ...o, items: map.get(o.key) }));
+  }, [shown, pane]);
 
   // A child cannot be on while its parent is off; the server resolves this too,
   // but showing it live explains why a toggle stopped responding.
@@ -158,15 +171,15 @@ export const FeatureSettings = ({ pane = '' }) => {
         </div>
       ) : null}
 
-      {CATEGORY_ORDER.filter((c) => byCategory.has(c)).map((category) => (
-        <section key={category} className="ui-card overflow-hidden">
+      {sections.map((section) => (
+        <section key={section.key} className="ui-card overflow-hidden">
           <div className="px-4 py-3" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
-            <div className="ui-title text-sm">{category}</div>
-            <div className="ui-subtle text-xs mt-0.5">{CATEGORY_BLURB[category]}</div>
+            <div className="ui-title text-sm">{section.label}</div>
+            <div className="ui-subtle text-xs mt-0.5">{section.blurb}</div>
           </div>
 
           <div>
-            {byCategory.get(category).map((f, idx) => {
+            {section.items.map((f, idx) => {
               const parent = f.dependsOn ? catalog.find((x) => x.key === f.dependsOn) : null;
               const blockedByParent = Boolean(parent && values[parent.key] === false);
               /*
@@ -213,6 +226,25 @@ export const FeatureSettings = ({ pane = '' }) => {
                     <span id={`feat-${f.key}-desc`} className="ui-muted text-xs block mt-0.5">
                       {f.locked && f.lockedReason ? `${f.description} ${f.lockedReason}.` : f.description}
                     </span>
+                    {/* Some switches only change the shape of the organisation:
+                        turning branches on does nothing until there are
+                        branches, so the row says where to go next rather than
+                        leaving the operator to find it. */}
+                    {settingsLinkFor(f.key) && effective[f.key] && onNavigate ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onNavigate(settingsLinkFor(f.key).key);
+                        }}
+                        className="text-xs font-medium underline underline-offset-2 mt-1 inline-flex items-center gap-1"
+                        style={{ color: 'rgb(var(--brand-ink))' }}
+                      >
+                        {settingsLinkFor(f.key).label}
+                        <ArrowRight size={12} aria-hidden="true" />
+                      </button>
+                    ) : null}
                   </span>
                 </label>
               );
