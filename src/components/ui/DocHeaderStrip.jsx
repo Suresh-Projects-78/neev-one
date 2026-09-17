@@ -78,7 +78,7 @@ export const DocHeaderStrip = ({
               type="button"
               ref={numberingBtnRef}
               onClick={() => setNumberingOpen((v) => !v)}
-              className="absolute end-0.5 top-1/2 -translate-y-1/2 ui-icon-btn !h-6 !w-6"
+              className="absolute end-1 top-1/2 -translate-y-1/2 ui-icon-btn"
               aria-label={`${numbering.title || 'Document'} settings`}
               aria-haspopup="dialog"
               aria-expanded={numberingOpen}

@@ -1078,7 +1078,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                               type="text"
                               value={item.batchNo || ''}
                               onChange={(e) => updateItem(idx, 'batchNo', e.target.value)}
-                              className="ui-input !h-8 w-32 px-2 text-xs"
+                              className="ui-input w-32 px-2 text-xs ui-ctl-compact"
                               placeholder="Batch no *"
                             />
                             <span className="ui-muted">Mfg</span>
@@ -1086,7 +1086,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                               type="date"
                               value={item.mfgDate || ''}
                               onChange={(e) => updateItem(idx, 'mfgDate', e.target.value)}
-                              className="ui-input !h-8 w-36 px-2 text-xs"
+                              className="ui-input w-36 px-2 text-xs ui-ctl-compact"
                             />
                             {needsExpiry(master) ? (
                               <>
@@ -1095,7 +1095,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                                   type="date"
                                   value={item.expiryDate || ''}
                                   onChange={(e) => updateItem(idx, 'expiryDate', e.target.value)}
-                                  className="ui-input !h-8 w-36 px-2 text-xs"
+                                  className="ui-input w-36 px-2 text-xs ui-ctl-compact"
                                 />
                               </>
                             ) : null}

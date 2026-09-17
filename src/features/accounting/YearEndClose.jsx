@@ -285,7 +285,7 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
             step="0.01"
             value={netOverride}
             onChange={(e) => setNetOverride(e.target.value)}
-            className="ui-input mt-1 !h-8 w-40 px-2 text-sm"
+            className="ui-input mt-1 w-40 px-2 text-sm ui-ctl-compact"
             placeholder="Override (CA adjusted)"
           />
         </div>

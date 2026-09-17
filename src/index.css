@@ -871,6 +871,32 @@
     color: rgb(var(--fg-subtle));
   }
   /*
+   * The compact variant, named.
+   *
+   * Twenty controls carried `!h-8 !min-h-0` — 32px, a height nothing else in
+   * the product uses, reached for because a column filter or an in-table
+   * editor genuinely cannot be 36. The context was right and the number was
+   * invented: the product's compact height is 28px, which is what `.ui-btn-sm`
+   * has always been.
+   *
+   * Use it where the row itself is dense — a filter under a column header, an
+   * editor inside a table cell. A field on a form is not dense; it is 36.
+   */
+  .ui-ctl-compact {
+    min-height: 1.75rem;
+    height: 1.75rem;
+    padding-block: 0;
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  /* A compact select still has to clear its own mark. */
+  .ui-ctl-compact.ui-select {
+    padding-inline-end: 1.875rem;
+    background-size: 0.875rem 0.875rem;
+    background-position: right 0.625rem center;
+  }
+
+  /*
    * The select's own geometry, which is not the input's.
    *
    * The browser drew its arrow inside the same 10px the text used, so a long
@@ -1171,6 +1197,10 @@
   /* An action button sets the row height if it is taller than the text beside
      it. In a row, it is 28px, so the row is decided by its content and not by
      its last column. */
+  /* An icon button is 36px, and 28px only in a table row — this rule, whose
+     specificity puts it above the base further down the file. Worth stating:
+     a sweep that assumed 28px everywhere stripped fifteen deliberate heights
+     from in-field actions before the measurement corrected it. */
   .ui-table tbody .ui-icon-btn {
     width: 1.75rem;
     height: 1.75rem;

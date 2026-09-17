@@ -482,7 +482,7 @@ export function Pagination({ total, page, perPage, pageCount, onPage, onPerPage,
         <select
           value={perPage}
           onChange={(e) => onPerPage(Number(e.target.value))}
-          className="ui-select ui-btn-sm !h-8 w-24 px-2 text-xs"
+          className="ui-select ui-btn-sm w-24 px-2 text-xs ui-ctl-compact"
           aria-label="Rows per page"
         >
           {[10, 25, 50, 100].map((n) => (

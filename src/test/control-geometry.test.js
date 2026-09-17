@@ -88,10 +88,16 @@ describe('one control height', () => {
 
   it('carries no override that merely restates the baseline', async () => {
     /*
-     * `!h-9` IS 36px, so on an input, select or button it says nothing and
-     * hides the fact that the height is shared. It is not redundant on an
-     * icon button, whose own height is 28px — squaring one to 36 to sit level
-     * with a row is a real decision, and those are kept.
+     * `!h-9` IS 36px, so wherever the base is already 36 it says nothing and
+     * hides the fact that the height is shared.
+     *
+     * `.ui-icon-btn` is the exception, and not the one I first assumed: it is
+     * 36px normally and 28px only inside `.ui-table tbody`, which is a second
+     * rule at higher specificity further down the stylesheet. So squaring one
+     * to 36 is a real decision INSIDE a table and redundant outside it — and
+     * the first cut of this pass had that backwards and stripped fifteen
+     * deliberate compact heights from in-field actions, where a 36px mark
+     * fills a 36px input edge to edge.
      */
     const { readdirSync, statSync } = await import('node:fs');
     const { join } = await import('node:path');
@@ -107,6 +113,7 @@ describe('one control height', () => {
     for (const f of walk('src')) {
       const src = readFileSync(f, 'utf8');
       for (const m of src.matchAll(/className="([^"]*!h-9[^"]*)"/g)) {
+        /* Left to the table-row exception, which the stylesheet documents. */
         if (!m[1].includes('ui-icon-btn')) offenders.push(`${f}  ${m[1]}`);
       }
     }

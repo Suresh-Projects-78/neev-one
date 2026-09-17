@@ -528,7 +528,7 @@ export function SettingsUsers({ orgId }) {
                       value={newRoleDraft}
                       onChange={(e) => setNewRoleDraft(e.target.value)}
                       placeholder="Role name, e.g. Billing Clerk"
-                      className="ui-input flex-1 ui-btn-sm !min-h-0 text-sm"
+                      className="ui-input flex-1 min-w-0 ui-btn-sm !min-h-0 text-sm"
                       autoFocus
                     />
                     <button

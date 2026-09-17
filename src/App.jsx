@@ -6128,7 +6128,7 @@ const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass
       <div className="space-y-3">
         <div className="flex items-stretch gap-3">
           <div className={`w-2 rounded-lg ${accentBarClass}`} />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="text-xs ui-muted">{title}</div>
             <div className="ui-title text-xl ui-fg">{voucherLabel}</div>
             <div className="text-sm ui-muted">{companyName}</div>
@@ -7257,7 +7257,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
                             type="text"
                             value={editing.name}
                             onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                            className="ui-input w-full px-2 !h-8"
+                            className="ui-input w-full px-2 ui-ctl-compact"
                           />
                         ) : (
                           <span>{c.name}</span>
@@ -7269,7 +7269,7 @@ const ItemCategoriesList = ({ db, setDb, currentCompany }) => {
                             type="text"
                             value={editing.description}
                             onChange={(e) => setEditing({ ...editing, description: e.target.value })}
-                            className="ui-input w-full px-2 !h-8"
+                            className="ui-input w-full px-2 ui-ctl-compact"
                           />
                         ) : (
                           <span className="ui-muted">{c.description || '—'}</span>
@@ -7716,7 +7716,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                     <select
                       value={cfg?.mode || 'auto'}
                       onChange={(e) => updateNumberingSetting(v.key, { mode: e.target.value })}
-                      className="ui-select w-full !h-8 !min-h-0 px-2 text-sm"
+                      className="ui-select w-full px-2 text-sm ui-ctl-compact"
                     >
                       <option value="auto">Auto</option>
                       <option value="manual">Manual</option>
@@ -7729,7 +7729,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       type="text"
                       value={cfg?.prefix || ''}
                       onChange={(e) => updateNumberingSetting(v.key, { prefix: e.target.value })}
-                      className="ui-input w-full !h-8 !min-h-0 px-2 text-sm"
+                      className="ui-input w-full px-2 text-sm ui-ctl-compact"
                     />
                   </div>
 
@@ -7739,7 +7739,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                       type="text"
                       value={cfg?.suffix || ''}
                       onChange={(e) => updateNumberingSetting(v.key, { suffix: e.target.value })}
-                      className="ui-input w-full !h-8 !min-h-0 px-2 text-sm"
+                      className="ui-input w-full px-2 text-sm ui-ctl-compact"
                     />
                   </div>
 
@@ -7748,7 +7748,7 @@ const DocNumberingSettings = ({ db, setDb, currentCompany, branches = [] }) => {
                     <select
                       value={String(cfg?.digits || 0)}
                       onChange={(e) => updateNumberingSetting(v.key, { digits: Number(e.target.value) })}
-                      className="ui-select w-full !h-8 !min-h-0 px-2 text-sm"
+                      className="ui-select w-full px-2 text-sm ui-ctl-compact"
                       disabled={isManual}
                     >
                       <option value="0">None</option>
@@ -14140,7 +14140,7 @@ const AppShell = () => {
                   setNotifOpen((v) => !v);
                   if (!notifOpen) markNotifsSeen();
                 }}
-                className="ui-icon-btn relative !h-9 !w-9"
+                className="ui-icon-btn relative"
                 aria-haspopup="menu"
                 aria-expanded={notifOpen}
                 aria-label={`Notifications${notifications.length ? `, ${notifications.length} item${notifications.length === 1 ? '' : 's'}` : ''}`}
@@ -14312,7 +14312,7 @@ const AppShell = () => {
                           type="button"
                           onClick={() => setDensity(d.key)}
                           aria-pressed={density === d.key}
-                          className="flex-1 h-7 rounded-lg text-xs font-medium transition-colors"
+                          className="flex-1 min-w-0 h-7 rounded-lg text-xs font-medium transition-colors"
                           style={
                             density === d.key
                               ? { backgroundColor: 'rgb(var(--surface))', color: 'rgb(var(--fg))', boxShadow: 'var(--shadow-card)' }

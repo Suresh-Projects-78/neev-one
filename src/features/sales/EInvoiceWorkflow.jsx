@@ -281,7 +281,7 @@ export default function EInvoiceWorkflow({ invoice, company, customer, onRegiste
                 <option value="4">Others</option>
               </select>
             </div>
-            <div className="min-w-48 flex-1">
+            <div className="min-w-48 flex-1 min-w-0">
               <label className="ui-label">Remarks</label>
               <input type="text" value={cancelRemarks} onChange={(e) => setCancelRemarks(e.target.value)} maxLength={100} className="ui-input w-full px-2 text-sm" placeholder="Optional" />
             </div>

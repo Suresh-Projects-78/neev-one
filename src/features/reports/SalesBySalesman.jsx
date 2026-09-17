@@ -88,7 +88,7 @@ export default function SalesBySalesman({ db, currentCompany }) {
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ui-input" />
         </div>
         {(from || to) ? (
-          <button type="button" onClick={() => { setFrom(''); setTo(''); }} className="ui-btn ui-btn-secondary !h-10">
+          <button type="button" onClick={() => { setFrom(''); setTo(''); }} className="ui-btn ui-btn-secondary">
             Clear
           </button>
         ) : null}

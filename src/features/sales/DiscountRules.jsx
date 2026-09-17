@@ -351,7 +351,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               <button
                 type="button"
                 onClick={() => setForm((p) => ({ ...p, qtyTiers: [...p.qtyTiers, { minQty: '', value: '' }] }))}
-                className="ui-btn ui-btn-secondary !h-7 text-xs"
+                className="ui-btn ui-btn-secondary ui-btn-sm"
               >
                 + Tier
               </button>
@@ -373,7 +373,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                   step="0.01"
                   value={t.value}
                   onChange={(e) => setForm((p) => ({ ...p, qtyTiers: p.qtyTiers.map((x, i) => (i === ti ? { ...x, value: e.target.value } : x)) }))}
-                  className="ui-input !h-8 w-24 px-2 text-sm"
+                  className="ui-input w-24 px-2 text-sm ui-ctl-compact"
                 />
                 <span className="ui-muted">{form.type === 'PERCENT' ? '% off' : '₹ off per unit'}</span>
                 <button

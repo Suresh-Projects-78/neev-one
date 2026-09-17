@@ -221,7 +221,7 @@ export const DocFormFootnote = ({ declaration = '' }) => (
       * Indicates mandatory fields
     </p>
     {declaration ? (
-      <p className="text-xs ui-muted flex-1 min-w-[16rem]">
+      <p className="text-xs ui-muted flex-1 min-w-0 min-w-[16rem]">
         <span className="font-medium">Declaration:</span> {declaration}
       </p>
     ) : null}

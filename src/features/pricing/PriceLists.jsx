@@ -633,7 +633,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                         step="0.01"
                         value={editing.rates?.[String(i.id)] ?? ''}
                         onChange={(e) => setRate(i.id, e.target.value)}
-                        className="ui-input !h-8 w-28 px-2 text-sm"
+                        className="ui-input w-28 px-2 text-sm ui-ctl-compact"
                         placeholder="—"
                         aria-label={`Rate for ${i.name}`}
                       />
@@ -663,7 +663,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                       <select
                         value={c.priceListId ?? ''}
                         onChange={(e) => assignCustomer(c.id, e.target.value)}
-                        className="ui-select !h-8 w-40 px-2 text-sm"
+                        className="ui-select w-40 px-2 text-sm ui-ctl-compact"
                         aria-label={`Price list for ${c.displayName || c.name}`}
                       >
                         <option value="">Standard rates</option>

@@ -321,7 +321,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="ui-input !h-8 min-w-0 flex-1 px-2 text-xs"
+              className="ui-input min-w-0 flex-1 px-2 text-xs ui-ctl-compact"
               aria-label={`${column.label || key} from`}
             />
             <span className="ui-subtle">–</span>
@@ -329,13 +329,13 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="ui-input !h-8 min-w-0 flex-1 px-2 text-xs"
+              className="ui-input min-w-0 flex-1 px-2 text-xs ui-ctl-compact"
               aria-label={`${column.label || key} to`}
             />
           </div>
         ) : (
         <div className="flex gap-2">
-          <select value={op} onChange={(e) => setOp(e.target.value)} className="ui-select !h-8 flex-1 px-2 text-xs">
+          <select value={op} onChange={(e) => setOp(e.target.value)} className="ui-select flex-1 px-2 text-xs ui-ctl-compact">
             {CONDITIONS.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
@@ -347,7 +347,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             disabled={!op || op === 'empty' || op === 'notEmpty'}
-            className="ui-input !h-8 w-24 px-2 text-xs"
+            className="ui-input w-24 px-2 text-xs ui-ctl-compact"
             placeholder="Value"
             aria-label="Condition value"
           />
@@ -361,7 +361,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="ui-input !h-8 w-full pl-7 pr-2 text-xs"
+          className="ui-input w-full pl-7 pr-2 text-xs ui-ctl-compact"
           placeholder="Search"
           aria-label="Search values"
         />
@@ -369,7 +369,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
 
       {/* The one part that grows without limit, so it is the part that
           scrolls — the sort buttons and the footer stay reachable. */}
-      <div className="min-h-16 flex-1 overflow-y-auto border rounded-lg p-2 space-y-1">
+      <div className="min-h-16 flex-1 min-w-0 overflow-y-auto border rounded-lg p-2 space-y-1">
         <label className="flex items-center gap-2 cursor-pointer font-medium">
           <input
             type="checkbox"

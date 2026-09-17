@@ -68,7 +68,7 @@ export function ListToolbar({
         <select
           value={period || 'all'}
           onChange={(e) => onPeriodChange(e.target.value)}
-          className="ui-select !h-10 w-40"
+          className="ui-select w-40"
           aria-label="Period"
         >
           {LIST_PERIODS.map((p) => (
@@ -87,14 +87,14 @@ export function ListToolbar({
             type="date"
             value={dateFrom}
             onChange={(e) => onDateFromChange?.(e.target.value)}
-            className="ui-input !h-10 w-36"
+            className="ui-input w-36"
             aria-label="From date"
           />
           <input
             type="date"
             value={dateTo}
             onChange={(e) => onDateToChange?.(e.target.value)}
-            className="ui-input !h-10 w-36"
+            className="ui-input w-36"
             aria-label="To date"
           />
         </>
@@ -114,7 +114,7 @@ export function ListToolbar({
             type="button"
             ref={exportBtnRef}
             onClick={() => setExportOpen((v) => !v)}
-            className="ui-btn ui-btn-secondary !h-10 whitespace-nowrap"
+            className="ui-btn ui-btn-secondary whitespace-nowrap"
             aria-haspopup="menu"
             aria-expanded={exportOpen}
           >
@@ -178,7 +178,7 @@ export function ListToolbar({
           ) : null}
         </div>
       ) : onExport ? (
-        <button type="button" onClick={onExport} className="ui-btn ui-btn-secondary !h-10 whitespace-nowrap">
+        <button type="button" onClick={onExport} className="ui-btn ui-btn-secondary whitespace-nowrap">
           <Download size={15} aria-hidden="true" /> {exportLabel}
         </button>
       ) : null}

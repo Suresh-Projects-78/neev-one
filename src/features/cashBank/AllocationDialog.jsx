@@ -496,7 +496,7 @@ const AllocationDialog = ({ db, setDb, currentCompany, txn, onClose }) => {
                     type="button"
                     onClick={() => removeRow(i)}
                     disabled={rows.length === 1}
-                    className="ui-icon-btn !h-9 !w-9"
+                    className="ui-icon-btn"
                     aria-label={`Remove allocation row ${i + 1}`}
                   >
                     <Trash2 size={15} aria-hidden="true" className="text-[rgb(var(--neg))]" />
@@ -546,7 +546,7 @@ const AllocationDialog = ({ db, setDb, currentCompany, txn, onClose }) => {
                                       min="0"
                                       max={d.balance}
                                       step="0.01"
-                                      className="ui-input ui-money !h-8 !min-h-0 w-28 text-sm"
+                                      className="ui-input ui-money w-28 text-sm ui-ctl-compact"
                                       aria-label={`Amount against ${d.number || d.key}`}
                                       value={picked ? r.bills[d.key] : ''}
                                       disabled={!picked}

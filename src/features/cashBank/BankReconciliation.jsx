@@ -417,7 +417,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                             ) : (
                               <input
                                 type="date"
-                                className="ui-input !h-8 !min-h-0 w-36 text-sm"
+                                className="ui-input w-36 text-sm ui-ctl-compact"
                                 aria-label={`Bank date for ${r.number || r.ledgerName}`}
                                 value={bankDateOf(r)}
                                 onChange={(e) => setDraftDates((prev) => ({ ...prev, [r.id]: e.target.value }))}

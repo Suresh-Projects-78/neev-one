@@ -844,7 +844,7 @@ export const StockTransferEditor = ({
                                 expiryDate: picked ? String(picked.expiryDate || '') : '',
                               });
                             }}
-                            className="ui-select !h-8 px-2 text-xs min-w-52"
+                            className="ui-select px-2 text-xs min-w-52 ui-ctl-compact"
                             disabled={readOnly}
                           >
                             <option value="">Select batch *</option>
@@ -903,7 +903,7 @@ export const StockTransferEditor = ({
             type="text"
             value={form.reason}
             onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))}
-            className="ui-input !h-8 !min-h-0 w-full px-2 text-xs"
+            className="ui-input w-full px-2 text-xs ui-ctl-compact"
             placeholder="Optional"
             disabled={readOnly}
           />

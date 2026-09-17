@@ -1360,7 +1360,7 @@ const statusReason = (doc, status, company, nowMs) => {
                   setPerPage(Number(e.target.value));
                   setPage(1);
                 }}
-                className="ui-select ui-btn-sm !h-8 w-24 px-2 text-xs"
+                className="ui-select ui-btn-sm w-24 px-2 text-xs ui-ctl-compact"
                 aria-label="Rows per page"
               >
                 {[10, 25, 50, 100].map((n) => (
@@ -4897,7 +4897,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                         otherCharges: p.otherCharges.map((x, i) => (i === ci ? { ...x, label: e.target.value } : x)),
                       }))
                     }
-                    className="ui-input flex-1 px-2 text-sm"
+                    className="ui-input flex-1 min-w-0 px-2 text-sm"
                     placeholder="Transport"
                   />
                   <input

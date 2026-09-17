@@ -319,7 +319,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             type="button"
             ref={numberingBtnRef}
             onClick={() => setNumberingOpen((v) => !v)}
-            className="ui-icon-btn"
+            className="ui-icon-btn !h-7 !w-7"
             aria-label="POS numbering settings"
             aria-haspopup="dialog"
             aria-expanded={numberingOpen}
@@ -479,7 +479,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                     <span className="w-6 text-center">{c.qty}</span>
                     <button type="button" onClick={() => bump(c.itemId, 1)} className="ui-icon-btn !h-7 !w-7" aria-label="More"><Plus size={12} /></button>
                     <span className="ui-col-amount w-20 text-right">{formatMoney(c.qty * c.rate, currentCompany)}</span>
-                    <button type="button" onClick={() => drop(c.itemId)} className="ui-icon-btn !h-7 !w-7" aria-label="Remove"><X size={12} /></button>
+                    <button type="button" onClick={() => drop(c.itemId)} className="ui-icon-btn" aria-label="Remove"><X size={12} /></button>
                   </div>
                 ))}
               </div>

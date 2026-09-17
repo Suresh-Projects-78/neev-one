@@ -374,7 +374,7 @@ const ChallanForm = ({ db, setDb, currentCompany, onClose }) => {
                         min="0"
                         max={e.due}
                         step="0.01"
-                        className="ui-input ui-money !h-8 !min-h-0 w-28 text-sm"
+                        className="ui-input ui-money w-28 text-sm ui-ctl-compact"
                         aria-label={`Allocate to ${e.partyName || `entry ${e.id}`}`}
                         value={alloc[e.id] ?? ''}
                         onChange={(ev) => setOne(e.id, ev.target.value)}
