@@ -287,7 +287,20 @@ const ItemPicker = ({ db, setDb, currentCompany, value, onChange, label = 'Item'
                           : undefined
                       }
                     >
-                      <div className={`text-sm font-medium ${on ? '' : 'ui-fg'}`}>{i.name}</div>
+                      {/* The name takes the room that is left and ends in an
+                          ellipsis; the unit sits at the right edge where the
+                          eye can run down the column. A name like "Enterprise
+                          Network Security Appliance with Extended Support
+                          Subscription" wrapped onto a second line and pushed
+                          every row below it out of rhythm. */}
+                      <div className="flex items-baseline gap-2">
+                        <span className={`min-w-0 flex-1 truncate text-sm font-medium ${on ? '' : 'ui-fg'}`}>
+                          {i.name}
+                        </span>
+                        {i.unit ? (
+                          <span className={`shrink-0 text-xs ${on ? 'opacity-80' : 'ui-muted'}`}>{i.unit}</span>
+                        ) : null}
+                      </div>
                       <div className={`text-xs truncate ${on ? 'opacity-80' : 'ui-muted'}`}>
                         {[i.code, i.hsnSac ? `HSN/SAC ${i.hsnSac}` : null, `GST ${Number(i.gstRate || 0)}%`]
                           .filter(Boolean)

@@ -80,3 +80,36 @@ describe('ItemPicker keyboard', () => {
     expect(screen.getByRole('combobox')).toHaveValue('');
   });
 });
+
+/**
+ * What an option shows, and what it does when the name is longer than the row.
+ *
+ * A line grid is read down its columns, so the unit belongs at the right edge
+ * where the eye can run down it. And a name like "Enterprise Network Security
+ * Appliance with Extended Support Subscription" used to wrap onto a second
+ * line, making that one row taller than its neighbours and knocking the list
+ * out of rhythm — it ends in an ellipsis instead.
+ */
+describe('an option in the list', () => {
+  it('puts the unit at the right of the name, not in the detail line', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await openPicker(user);
+
+    const option = screen.getByRole('option', { name: /MS Angle 50mm/ });
+    const parts = [...option.querySelectorAll('span')];
+    expect(parts.at(-1).textContent).toBe('Pcs');
+    /* The code line stays where it was; the unit is not duplicated into it. */
+    expect(option.textContent).toContain('A50');
+  });
+
+  it('holds the name on one line, however long it is', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    await openPicker(user);
+
+    const name = screen.getByRole('option', { name: /MS Angle 50mm/ }).querySelector('span');
+    expect(name.className).toContain('truncate');
+    expect(name.className).toContain('min-w-0');
+  });
+});
