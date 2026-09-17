@@ -276,6 +276,25 @@
   --kpi-overdue-bg: 251 239 238;   --kpi-overdue-ink: 194 65 58;
   --kpi-credit-bg: 248 240 234;    --kpi-credit-ink: 176 111 66;
 
+  /* --- feature category identity ------------------------------------------
+     A capability's icon says which part of the book it belongs to. Ink on a
+     soft ground of the same hue, so forty rows are scannable by family
+     without any of them shouting — and none of them is the brand, which on
+     this screen still means the thing you press. */
+  --cat-organisation: 100 116 139;  --cat-organisation-soft: 241 244 246;
+  --cat-general: 100 116 139;       --cat-general-soft: 241 244 246;
+  --cat-sales: 63 100 140;          --cat-sales-soft: 238 243 247;
+  --cat-crm: 30 138 145;            --cat-crm-soft: 234 246 246;
+  --cat-purchases: 117 96 125;      --cat-purchases-soft: 244 240 245;
+  --cat-expenses: 176 111 66;       --cat-expenses-soft: 248 240 234;
+  --cat-cashbank: 39 118 109;       --cat-cashbank-soft: 234 245 243;
+  --cat-inventory: 166 106 0;       --cat-inventory-soft: 255 245 223;
+  --cat-accounting: 83 109 130;     --cat-accounting-soft: 238 243 246;
+  --cat-taxation: 152 119 134;      --cat-taxation-soft: 246 241 243;
+  --cat-governance: 100 116 139;    --cat-governance-soft: 241 244 246;
+  --cat-communication: 30 138 145;  --cat-communication-soft: 234 246 246;
+  --cat-other: 116 116 116;         --cat-other-soft: 243 243 242;
+
   /* ---- semantic states the four-colour set did not cover ---------------- */
   --reconciled: 39 118 109;        --reconciled-soft: 234 245 243;  /* #27766D */
   --adjustment: 117 96 125;        --adjustment-soft: 244 240 245;  /* #75607D */
@@ -553,6 +572,20 @@
   --kpi-due-bg: 44 36 18;          --kpi-due-ink: 214 168 74;
   --kpi-overdue-bg: 41 30 28;      --kpi-overdue-ink: 240 145 134;
   --kpi-credit-bg: 45 33 25;       --kpi-credit-ink: 219 154 110;
+
+  --cat-organisation: 156 171 191;  --cat-organisation-soft: 30 35 41;
+  --cat-general: 156 171 191;       --cat-general-soft: 30 35 41;
+  --cat-sales: 140 176 214;         --cat-sales-soft: 26 34 44;
+  --cat-crm: 94 200 205;            --cat-crm-soft: 20 40 41;
+  --cat-purchases: 190 160 199;     --cat-purchases-soft: 38 32 41;
+  --cat-expenses: 219 154 110;      --cat-expenses-soft: 45 33 25;
+  --cat-cashbank: 110 195 180;      --cat-cashbank-soft: 21 42 39;
+  --cat-inventory: 214 168 74;      --cat-inventory-soft: 44 36 18;
+  --cat-accounting: 147 170 190;    --cat-accounting-soft: 27 34 40;
+  --cat-taxation: 202 168 183;      --cat-taxation-soft: 40 33 36;
+  --cat-governance: 156 171 191;    --cat-governance-soft: 30 35 41;
+  --cat-communication: 94 200 205;  --cat-communication-soft: 20 40 41;
+  --cat-other: 154 154 147;         --cat-other-soft: 38 38 38;
 
   --reconciled: 110 195 180;       --reconciled-soft: 24 48 44;
   --adjustment: 190 160 199;       --adjustment-soft: 41 34 44;
@@ -2849,6 +2882,52 @@
     text-transform: uppercase;
     color: rgb(var(--fg-subtle));
     margin-bottom: 0.375rem;
+  }
+
+  /* --- a feature row -------------------------------------------------------
+     Forty capabilities read as a list, not forty cards. One divider, a fixed
+     height so the eye can run down the controls, and the only colour is the
+     small mark that says which family the row belongs to.
+  --------------------------------------------------------------------------- */
+  .ui-feature-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.375rem;   /* 54px */
+    padding: 0.5rem 1rem;
+    background-color: rgb(var(--surface));
+  }
+  .ui-feature-row + .ui-feature-row { border-top: 1px solid rgb(var(--border)); }
+
+  .ui-feature-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--radius-input);
+    background-color: rgb(var(--cat-soft, var(--surface-sunken)));
+    color: rgb(var(--cat-ink, var(--fg-muted)));
+  }
+
+  /* Configure goes to data, not to an action, so it takes the link colour
+     rather than the brand. Orange on this screen means focus and selection. */
+  .ui-feature-config {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: rgb(var(--link));
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .ui-feature-config:hover { color: rgb(var(--link-hover, var(--link))); text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Yes/No is a configuration state, never a verdict — no green, no red. */
+  .ui-feature-answer {
+    width: 6rem;
+    min-height: 2rem;
+    flex: none;
   }
 
   .ui-sec-head {

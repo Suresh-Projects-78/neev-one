@@ -43,8 +43,7 @@ const YesNo = ({ value, onChange, disabled, label }) => (
     onChange={(e) => onChange(e.target.value === 'yes')}
     disabled={disabled}
     aria-label={label}
-    className="ui-select"
-    style={{ width: '6.25rem', minHeight: '2rem', flex: 'none' }}
+    className="ui-select ui-feature-answer"
   >
     <option value="yes">Yes</option>
     <option value="no">No</option>
@@ -292,12 +291,18 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
 
       {sections.map((section) => (
         <section key={section.key} className="ui-card overflow-hidden">
-          <div className="px-4 py-2.5 ui-sunken" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
+          <div
+            className="px-4 py-2 ui-sunken flex items-center justify-between gap-3"
+            style={{ borderBottom: '1px solid rgb(var(--border))' }}
+          >
             <div className="ui-t-label">{section.label}</div>
+            <div className="ui-caption">
+              {section.items.length} {section.items.length === 1 ? 'feature' : 'features'}
+            </div>
           </div>
 
           <div>
-            {section.items.map((r, idx) => {
+            {section.items.map((r) => {
               const Icon = r.icon;
               const parent = r.dependsOn ? catalog.find((x) => x.key === r.dependsOn) : null;
               const blocked = Boolean(parent && values[parent.key] === false);
@@ -305,18 +310,17 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
               const losing = !r.readOnly && values[r.key] ? childrenOf(r.key) : [];
 
               return (
-                <div
-                  key={r.key}
-                  className="flex items-center gap-3 px-4 py-2.5"
-                  style={idx ? { borderTop: '1px solid rgb(var(--border))' } : undefined}
-                >
+                <div key={r.key} className="ui-feature-row">
                   {Icon ? (
                     <span
                       aria-hidden="true"
-                      className="flex-none inline-flex"
-                      style={{ color: `rgb(var(--kpi-${section.key === 'taxation' ? 'due' : 'sales'}-ink, var(--fg-muted)))` }}
+                      className="ui-feature-mark"
+                      style={{
+                        '--cat-ink': `var(--cat-${section.key})`,
+                        '--cat-soft': `var(--cat-${section.key}-soft)`,
+                      }}
                     >
-                      <Icon size={16} />
+                      <Icon size={15} />
                     </span>
                   ) : null}
 
@@ -344,14 +348,11 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
                         Turning this off also turns off {losing.map((c) => c.label).join(', ')}. Nothing is deleted.
                       </span>
                     ) : null}
-                    {r.readOnly ? (
-                      <span className="ui-caption block mt-0.5">Set under its own settings.</span>
-                    ) : null}
                   </span>
 
                   {r.readOnly ? (
-                    <span className="text-sm ui-muted flex-none" style={{ width: '6.25rem' }}>
-                      {r.enabled ? 'Yes' : 'No'}
+                    <span className="text-sm ui-muted flex-none text-center" style={{ width: '6rem' }}>
+                      {r.enabled ? 'Enabled' : 'Disabled'}
                     </span>
                   ) : (
                     <YesNo
@@ -363,16 +364,12 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
                   )}
 
                   {/* Configure appears where a capability has a real screen and
-                      is switched on. Off, there is nothing to configure. */}
-                  <span className="flex-none" style={{ width: '6.5rem' }}>
+                      is switched on. No screen, no link — a row is not made
+                      consistent by inventing somewhere for it to go. */}
+                  <span className="flex-none" style={{ width: '6.25rem' }}>
                     {r.config && r.enabled && onNavigate ? (
-                      <button
-                        type="button"
-                        onClick={() => onNavigate(r.config)}
-                        className="text-sm font-medium inline-flex items-center gap-1"
-                        style={{ color: 'rgb(var(--brand-ink))' }}
-                      >
-                        {r.configLabel} <ArrowRight size={13} aria-hidden="true" />
+                      <button type="button" onClick={() => onNavigate(r.config)} className="ui-feature-config">
+                        Configure <ArrowRight size={13} aria-hidden="true" />
                       </button>
                     ) : null}
                   </span>

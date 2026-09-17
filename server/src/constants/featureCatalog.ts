@@ -120,10 +120,22 @@ export const FEATURE_CATALOG: FeatureDef[] = [
   },
   {
     key: 'batchExpiry',
-    /* Expiry is a property of a batch. Tracking when one runs out while not
-       tracking batches at all was a state the catalogue allowed and nothing
-       could act on. */
-    dependsOn: 'batchSerial',
+    /*
+     * NOT dependent on batchSerial — yet.
+     *
+     * Expiry is a property of a batch, so the dependency is right in
+     * principle, and it was added here once. It is backed out because one
+     * live organisation is in exactly the state it would forbid:
+     * `cmthj0b3v000avnsd50hkmtt5` has batchExpiry on and batchSerial off.
+     *
+     * `dependsOn` is enforced on the client only — the server never reads it —
+     * so declaring it would not have rewritten that row. It would have done
+     * something quieter and worse: the screen would show Expiry as No while
+     * the stored value stayed Yes, and the next save would write Yes back.
+     *
+     * Restore this line together with a migration that decides what that
+     * organisation's batch history means.
+     */
     label: 'Batch stock & expiry',
     description: 'Batch/expiry tracking on items, FEFO picking, and the Batch Stock & Expiry view.',
     defaultEnabled: true,

@@ -106,10 +106,20 @@ describe('what was deliberately left alone', () => {
 });
 
 describe('dependencies', () => {
-  it('makes batch expiry depend on batches', () => {
+  it('does NOT yet make batch expiry depend on batches, and says why', () => {
+    /*
+     * Right in principle, held back on evidence: one live organisation has
+     * batchExpiry on with batchSerial off. `dependsOn` is client-only, so
+     * declaring it would not rewrite that row — it would show No while the
+     * store said Yes, and the next save would write Yes back.
+     *
+     * This asserts the reason is still recorded at the site. Someone will
+     * add the line back; they should read why it was removed first.
+     */
     const catalog = readFileSync('server/src/constants/featureCatalog.ts', 'utf8');
-    const block = catalog.slice(catalog.indexOf("key: 'batchExpiry'"), catalog.indexOf("key: 'batchExpiry'") + 500);
-    expect(block).toContain("dependsOn: 'batchSerial'");
+    const block = catalog.slice(catalog.indexOf("key: 'batchExpiry'"), catalog.indexOf("key: 'batchExpiry'") + 900);
+    expect(block).not.toContain("dependsOn: 'batchSerial'");
+    expect(block).toContain('cmthj0b3v000avnsd50hkmtt5');
   });
 
   it('turns children off with their parent rather than leaving them stranded', () => {
