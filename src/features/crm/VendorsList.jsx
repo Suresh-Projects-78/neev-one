@@ -86,7 +86,6 @@ export default function VendorsList({ db, setDb, currentCompany }) {
       if (isGstRegistered(v)) registered += 1;
     }
     return { count: shownVendors.length, outstanding, overdue, registered, owed };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shownVendors, vendorStanding]);
 
   const vendExportColumns = [

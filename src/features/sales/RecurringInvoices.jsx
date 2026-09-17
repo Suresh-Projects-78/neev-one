@@ -447,7 +447,6 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       return true;
     });
     // scheduleStatus reads only the row it is given.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recSearch.filtered, customerFilter, freqFilter, statusFilter, fromDate, toDate]);
 
   /*
@@ -481,7 +480,6 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       counts[st] = (counts[st] || 0) + 1;
     }
     return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recSearch.filtered]);
 
   /*
@@ -514,7 +512,6 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
       }
     }
     return { count: shownTemplates.length, active, monthly, paused, dueThisMonth };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shownTemplates]);
 
   /*
@@ -1074,7 +1071,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                                 role="menuitem"
                                 disabled={t.active === false}
                                 onClick={() => { setRowMenu(null); runNow(t); }}
-                                className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2 disabled:opacity-50"
+                                className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2 disabled:opacity-50"
                               >
                                 <RefreshCw size={15} aria-hidden="true" /> Run now
                               </button>
@@ -1082,7 +1079,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                                 type="button"
                                 role="menuitem"
                                 onClick={() => { setRowMenu(null); toggle(t); }}
-                                className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                               >
                                 {t.active === false ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
                                 {t.active === false ? 'Resume' : 'Pause'}
@@ -1092,7 +1089,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                                 type="button"
                                 role="menuitem"
                                 onClick={() => { setRowMenu(null); remove(t); }}
-                                className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                                className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                                 style={{ color: 'rgb(var(--neg-ink))' }}
                               >
                                 <Trash2 size={15} aria-hidden="true" /> Delete

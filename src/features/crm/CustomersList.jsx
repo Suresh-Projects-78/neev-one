@@ -88,7 +88,6 @@ export default function CustomersList({ db, setDb, currentCompany }) {
       if (isGstRegistered(c)) registered += 1;
     }
     return { count: shownCustomers.length, outstanding, overdue, registered, owing };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shownCustomers, customerStanding]);
 
   const custExportColumns = [

@@ -62,7 +62,6 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
       counts[st] = (counts[st] || 0) + 1;
     }
     return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journalEntries]);
 
   /*
@@ -87,7 +86,6 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
       if (st === 'Unbalanced') unbalanced += 1;
     }
     return { count: journalEntries.length, debit, lines, unbalanced, reversed };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [journalEntries]);
 
   const jvExportColumns = [

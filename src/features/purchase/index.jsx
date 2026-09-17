@@ -4432,7 +4432,6 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
       counts[st] = (counts[st] || 0) + 1;
     }
     return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debitNotes]);
 
   const dnHeadline = useMemo(() => {
@@ -4448,7 +4447,6 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
       else againstBill += amt;
     }
     return { count: debitNotes.length, value, onAccount, drafted, againstBill };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debitNotes]);
 
   const dnExportColumns = [

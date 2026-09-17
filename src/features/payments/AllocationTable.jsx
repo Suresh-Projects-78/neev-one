@@ -176,7 +176,10 @@ export const AllocationTable = ({
                         View Bills
                         {meta(i).available > 0 ? (
                           <span
-                            className="ms-0.5 inline-flex items-center justify-center rounded-full px-1.5 text-[11px] ui-mono"
+                            /* 12px is the floor of the scale; this count sat
+                               at 11. Tracking keeps the digits from crowding
+                               now that they are a step larger. */
+                            className="ms-0.5 inline-flex items-center justify-center rounded-full px-1.5 text-xs tracking-wide ui-mono"
                             style={{
                               backgroundColor: 'rgb(var(--brand))',
                               color: 'rgb(var(--on-brand))',

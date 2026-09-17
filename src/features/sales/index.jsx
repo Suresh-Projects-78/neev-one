@@ -845,7 +845,6 @@ const statusReason = (doc, status, company, nowMs) => {
     for (const inv of drafts) {
       // Sequential on purpose: each delete hits the API and then rewrites
       // db state; racing them loses updates to the last writer.
-      // eslint-disable-next-line no-await-in-loop
       await deleteInvoiceCore(inv);
     }
     setSelectedIds(new Set());
@@ -1868,7 +1867,6 @@ export const EstimatesList = ({
       counts[st] = (counts[st] || 0) + 1;
     }
     return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estimatesAll]);
 
   /*
@@ -1891,7 +1889,6 @@ export const EstimatesList = ({
       else open += amt;
     }
     return { count: estimatesAll.length, value, open, converted, expired };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [estimatesAll]);
 
   const MENU_WIDTH = 224; // w-56
@@ -2513,7 +2510,6 @@ export const CreditNotesList = ({
       counts[st] = (counts[st] || 0) + 1;
     }
     return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creditNotesAll]);
 
   const cnHeadline = useMemo(() => {
@@ -2529,7 +2525,6 @@ export const CreditNotesList = ({
       else againstInvoice += amt;
     }
     return { count: creditNotesAll.length, value, onAccount, drafted, againstInvoice };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creditNotesAll]);
 
   const cnExportColumns = [

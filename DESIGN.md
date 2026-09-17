@@ -39,30 +39,125 @@ Nothing below 12px. Nothing between 16 and 24.
 
 ## Color
 - **Approach:** restrained. One accent, and it means one thing.
-- **Brand `#F97316`:** primary action and active navigation. Nothing else. Rare in this category — Tally blue, Zoho red, QuickBooks green.
+- **Brand `#FF6B00`** (`--brand`): primary action and active navigation. Nothing else. Rare in this category — Tally blue, Zoho red, QuickBooks green. Its readable-on-light partner is `#C2410C` (`--brand-ink`), used for brand-coloured text and marks where the fill would not carry contrast.
 - **Money semantics, never the accent:** in `#15803D`, out / late `#B91C1C`, attention `#A16207`.
 - **Column hues:** document number `#C2410C`, party name `#0F766E`. A row reads as fields, not prose.
 - **Neutrals:** warm (stone), `#FAFAF9` → `#1C1917`, biased toward the orange so they read as chosen.
-- **Dark mode:** redefine tokens only, never restyle components inside a theme block. Accent lifts to `#FB923C`; money greens and reds lighten for contrast on dark ground.
+- **Dark mode:** redefine tokens only, never restyle components inside a theme block. Accent lifts to `#FF8A33`; money greens and reds lighten for contrast on dark ground.
 
 ## Spacing
 - **Base:** 8px.
 - **Density:** comfortable-dense.
-- **Rhythm — three values, not six:** 12 inside a group, 24 between groups, 40 between page sections.
+- **Rhythm — two values in force, a third only intended:** 12 inside a group
+  (`space-y-3`, 62 uses), 24 between groups (`space-y-6`, 129 uses).
   - **Page blocks are 24** (`space-y-6`), enforced on every screen root. Before
     2026-09-08 the product used 16 in 43 screens and 20 in 20 more — two values
     on no scale here — so opening one page after another shifted the layout for
     no reason a reader could name.
-  - **16 (`space-y-4`) still appears inside cards and forms**, 122 times. It is
-    off the scale and should migrate to 12, but that tightens every form and
-    wants a visual pass rather than a codemod.
-- **Row height:** 36px table rows, 34px controls.
+  - **40 between page sections (`space-y-10`) is written down and never used —
+    zero occurrences.** It is an intention, not a rule the code follows. Either
+    adopt it deliberately on screens that have distinct sections, or drop it
+    from this document; do not cite it as an existing standard.
+  - **16 (`space-y-4`) is legacy and still present inside cards and forms**,
+    114 uses. It is off the 8-base scale and should migrate to 12 — but that
+    tightens every form it touches, so it wants a screen-by-screen visual pass,
+    not a codemod. Counted 2026-09-17; do not bulk-replace.
+
+### Row and control height — measured, not assumed
+
+Two table contexts, not one. An audit that quotes a single row height is
+reading an older version of this file.
+
+| Context | Row | Control |
+| --- | --- | --- |
+| List / data table (`.ui-table`) | **55px** (9px cell padding) | 36px |
+| Dense line grid (`.ui-grid-dense`) | **40px** (1px cell padding) | **34px** |
+
+Header rows: 37px on a list, 29px on a dense grid. The control tiers those
+numbers refer to are defined once under *Controls → Height*.
 
 ## Layout
 - **Approach:** grid-disciplined.
-- **Shell:** fixed 188px left rail with module groups, content pane on page ground.
-- **Radius — two, not four:** 8px on anything clickable, 12px on anything holding content. `999px` for pills only.
+- **Shell:** left rail with module groups, content pane on page ground. The
+  rail is **224px** from `md` and **240px** from `lg` (`md:w-56 lg:w-60`), and
+  collapses to `.ui-rail-narrow`. Content is capped at 1920px and centres
+  beyond that; page padding is 24px, 16px below `sm`.
+- **Breakpoints are read against the window, the panels are laid out in what
+  is left of it.** A row of three panels sized at `xl` (1280) is really sharing
+  1040px once the rail is taken off, which is how a five-column table ended up
+  in a 383px panel. Three-up rows wait for `2xl`; `src/test/overview-breakpoints.test.js` pins it.
+- **Radius — two, not four:** 8px (`rounded-lg`) on anything clickable, 12px
+  (`rounded-xl`) on anything holding content. `999px` (`rounded-full`) for
+  pills and status labels only.
+  - **One documented exception: the keycap, 6px.** A key is 22–28px tall; at
+    8px the corner is a third of the height and the cap reads as a lozenge
+    rather than a key. It also sets 11px type, below the 12px floor, for the
+    same reason — a keycap is a glyph of a physical object, not running text.
+    `.ui-kbd` is the canonical one. Two call sites still open-code it with
+    `rounded-md` (the shortcut sheet's `<kbd>`, the ⌘K hint in the dashboard
+    search); both are annotated in place and should converge on `.ui-kbd`, but
+    their heights differ from it so that is a visual change, not a rename.
+    Every other `rounded-md` was drift and is gone — a third is drift.
 - **No card-in-card.** A list is the page: one hairline, no wrapper. A document is a discrete object: it earns a surface.
+
+## Controls
+
+### Height — one baseline, one compact tier, four named exceptions
+
+| Tier | Height | Where |
+| --- | --- | --- |
+| Baseline | **36px** | Every input, select and button in app chrome |
+| Compact | **28px** | `.ui-ctl-compact`, `.ui-btn-sm` — column filters and in-table editors, where 36 will not fit |
+| Dense grid | **34px** | `.ui-grid-dense .ui-input` / `.ui-select` — the line grid only |
+
+The baseline is **36, not 40**. A generic spec will tell you 40; this product
+was measured before that was adopted and 36 is what every screen already uses.
+An override that merely restates the baseline (`!h-9`) is noise and
+`src/test/control-geometry.test.js` fails on it.
+
+Four exceptions, each deliberate:
+
+- **`.ui-icon-btn` is 36px, and 28px only inside `.ui-table tbody`.** A second
+  rule at higher specificity. So `!h-9` on an icon button *inside* a table is a
+  real decision; outside one it says nothing.
+- **28px in-field actions.** A mark sitting inside a 36px input: at 36 it fills
+  the field edge to edge.
+- **44px POS primary** (`!h-11`, the checkout button) — a touch target on a
+  counter, used at arm's length.
+- **28px POS steppers** (`!h-7 !w-7`) — quantity ± beside a cart line.
+
+### Select
+
+A select draws its own indicator: `appearance: none`, a chevron as an inline
+SVG background, 36px of trailing room reserved for a 16px mark, and
+`text-overflow: ellipsis` so a long value truncates rather than running under
+it. The dark-theme stroke is a separate rule guarded by
+`@media (prefers-color-scheme: dark)` — an unguarded `:root:not([data-theme='light'])`
+also matches a light page.
+
+**This belongs to `.ui-select` alone, never to the shared `.ui-input` block.**
+Putting it there once gave every text input in the product a chevron.
+
+### Value alignment
+
+A figure is aligned by what it *is*, not by being a number. Named once, in
+`.ui-val-left` / `.ui-val-center` / `.ui-val-right`, so it is not re-decided at
+each call site.
+
+| Kind | Alignment |
+| --- | --- |
+| Financial table column | **right** — a column is compared down its decimal |
+| Financial summary / totals | **right** — it lines up with the column above it |
+| Standalone monetary input | **centred** — one field is not a column, and a lone figure pinned right reads as a stray |
+| Compact numeric entry | **centred** where the field is narrow enough that right-alignment crowds the edge |
+| Text and entity fields | **left** |
+
+A centred amount keeps its currency symbol with the number rather than pinning
+it to the left edge — `.ui-money-centred` groups the two so they centre as one
+thing.
+
+**Do not reintroduce `text-right` on every money input.** That is the change
+this table exists to prevent.
 
 ## Motion
 - **Approach:** minimal-functional.
@@ -85,7 +180,9 @@ Rules that hold across every module:
 1. One primary action per screen, top right.
 2. Voucher number and date sit right of the page title on entry forms.
 3. Print / Download / Share, in that order, above a document — never inside it.
-4. Every amount is set with tabular figures and right-aligned.
+4. Every amount is set with tabular figures. Where it is *aligned* depends on
+   what kind of thing it is — see *Value alignment* below. A column of figures
+   is right-aligned; a lone amount field is not a column.
 5. Status is a pill; severity is carried by color *and* text, never color alone.
 6. A status hue is a **background**, never type. Pills and filter tabs keep grey
    text on a pale tint; the word carries the meaning and the tint places it.
@@ -133,8 +230,11 @@ gets checked against this list; a screen that fails any line is not finished.
 **Documents additionally**
 6. **Head in two columns**, ruled apart: who and where on the left, the paperwork —
    number, dates, references — on the right.
-7. **Line grid** at `.ui-grid-dense`: 36px rows, 34px controls, column widths sized to
-   what the column holds, figures mono and right-aligned, no spin buttons.
+7. **Line grid** at `.ui-grid-dense`: 40px rows, 34px controls (see *Row and
+   control height*), column widths sized to what the column holds, figures
+   tabular and right-aligned, no spin buttons. Header text, field text and
+   plain cell text all start on one inset — the control is pulled out by its
+   own padding so the three agree.
 8. **Keyboard.** Pickers on the shared `useListboxKeys` contract; the form on
    `useDocumentFormKeys`. Arrows move between fields and down a grid column, Tab commits
    and advances, a date field is left in one press, Alt+C creates a master in place,
@@ -163,6 +263,7 @@ because focus, portals and event order cannot be read off the source.
 | 2026-09-08 | Weight marks structure, not content | 121 values carried semibold or bold. Spending weight on content leaves none for hierarchy — everything emphasised is nothing emphasised |
 | 2026-09-08 | Money drops to weight 400 | Tabular alignment already marks a figure as money. A weight on top made every amount in every table an emphasis, and a screen that is mostly amounts then had none |
 | 2026-09-08 | Status hues move out of type and into the tint | Seven saturated words in the filter strip competed with each other and with the figures beside them. Reverses the 2026-09-01 contrast increase, which raised the wrong thing |
+| 2026-09-17 | This document reconciled against the rendered app | An audit quoted `#F97316`, "36px table rows" and a 188px rail — all from here, all stale. Every geometry and colour value above is now measured from the running product, and the audit inherited the errors because it read the doc instead of the tokens |
 | 2026-09-13 | One face: Inter, everywhere | The Graphite type decision, adopted alone while its colors stay parked. Money and codes keep digit alignment through tabular-nums instead of a mono family |
 | 2026-08-24 | Monospace money | Superseded 2026-09-13 — the alignment survives via tabular-nums, the second family does not |
 | 2026-08-24 | No card-in-card on lists | 2–3 more rows per screen, less framing noise. Departs from the Zoho/Tally convention deliberately |

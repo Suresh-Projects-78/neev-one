@@ -132,7 +132,6 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
 
   const current = useMemo(
     // summarise closes over the same inputs the memo lists.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     () => summarise(period.from, period.to),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allBills, allDebitNotes, period.from, period.to, nowTs]
@@ -346,7 +345,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
                       setPeriodKey(p.key);
                       setPeriodOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken"
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken"
                     style={p.key === periodKey ? { backgroundColor: 'rgb(var(--accent-soft))' } : undefined}
                   >
                     <span>{p.label}</span>
@@ -398,7 +397,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
                     go('bills');
                     setMoreOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
                   <LayoutList size={15} aria-hidden="true" /> All bills
                 </button>
@@ -409,7 +408,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
                     go('purchaseOrders');
                     setMoreOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
                   <FileText size={15} aria-hidden="true" /> Purchase orders
                 </button>

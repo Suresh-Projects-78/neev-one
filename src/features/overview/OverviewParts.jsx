@@ -302,7 +302,9 @@ export const OverviewStatusPill = ({ status }) => {
   const it = map[key] || { bg: 'var(--ov-amber-soft)', fg: 'var(--ov-amber)', label: 'Pending' };
   return (
     <span
-      className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium"
+      /* A status word on a soft ground is a pill, like every other one in the
+         product — it was the only status label drawn as a rounded box. */
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
       style={{ backgroundColor: `rgb(${it.bg})`, color: `rgb(${it.fg})` }}
     >
       {it.label}

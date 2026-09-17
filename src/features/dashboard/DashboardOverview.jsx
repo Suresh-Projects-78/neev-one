@@ -714,6 +714,7 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
             <Search size={15} aria-hidden="true" />
             <span className="ui-t-body truncate">Search invoices, customers, items…</span>
             <span
+              /* A keycap, the same object ShortcutSheet draws. 6px is the keycap exception in DESIGN.md: on a 24px cap 8px reads as a lozenge, not a key. */
               className="ms-auto grid h-7 min-w-7 px-1.5 place-items-center rounded-md text-xs font-semibold"
               style={{ backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--fg-muted))' }}
               aria-hidden="true"

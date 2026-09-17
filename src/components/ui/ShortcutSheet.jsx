@@ -85,6 +85,7 @@ export const label = (key, mac = isMac()) => {
 
 const Key = ({ children }) => (
   <kbd
+    /* 6px is the keycap exception in DESIGN.md: on a 24px cap 8px reads as a lozenge, not a key. */
     className="ui-mono inline-grid h-6 min-w-6 place-items-center rounded-md border px-1.5 text-xs"
     style={{ borderColor: 'rgb(var(--border-strong))', backgroundColor: 'rgb(var(--surface-sunken))' }}
   >

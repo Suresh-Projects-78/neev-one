@@ -3309,7 +3309,6 @@ export const ChartAccountForm = ({
         <PopupSelect
           label={null}
           ariaLabel="Ledger Group *"
-          ariaLabel="Ledger Group *"
           value={formData.groupId}
           disabled={groupLocked}
           onChange={(val) => {

@@ -503,7 +503,7 @@ const SalesOverview = ({
                       setPeriodKey(p.key);
                       setPeriodOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken"
+                    className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken"
                     style={p.key === periodKey ? { backgroundColor: 'rgb(var(--accent-soft))' } : undefined}
                   >
                     <span>{p.label}</span>
@@ -548,7 +548,7 @@ const SalesOverview = ({
                     setBranchPickerOpen(true);
                     setMoreOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
                   <Building2 size={15} aria-hidden="true" /> Branches: {branchFilterLabel}
                 </button>
@@ -559,7 +559,7 @@ const SalesOverview = ({
                     go('invoices');
                     setMoreOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-md text-sm ui-hover-sunken flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
                   <LayoutList size={15} aria-hidden="true" /> All invoices
                 </button>
@@ -854,7 +854,7 @@ const SalesOverview = ({
                 }
               >
                 <span
-                  className="h-7 w-7 rounded-md grid place-items-center flex-shrink-0"
+                  className="h-7 w-7 rounded-lg grid place-items-center flex-shrink-0"
                   style={
                     a.primary
                       ? { backgroundColor: 'rgb(var(--on-brand) / 0.14)' }
