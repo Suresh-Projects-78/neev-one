@@ -717,8 +717,16 @@ const SalesOverview = ({
 
       {/* The invoice table carries five columns to the credit-note table's four,
           so it gets the wider share rather than an equal one — an equal split
-          left the status column scrolling off its own right edge. */}
-      <div className="grid gap-4 items-stretch xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_15.5rem]">
+          left the status column scrolling off its own right edge.
+
+          Three-up at 2xl, not xl, because the breakpoint is read against the
+          window and the panels are laid out in what is left after the 240px
+          rail. At xl (1280) the invoice panel came to 383px for a table whose
+          five columns need 508 — so on a 1280, 1366 or 1440 laptop, which is
+          most of them, Recent Invoices scrolled sideways inside its own panel
+          to show a status pill. 1536 is measured, not guessed: it is the first
+          width at which the column reaches the table's natural size. */}
+      <div className="grid gap-4 items-stretch 2xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.85fr)_15.5rem]">
         <Panel
           title="Recent Invoices"
           bodyClass="justify-start"

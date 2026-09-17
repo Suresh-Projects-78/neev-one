@@ -334,6 +334,14 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView, 
         setPage(1);
       }}
     >
+        {/* Eight columns in a card that stops at the page's edge, so the
+            table needs somewhere to scroll. Without this wrapper the card's
+            own `overflow: hidden` clipped it: at 1093px — a 1366 laptop at
+            125% — the table came to 960px inside an 803px card, and the last
+            157px, which is the Amount column, was not merely off-screen but
+            unreachable, with no scrollbar to say it existed. Every other wide
+            list in the product is wrapped this way; this one was missed. */}
+        <div className="overflow-x-auto ui-table-scroll">
         <table className="ui-table ui-table-wide ui-table-sticky">
           <thead>
             <tr>
@@ -393,6 +401,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView, 
             )}
           </tbody>
         </table>
+        </div>
         <TableTotals
           count={shown.length}
           totalCount={(rows || []).length}

@@ -1319,7 +1319,20 @@ export default function DashboardOverview({
               />
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
+            {/* Two panels, then the list — not three equal thirds.
+
+                Receivables and Payables are three label-and-figure lines each
+                and are happy narrow. Recent Activity is a five-column row
+                (number, party, kind, amount, status) that cannot render below
+                ~380px: the fixed columns alone come to that, so the party name
+                collapses to nothing and the amount is laid out past the
+                panel's right edge. At an equal third of this column — 200px on
+                a 1280 laptop, 229 on a 1366 — every row's rupee figure sat
+                outside the card it belongs to, over the panel beside it.
+
+                So the list takes the full width under the pair. At 1280 that
+                is 696px against the 412 it needs, and it only grows. */}
+            <div className="grid gap-6 lg:grid-cols-2">
               <DueSplitPanel
       title="Receivables"
                 Icon={FileText}
@@ -1344,7 +1357,9 @@ export default function DashboardOverview({
                   { label: 'Due later', value: paySplit.later },
                 ]}
               />
-              <RecentActivity rows={activity} company={currentCompany} onViewAll={onOpenInvoices || nav('invoices')} />
+              <div className="lg:col-span-2">
+                <RecentActivity rows={activity} company={currentCompany} onViewAll={onOpenInvoices || nav('invoices')} />
+              </div>
             </div>
           </div>
 
