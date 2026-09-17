@@ -3294,6 +3294,28 @@
     line-height: 1.125rem;
   }
 
+  /*
+   * Header text, field text and plain cell text all start on the same line.
+   *
+   * The cell insets 12px and the control insets another 8 inside that, so a
+   * typed item name began 20px from the cell's edge while the word "ITEM"
+   * above it began at 12 — and the Unit and Amount cells, which hold bare
+   * text and take the cell's padding directly, sat at 12 with the header.
+   * Three different starts down one column, which is what reads as a grid
+   * that was never lined up.
+   *
+   * Pulling the control out by exactly its own padding puts its text back on
+   * 12px without moving anything else: the header stays where it is, the
+   * plain cells stay where they are, and the field's box simply reaches
+   * closer to the cell's edge — which the narrow numeric columns wanted
+   * anyway. It stays inside the cell's padding box, so nothing overflows.
+   */
+  .ui-grid-dense tbody td > .ui-input,
+  .ui-grid-dense tbody td > .ui-select {
+    margin-inline: -0.5rem;
+    width: calc(100% + 1rem);
+  }
+
   /* Figures in a line grid are money and counts, so they follow the money row
      of the type scale: mono, tabular, right-aligned. They were the body face,
      left-aligned, which is why a column of rates did not line up on the

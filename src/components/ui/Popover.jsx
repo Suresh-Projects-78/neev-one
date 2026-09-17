@@ -68,11 +68,21 @@ const Popover = ({
       const below = roomBelow >= wanted || roomBelow >= roomAbove;
       const h = Math.min(panel.scrollHeight, below ? roomBelow : roomAbove);
 
-      const top = below ? a.bottom + GAP : Math.max(MARGIN, a.top - h - GAP);
       const left = Math.min(Math.max(MARGIN, a.left), Math.max(MARGIN, window.innerWidth - w - MARGIN));
       const maxHeight = Math.max(140, (below ? roomBelow : roomAbove) - GAP);
 
-      setPos({ top, left, width: w, maxHeight });
+      /*
+       * A panel above the trigger is pinned by its BOTTOM edge, not its top.
+       *
+       * Its height is not fixed — the list filters as you type — and a panel
+       * held by `top` grows and shrinks downward, away from the control it
+       * belongs to. Typing one letter into an item field near the foot of the
+       * page cut the list from four rows to one and left it stranded 187px
+       * above the box, connected to nothing. Held by the bottom it stays put
+       * against the field and grows upward, which is what "above" means.
+       */
+      if (below) setPos({ top: a.bottom + GAP, left, width: w, maxHeight });
+      else setPos({ bottom: Math.max(MARGIN, window.innerHeight - a.top + GAP), left, width: w, maxHeight });
     };
 
     place();
@@ -80,7 +90,18 @@ const Popover = ({
     // scrolled a pixel reads as a bug, not as a dismissal.
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
+
+    /*
+     * The panel's own contents change size — a list filters, a message
+     * replaces the rows — and that changes which side it should be on, so the
+     * placement is re-decided when it does. Pinning by the bottom edge keeps
+     * it attached in the meantime; this keeps the CHOICE of side honest.
+     */
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(place) : null;
+    if (ro && panelRef.current) ro.observe(panelRef.current);
+
     return () => {
+      ro?.disconnect();
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     };
@@ -195,7 +216,14 @@ const Popover = ({
       className="ui-popover"
       style={
         pos
-          ? { top: pos.top, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }
+          ? {
+              /* One of the two, never both: `top` holds a panel that opened
+                 downward, `bottom` holds one that flipped above. */
+              ...(pos.top === undefined ? { bottom: pos.bottom } : { top: pos.top }),
+              left: pos.left,
+              width: pos.width,
+              maxHeight: pos.maxHeight,
+            }
           : { top: 0, left: 0, width: minWidth, visibility: 'hidden' }
       }
     >
