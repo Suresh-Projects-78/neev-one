@@ -86,14 +86,14 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
-              className="ui-input !h-9 !min-h-0 w-auto text-sm"
+              className="ui-input w-auto text-sm"
               aria-label="From date"
             />
             <input
               type="date"
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
-              className="ui-input !h-9 !min-h-0 w-auto text-sm"
+              className="ui-input w-auto text-sm"
               aria-label="To date"
             />
             <label

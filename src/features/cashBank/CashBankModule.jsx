@@ -1929,7 +1929,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             id="cashbank-account"
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
-            className="ui-select !h-9 w-44 text-sm"
+            className="ui-select w-44 text-sm"
           >
             <option value="">Select account</option>
             {cashBankAccounts.map((a) => (

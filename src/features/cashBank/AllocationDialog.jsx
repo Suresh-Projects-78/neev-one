@@ -477,7 +477,7 @@ const AllocationDialog = ({ db, setDb, currentCompany, txn, onClose }) => {
                       type="number"
                       min="0"
                       step="0.01"
-                      className="ui-input ui-money w-full"
+                      className="ui-input ui-money ui-val-center w-full"
                       value={r.amount}
                       onChange={(e) => setRow(i, { amount: e.target.value })}
                     />

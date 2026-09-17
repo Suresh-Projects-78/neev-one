@@ -512,7 +512,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                     key={t}
                     type="button"
                     onClick={() => setTender(t)}
-                    className={`ui-btn !h-9 flex-1 text-sm ${tender === t ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
+                    className={`ui-btn flex-1 text-sm ${tender === t ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
                   >
                     {t}
                   </button>

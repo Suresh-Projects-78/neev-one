@@ -297,7 +297,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                     setNewName('');
                   }
                 }}
-                className="ui-input !h-9 w-44 px-2 text-sm"
+                className="ui-input w-44 px-2 text-sm"
                 placeholder="Retail, Wholesale…"
                 aria-label="New price list name"
               />

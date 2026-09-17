@@ -227,15 +227,15 @@ export function PartyFormLayout({
           <FormRow className={rows.opening} label="Opening Balance" htmlFor="party-opening-balance" hint={cfg.openingBalanceHint}>
             {/* The symbol sits in the field rather than in the label: a column
                 of money the eye reads as money before it reads the number. */}
-            <div className="relative">
-              <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+            <div className="ui-money-centred">
+              <span className="ui-money-symbol pointer-events-none">₹</span>
               <input
                 id="party-opening-balance"
                 type="number"
                 step="0.01"
                 value={formData.openingBalance}
                 onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-                className="ui-input ui-money w-full ps-7"
+                className="ui-input ui-money"
                 placeholder="0.00"
               />
             </div>

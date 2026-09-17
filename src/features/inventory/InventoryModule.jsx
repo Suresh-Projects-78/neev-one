@@ -517,7 +517,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
               id="inv-view"
               value={viewMode}
               onChange={(e) => setViewMode(e.target.value)}
-              className="ui-select !h-9 !min-h-0 px-2 text-sm"
+              className="ui-select px-2 text-sm"
             >
               <option value="qty">Qty</option>
               <option value="value">Value</option>
@@ -530,7 +530,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
               id="inv-warehouse"
               value={warehouseId}
               onChange={(e) => setWarehouseId(e.target.value)}
-              className="ui-select !h-9 !min-h-0 px-2 text-sm"
+              className="ui-select px-2 text-sm"
             >
               <option value="">All Warehouses</option>
               {warehouseOptions.map((w) => (
@@ -555,7 +555,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
               id="inv-period"
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              className="ui-select !h-9 !min-h-0 px-2 text-sm"
+              className="ui-select px-2 text-sm"
             >
               {PERIOD_OPTIONS.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -571,7 +571,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
+                className="ui-input !w-[9.5rem] px-2 text-sm"
                 aria-label="From date"
               />
               <span className="ui-subtle">to</span>
@@ -579,7 +579,7 @@ const InventoryModule = ({ db, openModal, currentCompany, warehouses = [], onOpe
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="ui-input !h-9 !min-h-0 !w-[9.5rem] px-2 text-sm"
+                className="ui-input !w-[9.5rem] px-2 text-sm"
                 aria-label="To date"
               />
             </div>

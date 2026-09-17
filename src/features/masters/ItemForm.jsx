@@ -573,7 +573,7 @@ const ItemForm = ({
                     aria-label="New unit"
                     autoFocus
                   />
-                  <button type="button" onClick={saveNewUnit} className="ui-btn ui-btn-primary !h-9 text-xs">
+                  <button type="button" onClick={saveNewUnit} className="ui-btn ui-btn-primary text-xs">
                     Add
                   </button>
                   <button
@@ -582,7 +582,7 @@ const ItemForm = ({
                       setNewUnitOpen(false);
                       setNewUnitName('');
                     }}
-                    className="ui-btn ui-btn-secondary !h-9 text-xs"
+                    className="ui-btn ui-btn-secondary text-xs"
                   >
                     Cancel
                   </button>

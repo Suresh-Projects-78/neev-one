@@ -4897,7 +4897,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                         otherCharges: p.otherCharges.map((x, i) => (i === ci ? { ...x, label: e.target.value } : x)),
                       }))
                     }
-                    className="ui-input !h-9 flex-1 px-2 text-sm"
+                    className="ui-input flex-1 px-2 text-sm"
                     placeholder="Transport"
                   />
                   <input
@@ -4911,7 +4911,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                         otherCharges: p.otherCharges.map((x, i) => (i === ci ? { ...x, amount: e.target.value } : x)),
                       }))
                     }
-                    className="ui-input !h-9 w-24 px-2 text-sm"
+                    className="ui-input w-24 px-2 text-sm"
                     placeholder="Amount"
                   />
                   <select
@@ -4922,7 +4922,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                         otherCharges: p.otherCharges.map((x, i) => (i === ci ? { ...x, gstRate: e.target.value } : x)),
                       }))
                     }
-                    className="ui-select !h-9 w-24 px-2 text-sm"
+                    className="ui-select w-24 px-2 text-sm"
                   >
                     {[0, 5, 12, 18, 28].map((r) => (
                       <option key={r} value={r}>GST {r}%</option>

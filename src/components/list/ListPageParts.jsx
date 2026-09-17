@@ -188,7 +188,7 @@ export function ListSearch({ value, onChange, placeholder = 'Search…', label =
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        className="ui-input !h-9 w-full md:w-56 lg:w-64 ps-8 pe-2 text-sm"
+        className="ui-input w-full md:w-56 lg:w-64 ps-8 pe-2 text-sm"
       />
     </div>
   );

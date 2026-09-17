@@ -870,6 +870,31 @@
   .ui-input::placeholder {
     color: rgb(var(--fg-subtle));
   }
+  /*
+   * The select's own geometry, which is not the input's.
+   *
+   * The browser drew its arrow inside the same 10px the text used, so a long
+   * vendor name ran straight into it and the arrow sat hard against the
+   * border — a native select reserves nothing. Drawn rather than native: the
+   * inset is ours at every width and in every browser, and there is exactly
+   * one indicator.
+   *
+   * This lives apart from `.ui-input` because the two shared a rule block,
+   * and the first cut of this put a chevron on every text box in the product.
+   */
+  .ui-select {
+    padding-inline-end: 2.25rem;   /* 36px of room for a 16px mark at 12px */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem 1rem;
+    /* A value longer than the control stops at the chevron, not under it. */
+    text-overflow: ellipsis;
+  }
+
   .ui-input:hover,
   .ui-select:hover {
     border-color: rgb(var(--fg-subtle));
@@ -2960,6 +2985,99 @@
     line-height: 1rem;
     color: rgb(var(--fg-muted));
     margin: 0.0625rem 0 0;
+  }
+
+  /*
+   * The chevron's stroke is baked into the data URI, so the dark theme needs
+   * its own rather than inheriting a slate that vanishes on a dark field.
+   *
+   * Both halves of the guard matter and the first cut had only one: bare,
+   * `:root:not([data-theme='light'])` matches a light page too, because the
+   * default theme stamps no attribute at all. The media query is what makes
+   * it mean "dark".
+   */
+  :root[data-theme='dark'] .ui-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239A9A93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) .ui-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239A9A93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    }
+  }
+
+  /* --- where a value sits inside its control -------------------------------
+     Alignment is a property of what the number MEANS, not of its being a
+     number. Eighteen call sites had reached for `text-right` on a money input
+     because money is right-aligned in a table — but a table is right-aligned
+     so digits line up down a column, and a lone field has no column.
+
+       ui-val-left    names, references, narration — read left to right
+       ui-val-center  a figure the operator types: amount, quantity, a percent
+       ui-val-right   a figure the operator compares: a table cell, a total
+
+     Named rather than spelled at the call site, so the rule can be argued
+     with in one place instead of three hundred.
+  --------------------------------------------------------------------------- */
+  .ui-val-left  { text-align: left; }
+  .ui-val-right { text-align: right; }
+  /*
+   * A centred value has to LOOK centred, so symmetry is part of the rule
+   * rather than a second one. These controls inherit a trailing icon's right
+   * padding in some rows, and text centred inside a box whose usable width is
+   * lopsided is only centred by accident.
+   */
+  .ui-val-center {
+    text-align: center;
+    padding-inline: 0.625rem;
+  }
+
+  /*
+   * A currency prefix that moves with its number.
+   *
+   * The ₹ was absolutely positioned at the start of the control, which is
+   * right while the value reads from the left and wrong the moment it is
+   * centred: the symbol stays pinned to the border and the digits drift to
+   * the middle, so one amount renders as two things.
+   *
+   * Here the pair is a flex group that centres together. The input gives up
+   * its full width and takes only what it needs, so "₹ 25,000.00" is one
+   * object with space either side of it.
+   */
+  .ui-money-centred {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    min-height: 2.25rem;
+    padding-inline: 0.625rem;
+    background-color: rgb(var(--surface));
+    border: 1px solid rgb(var(--border-strong));
+    border-radius: var(--radius-input);
+    transition: border-color var(--dur-surface) ease, box-shadow var(--dur-surface) ease;
+  }
+  .ui-money-centred:focus-within {
+    border-color: rgb(var(--brand));
+    box-shadow: 0 0 0 3px rgb(var(--brand) / 0.15);
+  }
+  /* The control inside has already been drawn by the wrapper. */
+  .ui-money-centred > .ui-input {
+    width: auto;
+    min-width: 0;
+    flex: 0 1 auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+  }
+  .ui-money-centred > .ui-input:focus {
+    outline: none;
+    box-shadow: none;
+  }
+  .ui-money-centred > .ui-money-symbol {
+    flex: none;
+    color: rgb(var(--fg-muted));
+    font-size: 0.875rem;
   }
 
   .ui-scope-field {

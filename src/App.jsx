@@ -803,7 +803,7 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="ui-input !h-9 !min-h-0 w-auto text-sm"
+            className="ui-input w-auto text-sm"
           />
           <label className="ui-label mb-0" htmlFor="expense-to">To</label>
           <input
@@ -811,7 +811,7 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="ui-input !h-9 !min-h-0 w-auto text-sm"
+            className="ui-input w-auto text-sm"
           />
           {fromDate || toDate ? (
             <button
@@ -3269,14 +3269,14 @@ export const ChartAccountForm = ({
 
 
       <PartyFormRow className="lg:col-start-1 lg:row-start-2" label="Opening Balance" htmlFor="ledger-opening" hint="What this ledger already held on the day the books begin.">
-        <div className="relative">
-        <span className="ui-subtle pointer-events-none absolute inset-y-0 start-3 flex items-center text-sm">₹</span>
+        <div className="ui-money-centred">
+        <span className="ui-money-symbol pointer-events-none">₹</span>
         <input
           id="ledger-opening"
           type="number"
           value={formData.openingBalance}
           onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}
-          className="ui-input ui-money w-full ps-7"
+          className="ui-input ui-money"
           step="0.01"
         />
         </div>
@@ -10579,7 +10579,7 @@ const GstrExportControl = ({ label, onExport }) => {
         type="month"
         value={month}
         onChange={(e) => setMonth(e.target.value)}
-        className="ui-input !h-9 !min-h-0 w-auto text-sm"
+        className="ui-input w-auto text-sm"
         aria-label="Return period"
       />
       <button
@@ -14060,7 +14060,7 @@ const AppShell = () => {
               <select
                 value={activeBranchId || ''}
                 onChange={(e) => setActiveBranch(e.target.value)}
-                className="ui-select ui-scope-select !h-9 !min-h-0 max-w-[16rem] text-sm"
+                className="ui-select ui-scope-select max-w-[16rem] text-sm"
                 aria-label="Active branch"
               >
                 {branchesForUser.map((b) => (
@@ -14078,7 +14078,7 @@ const AppShell = () => {
               <select
                 value={activeWarehouseId || ''}
                 onChange={(e) => setActiveWarehouse(e.target.value)}
-                className="ui-select ui-scope-select !h-9 !min-h-0 max-w-[16rem] text-sm"
+                className="ui-select ui-scope-select max-w-[16rem] text-sm"
                 aria-label="Active warehouse"
               >
                 <option value="">All warehouses</option>
@@ -14095,7 +14095,7 @@ const AppShell = () => {
               <button
                 type="button"
                 onClick={() => setActive('settingsWarehouses')}
-                className="ui-btn ui-btn-secondary hidden md:inline-flex !h-9 !min-h-0 text-sm"
+                className="ui-btn ui-btn-secondary hidden md:inline-flex text-sm"
       title="No warehouse yet — stock and documents need one"
               >
                 <Package size={15} aria-hidden="true" /> Add warehouse
@@ -14110,7 +14110,7 @@ const AppShell = () => {
             */}
             <select
               aria-label="Financial year"
-              className="ui-select hidden md:inline-flex !h-9 !min-h-0 w-36 text-sm"
+              className="ui-select hidden md:inline-flex w-36 text-sm"
               value={readGlobalFy()}
               onChange={(e) => {
                 writeGlobalFy(e.target.value);
