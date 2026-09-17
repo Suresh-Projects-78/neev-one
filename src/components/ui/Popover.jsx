@@ -66,7 +66,6 @@ const Popover = ({
       // every list of any length upward, which is not a flip, it is a default.
       const wanted = Math.min(panel.scrollHeight, MIN_USEFUL);
       const below = roomBelow >= wanted || roomBelow >= roomAbove;
-      const h = Math.min(panel.scrollHeight, below ? roomBelow : roomAbove);
 
       const left = Math.min(Math.max(MARGIN, a.left), Math.max(MARGIN, window.innerWidth - w - MARGIN));
       const maxHeight = Math.max(140, (below ? roomBelow : roomAbove) - GAP);
