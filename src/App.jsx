@@ -14000,7 +14000,29 @@ const AppShell = () => {
         }}
       >
         <div className="w-full px-4 lg:px-6 h-14 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5 min-w-0">
+          {/* No gap here: the only two children are the rail-width company block
+              and the search, and a gap between them would push the search off
+              the content's left edge by exactly that much. Each child spaces
+              its own contents. */}
+          <div className="flex items-center min-w-0">
+            {/*
+              The company sits over the rail, and nothing else does.
+
+              This block is exactly the rail's width and pulled out to the
+              header's true left edge, so the column below it and the name
+              above it share one boundary — and whatever follows starts where
+              the page content starts rather than floating over the navigation.
+            */}
+            <div
+              className={`flex items-center gap-2.5 min-w-0 shrink-0 md:-ms-4 md:ps-4 lg:-ms-6 lg:ps-6 ${
+                /* Collapsed, the rail is 60px — narrower than the company name
+                   — so there is no column left to match. Pinning the block to
+                   60 would crush the name; pinning it to 240 would strand the
+                   search 180px into open page. Natural width keeps the two
+                   together, which is what the collapsed rail is asking for. */
+                navCollapsed ? '' : 'md:w-56 lg:w-60'
+              }`}
+            >
             {/* Phone-only: the rail lives in a drawer, opened here. */}
             <button
               type="button"
@@ -14055,9 +14077,10 @@ const AppShell = () => {
             ) : (
               <div className="ui-title text-sm truncate">{activeOrgName}</div>
             )}
+            </div>
 
             {/*
-              Search, beside the company it searches.
+              Search, at the content's left edge.
 
               It used to sit in the dashboard's hero card, which meant it was
               on exactly one screen — and the one screen you are least likely
@@ -14065,6 +14088,10 @@ const AppShell = () => {
               reaches it from anywhere; this is the visible affordance for the
               people who do not know that yet, so it belongs where it is always
               in view. The keycap says how to skip the click.
+
+              It begins where the page begins, not over the rail: the block
+              beside it is the rail's width, so this lines up with the content
+              under it and reads as part of the page rather than the navigation.
             */}
             <button
               type="button"
