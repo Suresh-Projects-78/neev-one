@@ -2027,6 +2027,15 @@
      to carry on, forty times a day. This keeps the figure and the one action
      on screen the whole time.
   --------------------------------------------------------------------------- */
+  /*
+   * Sticky at the foot, and deliberately not "paid for" with reserved space.
+   *
+   * Content passing under it at rest is what sticky IS, and it is reachable by
+   * scrolling — the bar is the form's own last child, so at the bottom of the
+   * form nothing is hidden. A padding-bottom to clear it was tried and
+   * reverted: it put four rems of dead strip under every document form to
+   * solve a problem the scroll already solves.
+   */
   .ui-entry-summary {
     position: sticky;
     bottom: 0;
