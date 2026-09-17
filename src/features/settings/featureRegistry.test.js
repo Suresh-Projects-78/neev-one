@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 
-import { FEATURE_GROUPS, groupForFeature, settingsLinkFor, groupMeta } from './featureGroups';
+import { FEATURE_GROUPS, groupForFeature, settingsLinkFor, groupMeta } from './featureRegistry';
 
 /**
  * The Features screen groups the way the business thinks.
@@ -19,22 +19,32 @@ const catalogKeys = () => {
   return [...src.matchAll(/^\s*key: '([^']+)',$/gm)].map((m) => m[1]);
 };
 
-describe('the six groups', () => {
+describe('the groups', () => {
   it('are the ones the setting-up conversation actually has', () => {
+    /* Wider than the six on the original list, because the catalogue holds
+       capabilities that list never mentioned — reconciliation, period lock,
+       approvals — and a capability with nowhere to sit is a capability nobody
+       can switch. */
     expect(FEATURE_GROUPS.map((g) => g.label)).toEqual([
       'Organisation',
       'General',
       'Sales',
-      'Purchases / Expenses',
+      'Purchases & Expenses',
       'Inventory',
+      'Cash & Bank',
+      'Accounting',
       'Taxation',
+      'Users & Permissions',
+      'Notifications',
       'Other',
     ]);
   });
 
-  it('every one of them explains itself', () => {
+  it('carries no description under a heading', () => {
+    /* House rule: a line under "Sales" saying it holds sales features is
+       noise. The group's own name is the whole explanation. */
     for (const g of FEATURE_GROUPS) {
-      expect(g.blurb.length).toBeGreaterThan(20);
+      expect(g.blurb).toBeUndefined();
       expect(groupMeta(g.key)).toBe(g);
     }
   });

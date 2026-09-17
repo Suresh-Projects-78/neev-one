@@ -97,18 +97,12 @@ export const SETTINGS_ITEMS = [
 
   // Business operations
   { key: 'settingsModules', title: 'Modules', category: 'business', icon: Boxes, perm: 'SETTINGS::Company Profile::VIEW', group: 'What is switched on', description: 'Which parts of the product this company uses.', keywords: ['features', 'turn on', 'enable', 'switch off'] },
-  { key: 'settingsFeatures', title: 'Preferences', category: 'business', icon: Settings, perm: 'SETTINGS::Company Profile::VIEW', group: 'What is switched on', description: 'The individual switches behind each module.', keywords: ['toggles', 'options', 'behaviour'] },
-  { key: 'settingsSales', title: 'Sales', category: 'business', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Defaults for invoices, quotations and the rest of the sell side.', keywords: ['invoice', 'quotation', 'estimate', 'terms'] },
-  { key: 'settingsPurchases', title: 'Purchases', category: 'business', icon: ShoppingCart, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Defaults for bills, orders and purchase returns.', keywords: ['bill', 'purchase order', 'vendor'] },
-  { key: 'settingsInventory', title: 'Inventory', category: 'business', icon: Package, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'How stock is valued and when it is allowed to go negative.', keywords: ['stock', 'valuation', 'batch', 'expiry'] },
   { key: 'settingsInvoiceFields', title: 'Invoice Settings', category: 'business', icon: FileText, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Which fields an invoice asks for, and what prints on it.', keywords: ['invoice fields', 'numbering', 'declaration', 'e-invoice'] },
   { key: 'settingsCustomFields', title: 'Custom Fields', category: 'business', icon: Plus, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Your own fields on a document, and where they appear.', keywords: ['extra fields', 'reference', 'udf'] },
   { key: 'discountRules', title: 'Discount Rules', category: 'business', icon: Tags, perm: 'SALES::Invoices::VIEW', feature: 'discountRules', group: 'Documents', description: 'Standing discounts and who they apply to.', keywords: ['discount', 'scheme', 'offer'] },
   { key: 'recurringInvoices', standalone: true, title: 'Recurring Invoices', category: 'business', icon: RefreshCw, perm: 'SALES::Invoices::VIEW', feature: 'recurringInvoices', group: 'Automation', description: 'Schedules that raise their own invoices — rent, AMC, retainers.', keywords: ['schedule', 'repeat', 'subscription', 'amc'] },
 
   // Finance & accounting
-  { key: 'settingsAccounting', title: 'Accounting', category: 'finance', icon: NotebookPen, perm: 'SETTINGS::Company Profile::VIEW', description: 'Posting rules, rounding and the ledgers documents default to.', keywords: ['ledger', 'posting', 'rounding', 'journal'] },
-  { key: 'settingsPaymentsReceipts', title: 'Payments', category: 'finance', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW', description: 'How receipts and payments are recorded and allocated.', keywords: ['receipt', 'payment', 'allocation', 'tds', 'bank charges'] },
   { key: 'settingsAccount', title: 'Account Overview', category: 'finance', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', group: 'Your account', description: 'The plan this account is on and what it includes.', keywords: ['plan', 'subscription', 'entitlement'] },
   { key: 'settingsBilling', title: 'Billing', category: 'finance', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW', group: 'Your account', description: 'What you are charged for Neev, and the invoices for it.', keywords: ['payment method', 'invoice', 'card', 'subscription'] },
 
@@ -131,7 +125,6 @@ export const SETTINGS_ITEMS = [
   { key: 'paymentReminders', standalone: true, title: 'Payment Reminders', category: 'platform', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders', group: 'Communication', description: 'When a customer is chased for an overdue invoice.', keywords: ['reminder', 'dunning', 'chase', 'overdue'] },
   { key: 'invoiceTemplates', standalone: true, title: 'Invoice Templates', category: 'platform', icon: FileText, perm: 'SETTINGS::Document Templates::VIEW', group: 'Documents', description: 'What a printed document looks like.', keywords: ['template', 'print', 'layout', 'letterhead'] },
   { key: 'docNumbering', title: 'Numbering', category: 'platform', icon: Settings, perm: 'SETTINGS::Document Numbering::VIEW', group: 'Documents', description: 'The prefix and next number for every kind of document.', keywords: ['prefix', 'series', 'sequence', 'next number'] },
-  { key: 'settingsDocuments', title: 'Documents', category: 'platform', icon: FileStack, perm: 'SETTINGS::Company Profile::VIEW', group: 'Documents', description: 'Terms, declarations and the notes documents carry.', keywords: ['terms', 'declaration', 'notes', 'footer'] },
   /*
    * Backup was written, wired to a screen, and never put here — so there was no
    * route to it from anywhere in the product. A company's own data, and the

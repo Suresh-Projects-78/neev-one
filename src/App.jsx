@@ -16,52 +16,53 @@ import StockTransferModule, { StockTransferEditor } from './features/inventory/S
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft,
   AlertTriangle,
+  ArrowLeft,
+  ArrowLeftRight,
+  ArrowRight,
   BadgePercent,
-  BarChart3,
-  Check,
-  BookOpen,
   Ban,
+  BarChart3,
+  Bell,
+  BookOpen,
+  Boxes,
   Building2,
+  Check,
   ChevronDown,
   ClipboardList,
+  Coins,
   Download,
   FileStack,
   FileText,
+  FolderTree,
+  Info,
+  Landmark,
   LayoutDashboard,
+  ListChecks,
+  LogOut,
   MoreVertical,
   NotebookPen,
   Package,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pencil,
   Plus,
   Receipt,
   RefreshCw,
-  Info,
-  ArrowLeftRight,
-  Landmark,
-  ListChecks,
-  LogOut,
   Search,
   Settings,
-  UserRound,
   Shield,
   ShoppingCart,
+  SlidersHorizontal,
   Tags,
-  FolderTree,
   Trash2,
   TrendingDown,
   TrendingUp,
-  Undo2,
   Truck,
-  Users,
-  Boxes,
-  Coins,
+  Undo2,
   Upload,
-  ArrowRight,
-  Bell,
-  PanelLeftClose,
-  PanelLeftOpen,
+  UserRound,
+  Users,
 } from 'lucide-react';
 /* Duotone icons for the module rail — the two-tone fill is what reads as a
    "coloured icon" rather than a tinted outline. Leaf items stay lucide, tinted
@@ -143,6 +144,21 @@ import AuthGate from './components/AuthGate';
  */
 const HUB_SCREENS = new Set([
   'accounts',
+  /*
+   * Features, and the seven surfaces that now render it.
+   *
+   * The seven were settings screens and were known through the settings map;
+   * they left it when capability management left Settings, so they are named
+   * here to stay openable from a link somebody saved.
+   */
+  'features',
+  'settingsFeatures',
+  'settingsSales',
+  'settingsPurchases',
+  'settingsInventory',
+  'settingsAccounting',
+  'settingsPaymentsReceipts',
+  'settingsDocuments',
   'balanceSheet',
   'cashBankImport',
   'cashFlow',
@@ -210,7 +226,7 @@ import RolePermissionManager from './features/admin/RolePermissionManager';
 import SettingsHub from './features/settings/SettingsHub';
 import SettingsWorkspace from './features/settings/SettingsWorkspace';
 import { isSettingsKey, isSettingsRoute, visibleSettings, SETTINGS_KEYS } from './features/settings/settingsRegistry';
-import FeatureSettings from './features/settings/FeatureSettings';
+import FeaturesPage from './features/features/FeaturesPage';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
@@ -11876,6 +11892,21 @@ const AppShell = () => {
        * now — a hub of six categories, each with its settings beside the page
        * they configure — so the rail stays a list of what the product does.
        */
+      {
+        /*
+         * Not a child of Settings.
+         *
+         * Features answers "do we use this?"; Settings answers "how should it
+         * behave?". Nesting the first inside the second made the question
+         * findable only by someone who already knew the answer.
+         */
+        type: 'item',
+        key: 'features',
+        label: 'Features',
+        icon: SlidersHorizontal,
+        tone: 'settings',
+        perm: 'SETTINGS::Company Profile::VIEW',
+      },
       { type: 'item', key: 'settings', label: 'Settings', icon: PhSettings, tone: 'settings', ph: true, perm: 'SETTINGS::Company Profile::VIEW' },
     ],
     [branchCountLabel, warehouseCountLabel, featureCountLabel, gstStateLabel, emailStateLabel]
@@ -13495,17 +13526,24 @@ const AppShell = () => {
             <ModulePicker submitLabel="Save modules" />
           </div>
         );
+      case 'features':
+        return <FeaturesPage onNavigate={setActive} currentCompany={currentCompany} />;
+      /*
+       * The old capability surfaces, pointed at the new one.
+       *
+       * Settings → Preferences and the six Business panes all switched the
+       * same forty flags; there is one place to do that now. They redirect
+       * rather than 404 because they have been linked and bookmarked, and
+       * they render the same page rather than a copy of it.
+       */
       case 'settingsFeatures':
-        return <FeatureSettings onNavigate={setActive} />;
-      // The Business panes are the same screen filtered to one part of the
-      // business, not six copies of it.
       case 'settingsSales':
       case 'settingsPurchases':
       case 'settingsInventory':
       case 'settingsAccounting':
       case 'settingsPaymentsReceipts':
       case 'settingsDocuments':
-        return <FeatureSettings pane={active} />;
+        return <FeaturesPage onNavigate={setActive} currentCompany={currentCompany} />;
       case 'settingsEmail':
         return <EmailSettings />;
       case 'settingsSecurity':

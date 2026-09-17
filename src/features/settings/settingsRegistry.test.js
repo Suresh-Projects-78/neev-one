@@ -54,8 +54,29 @@ describe('nothing was lost on the way in', () => {
      * setting.
      */
     const inHub = new Set(SETTINGS_ITEMS.map((i) => i.key));
+
+    /*
+     * A fourth way in, which is really a way OUT: the seven capability
+     * surfaces that Settings used to carry now render the Features page.
+     * They are kept as routes so old links and bookmarks still land
+     * somewhere, and deliberately have no hub entry — seven doors to one
+     * room is the duplication the consolidation removed.
+     */
+    const REDIRECTS_TO_FEATURES = new Set([
+      'settingsFeatures',
+      'settingsSales',
+      'settingsPurchases',
+      'settingsInventory',
+      'settingsAccounting',
+      'settingsPaymentsReceipts',
+      'settingsDocuments',
+    ]);
+
     const reachable = (key) =>
-      inHub.has(key) || APP.includes(`key: '${key}'`) || APP.includes(`setActive('${key}')`);
+      inHub.has(key) ||
+      REDIRECTS_TO_FEATURES.has(key) ||
+      APP.includes(`key: '${key}'`) ||
+      APP.includes(`setActive('${key}')`);
 
     /*
      * One screen is knowingly unreachable and stays that way until somebody
@@ -130,7 +151,10 @@ describe('local navigation', () => {
 describe('search finds what people type', () => {
   it('matches a word the title does not contain', () => {
     expect(searchSettings('password', all).map((i) => i.key)).toContain('settingsSecurity');
-    expect(searchSettings('tds', all).map((i) => i.key)).toContain('settingsPaymentsReceipts');
+    /* "tds" used to reach the Payments pane by keyword; that pane was a
+       capability surface and has gone to Features. The TDS settings page is
+       what someone typing this is actually after. */
+    expect(searchSettings('tds', all).map((i) => i.key)).toContain('settingsTds');
     expect(searchSettings('godown', all).map((i) => i.key)).toContain('settingsWarehouses');
   });
 

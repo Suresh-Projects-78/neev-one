@@ -120,6 +120,10 @@ export const FEATURE_CATALOG: FeatureDef[] = [
   },
   {
     key: 'batchExpiry',
+    /* Expiry is a property of a batch. Tracking when one runs out while not
+       tracking batches at all was a state the catalogue allowed and nothing
+       could act on. */
+    dependsOn: 'batchSerial',
     label: 'Batch stock & expiry',
     description: 'Batch/expiry tracking on items, FEFO picking, and the Batch Stock & Expiry view.',
     defaultEnabled: true,

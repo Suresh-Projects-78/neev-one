@@ -51,9 +51,21 @@ describe('the navigation floor', () => {
    * built from the registry — so the floor is checked where the settings now
    * live rather than where they used to be listed.
    */
+  it('never hides Features behind a feature', async () => {
+    /* The screen that switches capabilities on cannot itself be switched off,
+       or a company that turned everything off has no way back. */
+    const app = readFileSync('src/App.jsx', 'utf8');
+    const entry = app.slice(app.indexOf("key: 'features'"), app.indexOf("key: 'features'") + 320);
+    expect(entry).not.toMatch(/feature:/);
+    expect(entry).toMatch(/perm: 'SETTINGS::Company Profile::VIEW'/);
+  });
+
   it('never hides the core of Settings', async () => {
     const { SETTINGS_ITEMS } = await import('../features/settings/settingsRegistry');
-    for (const key of ['settingsModules', 'settingsFeatures', 'settingsCompany', 'settingsUsers', 'settingsRoles']) {
+    /* `settingsFeatures` left this list when capability management left
+       Settings. The floor it guarded still holds: Features is a top-level
+       module of its own now, and the test below checks it is reachable. */
+    for (const key of ['settingsModules', 'settingsCompany', 'settingsUsers', 'settingsRoles']) {
       const item = SETTINGS_ITEMS.find((i) => i.key === key);
       expect(`${key}:${Boolean(item)}`).toBe(`${key}:true`);
       expect(`${key}:${item.feature ?? 'none'}`).toBe(`${key}:none`);
