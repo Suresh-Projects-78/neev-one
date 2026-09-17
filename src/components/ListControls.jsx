@@ -226,48 +226,27 @@ export default ListControls;
  * rows can never disagree — the preset writes the dates, and the dates are the
  * only thing consulted.
  */
-/**
- * The financial year chosen top-right, read by every period filter.
+/*
+ * There was a financial-year selector in the header, and every list read it
+ * as a silent floor: a list whose own period was still "All time" quietly
+ * answered for that year instead. It is gone, and so is the floor.
  *
- * '' means "all years". Anything else is 'YYYY-MM-DD..YYYY-MM-DD' — the
- * FY's own range — and a list whose period is still 'all' silently narrows
- * to it, which is what a top-right year selector means: every list and
- * report answers for that year until the list picks something narrower
- * itself. Stored per browser; a storage event keeps open tabs in step.
+ * Clearing the stored key matters more than deleting the control. Without
+ * this, anyone who had picked a year would keep that filter on every list
+ * with nothing on screen to change it — a hidden date range that cannot be
+ * turned off is worse than a selector nobody used. Each list keeps its own
+ * period control, which is the narrower one and always won anyway.
  */
-export const readGlobalFy = () => {
-  try {
-    return String(localStorage.getItem('globalFy') || '').trim();
-  } catch {
-    return '';
-  }
-};
-export const writeGlobalFy = (range) => {
-  try {
-    if (range) localStorage.setItem('globalFy', String(range));
-    else localStorage.removeItem('globalFy');
-  } catch {
-    /* private mode: the selector simply does not persist */
-  }
-  window.dispatchEvent(new Event('globalFyChanged'));
-};
+try {
+  localStorage.removeItem('globalFy');
+} catch {
+  /* private mode: there was nothing stored to clear */
+}
 
 export const usePeriodFilter = () => {
   const [period, setPeriodState] = React.useState('all');
   const [dateFrom, setDateFrom] = React.useState('');
   const [dateTo, setDateTo] = React.useState('');
-  const [globalFy, setGlobalFy] = React.useState(readGlobalFy);
-
-  React.useEffect(() => {
-    const sync = () => setGlobalFy(readGlobalFy());
-    window.addEventListener('globalFyChanged', sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener('globalFyChanged', sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
-
   const setPeriod = (key) => {
     setPeriodState(key);
     const range = periodRange(key);
@@ -277,12 +256,9 @@ export const usePeriodFilter = () => {
     setDateTo(range.to);
   };
 
-  /* The FY floor: with no narrower period chosen, the year rules. */
-  const [fyFrom, fyTo] = period === 'all' && !dateFrom && !dateTo && globalFy.includes('..')
-    ? globalFy.split('..')
-    : ['', ''];
-  const effFrom = dateFrom || fyFrom;
-  const effTo = dateTo || fyTo;
+  /* The list's own dates are the only thing consulted now. */
+  const effFrom = dateFrom;
+  const effTo = dateTo;
 
   const inRange = (value) => {
     const d = String(value || '').slice(0, 10);

@@ -16,7 +16,6 @@ import {
   Package,
   Plus,
   Receipt,
-  Search,
   TrendingUp,
   Users,
   Wallet,
@@ -636,7 +635,7 @@ function NothingBilledYet({ payable, stockValue, company, onNewInvoice }) {
  * than ornament is what reads as considered — and it gives back most of the
  * height to the figures, which is what the page is actually for.
  */
-function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
+function DashboardHero({ name, insights, actions, dateLabel = '' }) {
   const [idx, setIdx] = useState(0);
   const list = Array.isArray(insights) ? insights.filter(Boolean) : [];
   const active = list.length ? list[Math.min(idx, list.length - 1)] : null;
@@ -698,32 +697,8 @@ function DashboardHero({ name, insights, onCommand, actions, dateLabel = '' }) {
           ) : null}
         </>
       }
-      right={
-        onCommand ? (
-          <button
-            type="button"
-            onClick={onCommand}
-            className="flex w-full sm:w-auto sm:min-w-[19rem] items-center gap-2.5 rounded-lg border ps-3 pe-1.5 text-start shrink-0"
-            style={{
-              height: 40,
-              borderColor: 'rgb(var(--border-strong))',
-              backgroundColor: 'rgb(var(--surface))',
-              color: 'rgb(var(--fg-subtle))',
-            }}
-          >
-            <Search size={15} aria-hidden="true" />
-            <span className="ui-t-body truncate">Search invoices, customers, items…</span>
-            <span
-              /* A keycap, the same object ShortcutSheet draws. 6px is the keycap exception in DESIGN.md: on a 24px cap 8px reads as a lozenge, not a key. */
-              className="ms-auto grid h-7 min-w-7 px-1.5 place-items-center rounded-md text-xs font-semibold"
-              style={{ backgroundColor: 'rgb(var(--surface-sunken))', color: 'rgb(var(--fg-muted))' }}
-              aria-hidden="true"
-            >
-              ⌘K
-            </span>
-          </button>
-        ) : null
-      }
+      /* Search moved to the header, beside the company name, where it is on
+         every screen instead of only this one. */
       meta={dateLabel}
       actions={actions}
     />
@@ -778,7 +753,6 @@ export default function DashboardOverview({
   onOpenInvoices,
   invoices: invoicesProp = null,
   activeWarehouseId = '',
-  onOpenCommand = null,
   onNewBill = null,
   onRecordReceipt = null,
   onOpenCustomers = null,
@@ -1238,7 +1212,6 @@ export default function DashboardOverview({
         <DashboardHero
           name={heroName}
           insights={heroInsights}
-          onCommand={onOpenCommand}
           actions={quickActions}
           dateLabel={new Date(now).toLocaleDateString(undefined, {
             weekday: 'short',
@@ -1394,7 +1367,6 @@ export default function DashboardOverview({
       <DashboardHero
         name={heroName}
         insights={heroInsights}
-        onCommand={onOpenCommand}
         actions={quickActions}
       />
 

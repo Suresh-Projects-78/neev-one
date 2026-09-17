@@ -1,8 +1,7 @@
 import InventoryModule from './features/inventory/InventoryModule';
 import StockAdjustments from './features/inventory/StockAdjustments';
 import { notify, confirmDialog } from './components/ui/notify';
-import { blockIfClosed, fyOptions, fyStartMonth } from './utils/bookClose';
-import { readGlobalFy, writeGlobalFy } from './components/ListControls';
+import { blockIfClosed } from './utils/bookClose';
 import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { postJournalToLedger, reverseJournalOnLedger } from './utils/journalSync';
 import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
@@ -12628,7 +12627,6 @@ const AppShell = () => {
             // The search field on the dashboard is the command palette the
             // shell already owns, not a second search that would have to be
             // built and kept in step with it.
-            onOpenCommand={() => setPaletteOpen(true)}
             // Identity comes from /auth/me, the same place the header takes it
             // from, so the picture and the name cannot disagree between the
             // corner and the middle of the page.
@@ -14057,6 +14055,28 @@ const AppShell = () => {
             ) : (
               <div className="ui-title text-sm truncate">{activeOrgName}</div>
             )}
+
+            {/*
+              Search, beside the company it searches.
+
+              It used to sit in the dashboard's hero card, which meant it was
+              on exactly one screen — and the one screen you are least likely
+              to be on when you want to find an invoice. Command-K already
+              reaches it from anywhere; this is the visible affordance for the
+              people who do not know that yet, so it belongs where it is always
+              in view. The keycap says how to skip the click.
+            */}
+            <button
+              type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="ui-input hidden md:flex items-center gap-2 w-56 lg:w-72 shrink-0 text-start ps-3 pe-1.5"
+              style={{ color: 'rgb(var(--fg-subtle))' }}
+              aria-label="Search invoices, customers, items"
+            >
+              <Search size={15} aria-hidden="true" className="shrink-0" />
+              <span className="truncate">Search invoices, customers, items…</span>
+              <kbd className="ui-kbd ms-auto shrink-0" aria-hidden="true">⌘K</kbd>
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -14118,25 +14138,13 @@ const AppShell = () => {
             )}
 
             {/*
-              The financial year, chosen once for every list and report. A
-              screen whose own period is still "All time" answers for this
-              year; a narrower period on the screen always wins. 'All years'
-              turns the floor off.
+              The financial-year selector stood here. It was a floor under
+              every list and report — a screen whose own period was "All time"
+              silently answered for that year instead — and the floor was
+              invisible from the screen it changed. Each list has its own
+              period control, which was always the narrower one and always won,
+              so that is the only one now.
             */}
-            <select
-              aria-label="Financial year"
-              className="ui-select hidden md:inline-flex w-36 text-sm"
-              value={readGlobalFy()}
-              onChange={(e) => {
-                writeGlobalFy(e.target.value);
-                setDb((prev) => ({ ...prev }));
-              }}
-            >
-              <option value="">All years</option>
-              {fyOptions(dbForUser, currentCompany?.id, fyStartMonth(currentCompany)).map((f) => (
-                <option key={f.year} value={`${f.from}..${f.to}`}>{f.label}</option>
-              ))}
-            </select>
 
             {/*
               The quick-create button used to sit here. It repeated on all
