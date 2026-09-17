@@ -6,6 +6,7 @@ import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import Modal from '../../components/ui/Modal';
 import { notify } from '../../components/ui/notify';
 import Popover from '../../components/ui/Popover';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 import { buildLedgerStatement } from '../../data/db';
 import { formatMoney } from '../../utils/money';
 
@@ -209,20 +210,45 @@ export default function BankCashAccounts({
       statusValue={tab}
       statusCounts={counts}
       onStatusChange={setTab}
-      moreItems={
-        setDb
-          ? [
-              {
-                key: 'adjustmentLedger',
-                label: 'Difference adjustment ledger…',
-                onSelect: () => {
-                  setAdjustDraft(savedAdjustId);
-                  setAdjustOpen(true);
-                },
-              },
-            ]
-          : null
-      }
+      /* The menu hands back the key that was chosen; it does not call a
+         callback hung off the item. This screen used to pass `onSelect` on the
+         item itself, which `MoreButton` never reads — so choosing "Difference
+         adjustment ledger" closed the menu and did nothing at all.
+
+         Export comes first because it does on every other list in the product;
+         this one was the only master you could not get out of the screen. */
+      moreItems={[
+        exportMenuItem('Export accounts'),
+        ...(setDb ? [{ key: 'adjustmentLedger', label: 'Difference adjustment ledger…' }] : []),
+      ]}
+      onMoreSelect={(key) => {
+        if (key === 'adjustmentLedger') {
+          setAdjustDraft(savedAdjustId);
+          setAdjustOpen(true);
+          return;
+        }
+        const format = exportFormatFromKey(key);
+        if (!format) return;
+        /* What is on screen, in the order it is on screen — the tab's filter
+           included, because exporting "Inactive" and getting everything is a
+           different list than the one that was asked for. */
+        runListExport({
+          format,
+          title: 'Bank & cash accounts',
+          fileName: `Bank_and_cash_accounts_${currentCompany?.name || 'company'}`,
+          label: 'account(s)',
+          columns: [
+            { key: 'name', label: 'Account name' },
+            { key: 'type', label: 'Type' },
+            { key: 'bankName', label: 'Bank name', value: (a) => a.bankName || '' },
+            { key: 'accountNumber', label: 'Account number', value: (a) => a.accountNumber || '' },
+            { key: 'branch', label: 'Branch', value: (a) => a.branch || '' },
+            { key: 'balance', label: 'Current balance', value: (a) => Number(a.balance || 0) },
+            { key: 'status', label: 'Status', value: (a) => (a.isActive ? 'Active' : 'Inactive') },
+          ],
+          rows,
+        });
+      }}
     >
       {adjustOpen ? (
         <Modal onClose={() => setAdjustOpen(false)} title="Difference adjustment ledger" maxWidthClass="max-w-lg">

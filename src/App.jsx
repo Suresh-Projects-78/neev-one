@@ -11610,6 +11610,13 @@ const AppShell = () => {
   /* The Bank & Cash Accounts screen's ledger form — a full page like the
      other masters, not a dialog. null | { mode: 'new' } | { mode: 'edit', ledger }. */
   const [bankAcctForm, setBankAcctForm] = useState(null);
+  /* Leaving the screen closes its form. Without this, opening an account to
+     edit it and then going anywhere else left the form open underneath: come
+     back to Bank & Cash Accounts later and you are dropped into a half-
+     finished edit of whatever you last clicked, with no list in sight. */
+  useEffect(() => {
+    if (active !== 'bankCashAccounts') setBankAcctForm(null);
+  }, [active]);
   const openLedger = useCallback(
     (ledgerId) => {
       setLedgerNav({ ledgerId, returnTo: active });
@@ -13800,7 +13807,10 @@ const AppShell = () => {
               if (!row) return;
               setBankAcctForm({ mode: 'edit', ledger: row });
             }}
-            onOpenAccount={(ledgerId) => setLedgerNav({ ledgerId: String(ledgerId), returnTo: 'bankCashAccounts' })}
+            /* `openLedger` is the one that also goes there. Setting the nav
+               state alone left the account name on this screen unclickable:
+               the ledger to show was recorded and the screen never changed. */
+            onOpenAccount={(ledgerId) => openLedger(String(ledgerId))}
           />
         );
       }
@@ -13818,7 +13828,13 @@ const AppShell = () => {
       default:
         return <SalesOverview db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} warehouses={warehousesForUser} onNavigate={setActive} />;
     }
-  }, [active, billEditor, branchesForUser, creditNoteEditor, currentCompany, dbForUser, debitNoteEditor, estimateEditor, invoiceEditor, journalEditor, openLedger, paymentEditor, receiptEditor, ledgerNav, stockTransferEditor, warehousesForUser, activeWarehouseId, activeBranchId, poEditor]);
+    /* Every piece of state this switch reads has to be listed, or the screen
+       it decides is cached against a value that has already changed. That is
+       not a lint nicety: `bankAcctForm` was missing, so Add Account on Bank &
+       Cash Accounts set the state, React re-rendered, and this memo handed
+       back the same list element it had built before — the button did nothing
+       at all, and so did Edit. Add an editor here, add it to this list. */
+  }, [active, bankAcctForm, billEditor, branchesError, branchesForUser, branchesLoading, companiesIntent, creditNoteEditor, currentCompany, dbForUser, debitNoteEditor, estimateEditor, importKind, invoiceEditor, journalEditor, openLedger, paymentEditor, receiptEditor, ledgerNav, stockTransferEditor, warehousesForUser, activeWarehouseId, activeBranchId, poEditor]);
 
   if (!isAuthenticated) {
     return (
