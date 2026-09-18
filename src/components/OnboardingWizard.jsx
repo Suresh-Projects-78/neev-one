@@ -327,7 +327,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   className="ui-input"
-                  placeholder="Acme Traders"
+                  placeholder="Bengaluru Office Supplies Pvt Ltd"
                   autoFocus
                 />
               </div>

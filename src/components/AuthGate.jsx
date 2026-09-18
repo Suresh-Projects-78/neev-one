@@ -456,7 +456,7 @@ const AuthGate = ({ onAuth }) => {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" style={{ backgroundColor: 'rgb(var(--app-bg))' }}>
-      <div className="min-h-screen flex">
+      <div className="ui-min-h-viewport flex">
         {/* Left: the brand side.
             Deep pine rather than the usual slate/indigo — this screen used to
             open on blue-500 and indigo-500 washes, which is the default nobody
@@ -677,7 +677,7 @@ const AuthGate = ({ onAuth }) => {
                           if (error) setError('');
                         }}
                         className="ui-input h-11"
-                        placeholder="John Doe"
+                        placeholder="Enter your full name"
                         autoFocus
                       />
                     </div>

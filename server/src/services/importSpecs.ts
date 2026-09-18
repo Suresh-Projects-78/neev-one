@@ -56,7 +56,7 @@ export const IMPORT_SPECS: Record<string, ImportSpec> = {
     columns: [
       { key: 'invoice_no', label: 'Invoice no', required: true, hint: 'Groups lines into one invoice', sample: 'INV-1001' },
       { key: 'date', label: 'Date', required: true, hint: 'YYYY-MM-DD', sample: '2026-04-05' },
-      { key: 'customer_name', label: 'Customer', required: true, hint: 'Matched by name', sample: 'Acme Ltd' },
+      { key: 'customer_name', label: 'Customer', required: true, hint: 'Matched by name', sample: 'Bengaluru Office Supplies Pvt Ltd' },
       { key: 'customer_gstin', label: 'Customer GSTIN', required: false, hint: 'Optional', sample: '' },
       { key: 'description', label: 'Description', required: true, hint: 'Line description', sample: 'Consulting' },
       { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '1' },
@@ -92,7 +92,7 @@ export const IMPORT_SPECS: Record<string, ImportSpec> = {
     columns: [
       { key: 'bill_no', label: 'Bill no', required: true, hint: 'Groups lines into one bill', sample: 'BILL-2001' },
       { key: 'date', label: 'Date', required: true, hint: 'YYYY-MM-DD', sample: '2026-04-06' },
-      { key: 'vendor_name', label: 'Vendor', required: true, hint: 'Matched by name', sample: 'Supplier Co' },
+      { key: 'vendor_name', label: 'Vendor', required: true, hint: 'Matched by name', sample: 'Karnataka Industrial Supplies' },
       { key: 'vendor_gstin', label: 'Vendor GSTIN', required: false, hint: 'Optional', sample: '' },
       { key: 'description', label: 'Description', required: true, hint: 'Line description', sample: 'Raw material' },
       { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '10' },
@@ -111,7 +111,7 @@ export const IMPORT_SPECS: Record<string, ImportSpec> = {
     columns: [
       { key: 'note_no', label: 'Note no', required: true, hint: 'Groups lines into one note', sample: 'CN-3001' },
       { key: 'date', label: 'Date', required: true, hint: 'YYYY-MM-DD', sample: '2026-04-07' },
-      { key: 'customer_name', label: 'Customer', required: true, hint: 'Matched by name', sample: 'Acme Ltd' },
+      { key: 'customer_name', label: 'Customer', required: true, hint: 'Matched by name', sample: 'Bengaluru Office Supplies Pvt Ltd' },
       { key: 'against_invoice', label: 'Against invoice', required: false, hint: 'Original invoice number', sample: 'INV-1001' },
       { key: 'description', label: 'Description', required: true, hint: 'Line description', sample: 'Returned goods' },
       { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '1' },
@@ -130,7 +130,7 @@ export const IMPORT_SPECS: Record<string, ImportSpec> = {
     columns: [
       { key: 'note_no', label: 'Note no', required: true, hint: 'Groups lines into one note', sample: 'DN-4001' },
       { key: 'date', label: 'Date', required: true, hint: 'YYYY-MM-DD', sample: '2026-04-08' },
-      { key: 'vendor_name', label: 'Vendor', required: true, hint: 'Matched by name', sample: 'Supplier Co' },
+      { key: 'vendor_name', label: 'Vendor', required: true, hint: 'Matched by name', sample: 'Karnataka Industrial Supplies' },
       { key: 'against_bill', label: 'Against bill', required: false, hint: 'Original bill number', sample: 'BILL-2001' },
       { key: 'description', label: 'Description', required: true, hint: 'Line description', sample: 'Returned material' },
       { key: 'quantity', label: 'Quantity', required: true, hint: 'Number', sample: '2' },

@@ -21,7 +21,7 @@ const inr = (v) =>
   );
 
 const Shell = ({ children }) => (
-  <div className="min-h-screen bg-gray-100 px-4 py-10">
+  <div className="ui-min-h-viewport bg-gray-100 px-4 py-10">
     <div className="mx-auto max-w-3xl">{children}</div>
   </div>
 );

@@ -3150,6 +3150,27 @@
     min-height: 100vh;
   }
 
+  /*
+   * A full-height ground that may grow past the fold.
+   *
+   * `min-h-screen` is 100vh, and on a phone 100vh is the viewport with the
+   * URL bar hidden — a height you are not looking at until you scroll. A
+   * centred card measured against it sits low, and its buttons can end up
+   * under the browser chrome on the screen a stranger opens.
+   *
+   * Minimum height, never fixed: the content has to be free to grow past the
+   * fold, so a signup form stays scrollable when the software keyboard takes
+   * half the screen. `h-dvh` here would clip it.
+   *
+   * Two declarations rather than `min-h-dvh`, which Tailwind can emit either
+   * side of `min-h-screen` — the cascade decides that, not us. This is the
+   * same shape `.ui-app-shell` above already uses.
+   */
+  .ui-min-h-viewport {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   /* The rail scrolls, and a scroll area that ends flush against a rounded
      panel edge cuts its last row in half and reads as broken rather than as
      "there is more". A short fade at each end says which it is, and only

@@ -18,7 +18,7 @@ class ErrorBoundary extends React.Component {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="min-h-screen flex items-center justify-center ui-sunken p-6">
+      <div className="ui-min-h-viewport flex items-center justify-center ui-sunken p-6">
         <div className="w-full max-w-lg ui-surface border rounded-xl p-6">
           <div className="ui-t-sec">Something went wrong</div>
           <div className="text-sm ui-muted mt-2">
