@@ -227,6 +227,7 @@ import SettingsWorkspace from './features/settings/SettingsWorkspace';
 import { isSettingsKey, isSettingsRoute, visibleSettings, SETTINGS_KEYS } from './features/settings/settingsRegistry';
 import FeaturesPage from './features/features/FeaturesPage';
 import FeaturesPanel from './features/features/FeaturesPanel';
+import PosPaymentAccounts from './features/admin/PosPaymentAccounts';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
@@ -13758,6 +13759,16 @@ const AppShell = () => {
         return <ApprovalsInbox currentCompany={currentCompany} />;
       case 'settingsAudit':
         return <AuditTrail />;
+      case 'settingsPosAccounts':
+        return (
+          <PosPaymentAccounts
+            /* Keyed on the branch so switching counters remounts with that
+               branch's accounts rather than showing the previous one's. */
+            key={activeBranchId}
+            currentCompany={currentCompany}
+            branchLabel={branches.find((b) => String(b.id) === String(activeBranchId))?.branchName || ''}
+          />
+        );
       case 'settingsAccount':
         return (
           <AccountOverview

@@ -1112,6 +1112,7 @@ model LedgerAccount {
   updatedAt       DateTime @updatedAt
 
   lines JournalLine[]
+  posTenderAccounts PosTenderAccount[]
 
   @@unique([orgId, branchId, code])
   @@unique([orgId, sourceSystem, sourceKey])
@@ -2133,6 +2134,44 @@ model Payment {
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
   @@index([accountId, orgId, reconciled])
+}
+
+/// Where a point-of-sale tender posts its money, for one branch.
+///
+/// A till knows it took "Cash". The ledger needs an account. Nothing joined the
+/// two, so POS could not raise a real receipt without inventing one — and an
+/// invented account is how a counter sale ends up debiting receivables that
+/// nothing ever clears.
+///
+/// Explicit per branch, with no inheritance. The product has the idea of a head
+/// office — a branch code, a parent link, a share flag — but no field that
+/// authoritatively answers which branch it is, and production already holds an
+/// organisation with two parentless branches. Rather than invent that identity
+/// to save some typing, every branch names its own accounts. The ledger it
+/// names may well be organisation-wide; choosing a shared account is still a
+/// choice this branch made.
+///
+/// One row per branch per tender, or none. No row means the tender is not
+/// configured, which a checkout must treat as "cannot take this money" rather
+/// than falling back to any account it can find.
+model PosTenderAccount {
+  id        String @id @default(cuid())
+  accountId String
+  orgId     String
+  branchId  String
+
+  /// CASH | UPI | CARD
+  tender          String
+  ledgerAccountId String
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  ledgerAccount LedgerAccount @relation(fields: [ledgerAccountId], references: [id])
+
+  @@unique([orgId, branchId, tender])
+  @@index([accountId, orgId, branchId])
 }
 
 model PaymentAllocation {

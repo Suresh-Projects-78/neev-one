@@ -6,8 +6,9 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
-import { SETUP_CASH_BANK_CODES, ensureLedgerSetup, postEntry, reverseEntry } from '../services/ledger.js';
+import { ensureLedgerSetup, postEntry, reverseEntry } from '../services/ledger.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
+import { receiptAccountsFor } from '../services/receiptAccounts.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { baseCurrencyFor, isBase, rateFor, round2, toBase } from '../services/fx.js';
 import {
@@ -97,17 +98,11 @@ paymentsRouter.get('/orgs/:orgId/payment-modes', async (req, res) => {
   // set them up — a business with no ledgers of its own was invited to receive
   // money into an account it had never heard of. They stay in the chart and
   // keep taking the postings; they are just not choices.
-  const modes = await prisma.ledgerAccount.findMany({
-    where: {
-      orgId,
-      isActive: true,
-      controlKind: { in: ['CASH', 'BANK'] },
-      code: { notIn: SETUP_CASH_BANK_CODES },
-      OR: [{ branchId: null }, { branchId }],
-    },
-    orderBy: { code: 'asc' },
-    select: { id: true, code: true, name: true, controlKind: true },
-  });
+  /* The rule lives in one place now, because POS needs the same answer when it
+     validates where a tender posts, and two copies of a rule about where money
+     may land would drift. */
+  const accounts = await receiptAccountsFor(prisma, { orgId, branchId });
+  const modes = accounts.map(({ id, code, name, controlKind }) => ({ id, code, name, controlKind }));
 
   res.json({ modes });
 });

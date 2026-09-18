@@ -104,6 +104,7 @@ export const SETTINGS_ITEMS = [
 
   // Finance & accounting
   { key: 'settingsAccount', title: 'Account Overview', category: 'finance', icon: Building2, perm: 'SETTINGS::Company Profile::VIEW', group: 'Your account', description: 'The plan this account is on and what it includes.', keywords: ['plan', 'subscription', 'entitlement'] },
+  { key: 'settingsPosAccounts', title: 'POS Payment Accounts', category: 'finance', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW', group: 'Point of sale', description: 'Where the counter posts cash, UPI and card takings.', keywords: ['pos', 'tender', 'cash', 'upi', 'card', 'till', 'counter'] },
   { key: 'settingsBilling', title: 'Billing', category: 'finance', icon: Receipt, perm: 'SETTINGS::Company Profile::VIEW', group: 'Your account', description: 'What you are charged for Neev, and the invoices for it.', keywords: ['payment method', 'invoice', 'card', 'subscription'] },
 
   // Tax & compliance

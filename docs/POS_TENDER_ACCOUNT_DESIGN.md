@@ -339,3 +339,77 @@ POS change, not before it.
 5. **Cancel versus refund** (§12). The product has no refund document.
 6. **What POS does when unconfigured** — block the tender, or block POS
    entirely until all three are mapped?
+
+---
+
+# Decided and implemented — v1
+
+The unresolved decisions in §15 are settled. This section is the record; the
+sections above are the audit that led to it.
+
+## Card — option A
+
+Card maps to a configured **BANK** account and is treated as received
+immediately. A clearing account, settlement timing and MDR fees are **future
+work**, not approximated here: option B needs a `controlKind` the schema does
+not have and a settlement document that does not exist, and a fake clearing
+implementation would be worse than an honest simplification.
+
+## Configuration — explicit per branch, no inheritance
+
+**Head office inheritance is deferred**, on evidence rather than preference:
+
+- no authoritative head-office identifier exists in the schema;
+- `branchCode = 'HO'` is set once at company setup and is freely editable
+  afterwards through `branches.ts` — a convention, not an identity;
+- `parentBranchId` is accepted from the request body on create and update and
+  defaults to null, so **every** branch created without naming a parent is
+  equally rootless;
+- production contains an organisation with **two parentless branches**, so the
+  obvious rule returns two answers;
+- `shareHeadOfficeSettings` is **false on every production branch** — the
+  feature has no users to preserve.
+
+Encoding a head office would have meant inventing that identity and making it
+load-bearing for money. Every branch names its own accounts instead. Adding
+inheritance later needs a real identifier first — an `isHeadOffice` marker with
+a one-time reviewed backfill would be the way, and it is a separate decision.
+
+Resolution is therefore two-valued:
+
+```
+explicit mapping for (org, branch, tender), still usable  →  DIRECT
+otherwise                                                 →  UNCONFIGURED
+```
+
+"Still usable" matters: a mapping whose account has since been deactivated,
+moved to another branch or had its kind changed reports UNCONFIGURED rather
+than a broken account, because a checkout asking "can I take cash?" needs a
+usable answer rather than a stale one.
+
+Choosing an organisation-shared (`branchId: null`) account is allowed and is
+**not** inheritance — it is this branch selecting a shared ledger. Every ledger
+account in production is shared today, so a rule demanding an exact branch match
+would have rejected all of them.
+
+## Storage
+
+`PosTenderAccount` — typed, `@@unique([orgId, branchId, tender])`, with a real
+relation to `LedgerAccount`. Not `Org.profileJson` (unvalidated, and the route
+comment says nothing branches on it), not `OrgMaster` (a whitelist of
+browser-shaped payloads, chosen only to dodge a migration).
+
+Removal is the absence of a row. There is no sentinel account id meaning
+"none".
+
+## Eligibility
+
+One definition, in `services/receiptAccounts.ts`, now read by both
+`/payment-modes` and POS configuration. It is the rule `/payment-modes` always
+applied — same org, active, CASH or BANK, not a setup control account, and
+belonging to this branch or to none — plus tender compatibility: cash into a
+cash account, UPI and card into a bank account.
+
+Two copies of a rule about where money may land would drift, and only one of
+them would get corrected.
+
