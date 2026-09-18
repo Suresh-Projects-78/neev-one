@@ -70,6 +70,18 @@ export default function Toaster() {
         offset={16}
         gap={8}
         visibleToasts={5}
+        /*
+         * Sonner injects its own stylesheet with `z-index: 999999999` on
+         * `[data-sonner-toaster]`, which is outside this product's layer scale
+         * entirely — it would paint over the command palette, and over any
+         * tier added later. `style` is a documented Toaster prop and lands as
+         * an inline style, which beats the injected rule without `!important`
+         * and without reaching into rendered third-party DOM.
+         *
+         * The tier is the one DESIGN.md already states: a toast outranks the
+         * dialog that caused it, and the command palette outranks the toast.
+         */
+        style={{ zIndex: 'var(--z-toast)' }}
         toastOptions={{
           duration: 4000,
           classNames: {
