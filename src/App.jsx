@@ -226,6 +226,7 @@ import SettingsHub from './features/settings/SettingsHub';
 import SettingsWorkspace from './features/settings/SettingsWorkspace';
 import { isSettingsKey, isSettingsRoute, visibleSettings, SETTINGS_KEYS } from './features/settings/settingsRegistry';
 import FeaturesPage from './features/features/FeaturesPage';
+import FeaturesPanel from './features/features/FeaturesPanel';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
@@ -12028,6 +12029,27 @@ const AppShell = () => {
       return !v;
     });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  /*
+   * Features opens over the current screen rather than as one.
+   *
+   * <main> is keyed on `active`, so navigating to a Features *screen* from
+   * inside a half-typed invoice remounted the invoice and lost it. The rail
+   * opens a panel instead: the route and the screen under it are untouched,
+   * and closing the panel is the same as never having opened it. The trigger
+   * is kept so focus can go back to it. Any real navigation — Configure, the
+   * palette, a link — closes the panel, because the screen it was over is
+   * no longer the screen.
+   */
+  const [featuresOpen, setFeaturesOpen] = useState(false);
+  const featuresTriggerRef = useRef(null);
+  const openFeatures = useCallback((trigger = null) => {
+    featuresTriggerRef.current = trigger;
+    setMobileNavOpen(false);
+    setFeaturesOpen(true);
+  }, []);
+  useEffect(() => {
+    setFeaturesOpen(false);
+  }, [active]);
   const [quickOpen, setQuickOpen] = useState(false);
   const quickRef = useRef(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -13991,6 +14013,7 @@ const AppShell = () => {
       </a>
 
       <header
+        inert={featuresOpen || undefined}
         className="shrink-0 z-40 backdrop-blur"
         style={{
           backgroundColor: 'rgb(var(--surface) / 0.85)',
@@ -14411,6 +14434,9 @@ const AppShell = () => {
           />
         ) : null}
         <aside
+          /* Modal while the Features panel is open: visible, not operable,
+             so a click on the rail cannot navigate out from under it. */
+          inert={featuresOpen || undefined}
           className={`shrink-0 transition-[width] duration-200 ${navCollapsed ? 'ui-rail-narrow' : 'md:w-56 lg:w-60'} ${
             mobileNavOpen
               ? 'ui-rail-drawer max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-72 max-md:overflow-y-auto max-md:p-2 max-md:ui-in-left'
@@ -14460,17 +14486,23 @@ const AppShell = () => {
                     'salesReports',
                   ]);
                   const isReportsEntry = entry.key === 'reports';
-                  const isActive = active === entry.key || (isReportsEntry && reportKeys.has(active));
+                  const isRoute = active === entry.key || (isReportsEntry && reportKeys.has(active));
+                  const isFeatures = entry.key === 'features';
+                  /* While the Features panel is open it is the one thing lit;
+                     the route's own item gets its mark back when it closes. */
+                  const isActive = featuresOpen ? isFeatures : isRoute;
                   return (
                     <button
                       key={entry.key}
                       type="button"
-                      onClick={() => setActive(entry.key)}
+                      onClick={(e) => (isFeatures ? openFeatures(e.currentTarget) : setActive(entry.key))}
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : ''}`}
                       data-level="module"
                       data-tone={entry.tone}
                       data-active={isActive}
-                      aria-current={isActive ? 'page' : undefined}
+                      aria-current={isRoute ? 'page' : undefined}
+                      aria-haspopup={isFeatures ? 'dialog' : undefined}
+                      aria-expanded={isFeatures ? featuresOpen : undefined}
       title={navCollapsed ? entry.label : undefined}
                     >
                       <Icon
@@ -14510,7 +14542,7 @@ const AppShell = () => {
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
                       data-level="module"
                       data-tone={entry.tone}
-                      data-active={isGroupActive || undefined}
+                      data-active={(!featuresOpen && isGroupActive) || undefined}
                       aria-expanded={isOpen}
       title={navCollapsed ? entry.label : undefined}
                     >
@@ -14559,7 +14591,7 @@ const AppShell = () => {
                               onClick={() => setActive(item.key)}
                               className="ui-nav-item"
                               data-tone={entry.tone}
-                              data-active={isActive}
+                              data-active={!featuresOpen && isActive}
                               aria-current={isActive ? 'page' : undefined}
                             >
                               <Icon
@@ -14599,6 +14631,10 @@ const AppShell = () => {
             // A record hands its number to the list it opens, so the screen
             // arrives filtered to the thing that was picked rather than showing
             // eighty-eight rows and leaving the user to find it again.
+            if (item.key === 'features') {
+              openFeatures();
+              return;
+            }
             if (item.screen) {
               setSearchSeed(item.screen, item.seed);
               setActive(item.screen);
@@ -14612,6 +14648,7 @@ const AppShell = () => {
         <main
           id="main-content"
           key={active}
+          inert={featuresOpen || undefined}
           className="min-w-0 flex-1 ui-content overflow-y-auto overflow-x-hidden min-h-0 px-4 lg:px-6 py-5"
           /*
            * Two fixes, because the two families of scrollbar break this
@@ -14704,6 +14741,17 @@ const AppShell = () => {
           )}
         </main>
       </div>
+
+      <FeaturesPanel
+        open={featuresOpen}
+        onClose={() => setFeaturesOpen(false)}
+        onNavigate={(key) => {
+          setFeaturesOpen(false);
+          setActive(key);
+        }}
+        currentCompany={currentCompany}
+        returnFocusRef={featuresTriggerRef}
+      />
 
       {modal.content && (
         <Modal onClose={() => openModal(null)} title={modal.title} maxWidthClass={modal.maxWidthClass}>

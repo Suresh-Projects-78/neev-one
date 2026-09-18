@@ -85,15 +85,20 @@ describe('what was deliberately left alone', () => {
   });
 
   it('keeps one writer for feature state', () => {
-    const page = readFileSync('src/features/features/FeaturesPage.jsx', 'utf8');
+    /* The model behind both the page and the panel; the two frames hold no
+       switch of their own, so this is the only place a write could come from. */
+    const model = readFileSync('src/features/features/useFeatureCatalog.js', 'utf8');
     const picker = readFileSync('src/features/settings/ModulePicker.jsx', 'utf8');
-    for (const src of [page, picker]) expect(src).toContain('setFeatures');
+    for (const src of [model, picker]) expect(src).toContain('setFeatures');
+    for (const frame of ['FeaturesPage.jsx', 'FeaturesPanel.jsx', 'FeatureCatalog.jsx']) {
+      expect(readFileSync(`src/features/features/${frame}`, 'utf8')).not.toContain('setFeatures(');
+    }
     /* And no second store anywhere. */
-    expect(page).not.toMatch(/featuresV2|businessOperationFlags|sidebarFeatureFlags/);
+    expect(model).not.toMatch(/featuresV2|businessOperationFlags|sidebarFeatureFlags/);
   });
 
   it('reads the tax three rather than writing them', () => {
-    const page = readFileSync('src/features/features/FeaturesPage.jsx', 'utf8');
+    const page = readFileSync('src/features/features/useFeatureCatalog.js', 'utf8');
     expect(page).toContain('TAX_FEATURES');
     expect(page).toContain('readOnly: true');
     /*
@@ -123,12 +128,12 @@ describe('dependencies', () => {
   });
 
   it('turns children off with their parent rather than leaving them stranded', () => {
-    const page = readFileSync('src/features/features/FeaturesPage.jsx', 'utf8');
+    const page = readFileSync('src/features/features/useFeatureCatalog.js', 'utf8');
     expect(page).toMatch(/if \(!next\) for \(const f of catalog\) if \(f\.dependsOn === key\)/);
   });
 
   it('says what a parent takes with it before the save, not after', () => {
-    const page = readFileSync('src/features/features/FeaturesPage.jsx', 'utf8');
+    const page = readFileSync('src/features/features/FeatureCatalog.jsx', 'utf8');
     expect(page).toContain('Turning this off also turns off');
     /* And promises nothing is destroyed, because nothing is. */
     expect(page).toContain('Nothing is deleted');

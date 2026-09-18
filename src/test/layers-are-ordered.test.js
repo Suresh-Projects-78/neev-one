@@ -32,6 +32,7 @@ const ORDER = [
   'header',         // the app header
   'popover',        // menus, pickers, row actions
   'drawer',         // side drawers, mobile nav
+  'drawer-popover', // a menu opened inside a drawer
   'modal',          // dialogs
   'modal-popover',  // a menu opened inside a dialog
   'toast',          // notifications outrank what caused them

@@ -416,6 +416,7 @@
   --z-popover: 60;          /* menus, dropdowns, pickers, row actions */
   --z-drawer: 100;          /* side drawers and the mobile nav */
   --z-drawer-panel: 101;    /* the panel that slides over its own scrim */
+  --z-drawer-popover: 110;  /* a menu opened INSIDE a drawer or side panel */
   --z-modal: 120;           /* dialogs */
   --z-modal-popover: 130;   /* a menu opened INSIDE a dialog */
   --z-toast: 140;           /* notifications outrank the thing that caused them */
@@ -3208,6 +3209,52 @@
   .ui-min-h-viewport {
     min-height: 100vh;
     min-height: 100dvh;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Features as a panel over the content area.
+
+     Left-anchored, after the rail, over <main> only: the scrim and the panel
+     are positioned from <main>'s measured box, so neither touches the rail
+     or the header. The scrim is a wash and not a blur — the page underneath
+     is meant to stay legible enough to remember, not to read.
+  --------------------------------------------------------------------------- */
+  .ui-feature-scrim {
+    position: fixed;
+    background-color: rgb(24 24 27 / 0.24);
+    animation: ui-fade var(--dur-state) linear both;
+  }
+  :root[data-theme='dark'] .ui-feature-scrim {
+    background-color: rgb(0 0 0 / 0.5);
+  }
+  .ui-feature-panel {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+    background-color: rgb(var(--surface));
+    color: rgb(var(--fg));
+    border-inline-end: 1px solid rgb(var(--border));
+    outline: none;
+    /* A workspace panel settling into place, not a drawer arriving from off
+       screen: twelve pixels of travel and a fade, under 200ms. */
+    animation: ui-panel-in 180ms var(--ease-out) both;
+  }
+  .ui-feature-panel[data-closing='true'] {
+    animation: ui-panel-out var(--dur-exit) var(--ease-in) both;
+  }
+  @keyframes ui-panel-in {
+    from { transform: translate3d(-12px, 0, 0); opacity: 0; }
+    to   { transform: translate3d(0, 0, 0); opacity: 1; }
+  }
+  @keyframes ui-panel-out {
+    from { transform: translate3d(0, 0, 0); opacity: 1; }
+    to   { transform: translate3d(-12px, 0, 0); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ui-feature-panel { animation-name: ui-fade; animation-duration: 160ms; }
+    .ui-feature-panel[data-closing='true'] { animation-duration: 1ms; }
+    .ui-feature-scrim { animation: none; }
   }
 
   /* The rail scrolls, and a scroll area that ends flush against a rounded
