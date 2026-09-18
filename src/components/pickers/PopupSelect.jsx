@@ -243,7 +243,7 @@ const PopupSelect = ({
         <span className="flex min-w-0 items-center gap-2">
           {/* createElement: a capitalised local reads to the linter as a
               component declared in a render. It is a lookup. */}
-          {leading ? createElement(leading, { size: 15, className: 'ui-subtle shrink-0', 'aria-hidden': 'true' }) : null}
+          {leading ? createElement(leading, { size: 16, className: 'ui-subtle shrink-0', 'aria-hidden': 'true' }) : null}
           <span className={`truncate ${displayLabel ? 'ui-fg' : 'ui-subtle'}`}>{displayLabel || placeholder}</span>
         </span>
         <ChevronDown size={16} className="ui-muted shrink-0" />

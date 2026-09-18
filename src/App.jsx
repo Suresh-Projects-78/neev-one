@@ -5655,7 +5655,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Profit & Loss Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
-          <Download size={20} /> Export PDF
+          <Download size={16} /> Export PDF
         </button>
       </div>
 
@@ -5757,7 +5757,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Balance Sheet</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
-          <Download size={20} /> Export PDF
+          <Download size={16} /> Export PDF
         </button>
       </div>
 
@@ -5887,7 +5887,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
       <div className="flex justify-between items-center">
         <h3 className="ui-t-sec">Cash Flow Statement</h3>
         <button className="flex items-center gap-2 px-4 py-2 border rounded-lg ui-hover-sunken">
-          <Download size={20} /> Export PDF
+          <Download size={16} /> Export PDF
         </button>
       </div>
 
