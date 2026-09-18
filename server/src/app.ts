@@ -25,6 +25,7 @@ import { quoteDocsRouter } from './routes/quoteDocs.js';
 import { orgMastersRouter } from './routes/orgMasters.js';
 import { auditRouter } from './routes/audit.js';
 import { posTenderAccountsRouter } from './routes/posTenderAccounts.js';
+import { posCheckoutRouter } from './routes/posCheckout.js';
 import { accountRouter } from './routes/account.js';
 import { shareAdminRouter, sharePublicRouter } from './routes/share.js';
 import { bankBookRouter } from './routes/bankBook.js';
@@ -147,6 +148,7 @@ export function buildApp() {
   app.use('/api', orgMastersRouter);
   app.use('/api', auditRouter);
   app.use('/api', posTenderAccountsRouter);
+  app.use('/api', posCheckoutRouter);
   app.use('/api', accountRouter);
   app.use('/api', shareAdminRouter);
   app.use('/api', bankBookRouter);

@@ -4,17 +4,32 @@ import { PageHeader } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
 import { computeGstForLines } from '../../utils/gst';
 import { formatMoney } from '../../utils/money';
-import { createInvoiceApi } from '../../api/invoices';
+import { checkoutErrorCode, newCheckoutId, posCheckoutApi } from '../../api/posCheckout';
 import { createPosDayClose } from '../../api/posDayClose';
 import { hasApiSession } from '../../api/purchaseDocs';
-import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
+import { bumpCompanyNextNumber, getDocSettings } from '../../utils/docSettings';
 import DocNumberingPopover from '../../components/DocNumberingPopover';
 
 /**
  * Point of sale — the fast lane for counter sales. Search or tap items, take
- * cash/UPI/card, done: it books a normal PAID invoice (B2C, intra-state) plus
- * its receipt, so the books and GST reports see POS sales like any other.
+ * cash/UPI/card, done.
+ *
+ * The server rings the sale up, as one transaction: invoice, sale posting,
+ * receipt into the account this branch configured for the tender, allocation,
+ * receipt posting, settlement. What this screen keeps locally afterwards is a
+ * projection of that — the server's numbers and ids, not a second set of books.
+ * It used to be the other way round: the invoice went to the server marked
+ * Paid, the receipt lived only here, and the ledger carried the sale as still
+ * owed.
  */
+
+/** The three the counter takes, in the spelling the books use. */
+const TENDERS = [
+  { key: 'CASH', label: 'Cash' },
+  { key: 'UPI', label: 'UPI' },
+  { key: 'CARD', label: 'Card' },
+];
+const tenderLabel = (key) => TENDERS.find((t) => t.key === String(key || '').toUpperCase())?.label || 'Cash';
 export default function PosScreen({ db, setDb, currentCompany }) {
   /* The POS series has no number field to hang its gear on — a sale takes its
      number the moment it is rung up — so the gear sits in the header and
@@ -32,10 +47,22 @@ export default function PosScreen({ db, setDb, currentCompany }) {
 
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState([]); // {itemId, name, rate, gstRate, qty}
-  const [tender, setTender] = useState('Cash');
+  const [tender, setTender] = useState('CASH');
   const [customerName, setCustomerName] = useState('');
   const [customerMobile, setCustomerMobile] = useState('');
   const [busy, setBusy] = useState(false);
+  /*
+   * One id per checkout attempt, and the same one on the retry.
+   *
+   * Minted the first time Charge is pressed for this cart, kept through a
+   * failed call, and let go only when the server confirms the sale or the
+   * cart is deliberately emptied. A till whose network drops after the server
+   * has committed sends the same id again and is handed the sale that exists,
+   * rather than taking the customer's money twice. A ref, not persisted: the
+   * cart itself does not survive a reload, so there is nothing to retry after
+   * one, and an id that outlived its cart could claim another customer's sale.
+   */
+  const checkoutIdRef = useRef('');
   const [dayCloseOpen, setDayCloseOpen] = useState(false);
   const DENOMS = [500, 200, 100, 50, 20, 10, 5, 2, 1];
   const [denomCounts, setDenomCounts] = useState({});
@@ -46,8 +73,14 @@ export default function PosScreen({ db, setDb, currentCompany }) {
     [db.invoices, companyId, today]
   );
   const byTender = useMemo(() => {
+    /* Keyed by the label the day close prints. Sales the old till wrote carry
+       "Cash"; sales the server rings up carry "CASH"; a day can hold both, and
+       the count must not split them. */
     const m = { Cash: 0, UPI: 0, Card: 0 };
-    for (const s of todaysSales) m[s.tender || 'Cash'] = (m[s.tender || 'Cash'] || 0) + Number(s.total || 0);
+    for (const s of todaysSales) {
+      const label = tenderLabel(s.tender);
+      m[label] = (m[label] || 0) + Number(s.total || 0);
+    }
     return m;
   }, [todaysSales]);
   const recentCloses = useMemo(
@@ -162,16 +195,34 @@ export default function PosScreen({ db, setDb, currentCompany }) {
     }
   };
 
+  /*
+   * Any change to the cart is a different sale, so the attempt id goes with
+   * it. Keeping it would let a retry after an edit be answered with the sale
+   * the server committed for the cart as it WAS — a receipt for the wrong
+   * goods. If a response really was lost and the till edits the cart, the
+   * committed sale is still in the server's books and hydrates from there;
+   * what the till rings up next is a second, genuine sale.
+   */
+  const cartChanged = () => {
+    checkoutIdRef.current = '';
+  };
+
   const addToCart = (item) => {
+    cartChanged();
     setCart((prev) => {
       const existing = prev.find((c) => c.itemId === item.id);
       if (existing) return prev.map((c) => (c.itemId === item.id ? { ...c, qty: c.qty + 1 } : c));
       return [...prev, { itemId: item.id, name: item.name, rate: Number(item.salePrice || 0), gstRate: Number(item.gstRate || 0), qty: 1 }];
     });
   };
-  const bump = (itemId, delta) =>
+  const bump = (itemId, delta) => {
+    cartChanged();
     setCart((prev) => prev.map((c) => (c.itemId === itemId ? { ...c, qty: Math.max(1, c.qty + delta) } : c)));
-  const drop = (itemId) => setCart((prev) => prev.filter((c) => c.itemId !== itemId));
+  };
+  const drop = (itemId) => {
+    cartChanged();
+    setCart((prev) => prev.filter((c) => c.itemId !== itemId));
+  };
 
   // Walk-in sales are intra-state by definition — the buyer is at the counter.
   const computed = computeGstForLines({
@@ -184,51 +235,74 @@ export default function PosScreen({ db, setDb, currentCompany }) {
       notify.error('Cart is empty');
       return;
     }
+    if (!hasApiSession()) {
+      notify.error('Sign in to ring up a sale — the counter records money on the server, not in this browser.');
+      return;
+    }
     setBusy(true);
     try {
       const buyer = customerName.trim() || 'Walk-in Customer';
-      const nextInvId = (db.invoices || []).reduce((m, i) => Math.max(m, Number(i.id) || 0), 0) + 1;
-      // Branch-scoped POS series, like every other document type.
       const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
-      const posSeq = (db.invoices || []).filter((i) => i.companyId === companyId && String(i.number || '').startsWith('POS-')).length + 1;
-      const number =
-        nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'pos', branchId: activeBranchId || null, takenNumbers: (db.invoices || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || `POS-${posSeq}`;
       const today = new Date().toISOString().slice(0, 10);
 
-      let backendInvoiceId;
-      const hasApi = Boolean(String(localStorage.getItem('token') || '').trim() && String(localStorage.getItem('activeOrgId') || '').trim());
-      if (hasApi) {
-        try {
-          const saved = await createInvoiceApi({
-            number,
-            date: today,
-            dueDate: today,
-            customerName: buyer,
-            taxType: 'CGST_SGST',
-            subtotal: computed.subtotal,
-            cgstTotal: computed.cgstTotal,
-            sgstTotal: computed.sgstTotal,
-            igstTotal: 0,
-            gstTotal: computed.gstTotal,
-            total: computed.total,
-            status: 'Paid',
-            posSale: true,
-            tender,
-            customerMobile: customerMobile.trim() || undefined,
-            items: computed.lines,
-          });
-          backendInvoiceId = String(saved?.id || '') || undefined;
-        } catch (err) {
-          notify.error(String(err?.message || 'POS sale not saved to the server.'));
-          setBusy(false);
-          return;
+      if (!checkoutIdRef.current) checkoutIdRef.current = newCheckoutId();
+      const checkoutId = checkoutIdRef.current;
+
+      let sale;
+      try {
+        sale = await posCheckoutApi({
+          checkoutId,
+          tender,
+          date: today,
+          customerName: buyer,
+          customerMobile: customerMobile.trim() || undefined,
+          warehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim() || undefined,
+          taxType: 'CGST_SGST',
+          subtotal: computed.subtotal,
+          cgstTotal: computed.cgstTotal,
+          sgstTotal: computed.sgstTotal,
+          igstTotal: 0,
+          gstTotal: computed.gstTotal,
+          total: computed.total,
+          items: computed.lines,
+        });
+      } catch (err) {
+        /* The cart and its checkout id both stay: pressing Charge again sends
+           the same id, and a sale the server had already committed comes back
+           as itself rather than as a second one. */
+        const code = checkoutErrorCode(err);
+        if (code === 'POS_TENDER_UNCONFIGURED') {
+          notify.error(
+            `${tenderLabel(tender)} cannot be taken at this counter yet. An administrator needs to set its account under ` +
+              'Settings → Finance → POS Payment Accounts.'
+          );
+        } else if (code === 'POS_CHECKOUT_CONFLICT') {
+          notify.error(`${String(err?.message || 'This sale is in a state the counter cannot complete.')} Do not retry it.`);
+        } else {
+          notify.error(String(err?.message || 'The sale did not go through. Nothing was recorded — try again.'));
         }
+        return;
       }
 
+      // Confirmed by the server: this attempt is finished with its id.
+      checkoutIdRef.current = '';
+
+      const number = sale.invoice.number;
+      const nextInvId = (db.invoices || []).reduce((m, i) => Math.max(m, Number(i.id) || 0), 0) + 1;
+      const nextPayId = (db.payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1;
+
+      /*
+       * What stays in this browser is a projection of the sale the server just
+       * rang up — its number, its ids, what it settled to. The invoice feeds
+       * the day close (posSale, tender, total) and the invoice list; the
+       * receipt row feeds the cash book and the dashboard. Neither is a second
+       * accounting write: the server's payment carries the money, and this
+       * row points at it.
+       */
       const invoice = {
         id: nextInvId,
         companyId,
-        backendInvoiceId,
+        backendInvoiceId: sale.invoice.id,
         number,
         date: today,
         dueDate: today,
@@ -242,8 +316,8 @@ export default function PosScreen({ db, setDb, currentCompany }) {
         igstTotal: 0,
         gstTotal: computed.gstTotal,
         total: computed.total,
-        paidAmount: computed.total,
-        status: 'Paid',
+        paidAmount: Number(sale.invoice.paidAmount || 0),
+        status: sale.invoice.status,
         posSale: true,
         tender,
         customerMobile: customerMobile.trim(),
@@ -253,22 +327,25 @@ export default function PosScreen({ db, setDb, currentCompany }) {
         warehouseId: String(localStorage.getItem('activeWarehouseId') || '').trim(),
         createdAt: new Date().toISOString(),
       };
-      const nextPayId = (db.payments || []).reduce((m, p) => Math.max(m, Number(p.id) || 0), 0) + 1;
       const receipt = {
         id: nextPayId,
         companyId,
+        backendPaymentId: sale.payment.id,
         voucherType: 'receipt',
         direction: 'IN',
-        receiptNo: `RCPT-${number}`,
+        receiptNo: sale.payment.number,
         date: today,
         customerId: null,
         customerName: buyer,
-        amount: computed.total,
-        allocatedAmount: computed.total,
+        amount: Number(sale.payment.amount || computed.total),
+        allocatedAmount: Number(sale.allocation.amount || computed.total),
         advanceAmount: 0,
-        allocations: [{ voucherType: 'invoice', voucherId: nextInvId, documentNumber: number, amount: computed.total }],
-        mode: tender,
+        allocations: [{ voucherType: 'invoice', voucherId: nextInvId, documentNumber: number, amount: Number(sale.allocation.amount || computed.total) }],
+        mode: tenderLabel(tender),
+        ledgerAccountId: sale.payment.ledgerAccountId,
         notes: `POS sale ${number}`,
+        sourceSystem: 'POS',
+        sourceKey: checkoutId,
         createdAt: new Date().toISOString(),
       };
 
@@ -294,7 +371,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             `--------------------------------\n` +
             computed.lines.map((l) => `${l.description}\n  ${l.quantity} x ${l.rate.toFixed(2)} = ${l.lineTotal.toFixed(2)}`).join('\n') +
             `\n--------------------------------\n` +
-            `Subtotal  ${computed.subtotal.toFixed(2)}\nGST       ${computed.gstTotal.toFixed(2)}\nTOTAL     ${computed.total.toFixed(2)}\nPaid by   ${tender}\n\nThank you!` +
+            `Subtotal  ${computed.subtotal.toFixed(2)}\nGST       ${computed.gstTotal.toFixed(2)}\nTOTAL     ${computed.total.toFixed(2)}\nPaid by   ${tenderLabel(tender)}\n\nThank you!` +
             `</pre>`
         );
         w.document.close();
@@ -304,7 +381,9 @@ export default function PosScreen({ db, setDb, currentCompany }) {
       setCart([]);
       setCustomerName('');
       setCustomerMobile('');
-      notify.success(`${number} — ${formatMoney(computed.total, currentCompany)} received by ${tender}.`);
+      notify.success(
+        `${number} — ${formatMoney(computed.total, currentCompany)} received by ${tenderLabel(tender)}${sale.replayed ? ' (already recorded)' : ''}.`
+      );
     } finally {
       setBusy(false);
     }
@@ -507,14 +586,14 @@ export default function PosScreen({ db, setDb, currentCompany }) {
                 placeholder="Customer mobile (optional)"
               />
               <div className="flex gap-2">
-                {['Cash', 'UPI', 'Card'].map((t) => (
+                {TENDERS.map((t) => (
                   <button
-                    key={t}
+                    key={t.key}
                     type="button"
-                    onClick={() => setTender(t)}
-                    className={`ui-btn flex-1 text-sm ${tender === t ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
+                    onClick={() => setTender(t.key)}
+                    className={`ui-btn flex-1 text-sm ${tender === t.key ? 'ui-btn-primary' : 'ui-btn-secondary'}`}
                   >
-                    {t}
+                    {t.label}
                   </button>
                 ))}
               </div>

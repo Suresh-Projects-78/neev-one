@@ -7,6 +7,7 @@ import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { ensureLedgerSetup, invoicePostingLines, postEntry, reverseEntry } from '../services/ledger.js';
+import { PosCheckoutError, assertPosSaleCancellable } from '../services/posCheckout.js';
 import { recalcDocumentSettlement } from '../services/settlement.js';
 import { MutationBlocked, assertInvoiceMutationAllowed } from '../services/invoiceMutation.js';
 import { allowsEntity, filterFieldsByLevel, levelFor, resolveAccess, resolveUserPermissions } from '../services/access.js';
@@ -667,6 +668,20 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
    */
   let reversedEntries = 0;
   if (nowCancelled && !wasCancelled) {
+    /* A counter sale that has been paid needs a refund, not a cancellation:
+       this route reverses the sale and would leave the receipt standing. */
+    try {
+      await assertPosSaleCancellable(prisma, {
+        accountId,
+        orgId,
+        invoiceId: existing.id,
+        invoiceNumber: existing.number,
+      });
+    } catch (e: any) {
+      if (e instanceof PosCheckoutError) return res.status(e.status).json({ error: e.message, code: e.code });
+      throw e;
+    }
+
     const posted = await prisma.journalEntry.findMany({
       where: {
         accountId,
