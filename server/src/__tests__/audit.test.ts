@@ -92,14 +92,19 @@ describe('the audit trail', () => {
 
   /*
    * "Edited" is not an audit entry. The per-field diff is the thing that lets
-   * somebody see that a total went from 1,180 to 118.
+   * somebody see what actually moved.
+   *
+   * This used to prove the point by editing a posted invoice's total from
+   * 1,180 to 118 — which is exactly the edit P0-1 forbids, because the ledger
+   * did not follow it. The diff is asserted on a field that is still the
+   * user's to change, and the refusal of the old one is asserted beside it.
    */
   it('carries the per-field diff of an edit', async () => {
     const inv = await raiseInvoice(owner);
     await request(app)
       .patch(`/api/orgs/${owner.orgId}/invoices/${inv.id}`)
       .set(auth(owner))
-      .send({ ...inv, total: 118, subtotal: 100, gstTotal: 18, cgstTotal: 9, sgstTotal: 9 })
+      .send({ dueDate: '2026-12-31' })
       .expect(200);
 
     const res = await request(app)
@@ -108,8 +113,22 @@ describe('the audit trail', () => {
       .expect(200);
     const row = res.body.entries[0];
     expect(row).toBeTruthy();
-    expect(Number(row.metadata.changes.total.from)).toBe(1180);
-    expect(Number(row.metadata.changes.total.to)).toBe(118);
+    expect(String(row.metadata.changes.dueDate.to)).toBe('2026-12-31');
+  });
+
+  it('records nothing for an edit the accounting rules refuse', async () => {
+    const inv = await raiseInvoice(owner);
+    await request(app)
+      .patch(`/api/orgs/${owner.orgId}/invoices/${inv.id}`)
+      .set(auth(owner))
+      .send({ total: 118, subtotal: 100, gstTotal: 18, cgstTotal: 9, sgstTotal: 9 })
+      .expect(409);
+
+    const res = await request(app)
+      .get(`/api/orgs/${owner.orgId}/audit?entity=INVOICE&action=UPDATE&entityId=${inv.id}`)
+      .set(auth(owner))
+      .expect(200);
+    expect(res.body.entries).toHaveLength(0);
   });
 
   it('filters by record, action and free text', async () => {

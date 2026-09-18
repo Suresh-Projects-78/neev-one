@@ -8,6 +8,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { ensureLedgerSetup, invoicePostingLines, postEntry, reverseEntry } from '../services/ledger.js';
 import { recalcDocumentSettlement } from '../services/settlement.js';
+import { MutationBlocked, assertInvoiceMutationAllowed } from '../services/invoiceMutation.js';
 import { allowsEntity, filterFieldsByLevel, levelFor, resolveAccess, resolveUserPermissions } from '../services/access.js';
 import { evaluateApproval, isPending } from '../services/approvals.js';
 import { fieldsFor } from '../constants/permissionCatalog.js';
@@ -121,6 +122,31 @@ const extrasFrom = (body: any) => {
     if (body?.[k] !== undefined && body?.[k] !== null && body?.[k] !== '') out[k] = body[k];
   }
   return Object.keys(out).length ? JSON.stringify(out) : null;
+};
+
+/**
+ * Extras survive a partial edit.
+ *
+ * `extrasFrom` builds the blob from scratch out of whatever the body carries,
+ * which is right on create and wrong on a patch — a request naming only a note
+ * would drop the salesman, the cost centre and the ship-to address that were
+ * stored beside it. Only the keys the caller actually sent are replaced.
+ */
+const mergedExtras = (currentJson: string | null, body: any, sent: Set<string>) => {
+  let current: Record<string, unknown> = {};
+  try {
+    const parsed = JSON.parse(currentJson || '{}');
+    if (parsed && typeof parsed === 'object') current = parsed as Record<string, unknown>;
+  } catch {
+    current = {};
+  }
+  for (const k of EXTRA_KEYS) {
+    if (!sent.has(k)) continue;
+    const v = body?.[k];
+    if (v === undefined || v === null || v === '') delete current[k];
+    else current[k] = v;
+  }
+  return Object.keys(current).length ? JSON.stringify(current) : null;
 };
 
 const statusSchema = z.object({
@@ -519,7 +545,17 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   });
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
-  const parsedPatch = invoiceUpsertSchema.parse(req.body);
+  /*
+   * What the caller actually sent, before Zod fills in its defaults.
+   *
+   * This used to write every column from the parsed body with `?? 0` behind
+   * it, so a request carrying nothing but a note set subtotal, every tax total
+   * and the invoice total to zero — while the ledger, which this route never
+   * touched, kept the original figures. An omitted field now keeps what is
+   * stored, which is what makes this a PATCH rather than a replace.
+   */
+  const sent = new Set(Object.keys((req.body ?? {}) as Record<string, unknown>));
+  const parsedPatch = invoiceUpsertSchema.partial().parse(req.body);
   const editAccess = await resolveAccess(accountId, orgId, req.auth!.userId, req.tenant!.branchId);
   const { value: body, stripped } = filterFieldsByLevel(
     parsedPatch,
@@ -531,33 +567,53 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
     return res.status(409).json({ error: 'This invoice is awaiting approval and cannot be edited' });
   }
 
+  /* An invoice that has reached the books is no longer financially editable.
+     Nothing is written if this throws. */
+  try {
+    await assertInvoiceMutationAllowed({ existing: existing as any, body: body as any, sent });
+  } catch (e: any) {
+    if (e instanceof MutationBlocked) return res.status(e.status).json({ error: e.message, field: e.field });
+    throw e;
+  }
+
+  /** Supplied by the caller, and allowed through by the field-level filter. */
+  const given = (key: string) => sent.has(key) && (body as any)[key] !== undefined;
+  const keepText = (key: string, current: string | null) =>
+    given(key) ? String((body as any)[key] || '').trim() || null : current;
+  const keepNumber = (key: string, current: unknown) => (given(key) ? (body as any)[key] : toNumber(current as any));
+
   try {
     await prisma.invoice.update({
       where: { id: existing.id },
       data: {
-        warehouseId: String(body.warehouseId || '').trim() || null,
-        number: String(body.number || existing.number).trim(),
-        date: String(body.date).trim(),
-        dueDate: String(body.dueDate || '').trim() || null,
-        refNo: String(body.refNo || '').trim() || null,
-        refDate: String(body.refDate || '').trim() || null,
-        customerId: String(body.customerId || '').trim() || null,
-        customerName: String(body.customerName || '').trim(),
-        customerGstin: String(body.customerGstin || '').trim() || null,
-        placeOfSupplyState: String(body.placeOfSupplyState || '').trim() || null,
-        taxType: String(body.taxType || '').trim() || null,
-        reverseCharge: Boolean(body.reverseCharge ?? existing.reverseCharge),
-        subtotal: body.subtotal ?? 0,
-        cgstTotal: body.cgstTotal ?? 0,
-        sgstTotal: body.sgstTotal ?? 0,
-        igstTotal: body.igstTotal ?? 0,
-        gstTotal: body.gstTotal ?? 0,
-        total: body.total ?? 0,
-        paidAmount: body.paidAmount ?? toNumber(existing.paidAmount),
-        status: String(body.status || existing.status || 'Draft').trim() || 'Draft',
-        sourceEstimateId: String(body.sourceEstimateId || '').trim() || null,
-        itemsJson: JSON.stringify(body.items || []),
-        extrasJson: extrasFrom(body),
+        warehouseId: keepText('warehouseId', existing.warehouseId),
+        number: given('number') ? String((body as any).number).trim() : existing.number,
+        date: given('date') ? String((body as any).date).trim() : existing.date,
+        dueDate: keepText('dueDate', existing.dueDate),
+        refNo: keepText('refNo', existing.refNo),
+        refDate: keepText('refDate', existing.refDate),
+        customerId: keepText('customerId', existing.customerId),
+        customerName: given('customerName') ? String((body as any).customerName || '').trim() : existing.customerName,
+        customerGstin: keepText('customerGstin', existing.customerGstin),
+        placeOfSupplyState: keepText('placeOfSupplyState', existing.placeOfSupplyState),
+        taxType: keepText('taxType', existing.taxType),
+        reverseCharge: given('reverseCharge') ? Boolean((body as any).reverseCharge) : existing.reverseCharge,
+        subtotal: keepNumber('subtotal', existing.subtotal),
+        cgstTotal: keepNumber('cgstTotal', existing.cgstTotal),
+        sgstTotal: keepNumber('sgstTotal', existing.sgstTotal),
+        igstTotal: keepNumber('igstTotal', existing.igstTotal),
+        gstTotal: keepNumber('gstTotal', existing.gstTotal),
+        total: keepNumber('total', existing.total),
+        paidAmount: keepNumber('paidAmount', existing.paidAmount),
+        /* Lifecycle transitions belong to the status route; anything that
+           differs was already refused above, so this only ever re-writes what
+           is already there. */
+        status: existing.status || 'Draft',
+        sourceEstimateId: keepText('sourceEstimateId', existing.sourceEstimateId),
+        itemsJson: given('items') ? JSON.stringify((body as any).items || []) : existing.itemsJson,
+        /* Extras are merged, not replaced: a note-only edit must not drop the
+           salesman and the shipping address stored beside it. */
+        extrasJson: mergedExtras(existing.extrasJson, body, sent),
       },
     });
   } catch (e: any) {
