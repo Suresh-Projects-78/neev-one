@@ -15,6 +15,52 @@ Preview (rendered): https://claude.ai/code/artifact/b5f06c26-a4de-4879-979f-fbb1
 - **Mood:** a precision tool. Data is the interface; chrome gets out of the way.
 - **Removed:** ambient orange orbs (`ui-ambient`) leave product screens. They stay on auth and marketing.
 
+## Do's and Don'ts
+
+The rules below are stated in full in the sections that follow. This is the
+scan-first list — if you read one part of this document before writing a
+component, read this one.
+
+### Do
+
+- **Take every colour from a token** in `src/index.css`. Dark mode is a token
+  redefinition, so a literal colour is a light-mode-only colour.
+- **Set every amount in tabular figures** and align it by what it is, not by
+  being a number — see *Value alignment*.
+- **Use the shared control height**: 36px, or 28px where a table cell genuinely
+  cannot hold 36.
+- **Give a status both colour and text.** Colour alone is not a state.
+- **Let one screen have one primary action**, top right.
+- **Measure before you change geometry.** Every number in this document came
+  from the rendered app; an audit that quotes an older draft of this file will
+  send you the wrong way.
+
+### Don't
+
+- **Don't use a raw palette class** — `bg-gray-*`, `text-stone-*`,
+  `border-slate-*` — anywhere in app chrome. The only exception is a printed
+  document (`InvoicePreview`, `ExpenseVoucher`, `DocumentPrintView`,
+  `TemplatePreview`), which is black on white on purpose and does not follow
+  the theme.
+- **Don't nest a card in a card.** A list is the page under one hairline; a
+  document earns a surface.
+- **Don't introduce a third radius.** 8px clickable, 12px content, `999px`
+  pills. The keycap is the one written-down exception.
+- **Don't add a Tailwind shadow utility.** Three tokens, and they carry meaning
+  — a hard-coded `shadow-sm` does not follow the dark-mode redefinition.
+  **57 of them are still in app chrome** (37 in `App.jsx`, the rest spread over
+  twelve files; none in the print surfaces). Legacy, counted 2026-09-18, not
+  yet migrated — do not add a fifty-eighth.
+- **Don't put a hover lift on something that isn't clickable.** A lift is a
+  promise.
+- **Don't right-align a lone money input** because money is usually
+  right-aligned. One field is not a column.
+- **Don't reach below 12px type** in app chrome.
+- **Don't size a panel row by the window.** The rail takes 224–240px off it
+  first — that arithmetic is what put a five-column table in a 383px panel.
+- **Don't let a wide table clip.** It scrolls in its own container, or its last
+  columns are unreachable and nothing says so.
+
 ## Typography
 Loaded from Google Fonts in `src/index.css`. **One face: Inter** (2026-09-13, the
 Graphite type decision adopted ahead of the rest of that system). Fraunces and
@@ -99,6 +145,55 @@ numbers refer to are defined once under *Controls → Height*.
     their heights differ from it so that is a visual change, not a rename.
     Every other `rounded-md` was drift and is gone — a third is drift.
 - **No card-in-card.** A list is the page: one hairline, no wrapper. A document is a discrete object: it earns a surface.
+
+### Elevation — three tiers, and they mean different things
+
+Shadow is not decoration here; it says how far a surface is from the page.
+Three tokens, each redefined for dark mode rather than restyled.
+
+| Token | Reads as | Applied to |
+| --- | --- | --- |
+| `--shadow-card` | Resting on the page | `.ui-card`, `.ui-stat`, `.ui-strip` — a hairline plus barely a shadow |
+| `--shadow-pop` | Floating over the page | `.ui-popover`, `[role="menu"]`, the command palette, every open menu |
+| `--shadow-lift` | Being picked up | `.ui-lift:hover` only — a card that is itself clickable |
+
+Rules that come out of that:
+
+- **A lift promises interactivity.** `.ui-lift` is opt-in and never goes on a
+  plain content card. If it rises on hover, clicking it must do something.
+- **The hover lift is gated** behind `@media (hover: hover) and (pointer: fine)` —
+  on a touch screen there is no hover, and a sticky lifted state reads as broken.
+- **Anything popped over a card takes the raised surface, not just a shadow.**
+  `.ui-in-pop` (and `[role="menu"].ui-card`) switch to `--surface-raised`.
+  In light both resolve to white so nothing changes; in dark, a menu opened on
+  a card used to sit at exactly the card's colour with only a shadow between
+  them. Shadow alone is not enough separation on a dark ground.
+- **Shadows are token-only.** No `shadow-lg` or any Tailwind shadow utility in
+  app chrome — dark mode redefines these three and a hard-coded shadow does not
+  follow.
+
+### Responsive behaviour — three layout classes
+
+The product is desktop-first and stays usable from **911px to 3840px**; that
+band is measured, with no page-level horizontal scroll anywhere in it. Browser
+zoom is the same thing as a narrower window — 1366 at 125% is 1093 CSS px — so
+the zoom levels are covered by the width band rather than tested separately.
+
+| Class | Behaviour |
+| --- | --- |
+| **Dashboard / overview** | Panel rows collapse by breakpoint. Two-up rows at `xl`; three-up rows wait for `2xl` (see *Layout*). Below that they stack full width |
+| **List / data table** | The page never scrolls sideways; the table scrolls inside its own `.ui-table-scroll`. A wide table scrolling in its container is correct, not a defect |
+| **Document form** | The head grid reflows by column count (`sm:grid-cols-2 lg:grid-cols-3`, or a 12-column grid). The line grid does not reflow — it scrolls, because a line item read as stacked fields is not a line item |
+
+Fixed points across the whole band:
+
+- Content caps at **1920px** and centres beyond it. It does not keep growing.
+- Page padding is **24px**, dropping to 16px below `sm`.
+- Control heights never change with viewport — 36px is 36px at every width.
+- **A table that scrolls inside its container is not a defect. A page that
+  scrolls sideways is.** Those are the two different results, and only the
+  second one is a bug.
+
 
 ## Controls
 
@@ -263,6 +358,7 @@ because focus, portals and event order cannot be read off the source.
 | 2026-09-08 | Weight marks structure, not content | 121 values carried semibold or bold. Spending weight on content leaves none for hierarchy — everything emphasised is nothing emphasised |
 | 2026-09-08 | Money drops to weight 400 | Tabular alignment already marks a figure as money. A weight on top made every amount in every table an emphasis, and a screen that is mostly amounts then had none |
 | 2026-09-08 | Status hues move out of type and into the tint | Seven saturated words in the filter strip competed with each other and with the figures beside them. Reverses the 2026-09-01 contrast increase, which raised the wrong thing |
+| 2026-09-18 | Do's and Don'ts, Elevation and Responsive behaviour added | Three sections the document never had, filled from the tokens and the measured band rather than from intent. Writing them down surfaced that 57 Tailwind shadow utilities sit in app chrome against a three-token system — recorded as legacy, like `space-y-4`, not silently migrated |
 | 2026-09-17 | This document reconciled against the rendered app | An audit quoted `#F97316`, "36px table rows" and a 188px rail — all from here, all stale. Every geometry and colour value above is now measured from the running product, and the audit inherited the errors because it read the doc instead of the tokens |
 | 2026-09-13 | One face: Inter, everywhere | The Graphite type decision, adopted alone while its colors stay parked. Money and codes keep digit alignment through tabular-nums instead of a mono family |
 | 2026-08-24 | Monospace money | Superseded 2026-09-13 — the alignment survives via tabular-nums, the second family does not |
