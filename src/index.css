@@ -3212,6 +3212,46 @@
   }
 
   /* ---------------------------------------------------------------------------
+     The category chips, on a phone.
+
+     Ten of them wrapped onto five lines and the Features header stood 323px
+     tall on an 812px screen — the catalogue below had less room than its own
+     filters. One scrolling row instead: nothing truncated, nothing shrunk to
+     fit, every chip still reached by Tab, and no JavaScript.
+
+     Wrapping is right wherever it fits, so this only takes over where it
+     does not.
+  --------------------------------------------------------------------------- */
+  .ui-filter-scroll {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  @media (max-width: 640px) {
+    .ui-filter-scroll {
+      /* Its own line, and free to be narrower than its own contents. */
+      flex: 1 1 100%;
+      min-width: 0;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      /* Scrolling past the last chip should not start dragging the page. */
+      overscroll-behavior-x: contain;
+      /* A horizontal scroller clips vertically too; without this the focus
+         ring of a chip is sliced off top and bottom. */
+      padding-block: 3px;
+      margin-block: -3px;
+      scrollbar-width: thin;
+      scrollbar-color: rgb(var(--border-strong)) transparent;
+    }
+    /* Natural width, always: a chip squeezed to fit is a chip nobody can
+       read, which is the failure this replaces. */
+    .ui-filter-scroll > * {
+      flex: 0 0 auto;
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
      Features as a panel over the content area.
 
      Left-anchored, after the rail, over <main> only: the scrim and the panel

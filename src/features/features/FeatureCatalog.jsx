@@ -69,7 +69,11 @@ export const FeatureFilters = ({ model, searchRef = null }) => (
       />
     </div>
 
-    <div className="flex flex-wrap items-center gap-1.5">
+    {/* Wraps where it fits and scrolls where it does not — see
+        .ui-filter-scroll. Deliberately not Tailwind's flex-wrap: the mobile
+        override has to win, and a utility sits in a later layer than a
+        component class. */}
+    <div className="ui-filter-scroll">
       {[{ key: 'all', label: 'All' }, ...FEATURE_GROUPS.filter((g) => g.key !== 'other')].map((g) => (
         <button
           key={g.key}

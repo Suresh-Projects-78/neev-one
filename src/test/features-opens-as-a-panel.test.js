@@ -56,6 +56,44 @@ describe('the legacy route', () => {
   });
 });
 
+describe('the category filters on a narrow screen', () => {
+  /* Ten chips wrapped onto five lines and the header stood 323px tall on an
+     812px phone. These assert the mechanism, not a pixel count: wrapping
+     where it fits, one scrolling row where it does not. */
+  const rule = (selector, from) => {
+    const at = CSS.indexOf(selector, from || 0);
+    expect(at).toBeGreaterThan(-1);
+    return CSS.slice(at, CSS.indexOf('}', at));
+  };
+
+  it('wraps by default, so nothing changes where there is room', () => {
+    const base = rule('.ui-filter-scroll {');
+    expect(base).toContain('flex-wrap: wrap');
+    expect(base).not.toContain('overflow-x');
+  });
+
+  it('becomes one scrolling row under 640px', () => {
+    const mq = CSS.indexOf('@media (max-width: 640px) {', CSS.indexOf('.ui-filter-scroll {'));
+    expect(mq).toBeGreaterThan(-1);
+    const narrow = rule('.ui-filter-scroll {', mq);
+    expect(narrow).toContain('flex-wrap: nowrap');
+    expect(narrow).toContain('overflow-x: auto');
+    /* Its own line, and allowed to be narrower than its contents. */
+    expect(narrow).toContain('min-width: 0');
+  });
+
+  it('keeps every chip at its natural width rather than squeezing labels', () => {
+    const kids = rule('.ui-filter-scroll > * {');
+    expect(kids).toContain('flex: 0 0 auto');
+  });
+
+  it('scrolls without JavaScript', () => {
+    const src = readFileSync('src/features/features/FeatureCatalog.jsx', 'utf8');
+    expect(src).toContain('ui-filter-scroll');
+    expect(src).not.toMatch(/scrollLeft|scrollIntoView|scrollBy/);
+  });
+});
+
 describe('the panel', () => {
   it('is a drawer on the layer scale, not a number of its own', () => {
     expect(PANEL).toContain("zIndex: 'var(--z-drawer)'");

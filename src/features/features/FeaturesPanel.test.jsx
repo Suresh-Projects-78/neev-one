@@ -165,6 +165,20 @@ describe('FeaturesPanel', () => {
     expect(close.className).toContain('shrink-0');
   });
 
+  it('puts the category chips in the scrolling row, each one still tabbable', async () => {
+    render(<Shell />);
+    await openPanel();
+    /* Not "All" — the state filter has one of those too. */
+    const group = screen.getByRole('button', { name: 'Sales' }).parentElement;
+    expect(group.className).toContain('ui-filter-scroll');
+    /* Real buttons, so Tab reaches them and the browser scrolls the focused
+       one into view — which is what makes the row keyboard-usable. */
+    for (const chip of group.children) {
+      expect(chip.tagName).toBe('BUTTON');
+      expect(chip).not.toBeDisabled();
+    }
+  });
+
   it('hands Configure to the shell and does not navigate itself', async () => {
     const onNavigate = vi.fn();
     render(<Shell onNavigate={onNavigate} />);
