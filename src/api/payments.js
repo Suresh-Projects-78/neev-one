@@ -41,10 +41,16 @@ export async function listPayments({ direction = 'RECEIPT', unreconciled = false
  *
  * Returns the stored row, whose `number` is the series-allocated one — prefer
  * it over any number generated in the browser, which two tabs can duplicate.
+ *
+ * `settlements` rides along: what each allocated document is now paid, as the
+ * server derived it from the allocations it just stored. The browser applies
+ * those numbers rather than adding the receipt to its own copy, because its
+ * own copy is the thing that used to drift.
  */
 export async function createPayment(payload) {
   const data = await apiFetch(`${base()}/payments`, { method: 'POST', body: payload, ...opts });
-  return data?.payment || null;
+  if (!data?.payment) return null;
+  return { ...data.payment, settlements: Array.isArray(data.settlements) ? data.settlements : [] };
 }
 
 /** Reversal, not deletion: the original stays in the audit trail. */
@@ -53,7 +59,8 @@ export async function reversePayment(paymentId) {
     method: 'POST',
     ...opts,
   });
-  return data?.payment || null;
+  if (!data?.payment) return null;
+  return { ...data.payment, settlements: Array.isArray(data.settlements) ? data.settlements : [] };
 }
 
 export async function reconcilePayment(paymentId, { reconciled, bankDate, statementRef } = {}) {

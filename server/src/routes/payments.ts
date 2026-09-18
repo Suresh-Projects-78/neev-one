@@ -10,6 +10,12 @@ import { SETUP_CASH_BANK_CODES, ensureLedgerSetup, postEntry, reverseEntry } fro
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { baseCurrencyFor, isBase, rateFor, round2, toBase } from '../services/fx.js';
+import {
+  OverAllocationError,
+  assertAllocationsFit,
+  recalcDocumentSettlement,
+  recalcSettlementForPayment,
+} from '../services/settlement.js';
 
 /**
  * Receipts and payments.
@@ -203,7 +209,20 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
 
   await ensureDefaultSeries({ accountId, orgId, branchId, docType: body.direction, userId });
 
-  const created = await prisma.$transaction(async (tx) => {
+  let created;
+  try {
+    created = await prisma.$transaction(async (tx) => {
+    /*
+     * The balance check and the allocation write happen in one transaction, so
+     * two receipts racing for the same invoice cannot each read a balance that
+     * the other is about to consume.
+     */
+    await assertAllocationsFit(tx, {
+      accountId,
+      orgId,
+      allocations: (body.allocations || []) as Array<{ docType: 'INVOICE' | 'BILL'; docId: string; amount: number }>,
+    });
+
     const number =
       String(body.number || '').trim() ||
       (
@@ -217,7 +236,7 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
         })
       ).number;
 
-    return tx.payment.create({
+    const payment = await tx.payment.create({
       data: {
         accountId,
         orgId,
@@ -249,7 +268,22 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
       },
       include: { allocations: true },
     });
-  });
+
+    /*
+     * Settlement is derived here, from the allocations this transaction has
+     * just written, and never accumulated onto whatever the document was
+     * carrying. It is the same transaction on purpose: a receipt that is saved
+     * while the invoice it settles still reads Unpaid is the defect this
+     * exists to remove.
+     */
+    const settlements = await recalcSettlementForPayment(tx, { accountId, orgId, paymentId: payment.id });
+
+    return Object.assign(payment, { settlements });
+    });
+  } catch (e: any) {
+    if (e instanceof OverAllocationError) return res.status(e.status).json({ error: e.message });
+    throw e;
+  }
 
   // A receipt debits the bank and credits the customer; a payment is the
   // mirror. Posting fails loudly: the payment row is removed so the books and
@@ -360,11 +394,20 @@ paymentsRouter.post('/orgs/:orgId/payments', async (req, res) => {
             ],
     });
   } catch (e: any) {
+    /* The payment is removed, so every document it settled has to be
+       recomputed without it — otherwise a failed posting leaves an invoice
+       marked Paid by a receipt that no longer exists. */
+    const touched = created.allocations.map((a) => ({ docType: String(a.docType) === 'BILL' ? ('BILL' as const) : ('INVOICE' as const), docId: String(a.docId) }));
     await prisma.payment.delete({ where: { id: created.id } });
+    for (const t of touched) {
+      await recalcDocumentSettlement(prisma, { accountId, orgId, docType: t.docType, docId: t.docId });
+    }
     return res.status(Number(e?.status || 400)).json({ error: `Not saved: ${String(e?.message || e)}` });
   }
 
-  res.status(201).json({ payment: normalize(created) });
+  /* The settled documents travel back with the receipt, so a browser holding
+     its own copy can take the server's numbers instead of recomputing them. */
+  res.status(201).json({ payment: normalize(created), settlements: (created as any).settlements ?? [] });
 });
 
 /** Reversal, not deletion: a posted payment stays in the audit trail. */
@@ -386,12 +429,23 @@ paymentsRouter.post('/orgs/:orgId/payments/:paymentId/reverse', async (req, res)
     await reverseEntry({ accountId, orgId, branchId, userId: req.auth!.userId, entryId: e.id, narration: 'Payment reversed' });
   }
 
-  const updated = await prisma.payment.update({
-    where: { id: payment.id },
-    data: { status: 'REVERSED' },
-    include: { allocations: true },
+  /* Marking the payment and withdrawing its settlement are one change: a
+     reversed receipt that leaves its invoice reading Paid is the other half of
+     the defect this phase removes. */
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.payment.update({
+      where: { id: payment.id },
+      data: { status: 'REVERSED' },
+      include: { allocations: true },
+    });
+    const settlements = await recalcSettlementForPayment(tx, { accountId, orgId, paymentId: payment.id });
+    return Object.assign(row, { settlements });
   });
-  res.json({ payment: normalize(updated), reversedEntries: entries.length });
+  res.json({
+    payment: normalize(updated),
+    reversedEntries: entries.length,
+    settlements: (updated as any).settlements ?? [],
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -53,7 +53,10 @@ const mapCommon = (d, companyId, idKey) => ({
   igstTotal: num(d.igstTotal),
   gstTotal: num(d.gstTotal),
   total: num(d.total),
-  paidAmount: num(d.settledAmount),
+  /* Invoices call it `paidAmount`, bills and notes call it `settledAmount`.
+     Reading only the second meant every hydrated invoice arrived showing
+     nothing paid, however much had been received against it. */
+  paidAmount: num(d.paidAmount ?? d.settledAmount),
   items: Array.isArray(d.items) ? d.items : [],
   placeOfSupplyState: d.placeOfSupplyState || '',
   taxType: d.taxType || '',
@@ -525,6 +528,71 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
 
       setDb((prev) => {
         const next = { ...prev };
+
+        /*
+         * Settlement converges into documents the browser already holds.
+         *
+         * Everything else here is insert-only, deliberately: a document this
+         * browser knows is not replaced wholesale, because its local copy may
+         * carry edits that have not been submitted and this is not the place
+         * to decide whose version of a whole document wins.
+         *
+         * How much has been paid is different. The server decides that now,
+         * from the allocations it holds, so a receipt recorded on another
+         * device leaves this browser showing a stale balance until it is told.
+         * Only those two fields move, and only on rows that carry a server id
+         * — a document that has never reached the server has no counterpart to
+         * converge with and is left completely alone.
+         */
+        const SETTLEMENT_STATUSES = new Set(['unpaid', 'partially paid', 'partial', 'paid', 'overdue']);
+        const reconcileSettlement = (collection, idKey) => {
+          const incoming = collected[collection];
+          if (!incoming || !incoming.length) return;
+          const existing = Array.isArray(prev[collection]) ? prev[collection] : [];
+          if (!existing.length) return;
+
+          const fromServer = new Map();
+          for (const d of incoming) {
+            const id = String(d?.[idKey] || '').trim();
+            if (id) fromServer.set(id, d);
+          }
+
+          let touched = false;
+          const merged = existing.map((row) => {
+            const id = String(row?.[idKey] || '').trim();
+            if (!id) return row; // never sent to the server: not ours to change
+            const server = fromServer.get(id);
+            if (!server) return row;
+
+            const serverPaid = num(server.paidAmount);
+            const localPaid = num(row.paidAmount);
+            const localStatus = String(row.status || '').trim();
+            const serverStatus = String(server.status || '').trim();
+
+            /* A status that describes where the document is in its life, not
+               how much of it is paid, is left as it stands on both sides —
+               a locally cancelled document must not be reopened by a sync,
+               and a settlement status must not overwrite one. */
+            const statusIsSettlement =
+              SETTLEMENT_STATUSES.has(localStatus.toLowerCase()) &&
+              SETTLEMENT_STATUSES.has(serverStatus.toLowerCase());
+
+            const nextStatus = statusIsSettlement && serverStatus !== localStatus ? serverStatus : localStatus;
+            /* Decreases matter as much as increases: a reversed receipt has to
+               reopen the document, so this is a straight assignment and never
+               a max(). */
+            const paidChanged = serverPaid !== localPaid;
+            if (!paidChanged && nextStatus === localStatus) return row;
+
+            touched = true;
+            return { ...row, paidAmount: serverPaid, status: nextStatus };
+          });
+
+          if (touched) next[collection] = merged;
+        };
+
+        reconcileSettlement('invoices', 'backendInvoiceId');
+        for (const [, collection, idKey] of KINDS) reconcileSettlement(collection, idKey);
 
         for (const [collection, idKey] of [...MASTER_KINDS, ...REFERENCE_COLLECTIONS, ...WRITE_THROUGH_BY_NAME]) {
           const incoming = collected[collection];

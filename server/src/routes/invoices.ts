@@ -7,6 +7,7 @@ import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { ensureLedgerSetup, invoicePostingLines, postEntry, reverseEntry } from '../services/ledger.js';
+import { recalcDocumentSettlement } from '../services/settlement.js';
 import { allowsEntity, filterFieldsByLevel, levelFor, resolveAccess, resolveUserPermissions } from '../services/access.js';
 import { evaluateApproval, isPending } from '../services/approvals.js';
 import { fieldsFor } from '../constants/permissionCatalog.js';
@@ -487,6 +488,26 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   res.status(201).json({ invoice: normalizeInvoiceResponse(row), strippedFields: stripped });
 });
 
+
+/**
+ * Settlement belongs to the allocations, not to whatever the caller sent.
+ *
+ * A browser holding a stale `paidAmount` used to be able to write it back over
+ * a value the receipts had already decided. So once an invoice has been
+ * settled by anything, its own allocations get the last word.
+ *
+ * Only once it has been settled, though: an invoice carrying an opening
+ * balance from an import has no allocations behind it, and recomputing that to
+ * zero would erase a real figure this phase is not meant to touch.
+ */
+async function reassertSettlement(accountId: string, orgId: string, invoiceId: string) {
+  const allocated = await prisma.paymentAllocation.count({
+    where: { accountId, orgId, docType: 'INVOICE', docId: invoiceId },
+  });
+  if (!allocated) return;
+  await recalcDocumentSettlement(prisma, { accountId, orgId, docType: 'INVOICE', docId: invoiceId });
+}
+
 invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOICE_MODULE, PermissionAction.EDIT, INVOICE_SUBMODULE), async (req, res) => {
   const accountId = req.tenant!.accountId;
   const orgId = String(req.params.orgId);
@@ -552,7 +573,9 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
 
   await auditInvoiceChange(req, 'UPDATE', existing, row);
 
-  res.json({ invoice: normalizeInvoiceResponse(row), strippedFields: stripped });
+  await reassertSettlement(accountId, orgId, existing.id);
+  const settled = await prisma.invoice.findUnique({ where: { id: existing.id } });
+  res.json({ invoice: normalizeInvoiceResponse(settled ?? row), strippedFields: stripped });
 });
 
 invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermission(INVOICE_MODULE, PermissionAction.EDIT, INVOICE_SUBMODULE), async (req, res) => {
@@ -620,7 +643,9 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
 
   await auditInvoiceChange(req, 'STATUS', existing, row);
 
-  res.json({ invoice: normalizeInvoiceResponse(row), reversedEntries });
+  await reassertSettlement(accountId, orgId, existing.id);
+  const settled = await prisma.invoice.findUnique({ where: { id: existing.id } });
+  res.json({ invoice: normalizeInvoiceResponse(settled ?? row), reversedEntries });
 });
 
 invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOICE_MODULE, PermissionAction.DELETE, INVOICE_SUBMODULE), async (req, res) => {

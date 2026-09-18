@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "seed:ui-qa": "tsx src/scripts/seedUiQa.ts"
+    "seed:ui-qa": "tsx src/scripts/seedUiQa.ts",
+    "report:settlement": "tsx src/scripts/settlementReport.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

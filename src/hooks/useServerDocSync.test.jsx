@@ -349,3 +349,121 @@ describe('till counts', () => {
     expect(book.posDayCloses).toHaveLength(1);
   });
 });
+
+/*
+ * Settlement convergence.
+ *
+ * Hydration is insert-only by design, which left a browser that already knew
+ * an invoice showing whatever it was paid the last time it looked. A receipt
+ * recorded on another device, or reversed there, never reached it — the server
+ * was right and the screen was not.
+ *
+ * These pin the narrow exception: how much a document has been paid converges
+ * on every sync, in both directions, and nothing else about the local copy is
+ * disturbed.
+ */
+describe('settlement convergence', () => {
+  const localInvoice = (over = {}) => ({
+    id: 7,
+    companyId: 1,
+    backendInvoiceId: 'srv-inv-1',
+    number: 'INV-001',
+    total: 118000,
+    paidAmount: 0,
+    status: 'Unpaid',
+    customerName: 'Bengaluru Industrial Supplies',
+    notes: 'deliver to gate 3',
+    ...over,
+  });
+
+  const serverInvoice = (over = {}) => ({
+    id: 'srv-inv-1',
+    number: 'INV-001',
+    date: '2026-06-10',
+    total: 118000,
+    paidAmount: 0,
+    status: 'Unpaid',
+    partyName: 'Bengaluru Industrial Supplies',
+    items: [],
+    ...over,
+  });
+
+  it('raises a known invoice when another device recorded a receipt', async () => {
+    listInvoicesApi.mockResolvedValue([serverInvoice({ paidAmount: 50000, status: 'Partially Paid' })]);
+    const book = await hydrate({ invoices: [localInvoice()] });
+
+    expect(book.invoices).toHaveLength(1);
+    const row = book.invoices[0];
+    expect(row.paidAmount).toBe(50000);
+    expect(row.status).toBe('Partially Paid');
+    expect(Number(row.total) - Number(row.paidAmount)).toBe(68000);
+  });
+
+  it('lowers it again when that receipt is reversed — never a max()', async () => {
+    listInvoicesApi.mockResolvedValue([serverInvoice({ paidAmount: 0, status: 'Unpaid' })]);
+    const book = await hydrate({ invoices: [localInvoice({ paidAmount: 50000, status: 'Partially Paid' })] });
+
+    const row = book.invoices[0];
+    expect(row.paidAmount).toBe(0);
+    expect(row.status).toBe('Unpaid');
+    expect(Number(row.total) - Number(row.paidAmount)).toBe(118000);
+  });
+
+  it('converges a bill through settledAmount', async () => {
+    listDocsApi.mockImplementation(async (kind) =>
+      kind === 'bill'
+        ? [{ id: 'srv-bill-1', number: 'BILL-001', date: '2026-06-10', total: 118000, settledAmount: 50000, status: 'Partially Paid', partyName: 'KIS', items: [] }]
+        : []
+    );
+    const book = await hydrate({
+      bills: [{ id: 3, companyId: 1, backendDocId: 'srv-bill-1', number: 'BILL-001', total: 118000, paidAmount: 0, status: 'Unpaid' }],
+    });
+
+    const row = book.bills.find((b) => b.backendDocId === 'srv-bill-1');
+    expect(row.paidAmount).toBe(50000);
+    expect(row.status).toBe('Partially Paid');
+    expect(Number(row.total) - Number(row.paidAmount)).toBe(68000);
+  });
+
+  it('leaves a document that was never sent to the server completely alone', async () => {
+    listInvoicesApi.mockResolvedValue([serverInvoice({ paidAmount: 50000, status: 'Partially Paid' })]);
+    const draft = { id: 99, companyId: 1, number: 'LOCAL-DRAFT', total: 5000, paidAmount: 0, status: 'Draft', notes: 'not sent yet' };
+    const book = await hydrate({ invoices: [localInvoice(), draft] });
+
+    const stillThere = book.invoices.find((i) => i.number === 'LOCAL-DRAFT');
+    expect(stillThere).toEqual(draft);
+  });
+
+  it('touches only the settlement fields, never the rest of the local row', async () => {
+    listInvoicesApi.mockResolvedValue([
+      serverInvoice({ paidAmount: 50000, status: 'Partially Paid', number: 'RENAMED-ON-SERVER', total: 999999 }),
+    ]);
+    const book = await hydrate({ invoices: [localInvoice({ notes: 'local edit nobody has pushed' })] });
+
+    const row = book.invoices[0];
+    expect(row.paidAmount).toBe(50000);
+    expect(row.notes).toBe('local edit nobody has pushed');
+    expect(row.number).toBe('INV-001');
+    expect(row.total).toBe(118000);
+    expect(row.id).toBe(7);
+  });
+
+  it('does not reopen a locally cancelled document', async () => {
+    listInvoicesApi.mockResolvedValue([serverInvoice({ paidAmount: 0, status: 'Unpaid' })]);
+    const book = await hydrate({ invoices: [localInvoice({ status: 'Cancelled' })] });
+    expect(book.invoices[0].status).toBe('Cancelled');
+  });
+
+  it('is idempotent — a second sync of the same state changes nothing', async () => {
+    listInvoicesApi.mockResolvedValue([serverInvoice({ paidAmount: 50000, status: 'Partially Paid' })]);
+    const first = await hydrate({ invoices: [localInvoice()] });
+    const second = await hydrate(first);
+    expect(second.invoices).toEqual(first.invoices);
+  });
+
+  it('hydrates a brand-new invoice with what it has actually been paid', async () => {
+    listInvoicesApi.mockResolvedValue([serverInvoice({ paidAmount: 50000, status: 'Partially Paid' })]);
+    const book = await hydrate({ invoices: [] });
+    expect(book.invoices[0].paidAmount).toBe(50000);
+  });
+});

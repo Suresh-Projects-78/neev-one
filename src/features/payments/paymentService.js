@@ -285,6 +285,10 @@ export const buildCustomerReceipt = async ({
     })),
     mode: 'Bank',
     backendPaymentId: posted?.id ? String(posted.id) : undefined,
+    /* What the server says each allocated document is now paid. It is the
+       authority; the local arithmetic below is only the fallback for a book
+       with no API session. */
+    serverSettlements: Array.isArray(posted?.settlements) ? posted.settlements : [],
     ledgerAccountId: String(ledgerAccountId || '').trim() || undefined,
     notes,
     createdAt: new Date().toISOString(),
@@ -310,7 +314,39 @@ export const applyVendorPayments = (prev, companyId, records) => {
     }
   }
 
+  /*
+   * What the server settled, by its own document id.
+   *
+   * Settlement is decided on the server now, from the allocations it holds.
+   * Adding a receipt to whatever `paidAmount` this browser happened to be
+   * carrying is how the two books drifted apart in the first place — a second
+   * device, or a reversal it never saw, and the number was wrong for good. So
+   * when the server has answered, its answer is taken verbatim.
+   */
+  const serverPaid = new Map();
+  for (const r of records) {
+    for (const st of safeArray(r.serverSettlements)) {
+      if (!st?.docId) continue;
+      serverPaid.set(String(st.docId), st);
+    }
+  }
+  const serverAnswerFor = (doc) => {
+    const backendId = String(doc?.backendInvoiceId || doc?.backendDocId || '').trim();
+    return backendId ? serverPaid.get(backendId) : undefined;
+  };
+
   const settle = (doc, kind) => {
+    const fromServer = serverAnswerFor(doc);
+    if (fromServer && doc.companyId === companyId) {
+      const rawStatus = String(doc.status || '').trim();
+      return {
+        ...doc,
+        paidAmount: round2(Number(fromServer.paidAmount ?? 0)),
+        /* A draft stays a draft locally, as it always did. */
+        status: rawStatus === 'Draft' ? 'Draft' : String(fromServer.status || rawStatus),
+        updatedAt: stamp,
+      };
+    }
     const add = paidByDoc.get(`${kind}:${Number(doc.id)}`);
     if (!add || doc.companyId !== companyId) return doc;
     const total = Number(doc.total ?? doc.amount ?? 0);
