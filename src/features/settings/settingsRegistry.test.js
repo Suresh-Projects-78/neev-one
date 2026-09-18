@@ -138,6 +138,17 @@ describe('local navigation', () => {
     expect(groups.map((g) => g.name)).toEqual(['Access', 'Security']);
   });
 
+  it('keeps a group together wherever its members are declared', () => {
+    /* Finance declares Account Overview, then POS Payment Accounts, then
+       Billing. The first and third share a group; grouping by adjacency
+       rendered "Your account" twice, with a duplicate React key each visit. */
+    const groups = groupedForCategory('finance', all);
+    expect(groups.map((g) => g.name)).toEqual(['Your account', 'Point of sale']);
+    expect(groups[0].items.map((i) => i.key)).toEqual(['settingsAccount', 'settingsBilling']);
+    expect(groups[1].items.map((i) => i.key)).toEqual(['settingsPosAccounts']);
+    expect(new Set(groups.map((g) => g.name)).size).toBe(groups.length);
+  });
+
   /* One heading over the whole list says nothing the page title has not said. */
   it('leaves a short category ungrouped', () => {
     const groups = groupedForCategory('tax', all);

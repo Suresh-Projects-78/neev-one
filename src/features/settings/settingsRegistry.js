@@ -198,12 +198,27 @@ export const visibleCategories = ({ can, isEnabled }) => {
  */
 export const groupedForCategory = (categoryId, { can, isEnabled }) => {
   const items = visibleSettings({ can, isEnabled }).filter((i) => i.category === categoryId);
+  /*
+   * Grouped by the group's name, wherever its members sit in the registry.
+   *
+   * This used to merge only ADJACENT items, so a group whose members were
+   * separated by one entry from another group came out twice — Finance showed
+   * "Your account" above Account Overview and again above Billing, with Point
+   * of sale between them, and React reported the duplicate key on every
+   * visit. A group is its name; an entry belongs to it from wherever it is
+   * declared, in the order its first member appears.
+   */
   const groups = [];
+  const byName = new Map();
   for (const item of items) {
     const name = item.group || '';
-    const last = groups[groups.length - 1];
-    if (last && last.name === name) last.items.push(item);
-    else groups.push({ name, items: [item] });
+    let group = byName.get(name);
+    if (!group) {
+      group = { name, items: [] };
+      byName.set(name, group);
+      groups.push(group);
+    }
+    group.items.push(item);
   }
   // One heading over the whole list says nothing the page title has not said.
   if (groups.length === 1) return [{ name: '', items: groups[0].items }];
