@@ -1,6 +1,7 @@
 import { createHash } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
+import type { DbClient } from '../utils/dbClient.js';
 
 // ---------------------------------------------------------------------------
 // Double-entry posting.
@@ -315,7 +316,21 @@ function canonicalPayload(entry: {
  * Post a balanced journal entry. Throws PostingError unless debits === credits.
  * The whole entry (numbering, lines, hash chain) commits atomically.
  */
-export async function postEntry(req: PostingRequest) {
+/**
+ * Post a journal entry.
+ *
+ * `tx` is how this composes. Called without one it opens its own transaction,
+ * exactly as it always has, and every existing caller is unchanged. Called with
+ * one it joins that transaction and opens nothing — so a sale, the receipt that
+ * settles it and the settlement derived from both either all land or none of
+ * them do.
+ *
+ * It matters that the second form does NOT open a nested transaction: Prisma
+ * would not join it to the caller's, and the entry would commit independently
+ * of the operation it belongs to — which is the failure this parameter exists
+ * to prevent. `DbClient` has no `$transaction`, so the mistake will not compile.
+ */
+export async function postEntry(req: PostingRequest, tx?: DbClient) {
   const { accountId, orgId, branchId, userId, date } = req;
 
   if (!req.lines?.length) throw new PostingError('A journal entry needs at least two lines');
@@ -339,7 +354,10 @@ export async function postEntry(req: PostingRequest) {
     );
   }
 
-  return prisma.$transaction(async (tx) => {
+  /* Validation above touches no database and stays outside the transaction;
+     a malformed entry is rejected before a transaction is opened at all. */
+  const write = async (db: DbClient) => {
+    const tx = db as Prisma.TransactionClient;
     const fy = await ensureFiscalYear(tx, accountId, orgId, userId, date);
 
     if (fy.status === 'CLOSED') {
@@ -431,12 +449,26 @@ export async function postEntry(req: PostingRequest) {
     });
 
     return entry;
-  });
+  };
+
+  return tx ? write(tx) : prisma.$transaction((t) => write(t));
 }
 
 /**
  * Reverse a posted entry with a contra entry. Posted rows are never mutated,
  * beyond linking the original to its reversal.
+ */
+/**
+ * Reverse a posted entry with a contra entry. Posted rows are never mutated,
+ * beyond linking the original to its reversal.
+ *
+ * `tx` composes the same way `postEntry` does: supplied, every read and write
+ * here — including the contra posting — uses it, so a reversal can be part of a
+ * larger operation that rolls back as one. Omitted, the behaviour is byte for
+ * byte what it was: three separate statements against the client, which is not
+ * atomic and never was. Making the no-transaction path atomic would be a
+ * behaviour change rather than an additive one, so it is left alone and
+ * recorded instead.
  */
 export async function reverseEntry(opts: {
   accountId: string;
@@ -446,8 +478,10 @@ export async function reverseEntry(opts: {
   entryId: string;
   date?: string;
   narration?: string;
-}) {
-  const original = await prisma.journalEntry.findFirst({
+}, tx?: DbClient) {
+  const db: DbClient = tx ?? prisma;
+
+  const original = await db.journalEntry.findFirst({
     where: { id: opts.entryId, accountId: opts.accountId, orgId: opts.orgId },
     include: { lines: true, journal: true },
   });
@@ -475,9 +509,9 @@ export async function reverseEntry(opts: {
       warehouseId: l.warehouseId,
       description: `Reversal: ${l.description ?? ''}`.trim(),
     })),
-  });
+  }, tx);
 
-  await prisma.journalEntry.update({
+  await db.journalEntry.update({
     where: { id: original.id },
     data: { status: 'REVERSED', reversedById: reversal.id },
   });

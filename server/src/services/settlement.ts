@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 
 import { prisma } from '../utils/prisma.js';
+import type { DbClient } from '../utils/dbClient.js';
 
 /**
  * How much of a document has been settled, and what that makes it.
@@ -94,14 +95,12 @@ export function deriveSettlementStatus(opts: {
   return key === 'overdue' ? current : 'Unpaid';
 }
 
-type Tx = Prisma.TransactionClient | typeof prisma;
-
 /**
  * What a document has actually been settled by, in paise, from persisted
  * allocations — reversed payments excluded.
  */
 export async function validAllocatedPaise(
-  tx: Tx,
+  tx: DbClient,
   opts: { accountId: string; orgId: string; docType: 'INVOICE' | 'BILL'; docId: string }
 ): Promise<number> {
   const rows = await tx.paymentAllocation.findMany({
@@ -123,7 +122,7 @@ export async function validAllocatedPaise(
  * and reports `changed: false` the second time.
  */
 export async function recalcDocumentSettlement(
-  tx: Tx,
+  tx: DbClient,
   opts: { accountId: string; orgId: string; docType: 'INVOICE' | 'BILL'; docId: string }
 ): Promise<SettlementResult | null> {
   const { accountId, orgId, docType, docId } = opts;
@@ -171,7 +170,7 @@ export async function recalcDocumentSettlement(
  * name exactly the documents whose settlement can have moved.
  */
 export async function recalcSettlementForPayment(
-  tx: Tx,
+  tx: DbClient,
   opts: { accountId: string; orgId: string; paymentId: string }
 ): Promise<SettlementResult[]> {
   const allocations = await tx.paymentAllocation.findMany({
@@ -219,7 +218,7 @@ export class OverAllocationError extends Error {
  * re-saving a receipt does not read as a double allocation.
  */
 export async function assertAllocationsFit(
-  tx: Tx,
+  tx: DbClient,
   opts: {
     accountId: string;
     orgId: string;

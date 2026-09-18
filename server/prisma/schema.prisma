@@ -2125,6 +2125,12 @@ model Payment {
   // different documents wearing one number, which is not a numbering series a
   // business can file, quote in a return, or hand an auditor.
   @@unique([orgId, number])
+  /// The same guarantee Invoice already had: one payment per source record.
+  /// A till whose network drops after the server committed retries, and the
+  /// retry has to land on the payment that already exists rather than taking
+  /// the money a second time. The document number cannot do this job — it is
+  /// allocated per attempt, so two attempts wear two numbers.
+  @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
   @@index([accountId, orgId, reconciled])
 }
