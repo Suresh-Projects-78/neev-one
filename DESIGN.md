@@ -302,6 +302,11 @@ gone. A bracketed z-index at or above the drawer tier fails
 already-layered ancestor is fine — it orders siblings inside that ancestor's
 context and cannot escape it.
 
+**A third-party overlay joins the scale explicitly or it is outside it.**
+Sonner's `Toaster` takes `style={{ zIndex: 'var(--z-toast)' }}` because Sonner
+otherwise injects its own `z-index: 999999999` and would paint over the command
+palette — the prop is the wiring, not a redundancy to tidy away.
+
 **Before raising a z-index, check the stacking context.** A number cannot lift
 an element out of an ancestor that has `transform`, `filter`, `backdrop-filter`,
 `contain: paint`, `isolation` or its own positioned z-index. If an overlay is
