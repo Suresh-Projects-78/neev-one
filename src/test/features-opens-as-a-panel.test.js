@@ -5,12 +5,16 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 /**
- * Features opens over the current screen, not instead of it.
+ * Features is a destination from Home and a tool from everywhere else.
  *
- * <main> is keyed on `active`, so any navigation remounts the screen and an
- * unsaved invoice is gone. The rail's Features entry therefore opens a panel
- * and leaves `active` alone. What this holds is that nothing in the shell
- * quietly goes back to `setActive('features')`.
+ * Both faces target the same thing; which one the rail shows is decided by
+ * where the user is standing, never by the destination. From Home the rail
+ * goes to the full page, like any rail entry. From inside a module it opens
+ * the panel over the screen — <main> is keyed on `active`, so navigating out
+ * of a half-typed invoice would remount it empty. What this holds is that the
+ * decision is one explicit function reading the current route, that the panel
+ * state is never derived from the route, and that the rail never hard-codes
+ * either answer.
  */
 
 const APP = readFileSync('src/App.jsx', 'utf8');
@@ -18,21 +22,52 @@ const PANEL = readFileSync('src/features/features/FeaturesPanel.jsx', 'utf8');
 const CSS = readFileSync('src/index.css', 'utf8');
 
 describe('the rail', () => {
-  it('opens the panel from the Features entry rather than navigating', () => {
-    expect(APP).toMatch(/isFeatures \? openFeatures\(e\.currentTarget\) : setActive\(entry\.key\)/);
-    expect(APP).toContain("aria-haspopup={isFeatures ? 'dialog' : undefined}");
+  it('asks one decision function, from the current route, never the destination', () => {
+    expect(APP).toContain("import { featuresPresentationFor } from './features/features/featuresPresentation';");
+    expect(APP).toMatch(/if \(featuresPresentationFor\(active\) === 'page'\) \{\s*goTo\('features'\);\s*return;\s*\}\s*openFeatures\(trigger\);/);
+    expect(APP).toContain(
+      "onClick={(e) => (isFeatures ? handleFeaturesNavigation(e.currentTarget) : goTo(entry.key))}"
+    );
+    /* Neither hard-coded answer may come back. */
+    expect(APP).not.toContain("onClick={() => goTo(entry.key)}\n");
+    expect(APP).not.toContain('openFeatures(e.currentTarget)');
   });
 
-  it('shows Features as the one lit entry while the panel is open', () => {
-    expect(APP).toContain('const isActive = featuresOpen ? isFeatures : isRoute;');
-    expect(APP).toContain('data-active={(!featuresOpen && isGroupActive) || undefined}');
-    expect(APP).toContain('data-active={!featuresOpen && isActive}');
+  it('puts an open panel away when its own entry is pressed again, without navigating', () => {
+    expect(APP).toMatch(/const handleFeaturesNavigation = useCallback\(\s*\(trigger = null\) => \{\s*if \(featuresOpen\) \{\s*setFeaturesOpen\(false\);\s*return;\s*\}/);
   });
 
-  it('sends the palette to the panel too', () => {
+  it('lights the route it is on, never an overlay merely open over it', () => {
+    expect(APP).toContain('data-active={isRoute}');
+    expect(APP).toContain('data-active={isGroupActive || undefined}');
+    expect(APP).not.toMatch(/data-active=\{[^}]*featuresOpen/);
+    /* The open panel is announced on the entry, not painted as a route. */
+    expect(APP).toContain('aria-expanded={isFeatures ? featuresOpen : undefined}');
+  });
+
+  it('puts the panel away on the way to anywhere, including where it already is', () => {
+    expect(APP).toMatch(/const goTo = useCallback\(\(key\) => \{\s*setFeaturesOpen\(false\);[\s\S]*?setMobileNavOpen\(false\);\s*setActive\(key\);\s*\}, \[\]\);/);
+    expect(APP).toContain('onClick={() => goTo(item.key)}');
+  });
+
+  it('puts the panel away when a group is opened, not only when a screen is chosen', () => {
+    /* Purchases, Sales, Inventory and Master Data are groups: their rail
+       entry unfolds children rather than navigating. Leaving the panel over
+       the page while the group unfolded beside it would take two clicks to
+       reach anything. */
+    const group = APP.slice(APP.indexOf('// Collapsed rail: a group tap re-opens') - 600, APP.indexOf('// Collapsed rail: a group tap re-opens'));
+    expect(group).toContain('setFeaturesOpen(false);');
+  });
+
+  it('stays operable while the panel is open', () => {
+    const aside = APP.slice(APP.indexOf('<aside'), APP.indexOf('<nav', APP.indexOf('<aside')));
+    expect(aside).not.toMatch(/\binert=/);
+  });
+
+  it('sends ⌘K through the same decision', () => {
     const from = APP.indexOf('<CommandPalette');
     const site = APP.slice(from, APP.indexOf('<main', from));
-    expect(site).toMatch(/if \(item\.key === 'features'\) \{\s*openFeatures\(\);\s*return;/);
+    expect(site).toMatch(/if \(item\.key === 'features'\) \{\s*handleFeaturesNavigation\(\);\s*return;/);
   });
 });
 
@@ -41,8 +76,11 @@ describe('the screen underneath', () => {
     expect(APP).toMatch(/<main\s+id="main-content"\s+key=\{active\}\s+inert=\{featuresOpen \|\| undefined\}/);
   });
 
-  it('is inert with the rail and the header while the panel is open', () => {
-    expect((APP.match(/inert=\{featuresOpen \|\| undefined\}/g) || []).length).toBe(3);
+  it('is the only region the panel makes inert', () => {
+    /* The scrim is measured from <main> and stops at the content edge, so
+       anything it does not cover must stay clickable — a header you can read
+       and click with nothing happening is worse than one that is washed. */
+    expect((APP.match(/inert=\{featuresOpen \|\| undefined\}/g) || []).length).toBe(1);
   });
 
   it('closes the panel on any real navigation', () => {
@@ -50,9 +88,23 @@ describe('the screen underneath', () => {
   });
 });
 
-describe('the legacy route', () => {
-  it('still renders the same catalogue for a saved link', () => {
+describe('the Features route', () => {
+  it('renders the full page — for the rail, a saved link and a refresh alike', () => {
     expect(APP).toContain("case 'features':\n        return <FeaturesPage");
+  });
+
+  it('wears page chrome, not panel chrome', () => {
+    /* A close button on a full page would be a control with nowhere to go.
+       Panel chrome belongs to FeaturesPanel; the catalogue belongs to both. */
+    const page = readFileSync('src/features/features/FeaturesPage.jsx', 'utf8');
+    expect(page).toContain('<PageHeader');
+    expect(page).not.toContain('Close Features');
+    expect(page).not.toContain('ui-feature-scrim');
+    expect(page).not.toMatch(/role="dialog"/);
+    for (const shared of ['FeatureCatalog', 'FeatureFilters', 'FeatureSaveActions']) {
+      expect(page).toContain(shared);
+      expect(PANEL).toContain(shared);
+    }
   });
 });
 
@@ -95,6 +147,23 @@ describe('the category filters on a narrow screen', () => {
 });
 
 describe('the panel', () => {
+  it('does not claim modality it does not have, and does not trap Tab', () => {
+    /* The rail beside it is operable, so telling a screen-reader user the
+       rest of the page is not there would be a lie — and so would a Tab that
+       wrapped inside the panel while a mouse could leave it. */
+    expect(PANEL).toContain('aria-modal="false"');
+    expect(PANEL).not.toMatch(/e\.key\s*[!=]==?\s*'Tab'/);
+    expect(PANEL).not.toContain('FOCUSABLE');
+  });
+
+  it('bounds its scrim to the content area rather than the viewport', () => {
+    const rule = CSS.slice(CSS.indexOf('.ui-feature-scrim {'), CSS.indexOf('}', CSS.indexOf('.ui-feature-scrim {')));
+    expect(rule).not.toMatch(/inset:\s*0/);
+    /* Placed from the measured rect, every edge, so nothing spills onto the
+       rail or the header. */
+    expect(PANEL).toMatch(/top: box\.top, left: box\.left, width: box\.width, height: box\.height/);
+  });
+
   it('is a drawer on the layer scale, not a number of its own', () => {
     expect(PANEL).toContain("zIndex: 'var(--z-drawer)'");
     expect(PANEL).toContain("zIndex: 'var(--z-drawer-panel)'");

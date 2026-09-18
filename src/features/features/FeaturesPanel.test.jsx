@@ -8,9 +8,10 @@ import { panelWidthFor } from './featurePanelGeometry';
 /**
  * Features opens over the screen rather than instead of it.
  *
- * The panel is a dialog by contract: it takes focus, keeps Tab, gives focus
- * back, and answers Escape only when nothing closer has. What this runs is
- * the part that cannot be read off the source — focus and event order.
+ * The panel is a non-modal dialog by contract: it takes focus, lets Tab leave,
+ * gives focus back on Escape, and answers Escape only when nothing closer
+ * has. What this runs is the part that cannot be read off the source — focus
+ * and event order.
  */
 
 vi.mock('../../api/features', () => ({
@@ -55,10 +56,13 @@ const openPanel = async () => {
 };
 
 describe('FeaturesPanel', () => {
-  it('is a labelled modal dialog that takes focus on open', async () => {
+  it('is a labelled non-modal dialog that takes focus on open', async () => {
     render(<Shell />);
     const dialog = await openPanel();
-    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    /* Non-modal on purpose: the rail beside it stays operable, so claiming
+       modality would tell a screen-reader user the rest of the page is gone
+       while a sighted user can still click all of it. */
+    expect(dialog).toHaveAttribute('aria-modal', 'false');
     const labelledBy = dialog.getAttribute('aria-labelledby');
     expect(document.getElementById(labelledBy)).toHaveTextContent('Features');
     expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Search features' }));
@@ -74,6 +78,30 @@ describe('FeaturesPanel', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByLabelText('Narration')).toBe(narration);
     expect(narration.value).toBe('kept');
+  });
+
+  it('gives the same DOM node back however it is closed', async () => {
+    /* Node identity, not equal text: a remount would produce a different
+       input holding the same string and read as a pass. Each of the three
+       ways out has to be the same non-event. */
+    const closers = {
+      X: () => fireEvent.click(screen.getByRole('button', { name: 'Close Features' })),
+      Escape: () => fireEvent.keyDown(window, { key: 'Escape' }),
+      scrim: () => fireEvent.mouseDown(document.querySelector('.ui-feature-scrim')),
+    };
+    for (const [how, close] of Object.entries(closers)) {
+      const view = render(<Shell />);
+      const main = document.querySelector('#main-content');
+      const narration = screen.getByLabelText('Narration');
+      fireEvent.change(narration, { target: { value: how } });
+      await openPanel();
+      close();
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(document.querySelector('#main-content')).toBe(main);
+      expect(screen.getByLabelText('Narration')).toBe(narration);
+      expect(narration.value).toBe(how);
+      view.unmount();
+    }
   });
 
   it('closes on Escape and gives focus back to what opened it', async () => {
@@ -134,7 +162,10 @@ describe('FeaturesPanel', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
-  it('keeps Tab inside the panel', async () => {
+  it('lets Tab leave the panel rather than wrapping it', async () => {
+    /* Non-modal in fact as well as in name: the rail beside the panel can be
+       clicked, so it can be tabbed to. The last control in the panel must not
+       hand focus back to the first. */
     render(<Shell />);
     const dialog = await openPanel();
     await screen.findByText('Sales Orders');
@@ -144,10 +175,13 @@ describe('FeaturesPanel', () => {
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
     last.focus();
-    fireEvent.keyDown(window, { key: 'Tab' });
+    const tab = fireEvent.keyDown(window, { key: 'Tab' });
+    expect(tab).toBe(true); // not prevented — the browser moves on
+    expect(document.activeElement).toBe(last); // and jsdom, which does not move focus, left it alone
+    expect(document.activeElement).not.toBe(first);
+    first.focus();
+    expect(fireEvent.keyDown(window, { key: 'Tab', shiftKey: true })).toBe(true);
     expect(document.activeElement).toBe(first);
-    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
-    expect(document.activeElement).toBe(last);
   });
 
   it('keeps the close button inside the panel when the panel is narrow', async () => {
@@ -192,6 +226,91 @@ describe('FeaturesPanel', () => {
     const dialog = await openPanel();
     expect(dialog.style.zIndex).toBe('var(--z-drawer-panel)');
     expect(document.querySelector('.ui-feature-scrim').style.zIndex).toBe('var(--z-drawer)');
+  });
+});
+
+
+/**
+ * The rail, deciding. The same decision the shell uses, over a screen that
+ * behaves like a form: from a module it opens the panel and the form survives;
+ * from Home it navigates. Node identity, not equal text.
+ */
+import { featuresPresentationFor } from './featuresPresentation';
+
+const Rail = ({ start }) => {
+  const [active, setActive] = useState(start);
+  const [open, setOpen] = useState(false);
+  const goTo = (key) => {
+    setOpen(false);
+    setActive(key);
+  };
+  const onFeatures = () => {
+    if (open) return setOpen(false);
+    if (featuresPresentationFor(active) === 'page') return goTo('features');
+    setOpen(true);
+  };
+  return (
+    <div>
+      <aside>
+        <button type="button" onClick={onFeatures} aria-expanded={open}>
+          Features
+        </button>
+        <button type="button" onClick={() => goTo('purchases')}>
+          Purchases
+        </button>
+      </aside>
+      <main id="main-content" key={active} data-route={active}>
+        {active === 'features' ? <h1>Features page</h1> : <input aria-label="Customer" defaultValue="" />}
+      </main>
+      <FeaturesPanel open={open} onClose={() => setOpen(false)} />
+    </div>
+  );
+};
+
+describe('the rail decides from where you are', () => {
+  it('opens the panel over a working screen and gives the same node back', async () => {
+    render(<Rail start="invoices" />);
+    const main = document.getElementById('main-content');
+    const customer = screen.getByLabelText('Customer');
+    fireEvent.change(customer, { target: { value: 'Acme Pvt Ltd' } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    await screen.findByRole('dialog');
+    expect(main.getAttribute('data-route')).toBe('invoices');
+    expect(document.getElementById('main-content')).toBe(main);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close Features' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.getElementById('main-content')).toBe(main);
+    expect(screen.getByLabelText('Customer')).toBe(customer);
+    expect(customer.value).toBe('Acme Pvt Ltd');
+  });
+
+  it('navigates to the page from Home', async () => {
+    render(<Rail start="dashboard" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Features page' })).toBeInTheDocument();
+  });
+
+  it('pressed again while open, closes the panel and stays', async () => {
+    render(<Rail start="invoices" />);
+    const main = document.getElementById('main-content');
+    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.getElementById('main-content')).toBe(main);
+    expect(main.getAttribute('data-route')).toBe('invoices');
+  });
+
+  it('another destination closes the panel and goes there in one click', async () => {
+    render(<Rail start="invoices" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    await screen.findByRole('dialog');
+    fireEvent.click(screen.getByRole('button', { name: 'Purchases' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.getElementById('main-content').getAttribute('data-route')).toBe('purchases');
   });
 });
 

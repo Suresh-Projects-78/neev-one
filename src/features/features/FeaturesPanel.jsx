@@ -11,12 +11,16 @@ import { panelWidthFor } from './featurePanelGeometry';
 /**
  * Features, opened over the screen you are on.
  *
- * It was a screen of its own, which meant that switching Sales Orders on
- * from inside a half-typed invoice cost the invoice: the rail navigated,
- * <main> remounted on the new key, and the form came back empty. Now the
- * rail opens this panel instead. The route does not change, the screen
- * underneath stays mounted with every unsaved field intact, and closing the
- * panel is the same as never having opened it.
+ * This is Features as a TOOL, reached from ⌘K while you are in the middle of
+ * something. Features as a DESTINATION is FeaturesPage on `#/features`, which
+ * is what the rail goes to — the two are not the same thing and the shell
+ * keeps them apart.
+ *
+ * Switching Sales Orders on from inside a half-typed invoice used to cost the
+ * invoice: navigating remounted <main> on its new key and the form came back
+ * empty. Reaching for the tool leaves the route alone, the screen underneath
+ * stays mounted with every unsaved field intact, and closing it is the same
+ * as never having opened it.
  *
  * A left-anchored panel, not a dialog and not a right drawer: it starts where
  * the content starts, directly after the rail, and covers about three
@@ -26,12 +30,15 @@ import { panelWidthFor } from './featurePanelGeometry';
  * assumed from rail widths, so a collapsed rail, a phone layout or a header
  * of a different height all just work.
  *
+ * Not `aria-modal`, and that is the honest description. The scrim covers the
+ * content area only; the rail and the header beside it stay lit AND operable,
+ * and clicking a destination there puts this away and goes there. Claiming
+ * modality would tell a screen-reader user that the rest of the page is not
+ * there, while a sighted user can reach all of it.
+ *
  * Layer: a drawer. Toasts and the command palette outrank it, so ⌘K over an
  * open panel still opens the palette on top.
  */
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** The content area, as <main> actually is on screen right now. */
 const measureContent = () => {
@@ -119,20 +126,14 @@ export default function FeaturesPanel({
         beginClose();
         return;
       }
-      if (e.key !== 'Tab') return;
-      const panel = panelRef.current;
-      if (!panel) return;
-      const focusables = panel.querySelectorAll(FOCUSABLE);
-      if (!focusables.length) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      /*
+       * No Tab trap. The panel is non-modal — the rail and the header beside
+       * it can be clicked, so they can be tabbed to as well; a trap here would
+       * have told a keyboard user the rest of the page was gone while a mouse
+       * user could reach all of it. Tab leaves the panel the way it leaves any
+       * region; `<main>` underneath is inert, so focus cannot land in the
+       * washed-out screen, and Escape still brings focus back to the trigger.
+       */
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -178,7 +179,7 @@ const FeaturesPanelBody = ({ rect, closing, beginClose, onClose, onNavigate, cur
       <div
         ref={panelRef}
         role="dialog"
-        aria-modal="true"
+        aria-modal="false"
         aria-labelledby={titleId}
         tabIndex={-1}
         data-closing={closing ? 'true' : undefined}

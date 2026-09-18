@@ -227,6 +227,7 @@ import SettingsWorkspace from './features/settings/SettingsWorkspace';
 import { isSettingsKey, isSettingsRoute, visibleSettings, SETTINGS_KEYS } from './features/settings/settingsRegistry';
 import FeaturesPage from './features/features/FeaturesPage';
 import FeaturesPanel from './features/features/FeaturesPanel';
+import { featuresPresentationFor } from './features/features/featuresPresentation';
 import PosPaymentAccounts from './features/admin/PosPaymentAccounts';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
@@ -12031,15 +12032,20 @@ const AppShell = () => {
     });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   /*
-   * Features opens over the current screen rather than as one.
+   * Features is two things, and they are not the same thing.
    *
-   * <main> is keyed on `active`, so navigating to a Features *screen* from
-   * inside a half-typed invoice remounted the invoice and lost it. The rail
-   * opens a panel instead: the route and the screen under it are untouched,
-   * and closing the panel is the same as never having opened it. The trigger
-   * is kept so focus can go back to it. Any real navigation — Configure, the
-   * palette, a link — closes the panel, because the screen it was over is
-   * no longer the screen.
+   * Asked for from the rail it is a DESTINATION: `#/features`, the full page,
+   * exactly like Sales or Reports. Asked for from ⌘K it is a TOOL — the panel
+   * over whatever screen you are on, because <main> is keyed on `active` and
+   * navigating out of a half-typed invoice to switch one flag on remounted
+   * the invoice and lost it. Reaching for the tool leaves the route alone;
+   * closing it is the same as never having opened it.
+   *
+   * The rail used to open the panel too, which conflated the two: clicking
+   * Features in the rail — an unambiguous "take me there" — washed out the
+   * screen you were already looking at instead of going anywhere. So the
+   * panel's open state is now its own state, never derived from the route.
+   * The trigger element is kept so focus can go back to it.
    */
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const featuresTriggerRef = useRef(null);
@@ -12048,9 +12054,50 @@ const AppShell = () => {
     setMobileNavOpen(false);
     setFeaturesOpen(true);
   }, []);
+  /*
+   * Every destination in the rail puts the tool away on the way out.
+   *
+   * The effect below covers a change of route, but not the two cases that
+   * matter most here: choosing the screen that is already showing, and
+   * choosing Features itself while the panel is over something else. In both
+   * `active` never changes, so without this the panel would survive the click
+   * and the user would have to click twice.
+   */
+  const goTo = useCallback((key) => {
+    setFeaturesOpen(false);
+    /* Same reasoning for the phone drawer, which closes on `active` and so
+       has the same blind spot: tapping the screen you are already on should
+       reveal it, not leave the drawer over it. */
+    setMobileNavOpen(false);
+    setActive(key);
+  }, []);
   useEffect(() => {
     setFeaturesOpen(false);
   }, [active]);
+  /*
+   * One question, answered from where the user is standing.
+   *
+   * Features is a destination from Home and from the Features page itself,
+   * and a tool from everywhere else — over a half-typed invoice, a report
+   * scrolled to the right row, a settings screen mid-edit. The route decides;
+   * the destination is the same either way. And a second press on the entry
+   * while the panel is already up puts the panel away: the user pointed at
+   * the surface that is open, not at a page they were not on.
+   */
+  const handleFeaturesNavigation = useCallback(
+    (trigger = null) => {
+      if (featuresOpen) {
+        setFeaturesOpen(false);
+        return;
+      }
+      if (featuresPresentationFor(active) === 'page') {
+        goTo('features');
+        return;
+      }
+      openFeatures(trigger);
+    },
+    [featuresOpen, active, goTo, openFeatures]
+  );
   const [quickOpen, setQuickOpen] = useState(false);
   const quickRef = useRef(null);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -14024,7 +14071,10 @@ const AppShell = () => {
       </a>
 
       <header
-        inert={featuresOpen || undefined}
+        /* Not inert behind the Features panel. The panel's scrim is measured
+           from <main> and stops at the content edge, so the header is lit and
+           unwashed — blocking it there produced a bar you could see, read and
+           click with nothing happening. */
         className="shrink-0 z-40 backdrop-blur"
         style={{
           backgroundColor: 'rgb(var(--surface) / 0.85)',
@@ -14445,9 +14495,16 @@ const AppShell = () => {
           />
         ) : null}
         <aside
-          /* Modal while the Features panel is open: visible, not operable,
-             so a click on the rail cannot navigate out from under it. */
-          inert={featuresOpen || undefined}
+          /*
+           * Operable while the Features panel is open, deliberately.
+           *
+           * It used to be inert, on the theory that the rail should not
+           * navigate out from under an open panel. In practice the panel is a
+           * tool, not a modal: it covers the content area and the rail stays
+           * fully lit beside it, so a rail that ignores clicks reads as a
+           * broken app rather than as a protected one. Clicking any
+           * destination now puts the panel away and goes there, in one click.
+           */
           className={`shrink-0 transition-[width] duration-200 ${navCollapsed ? 'ui-rail-narrow' : 'md:w-56 lg:w-60'} ${
             mobileNavOpen
               ? 'ui-rail-drawer max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-72 max-md:overflow-y-auto max-md:p-2 max-md:ui-in-left'
@@ -14499,20 +14556,20 @@ const AppShell = () => {
                   const isReportsEntry = entry.key === 'reports';
                   const isRoute = active === entry.key || (isReportsEntry && reportKeys.has(active));
                   const isFeatures = entry.key === 'features';
-                  /* While the Features panel is open it is the one thing lit;
-                     the route's own item gets its mark back when it closes. */
-                  const isActive = featuresOpen ? isFeatures : isRoute;
+                  /* The rail lights the route you are on. A panel merely open
+                     over it is not a route, so Features is lit only when the
+                     Features PAGE is showing; `aria-expanded` says whether its
+                     panel is up, without pretending navigation happened. */
                   return (
                     <button
                       key={entry.key}
                       type="button"
-                      onClick={(e) => (isFeatures ? openFeatures(e.currentTarget) : setActive(entry.key))}
+                      onClick={(e) => (isFeatures ? handleFeaturesNavigation(e.currentTarget) : goTo(entry.key))}
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : ''}`}
                       data-level="module"
                       data-tone={entry.tone}
-                      data-active={isActive}
+                      data-active={isRoute}
                       aria-current={isRoute ? 'page' : undefined}
-                      aria-haspopup={isFeatures ? 'dialog' : undefined}
                       aria-expanded={isFeatures ? featuresOpen : undefined}
       title={navCollapsed ? entry.label : undefined}
                     >
@@ -14536,6 +14593,12 @@ const AppShell = () => {
                     <button
                       type="button"
                       onClick={() => {
+                        /* Reaching for a group is the first half of going
+                           somewhere, so the Features panel — a tool over the
+                           screen, not a place — is put away here too, rather
+                           than sitting over the page while the group unfolds
+                           beside it. */
+                        setFeaturesOpen(false);
                         // Collapsed rail: a group tap re-opens the rail with
                         // that group expanded — a flyout would need its own
                         // focus management for four entries.
@@ -14553,7 +14616,7 @@ const AppShell = () => {
                       className={`ui-nav-item ${navCollapsed ? 'md:justify-center' : 'justify-between'}`}
                       data-level="module"
                       data-tone={entry.tone}
-                      data-active={(!featuresOpen && isGroupActive) || undefined}
+                      data-active={isGroupActive || undefined}
                       aria-expanded={isOpen}
       title={navCollapsed ? entry.label : undefined}
                     >
@@ -14599,10 +14662,10 @@ const AppShell = () => {
                             <button
                               key={item.key}
                               type="button"
-                              onClick={() => setActive(item.key)}
+                              onClick={() => goTo(item.key)}
                               className="ui-nav-item"
                               data-tone={entry.tone}
-                              data-active={!featuresOpen && isActive}
+                              data-active={isActive}
                               aria-current={isActive ? 'page' : undefined}
                             >
                               <Icon
@@ -14643,7 +14706,7 @@ const AppShell = () => {
             // arrives filtered to the thing that was picked rather than showing
             // eighty-eight rows and leaving the user to find it again.
             if (item.key === 'features') {
-              openFeatures();
+              handleFeaturesNavigation();
               return;
             }
             if (item.screen) {
