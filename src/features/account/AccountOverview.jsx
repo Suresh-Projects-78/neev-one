@@ -3,6 +3,7 @@ import { Building2, Users } from 'lucide-react';
 
 import { PageHeader, EmptyState } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
+import { formatDateIn, localDateIso } from '../../utils/dates';
 import NotConnected from '../../components/ui/NotConnected';
 import { getAccountOverview } from '../../api/admin';
 
@@ -242,7 +243,7 @@ export default function AccountOverview({ currentCompany, onOpenCompany = null }
                   <div className="ui-caption ui-muted truncate">{u.email}</div>
                 </div>
                 <div className="ui-caption ui-muted">
-                  {u.active ? (u.lastLoginAt ? `Last signed in ${new Date(u.lastLoginAt).toLocaleDateString()}` : 'Never signed in') : 'Deactivated'}
+                  {u.active ? (u.lastLoginAt ? `Last signed in ${formatDateIn(localDateIso(u.lastLoginAt))}` : 'Never signed in') : 'Deactivated'}
                 </div>
               </div>
             ))}

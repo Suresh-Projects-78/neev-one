@@ -28,6 +28,29 @@ export const formatDateIn = (value) => {
   return `${d}/${m}/${y}`;
 };
 
+/**
+ * The calendar date where the reader is, as YYYY-MM-DD.
+ *
+ * `todayIso()` is UTC, which is what a form default wants — it has to match
+ * the day the server will store. This is for a date a person reads: "As of …"
+ * on a report header, "Last signed in …" beside a user. East of UTC those two
+ * disagree for the first hours of the day, and a trial balance headed with
+ * yesterday at 2am is simply wrong.
+ *
+ * Also the safe way in from a timestamp: slicing an ISO datetime to ten
+ * characters gives the UTC date, which is a different day from the one the
+ * reader just lived through.
+ */
+export const localDateIso = (value = new Date()) => {
+  /* `new Date(null)` is the epoch, not an invalid date, so a missing value
+     would render as 01/01/1970 rather than as nothing. Refuse it up front. */
+  if (value === null || value === undefined || value === '') return '';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 /** The reverse, for anything that takes typing: 12/09/2026 → 2026-09-12. */
 export const parseDateIn = (text) => {
   const raw = String(text || '').trim();

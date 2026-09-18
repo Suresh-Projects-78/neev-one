@@ -232,7 +232,7 @@ import { TDS_SECTIONS, tdsSection } from './utils/tds';
 import { TDS_NATURES, natureByCode, natureForSection, resolveRule, ruleReference } from './features/tds/ruleMaster';
 import { tdsEventFrom } from './features/tds/engine';
 import { tdsGroupSide } from './utils/tdsLedgers';
-import { todayIso } from './utils/dates';
+import { formatDateIn, localDateIso, todayIso } from './utils/dates';
 import {
   ledgerHasPostings,
   openingTypeForNature,
@@ -4652,7 +4652,10 @@ const LedgerView = ({
 
     const money = (n) => (Number(n ?? 0) ? formatMoney(Number(n ?? 0), currentCompany) : '-');
 
-    if (k === 'date') return r?.date ? new Date(r.date).toLocaleDateString() : '-';
+    /* The stored ISO date, read as this country writes it. Building a Date
+       first parsed it as UTC midnight and rendered the day before west of
+       Greenwich; the string never needed a Date at all. */
+    if (k === 'date') return r?.date ? formatDateIn(r.date) : '-';
     if (k === 'particulars') {
       const showNarrationInline = !selectedColumnKeys.includes('narration');
       const showItemsInline = !selectedColumnKeys.includes('itemsSummary');
@@ -5135,14 +5138,9 @@ const LedgerView = ({
   // "rendered fewer hooks than expected" as soon as a ledger does resolve.
   const periodLabel = useMemo(() => {
     if (!filterFrom && !filterTo) return 'Period';
-    const fmt = (s) => {
-      if (!s) return '';
-      try {
-        return new Date(s).toLocaleDateString();
-      } catch {
-        return String(s);
-      }
-    };
+    /* `formatDateIn` is total — it hands back whatever it cannot parse — so the
+       try/catch that guarded `new Date()` has nothing left to catch. */
+    const fmt = (s) => (s ? formatDateIn(s) : '');
     if (filterFrom && filterTo) return `${fmt(filterFrom)} → ${fmt(filterTo)}`;
     if (filterFrom) return `From ${fmt(filterFrom)}`;
     return `To ${fmt(filterTo)}`;
@@ -5299,7 +5297,7 @@ const LedgerView = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="ui-t-sec">Ledger: {account.name}</h3>
-          <div className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</div>
+          <div className="text-sm ui-muted">As of {formatDateIn(localDateIso())}</div>
         </div>
           <div className="flex items-center gap-2">
           <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
@@ -5665,7 +5663,7 @@ const ProfitLoss = ({ db, currentCompany, onOpenLedger }) => {
         <div className="text-center mb-6">
           <h4 className="ui-t-sec">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Profit & Loss Statement</p>
-          <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
+          <p className="text-sm ui-muted">As of {formatDateIn(localDateIso())}</p>
         </div>
 
         <div className="space-y-4">
@@ -5767,7 +5765,7 @@ const BalanceSheet = ({ db, currentCompany, onOpenLedger }) => {
         <div className="text-center mb-6">
           <h4 className="ui-t-sec">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Balance Sheet</p>
-          <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
+          <p className="text-sm ui-muted">As of {formatDateIn(localDateIso())}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-8">
@@ -5897,7 +5895,7 @@ const CashFlowStatement = ({ db, currentCompany }) => {
         <div className="text-center mb-6">
           <h4 className="ui-t-sec">{currentCompany.name}</h4>
           <p className="text-sm ui-muted">Cash Flow Statement</p>
-          <p className="text-sm ui-muted">As of {new Date().toLocaleDateString()}</p>
+          <p className="text-sm ui-muted">As of {formatDateIn(localDateIso())}</p>
           <p className="text-xs ui-muted mt-2">
             Based on recorded Receipts/Payments transactions.
           </p>
