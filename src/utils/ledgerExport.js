@@ -1,4 +1,5 @@
 import { csvSafeValue } from './csv';
+import { formatDateIn, localDateIso } from './dates';
 
 /**
  * jsPDF loads on demand: it is ~100KB of gzip that only matters the moment
@@ -15,13 +16,6 @@ const safeNum = (n) => {
 };
 
 const r2 = (n) => Math.round(safeNum(n) * 100) / 100;
-
-const fmtDate = (d) => {
-  if (!d) return '';
-  const dt = new Date(d);
-  if (Number.isNaN(dt.getTime())) return String(d);
-  return dt.toLocaleDateString();
-};
 
 const DEFAULT_COLUMNS = [
   { key: 'date', label: 'Date' },
@@ -56,7 +50,15 @@ const isNumericKey = (k) => {
 const cellValue = (row, key) => {
   const r = row || {};
   const k = String(key || '').trim();
-  if (k === 'date') return fmtDate(r?.date);
+  /*
+   * The stored ISO date, in the product's format — the same call the ledger
+   * screen makes, so an exported row and the row it was exported from cannot
+   * disagree. It used to go through `new Date(r.date)`, which reads a bare
+   * date as UTC midnight and hands back the previous day west of Greenwich,
+   * and then through `toLocaleDateString()`, which asked the reader's machine
+   * what shape a date is. A statement filed from could say either.
+   */
+  if (k === 'date') return formatDateIn(r?.date);
   if (k === 'particulars') return String(r?.particulars || '');
   if (k === 'voucherType') return String(r?.voucherType || '');
   if (k === 'voucherNo') return String(r?.voucherNo || '');
@@ -106,7 +108,7 @@ export const exportLedgerToExcel = ({
   const data = [
     ['Company', companyName || ''],
     ['Ledger', ledgerName || ''],
-    ['As of', new Date().toLocaleDateString()],
+    ['As of', formatDateIn(localDateIso())],
     ['Opening Balance', r2(openingBalance)],
     ['Closing Balance', r2(closingBalance)],
     [],
@@ -162,7 +164,7 @@ export const exportLedgerToPdf = async ({
   y += 14;
 
   doc.setFontSize(10);
-  doc.text(`As of: ${new Date().toLocaleDateString()}`, marginX, y);
+  doc.text(`As of: ${formatDateIn(localDateIso())}`, marginX, y);
   y += 14;
   doc.text(`Opening Balance: ${r2(openingBalance)}`, marginX, y);
   y += 14;
@@ -247,7 +249,7 @@ export const printLedger = ({ companyName, ledgerName, openingBalance, closingBa
 <body>
   <h1>${safe(companyName || '')}</h1>
   <h2>Ledger: ${safe(ledgerName || '')}</h2>
-  <div class="meta">As of: ${safe(new Date().toLocaleDateString())} &nbsp; | &nbsp; Opening: ${r2(openingBalance).toFixed(2)} &nbsp; | &nbsp; Closing: ${r2(closingBalance).toFixed(2)}</div>
+  <div class="meta">As of: ${safe(formatDateIn(localDateIso()))} &nbsp; | &nbsp; Opening: ${r2(openingBalance).toFixed(2)} &nbsp; | &nbsp; Closing: ${r2(closingBalance).toFixed(2)}</div>
   <table>
     <thead>
       <tr>

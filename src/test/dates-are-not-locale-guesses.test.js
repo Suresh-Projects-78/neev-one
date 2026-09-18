@@ -22,12 +22,12 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
 /*
- * Exports carry the same defect and are not fixed yet: the ledger statement
- * PDF, CSV and HTML still head themselves with a browser-shaped date. They are
- * listed so this test guards the screens today without pretending the
- * documents are clean — delete the entry when they are fixed, never add one.
+ * There is no exception list. There was one — the ledger statement's PDF, CSV
+ * and HTML headed themselves with a browser-shaped date — and it is empty now
+ * that those are fixed, so the rule applies everywhere without a footnote.
+ * Nothing goes back on it: a date a reader sees is either the product's format
+ * or it is a bug.
  */
-const KNOWN = new Set(['src/utils/ledgerExport.js']);
 
 const sources = () =>
   execSync("git ls-files 'src/**/*.js' 'src/**/*.jsx' 'src/*.jsx'", { cwd: root, encoding: 'utf8' })
@@ -42,7 +42,6 @@ const offenders = () => {
   const out = [];
   for (const file of sources()) {
     const rel = relative(root, resolve(root, file));
-    if (KNOWN.has(rel)) continue;
     const lines = readFileSync(resolve(root, file), 'utf8').split('\n');
     lines.forEach((line, i) => {
       if (BARE.test(line)) out.push(`${rel}:${i + 1}`);
@@ -55,13 +54,6 @@ const offenders = () => {
 describe('accounting dates', () => {
   it('are never left to the browser locale', () => {
     expect(offenders()).toEqual([]);
-  });
-
-  it('still has the export defect on the list, so the list stays honest', () => {
-    /* If someone fixes ledgerExport.js and forgets to remove it from KNOWN,
-       this fails and tells them to. */
-    const stillBare = readFileSync(resolve(root, 'src/utils/ledgerExport.js'), 'utf8');
-    expect(stillBare).toMatch(BARE);
   });
 
   it('has files to check, so an empty search cannot pass it', () => {
