@@ -99,7 +99,7 @@ export default function TallyExport({ db, currentCompany }) {
               }}
               className="ui-btn ui-btn-secondary"
             >
-              <FileStack size={15} aria-hidden="true" /> 1. Masters XML
+              <FileStack size={16} aria-hidden="true" /> 1. Masters XML
             </button>
             <button
               type="button"
@@ -110,7 +110,7 @@ export default function TallyExport({ db, currentCompany }) {
               }}
               className="ui-btn ui-btn-primary"
             >
-              <Download size={15} aria-hidden="true" /> 2. Vouchers XML
+              <Download size={16} aria-hidden="true" /> 2. Vouchers XML
             </button>
           </div>
         </div>

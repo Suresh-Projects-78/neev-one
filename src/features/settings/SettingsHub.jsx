@@ -164,7 +164,7 @@ export default function SettingsHub({ can, isEnabled, onOpenCategory, onOpenSett
                       onClick={() => onOpenSetting(item.key)}
                       className="ui-btn ui-btn-secondary"
                     >
-                      <Icon size={15} aria-hidden="true" /> {item.title}
+                      <Icon size={16} aria-hidden="true" /> {item.title}
                     </button>
                   );
                 })}

@@ -286,7 +286,7 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
     return (
       <div style={{ marginLeft: depth ? '1.75rem' : 0 }}>
         <div className={`ui-card ui-lift mb-3 flex flex-wrap items-center gap-4 p-4 ${isActive ? 'ring-1 ring-[rgb(var(--brand))]' : ''}`}>
-          {depth > 0 ? <CornerDownRight size={15} className="ui-subtle -ml-1 flex-shrink-0" aria-hidden="true" /> : null}
+          {depth > 0 ? <CornerDownRight size={16} className="ui-subtle -ml-1 flex-shrink-0" aria-hidden="true" /> : null}
           <span
             className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl"
             style={{ backgroundColor: 'rgb(var(--brand-soft))', color: 'rgb(var(--brand-ink))' }}
@@ -360,7 +360,7 @@ export default function CompanyGroups({ db, setDb, currentCompany, onSwitched, i
           <div className="flex items-center gap-2">
             {!isActive ? (
               <button type="button" onClick={() => setActive(c)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-                Set active <ChevronRight size={13} aria-hidden="true" />
+                Set active <ChevronRight size={14} aria-hidden="true" />
               </button>
             ) : null}
             <button

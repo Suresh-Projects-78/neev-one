@@ -84,7 +84,7 @@ export default function GridControls({ grid }) {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <Bookmark size={15} aria-hidden="true" />
+        <Bookmark size={16} aria-hidden="true" />
         Layout
         {/* How many are off, so a list missing a column says so on the button
             rather than leaving somebody to wonder where it went. */}
@@ -101,8 +101,8 @@ export default function GridControls({ grid }) {
       {open && pos
         ? createPortal(
             <div
-              className="ui-card ui-in-pop fixed z-[120] w-72 overflow-y-auto p-2"
-              style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight, '--pop-origin': 'top left' }}
+              className="ui-card ui-in-pop fixed w-72 overflow-y-auto p-2"
+              style={{ left: pos.left, top: pos.top, maxHeight: pos.maxHeight, '--pop-origin': 'top left', zIndex: 'var(--z-popover)' }}
               data-layout-pop=""
               role="menu"
             >

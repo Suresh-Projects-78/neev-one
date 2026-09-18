@@ -744,7 +744,7 @@ export function PartyFormLayout({
                     aria-label="Anything else this party is registered under — an IEC for exports, a LUT number, a licence."
                     className="ui-subtle inline-flex cursor-help"
                   >
-                    <Info size={13} aria-hidden="true" />
+                    <Info size={14} aria-hidden="true" />
                   </span>
                 </label>
                 <input

@@ -106,7 +106,7 @@ export default function CashBankTransactions({
               aria-expanded={newOpen}
             >
               <Plus size={16} aria-hidden="true" /> New Transaction
-              <ChevronDown size={15} aria-hidden="true" />
+              <ChevronDown size={16} aria-hidden="true" />
             </button>
             {newOpen ? (
               <Popover anchorRef={newBtnRef} onClose={() => setNewOpen(false)} minWidth={240}>
@@ -124,7 +124,7 @@ export default function CashBankTransactions({
                         }}
                         className="ui-hover-sunken flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
                       >
-                        <Icon size={15} aria-hidden="true" /> {item.label}
+                        <Icon size={16} aria-hidden="true" /> {item.label}
                       </button>
                     );
                   })}

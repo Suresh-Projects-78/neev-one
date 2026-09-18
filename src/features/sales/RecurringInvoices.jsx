@@ -672,7 +672,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                             className="ui-subtle hover:text-[rgb(var(--neg))] disabled:opacity-40"
                             aria-label="Remove line"
                           >
-                            <Trash2 size={15} />
+                            <Trash2 size={16} />
                           </button>
                         </td>
                       </tr>
@@ -691,7 +691,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                   onClick={() => setDraft((p) => ({ ...p, items: [...p.items, { ...emptyLine }] }))}
                   className="ui-btn ui-btn-secondary"
                 >
-                  <Plus size={15} aria-hidden="true" /> Add Item
+                  <Plus size={16} aria-hidden="true" /> Add Item
                 </button>
                 <div className="text-sm">
                   <span className="ui-muted mr-2">Each run:</span>
@@ -1073,7 +1073,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                                 onClick={() => { setRowMenu(null); runNow(t); }}
                                 className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2 disabled:opacity-50"
                               >
-                                <RefreshCw size={15} aria-hidden="true" /> Run now
+                                <RefreshCw size={16} aria-hidden="true" /> Run now
                               </button>
                               <button
                                 type="button"
@@ -1081,7 +1081,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                                 onClick={() => { setRowMenu(null); toggle(t); }}
                                 className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                               >
-                                {t.active === false ? <Play size={15} aria-hidden="true" /> : <Pause size={15} aria-hidden="true" />}
+                                {t.active === false ? <Play size={16} aria-hidden="true" /> : <Pause size={16} aria-hidden="true" />}
                                 {t.active === false ? 'Resume' : 'Pause'}
                               </button>
                               <div className="my-1" style={{ borderTop: '1px solid rgb(var(--border))' }} />
@@ -1092,7 +1092,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                                 className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                                 style={{ color: 'rgb(var(--neg-ink))' }}
                               >
-                                <Trash2 size={15} aria-hidden="true" /> Delete
+                                <Trash2 size={16} aria-hidden="true" /> Delete
                               </button>
                             </div>
                           ) : null}

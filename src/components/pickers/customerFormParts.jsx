@@ -50,7 +50,7 @@ export const FormRow = ({ label, hint = '', required = false, htmlFor = '', clas
       </label>
       {hint ? (
         <span title={hint} aria-label={hint} className="ui-subtle inline-flex cursor-help">
-          <Info size={13} aria-hidden="true" />
+          <Info size={14} aria-hidden="true" />
         </span>
       ) : null}
     </div>
@@ -104,7 +104,7 @@ const AddressCard = ({ row, index, states, onChange, onRemove, tone, title, subt
             }
             aria-hidden="true"
           >
-            <MapPin size={17} />
+            <MapPin size={18} />
           </span>
           <div className="min-w-0">
             {row.builtIn ? (
@@ -249,7 +249,7 @@ export const AddressTab = ({
           <p className="ui-caption mt-0.5">{caption}</p>
         </div>
         <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary shrink-0">
-          <Plus size={15} aria-hidden="true" /> Add Address
+          <Plus size={16} aria-hidden="true" /> Add Address
         </button>
       </div>
 
@@ -309,7 +309,7 @@ export const AddressTab = ({
                     aria-label={`Remove address ${i + 1}`}
                     className="ui-icon-btn mx-auto"
                   >
-                    <Trash2 size={15} aria-hidden="true" className="text-[rgb(var(--neg))]" />
+                    <Trash2 size={16} aria-hidden="true" className="text-[rgb(var(--neg))]" />
                   </button>
                 </td>
               </tr>
@@ -329,7 +329,7 @@ export const AddressTab = ({
       {/* At the head of the group it adds to, where the mockup puts it and
           where a section action belongs. */}
       <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary shrink-0">
-        <Plus size={15} aria-hidden="true" /> Add Address
+        <Plus size={16} aria-hidden="true" /> Add Address
       </button>
     </div>
 
@@ -474,7 +474,7 @@ export const ContactsTab = ({
                   >
                     {/* The same red every other delete in the product carries.
                         Grey, it read as one more field control. */}
-                    <Trash2 size={17} aria-hidden="true" className="text-[rgb(var(--neg))]" />
+                    <Trash2 size={18} aria-hidden="true" className="text-[rgb(var(--neg))]" />
                   </button>
                 </td>
               </tr>
@@ -485,7 +485,7 @@ export const ContactsTab = ({
 
     <div>
       <button type="button" onClick={onAdd} className="ui-btn ui-btn-secondary">
-        <Plus size={15} aria-hidden="true" /> Add Contact
+        <Plus size={16} aria-hidden="true" /> Add Contact
       </button>
     </div>
   </section>

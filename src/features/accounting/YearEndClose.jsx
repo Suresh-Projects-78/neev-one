@@ -299,18 +299,18 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
           </li>
           <li>
             <button type="button" onClick={draftClosingJournal} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-              <CalendarCheck size={13} aria-hidden="true" /> Draft closing journal ({money(Math.abs(net))})
+              <CalendarCheck size={14} aria-hidden="true" /> Draft closing journal ({money(Math.abs(net))})
             </button>
             <span className="ui-muted ml-2">P&amp;L → Capital Account, dated {fy.to}.</span>
           </li>
           <li>
             {lock ? (
               <button type="button" onClick={unlockYear} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-                <Unlock size={13} aria-hidden="true" /> Unlock books
+                <Unlock size={14} aria-hidden="true" /> Unlock books
               </button>
             ) : (
               <button type="button" onClick={lockYear} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
-                <Lock size={13} aria-hidden="true" /> Lock the year (freeze up to {fy.to})
+                <Lock size={14} aria-hidden="true" /> Lock the year (freeze up to {fy.to})
               </button>
             )}
             <span className="ui-muted ml-2">New documents dated inside a locked period are refused.</span>

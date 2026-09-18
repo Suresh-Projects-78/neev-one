@@ -2614,8 +2614,8 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-48 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden z-[9999]"
-          style={{ left: openMenu.left, top: openMenu.top }}
+          className="fixed w-48 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden"
+          style={{ left: openMenu.left, top: openMenu.top, zIndex: 'var(--z-popover)' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -6037,7 +6037,7 @@ const ReportsOverview = ({ sections, onNavigate }) => {
                     <span className="flex items-center justify-between gap-2">
                       <span className="font-medium">{r.label}</span>
                       <ArrowRight
-                        size={15}
+                        size={16}
                         className="ui-subtle flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
                         aria-hidden="true"
                       />
@@ -10586,7 +10586,7 @@ const GstrExportControl = ({ label, onExport }) => {
         }}
         className="ui-btn ui-btn-primary"
       >
-        <Download size={15} aria-hidden="true" /> {label}
+        <Download size={16} aria-hidden="true" /> {label}
       </button>
     </div>
   );
@@ -14031,7 +14031,7 @@ const AppShell = () => {
             >
               <PanelLeftOpen size={18} aria-hidden="true" />
             </button>
-            <Building2 size={17} style={{ color: 'rgb(var(--accent))' }} aria-hidden="true" />
+            <Building2 size={18} style={{ color: 'rgb(var(--accent))' }} aria-hidden="true" />
 
             {availableOrgs.length > 1 ? (
               <div className="relative" ref={orgMenuRef}>
@@ -14098,7 +14098,7 @@ const AppShell = () => {
               style={{ color: 'rgb(var(--fg-subtle))' }}
               aria-label="Search invoices, customers, items"
             >
-              <Search size={15} aria-hidden="true" className="shrink-0" />
+              <Search size={16} aria-hidden="true" className="shrink-0" />
               <span className="truncate">Search invoices, customers, items…</span>
               <kbd className="ui-kbd ms-auto shrink-0" aria-hidden="true">⌘K</kbd>
             </button>
@@ -14158,7 +14158,7 @@ const AppShell = () => {
                 className="ui-btn ui-btn-secondary hidden md:inline-flex text-sm"
       title="No warehouse yet — stock and documents need one"
               >
-                <Package size={15} aria-hidden="true" /> Add warehouse
+                <Package size={16} aria-hidden="true" /> Add warehouse
               </button>
             )}
 
@@ -14326,7 +14326,7 @@ const AppShell = () => {
                     }}
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-[rgb(var(--surface-sunken))]"
                   >
-                    <UserRound size={15} aria-hidden="true" /> My account
+                    <UserRound size={16} aria-hidden="true" /> My account
                   </button>
                   <button
                     type="button"
@@ -14337,7 +14337,7 @@ const AppShell = () => {
                     }}
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-[rgb(var(--surface-sunken))]"
                   >
-                    <Settings size={15} aria-hidden="true" /> Settings
+                    <Settings size={16} aria-hidden="true" /> Settings
                   </button>
 
                   {/* Row density had no other home once the rail menu went. */}
@@ -14382,7 +14382,7 @@ const AppShell = () => {
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-[rgb(var(--surface-sunken))]"
                     style={{ borderTop: '1px solid rgb(var(--border))' }}
                   >
-                    <LogOut size={15} aria-hidden="true" /> Sign out
+                    <LogOut size={16} aria-hidden="true" /> Sign out
                   </button>
                 </div>
               ) : null}
@@ -14404,8 +14404,8 @@ const AppShell = () => {
       <div className="w-full flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {mobileNavOpen ? (
           <div
-            className="fixed inset-0 z-[110] md:hidden"
-            style={{ backgroundColor: 'rgb(0 0 0 / 0.45)' }}
+            className="fixed inset-0 md:hidden"
+            style={{ backgroundColor: 'rgb(0 0 0 / 0.45)', zIndex: 'var(--z-drawer)' }}
             onClick={() => setMobileNavOpen(false)}
             aria-hidden="true"
           />
@@ -14413,7 +14413,7 @@ const AppShell = () => {
         <aside
           className={`shrink-0 transition-[width] duration-200 ${navCollapsed ? 'ui-rail-narrow' : 'md:w-56 lg:w-60'} ${
             mobileNavOpen
-              ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[115] max-md:w-72 max-md:overflow-y-auto max-md:p-2 max-md:ui-in-left'
+              ? 'ui-rail-drawer max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-72 max-md:overflow-y-auto max-md:p-2 max-md:ui-in-left'
               : 'max-md:hidden'
           } md:block`}
         >
@@ -14563,7 +14563,7 @@ const AppShell = () => {
                               aria-current={isActive ? 'page' : undefined}
                             >
                               <Icon
-                                size={15}
+                                size={16}
                                 aria-hidden="true"
                                 
                               />
@@ -14651,7 +14651,7 @@ const AppShell = () => {
                 }}
                 className="ui-btn ui-btn-ghost ui-btn-sm"
               >
-                <ArrowLeft size={15} aria-hidden="true" /> Back to {screenLabel(returnTo.from)}
+                <ArrowLeft size={16} aria-hidden="true" /> Back to {screenLabel(returnTo.from)}
               </button>
             </div>
           ) : null}

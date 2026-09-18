@@ -673,7 +673,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                       className="ui-btn ui-btn-secondary"
                       disabled={!dataset.lines.length}
                     >
-                      <Download size={15} aria-hidden="true" />
+                      <Download size={16} aria-hidden="true" />
                       {filing ? ` Export v${(filing.exports?.length || 0) + 1}` : ' Download draft'}
                     </button>
                     {filing && filing.status !== 'Filed' && setDb ? (

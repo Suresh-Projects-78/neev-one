@@ -90,7 +90,7 @@ export const StatTile = ({ label, value, hint, tone = 'neutral', icon: Icon = nu
         <span className="ui-card-label">{label}</span>
         {Icon ? (
           <Icon
-            size={15}
+            size={16}
             className="ui-subtle"
             aria-hidden="true"
           />

@@ -109,7 +109,7 @@ export const TermsSettings = ({ db, setDb, currentCompany }) => {
                   className="ui-btn ui-btn-ghost ui-btn-sm ml-auto"
       title="Use the same wording as the invoice"
                 >
-                  <Copy size={13} aria-hidden="true" /> Copy from invoice
+                  <Copy size={14} aria-hidden="true" /> Copy from invoice
                 </button>
               ) : null}
             </div>

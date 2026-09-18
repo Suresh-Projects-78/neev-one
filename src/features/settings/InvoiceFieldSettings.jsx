@@ -184,7 +184,7 @@ export const InvoiceFieldSettings = ({
                 left no exit but the navigation rail. */}
             {onBack ? (
               <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
-                <ArrowLeft size={15} aria-hidden="true" /> Back
+                <ArrowLeft size={16} aria-hidden="true" /> Back
               </button>
             ) : null}
             {customOnly ? null : (
@@ -488,7 +488,7 @@ export const InvoiceFieldSettings = ({
             </div>
             <div className="flex items-end">
               <button type="button" onClick={addCustomField} className="ui-btn ui-btn-primary">
-                <Plus size={15} aria-hidden="true" /> Add field
+                <Plus size={16} aria-hidden="true" /> Add field
               </button>
             </div>
           </div>

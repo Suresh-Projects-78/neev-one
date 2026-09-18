@@ -647,7 +647,7 @@ const StockAdjustments = ({
                 }}
               />
               <button type="button" onClick={() => fileRef.current?.click()} className="ui-btn ui-btn-secondary">
-                <Upload size={15} aria-hidden="true" /> Upload from Excel
+                <Upload size={16} aria-hidden="true" /> Upload from Excel
               </button>
               <span className="ui-caption">Columns: Item, Qty, Reason, Warehouse. Save the sheet as CSV.</span>
             </div>
@@ -778,7 +778,7 @@ const StockAdjustments = ({
                         className="text-[rgb(var(--neg))]"
                         aria-label="Remove adjustment"
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>

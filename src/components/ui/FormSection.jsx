@@ -22,7 +22,7 @@ export default function FormSection({ icon: Icon, title, description = '', actio
               style={{ backgroundColor: 'rgb(var(--brand) / 0.12)', color: 'rgb(var(--brand))' }}
               aria-hidden="true"
             >
-              <Icon size={17} />
+              <Icon size={18} />
             </span>
           ) : null}
           <div className="min-w-0">

@@ -138,7 +138,7 @@ export default function AuditTrail() {
           title="Audit Trail"
         />
         <button type="button" onClick={() => load()} className="ui-btn ui-btn-secondary" disabled={loading}>
-          <RefreshCw size={15} aria-hidden="true" /> {loading ? 'Loading…' : 'Refresh'}
+          <RefreshCw size={16} aria-hidden="true" /> {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
 

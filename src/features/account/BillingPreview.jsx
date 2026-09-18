@@ -117,7 +117,7 @@ export default function BillingPreview({ currentCompany }) {
                   <td className="ui-col-meta px-4 py-2.5">{inv.status}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm text-xs" disabled>
-                      <FileText size={13} aria-hidden="true" /> Receipt
+                      <FileText size={14} aria-hidden="true" /> Receipt
                     </button>
                   </td>
                 </tr>

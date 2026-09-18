@@ -60,6 +60,9 @@ component, read this one.
   first — that arithmetic is what put a five-column table in a 383px panel.
 - **Don't let a wide table clip.** It scrolls in its own container, or its last
   columns are unreachable and nothing says so.
+- **Don't write an arbitrary z-index.** The layer tokens are the whole scale;
+  `z-[9999]` is what a number becomes when nobody knows what it must beat.
+- **Don't pick an icon size by eye.** Four roles: 12 / 14 / **16 default** / 18.
 
 ## Typography
 Loaded from Google Fonts in `src/index.css`. **One face: Inter** (2026-09-13, the
@@ -221,6 +224,114 @@ Four exceptions, each deliberate:
   counter, used at arm's length.
 - **28px POS steppers** (`!h-7 !w-7`) — quantity ± beside a cart line.
 
+### Icon size — four roles, not ten numbers
+
+Ten different icon sizes were in use, and the two biggest were 15px (155) and
+16px (145) doing the *same job* — inline and button icons, one pixel apart.
+That is not a scale, it is two people's defaults.
+
+| Role | Size | Where |
+| --- | --- | --- |
+| **XS** | 12px | very compact metadata, tiny supporting marks — only where 12 stays legible |
+| **SM** | 14px | compact table actions, compact buttons, dense inline marks |
+| **MD** | **16px** | **the default.** Buttons, form and entity icons, toolbar controls, menu items, ordinary inline icons |
+| **LG** | 18px | page-heading icons, prominent navigation and context icons |
+
+Reach for MD unless the context is genuinely compact or genuinely a heading.
+
+**Exempt:** illustrations and empty-state artwork (48–104px), which are drawings
+rather than icons and are sized to their composition.
+
+**Exceptions still in the code**, small and deliberate, to inspect before
+changing: 11px (14 uses) and 10px (5) on compact status and supporting marks —
+a status dot enlarged to reach a token is a worse status dot — and 20px (3) on
+deliberately prominent buttons.
+
+### Icon stroke — three different things
+
+- **UI icons** (Lucide) take the library's own stroke. It is not overridden per
+  call site, and the library default is the product default because a mixed
+  stroke across one toolbar reads as a rendering fault.
+- **Illustrations** (`AuthIllustration`, `ui/Illustration`, the inline SVGs in
+  `AuthGate`) are artwork. They carry their own optical strokes — 1, 1.5, 1.75,
+  2, 2.5 — chosen against their own compositions, and normalising them to an
+  icon rule would flatten the drawing.
+- **Chart graphics** (sparkline paths, axis rules) are data marks. Their stroke
+  belongs to the chart's readability, not to the icon scale.
+
+Two Lucide-side overrides remain and are intentional: `Primitives.jsx`
+(`strokeWidth 2.1`, compensating for empty-state icons drawn much larger than
+interface size) and `DashboardOverview.jsx` (`1.5`, a sparkline, i.e. chart
+artwork).
+
+### Layers
+
+Sixteen z-index values were in use, ending at `z-[9999]`. Measured in the
+browser: a row-action menu at 9999 painted **over an open dialog**. It never
+needed 9999 — the shell creates no stacking context, so a fixed overlay
+competes in the root context and only had to clear a sticky table header at 20.
+9999 is what a number becomes when there is no scale to consult.
+
+| Token | Value | Layer |
+| --- | --- | --- |
+| `--z-below` | −1 | decoration painted behind content |
+| `--z-base` | 1 | in-flow lifts — a table head against its rows |
+| `--z-sticky` | 20 | sticky table headers and toolbars |
+| `--z-header` | 40 | the app header |
+| `--z-popover` | 60 | menus, dropdowns, pickers, **row actions** |
+| `--z-drawer` | 100 | side drawers, the mobile nav (panel at 101) |
+| `--z-modal` | 120 | dialogs |
+| `--z-modal-popover` | 130 | a menu opened **inside** a dialog |
+| `--z-toast` | 140 | notifications outrank what caused them |
+| `--z-palette` | 160 | the command palette reaches over everything |
+| `--z-tooltip` | 180 | last word, and never interactive |
+
+The order is the rule; the integers are spaced only so a tier can be inserted
+without renumbering.
+
+**The two popover layers are the point.** A popover belonging to an open dialog
+must sit above that dialog; an unrelated popover on the page behind it must sit
+below. Same component, two answers — so `Modal` publishes its layer through
+React context and `Popover` reads it. The DOM cannot answer this, because every
+overlay portals to `body` and a popover's ancestors say nothing about what
+opened it.
+
+**Never write an arbitrary z-index.** `z-[9999]`, `z-[200]`, `z-[125]` are all
+gone. A bracketed z-index at or above the drawer tier fails
+`src/test/layers-are-ordered.test.js`. A small local `z-10`/`z-30` inside an
+already-layered ancestor is fine — it orders siblings inside that ancestor's
+context and cannot escape it.
+
+**Before raising a z-index, check the stacking context.** A number cannot lift
+an element out of an ancestor that has `transform`, `filter`, `backdrop-filter`,
+`contain: paint`, `isolation` or its own positioned z-index. If an overlay is
+trapped, portal it — do not escalate.
+
+### Content width — measured, and smaller than it looked
+
+An audit counted 69 `max-w-*` uses across master-data files and read them as
+page-width drift. Measuring the rendered pages says otherwise: **document forms,
+master forms, lists, dashboards and reports carry no page-level `max-w` at all.**
+They use the full content column, which the shell already caps at 1920px and
+centres beyond that.
+
+So there are two page-width behaviours in force, not four roles:
+
+| Behaviour | Applies to | Implementation |
+| --- | --- | --- |
+| **Full content column** | documents, master forms, lists, dashboards, reports | no page-level `max-w`; the shell's 1920px cap governs |
+| **Compact** | settings and configuration pages | a page-level `max-w-2xl` (672px) |
+
+The rest of the `max-w-*` values are **inner measure**, not page width: a
+paragraph held to `[46ch]`, a totals block at `w-80`, a sub-panel at `max-w-lg`.
+Those are correct and should stay per-component.
+
+**A wide page is not a wide field.** Page width and field width are separate
+systems: the form grid's column spans decide how wide an input is, and a date
+stays a date on a 1920px screen. See *Controls → Value alignment* and the line
+grid rules.
+
+
 ### Select
 
 A select draws its own indicator: `appearance: none`, a chevron as an inline
@@ -358,6 +469,7 @@ because focus, portals and event order cannot be read off the source.
 | 2026-09-08 | Weight marks structure, not content | 121 values carried semibold or bold. Spending weight on content leaves none for hierarchy — everything emphasised is nothing emphasised |
 | 2026-09-08 | Money drops to weight 400 | Tabular alignment already marks a figure as money. A weight on top made every amount in every table an emphasis, and a screen that is mostly amounts then had none |
 | 2026-09-08 | Status hues move out of type and into the tint | Seven saturated words in the filter strip competed with each other and with the figures beside them. Reverses the 2026-09-01 contrast increase, which raised the wrong thing |
+| 2026-09-18 | Icon scale, layer scale and content width governed | Ten icon sizes became four roles (15px and 16px were doing the same job one pixel apart); sixteen z-index values became eleven ordered tokens after a row menu at `z-[9999]` was measured painting over an open dialog; and measuring the pages showed the content-width "drift" was mostly inner measure rather than page width, so two behaviours were documented instead of four roles invented |
 | 2026-09-18 | Do's and Don'ts, Elevation and Responsive behaviour added | Three sections the document never had, filled from the tokens and the measured band rather than from intent. Writing them down surfaced that 57 Tailwind shadow utilities sit in app chrome against a three-token system — recorded as legacy, like `space-y-4`, not silently migrated |
 | 2026-09-17 | This document reconciled against the rendered app | An audit quoted `#F97316`, "36px table rows" and a 188px rail — all from here, all stale. Every geometry and colour value above is now measured from the running product, and the audit inherited the errors because it read the doc instead of the tokens |
 | 2026-09-13 | One face: Inter, everywhere | The Graphite type decision, adopted alone while its colors stay parked. Money and codes keep digit alignment through tabular-nums instead of a mono family |

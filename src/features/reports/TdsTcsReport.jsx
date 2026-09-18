@@ -129,7 +129,7 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
           TCS 206C — receipts ({tcsRows.filter((r) => r.tax > 0).length} liable)
         </button>
         <button type="button" onClick={exportCsv} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-          <Download size={13} aria-hidden="true" /> CSV
+          <Download size={14} aria-hidden="true" /> CSV
         </button>
         <button type="button" onClick={draftJournal} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
           Draft {tab === 'tds' ? 'TDS' : 'TCS'} journal ({money(totalTax)})

@@ -147,7 +147,7 @@ export const ListControls = ({
             aria-haspopup="menu"
             aria-expanded={exportOpen}
           >
-            <Download size={15} aria-hidden="true" /> Export
+            <Download size={16} aria-hidden="true" /> Export
           </button>
           {exportOpen ? (
             <Popover anchorRef={exportBtnRef} onClose={close} minWidth={220}>
@@ -168,7 +168,7 @@ export const ListControls = ({
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                 >
-                  <FileText size={15} aria-hidden="true" /> PDF
+                  <FileText size={16} aria-hidden="true" /> PDF
                 </button>
                 <button
                   type="button"
@@ -185,7 +185,7 @@ export const ListControls = ({
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                 >
-                  <Table2 size={15} aria-hidden="true" /> Excel
+                  <Table2 size={16} aria-hidden="true" /> Excel
                 </button>
                 <button
                   type="button"
@@ -201,7 +201,7 @@ export const ListControls = ({
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                 >
-                  <Download size={15} aria-hidden="true" /> CSV
+                  <Download size={16} aria-hidden="true" /> CSV
                 </button>
                 <p className="ui-caption px-3 pt-1 pb-2">
                   Exports what you are looking at — this period, this search, these columns.

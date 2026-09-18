@@ -114,7 +114,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
               All branches
             </label>
             <button type="button" className="ui-btn ui-btn-secondary" onClick={() => load()}>
-              <RefreshCw size={15} aria-hidden="true" /> Refresh
+              <RefreshCw size={16} aria-hidden="true" /> Refresh
             </button>
           </>
         }
@@ -272,7 +272,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
                           URL.revokeObjectURL(url);
                         }}
                       >
-                        <Download size={13} aria-hidden="true" /> CSV
+                        <Download size={14} aria-hidden="true" /> CSV
                       </button>
                       <button
                         type="button"
@@ -292,12 +292,12 @@ ${drill.rows.map((l) => `<tr><td>${safe(l.date)}</td><td>${safe(l.entryNo)}</td>
                           w.print();
                         }}
                       >
-                        <Printer size={13} aria-hidden="true" /> Sheet
+                        <Printer size={14} aria-hidden="true" /> Sheet
                       </button>
                     </>
                   ) : null}
                   <button type="button" onClick={() => setDrill(null)} className="ui-icon-btn" aria-label="Close account ledger">
-                    <X size={15} aria-hidden="true" />
+                    <X size={16} aria-hidden="true" />
                   </button>
                 </div>
               </header>

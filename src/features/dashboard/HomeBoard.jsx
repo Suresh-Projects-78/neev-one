@@ -109,7 +109,7 @@ export function ThingsToDo({ items, onOpenAll }) {
                   style={{ backgroundColor: TONES[it.tone]?.soft, color: TONES[it.tone]?.solid }}
                   aria-hidden="true"
                 >
-                  <it.Icon size={13} />
+                  <it.Icon size={14} />
                 </span>
                 <span className="min-w-0 truncate">{it.text}</span>
               </button>
@@ -139,7 +139,7 @@ export function QuickLinks({ links }) {
               disabled={!l.onSelect}
               className="ui-hover-sunken flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm disabled:cursor-default"
             >
-              <l.Icon size={15} aria-hidden="true" style={{ color: TONES[l.tone]?.solid }} />
+              <l.Icon size={16} aria-hidden="true" style={{ color: TONES[l.tone]?.solid }} />
               <span className="min-w-0 flex-1 truncate">{l.label}</span>
               <ChevronRight size={14} aria-hidden="true" className="ui-subtle" />
             </button>
@@ -269,7 +269,7 @@ export function DueSplitPanel({ title, Icon, tone, rows, company, onViewAll }) {
         </div>
         {onViewAll ? (
           <button type="button" onClick={onViewAll} className="ui-link inline-flex items-center gap-1 text-sm">
-            View all <ArrowRight size={13} aria-hidden="true" />
+            View all <ArrowRight size={14} aria-hidden="true" />
           </button>
         ) : null}
       </div>
@@ -299,7 +299,7 @@ export function RecentActivity({ rows, company, onViewAll, onOpen }) {
         </div>
         {onViewAll ? (
           <button type="button" onClick={onViewAll} className="ui-link inline-flex items-center gap-1 text-sm">
-            View all <ArrowRight size={13} aria-hidden="true" />
+            View all <ArrowRight size={14} aria-hidden="true" />
           </button>
         ) : null}
       </div>

@@ -324,7 +324,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
               className="ui-btn ui-btn-secondary"
       title="Stage Bank Date = Transaction Date for the rows in hand. Nothing is final until Submit."
             >
-              <Wand2 size={15} aria-hidden="true" /> Auto Reconcile (Same Date)
+              <Wand2 size={16} aria-hidden="true" /> Auto Reconcile (Same Date)
             </button>
           </div>
 
@@ -452,7 +452,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                   })
                 }
               >
-                <CalendarCheck size={15} aria-hidden="true" /> Bulk Reconcile — Bank Date = Transaction Date
+                <CalendarCheck size={16} aria-hidden="true" /> Bulk Reconcile — Bank Date = Transaction Date
               </button>
               <div className="ms-auto flex items-center gap-2">
                 <button

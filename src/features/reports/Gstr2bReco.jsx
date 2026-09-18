@@ -109,7 +109,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
         <div>
           <input ref={fileRef} type="file" accept=".json,application/json" onChange={onFile} className="hidden" />
           <button type="button" onClick={() => fileRef.current?.click()} className="ui-btn ui-btn-primary">
-            <Upload size={15} aria-hidden="true" /> Upload GSTR-2B JSON
+            <Upload size={16} aria-hidden="true" /> Upload GSTR-2B JSON
           </button>
         </div>
       </div>
@@ -158,7 +158,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
               }}
               className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
             >
-              <Download size={13} aria-hidden="true" /> CSV
+              <Download size={14} aria-hidden="true" /> CSV
             </button>
           </div>
 

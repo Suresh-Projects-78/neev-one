@@ -153,7 +153,7 @@ export const DocFormActions = ({
                             item.danger ? 'text-[rgb(var(--neg-ink))]' : ''
                           }`}
                         >
-                          {Icon ? <Icon size={15} aria-hidden="true" /> : null}
+                          {Icon ? <Icon size={16} aria-hidden="true" /> : null}
                           {item.label}
                         </button>
                       );

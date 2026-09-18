@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import { OverlayLayerContext } from './overlayLayer';
 import { X } from 'lucide-react';
 
 /**
@@ -121,8 +123,12 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
   }, [beginClose]);
 
   return createPortal(
+    /* Anything opened from inside this dialog is told so, and rises above it.
+       A popover on the page behind never sees this and stays where it is. */
+    <OverlayLayerContext.Provider value="modal">
     <div
-      className={`ui-scrim fixed inset-0 flex items-center justify-center p-4 z-50 ${closing ? 'ui-out-fade' : ''}`}
+      className={`ui-scrim fixed inset-0 flex items-center justify-center p-4 ${closing ? 'ui-out-fade' : ''}`}
+      style={{ zIndex: 'var(--z-modal)' }}
       onMouseDown={(e) => {
         // Backdrop click closes; clicks inside the panel don't bubble here.
         if (e.target === e.currentTarget) beginClose();
@@ -158,7 +164,8 @@ const Modal = ({ children, onClose, title = 'Form', maxWidthClass = 'max-w-4xl' 
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
       </div>
-    </div>,
+    </div>
+    </OverlayLayerContext.Provider>,
     document.body
   );
 };

@@ -79,7 +79,8 @@ export default function Drawer({ open, onClose, title, description = '', childre
 
   return createPortal(
     <div
-      className={`ui-scrim fixed inset-0 z-50 flex justify-end ${closing ? 'ui-out-fade' : ''}`}
+      className={`ui-scrim fixed inset-0 flex justify-end ${closing ? 'ui-out-fade' : ''}`}
+      style={{ zIndex: 'var(--z-drawer)' }}
       onMouseDown={(e) => {
         // The scrim closes; a click inside the panel does not reach here.
         if (e.target === e.currentTarget) beginClose();

@@ -480,12 +480,12 @@ const SalesOverview = ({
               aria-haspopup="listbox"
               aria-expanded={periodOpen}
             >
-              <Calendar size={15} aria-hidden="true" />
+              <Calendar size={16} aria-hidden="true" />
               {period.label}{' '}
               <span style={{ color: 'rgb(var(--link))' }}>
                 ({prettyDate(period.from)} - {prettyDate(period.to)})
               </span>
-              <ChevronDown size={15} aria-hidden="true" />
+              <ChevronDown size={16} aria-hidden="true" />
             </button>
             {periodOpen ? (
               <div
@@ -524,7 +524,7 @@ const SalesOverview = ({
           </span>
 
           <button type="button" onClick={exportCsv} className="ui-btn ui-btn-secondary">
-            <Download size={15} aria-hidden="true" /> Export
+            <Download size={16} aria-hidden="true" /> Export
           </button>
 
           <div className="relative">
@@ -550,7 +550,7 @@ const SalesOverview = ({
                   }}
                   className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <Building2 size={15} aria-hidden="true" /> Branches: {branchFilterLabel}
+                  <Building2 size={16} aria-hidden="true" /> Branches: {branchFilterLabel}
                 </button>
                 <button
                   type="button"
@@ -561,7 +561,7 @@ const SalesOverview = ({
                   }}
                   className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <LayoutList size={15} aria-hidden="true" /> All invoices
+                  <LayoutList size={16} aria-hidden="true" /> All invoices
                 </button>
               </div>
             ) : null}
@@ -865,7 +865,7 @@ const SalesOverview = ({
                   }
                   aria-hidden="true"
                 >
-                  <a.icon size={15} />
+                  <a.icon size={16} />
                 </span>
                 <span className="flex-1 min-w-0 whitespace-nowrap">{a.label}</span>
                 <ArrowRight size={14} aria-hidden="true" className="flex-shrink-0 opacity-60" />

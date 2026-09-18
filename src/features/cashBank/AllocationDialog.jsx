@@ -416,7 +416,7 @@ const AllocationDialog = ({ db, setDb, currentCompany, txn, onClose }) => {
               const acc = ledgers.find((l) => String(l.id) === String(r.ledgerId));
               return (
                 <div key={i} className="ui-sunken flex items-center gap-3 rounded-lg border p-2.5 text-sm">
-                  <FileText size={15} aria-hidden="true" className="ui-muted shrink-0" />
+                  <FileText size={16} aria-hidden="true" className="ui-muted shrink-0" />
                   <span className="truncate">{acc?.name || 'Party ledger'}</span>
                   <span className="ui-caption">
                     settled via {r.paymentNumber || (r.partyKind === 'customer' ? 'receipt' : 'payment')}
@@ -499,7 +499,7 @@ const AllocationDialog = ({ db, setDb, currentCompany, txn, onClose }) => {
                     className="ui-icon-btn"
                     aria-label={`Remove allocation row ${i + 1}`}
                   >
-                    <Trash2 size={15} aria-hidden="true" className="text-[rgb(var(--neg))]" />
+                    <Trash2 size={16} aria-hidden="true" className="text-[rgb(var(--neg))]" />
                   </button>
                 </div>
 

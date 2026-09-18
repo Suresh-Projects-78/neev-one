@@ -64,7 +64,7 @@ export const DateCell = ({ value, withIcon = true }) => {
     /* Read as dd/mm/yyyy, stored as ISO — `dateTime` keeps the machine-readable
        value on the element for anything that copies or scrapes it. */
     <time className="ui-cell-date" dateTime={iso}>
-      {withIcon ? <Calendar size={13} aria-hidden="true" /> : null}
+      {withIcon ? <Calendar size={14} aria-hidden="true" /> : null}
       {formatDateIn(iso)}
     </time>
   );
@@ -81,7 +81,7 @@ export const DueDateCell = ({ value, balance = 0, todayIso = null, withIcon = tr
   const note = urgency === 'overdue' ? 'Overdue' : urgency === 'today' ? 'Due today' : '';
   return (
     <time className="ui-cell-date" dateTime={text} data-urgency={urgency} title={note || undefined}>
-      {withIcon ? <Calendar size={13} aria-hidden="true" /> : null}
+      {withIcon ? <Calendar size={14} aria-hidden="true" /> : null}
       {formatDateIn(text)}
       {note ? <span className="sr-only"> — {note}</span> : null}
     </time>

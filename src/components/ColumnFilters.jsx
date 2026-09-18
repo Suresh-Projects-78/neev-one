@@ -279,8 +279,8 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
   return (
     <div
       ref={panelRef}
-      className="fixed z-50 flex w-72 flex-col overflow-hidden ui-surface border rounded-xl shadow-lg p-3 gap-3 text-sm"
-      style={{ top, left, maxHeight }}
+      className="fixed flex w-72 flex-col overflow-hidden ui-surface border rounded-xl shadow-lg p-3 gap-3 text-sm"
+      style={{ top, left, maxHeight, zIndex: 'var(--z-popover)' }}
       role="dialog"
       aria-label={`Filter ${column.label || key}`}
     >
@@ -356,7 +356,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
       </div>
 
       <div className="relative">
-        <SearchIcon size={13} className="absolute left-2 top-1/2 -translate-y-1/2 ui-muted" aria-hidden="true" />
+        <SearchIcon size={14} className="absolute left-2 top-1/2 -translate-y-1/2 ui-muted" aria-hidden="true" />
         <input
           type="text"
           value={search}
@@ -450,7 +450,7 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
         <span className="flex items-center gap-0.5 shrink-0">
           {sorted ? <span aria-hidden="true" className="text-xs">{state.sort.dir === 'asc' ? '\u25b2' : '\u25bc'}</span> : null}
           <ChevronDown
-            size={13}
+            size={14}
             aria-hidden="true"
             className={active ? 'text-[rgb(var(--brand))]' : 'opacity-50'}
           />

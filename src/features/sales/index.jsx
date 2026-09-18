@@ -940,7 +940,7 @@ const statusReason = (doc, status, company, nowMs) => {
                 aria-haspopup="menu"
                 aria-expanded={moreOpen}
               >
-                <MoreVertical size={15} aria-hidden="true" /> More
+                <MoreVertical size={16} aria-hidden="true" /> More
               </button>
               {moreOpen ? (
                 <Popover anchorRef={moreBtnRef} onClose={() => setMoreOpen(false)} minWidth={228}>
@@ -960,7 +960,7 @@ const statusReason = (doc, status, company, nowMs) => {
                       }}
                       className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                     >
-                      <Download size={15} aria-hidden="true" /> Import invoices
+                      <Download size={16} aria-hidden="true" /> Import invoices
                     </button>
 
                     {/* Three formats behind one entry, not three entries.
@@ -973,7 +973,7 @@ const statusReason = (doc, status, company, nowMs) => {
                       onClick={() => setExportOpen((v) => !v)}
                       className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                     >
-                      <Download size={15} aria-hidden="true" /> Export invoices
+                      <Download size={16} aria-hidden="true" /> Export invoices
                       <ChevronDown
                         size={14}
                         aria-hidden="true"
@@ -998,7 +998,7 @@ const statusReason = (doc, status, company, nowMs) => {
                             }}
                             className="w-full text-left flex items-center gap-2 px-3 py-2 ps-9 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                           >
-                            <o.Icon size={15} aria-hidden="true" /> {o.label}
+                            <o.Icon size={16} aria-hidden="true" /> {o.label}
                           </button>
                         ))
                       : null}
@@ -1021,7 +1021,7 @@ const statusReason = (doc, status, company, nowMs) => {
                         }}
                         className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                       >
-                        <o.Icon size={15} aria-hidden="true" /> {o.label}
+                        <o.Icon size={16} aria-hidden="true" /> {o.label}
                       </button>
                     ))}
                   </div>
@@ -1416,8 +1416,8 @@ const statusReason = (doc, status, company, nowMs) => {
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop"
-          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right' }}
+          className="fixed w-56 ui-card overflow-hidden ui-in-pop"
+          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right', zIndex: 'var(--z-popover)' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -2280,8 +2280,8 @@ export const EstimatesList = ({
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed w-56 ui-card overflow-hidden z-[9999] ui-in-pop"
-          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right' }}
+          className="fixed w-56 ui-card overflow-hidden ui-in-pop"
+          style={{ left: openMenu.left, top: openMenu.top, boxShadow: 'var(--shadow-pop)', '--pop-origin': 'top right', zIndex: 'var(--z-popover)' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
@@ -2702,7 +2702,7 @@ export const CreditNotesList = ({
                         aria-label={`Print credit note ${cn.number}`}
                         className="ui-btn ui-btn-secondary ui-btn-sm text-xs mr-2"
                       >
-                        <Printer size={13} aria-hidden="true" /> Print
+                        <Printer size={14} aria-hidden="true" /> Print
                       </button>
                       {isOnAccount(cn) ? (
                         noteBalance(cn).unsettled > 0.0001 ? (
@@ -4281,7 +4281,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 aria-expanded={numberingOpen}
       title="Numbering"
               >
-                <SlidersHorizontal size={15} aria-hidden="true" />
+                <SlidersHorizontal size={16} aria-hidden="true" />
               </button>
             </div>
             <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
@@ -4843,7 +4843,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-soft">
-            <Plus size={15} aria-hidden="true" /> Add Item
+            <Plus size={16} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
@@ -5827,7 +5827,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
 
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-soft">
-            <Plus size={15} aria-hidden="true" /> Add Item
+            <Plus size={16} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
         </div>
@@ -6664,7 +6664,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
 
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-soft">
-            <Plus size={15} aria-hidden="true" /> Add Item
+            <Plus size={16} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
         </div>

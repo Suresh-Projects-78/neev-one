@@ -155,7 +155,7 @@ export const ApprovalsInbox = ({ currentCompany }) => {
                       disabled={busyId === r.id}
                       onClick={() => decide(r, true)}
                     >
-                      {busyId === r.id ? <Spinner /> : <CheckCircle2 size={15} aria-hidden="true" />} Approve
+                      {busyId === r.id ? <Spinner /> : <CheckCircle2 size={16} aria-hidden="true" />} Approve
                     </button>
                     <button
                       type="button"
@@ -163,7 +163,7 @@ export const ApprovalsInbox = ({ currentCompany }) => {
                       disabled={busyId === r.id}
                       onClick={() => decide(r, false)}
                     >
-                      <XCircle size={15} aria-hidden="true" /> Reject
+                      <XCircle size={16} aria-hidden="true" /> Reject
                     </button>
                   </div>
                 ) : null}

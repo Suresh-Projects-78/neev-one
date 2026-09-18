@@ -491,7 +491,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             description="What the customer has ordered."
             action={
               <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary">
-                <Plus size={15} aria-hidden="true" /> Add Item
+                <Plus size={16} aria-hidden="true" /> Add Item
               </button>
             }
           >
@@ -572,7 +572,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
               className="inline-flex items-center gap-2 text-sm font-medium"
               style={{ color: 'rgb(var(--brand-ink))' }}
             >
-              <Plus size={15} aria-hidden="true" /> Add another item
+              <Plus size={16} aria-hidden="true" /> Add another item
             </button>
             <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           </div>
@@ -768,7 +768,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                           aria-label={`Print sales order ${o.number}`}
                           className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                         >
-                          <Printer size={13} aria-hidden="true" /> Print
+                          <Printer size={14} aria-hidden="true" /> Print
                         </button>
                         {prog.delivered < prog.ordered ? (
                           <button type="button" onClick={() => toChallan(o)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">

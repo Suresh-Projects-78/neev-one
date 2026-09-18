@@ -157,7 +157,7 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
             Draft depreciation journal ({money(totalDep)})
           </button>
           <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
-            <Plus size={15} aria-hidden="true" /> Add Asset
+            <Plus size={16} aria-hidden="true" /> Add Asset
           </button>
         </div>
       </div>

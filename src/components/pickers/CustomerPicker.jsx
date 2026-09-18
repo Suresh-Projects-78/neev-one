@@ -1050,7 +1050,7 @@ const CustomerPicker = ({ db, setDb, currentCompany, value, onChange, label = 'C
       <div className="relative">
         {LeadingIcon ? (
           <LeadingIcon
-            size={15}
+            size={16}
             aria-hidden="true"
             className="ui-subtle pointer-events-none absolute start-3 top-1/2 -translate-y-1/2"
           />

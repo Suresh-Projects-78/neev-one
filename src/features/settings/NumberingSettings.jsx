@@ -117,7 +117,7 @@ export const NumberingSettings = () => {
               </span>
             ) : null}
             <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setDraft({ ...blank })}>
-              <Plus size={15} aria-hidden="true" /> New series
+              <Plus size={16} aria-hidden="true" /> New series
             </button>
           </>
         }
@@ -206,7 +206,7 @@ export const NumberingSettings = () => {
                 }, 'Series created')
               }
             >
-              {busy === 'new' ? <Spinner /> : <Save size={15} aria-hidden="true" />} Save
+              {busy === 'new' ? <Spinner /> : <Save size={16} aria-hidden="true" />} Save
             </button>
             <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setDraft(null)}>
               Cancel

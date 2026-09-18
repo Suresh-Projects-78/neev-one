@@ -180,10 +180,10 @@ export const RolePermissionManager = () => {
               onClick={() => setGranted(new Set(baseline))}
               disabled={!dirty || saving}
             >
-              <RotateCcw size={15} aria-hidden="true" /> Revert
+              <RotateCcw size={16} aria-hidden="true" /> Revert
             </button>
             <button type="button" className="ui-btn ui-btn-primary" onClick={save} disabled={!dirty || saving}>
-              {saving ? <Spinner /> : <Save size={15} aria-hidden="true" />}
+              {saving ? <Spinner /> : <Save size={16} aria-hidden="true" />}
               {saving ? 'Saving…' : 'Save changes'}
             </button>
           </>
@@ -276,7 +276,7 @@ export const RolePermissionManager = () => {
                   aria-expanded={isOpen}
                 >
                   <ChevronDown
-                    size={15}
+                    size={16}
                     aria-hidden="true"
                     className={`transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`}
                   />

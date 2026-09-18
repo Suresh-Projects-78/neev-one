@@ -217,7 +217,7 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
              you came from. */
           onBack ? (
             <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
-              <ChevronLeft size={15} aria-hidden="true" /> Back
+              <ChevronLeft size={16} aria-hidden="true" /> Back
             </button>
           ) : null
         }

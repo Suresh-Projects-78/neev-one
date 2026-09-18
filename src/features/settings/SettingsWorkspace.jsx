@@ -50,7 +50,7 @@ const LocalNavItem = ({ item, selected, onSelect }) => {
       }
     >
       <Icon
-        size={15}
+        size={16}
         aria-hidden="true"
         className="shrink-0"
         style={selected ? { color: 'rgb(var(--brand))' } : undefined}

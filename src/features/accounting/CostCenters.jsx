@@ -84,7 +84,7 @@ export default function CostCenters({ db, setDb, currentCompany }) {
           />
         </div>
         <button type="button" onClick={add} className="ui-btn ui-btn-primary">
-          <Plus size={15} aria-hidden="true" /> Add
+          <Plus size={16} aria-hidden="true" /> Add
         </button>
         <div className="ui-caption pb-2">Then pick it on invoices and expenses.</div>
       </div>

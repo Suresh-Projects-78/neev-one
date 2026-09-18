@@ -207,7 +207,8 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
   const STEPS = ['Company', 'Modules', 'First customer', 'First invoice'];
 
   return (
-    <div className="fixed inset-0 z-[125] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="onboard-title">
+    <div className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex: 'var(--z-modal)' }} role="dialog" aria-modal="true" aria-labelledby="onboard-title">
       <div className="absolute inset-0" style={{ backgroundColor: 'rgb(0 0 0 / 0.5)' }} aria-hidden="true" />
       <div className="ui-card ui-in-pop relative w-full max-w-lg p-6" style={{ boxShadow: 'var(--shadow-pop)' }}>
         <div className="mb-5 flex items-center justify-between">
@@ -289,7 +290,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
             </div>
             <div className="mt-5 flex justify-end">
               <button type="button" onClick={saveCompany} className="ui-btn ui-btn-primary">
-                Continue <ArrowRight size={15} aria-hidden="true" />
+                Continue <ArrowRight size={16} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -355,7 +356,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
                 Skip
               </button>
               <button type="button" onClick={saveCustomer} className="ui-btn ui-btn-primary">
-                Continue <ArrowRight size={15} aria-hidden="true" />
+                Continue <ArrowRight size={16} aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -380,7 +381,7 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
                 }}
                 className="ui-btn ui-btn-primary"
               >
-                Create first invoice <ArrowRight size={15} aria-hidden="true" />
+                Create first invoice <ArrowRight size={16} aria-hidden="true" />
               </button>
             </div>
           </div>

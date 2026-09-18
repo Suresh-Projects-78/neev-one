@@ -168,7 +168,7 @@ export const GovernanceSettings = () => {
                   className="ui-btn ui-btn-ghost"
                   onClick={() => run('delp', async () => { await deleteRoleProfile(p.id); await reload(); }, 'Removed')}
                 >
-                  <Trash2 size={15} aria-hidden="true" />
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
               </div>
             ))
@@ -222,7 +222,7 @@ export const GovernanceSettings = () => {
                 }, 'Profile created')
               }
             >
-              {busy === 'prof' ? <Spinner /> : <Plus size={15} aria-hidden="true" />} Create profile
+              {busy === 'prof' ? <Spinner /> : <Plus size={16} aria-hidden="true" />} Create profile
             </button>
           </div>
 
@@ -299,7 +299,7 @@ export const GovernanceSettings = () => {
                   className="ui-btn ui-btn-ghost"
                   onClick={() => run('delr', async () => { await deleteApprovalRule(r.id); await reload(); }, 'Removed')}
                 >
-                  <Trash2 size={15} aria-hidden="true" />
+                  <Trash2 size={16} aria-hidden="true" />
                 </button>
               </div>
             ))
@@ -371,7 +371,7 @@ export const GovernanceSettings = () => {
                 }, 'Rule created')
               }
             >
-              {busy === 'rule' ? <Spinner /> : <Plus size={15} aria-hidden="true" />} Create rule
+              {busy === 'rule' ? <Spinner /> : <Plus size={16} aria-hidden="true" />} Create rule
             </button>
             <p className="ui-subtle text-xs">
               Someone who already holds the approving role is not asked to approve their own document.

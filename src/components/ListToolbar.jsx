@@ -53,7 +53,7 @@ export function ListToolbar({
   return (
     <div className={`ui-card p-3 flex flex-wrap items-center gap-3 ${className}`}>
       <div className="relative flex-1 min-w-[220px]">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 ui-muted" aria-hidden="true" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 ui-muted" aria-hidden="true" />
         <input
           type="text"
           value={search ?? ''}
@@ -118,7 +118,7 @@ export function ListToolbar({
             aria-haspopup="menu"
             aria-expanded={exportOpen}
           >
-            <Download size={15} aria-hidden="true" /> {exportLabel}
+            <Download size={16} aria-hidden="true" /> {exportLabel}
           </button>
           {exportOpen ? (
             <Popover anchorRef={exportBtnRef} onClose={() => setExportOpen(false)} minWidth={220}>
@@ -139,7 +139,7 @@ export function ListToolbar({
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                 >
-                  <FileText size={15} aria-hidden="true" /> PDF
+                  <FileText size={16} aria-hidden="true" /> PDF
                 </button>
                 <button
                   type="button"
@@ -156,7 +156,7 @@ export function ListToolbar({
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                 >
-                  <Table2 size={15} aria-hidden="true" /> Excel
+                  <Table2 size={16} aria-hidden="true" /> Excel
                 </button>
                 <button
                   type="button"
@@ -168,7 +168,7 @@ export function ListToolbar({
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                 >
-                  <Download size={15} aria-hidden="true" /> CSV
+                  <Download size={16} aria-hidden="true" /> CSV
                 </button>
                 <p className="ui-caption px-3 pt-1 pb-2">
                   Exports what you are looking at — this period, this search, these columns.
@@ -179,7 +179,7 @@ export function ListToolbar({
         </div>
       ) : onExport ? (
         <button type="button" onClick={onExport} className="ui-btn ui-btn-secondary whitespace-nowrap">
-          <Download size={15} aria-hidden="true" /> {exportLabel}
+          <Download size={16} aria-hidden="true" /> {exportLabel}
         </button>
       ) : null}
     </div>

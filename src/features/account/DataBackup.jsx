@@ -52,7 +52,7 @@ const BackupCard = ({ icon: Icon, title, blurb, action, scope, busy, last, onDow
           disabled={Boolean(busy)}
           className="ui-btn ui-btn-primary shrink-0"
         >
-          <Download size={15} aria-hidden="true" /> {busy === scope ? 'Preparing…' : action}
+          <Download size={16} aria-hidden="true" /> {busy === scope ? 'Preparing…' : action}
         </button>
       </div>
 

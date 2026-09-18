@@ -2051,8 +2051,8 @@ export const StockTransfersList = ({
         {openMenu?.id ? (
           <div
             ref={menuRef}
-            className="fixed w-56 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden z-[9999]"
-            style={{ left: openMenu.left, top: openMenu.top }}
+            className="fixed w-56 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden"
+            style={{ left: openMenu.left, top: openMenu.top, zIndex: 'var(--z-popover)' }}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}

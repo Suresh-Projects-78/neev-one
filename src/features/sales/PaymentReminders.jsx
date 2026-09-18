@@ -271,7 +271,7 @@ export default function PaymentReminders({ db, setDb, currentCompany }) {
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button type="button" onClick={() => sendWhatsApp(inv)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs" title="WhatsApp">
-                          <MessageCircle size={13} aria-hidden="true" /> WhatsApp
+                          <MessageCircle size={14} aria-hidden="true" /> WhatsApp
                         </button>
                         <button type="button" onClick={() => sendEmail(inv)} className="ui-icon-btn ui-btn-sm !w-8" aria-label="Email reminder" title="Email">
                           <Mail size={14} />

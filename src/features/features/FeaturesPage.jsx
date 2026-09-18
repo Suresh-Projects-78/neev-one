@@ -212,10 +212,10 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
               onClick={() => setValues(baseline)}
               disabled={!dirty || saving}
             >
-              <RotateCcw size={15} aria-hidden="true" /> Revert
+              <RotateCcw size={16} aria-hidden="true" /> Revert
             </button>
             <button type="button" className="ui-btn ui-btn-primary" onClick={save} disabled={!dirty || saving}>
-              {saving ? <Spinner /> : <Save size={15} aria-hidden="true" />}
+              {saving ? <Spinner /> : <Save size={16} aria-hidden="true" />}
               {saving ? 'Saving…' : 'Save changes'}
             </button>
           </>
@@ -234,7 +234,7 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="ui-scope-field inline-flex" style={{ flex: '1 1 16rem', maxWidth: '22rem' }}>
-          <Search size={15} aria-hidden="true" />
+          <Search size={16} aria-hidden="true" />
           <input
             type="search"
             value={query}
@@ -320,7 +320,7 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
                         '--cat-soft': `var(--cat-${section.key}-soft)`,
                       }}
                     >
-                      <Icon size={15} />
+                      <Icon size={16} />
                     </span>
                   ) : null}
 
@@ -369,7 +369,7 @@ export const FeaturesPage = ({ onNavigate = null, currentCompany = null }) => {
                   <span className="flex-none" style={{ width: '6.25rem' }}>
                     {r.config && r.enabled && onNavigate ? (
                       <button type="button" onClick={() => onNavigate(r.config)} className="ui-feature-config">
-                        Configure <ArrowRight size={13} aria-hidden="true" />
+                        Configure <ArrowRight size={14} aria-hidden="true" />
                       </button>
                     ) : null}
                   </span>

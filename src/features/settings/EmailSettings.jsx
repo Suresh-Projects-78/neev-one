@@ -329,7 +329,7 @@ export const EmailSettings = () => {
                 )
               }
             >
-              {busy === 'save' ? <Spinner /> : <Save size={15} aria-hidden="true" />} Save
+              {busy === 'save' ? <Spinner /> : <Save size={16} aria-hidden="true" />} Save
             </button>
 
             <button
@@ -338,7 +338,7 @@ export const EmailSettings = () => {
               disabled={!serverDirty || Boolean(busy)}
               onClick={() => setSettings(baseline)}
             >
-              <RotateCcw size={15} aria-hidden="true" /> Revert
+              <RotateCcw size={16} aria-hidden="true" /> Revert
             </button>
 
             <button
@@ -347,7 +347,7 @@ export const EmailSettings = () => {
               disabled={Boolean(busy) || !isSmtp}
               onClick={() => run('test', () => testEmailConnection(payload()), 'Server answered')}
             >
-              {busy === 'test' ? <Spinner /> : <Server size={15} aria-hidden="true" />} Test connection
+              {busy === 'test' ? <Spinner /> : <Server size={16} aria-hidden="true" />} Test connection
             </button>
 
             <button
@@ -360,7 +360,7 @@ export const EmailSettings = () => {
                 )
               }
             >
-              {busy === 'send' ? <Spinner /> : <Send size={15} aria-hidden="true" />} Send test email
+              {busy === 'send' ? <Spinner /> : <Send size={16} aria-hidden="true" />} Send test email
             </button>
 
             {verifiedAt ? <span className="ui-pill ui-pill-pos">Connection verified</span> : null}
@@ -423,7 +423,7 @@ export const EmailSettings = () => {
                     )
                   }
                 >
-                  {busy === 'notif' ? <Spinner /> : <Save size={15} aria-hidden="true" />} Save
+                  {busy === 'notif' ? <Spinner /> : <Save size={16} aria-hidden="true" />} Save
                 </button>
                 {eventsDirty ? <span className="ui-pill ui-pill-warn">Unsaved changes</span> : null}
               </div>
@@ -445,7 +445,7 @@ export const EmailSettings = () => {
                 className="ui-btn ui-btn-ghost"
                 onClick={() => run('refresh', async () => setMessages((await getOutbox())?.messages || []))}
               >
-                <RefreshCw size={15} aria-hidden="true" /> Refresh
+                <RefreshCw size={16} aria-hidden="true" /> Refresh
               </button>
               <button
                 type="button"

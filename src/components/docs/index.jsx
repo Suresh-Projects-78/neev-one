@@ -120,7 +120,7 @@ export const MetricCard = ({ label, value, company, tone = 'sent', Icon = null, 
           }}
           aria-hidden="true"
         >
-          <Icon size={15} />
+          <Icon size={16} />
         </span>
       ) : null}
       <span className="block min-w-0">

@@ -390,6 +390,38 @@
   /* Row density. Comfortable is the default; Compact is the setting a
      high-volume operator turns on. One variable, two audiences. */
   --row-pad-y: 0.5625rem;   /* 9px — Comfortable, 36px rows */
+  /* ---------------------------------------------------------------------
+     Layers.
+
+     Sixteen different z-index values were in use, ending at 9999 — which is
+     what a number becomes when nobody can say what it has to beat. Measured:
+     a row-action menu at 9999 painted over an open modal, because the menu
+     only ever needed to clear a sticky table header at 20 and reached for the
+     ceiling instead.
+
+     Nothing here escapes a stacking context; the shell creates none, so every
+     fixed overlay competes in the root context and these numbers decide the
+     order outright. The order is the rule — the integers are just spaced far
+     enough apart to insert a tier without renumbering.
+
+     One subtlety the numbers alone cannot carry: a popover belonging to an
+     open modal must sit ABOVE that modal, while an unrelated popover on the
+     page behind it must sit below. Same component, two layers — `Modal`
+     publishes its layer through React context and `Popover` reads it.
+     --------------------------------------------------------------------- */
+  --z-below: -1;            /* decorative ground painted behind content */
+  --z-base: 1;              /* in-flow lifts: a table head against its rows */
+  --z-sticky: 20;           /* sticky table headers, sticky toolbars */
+  --z-header: 40;           /* the app header */
+  --z-popover: 60;          /* menus, dropdowns, pickers, row actions */
+  --z-drawer: 100;          /* side drawers and the mobile nav */
+  --z-drawer-panel: 101;    /* the panel that slides over its own scrim */
+  --z-modal: 120;           /* dialogs */
+  --z-modal-popover: 130;   /* a menu opened INSIDE a dialog */
+  --z-toast: 140;           /* notifications outrank the thing that caused them */
+  --z-palette: 160;         /* the command palette reaches over everything */
+  --z-tooltip: 180;         /* last word, and never interactive */
+
   --radius-btn: 0.5rem;     /* 8px — buttons and rows */
   --radius-input: 0.5rem;   /* 8px — measured off the reference's own controls */
   --radius-sm: 0.5rem;      /* 8px — chips */
@@ -1219,7 +1251,7 @@
   .ui-table thead th {
     position: sticky;
     top: 0;
-    z-index: 1;
+    z-index: var(--z-base);
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg-muted));
     /* Matches .ui-th, which this outranks on specificity. The two disagreed,
@@ -1951,7 +1983,7 @@
   .ui-table-sticky thead th {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: var(--z-sticky);
     background-color: rgb(var(--surface));
   }
 
@@ -1985,7 +2017,7 @@
      that opened it sits. */
   .ui-popover {
     position: fixed;
-    z-index: 60;
+    z-index: var(--z-popover);
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -2039,7 +2071,7 @@
   .ui-entry-summary {
     position: sticky;
     bottom: 0;
-    z-index: 5;
+    z-index: var(--z-base);
     display: flex;
     align-items: center;
     gap: 1.25rem;
@@ -3166,6 +3198,13 @@
    * side of `min-h-screen` — the cascade decides that, not us. This is the
    * same shape `.ui-app-shell` above already uses.
    */
+  /* The rail as a phone drawer: it slides over its own scrim, so it takes the
+     tier just above it. A Tailwind `max-md:z-[101]` would have been the only
+     arbitrary number left in the product. */
+  .ui-rail-drawer {
+    z-index: var(--z-drawer-panel);
+  }
+
   .ui-min-h-viewport {
     min-height: 100vh;
     min-height: 100dvh;
@@ -3422,7 +3461,7 @@
   .ui-hero-ground::after {
     content: '';
     position: absolute;
-    z-index: -1;
+    z-index: var(--z-below);
     pointer-events: none;
     will-change: transform;
     /* The mask is what guarantees a soft edge whatever clips the element. */
@@ -3507,7 +3546,7 @@
     top: 5%;
     bottom: 27%;
     width: 150px;
-    z-index: -1;
+    z-index: var(--z-below);
     display: none;
     align-items: flex-end;
     gap: 9px;

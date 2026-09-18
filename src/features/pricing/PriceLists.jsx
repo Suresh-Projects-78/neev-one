@@ -434,7 +434,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                               aria-expanded={openMenu?.id === p.id}
                               aria-label={`Actions for ${p.name}`}
                             >
-                              <MoreVertical size={15} aria-hidden="true" />
+                              <MoreVertical size={16} aria-hidden="true" />
                             </button>
                           </td>
                         </tr>
@@ -461,8 +461,8 @@ export default function PriceLists({ db, setDb, currentCompany }) {
         {openMenu?.id ? (
           <div
             ref={menuRef}
-            className="fixed z-[9999] w-48 ui-surface border rounded-lg shadow-lg overflow-hidden"
-            style={{ left: openMenu.left, top: openMenu.top }}
+            className="fixed w-48 ui-surface border rounded-lg shadow-lg overflow-hidden"
+            style={{ left: openMenu.left, top: openMenu.top, zIndex: 'var(--z-popover)' }}
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="py-1" role="menu">
@@ -475,7 +475,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                 }}
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[rgb(var(--surface-sunken))]"
               >
-                <Pencil size={15} aria-hidden="true" /> Edit
+                <Pencil size={16} aria-hidden="true" /> Edit
               </button>
               {(() => {
                 const p = lists.find((x) => Number(x.id) === Number(openMenu.id));
@@ -491,7 +491,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                     }}
                     className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[rgb(var(--surface-sunken))]"
                   >
-                    {off ? <CheckCircle2 size={15} aria-hidden="true" /> : <Ban size={15} aria-hidden="true" />}
+                    {off ? <CheckCircle2 size={16} aria-hidden="true" /> : <Ban size={16} aria-hidden="true" />}
                     {off ? 'Activate' : 'Deactivate'}
                   </button>
                 );
@@ -507,7 +507,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
                 className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-[rgb(var(--surface-sunken))]"
                 style={{ color: 'rgb(var(--neg))', borderTop: '1px solid rgb(var(--border))' }}
               >
-                <Trash2 size={15} aria-hidden="true" /> Delete
+                <Trash2 size={16} aria-hidden="true" /> Delete
               </button>
             </div>
           </div>
@@ -530,7 +530,7 @@ export default function PriceLists({ db, setDb, currentCompany }) {
           <>
             <span className={STATUS_PILL[st].cls}>{STATUS_PILL[st].label}</span>
             <button type="button" onClick={() => setEditingId(null)} className="ui-btn ui-btn-secondary">
-              <ArrowLeft size={15} aria-hidden="true" /> All price lists
+              <ArrowLeft size={16} aria-hidden="true" /> All price lists
             </button>
           </>
         }

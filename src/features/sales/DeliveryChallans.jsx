@@ -475,7 +475,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
 
           <div className="mt-2 flex items-center gap-3">
             <button type="button" onClick={addLine} className="ui-btn ui-btn-secondary">
-              <Plus size={15} aria-hidden="true" /> Add Item
+              <Plus size={16} aria-hidden="true" /> Add Item
             </button>
             <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           </div>
@@ -606,7 +606,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
                         aria-label={`Print challan ${c.number}`}
                         className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
                       >
-                        <Printer size={13} aria-hidden="true" /> Print
+                        <Printer size={14} aria-hidden="true" /> Print
                       </button>
                       <button type="button" onClick={() => setEwbFor(c)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
                         e-Way Bill

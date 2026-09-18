@@ -269,15 +269,15 @@ export const ProfileSettings = () => {
             {editing ? (
               <>
                 <button type="button" className="ui-btn ui-btn-secondary" onClick={cancel} disabled={busy === 'save'}>
-                  <X size={15} aria-hidden="true" /> Cancel
+                  <X size={16} aria-hidden="true" /> Cancel
                 </button>
                 <button type="button" className="ui-btn ui-btn-primary" onClick={save} disabled={!dirty || busy === 'save'}>
-                  {busy === 'save' ? <Spinner /> : <Save size={15} aria-hidden="true" />} Save changes
+                  {busy === 'save' ? <Spinner /> : <Save size={16} aria-hidden="true" />} Save changes
                 </button>
               </>
             ) : (
               <button type="button" className="ui-btn ui-btn-primary" onClick={() => setEditing(true)}>
-                <Pencil size={15} aria-hidden="true" /> Edit profile
+                <Pencil size={16} aria-hidden="true" /> Edit profile
               </button>
             )}
           </>
@@ -315,7 +315,7 @@ export const ProfileSettings = () => {
                   className="ui-btn ui-btn-secondary ui-btn-sm"
                   onClick={() => fileRef.current?.click()}
                 >
-                  <Upload size={13} aria-hidden="true" /> Photo
+                  <Upload size={14} aria-hidden="true" /> Photo
                 </button>
                 {form.avatarUrl ? (
                   <button
@@ -325,7 +325,7 @@ export const ProfileSettings = () => {
                     aria-label="Remove photo"
       title="Remove photo"
                   >
-                    <Trash2 size={13} aria-hidden="true" />
+                    <Trash2 size={14} aria-hidden="true" />
                   </button>
                 ) : null}
               </div>
@@ -420,7 +420,7 @@ export const ProfileSettings = () => {
                       disabled={busy === 'verify'}
                       onClick={() => run('verify', resendVerification, 'Verification link sent')}
                     >
-                      {busy === 'verify' ? <Spinner /> : <Mail size={13} aria-hidden="true" />} Send the link
+                      {busy === 'verify' ? <Spinner /> : <Mail size={14} aria-hidden="true" />} Send the link
                     </button>
                   ) : (
                     <div className="ui-t-body mt-0.5" style={{ color: 'rgb(var(--fg-subtle))' }}>
@@ -472,7 +472,7 @@ export const ProfileSettings = () => {
           />
         </dl>
         <p className="ui-t-body mt-4 flex items-center gap-1.5" style={{ color: 'rgb(var(--fg-subtle))' }}>
-          <UserRound size={13} aria-hidden="true" />
+          <UserRound size={14} aria-hidden="true" />
           Password, devices and sign-in activity are under Settings &rarr; Security.
         </p>
       </section>

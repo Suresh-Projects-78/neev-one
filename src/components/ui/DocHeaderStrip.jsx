@@ -84,7 +84,7 @@ export const DocHeaderStrip = ({
               aria-expanded={numberingOpen}
       title="Numbering"
             >
-              <SlidersHorizontal size={13} aria-hidden="true" />
+              <SlidersHorizontal size={14} aria-hidden="true" />
             </button>
           ) : null}
           {numbering && numberingOpen ? (

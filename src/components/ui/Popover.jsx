@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { popoverZIndex, useOverlayLayer } from './overlayLayer';
+
 /**
  * A panel anchored to the control that opened it.
  *
@@ -42,6 +44,9 @@ const Popover = ({
    */
   autoFocus = true,
 }) => {
+  /* Above the dialog that opened this, or on the page layer when nothing did. */
+  const layer = useOverlayLayer();
+
   const panelRef = useRef(null);
   const returnFocusRef = useRef(null);
   const claimedFocusRef = useRef(false);
@@ -222,8 +227,9 @@ const Popover = ({
               left: pos.left,
               width: pos.width,
               maxHeight: pos.maxHeight,
+              zIndex: popoverZIndex(layer),
             }
-          : { top: 0, left: 0, width: minWidth, visibility: 'hidden' }
+          : { top: 0, left: 0, width: minWidth, visibility: 'hidden', zIndex: popoverZIndex(layer) }
       }
     >
       {children}

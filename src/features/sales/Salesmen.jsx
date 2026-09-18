@@ -238,7 +238,7 @@ export default function Salesmen({ db, setDb, currentCompany }) {
             />
           </div>
           <button type="button" onClick={add} className="ui-btn ui-btn-primary">
-            <Plus size={15} aria-hidden="true" /> Add salesman
+            <Plus size={16} aria-hidden="true" /> Add salesman
           </button>
         </div>
         </div>

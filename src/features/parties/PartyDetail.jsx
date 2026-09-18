@@ -145,11 +145,11 @@ export default function PartyDetail({ db, currentCompany, party, kind = 'custome
         actions={
           <>
             <button type="button" onClick={onBack} className="ui-btn ui-btn-secondary">
-              <ArrowLeft size={15} aria-hidden="true" /> Back
+              <ArrowLeft size={16} aria-hidden="true" /> Back
             </button>
             {onEdit ? (
               <button type="button" onClick={onEdit} className="ui-btn ui-btn-primary">
-                <Pencil size={15} aria-hidden="true" /> Edit
+                <Pencil size={16} aria-hidden="true" /> Edit
               </button>
             ) : null}
           </>
@@ -264,7 +264,7 @@ export default function PartyDetail({ db, currentCompany, party, kind = 'custome
               <ul className="space-y-2.5">
                 {contactRows.map(({ icon: Icon, value }, i) => (
                   <li key={i} className="flex items-start gap-2.5 text-sm">
-                    <Icon size={15} className="ui-subtle mt-0.5 flex-shrink-0" aria-hidden="true" />
+                    <Icon size={16} className="ui-subtle mt-0.5 flex-shrink-0" aria-hidden="true" />
                     <span className="break-words">{value}</span>
                   </li>
                 ))}

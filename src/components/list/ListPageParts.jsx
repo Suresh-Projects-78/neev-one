@@ -91,7 +91,7 @@ export function StatCards({ cards, company }) {
             style={{ backgroundColor: toneVars(c.tone).wash, color: toneVars(c.tone).ink }}
             aria-hidden="true"
           >
-            <c.Icon size={15} />
+            <c.Icon size={16} />
           </span>
 
           <span className="block min-w-0">
@@ -208,7 +208,7 @@ export function FiltersButton({ period, onPeriodChange, dateFrom, dateTo, onDate
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <SlidersHorizontal size={15} aria-hidden="true" /> Filters
+        <SlidersHorizontal size={16} aria-hidden="true" /> Filters
         {activeCount ? (
           <span className="ui-mono text-xs rounded-full px-1.5" style={{ backgroundColor: 'rgb(var(--brand))', color: '#fff' }}>
             {activeCount}
@@ -277,7 +277,7 @@ export function MoreButton({ items, onSelect }) {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <MoreVertical size={15} aria-hidden="true" /> More
+        <MoreVertical size={16} aria-hidden="true" /> More
       </button>
       {open ? (
         <Popover anchorRef={ref} onClose={() => setOpen(false)} minWidth={228}>
@@ -306,7 +306,7 @@ export function MoreButton({ items, onSelect }) {
                     }}
                     className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                   >
-                    {o.Icon ? <o.Icon size={15} aria-hidden="true" /> : null} {o.label}
+                    {o.Icon ? <o.Icon size={16} aria-hidden="true" /> : null} {o.label}
                     {o.children?.length ? (
                       <ChevronDown
                         size={14}
@@ -329,7 +329,7 @@ export function MoreButton({ items, onSelect }) {
                           }}
                           className="w-full text-left flex items-center gap-2 px-3 py-2 ps-9 text-sm hover:bg-[rgb(var(--surface-sunken))]"
                         >
-                          {c.Icon ? <c.Icon size={15} aria-hidden="true" /> : null} {c.label}
+                          {c.Icon ? <c.Icon size={16} aria-hidden="true" /> : null} {c.label}
                         </button>
                       ))
                     : null}
@@ -365,7 +365,7 @@ export function SplitPrimary({ label, options = [], onSelect, children }) {
         aria-expanded={open}
         aria-label={`More ways to create ${label}`}
       >
-        <ChevronDown size={15} aria-hidden="true" />
+        <ChevronDown size={16} aria-hidden="true" />
       </button>
       {open ? (
         <Popover anchorRef={ref} onClose={() => setOpen(false)} minWidth={236}>
@@ -381,7 +381,7 @@ export function SplitPrimary({ label, options = [], onSelect, children }) {
                 }}
                 className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
               >
-                {o.Icon ? <o.Icon size={15} aria-hidden="true" /> : null} {o.label}
+                {o.Icon ? <o.Icon size={16} aria-hidden="true" /> : null} {o.label}
               </button>
             ))}
             {options.hint ? <p className="ui-caption px-3 pt-1 pb-2">{options.hint}</p> : null}
@@ -410,7 +410,7 @@ export function ExportButton({ title, fileName, sheetName, columns, rows, subtit
         aria-label="Export"
         title="Export"
       >
-        <Download size={15} aria-hidden="true" />
+        <Download size={16} aria-hidden="true" />
       </button>
       {open ? (
         <Popover anchorRef={ref} onClose={() => setOpen(false)} minWidth={216}>
@@ -436,7 +436,7 @@ export function ExportButton({ title, fileName, sheetName, columns, rows, subtit
                 }}
                 className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"
               >
-                <o.Icon size={15} aria-hidden="true" /> {o.label}
+                <o.Icon size={16} aria-hidden="true" /> {o.label}
               </button>
             ))}
             <p className="ui-caption px-3 pt-1 pb-2">Exports what you are looking at — this tab, this search, this period.</p>

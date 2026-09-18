@@ -325,7 +325,7 @@ export default function PosScreen({ db, setDb, currentCompany }) {
             aria-expanded={numberingOpen}
       title="Numbering"
           >
-            <SlidersHorizontal size={15} aria-hidden="true" />
+            <SlidersHorizontal size={16} aria-hidden="true" />
           </button>
           <button type="button" onClick={() => setDayCloseOpen(true)} className="ui-btn ui-btn-secondary">
             Day Close ({todaysSales.length})

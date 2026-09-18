@@ -326,12 +326,12 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
               aria-haspopup="listbox"
               aria-expanded={periodOpen}
             >
-              <Calendar size={15} aria-hidden="true" />
+              <Calendar size={16} aria-hidden="true" />
               {period.label}{' '}
               <span style={{ color: 'rgb(var(--link))' }}>
                 ({prettyDate(period.from)} - {prettyDate(period.to)})
               </span>
-              <ChevronDown size={15} aria-hidden="true" />
+              <ChevronDown size={16} aria-hidden="true" />
             </button>
             {periodOpen ? (
               <div className="absolute end-0 mt-1 z-30 ui-card p-1 min-w-[14rem]" role="listbox" aria-label="Period">
@@ -366,7 +366,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
           </span>
 
           <button type="button" onClick={exportCsv} className="ui-btn ui-btn-secondary">
-            <Download size={15} aria-hidden="true" /> Export
+            <Download size={16} aria-hidden="true" /> Export
           </button>
 
           <button
@@ -399,7 +399,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
                   }}
                   className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <LayoutList size={15} aria-hidden="true" /> All bills
+                  <LayoutList size={16} aria-hidden="true" /> All bills
                 </button>
                 <button
                   type="button"
@@ -410,7 +410,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
                   }}
                   className="w-full text-left px-3 py-2 rounded-lg text-sm ui-hover-sunken flex items-center gap-2"
                 >
-                  <FileText size={15} aria-hidden="true" /> Purchase orders
+                  <FileText size={16} aria-hidden="true" /> Purchase orders
                 </button>
               </div>
             ) : null}

@@ -198,13 +198,13 @@ const BillPreview = ({ db, currentCompany, bill }) => {
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 justify-end">
         <button type="button" onClick={print} className="ui-btn ui-btn-secondary">
-          <Printer size={15} aria-hidden="true" /> Print
+          <Printer size={16} aria-hidden="true" /> Print
         </button>
         <button type="button" onClick={download} className="ui-btn ui-btn-secondary">
-          <Download size={15} aria-hidden="true" /> Download
+          <Download size={16} aria-hidden="true" /> Download
         </button>
         <button type="button" onClick={share} disabled={busy === 'share'} className="ui-btn ui-btn-secondary">
-          <Share2 size={15} aria-hidden="true" /> Share
+          <Share2 size={16} aria-hidden="true" /> Share
         </button>
       </div>
 

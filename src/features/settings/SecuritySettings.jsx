@@ -189,7 +189,7 @@ export const SecuritySettings = () => {
                   }, 'Removed')
                 }
               >
-                <Trash2 size={15} aria-hidden="true" />
+                <Trash2 size={16} aria-hidden="true" />
               </button>
             </div>
           ))}
@@ -328,7 +328,7 @@ export const SecuritySettings = () => {
                     )
                   }
                 >
-                  {busy === 'provider' ? <Spinner /> : <Save size={15} aria-hidden="true" />} Save
+                  {busy === 'provider' ? <Spinner /> : <Save size={16} aria-hidden="true" />} Save
                 </button>
                 <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setDraft(null)}>
                   Cancel
@@ -337,7 +337,7 @@ export const SecuritySettings = () => {
             </div>
           ) : (
             <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setDraft({ ...blankProvider })}>
-              <Plus size={15} aria-hidden="true" /> Add a sign-in method
+              <Plus size={16} aria-hidden="true" /> Add a sign-in method
             </button>
           )}
 
@@ -421,7 +421,7 @@ export const SecuritySettings = () => {
                 )
               }
             >
-              {busy === 'policy' ? <Spinner /> : <Save size={15} aria-hidden="true" />} Save policy
+              {busy === 'policy' ? <Spinner /> : <Save size={16} aria-hidden="true" />} Save policy
             </button>
             {policyDirty ? <span className="ui-pill ui-pill-warn">Unsaved changes</span> : null}
           </div>
@@ -477,7 +477,7 @@ export const SecuritySettings = () => {
                 );
               }}
             >
-              {busy === 'pw' ? <Spinner /> : <KeyRound size={15} aria-hidden="true" />} Change password
+              {busy === 'pw' ? <Spinner /> : <KeyRound size={16} aria-hidden="true" />} Change password
             </button>
           </div>
 

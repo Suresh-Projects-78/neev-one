@@ -106,7 +106,8 @@ export default function CommandPalette({ onClose, items = [], onSelect, searchRe
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-start justify-center px-4 pt-[12vh]"
+      className="fixed inset-0 flex items-start justify-center px-4 pt-[12vh]"
+      style={{ zIndex: 'var(--z-palette)' }}
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
@@ -133,7 +134,7 @@ export default function CommandPalette({ onClose, items = [], onSelect, searchRe
         }}
       >
         <div className="flex items-center gap-3 px-4" style={{ borderBottom: '1px solid rgb(var(--border))' }}>
-          <Search size={17} className="ui-subtle flex-shrink-0" aria-hidden="true" />
+          <Search size={18} className="ui-subtle flex-shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
             value={query}
@@ -188,7 +189,7 @@ export default function CommandPalette({ onClose, items = [], onSelect, searchRe
                     {it.detail ? <span className="ui-subtle"> · {it.detail}</span> : null}
                   </span>
                   <span className="ui-subtle text-xs">{it.group}</span>
-                  {i === active ? <CornerDownLeft size={13} className="ui-subtle" aria-hidden="true" /> : null}
+                  {i === active ? <CornerDownLeft size={14} className="ui-subtle" aria-hidden="true" /> : null}
                 </div>
               );
             })

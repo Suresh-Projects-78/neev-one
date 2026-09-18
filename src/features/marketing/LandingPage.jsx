@@ -93,7 +93,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
         <div className="ui-container flex h-16 items-center justify-between gap-4">
           <a href="#top" className="flex items-center gap-2.5">
             <span className="ui-brand-mark">
-              <Scale size={17} aria-hidden="true" />
+              <Scale size={18} aria-hidden="true" />
             </span>
             <span className="ui-display text-lg">Neev One</span>
           </a>
@@ -180,7 +180,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
             >
               <span className="text-sm font-semibold">Trial balance</span>
               <span className="ui-badge ui-badge-brand ui-depth-2">
-                <BadgeCheck size={13} aria-hidden="true" /> Balanced
+                <BadgeCheck size={14} aria-hidden="true" /> Balanced
               </span>
             </div>
 
@@ -237,7 +237,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
                   className="grid place-items-center w-9 h-9 rounded-lg"
                   style={{ backgroundColor: 'rgb(var(--brand-soft))', color: 'rgb(var(--brand))' }}
                 >
-                  <Icon size={17} aria-hidden="true" />
+                  <Icon size={18} aria-hidden="true" />
                 </span>
                 <h3 className="mt-4 font-medium">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed ui-muted">{body}</p>
@@ -297,7 +297,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
             ].map((line) => (
               <li key={line} className="ui-panel flex items-start gap-3 p-4">
                 <BadgeCheck
-                  size={17}
+                  size={18}
                   className="mt-0.5 flex-shrink-0"
                   style={{ color: 'rgb(var(--brand))' }}
                   aria-hidden="true"

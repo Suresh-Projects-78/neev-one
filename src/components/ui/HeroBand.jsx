@@ -95,7 +95,7 @@ export default function HeroBand({
               /* One primary, first. The rest are ways in, not invitations. */
               className={i === 0 ? 'ui-btn ui-btn-primary' : 'ui-btn ui-btn-secondary'}
             >
-              {a.Icon ? <a.Icon size={15} aria-hidden="true" /> : null}
+              {a.Icon ? <a.Icon size={16} aria-hidden="true" /> : null}
               {a.label}
             </button>
           ))}

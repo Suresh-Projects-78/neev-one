@@ -39,7 +39,7 @@ export default function ChartCard({
             className="ui-icon-btn -mr-1 -mt-1 flex-shrink-0"
             aria-label={`Expand ${title}`}
           >
-            <Maximize2 size={15} aria-hidden="true" />
+            <Maximize2 size={16} aria-hidden="true" />
           </button>
         ) : null}
       </header>
@@ -51,7 +51,7 @@ export default function ChartCard({
         <footer className="px-5 pb-5 pt-4">
           <button type="button" onClick={onAction} className="ui-card-action">
             {actionLabel}
-            <ArrowRight size={13} aria-hidden="true" />
+            <ArrowRight size={14} aria-hidden="true" />
           </button>
         </footer>
       ) : (

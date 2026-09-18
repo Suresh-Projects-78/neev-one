@@ -205,7 +205,7 @@ export const AllocationTable = ({
                       className="ui-icon-btn"
                       aria-label={`Remove allocation row ${i + 1}`}
                     >
-                      <Trash2 size={15} className="text-[rgb(var(--neg))]" aria-hidden="true" />
+                      <Trash2 size={16} className="text-[rgb(var(--neg))]" aria-hidden="true" />
                     </button>
                   ) : null}
                 </td>
@@ -246,7 +246,7 @@ export const AllocationTable = ({
           tall. */}
       {!disabled ? (
         <button type="button" onClick={add} className="ui-btn ui-btn-soft ui-btn-sm mt-3">
-          <Plus size={15} aria-hidden="true" /> Add Row
+          <Plus size={16} aria-hidden="true" /> Add Row
         </button>
       ) : null}
 

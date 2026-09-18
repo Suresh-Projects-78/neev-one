@@ -882,7 +882,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
               aria-expanded={numberingOpen}
       title="Numbering"
             >
-              <SlidersHorizontal size={15} aria-hidden="true" />
+              <SlidersHorizontal size={16} aria-hidden="true" />
             </button>
           </div>
           <FieldError error={fieldErrors.error('number')} id={fieldErrors.errorId('number')} />
@@ -1112,7 +1112,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
-            <Plus size={15} aria-hidden="true" /> Add Item
+            <Plus size={16} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
@@ -1704,8 +1704,8 @@ export const PurchaseOrdersList = ({
 
                       {poMenu?.id === po.id ? createPortal(
                         <div
-                          className="fixed z-[120] w-52 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden text-left"
-                          style={{ left: poMenu.left, top: poMenu.top }}
+                          className="fixed w-52 ui-surface border ui-border-c rounded-xl shadow-lg overflow-hidden text-left"
+                          style={{ left: poMenu.left, top: poMenu.top, zIndex: 'var(--z-popover)' }}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
@@ -1719,7 +1719,7 @@ export const PurchaseOrdersList = ({
                               status === 'Pending' ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed'
                             }`}
                           >
-                            <Pencil size={15} /> Edit
+                            <Pencil size={16} /> Edit
                           </button>
 
                           <button
@@ -1731,7 +1731,7 @@ export const PurchaseOrdersList = ({
                             aria-label={`Print purchase order ${po.number}`}
                             className="w-full px-4 py-2 text-left text-sm flex items-center gap-2 ui-hover-sunken"
                           >
-                            <Printer size={15} /> Print
+                            <Printer size={16} /> Print
                           </button>
 
                           <button
@@ -1745,7 +1745,7 @@ export const PurchaseOrdersList = ({
                               status === 'Pending' && onConvertToBill ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed'
                             }`}
                           >
-                            <Plus size={15} /> Convert to Bill
+                            <Plus size={16} /> Convert to Bill
                           </button>
 
                           <button
@@ -1759,7 +1759,7 @@ export const PurchaseOrdersList = ({
                               status === 'Pending' ? 'ui-hover-sunken' : 'ui-subtle cursor-not-allowed'
                             }`}
                           >
-                            <X size={15} /> Cancel
+                            <X size={16} /> Cancel
                           </button>
 
                           <div className="border-t ui-border-c" />
@@ -1775,7 +1775,7 @@ export const PurchaseOrdersList = ({
                               status === 'Closed' ? 'ui-subtle cursor-not-allowed' : 'ui-hover-sunken text-[rgb(var(--neg))]'
                             }`}
                           >
-                            <Trash2 size={15} /> Delete
+                            <Trash2 size={16} /> Delete
                           </button>
                         </div>,
                         document.body
@@ -2339,7 +2339,7 @@ export const PurchaseOrderForm = ({
 
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
-            <Plus size={15} aria-hidden="true" /> Add Item
+            <Plus size={16} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
         </div>
@@ -3166,8 +3166,8 @@ const billStatusReason = (doc, status, company, nowMs) => {
       {openMenu?.id ? (
         <div
           ref={menuRef}
-          className="fixed z-[9999] w-56 ui-surface border rounded-lg shadow-lg overflow-hidden"
-          style={{ left: openMenu.left, top: openMenu.top }}
+          className="fixed w-56 ui-surface border rounded-lg shadow-lg overflow-hidden"
+          style={{ left: openMenu.left, top: openMenu.top, zIndex: 'var(--z-popover)' }}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
@@ -4090,7 +4090,7 @@ export const DebitNoteForm = ({
               aria-expanded={numberingOpen}
       title="Numbering"
             >
-              <SlidersHorizontal size={15} aria-hidden="true" />
+              <SlidersHorizontal size={16} aria-hidden="true" />
             </button>
           </div>
           {numberingOpen ? (
@@ -4231,7 +4231,7 @@ export const DebitNoteForm = ({
 
         <div className="mt-2 flex items-center gap-3">
           <button type="button" onClick={addItem} className="ui-btn ui-btn-secondary">
-            <Plus size={15} aria-hidden="true" /> Add Item
+            <Plus size={16} aria-hidden="true" /> Add Item
           </button>
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
         </div>
@@ -4609,7 +4609,7 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
                         aria-label={`Print debit note ${dn.number}`}
                         className="ui-btn ui-btn-secondary ui-btn-sm text-xs mr-2"
                       >
-                        <Printer size={13} aria-hidden="true" /> Print
+                        <Printer size={14} aria-hidden="true" /> Print
                       </button>
                       {isOnAccount(dn) ? (
                         noteBalance(dn).unsettled > 0.0001 ? (

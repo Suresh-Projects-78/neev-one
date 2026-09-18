@@ -202,7 +202,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           title="Discount Rules"
         />
         <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
-          <Plus size={15} aria-hidden="true" /> New Rule
+          <Plus size={16} aria-hidden="true" /> New Rule
         </button>
       </div>
 

@@ -102,7 +102,7 @@ function DiffChip({ value, company, invert = false }) {
   if (v === 0) {
     return (
       <span className="inline-flex items-center gap-1 text-[0.8125rem] font-medium" style={{ color: 'rgb(var(--fg-muted))' }}>
-        <Minus size={13} aria-hidden="true" />
+        <Minus size={14} aria-hidden="true" />
         Flat
       </span>
     );
@@ -115,7 +115,7 @@ function DiffChip({ value, company, invert = false }) {
       className="inline-flex items-center gap-1 text-[0.8125rem] font-medium"
       style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
     >
-      <Icon size={13} aria-hidden="true" />
+      <Icon size={14} aria-hidden="true" />
       {formatMoney(Math.abs(v), company)}
     </span>
   );
@@ -127,7 +127,7 @@ function PointsChip({ value, invert = false }) {
   if (v === 0) {
     return (
       <span className="inline-flex items-center gap-1 text-[0.8125rem] font-medium" style={{ color: 'rgb(var(--fg-muted))' }}>
-        <Minus size={13} aria-hidden="true" />
+        <Minus size={14} aria-hidden="true" />
         Flat
       </span>
     );
@@ -140,7 +140,7 @@ function PointsChip({ value, invert = false }) {
       className="inline-flex items-center gap-1 text-[0.8125rem] font-medium"
       style={{ color: good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
     >
-      <Icon size={13} aria-hidden="true" />
+      <Icon size={14} aria-hidden="true" />
       {Math.abs(v)} pts
     </span>
   );
@@ -184,7 +184,7 @@ function DeltaChip({ value, invert = false }) {
       className="inline-flex items-center gap-1 text-[0.8125rem] font-medium"
       style={{ color: flat ? 'rgb(var(--fg-muted))' : good ? 'rgb(var(--pos))' : 'rgb(var(--neg))' }}
     >
-      <Icon size={13} aria-hidden="true" />
+      <Icon size={14} aria-hidden="true" />
       {flat ? 'Flat' : `${Math.abs(rounded)}%`}
     </span>
   );
@@ -239,7 +239,7 @@ function BalanceCard({ label, value, company, tone = '', hint, note, accent, act
           className={`ui-btn ui-btn-ghost ui-btn-sm self-start mt-auto pt-2 !px-0 ${rail ? 'ml-1' : ''}`}
           style={{ color: 'rgb(var(--brand-ink))' }}
         >
-          {actionLabel} <ArrowRight size={13} aria-hidden="true" />
+          {actionLabel} <ArrowRight size={14} aria-hidden="true" />
         </button>
       ) : null}
     </div>
@@ -381,7 +381,7 @@ function MetricCard({ label, value, company, deltaValue, invertDelta, hint, seri
       {actionLabel ? (
         <button type="button" onClick={onAction} className="ui-card-action mt-5 self-start">
           {actionLabel}
-          <ArrowRight size={13} aria-hidden="true" />
+          <ArrowRight size={14} aria-hidden="true" />
         </button>
       ) : null}
     </article>
@@ -562,7 +562,7 @@ function SetupChecklist({ steps, onGo }) {
                   }
                   aria-hidden="true"
                 >
-                  {step.done ? <Check size={13} /> : ''}
+                  {step.done ? <Check size={14} /> : ''}
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate">
