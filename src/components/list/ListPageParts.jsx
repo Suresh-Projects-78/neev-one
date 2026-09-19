@@ -102,10 +102,11 @@ export function StatCards({ cards, company }) {
             <span className="ui-t-label block truncate" title={c.label}>
               {c.label}
             </span>
+            {/* The figure is ink. The tile's meaning is carried by the icon
+                square beside it, not by colouring the number. */}
             <span
-              className={`block leading-6 truncate tabular-nums ${c.count ? 'text-base' : 'ui-mono text-base'}`}
+              className={`block leading-6 truncate tabular-nums font-medium ${c.count ? 'text-base' : 'ui-mono text-base'}`}
       title={c.count ? String(c.value) : formatMoney(c.value, company)}
-              style={toneVars(c.tone).figure ? { color: toneVars(c.tone).figure } : undefined}
             >
               {c.count ? String(c.value) : formatMoney(c.value, company)}
             </span>

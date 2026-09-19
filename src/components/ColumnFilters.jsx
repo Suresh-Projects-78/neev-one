@@ -423,12 +423,36 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
     else setLocalOpen(false);
   };
 
+  /*
+   * The column owns its geometry; the header inherits it.
+   *
+   * `ui-col-h-<align>` is the one place the header's text-align comes from,
+   * so a right-aligned money column has a right-aligned heading whether or
+   * not the caller also passed `ui-num`. The sort control then fills the
+   * cell and packs its contents toward the same edge:
+   *
+   *   left   [Customer ▾            ]   label first, chevron beside it
+   *   right  [            ▾ Amount  ]   chevron first, label on the edge
+   *
+   * Right columns run row-reverse on purpose. With the chevron after the
+   * label, "Amount" ended 26px short of the figures under it — every money
+   * heading in the product sat visibly left of its own column. The label is
+   * what the eye lines up with the digits, so the label takes the edge.
+   */
+  const headClass = `ui-col-h ui-col-h-${align} ${className}`.trim();
+
   if (!col) {
-    return <th scope="col" className={className}>{label}</th>;
+    return <th scope="col" className={headClass}>{label}</th>;
   }
 
+  /* row-reverse flips main-start to the right, so packing at START is what
+     puts the label on the right edge; `justify-end` there packs LEFT, which
+     is the mistake the first cut made and measured as a 23px gap. */
+  const pack =
+    align === 'right' ? 'justify-start flex-row-reverse' : align === 'center' ? 'justify-center' : 'justify-start';
+
   return (
-    <th scope="col" className={className}>
+    <th scope="col" className={headClass}>
       <button
         type="button"
         onClick={(e) => {
@@ -440,8 +464,12 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
            16px inside a 33px header cell — so half the header was dead to
            the pointer and the whole of it was under the 24px a pointer
            target is meant to be. `-my-1.5` gives the padding back to the cell
-           so no row gets taller. */
-        className={`w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} rounded-lg px-1 -mx-1 py-1.5 -my-1.5 ui-hover-sunken`}
+           so no row gets taller. `-mx-1 px-1` cancel, so the label's edge is
+           the cell's content edge — the same edge every cell below it uses.
+           The width has to say so too: `w-full` is 100% of the content box,
+           so with a -4px left margin the box ended 4px short on the right
+           and a right-aligned label sat 8px inside the figures' edge. */
+        className={`w-[calc(100%+0.5rem)] flex items-center gap-1 ${pack} rounded-md px-1 -mx-1 py-1.5 -my-1.5 ui-hover-sunken`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={`Sort and filter ${typeof label === 'string' ? label : col}`}

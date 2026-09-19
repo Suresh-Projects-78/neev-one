@@ -77,22 +77,31 @@ family.
 ### Scale
 | Role | Font | Size / line | Weight | Notes |
 |------|------|-------------|--------|-------|
-| Page title | Inter | 28 / 36 | 700 | `letter-spacing: -.025em` |
+| Page title | Inter | 20 / 28 | 600 | `letter-spacing: -.01em` |
 | Section title | Inter | 16 / 24 | 600 | |
-| Body, UI | Inter | 14 / 20 | 400–500 | |
+| Card title | Inter | 14 / 20 | 600 | |
+| Body, UI | Inter | 13 / 18–20 | 400 | |
+| Form label | Inter | 12 / 16 | 500 | sentence case; uppercase only in a document head |
+| Table header | Inter | 11 / 16 | 600 | `.04em`, uppercase, `#64748B` |
 | Table cell | Inter | 13 / 18 | 400 | |
-| Money | Inter | 13 / 18 | 400 | tabular-nums, right-aligned |
-| Label, caption | Inter | 12 / 16 | 500 | `.04em`, uppercase |
+| Money | Inter | 13 / 18 | 500 | `tabular-nums lining-nums`, right-aligned |
+| Large KPI | Inter | 24 / 32 | 600 | tabular-nums |
+| Metadata | Inter | 11–12 / 16 | 400 | |
+| Buttons | Inter | 13 / 20 | 500 | |
 
-Nothing below 12px. Nothing between 16 and 24.
+Nothing below 11px. 700 is not on the scale.
 
 ## Color
-- **Approach:** restrained. One accent, and it means one thing.
-- **Brand `#FF6B00`** (`--brand`): primary action and active navigation. Nothing else. Rare in this category — Tally blue, Zoho red, QuickBooks green. Its readable-on-light partner is `#C2410C` (`--brand-ink`), used for brand-coloured text and marks where the fill would not carry contrast.
-- **Money semantics, never the accent:** in `#15803D`, out / late `#B91C1C`, attention `#A16207`.
-- **Column hues:** document number `#C2410C`, party name `#0F766E`. A row reads as fields, not prose.
-- **Neutrals:** warm (stone), `#FAFAF9` → `#1C1917`, biased toward the orange so they read as chosen.
-- **Dark mode:** redefine tokens only, never restyle components inside a theme block. Accent lifts to `#FF8A33`; money greens and reds lighten for contrast on dark ground.
+- **Approach:** white + slate + black. About 70% white and off-white, 20% slate, 7% black, 3% semantic. Black is the primary action colour; slate is structure; a hue appears only where it carries a status or a category.
+- **Primary `#171717`** (`--brand`, kept under its old name because 300 call sites read it): the primary button, the checked box, the selected tab's underline, the 2px rail indicator. Hover `#0A0A0A`, pressed `#000000`, soft `#F5F5F4`. Black on white needs no lighter "ink" partner, so `--brand-ink` is the same value.
+- **Canvas `#F8FAFC`**, surface `#FFFFFF`, secondary/table header/hover `#F8FAFC`, tertiary/selected `#F1F5F9`. Borders `#E2E8F0`, strong `#CBD5E1`, divider `#F1F5F9`.
+- **Text:** `#0F172A` primary, `#1E293B` strong, `#475569` secondary, `#64748B` muted, `#94A3B8` placeholder and disabled.
+- **Links `#2563EB`**, hover `#1D4ED8`. A document number is ink; it takes blue only when it opens something.
+- **Semantic — status and condition only, never debit/credit:** success `#047857` on `#D1FAE5`; danger `#B91C1C` on `#FEE2E2`; warning `#B45309` on `#FEF3C7`; info `#2563EB` on `#EFF6FF`; processing `#4F46E5` on `#EEF2FF`; neutral `#64748B` on `#F1F5F9`. An ordinary amount is neutral ink whichever side of the ledger it is on.
+- **Sidebar:** white, separated from the canvas by its right border. Items `#475569`, hover `#F8FAFC`/`#0F172A`, selected `#F1F5F9` at 500–600 with a 2px black bar. Icons are slate; no module hues.
+- **Charts:** slate `#334155` first, then blue `#3B82F6`, teal `#0F766E`, violet `#7C3AED`, amber `#D97706`, muted `#94A3B8`. One series, one colour.
+- **Category accents** (`--cat-*`, `--id-*`, `--ov-*`): muted, and only ever on a small icon square or a chart — never a card ground or a card border.
+- **Dark mode:** redefine tokens only, never restyle components inside a theme block. The primary inverts to `#F8FAFC` with dark ink on it; slate-950 ground, slate-900 surfaces; semantic pairs lift.
 
 ## Spacing
 - **Base:** 8px.
@@ -135,9 +144,11 @@ numbers refer to are defined once under *Controls → Height*.
   is left of it.** A row of three panels sized at `xl` (1280) is really sharing
   1040px once the rail is taken off, which is how a five-column table ended up
   in a 383px panel. Three-up rows wait for `2xl`; `src/test/overview-breakpoints.test.js` pins it.
-- **Radius — two, not four:** 8px (`rounded-lg`) on anything clickable, 12px
-  (`rounded-xl`) on anything holding content. `999px` (`rounded-full`) for
-  pills and status labels only.
+- **Radius — two, not four:** 6px (`--radius-btn`, `--radius-input`) on
+  anything clickable, 8px (`--radius`) on anything holding content; 10px
+  (`--radius-lg`) for a large dialog. `999px` (`rounded-full`) for pills and
+  status labels only. Tailwind's `rounded-lg`/`rounded-xl` call sites are
+  legacy and resolve a step rounder than the tokens; migrate as touched.
   - **One documented exception: the keycap, 6px.** A key is 22–28px tall; at
     8px the corner is a third of the height and the cap reads as a lozenge
     rather than a key. It also sets 11px type, below the 12px floor, for the
@@ -469,6 +480,7 @@ because focus, portals and event order cannot be read off the source.
 ## Decisions Log
 | Date | Decision | Rationale |
 |------|----------|-----------|
+| 2026-09-19 | White + slate + black: orange retired as the primary | Black is the action colour, slate the structure, colour only where it means a status or a category. Decided at the token level — one `:root` block per theme — so 300 call sites reading `--brand` changed meaning without changing. Type stepped down (20px page title at 600, 13px body, 11px headers with `.04em`), money went to 500 against muted labels, vertical table rules and every decorative brand layer (ambient orbs, hero washes, border wake, tilt, hover lift) were removed. Seven screens are the reference implementation; the rest of the product inherits the tokens and is migrated as touched |
 | 2026-08-24 | Shell + primitives rebuild over a discipline-only pass | The flat type scale is why it reads as a dense tool rather than premium SaaS; discipline alone would not fix it |
 | 2026-09-08 | One vertical rhythm for page blocks | 43 screens at 16px and 20 at 20px meant no two modules agreed, and neither value was on the documented scale |
 | 2026-09-08 | Weight marks structure, not content | 121 values carried semibold or bold. Spending weight on content leaves none for hierarchy — everything emphasised is nothing emphasised |

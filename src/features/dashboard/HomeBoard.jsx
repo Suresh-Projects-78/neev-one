@@ -43,22 +43,26 @@ const TONES = {
 /** One headline figure, with the one line about it worth reading. */
 function StatCard({ tone = 'blue', Icon, label, value, company, count = false, foot, onFoot }) {
   const t = TONES[tone] || TONES.blue;
+  /* White, edged in the hairline like every other card. The hue is the icon
+     square and nothing else — four tinted slabs across the top of Home was the
+     first thing a visitor saw, before any figure. */
   return (
-    <div className="ui-card p-4" style={{ backgroundColor: t.wash, borderColor: t.soft }}>
-      <div className="flex items-start gap-3">
+    <div className="ui-card p-4">
+      {/* Label beside a small mark, figure on its own line beneath. Side by
+          side, a 20px figure had 150px to live in at 1366 and lakhs were
+          being cut to "₹14,69…" — the one number the card exists to show. */}
+      <div className="flex items-center gap-2.5">
         <span
-          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md"
           style={{ backgroundColor: t.soft, color: t.solid }}
           aria-hidden="true"
         >
-          <Icon size={18} />
+          <Icon size={14} />
         </span>
-        <div className="min-w-0">
-          <div className="ui-caption">{label}</div>
-          <div className="ui-money-lg mt-0.5 truncate">
-            {count ? value : formatMoney(value, company)}
-          </div>
-        </div>
+        <div className="ui-caption min-w-0 truncate">{label}</div>
+      </div>
+      <div className="ui-money-lg mt-2 truncate" title={count ? String(value) : formatMoney(value, company)}>
+        {count ? value : formatMoney(value, company)}
       </div>
 
       {foot ? (
@@ -236,17 +240,19 @@ export function CashFlowPanel({ moneyIn, moneyOut, company, label }) {
       <dl className="mt-4 space-y-3">
         <div className="flex items-center justify-between gap-3">
           <dt className="ui-muted text-sm">Money in</dt>
-          <dd className="ui-money" style={{ color: TONES.green.solid }}>{formatMoney(moneyIn, company)}</dd>
+          {/* Neutral ink. In and out are directions, not verdicts; only the
+              net line below says whether the month was good. */}
+          <dd className="ui-money">{formatMoney(moneyIn, company)}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">
           <dt className="ui-muted text-sm">Money out</dt>
-          <dd className="ui-money" style={{ color: 'rgb(var(--brand))' }}>{formatMoney(moneyOut, company)}</dd>
+          <dd className="ui-money">{formatMoney(moneyOut, company)}</dd>
         </div>
       </dl>
 
       <div
         className="mt-4 flex items-center justify-between gap-3 rounded-xl px-3 py-3"
-        style={{ backgroundColor: net >= 0 ? TONES.green.wash : TONES.red.wash }}
+        style={{ backgroundColor: 'rgb(var(--surface-sunken))' }}
       >
         <span className="text-sm font-medium">Net cash flow</span>
         <span className="ui-money" style={{ color: net >= 0 ? TONES.green.solid : TONES.red.solid }}>

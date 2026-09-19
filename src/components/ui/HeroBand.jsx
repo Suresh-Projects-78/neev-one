@@ -69,8 +69,8 @@ export default function HeroBand({
             className="ui-t-page"
             style={
               art
-                ? { fontSize: '2.25rem', lineHeight: '2.625rem', letterSpacing: '-0.02em' }
-                : { fontSize: 26, fontWeight: 700, lineHeight: '32px', letterSpacing: '-0.025em' }
+                ? { fontSize: '1.5rem', lineHeight: '2rem', letterSpacing: '-0.01em' }
+                : { fontSize: 20, fontWeight: 600, lineHeight: '28px', letterSpacing: '-0.01em' }
             }
           >
             {title}
