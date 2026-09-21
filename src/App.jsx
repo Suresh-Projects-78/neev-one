@@ -89,12 +89,12 @@ import VendorPicker, { VendorForm } from './components/pickers/VendorPicker';
 import { CustomerForm } from './components/pickers/CustomerPicker';
 import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB } from './data/db';
 import { nextFreeVoucherNumber } from './utils/docSettings';
-import { dueDateFor, termDaysFor, termsLabel } from './utils/paymentTerms';
+import { dueDateFor } from './utils/paymentTerms';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
 import { formatMoney, round2 } from './utils/money';
 import { downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
 import { useColumnFilters, ColumnHeader } from './components/ColumnFilters';
-import { ListToolbar, exportRows, useListSearch } from './components/ListToolbar';
+import { ListToolbar, useListSearch } from './components/ListToolbar';
 import { getVendorDisplayName } from './utils/contacts';
 import {
   ACCENT_OPTIONS,
@@ -378,7 +378,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   // This screen had no search at all — the only way to find a voucher was to
   // scroll, or to know its date and narrow the period around it.
   const expenseSearch = useListSearch(expenses, ['number', 'vendorName', 'description', 'refNo', 'date']);
-  const [statusFilter] = useState('All');
   const [isCreating, setIsCreating] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [expenseActionMenu, setExpenseActionMenu] = useState(null);
@@ -408,14 +407,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     return 'Unpaid';
   };
 
-  const inPeriod = (e) => {
-    const d = String(e?.date || '').slice(0, 10);
-    if (!d) return !fromDate && !toDate;
-    if (fromDate && d < fromDate) return false;
-    if (toDate && d > toDate) return false;
-    return true;
-  };
-
   const filteredExpenses = expenseColFilters.applyFilters(
     expenseSearch.filtered
       .slice()
@@ -436,21 +427,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       status: (r) => getDerivedStatus(r),
     }
   );
-
-  // Over the filtered set, so the figure always describes what is on screen.
-  const expenseTotals = useMemo(() => {
-    let spent = 0;
-    let unpaid = 0;
-    for (const e of filteredExpenses) {
-      const total = Number(e.total || 0);
-      spent += total;
-      unpaid += Math.max(0, total - Number(e.tdsAmount || 0) - Number(e.paidAmount || 0));
-    }
-    return [
-      { label: 'Spent', value: formatMoney(spent, currentCompany) },
-      { label: 'Unpaid', value: formatMoney(unpaid, currentCompany), tone: unpaid > 0 ? 'neg' : undefined },
-    ];
-  }, [filteredExpenses, currentCompany]);
 
 
   const ledgerNamesOf = (e) =>
@@ -725,24 +701,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     notify.success('Expense deleted.');
   };
 
-  /*
-   * The status counts the tabs carry.
-   *
-   * Counted over the period and the search, not the whole book: a strip of
-   * counts describing rows the table is not showing is two sets of figures on
-   * one screen with nothing saying so.
-   */
-  const expenseStatusCounts = useMemo(() => {
-    const inScope = expenseSearch.filtered.filter((e) => inPeriod(e));
-    const counts = { All: inScope.length };
-    for (const e of inScope) {
-      const st = getDerivedStatus(e);
-      counts[st] = (counts[st] || 0) + 1;
-    }
-    return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expenseSearch.filtered, fromDate, toDate]);
-
   const EXPENSE_STATUS_TABS = [
     { value: 'All', label: 'All', tone: 'all' },
     { value: 'Draft', label: 'Draft', tone: 'draft' },
@@ -914,8 +872,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
               filteredExpenses.map((expense) => {
                 const derived = getDerivedStatus(expense);
                 const expensePayable = Math.max(0, Number(expense.total || 0) - Number(expense.tdsAmount || 0));
-                const expensePaid = Math.min(Number(expense.paidAmount || 0), expensePayable);
-                const expenseBalance = Math.max(0, expensePayable - expensePaid);
                 return (
                   <tr
                     key={expense.id}
@@ -1122,57 +1078,6 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
   // Creating the ledger without leaving the voucher: the picker is limited to
   // expense groups, and the new ledger drops straight into the current line.
-  const expenseGroupIds = useMemo(() => {
-    const groups = (db.accountGroups || []).filter((g) => g.companyId === currentCompany.id);
-    const byId = new Map(groups.map((g) => [String(g.id), g]));
-    const isExpense = (g) => {
-      let cur = g;
-      const seen = new Set();
-      while (cur && !seen.has(String(cur.id))) {
-        seen.add(String(cur.id));
-        if (String(cur.groupCategory || '').trim() === 'Expense') return true;
-        cur = cur.parentGroupId ? byId.get(String(cur.parentGroupId)) : null;
-      }
-      return false;
-    };
-    return groups.filter(isExpense).map((g) => String(g.id));
-  }, [db.accountGroups, currentCompany.id]);
-
-  const openLedgerCreate = (lineIdxRaw = null) => {
-    // Guard against being wired straight to onClick, where the argument would
-    // be a click event rather than a line index.
-    const lineIdx = Number.isInteger(lineIdxRaw) ? lineIdxRaw : null;
-    if (typeof openModal !== 'function') {
-      notify.error('Create the ledger under Master Data → Chart of Accounts.');
-      return;
-    }
-    openModal(
-      <ChartAccountForm
-        db={db}
-        setDb={setDb}
-        currentCompany={currentCompany}
-        openModal={openModal}
-        includeGroupIds={expenseGroupIds}
-        onCreated={(created) => {
-          if (!created?.id) return;
-          const idx = lineIdx === null ? formData.lines.findIndex((l) => !String(l.ledgerId || '').trim()) : lineIdx;
-          const target = idx >= 0 ? idx : formData.lines.length;
-          setFormData((p) => {
-            const lines = target >= p.lines.length ? [...p.lines, emptyExpenseLine()] : [...p.lines];
-            lines[target] = {
-              ...lines[target],
-              ledgerId: String(created.id),
-              gstRate: created.gstRate !== null && created.gstRate !== undefined ? Number(created.gstRate) : 0,
-            };
-            return { ...p, lines };
-          });
-        }}
-        onClose={() => openModal(null)}
-      />,
-      { title: 'New Expense Ledger', maxWidthClass: 'max-w-4xl' }
-    );
-  };
-
   const addLine = () => setFormData((p) => ({ ...p, lines: [...p.lines, emptyExpenseLine()] }));
   const removeLine = (idx) =>
     setFormData((p) => ({ ...p, lines: p.lines.length > 1 ? p.lines.filter((_, i) => i !== idx) : p.lines }));
