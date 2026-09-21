@@ -385,26 +385,26 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                   />
                 </div>
                 <div className="col-span-12 sm:col-span-6">
-                  <label className="ui-label">Warehouse Name *</label>
-                  <input className="ui-input w-full" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} required />
+                  <label className="ui-label" htmlFor="settingswarehouses-warehouse-name">Warehouse Name *</label>
+                  <input id="settingswarehouses-warehouse-name" className="ui-input w-full" value={editForm.name} onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))} required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="ui-label">Address Line 1</label>
-                  <input className="ui-input w-full" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingswarehouses-address-line-1">Address Line 1</label>
+                  <input id="settingswarehouses-address-line-1" className="ui-input w-full" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="ui-label">Address Line 2</label>
-                  <input className="ui-input w-full" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingswarehouses-address-line-2">Address Line 2</label>
+                  <input id="settingswarehouses-address-line-2" className="ui-input w-full" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="ui-label">City</label>
-                  <input className="ui-input w-full" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingswarehouses-city">City</label>
+                  <input id="settingswarehouses-city" className="ui-input w-full" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
                 </div>
                 <div>
                   <PopupSelect
@@ -419,23 +419,23 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                   />
                 </div>
                 <div>
-                  <label className="ui-label">Country</label>
-                  <input className="ui-input w-full" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingswarehouses-country">Country</label>
+                  <input id="settingswarehouses-country" className="ui-input w-full" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="ui-label">GST Registration</label>
-                  <select className="ui-select w-full ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
+                  <label className="ui-label" htmlFor="settingswarehouses-gst-registration">GST Registration</label>
+                  <select id="settingswarehouses-gst-registration" className="ui-select w-full ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
                     <option value="UNREGISTERED">Unregistered</option>
                     <option value="REGULAR">Regular</option>
                     <option value="COMPOSITION">Composition</option>
                   </select>
                 </div>
                 <div>
-                  <label className="ui-label">GSTIN</label>
-                  <input
+                  <label className="ui-label" htmlFor="settingswarehouses-gstin">GSTIN</label>
+                  <input id="settingswarehouses-gstin"
                     className="ui-input w-full"
                     value={editForm.gstin}
                     onChange={(e) => {
@@ -451,16 +451,16 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="ui-label">Contact Person</label>
-                  <input className="ui-input w-full" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingswarehouses-contact-person">Contact Person</label>
+                  <input id="settingswarehouses-contact-person" className="ui-input w-full" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="ui-label">Phone</label>
-                  <input className="ui-input w-full" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingswarehouses-phone">Phone</label>
+                  <input id="settingswarehouses-phone" className="ui-input w-full" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="ui-label">Email</label>
-                  <input type="email" className="ui-input w-full" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingswarehouses-email">Email</label>
+                  <input id="settingswarehouses-email" type="email" className="ui-input w-full" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
                 </div>
               </div>
 
@@ -541,26 +541,26 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               />
             </div>
             <div className="col-span-12 sm:col-span-6">
-              <label className="ui-label">Warehouse Name *</label>
-              <input className="ui-input w-full" value={form.name} onChange={onChange('name')} required />
+              <label className="ui-label" htmlFor="settingswarehouses-warehouse-name-2">Warehouse Name *</label>
+              <input id="settingswarehouses-warehouse-name-2" className="ui-input w-full" value={form.name} onChange={onChange('name')} required />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="ui-label">Address Line 1</label>
-              <input className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} />
+              <label className="ui-label" htmlFor="settingswarehouses-address-line-1-2">Address Line 1</label>
+              <input id="settingswarehouses-address-line-1-2" className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} />
             </div>
             <div>
-              <label className="ui-label">Address Line 2</label>
-              <input className="ui-input w-full" value={form.addressLine2} onChange={onChange('addressLine2')} />
+              <label className="ui-label" htmlFor="settingswarehouses-address-line-2-2">Address Line 2</label>
+              <input id="settingswarehouses-address-line-2-2" className="ui-input w-full" value={form.addressLine2} onChange={onChange('addressLine2')} />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="ui-label">City</label>
-              <input className="ui-input w-full" value={form.city} onChange={onChange('city')} />
+              <label className="ui-label" htmlFor="settingswarehouses-city-2">City</label>
+              <input id="settingswarehouses-city-2" className="ui-input w-full" value={form.city} onChange={onChange('city')} />
             </div>
             <div>
               <PopupSelect
@@ -575,23 +575,23 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
               />
             </div>
             <div>
-              <label className="ui-label">Country</label>
-              <input className="ui-input w-full" value={form.country} onChange={onChange('country')} />
+              <label className="ui-label" htmlFor="settingswarehouses-country-2">Country</label>
+              <input id="settingswarehouses-country-2" className="ui-input w-full" value={form.country} onChange={onChange('country')} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="ui-label">GST Registration</label>
-              <select className="ui-select w-full ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+              <label className="ui-label" htmlFor="settingswarehouses-gst-registration-2">GST Registration</label>
+              <select id="settingswarehouses-gst-registration-2" className="ui-select w-full ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
                 <option value="UNREGISTERED">Unregistered</option>
                 <option value="REGULAR">Regular</option>
                 <option value="COMPOSITION">Composition</option>
               </select>
             </div>
             <div>
-              <label className="ui-label">GSTIN</label>
-              <input
+              <label className="ui-label" htmlFor="settingswarehouses-gstin-2">GSTIN</label>
+              <input id="settingswarehouses-gstin-2"
                 className="ui-input w-full"
                 value={form.gstin}
                 onChange={onChange('gstin')}
@@ -602,16 +602,16 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
 
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="ui-label">Contact Person</label>
-              <input className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
+              <label className="ui-label" htmlFor="settingswarehouses-contact-person-2">Contact Person</label>
+              <input id="settingswarehouses-contact-person-2" className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
             </div>
             <div>
-              <label className="ui-label">Phone</label>
-              <input className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
+              <label className="ui-label" htmlFor="settingswarehouses-phone-2">Phone</label>
+              <input id="settingswarehouses-phone-2" className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
             </div>
             <div>
-              <label className="ui-label">Email</label>
-              <input type="email" className="ui-input w-full" value={form.email} onChange={onChange('email')} />
+              <label className="ui-label" htmlFor="settingswarehouses-email-2">Email</label>
+              <input id="settingswarehouses-email-2" type="email" className="ui-input w-full" value={form.email} onChange={onChange('email')} />
             </div>
           </div>
           <div className="flex justify-end gap-2">

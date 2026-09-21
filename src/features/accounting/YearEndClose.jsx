@@ -255,8 +255,8 @@ export default function YearEndClose({ db, setDb, currentCompany }) {
 
       <div className="ui-card flex flex-wrap items-end gap-3 p-4">
         <div>
-          <label className="ui-label">Close the FY containing</label>
-          <input type="date" value={fyDate} onChange={(e) => setFyDate(e.target.value)} className="ui-input" />
+          <label className="ui-label" htmlFor="yearendclose-close-the-fy-containing">Close the FY containing</label>
+          <input id="yearendclose-close-the-fy-containing" type="date" value={fyDate} onChange={(e) => setFyDate(e.target.value)} className="ui-input" />
         </div>
         <div className="pb-2 text-sm font-medium">{fy.label} · {fy.from} → {fy.to}</div>
         {lock ? (

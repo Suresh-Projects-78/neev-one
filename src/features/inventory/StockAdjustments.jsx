@@ -711,7 +711,7 @@ const StockAdjustments = ({
         <table className="ui-table ui-table-wide ui-table-sticky">
           <thead>
             <tr>
-              <ColumnHeader label="Date" col="date" state={colFilters} />
+              <ColumnHeader label="Date" col="date" state={colFilters} align="center" />
               <ColumnHeader label="Number" col="number" state={colFilters} />
               <ColumnHeader label="Branch" col="branch" state={colFilters} />
               <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} />

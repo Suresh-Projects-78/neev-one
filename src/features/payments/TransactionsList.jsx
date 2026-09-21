@@ -345,7 +345,7 @@ const TransactionsTable = ({ title, rows, currentCompany, rightActions, onView, 
         <table className="ui-table ui-table-wide ui-table-sticky">
           <thead>
             <tr>
-              <ColumnHeader label="Date" col="date" state={colFilters} />
+              <ColumnHeader label="Date" col="date" state={colFilters} align="center" />
               {onReverse ? <th scope="col" className="w-10"></th> : null}
               <ColumnHeader label="Type" col="typeLabel" state={colFilters} />
               <ColumnHeader label="Document #" col="documentNumber" state={colFilters} />

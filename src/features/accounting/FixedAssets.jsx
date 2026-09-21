@@ -166,12 +166,12 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
         <div className="ui-card space-y-4 p-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="ui-label">Asset name</label>
-              <input type="text" value={form.name} onChange={set('name')} className="ui-input w-full" placeholder="Delivery van / Office AC…" />
+              <label className="ui-label" htmlFor="fixedassets-asset-name">Asset name</label>
+              <input id="fixedassets-asset-name" type="text" value={form.name} onChange={set('name')} className="ui-input w-full" placeholder="Delivery van / Office AC…" />
             </div>
             <div>
-              <label className="ui-label">Block</label>
-              <select
+              <label className="ui-label" htmlFor="fixedassets-block">Block</label>
+              <select id="fixedassets-block"
                 value={form.block}
                 onChange={(e) => {
                   const b = ASSET_BLOCKS.find((x) => x.name === e.target.value);
@@ -185,20 +185,20 @@ export default function FixedAssets({ db, setDb, currentCompany }) {
               </select>
             </div>
             <div>
-              <label className="ui-label">Depreciation rate % (WDV)</label>
-              <input type="number" min="0" max="100" step="0.01" value={form.depRate} onChange={set('depRate')} className="ui-input w-full" />
+              <label className="ui-label" htmlFor="fixedassets-depreciation-rate-wdv">Depreciation rate % (WDV)</label>
+              <input id="fixedassets-depreciation-rate-wdv" type="number" min="0" max="100" step="0.01" value={form.depRate} onChange={set('depRate')} className="ui-input w-full" />
             </div>
             <div>
-              <label className="ui-label">Cost (₹)</label>
-              <input type="number" min="0" step="0.01" value={form.cost} onChange={set('cost')} className="ui-input w-full" />
+              <label className="ui-label" htmlFor="fixedassets-cost">Cost (₹)</label>
+              <input id="fixedassets-cost" type="number" min="0" step="0.01" value={form.cost} onChange={set('cost')} className="ui-input w-full" />
             </div>
             <div>
-              <label className="ui-label">Purchase date</label>
-              <input type="date" value={form.purchaseDate} onChange={set('purchaseDate')} className="ui-input w-full" />
+              <label className="ui-label" htmlFor="fixedassets-purchase-date">Purchase date</label>
+              <input id="fixedassets-purchase-date" type="date" value={form.purchaseDate} onChange={set('purchaseDate')} className="ui-input w-full" />
             </div>
             <div>
-              <label className="ui-label">Accumulated dep till last FY (₹)</label>
-              <input type="number" min="0" step="0.01" value={form.accumulatedDep} onChange={set('accumulatedDep')} className="ui-input w-full" placeholder="0 for new assets" />
+              <label className="ui-label" htmlFor="fixedassets-accumulated-dep-till-last-fy">Accumulated dep till last FY (₹)</label>
+              <input id="fixedassets-accumulated-dep-till-last-fy" type="number" min="0" step="0.01" value={form.accumulatedDep} onChange={set('accumulatedDep')} className="ui-input w-full" placeholder="0 for new assets" />
             </div>
           </div>
           <div className="flex justify-end gap-2">

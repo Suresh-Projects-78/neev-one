@@ -69,12 +69,12 @@ export function RoleCreateForm({ orgId, onCreated }) {
 
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2">
-          <label className="ui-label">Role Name</label>
-          <input className="ui-input w-full" value={name} onChange={(e) => setName(e.target.value)} required />
+          <label className="ui-label" htmlFor="rolecreateform-role-name">Role Name</label>
+          <input id="rolecreateform-role-name" className="ui-input w-full" value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div>
-          <label className="ui-label">Role Type</label>
-          <select className="ui-select w-full" value={roleType} onChange={(e) => setRoleType(e.target.value)}>
+          <label className="ui-label" htmlFor="rolecreateform-role-type">Role Type</label>
+          <select id="rolecreateform-role-type" className="ui-select w-full" value={roleType} onChange={(e) => setRoleType(e.target.value)}>
             <option value="ADMIN">Admin</option>
             <option value="ACCOUNTANT">Accountant</option>
             <option value="SALES">Sales</option>
@@ -84,8 +84,8 @@ export function RoleCreateForm({ orgId, onCreated }) {
       </div>
 
       <div>
-        <label className="ui-label">Description</label>
-        <input className="ui-input w-full" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <label className="ui-label" htmlFor="rolecreateform-description">Description</label>
+        <input id="rolecreateform-description" className="ui-input w-full" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
 
       <div className="border rounded-xl overflow-hidden">

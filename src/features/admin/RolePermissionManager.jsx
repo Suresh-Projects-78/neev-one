@@ -3,8 +3,9 @@ import { Check, ChevronDown, Lock, RotateCcw, Save, ShieldCheck } from 'lucide-r
 
 import { listRoles } from '../../api/admin';
 import { expandPreset, getPermissionCatalog, getRolePermissions, setRolePermissions } from '../../api/permissions';
-import { EmptyState, PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
+import { EmptyState, Spinner, SkeletonCard } from '../../components/ui/Primitives';
 import { usePermissions } from '../../permissions/usePermissions';
+import SettingsScreenHeader from '../settings/SettingsScreenHeader';
 
 const key = (module, resource, action) => `${module}::${resource}::${action}`;
 
@@ -162,7 +163,7 @@ export const RolePermissionManager = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title="Role Permissions"
         description="Tick what each role may do. Users inherit these through the roles assigned to them."

@@ -12,7 +12,8 @@ import {
   revokeMySessions,
   savePolicy,
 } from '../../api/security';
-import { EmptyState, PageHeader, Spinner, StatusPill, SkeletonCard } from '../../components/ui/Primitives';
+import { EmptyState, Spinner, StatusPill, SkeletonCard } from '../../components/ui/Primitives';
+import SettingsScreenHeader from './SettingsScreenHeader';
 
 const TABS = [
   { key: 'signin', label: 'Sign-in methods' },
@@ -114,7 +115,7 @@ export const SecuritySettings = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title="Security"
               actions={

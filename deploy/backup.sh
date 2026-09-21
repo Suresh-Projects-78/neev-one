@@ -17,6 +17,12 @@
 set -euo pipefail
 
 DB="${NEEV_DB:-/opt/neev/data/prod.db}"
+# Payroll keeps its own database. A backup that takes only the accounting file
+# is not a backup of the payroll — and payroll is the data whose loss is least
+# recoverable, because nobody can reconstruct last year's payslips from memory.
+# Left empty, or absent on disk, payroll is skipped with a warning rather than
+# failing the accounting backup.
+PAYROLL_DB="${NEEV_PAYROLL_DB:-/opt/neev/data/payroll.db}"
 DEST="${NEEV_BACKUP_DIR:-/var/backups/neev-one}"
 KEEP="${NEEV_BACKUP_KEEP:-30}"
 
@@ -105,3 +111,45 @@ fi
 
 ls -1t "$DEST"/neev-one-*.db.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
 echo "backup written: $ARCHIVE"
+
+# ---------------------------------------------------------------- payroll
+#
+# The same treatment, its own archive. Separate files rather than one combined
+# archive, because the two databases are restored independently: recovering
+# accounting to last Tuesday must not drag payroll back with it.
+if [ -n "$PAYROLL_DB" ] && [ -f "$PAYROLL_DB" ]; then
+  PAYROLL_ARCHIVE="$DEST/neev-payroll-$STAMP.db"
+  if ! sqlite3 "$PAYROLL_DB" ".backup '$PAYROLL_ARCHIVE'"; then
+    rm -f "$PAYROLL_ARCHIVE"
+    die "sqlite3 could not back up $PAYROLL_DB (locked, or unreadable)"
+  fi
+  gzip "$PAYROLL_ARCHIVE"
+  PAYROLL_ARCHIVE="$PAYROLL_ARCHIVE.gz"
+
+  if [ "${1:-}" = "--verify" ]; then
+    PROBE2="$(mktemp -d)"
+    trap 'rm -rf "$PROBE2"' EXIT
+    gunzip -c "$PAYROLL_ARCHIVE" > "$PROBE2/probe.db"
+    INTEGRITY="$(sqlite3 "$PROBE2/probe.db" 'PRAGMA integrity_check;' 2>&1 | head -1 || true)"
+    [ "$INTEGRITY" = "ok" ] || die "restored payroll copy failed integrity check: $INTEGRITY"
+
+    # Compared, not listed, for the reason spelled out above. SalarySlip is the
+    # one that matters: an archive without payslips is not a payroll backup,
+    # whatever else it contains.
+    for table in SalaryComponent SalaryStructure SalaryAssignment SalarySlip; do
+      live="$(sqlite3 "$PAYROLL_DB" "SELECT COUNT(*) FROM \"$table\";" 2>/dev/null || echo missing)"
+      restored="$(sqlite3 "$PROBE2/probe.db" "SELECT COUNT(*) FROM \"$table\";" 2>/dev/null || echo missing)"
+      [ "$live" = "missing" ] && die "live payroll database has no $table table"
+      [ "$restored" = "missing" ] && die "restored payroll copy has no $table table"
+      [ "$live" = "$restored" ] || die "$table: live has $live rows, the restore has $restored"
+      echo "  $table: $restored rows"
+    done
+    echo "verified: $PAYROLL_ARCHIVE restores and matches the live payroll row counts"
+  fi
+
+  ls -1t "$DEST"/neev-payroll-*.db.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
+  echo "payroll backup written: $PAYROLL_ARCHIVE"
+elif [ -n "$PAYROLL_DB" ]; then
+  # Not fatal: an installation that has never switched payroll on has no file.
+  echo "backup: no payroll database at $PAYROLL_DB — skipping (set NEEV_PAYROLL_DB, or ignore if payroll is unused)" >&2
+fi

@@ -20,20 +20,20 @@ model Account {
   users User[]
 
   entitlement AccountEntitlement?
-  orgMasters       OrgMaster[]
+  orgMasters  OrgMaster[]
 }
 
 model Org {
-  id              String   @id @default(cuid())
-  accountId       String
-  name            String
+  id        String  @id @default(cuid())
+  accountId String
+  name      String
   /// The public handle: the `agc` in agc.books.neevone.com. Separate from `id`
   /// on purpose — the id is what foreign keys and authorisation use and never
   /// changes, the slug is what a person reads and may one day need to change.
   /// Nullable so existing rows are valid before the backfill.
-  slug            String?  @unique
-  legalName       String?
-  pan             String?
+  slug      String? @unique
+  legalName String?
+  pan       String?
 
   /// The currency the books are kept in. Every ledger posting is in this
   /// currency, whatever currency the document was raised in.
@@ -55,18 +55,18 @@ model Org {
   account   Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdBy User    @relation("OrgCreatedBy", fields: [createdByUserId], references: [id])
 
-  branches Branch[]
-  roles    Role[]
-  members  UserOrgMembership[]
-  audit    AuditLog[]
+  branches           Branch[]
+  roles              Role[]
+  members            UserOrgMembership[]
+  audit              AuditLog[]
+  orgMasters         OrgMaster[]
+  shareLinks         DocumentShareLink[]
+  bankBookEntries    BankBookEntry[]
+  posDayCloses       PosDayClose[]
+  recurringSchedules RecurringSchedule[]
 
   @@unique([accountId, name])
   @@index([accountId])
-  orgMasters       OrgMaster[]
-  shareLinks       DocumentShareLink[]
-  bankBookEntries  BankBookEntry[]
-  posDayCloses     PosDayClose[]
-  recurringSchedules RecurringSchedule[]
 }
 
 model Branch {
@@ -486,7 +486,7 @@ model Invoice {
   // the way to the server, so a browser that had never seen the invoice
   // rebuilt it without them. Stored as JSON so new UI fields do not each need
   // a migration.
-  extrasJson         String?
+  extrasJson String?
 
   subtotal   Decimal @default(0)
   cgstTotal  Decimal @default(0)
@@ -506,7 +506,7 @@ model Invoice {
   currency     String  @default("INR")
   exchangeRate Decimal @default(1)
   /// `total` translated at `exchangeRate`. Reports read this.
-  baseTotal Decimal @default(0)
+  baseTotal    Decimal @default(0)
 
   /// Migration identity: where this row came from, and its key in that system.
   /// Re-running an import maps to the same row instead of duplicating it.
@@ -515,19 +515,19 @@ model Invoice {
 
   /// e-Invoice (IRP) registration result. IRN is the invoice's identity on
   /// the GST network; the signed QR must be printed on the document.
-  irn             String?
-  irnStatus       String?   // REGISTERED | FAILED | CANCELLED
-  irnAckNo        String?
-  irnAckDate      String?
-  irnSignedQr     String?
+  irn                 String?
+  irnStatus           String? // REGISTERED | FAILED | CANCELLED
+  irnAckNo            String?
+  irnAckDate          String?
+  irnSignedQr         String?
   /// The full SignedInvoice JWT the IRP returns — the legal e-invoice.
-  irnSignedInvoice String?
+  irnSignedInvoice    String?
   /// The INV-01 JSON that was registered, kept verbatim for audit/re-download.
   einvoicePayloadJson String?
-  irnError        String?
-  irnRegisteredAt DateTime?
-  irnCancelledAt  DateTime?
-  irnCancelReason String?
+  irnError            String?
+  irnRegisteredAt     DateTime?
+  irnCancelledAt      DateTime?
+  irnCancelReason     String?
 
   /// e-Way Bill generated from the IRN (NIC /eiewb API).
   ewbNo        String?
@@ -546,7 +546,6 @@ model Invoice {
   @@unique([orgId, sourceSystem, sourceKey])
   @@index([accountId, orgId, branchId, date])
 }
-
 
 /// A purchase bill from a vendor. The mirror of Invoice: it debits purchases and input GST, and credits the vendor.
 model Bill {
@@ -571,16 +570,16 @@ model Bill {
   placeOfSupplyState String?
   taxType            String?
 
-  subtotal    Decimal @default(0)
-  cgstTotal   Decimal @default(0)
-  sgstTotal   Decimal @default(0)
-  igstTotal   Decimal @default(0)
-  gstTotal    Decimal @default(0)
-  total       Decimal @default(0)
+  subtotal      Decimal @default(0)
+  cgstTotal     Decimal @default(0)
+  sgstTotal     Decimal @default(0)
+  igstTotal     Decimal @default(0)
+  gstTotal      Decimal @default(0)
+  total         Decimal @default(0)
   settledAmount Decimal @default(0)
 
-  status    String  @default("Draft")
-  itemsJson String
+  status     String  @default("Draft")
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
 
@@ -613,22 +612,22 @@ model Estimate {
   orgId     String
   branchId  String
 
-  number      String
-  date        String
-  validUntil  String?
-  partyId     String?
-  partyName   String
-  partyGstin  String?
+  number     String
+  date       String
+  validUntil String?
+  partyId    String?
+  partyName  String
+  partyGstin String?
 
-  subtotal  Decimal @default(0)
-  gstTotal  Decimal @default(0)
-  total     Decimal @default(0)
+  subtotal Decimal @default(0)
+  gstTotal Decimal @default(0)
+  total    Decimal @default(0)
 
-  status    String @default("Draft")
-  itemsJson String
+  status     String  @default("Draft")
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
-  notes     String?
+  notes      String?
 
   createdByUserId String
   createdAt       DateTime @default(now())
@@ -657,15 +656,15 @@ model PurchaseOrderDoc {
   partyGstin   String?
   warehouseId  String?
 
-  subtotal  Decimal @default(0)
-  gstTotal  Decimal @default(0)
-  total     Decimal @default(0)
+  subtotal Decimal @default(0)
+  gstTotal Decimal @default(0)
+  total    Decimal @default(0)
 
-  status    String @default("Draft")
-  itemsJson String
+  status     String  @default("Draft")
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
-  notes     String?
+  notes      String?
 
   createdByUserId String
   createdAt       DateTime @default(now())
@@ -700,11 +699,11 @@ model SalesOrderDoc {
   gstTotal Decimal @default(0)
   total    Decimal @default(0)
 
-  status    String @default("Open")
-  itemsJson String
+  status     String  @default("Open")
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
-  notes     String?
+  notes      String?
 
   createdByUserId String
   createdAt       DateTime @default(now())
@@ -746,11 +745,11 @@ model DeliveryChallan {
   total    Decimal @default(0)
 
   /// Open | Converted | Cancelled. A converted challan cannot be billed twice.
-  status String @default("Open")
+  status             String  @default("Open")
   /// The invoice it became, so the double-billing guard survives a new device.
   convertedInvoiceId String?
 
-  itemsJson String
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
   notes      String?
@@ -771,7 +770,7 @@ model DeliveryChallan {
 /// showed different assets on different machines — not a missing feature but a
 /// wrong statement.
 model FixedAsset {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   accountId String
   orgId     String
   branchId  String?
@@ -795,8 +794,8 @@ model FixedAsset {
   accumulatedDepreciation Decimal @default(0)
 
   /// ACTIVE | DISPOSED | WRITTEN_OFF
-  status       String  @default("ACTIVE")
-  disposalDate String?
+  status        String   @default("ACTIVE")
+  disposalDate  String?
   disposalValue Decimal?
 
   notes String?
@@ -813,7 +812,7 @@ model FixedAsset {
 /// Sales by Salesman reports on this, so browser-only made the report differ by
 /// machine for the same books.
 model Salesman {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   accountId String
   orgId     String
   branchId  String?
@@ -873,8 +872,8 @@ model Expense {
   total         Decimal @default(0)
   settledAmount Decimal @default(0)
 
-  status    String @default("Unpaid")
-  itemsJson String
+  status     String  @default("Unpaid")
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
 
@@ -921,16 +920,16 @@ model CreditNote {
   placeOfSupplyState String?
   taxType            String?
 
-  subtotal    Decimal @default(0)
-  cgstTotal   Decimal @default(0)
-  sgstTotal   Decimal @default(0)
-  igstTotal   Decimal @default(0)
-  gstTotal    Decimal @default(0)
-  total       Decimal @default(0)
+  subtotal      Decimal @default(0)
+  cgstTotal     Decimal @default(0)
+  sgstTotal     Decimal @default(0)
+  igstTotal     Decimal @default(0)
+  gstTotal      Decimal @default(0)
+  total         Decimal @default(0)
   settledAmount Decimal @default(0)
 
-  status    String  @default("Draft")
-  itemsJson String
+  status     String  @default("Draft")
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
 
@@ -979,16 +978,16 @@ model DebitNote {
   placeOfSupplyState String?
   taxType            String?
 
-  subtotal    Decimal @default(0)
-  cgstTotal   Decimal @default(0)
-  sgstTotal   Decimal @default(0)
-  igstTotal   Decimal @default(0)
-  gstTotal    Decimal @default(0)
-  total       Decimal @default(0)
+  subtotal      Decimal @default(0)
+  cgstTotal     Decimal @default(0)
+  sgstTotal     Decimal @default(0)
+  igstTotal     Decimal @default(0)
+  gstTotal      Decimal @default(0)
+  total         Decimal @default(0)
   settledAmount Decimal @default(0)
 
-  status    String  @default("Draft")
-  itemsJson String
+  status     String  @default("Draft")
+  itemsJson  String
   /// Form-collected fields with no column of their own (see Invoice.extrasJson).
   extrasJson String?
 
@@ -1111,7 +1110,7 @@ model LedgerAccount {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  lines JournalLine[]
+  lines             JournalLine[]
   posTenderAccounts PosTenderAccount[]
 
   @@unique([orgId, branchId, code])
@@ -1401,12 +1400,12 @@ model Party {
   phone         String?
   contactPerson String?
 
-  billingLine1   String?
-  billingLine2   String?
-  billingCity    String?
-  billingState   String?
-  billingPincode String?
-  billingCountry String? @default("India")
+  billingLine1    String?
+  billingLine2    String?
+  billingCity     String?
+  billingState    String?
+  billingPincode  String?
+  billingCountry  String? @default("India")
   billingDistrict String?
 
   shippingSameAsBilling Boolean @default(true)
@@ -1427,9 +1426,9 @@ model Party {
   openingBalanceType String  @default("DR") // DR | CR
 
   /// Which group under Sundry Debtors / Creditors this party rolls up to.
-  partyGroup String?
+  partyGroup  String?
   /// The currency this party is billed in, when it is not the company's own.
-  currency   String?
+  currency    String?
   priceListId String?
 
   /// Statutory identifiers beyond GSTIN and PAN. `statutoryOther` is a free
@@ -1842,14 +1841,14 @@ model ItemMaster {
 /// of batch tracking is knowing which lot the stock is in — an expiry-dated
 /// pharmaceutical or food item cannot be issued from an aggregate number.
 model Batch {
-  id          String  @id @default(cuid())
+  id          String @id @default(cuid())
   accountId   String
   orgId       String
   branchId    String
   warehouseId String
   itemId      String
 
-  batchNo String
+  batchNo    String
   /// Kept as YYYY-MM-DD strings for the same reason document dates are: a
   /// timezone has no meaning for a manufacturing or expiry date.
   mfgDate    String?
@@ -1923,15 +1922,15 @@ model SerialNumber {
 /// that writes as it parses leaves half a ledger behind when row 400 turns out
 /// to be malformed.
 model ImportBatch {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   accountId String
   orgId     String
   branchId  String
 
   /// INVOICE | BILL | CREDIT_NOTE | DEBIT_NOTE | JOURNAL
-  docType String
+  docType      String
   /// Where the data came from, so a re-run maps to the same rows.
-  sourceSystem String @default("CSV")
+  sourceSystem String  @default("CSV")
   fileName     String?
 
   status String @default("STAGED") // STAGED | VALIDATED | COMMITTED | FAILED
@@ -1964,7 +1963,7 @@ model ImportRow {
 
   rowNumber Int
   /// The parsed source row, as JSON.
-  raw String
+  raw       String
 
   status String  @default("PENDING") // PENDING | VALID | ERROR | COMMITTED | SKIPPED
   error  String?
@@ -1972,7 +1971,7 @@ model ImportRow {
   /// Natural key from the file, used to make a re-run idempotent.
   sourceKey String?
   /// The record this row became.
-  targetId String?
+  targetId  String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1989,11 +1988,11 @@ model Currency {
   accountId String
   orgId     String
 
-  code   String // ISO 4217: INR, USD, EUR
-  name   String
-  symbol String @default("")
+  code     String // ISO 4217: INR, USD, EUR
+  name     String
+  symbol   String @default("")
   /// Minor units. Most currencies use 2; JPY uses 0.
-  decimals Int @default(2)
+  decimals Int    @default(2)
 
   isActive Boolean @default(true)
 
@@ -2018,11 +2017,11 @@ model ExchangeRate {
 
   currencyId String
   /// Denormalised so a rate can be looked up without joining.
-  code String
+  code       String
   /// YYYY-MM-DD.
-  date String
+  date       String
   /// Units of base currency per one unit of `code`.
-  rate Decimal
+  rate       Decimal
 
   createdByUserId String
   createdAt       DateTime @default(now())
@@ -2210,23 +2209,23 @@ model PaymentAllocation {
 // * kept unique.
 //
 model OrgMaster {
-  id        String   @id @default(cuid())
+  id        String @id @default(cuid())
   accountId String
   orgId     String
 
   /// UOM | ITEM_CATEGORY | PRICE_LIST | DISCOUNT_RULE | COST_CENTER | ACCOUNT_GROUP | GST_RATE
-  kind      String
-  name      String
-  isActive  Boolean  @default(true)
+  kind     String
+  name     String
+  isActive Boolean @default(true)
 
   /// Everything specific to the kind: a price list's rates, a rule's scope.
   /// JSON in a string column, the way every other payload in this schema is
   /// stored — SQLite has no Json type through Prisma.
-  dataJson  String   @default("{}")
+  dataJson String @default("{}")
 
   createdByUserId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
   org     Org     @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -2283,13 +2282,13 @@ model DocumentShareLink {
 // and settles nothing. Forcing them into one table would have meant a Payment
 // with no payer.
 model BankBookEntry {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   accountId String
   orgId     String
   branchId  String?
 
   /// The cash or bank ledger the money moved through.
-  ledgerAccountId String
+  ledgerAccountId       String
   /// What it was for, once somebody says: the expense or income ledger it is
   /// posted against. Null until then - an uncategorised line is the normal
   /// state of an imported statement row.
@@ -2334,20 +2333,20 @@ model BankBookEntry {
 // One row per branch per day, enforced by the database rather than by the
 // screen: closing a day twice would double-count the till.
 model PosDayClose {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   accountId String
   orgId     String
   branchId  String?
 
   /// The trading day being closed, as YYYY-MM-DD.
-  date      String
+  date String
 
   /// What the day's POS invoices came to, split by how they were tendered.
-  invoices  Int     @default(0)
-  cash      Decimal @default(0)
-  upi       Decimal @default(0)
-  card      Decimal @default(0)
-  total     Decimal @default(0)
+  invoices Int     @default(0)
+  cash     Decimal @default(0)
+  upi      Decimal @default(0)
+  card     Decimal @default(0)
+  total    Decimal @default(0)
 
   /// What was actually in the drawer, and the difference. Stored rather than
   /// derived: the count is evidence of what somebody saw, not a calculation to
@@ -2360,8 +2359,8 @@ model PosDayClose {
   denomJson String @default("{}")
 
   closedByUserId String?
-  closedAt  DateTime @default(now())
-  createdAt DateTime @default(now())
+  closedAt       DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   org Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
@@ -2380,24 +2379,24 @@ model PosDayClose {
 // The snapshot of the invoice is stored whole, because a schedule has to keep
 // billing what was agreed even after the item's price changes.
 model RecurringSchedule {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   accountId String
   orgId     String
   branchId  String?
 
-  name       String
-  partyId    String?
-  partyName  String
+  name        String
+  partyId     String?
+  partyName   String
   warehouseId String?
 
   /// WEEKLY | MONTHLY | QUARTERLY | YEARLY
-  frequency String  @default("MONTHLY")
+  frequency String @default("MONTHLY")
   /// How many of those periods to skip. Every second month, every third week.
-  interval  Int     @default(1)
+  interval  Int    @default(1)
 
   /// The next period due. Advanced only when that period is actually raised.
-  nextRunDate String
-  endDate     String?
+  nextRunDate    String
+  endDate        String?
   /// "End after 12 invoices" — a different instruction from an end date.
   maxOccurrences Int?
   generatedCount Int     @default(0)
@@ -2414,7 +2413,7 @@ model RecurringSchedule {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  org  Org                  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org  Org                    @relation(fields: [orgId], references: [id], onDelete: Cascade)
   runs RecurringScheduleRun[]
 
   @@index([accountId, orgId, isActive])

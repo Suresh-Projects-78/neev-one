@@ -1144,8 +1144,8 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
         <div className="min-w-0 space-y-4">
         <div>
-          <label className="ui-label">Notes</label>
-          <textarea
+          <label className="ui-label" htmlFor="recorddisbursementform-notes">Notes</label>
+          <textarea id="recorddisbursementform-notes"
             value={formData.notes}
             onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
             className="ui-input w-full"

@@ -194,6 +194,105 @@ export const PERMISSION_CATALOG: ModuleDef[] = [
       },
     ],
   },
+  {
+    key: 'PAYROLL',
+    label: 'Payroll',
+    description: 'Salaries, statutory deductions and what they post to the books',
+    resources: [
+      {
+        key: 'Salary Structures',
+        label: 'Salary structures',
+        description: 'Reusable salary templates and the components on them',
+        actions: MASTER,
+      },
+      {
+        key: 'Salary Assignments',
+        label: 'Salary assignments',
+        description: 'What an individual is paid, and from when',
+        actions: MASTER,
+        /*
+         * Seeing that somebody has a salary is not the same as seeing the
+         * figure. A payroll clerk preparing a run needs the list; only a
+         * payroll manager needs the amounts. The same reasoning the invoice
+         * resource already uses for discount and settlement.
+         */
+        fields: [
+          { key: 'annualCtc', label: 'Salary amount', permLevel: 1 },
+          { key: 'monthlyCtc', label: 'Monthly salary', permLevel: 1 },
+        ],
+      },
+      {
+        key: 'Salary Revisions',
+        label: 'Salary revisions',
+        description: 'Proposed raises, and approving them',
+        actions: DOCUMENT_APPROVAL,
+      },
+      {
+        key: 'Payroll Runs',
+        label: 'Pay runs',
+        description: 'Preparing, calculating, reviewing and approving a payroll',
+        actions: DOCUMENT_APPROVAL,
+      },
+      {
+        key: 'Salary Slips',
+        label: 'Salary slips',
+        description: 'Payslips and how each figure on them was reached',
+        actions: [A.VIEW, A.EXPORT],
+      },
+      {
+        key: 'Payroll Adjustments',
+        label: 'Payroll adjustments',
+        description: 'One-off bonuses, arrears and recoveries',
+        actions: DOCUMENT_APPROVAL,
+      },
+      {
+        key: 'Payroll Loans',
+        label: 'Loans and advances',
+        description: 'Money lent to staff and recovered from pay',
+        actions: DOCUMENT_APPROVAL,
+      },
+      {
+        key: 'Payroll Payments',
+        label: 'Salary payments',
+        description: 'Bank advice, payment files and marking salaries paid',
+        actions: [A.VIEW, A.CREATE, A.EDIT, A.EXPORT],
+      },
+      {
+        key: 'Payroll Posting',
+        label: 'Payroll posting',
+        description: 'Writing the payroll journal into the ledger',
+        actions: [A.VIEW, A.CREATE],
+      },
+      {
+        key: 'Employee Payroll Profile',
+        label: 'Employee payroll details',
+        description: 'Bank account, PAN, UAN and the statutory numbers',
+        actions: MASTER,
+        /*
+         * A bank account number and a PAN are the two fields payroll holds
+         * that are worth stealing. They are masked for everybody and revealed
+         * only at this level, separately from the ordinary profile.
+         */
+        fields: [
+          { key: 'bankAccountNumber', label: 'Bank account number', permLevel: 1 },
+          { key: 'pan', label: 'PAN', permLevel: 1 },
+          { key: 'taxDetails', label: 'Tax declaration details', permLevel: 1 },
+        ],
+      },
+      {
+        key: 'Payroll Settings',
+        label: 'Payroll settings',
+        description: 'Components, pay groups, periods, ledger mapping and statutory rules',
+        actions: SETTING,
+      },
+      {
+        key: 'Payroll Reports',
+        label: 'Payroll reports',
+        description: 'Salary register, cost summaries and statutory returns',
+        actions: REPORT,
+      },
+    ],
+  },
 ];
 
 /** Flat list of every grantable permission, as (module, subModule, action). */

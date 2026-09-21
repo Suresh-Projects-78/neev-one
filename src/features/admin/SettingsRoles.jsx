@@ -471,8 +471,8 @@ export function SettingsRoles({ orgId }) {
         <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
           <div className="ui-t-sec">{editRole ? 'Edit Role' : 'New Role'}</div>
           <div>
-            <label className="ui-label">Role Name *</label>
-            <input className="ui-input w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
+            <label className="ui-label" htmlFor="settingsroles-role-name">Role Name *</label>
+            <input id="settingsroles-role-name" className="ui-input w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Permissions</label>
@@ -613,7 +613,7 @@ export function SettingsRoles({ orgId }) {
                 <th className="ui-th">Role Name</th>
                 <th className="ui-th">Description</th>
                 <th className="ui-th">Assigned Users</th>
-                <th className="ui-th">Status</th>
+                <th className="ui-th ui-col-h-center">Status</th>
                 <th className="ui-th ui-num">Actions</th>
               </tr>
             </thead>

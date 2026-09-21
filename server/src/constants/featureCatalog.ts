@@ -16,7 +16,7 @@ export type FeatureDef = {
   description: string;
   /** Value for an organisation that has never touched the setting. */
   defaultEnabled: boolean;
-  category: 'Operations' | 'Accounting' | 'Inventory' | 'Governance' | 'Communication' | 'Data';
+  category: 'Operations' | 'Accounting' | 'Inventory' | 'Governance' | 'Communication' | 'Data' | 'Payroll';
   /** Turning the parent off forces these off too. */
   dependsOn?: string;
   /** Not switchable — listed so the screen can show why. */
@@ -362,6 +362,104 @@ export const FEATURE_CATALOG: FeatureDef[] = [
       'Import journal entries and sales invoices from a CSV file, with a downloadable template. Files are staged and validated first, so you see every problem before anything is written.',
     defaultEnabled: false,
     category: 'Data',
+  },
+
+  // ---- Payroll ----------------------------------------------------------
+  /*
+   * Payroll is off until somebody turns it on, and its parts are switchable
+   * separately because a company can run salaries without running PF, and can
+   * run PF without lending anybody money. Everything below depends on
+   * `payroll`, so one switch takes the whole module away.
+   */
+  {
+    key: 'payroll',
+    label: 'Payroll',
+    description:
+      'Pay salaries from Neev: salary structures, a monthly pay run you can check before you approve it, payslips, and the journal it posts to your books.',
+    defaultEnabled: false,
+    category: 'Payroll',
+  },
+  {
+    key: 'payrollCompensation',
+    label: 'Salary structures and revisions',
+    description:
+      'Reusable salary templates, dated assignments, and raises that show their cost before anyone approves them. Without this, payroll pays a flat amount per person.',
+    defaultEnabled: true,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollAdjustments',
+    label: 'Payroll adjustments',
+    description: 'One-off amounts for a single period — a bonus, an arrear, a recovery, a correction.',
+    defaultEnabled: true,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollLoans',
+    label: 'Loans and salary advances',
+    description: 'Money lent to staff, recovered over a set number of instalments straight from pay.',
+    defaultEnabled: false,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollPf',
+    label: 'Provident Fund',
+    description: 'Employee and employer PF, EPS and EDLI, computed from versioned rates so old payslips never change.',
+    defaultEnabled: false,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollEsi',
+    label: 'Employee State Insurance',
+    description: 'ESI on eligible wages, with the threshold and rates kept as dated rules rather than one editable number.',
+    defaultEnabled: false,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollProfessionalTax',
+    label: 'Professional Tax',
+    description: 'State slabs for professional tax. Each state keeps its own, so a business in two states deducts each correctly.',
+    defaultEnabled: false,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollTds',
+    label: 'Salary TDS',
+    description: 'Projected annual tax spread over the remaining months, under the regime each employee has chosen.',
+    defaultEnabled: false,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollPayments',
+    label: 'Salary payments',
+    description: 'Bank advice, a payment file to upload, and marking who was actually paid — including the ones that failed.',
+    defaultEnabled: true,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollAccounting',
+    label: 'Post payroll to the ledger',
+    description:
+      'Show finance the exact journal before it is written, then post it. No export and re-import to get salaries into the books.',
+    defaultEnabled: true,
+    category: 'Payroll',
+    dependsOn: 'payroll',
+  },
+  {
+    key: 'payrollReports',
+    label: 'Payroll reports',
+    description: 'Salary register, component summaries, cost by branch and cost centre, and the statutory summaries.',
+    defaultEnabled: true,
+    category: 'Payroll',
+    dependsOn: 'payroll',
   },
 ];
 

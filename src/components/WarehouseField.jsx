@@ -26,6 +26,11 @@ const WarehouseField = ({
   isEdit = false,
   label = 'Warehouse *',
   showSourceHint = true,
+  /* Not the same as `locked` above, which pins the field to the header's
+     warehouse. This is the caller saying the document itself may no longer be
+     re-attributed — a posted invoice's stock attribution is part of what was
+     posted. */
+  disabled = false,
   /* Drawn inside the control when the field is asking. The locked form keeps
      the padlock: one glyph in a field, and there it means "not yours to
      change", which outranks saying "warehouse" twice. */
@@ -104,6 +109,7 @@ const WarehouseField = ({
         placeholder="Select Warehouse"
         showValueSubtext={false}
         icon={icon}
+        disabled={disabled}
       />
     </div>
   );

@@ -195,8 +195,8 @@ export default function BatchSerialManager() {
       ) : (
         <>
           <div className="ui-card p-4">
-            <label className="ui-label">Item</label>
-            <select value={itemId} onChange={(e) => setItemId(e.target.value)} className="ui-select max-w-lg">
+            <label className="ui-label" htmlFor="batchserialmanager-item">Item</label>
+            <select id="batchserialmanager-item" value={itemId} onChange={(e) => setItemId(e.target.value)} className="ui-select max-w-lg">
               <option value="">Select a tracked item</option>
               {items.map((i) => (
                 <option key={i.id} value={i.id}>
@@ -217,8 +217,8 @@ export default function BatchSerialManager() {
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div>
-                    <label className="ui-label">Lot number *</label>
-                    <input
+                    <label className="ui-label" htmlFor="batchserialmanager-lot-number">Lot number *</label>
+                    <input id="batchserialmanager-lot-number"
                       value={lot.batchNo}
                       onChange={(e) => setLot((p) => ({ ...p, batchNo: e.target.value }))}
                       className="ui-input"
@@ -226,8 +226,8 @@ export default function BatchSerialManager() {
                     />
                   </div>
                   <div>
-                    <label className="ui-label">Quantity *</label>
-                    <input
+                    <label className="ui-label" htmlFor="batchserialmanager-quantity">Quantity *</label>
+                    <input id="batchserialmanager-quantity"
                       type="number"
                       min="0.01"
                       step="0.01"
@@ -238,8 +238,8 @@ export default function BatchSerialManager() {
                     />
                   </div>
                   <div>
-                    <label className="ui-label">Manufactured</label>
-                    <input
+                    <label className="ui-label" htmlFor="batchserialmanager-manufactured">Manufactured</label>
+                    <input id="batchserialmanager-manufactured"
                       type="date"
                       value={lot.mfgDate}
                       onChange={(e) => setLot((p) => ({ ...p, mfgDate: e.target.value }))}
@@ -247,8 +247,8 @@ export default function BatchSerialManager() {
                     />
                   </div>
                   <div>
-                    <label className="ui-label">Expires</label>
-                    <input
+                    <label className="ui-label" htmlFor="batchserialmanager-expires">Expires</label>
+                    <input id="batchserialmanager-expires"
                       type="date"
                       value={lot.expiryDate}
                       onChange={(e) => setLot((p) => ({ ...p, expiryDate: e.target.value }))}

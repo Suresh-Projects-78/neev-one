@@ -126,15 +126,15 @@ export default function EInvoiceSettings() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div>
-          <label className="ui-label">Provider</label>
-          <select value={form.provider} onChange={set('provider')} className="ui-select w-full ui-surface">
+          <label className="ui-label" htmlFor="einvoicesettings-provider">Provider</label>
+          <select id="einvoicesettings-provider" value={form.provider} onChange={set('provider')} className="ui-select w-full ui-surface">
             <option value="GSP">GSP REST gateway (MasterGST / ClearTax style)</option>
             <option value="NIC">NIC direct API (einvoice1.gst.gov.in)</option>
           </select>
         </div>
         <div>
-          <label className="ui-label">Mode</label>
-          <select value={form.mode} onChange={set('mode')} className="ui-select w-full ui-surface">
+          <label className="ui-label" htmlFor="einvoicesettings-mode">Mode</label>
+          <select id="einvoicesettings-mode" value={form.mode} onChange={set('mode')} className="ui-select w-full ui-surface">
             <option value="SANDBOX">Sandbox (testing)</option>
             <option value="PRODUCTION">Production (live IRN)</option>
           </select>
@@ -149,16 +149,16 @@ export default function EInvoiceSettings() {
           />
         </div>
         <div>
-          <label className="ui-label">GSTIN used at the gateway</label>
-          <input value={form.gstin} onChange={set('gstin')} className="ui-input w-full" placeholder="29ABCDE1234F1Z5" />
+          <label className="ui-label" htmlFor="einvoicesettings-gstin-used-at-the-gateway">GSTIN used at the gateway</label>
+          <input id="einvoicesettings-gstin-used-at-the-gateway" value={form.gstin} onChange={set('gstin')} className="ui-input w-full" placeholder="29ABCDE1234F1Z5" />
         </div>
         <div>
-          <label className="ui-label">API username</label>
-          <input value={form.username} onChange={set('username')} className="ui-input w-full" autoComplete="off" />
+          <label className="ui-label" htmlFor="einvoicesettings-api-username">API username</label>
+          <input id="einvoicesettings-api-username" value={form.username} onChange={set('username')} className="ui-input w-full" autoComplete="off" />
         </div>
         <div>
-          <label className="ui-label">API password</label>
-          <input
+          <label className="ui-label" htmlFor="einvoicesettings-api-password">API password</label>
+          <input id="einvoicesettings-api-password"
             type="password"
             value={form.password}
             onChange={set('password')}
@@ -168,12 +168,12 @@ export default function EInvoiceSettings() {
           />
         </div>
         <div>
-          <label className="ui-label">Client ID</label>
-          <input value={form.clientId} onChange={set('clientId')} className="ui-input w-full" autoComplete="off" />
+          <label className="ui-label" htmlFor="einvoicesettings-client-id">Client ID</label>
+          <input id="einvoicesettings-client-id" value={form.clientId} onChange={set('clientId')} className="ui-input w-full" autoComplete="off" />
         </div>
         <div>
-          <label className="ui-label">Client secret</label>
-          <input
+          <label className="ui-label" htmlFor="einvoicesettings-client-secret">Client secret</label>
+          <input id="einvoicesettings-client-secret"
             type="password"
             value={form.clientSecret}
             onChange={set('clientSecret')}
@@ -183,8 +183,8 @@ export default function EInvoiceSettings() {
           />
         </div>
         <div>
-          <label className="ui-label">Extra headers (JSON, optional)</label>
-          <input
+          <label className="ui-label" htmlFor="einvoicesettings-extra-headers-json-optional">Extra headers (JSON, optional)</label>
+          <input id="einvoicesettings-extra-headers-json-optional"
             value={form.headersJson}
             onChange={set('headersJson')}
             className="ui-input w-full"
@@ -193,8 +193,8 @@ export default function EInvoiceSettings() {
         </div>
         {form.provider === 'NIC' ? (
           <div className="sm:col-span-2">
-            <label className="ui-label">NIC e-Invoice public key (PEM)</label>
-            <textarea
+            <label className="ui-label" htmlFor="einvoicesettings-nic-e-invoice-public-key-pem">NIC e-Invoice public key (PEM)</label>
+            <textarea id="einvoicesettings-nic-e-invoice-public-key-pem"
               value={form.publicKeyPem}
               onChange={set('publicKeyPem')}
               className="ui-input w-full font-mono text-xs"

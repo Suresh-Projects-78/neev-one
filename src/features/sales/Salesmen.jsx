@@ -211,8 +211,8 @@ export default function Salesmen({ db, setDb, currentCompany }) {
         <div className="ui-card p-4">
         <div className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="ui-label">Name</label>
-            <input
+            <label className="ui-label" htmlFor="salesmen-name">Name</label>
+            <input id="salesmen-name"
               ref={nameRef}
               type="text"
               value={form.name}
@@ -221,12 +221,12 @@ export default function Salesmen({ db, setDb, currentCompany }) {
             />
           </div>
           <div>
-            <label className="ui-label">Phone</label>
-            <input type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="ui-input w-36" />
+            <label className="ui-label" htmlFor="salesmen-phone">Phone</label>
+            <input id="salesmen-phone" type="tel" value={form.phone} onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))} className="ui-input w-36" />
           </div>
           <div>
-            <label className="ui-label">Commission %</label>
-            <input
+            <label className="ui-label" htmlFor="salesmen-commission">Commission %</label>
+            <input id="salesmen-commission"
               type="number"
               min="0"
               max="100"

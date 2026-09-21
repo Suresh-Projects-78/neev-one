@@ -84,15 +84,16 @@ describe('a status hue is a background, never type', () => {
     const unselected = block('.ui-segment {\n    background-color');
     expect(unselected).toMatch(/color:\s*rgb\(var\(--fg-muted\)\)/);
     expect(unselected).not.toMatch(/--seg-ink/);
-    // The hue is still there — behind the text, not in it.
-    expect(unselected).toMatch(/--seg-soft/);
+    /* No tint either: seven tinted chips above a table of figures were seven
+       emphases. The hue lives in the count, where it says something. */
+    expect(unselected).toMatch(/background-color:\s*transparent/);
   });
 
-  it('the selected tab is neutral too, and carries the hue in its ring', () => {
-    const selected = block(".ui-segment[aria-selected='true']");
-    expect(selected).toMatch(/color:\s*rgb\(var\(--fg\)\)/);
+  it('the selected tab is the one dark thing in the strip', () => {
+    const selected = block(".ui-segment[aria-selected='true'] {");
+    expect(selected).toMatch(/background-color:\s*rgb\(var\(--brand\)\)/);
+    expect(selected).toMatch(/color:\s*rgb\(var\(--on-brand\)\)/);
     expect(selected).not.toMatch(/--seg-ink/);
-    expect(selected).toMatch(/border-color:\s*rgb\(var\(--seg-key/);
   });
 
   /* The pill is the one place the status colour is allowed in the type: one

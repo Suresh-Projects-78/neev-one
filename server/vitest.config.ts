@@ -17,8 +17,17 @@ import { defineConfig } from 'vitest/config';
 const TEST_DATABASE_URL =
   process.env.TEST_DATABASE_URL || `file:./test-${process.pid}.db?connection_limit=1`;
 
-// globalSetup runs in this same process and reads it from here.
+/*
+ * Payroll keeps its own database in production, so it keeps its own in the
+ * suite. Two files per run, keyed on the same process id for the same reason:
+ * a second run must not reset either of them out from under the first.
+ */
+const TEST_PAYROLL_DATABASE_URL =
+  process.env.TEST_PAYROLL_DATABASE_URL || `file:./test-payroll-${process.pid}.db?connection_limit=1`;
+
+// globalSetup runs in this same process and reads them from here.
 process.env.DATABASE_URL = TEST_DATABASE_URL;
+process.env.PAYROLL_DATABASE_URL = TEST_PAYROLL_DATABASE_URL;
 
 export default defineConfig({
   test: {
@@ -40,6 +49,7 @@ export default defineConfig({
       // Set above, and shared with globalSetup through the environment so both
       // halves of the run agree on which database they are using.
       DATABASE_URL: TEST_DATABASE_URL,
+      PAYROLL_DATABASE_URL: TEST_PAYROLL_DATABASE_URL,
       // Deterministic and fast: rate limiting is exercised by one test that
       // enables it explicitly, and 4 bcrypt rounds keep the suite quick.
       DISABLE_RATE_LIMIT: 'true',

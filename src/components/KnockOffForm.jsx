@@ -108,7 +108,7 @@ const KnockOffForm = ({
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="ui-th">Document</th>
-                <th className="ui-th">Date</th>
+                <th className="ui-th ui-col-h-center">Date</th>
                 <th className="ui-th ui-num">Outstanding</th>
                 <th className="ui-th ui-num w-40">Knock off</th>
               </tr>

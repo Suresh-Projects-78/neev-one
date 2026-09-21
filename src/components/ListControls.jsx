@@ -123,12 +123,12 @@ export const ListControls = ({
       {period === 'custom' ? (
         <>
           <div className="md:col-span-2">
-            <label className="ui-label">From</label>
-            <input type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} className="ui-input" />
+            <label className="ui-label" htmlFor="listcontrols-from">From</label>
+            <input id="listcontrols-from" type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} className="ui-input" />
           </div>
           <div className="md:col-span-1">
-            <label className="ui-label">To</label>
-            <input type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} className="ui-input" />
+            <label className="ui-label" htmlFor="listcontrols-to">To</label>
+            <input id="listcontrols-to" type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} className="ui-input" />
           </div>
         </>
       ) : null}

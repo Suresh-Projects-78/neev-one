@@ -89,6 +89,26 @@ async function main() {
   }
 
   run(['migrate', 'deploy']);
+
+  /*
+   * Payroll is a second database, so it is a second deploy.
+   *
+   * It has no baseline problem — it never existed before migrations did, so
+   * `migrate deploy` is the whole story. It runs after accounting because a
+   * failure here must not leave the accounting schema half applied, and
+   * because payroll is the newer of the two: an environment that has not been
+   * given `PAYROLL_DATABASE_URL` yet should fail loudly here rather than start
+   * an API whose payroll routes throw on first use.
+   */
+  if (!String(process.env.PAYROLL_DATABASE_URL || '').trim()) {
+    console.error(
+      'PAYROLL_DATABASE_URL is not set. Payroll keeps its own database — add it to the environment file ' +
+        '(see server/.env.example) before deploying.'
+    );
+    process.exit(1);
+  }
+  console.log('Applying payroll migrations.');
+  run(['migrate', 'deploy', '--schema', 'prisma/payroll/schema.prisma']);
 }
 
 main().catch(async (e) => {

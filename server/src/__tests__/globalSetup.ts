@@ -14,6 +14,24 @@ export default function setup() {
   const serverRoot = resolve(__dirname, '../..');
 
   /*
+   * Payroll is a separate database, so it is a separate push. Relative SQLite
+   * paths resolve from the schema's own directory, which for payroll is
+   * `prisma/payroll` — the file lands beside its schema, not beside the
+   * accounting one.
+   */
+  const pushPayroll = (url: string) =>
+    execFileSync(
+      'npx',
+      ['prisma', 'db', 'push', '--schema', 'prisma/payroll/schema.prisma', '--skip-generate', '--accept-data-loss', '--force-reset'],
+      { cwd: serverRoot, env: { ...process.env, PAYROLL_DATABASE_URL: url }, stdio: 'inherit' }
+    );
+
+  const payrollUrl = String(process.env.PAYROLL_DATABASE_URL || '').trim();
+  const payrollFile = payrollUrl.startsWith('file:')
+    ? resolve(serverRoot, 'prisma/payroll', payrollUrl.slice('file:'.length).split('?')[0].replace(/^\.\//, ''))
+    : '';
+
+  /*
    * Pointed at Postgres, there is no file to delete and the schema is pushed to
    * whatever TEST_DATABASE_URL names. The suite itself is identical either way.
    */
@@ -24,6 +42,7 @@ export default function setup() {
       env: { ...process.env, DATABASE_URL: external },
       stdio: 'inherit',
     });
+    if (payrollUrl) pushPayroll(payrollUrl);
     return;
   }
 
@@ -51,10 +70,16 @@ export default function setup() {
     stdio: 'inherit',
   });
 
+  if (payrollUrl) {
+    for (const suffix of ['', '-journal']) rmSync(`${payrollFile}${suffix}`, { force: true });
+    pushPayroll(payrollUrl);
+  }
+
   // Per-run databases would otherwise pile up in prisma/ one file per run.
   return () => {
     for (const suffix of ['', '-journal']) {
       rmSync(`${dbFile}${suffix}`, { force: true });
+      if (payrollFile) rmSync(`${payrollFile}${suffix}`, { force: true });
     }
   };
 }

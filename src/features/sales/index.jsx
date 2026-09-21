@@ -4,7 +4,7 @@ import KnockOffForm from '../../components/KnockOffForm';
 import { isOnAccount, noteBalance } from '../../utils/onAccount';
 import WarehouseField from '../../components/WarehouseField';
 import { notify, confirmDialog } from '../../components/ui/notify';
-import { Ban, Building2, ChevronDown, ClipboardList, Copy, CreditCard, Download, Eye, FileText, MoreVertical, Package, Plus, Printer, Receipt, RefreshCw, Search, Settings2, SlidersHorizontal, Table2, Tag, Trash2, Upload, Users, X } from 'lucide-react';
+import { Ban, Building2, ChevronDown, ClipboardList, Copy, CreditCard, Download, Eye, FileText, Lock, MoreVertical, Package, Plus, Printer, Receipt, RefreshCw, Search, Settings2, SlidersHorizontal, Table2, Tag, Trash2, Upload, Users, X } from 'lucide-react';
 
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { addDays, dueDateFor, termsLabel } from '../../utils/paymentTerms';
@@ -74,6 +74,7 @@ import { exportListXlsx } from '../../utils/listXlsx';
 import { DocFormActions, AmountInWordsBand, DocFormFootnote } from '../../components/DocumentForm';
 import { blockIfClosed } from '../../utils/bookClose';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
+import { usePostingLock } from './usePostingLock';
 
 
 /** Columns the invoices grid can show or hide. Identity and actions stay. */
@@ -1141,10 +1142,10 @@ const statusReason = (doc, status, company, nowMs) => {
               ) : null}
               <ColumnHeader label="Invoice #" col="number" state={colFilters} />
               {col('customer') ? <ColumnHeader label="Customer" col="customer" state={colFilters} /> : null}
-              {col('date') ? <ColumnHeader label="Date" col="date" state={colFilters} /> : null}
-              {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} /> : null}
+              {col('date') ? <ColumnHeader label="Date" col="date" state={colFilters} align="center" /> : null}
+              {col('due') ? <ColumnHeader label="Due" col="due" state={colFilters} align="center" /> : null}
               <ColumnHeader label="Amount" col="total" state={colFilters} className="ui-num" align="right" />
-              {col('status') ? <ColumnHeader label="Status" col="status" state={colFilters} /> : null}
+              {col('status') ? <ColumnHeader label="Status" col="status" state={colFilters} align="center" /> : null}
               {/* Balance, not paid: what is still owed is the figure somebody
                   chases. Paid is derivable from it and total, and only one of
                   the three earns a column. */}
@@ -2125,12 +2126,12 @@ export const EstimatesList = ({
             <tr>
               <ColumnHeader label="Quotation #" col="number" state={estFilters} />
               <ColumnHeader label="Customer" col="customer" state={estFilters} />
-              <ColumnHeader label="Date" col="date" state={estFilters} />
+              <ColumnHeader label="Date" col="date" state={estFilters} align="center" />
               {/* A quotation's "due" is the day the price stops standing, which
                   is what the customer is being asked to beat. */}
-              <ColumnHeader label="Valid till" col="due" state={estFilters} />
+              <ColumnHeader label="Valid till" col="due" state={estFilters} align="center" />
               <ColumnHeader label="Amount" col="total" state={estFilters} className="ui-num" align="right" />
-              <ColumnHeader label="Status" col="status" state={estFilters} />
+              <ColumnHeader label="Status" col="status" state={estFilters} align="center" />
               <ColumnHeader label="Warehouse" col="warehouse" state={estFilters} />
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
@@ -2620,9 +2621,9 @@ export const CreditNotesList = ({
               <ColumnHeader label="Credit #" col="number" state={cnFilters} />
               <ColumnHeader label="Original invoice" col="original" state={cnFilters} />
               <ColumnHeader label="Customer" col="customer" state={cnFilters} />
-              <ColumnHeader label="Date" col="date" state={cnFilters} />
+              <ColumnHeader label="Date" col="date" state={cnFilters} align="center" />
               <ColumnHeader label="Amount" col="total" state={cnFilters} className="ui-num" align="right" />
-              <ColumnHeader label="Status" col="status" state={cnFilters} />
+              <ColumnHeader label="Status" col="status" state={cnFilters} align="center" />
               <ColumnHeader label="Warehouse" col="warehouse" state={cnFilters} />
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
@@ -3504,6 +3505,25 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    */
   const isCancelled = String(existingInvoiceRecord?.status || '') === 'Cancelled';
 
+  /*
+   * An invoice that has reached the books is no longer financially editable.
+   *
+   * The server has refused this since `d024b6d` — an invoice posted at 118,000
+   * and edited to 40,000 left the document and the ledger disagreeing, and the
+   * edit route was the only place in the product that could do it. The refusal
+   * was right and invisible: every control stayed live, so the way to learn
+   * about the rule was to retype an invoice and lose the lot to a toast.
+   *
+   * Asked of the ledger rather than guessed from the status, because a Draft
+   * invoice posts today: Draft does not mean "not in the books", the entries
+   * do. The answer fails open — no permission or no network leaves the form as
+   * it was, with the server still the authority.
+   */
+  const { locked: postedLocked } = usePostingLock('INVOICE', existingInvoiceRecord?.backendInvoiceId || '');
+  /* A cancelled invoice is closed to editing for its own reason, and the two
+     want the same controls shut. */
+  const financialLocked = postedLocked || isCancelled;
+
   const previewInvoice = useMemo(
     () => ({
       ...formData,
@@ -3531,6 +3551,14 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
     if (isCancelled) {
       notify.error('This invoice is cancelled. Its number is spent — raise a new invoice instead.');
+      return;
+    }
+
+    if (postedLocked) {
+      notify.error(
+        'This invoice is in the books, so its amounts can no longer be changed. ' +
+          'Cancel it and raise a new one, or issue a credit note against it.'
+      );
       return;
     }
 
@@ -4069,6 +4097,21 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ].filter(Boolean)}
       />
 
+      {postedLocked && !isCancelled ? (
+        <div
+          className="flex items-start gap-2 rounded-lg p-3 text-sm"
+          style={{ background: 'rgb(var(--warn-soft))', color: 'rgb(var(--warn-ink))' }}
+          role="status"
+        >
+          <Lock size={16} aria-hidden="true" className="mt-0.5 flex-shrink-0" />
+          <span>
+            This invoice is in the books. Its lines, amounts, customer, date and tax details can no longer be
+            changed — cancel it and raise a new one, or issue a credit note against it. Notes, terms, the
+            reference and the due date are still yours to edit.
+          </span>
+        </div>
+      ) : null}
+
       {isCancelled ? (
         <div
           className="flex items-start gap-2 rounded-lg p-3 text-sm"
@@ -4164,6 +4207,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 ]}
                 placeholder="All branches"
                 showValueSubtext={false}
+                disabled={financialLocked}
               />
             </div>
 
@@ -4184,6 +4228,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               icon={Package}
               showSourceHint={false}
               className="ui-select"
+              disabled={financialLocked}
             />
             <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
           </div>
@@ -4198,6 +4243,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               setDb={setDb}
               icon={Users}
               currentCompany={currentCompany}
+              /* The customer becomes the party on the posted receivable line —
+                 the subledger's owner. It cannot move once that is in the books. */
+              disabled={financialLocked}
+              disabledHint="This invoice is in the books, so its customer can no longer be changed."
               value={formData.customerId}
               onChange={(customerId) =>
                 setFormData((prev) => {
@@ -4221,8 +4270,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
             ) : null}
             {prefOn('shipTo') && selectedCustomer && Array.isArray(selectedCustomer.shipToAddresses) && selectedCustomer.shipToAddresses.length > 0 ? (
               <div className="mt-2">
-                <label className="ui-label">Deliver to</label>
-                <select
+                <label className="ui-label" htmlFor="index-deliver-to">Deliver to</label>
+                <select id="index-deliver-to"
                   value={formData.shipToCode || ''}
                   onChange={(e) => {
                     const code = e.target.value;
@@ -4266,7 +4315,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                 type="text"
                 value={formData.number ?? ''}
                 onChange={(e) => setFormData((p) => ({ ...p, number: e.target.value }))}
-                disabled={lockInvoiceNumberOnCreate}
+                /* Two reasons to be closed: the series owns the number while a
+                   new invoice is being raised, and a posted invoice's number is
+                   its statutory serial. */
+                disabled={lockInvoiceNumberOnCreate || financialLocked}
                 required
                 aria-invalid={fieldErrors.error('number') ? true : undefined}
                 className="ui-input ui-mono w-full pe-9"
@@ -4312,6 +4364,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               </label>
               <input
                 id="invoice-date"
+                disabled={financialLocked}
                 type="date"
                 value={formData.date}
                 required
@@ -4446,8 +4499,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
         {prefOn('costCenter') && (db.costCenters || []).some((c) => c.companyId === currentCompany.id) ? (
           <div>
-            <label className="ui-label">Cost Center</label>
-            <select
+            <label className="ui-label" htmlFor="index-cost-center">Cost Center</label>
+            <select id="index-cost-center"
               value={formData.costCenterId || ''}
               onChange={(e) => setFormData({ ...formData, costCenterId: e.target.value ? Number(e.target.value) : '' })}
               className="ui-select"
@@ -4463,8 +4516,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
         ) : null}
         {prefOn('salesman') && (db.salesmen || []).some((s) => s.companyId === currentCompany.id) ? (
           <div>
-            <label className="ui-label">Salesman</label>
-            <select
+            <label className="ui-label" htmlFor="index-salesman">Salesman</label>
+            <select id="index-salesman"
               value={formData.salesmanId || ''}
               onChange={(e) => setFormData({ ...formData, salesmanId: e.target.value ? Number(e.target.value) : '' })}
               className="ui-select"
@@ -4603,8 +4656,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('packages') ? (
             <div>
-              <label className="ui-label">Packages &amp; weight</label>
-              <input
+              <label className="ui-label" htmlFor="index-packages-amp-weight">Packages &amp; weight</label>
+              <input id="index-packages-amp-weight"
                 type="text"
                 value={formData.packageDetails}
                 onChange={(e) => setFormData((p) => ({ ...p, packageDetails: e.target.value }))}
@@ -4639,8 +4692,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('project') ? (
             <div>
-              <label className="ui-label">Project / site</label>
-              <input
+              <label className="ui-label" htmlFor="index-project-site">Project / site</label>
+              <input id="index-project-site"
                 type="text"
                 value={formData.projectName}
                 onChange={(e) => setFormData((p) => ({ ...p, projectName: e.target.value }))}
@@ -4675,8 +4728,8 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
 
           {prefOn('timesheetRef') ? (
             <div>
-              <label className="ui-label">Timesheet reference</label>
-              <input
+              <label className="ui-label" htmlFor="index-timesheet-reference">Timesheet reference</label>
+              <input id="index-timesheet-reference"
                 type="text"
                 value={formData.timesheetRef}
                 onChange={(e) => setFormData((p) => ({ ...p, timesheetRef: e.target.value }))}
@@ -4693,6 +4746,12 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <h3>Line Items</h3>
         </div>
 
+        {/* The lines are the invoice's economics. Once it is in the books the
+            server refuses to change them, and the way that used to be found out
+            was to retype the whole table, press Save, and be told by a toast
+            that none of it could be kept. `contents` so the fieldset lays
+            nothing out of its own. */}
+        <fieldset className="contents" disabled={financialLocked}>
         <div className="border rounded-lg overflow-hidden">
           <table className="ui-table ui-grid-dense w-full ui-table-wide">
             <thead className="ui-sunken">
@@ -4767,6 +4826,10 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       value={item.description}
                       onChange={(e) => updateItem(idx, 'description', e.target.value)}
                       className="ui-input w-full min-w-0 px-2 py-1"
+                      /* A cell in a row is named by its column, which a screen
+                         reader does not read as it moves between fields. The
+                         line number says which of eight identical boxes it is. */
+                      aria-label={`Description for line ${idx + 1}`}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -4776,6 +4839,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       onChange={(e) => updateItem(idx, 'quantity', e.target.value)}
                       className="ui-input w-full min-w-0 px-2 py-1"
                       min="1"
+                      aria-label={`Quantity for line ${idx + 1}`}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -4792,6 +4856,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       className="ui-input w-full min-w-0 px-2 py-1"
                       min="0"
                       step="0.01"
+                      aria-label={`Rate for line ${idx + 1}`}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -4804,6 +4869,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                       max="100"
                       step="0.01"
                       placeholder="0"
+                      aria-label={`Discount percent for line ${idx + 1}`}
                     />
                   </td>
                   <td className="px-3 py-2">
@@ -4829,8 +4895,13 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
                   </td>
                   <td className="ui-col-amount px-3 py-2">{formatMoney((computed.lines[idx]?.lineTotal ?? item.lineTotal) || 0, currentCompany)}</td>
                   <td className="px-3 py-2">
-                    <button type="button" onClick={() => removeItem(idx)} className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]">
-                      <Trash2 size={16} />
+                    <button
+                      type="button"
+                      onClick={() => removeItem(idx)}
+                      className="text-[rgb(var(--neg))] hover:text-[rgb(var(--neg))]"
+                      aria-label={`Remove line ${idx + 1}`}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
                     </button>
                   </td>
                 </tr>
@@ -4848,9 +4919,14 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
           <span className="ui-subtle text-xs">or press Tab in the last field of the last row</span>
           <FieldError error={fieldErrors.error('items')} id={fieldErrors.errorId('items')} />
         </div>
+        </fieldset>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <div className="space-y-3">
+            {/* Discount and charges move the invoice's economics too, so they
+                close with the lines. Payment terms and notes below do not, and
+                stay editable — the server allows them on a posted invoice. */}
+            <fieldset className="contents" disabled={financialLocked}>
             {prefOn('invoiceDiscount') || Number(formData.invoiceDiscountValue) > 0 ? (
             <div>
               <label className="ui-label">Invoice discount</label>
@@ -4942,6 +5018,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
               </button>
             </div>
             ) : null}
+            </fieldset>
 
             {prefOn('paymentTerms') ? (
               <div>

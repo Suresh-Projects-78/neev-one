@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Check, Hash, Plus, Save } from 'lucide-react';
 
 import { apiFetch } from '../../api/http';
-import { EmptyState, PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
+import { EmptyState, Spinner, SkeletonCard } from '../../components/ui/Primitives';
+import SettingsScreenHeader from './SettingsScreenHeader';
 
 const DOC_TYPES = [
   { key: 'INVOICE', label: 'Invoices' },
@@ -106,7 +107,7 @@ export const NumberingSettings = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title="Document numbering"
         actions={

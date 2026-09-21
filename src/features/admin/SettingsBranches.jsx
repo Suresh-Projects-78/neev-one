@@ -307,29 +307,29 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
             <form onSubmit={saveEdit} className="space-y-4">
               <div className="grid grid-cols-12 gap-4">
                 <div className="col-span-12 sm:col-span-4">
-                  <label className="ui-label">Branch Code *</label>
-                  <input className="ui-input w-full max-w-40" value={editForm.branchCode} onChange={(e) => setEditForm((p) => ({ ...p, branchCode: e.target.value }))} required />
+                  <label className="ui-label" htmlFor="settingsbranches-branch-code">Branch Code *</label>
+                  <input id="settingsbranches-branch-code" className="ui-input w-full max-w-40" value={editForm.branchCode} onChange={(e) => setEditForm((p) => ({ ...p, branchCode: e.target.value }))} required />
                 </div>
                 <div className="col-span-12 sm:col-span-8">
-                  <label className="ui-label">Branch Name *</label>
-                  <input className="ui-input w-full" value={editForm.branchName} onChange={(e) => setEditForm((p) => ({ ...p, branchName: e.target.value }))} required />
+                  <label className="ui-label" htmlFor="settingsbranches-branch-name">Branch Name *</label>
+                  <input id="settingsbranches-branch-name" className="ui-input w-full" value={editForm.branchName} onChange={(e) => setEditForm((p) => ({ ...p, branchName: e.target.value }))} required />
                 </div>
               </div>
 
               <div>
-                <label className="ui-label">Address *</label>
-                <input className="ui-input w-full" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} required />
+                <label className="ui-label" htmlFor="settingsbranches-address">Address *</label>
+                <input id="settingsbranches-address" className="ui-input w-full" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} required />
               </div>
 
               <div>
-                <label className="ui-label">Address Line 2</label>
-                <input className="ui-input w-full" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
+                <label className="ui-label" htmlFor="settingsbranches-address-line-2">Address Line 2</label>
+                <input id="settingsbranches-address-line-2" className="ui-input w-full" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="ui-label">City</label>
-                  <input className="ui-input w-full" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingsbranches-city">City</label>
+                  <input id="settingsbranches-city" className="ui-input w-full" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
                 </div>
                 <div>
                   <PopupSelect
@@ -346,23 +346,23 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
                   />
                 </div>
                 <div>
-                  <label className="ui-label">Country</label>
-                  <input className="ui-input w-full" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingsbranches-country">Country</label>
+                  <input id="settingsbranches-country" className="ui-input w-full" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="ui-label">GST Registration</label>
-                  <select className="ui-select w-full ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
+                  <label className="ui-label" htmlFor="settingsbranches-gst-registration">GST Registration</label>
+                  <select id="settingsbranches-gst-registration" className="ui-select w-full ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
                     <option value="REGULAR">Regular</option>
                     <option value="COMPOSITION">Composition</option>
                     <option value="UNREGISTERED">Unregistered</option>
                   </select>
                 </div>
                 <div>
-                  <label className="ui-label">GSTIN</label>
-                  <input
+                  <label className="ui-label" htmlFor="settingsbranches-gstin">GSTIN</label>
+                  <input id="settingsbranches-gstin"
                     className="ui-input w-full"
                     value={editForm.gstin}
                     onChange={(e) => {
@@ -378,16 +378,16 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="ui-label">Contact Person</label>
-                  <input className="ui-input w-full" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingsbranches-contact-person">Contact Person</label>
+                  <input id="settingsbranches-contact-person" className="ui-input w-full" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="ui-label">Phone</label>
-                  <input className="ui-input w-full" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingsbranches-phone">Phone</label>
+                  <input id="settingsbranches-phone" className="ui-input w-full" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="ui-label">Email</label>
-                  <input type="email" className="ui-input w-full" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
+                  <label className="ui-label" htmlFor="settingsbranches-email">Email</label>
+                  <input id="settingsbranches-email" type="email" className="ui-input w-full" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
                 </div>
               </div>
 
@@ -455,22 +455,22 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
           <div className="ui-t-sec">New Branch</div>
           <div className="grid grid-cols-12 gap-4">
             <div className="col-span-12 sm:col-span-4">
-              <label className="ui-label">Branch Code *</label>
-              <input className="ui-input w-full max-w-40" value={form.branchCode} onChange={onChange('branchCode')} required />
+              <label className="ui-label" htmlFor="settingsbranches-branch-code-2">Branch Code *</label>
+              <input id="settingsbranches-branch-code-2" className="ui-input w-full max-w-40" value={form.branchCode} onChange={onChange('branchCode')} required />
             </div>
             <div className="col-span-12 sm:col-span-8">
-              <label className="ui-label">Branch Name *</label>
-              <input className="ui-input w-full" value={form.branchName} onChange={onChange('branchName')} required />
+              <label className="ui-label" htmlFor="settingsbranches-branch-name-2">Branch Name *</label>
+              <input id="settingsbranches-branch-name-2" className="ui-input w-full" value={form.branchName} onChange={onChange('branchName')} required />
             </div>
           </div>
           <div>
-            <label className="ui-label">Address *</label>
-            <input className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} required />
+            <label className="ui-label" htmlFor="settingsbranches-address-2">Address *</label>
+            <input id="settingsbranches-address-2" className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} required />
           </div>
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="ui-label">City</label>
-              <input className="ui-input w-full" value={form.city} onChange={onChange('city')} />
+              <label className="ui-label" htmlFor="settingsbranches-city-2">City</label>
+              <input id="settingsbranches-city-2" className="ui-input w-full" value={form.city} onChange={onChange('city')} />
             </div>
             <div>
               <PopupSelect
@@ -487,22 +487,22 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
               />
             </div>
             <div>
-              <label className="ui-label">Country</label>
-              <input className="ui-input w-full" value={form.country} onChange={onChange('country')} />
+              <label className="ui-label" htmlFor="settingsbranches-country-2">Country</label>
+              <input id="settingsbranches-country-2" className="ui-input w-full" value={form.country} onChange={onChange('country')} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="ui-label">GST Registration</label>
-              <select className="ui-select w-full ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+              <label className="ui-label" htmlFor="settingsbranches-gst-registration-2">GST Registration</label>
+              <select id="settingsbranches-gst-registration-2" className="ui-select w-full ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
                 <option value="REGULAR">Regular</option>
                 <option value="COMPOSITION">Composition</option>
                 <option value="UNREGISTERED">Unregistered</option>
               </select>
             </div>
             <div>
-              <label className="ui-label">GSTIN</label>
-              <input className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
+              <label className="ui-label" htmlFor="settingsbranches-gstin-2">GSTIN</label>
+              <input id="settingsbranches-gstin-2" className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -528,7 +528,7 @@ export function SettingsBranches({ orgId, onBranchesChanged }) {
                 <th className="ui-th w-32">Branch Code</th>
                 <th className="ui-th">Location</th>
                 <th className="ui-th">Address</th>
-                <th className="ui-th">Status</th>
+                <th className="ui-th ui-col-h-center">Status</th>
                 <th className="ui-th">GSTIN</th>
                 <th className="ui-th ui-num">Actions</th>
               </tr>

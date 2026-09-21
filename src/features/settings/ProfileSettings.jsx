@@ -16,7 +16,8 @@ import {
 
 import { getProfile, updateProfile } from '../../api/profile';
 import { resendVerification } from '../../api/email';
-import { PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
+import { Spinner, SkeletonCard } from '../../components/ui/Primitives';
+import SettingsScreenHeader from './SettingsScreenHeader';
 
 /**
  * The largest data URL the server will store, matched to the cap in the route.
@@ -256,7 +257,7 @@ export const ProfileSettings = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="customer"
         title="My profile"
               actions={

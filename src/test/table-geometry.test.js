@@ -44,6 +44,10 @@ describe('the sortable header inherits its column', () => {
     expect(HEADER).not.toContain('justify-between');
   });
 
+  it('centres the label itself, mirroring the icon group on the far side', () => {
+    expect(HEADER).toMatch(/align === 'center' \? \(\s*<span className="flex items-center gap-0\.5 shrink-0 invisible" aria-hidden="true">/);
+  });
+
   it('cancels its own inset so the label sits on the cell content edge', () => {
     expect(HEADER).toMatch(/px-1 -mx-1 py-1\.5 -my-1\.5/);
     /* 100% + the two 4px margins, or the box stops 4px short on the right. */
@@ -90,6 +94,36 @@ describe('semantic alignment', () => {
   });
 });
 
+describe('the header states the alignment, the column inherits it', () => {
+  it('carries a rule for every index a list could have, in all three directions', () => {
+    for (let n = 1; n <= 12; n += 1) {
+      for (const dir of ['left', 'center', 'right']) {
+        expect(CSS).toContain(`.ui-table:has(thead th:nth-child(${n}).ui-col-h-${dir}) tbody td:nth-child(${n}) { text-align: ${dir}; }`);
+      }
+    }
+  });
+
+  it('centres a date as one unit, icon and value together', () => {
+    expect(CSS).toMatch(/\.ui-table tbody td\.ui-col-date \.ui-cell-date \{ display: inline-flex; \}/);
+  });
+});
+
+describe('density', () => {
+  it('rows are 44px, 48px with a control, headers under 40', () => {
+    expect(CSS).toMatch(/--row-pad-y:\s*0\.625rem/);
+    expect(block('.ui-table tbody tr {')).toMatch(/height:\s*max\(2\.75rem/);
+    expect(block('.ui-table tbody .ui-btn {')).toMatch(/height:\s*1\.75rem/);
+  });
+});
+
+describe('the status strip is neutral with one dark selection', () => {
+  it('selected chip is the primary, unselected chips are transparent', () => {
+    expect(block(".ui-segment[aria-selected='true'] {")).toMatch(/background-color:\s*rgb\(var\(--brand\)\)/);
+    const rest = CSS.slice(CSS.indexOf('.ui-segment {\n    background-color: transparent'));
+    expect(rest.slice(0, rest.indexOf('}'))).not.toMatch(/--seg-soft/);
+  });
+});
+
 /* No page may undo the contract from the call site. */
 const PRINT = new Set(['InvoicePreview.jsx', 'ExpenseVoucher.jsx', 'DocumentPrintView.jsx', 'SharedInvoice.jsx', 'BillPreview.jsx']);
 const jsx = (dir) =>
@@ -107,6 +141,20 @@ describe('no call site breaks the contract', () => {
       const src = readFileSync(file, 'utf8');
       for (const m of src.matchAll(/<ColumnHeader[^>]*ui-num[^>]*\/>/g)) {
         if (!m[0].includes('align="right"')) offenders.push(`${relative(SRC, file)}: ${m[0].slice(0, 60)}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('every date and status heading is declared centred, sortable or plain', () => {
+    const offenders = [];
+    for (const file of jsx(SRC)) {
+      const src = readFileSync(file, 'utf8');
+      for (const m of src.matchAll(/<ColumnHeader[^/>]*label="(?:Date|Due|Due date|Ref Date|Valid till|Status)"[^/>]*\/>/g)) {
+        if (!m[0].includes('align="center"')) offenders.push(`${relative(SRC, file)}: ${m[0].slice(0, 60)}`);
+      }
+      for (const m of src.matchAll(/<th className="ui-th"[^>]*>(?:Date|Status|Due|Due Date)<\/th>/g)) {
+        offenders.push(`${relative(SRC, file)}: ${m[0]}`);
       }
     }
     expect(offenders).toEqual([]);

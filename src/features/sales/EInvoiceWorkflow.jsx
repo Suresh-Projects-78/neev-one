@@ -273,8 +273,8 @@ export default function EInvoiceWorkflow({ invoice, company, customer, onRegiste
           <div className="mb-2 text-sm font-semibold">Cancel IRN {details.irn?.slice(0, 12)}…</div>
           <div className="flex flex-wrap items-end gap-2">
             <div>
-              <label className="ui-label">Reason</label>
-              <select value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} className="ui-select px-2 text-sm">
+              <label className="ui-label" htmlFor="einvoiceworkflow-reason">Reason</label>
+              <select id="einvoiceworkflow-reason" value={cancelReason} onChange={(e) => setCancelReason(e.target.value)} className="ui-select px-2 text-sm">
                 <option value="1">Duplicate</option>
                 <option value="2">Data entry mistake</option>
                 <option value="3">Order cancelled</option>
@@ -282,8 +282,8 @@ export default function EInvoiceWorkflow({ invoice, company, customer, onRegiste
               </select>
             </div>
             <div className="min-w-48 flex-1 min-w-0">
-              <label className="ui-label">Remarks</label>
-              <input type="text" value={cancelRemarks} onChange={(e) => setCancelRemarks(e.target.value)} maxLength={100} className="ui-input w-full px-2 text-sm" placeholder="Optional" />
+              <label className="ui-label" htmlFor="einvoiceworkflow-remarks">Remarks</label>
+              <input id="einvoiceworkflow-remarks" type="text" value={cancelRemarks} onChange={(e) => setCancelRemarks(e.target.value)} maxLength={100} className="ui-input w-full px-2 text-sm" placeholder="Optional" />
             </div>
             <button type="button" onClick={doCancel} disabled={busy} className="ui-btn ui-btn-primary text-sm">
               {busy ? 'Cancelling…' : 'Confirm cancel'}

@@ -110,12 +110,12 @@ export default function TdsTcsReport({ db, setDb, currentCompany }) {
 
       <div className="ui-card flex flex-wrap items-end gap-3 p-4">
         <div>
-          <label className="ui-label">FY threshold (₹)</label>
-          <input type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="ui-input w-40" />
+          <label className="ui-label" htmlFor="tdstcsreport-fy-threshold">FY threshold (₹)</label>
+          <input id="tdstcsreport-fy-threshold" type="number" min="0" value={threshold} onChange={(e) => setThreshold(e.target.value)} className="ui-input w-40" />
         </div>
         <div>
-          <label className="ui-label">Rate (%)</label>
-          <input type="number" min="0" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} className="ui-input w-28" />
+          <label className="ui-label" htmlFor="tdstcsreport-rate">Rate (%)</label>
+          <input id="tdstcsreport-rate" type="number" min="0" step="0.01" value={rate} onChange={(e) => setRate(e.target.value)} className="ui-input w-28" />
         </div>
         <button type="button" onClick={saveConfig} className="ui-btn ui-btn-secondary">Save settings</button>
         <div className="ui-caption pb-2">Statutory defaults: ₹50,00,000 · 0.1% (5% without PAN — set per filing).</div>

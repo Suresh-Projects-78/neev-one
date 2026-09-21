@@ -11,7 +11,8 @@ import {
   sendTestEmail,
   testEmailConnection,
 } from '../../api/email';
-import { EmptyState, PageHeader, Spinner, StatusPill, SkeletonCard } from '../../components/ui/Primitives';
+import { EmptyState, Spinner, StatusPill, SkeletonCard } from '../../components/ui/Primitives';
+import SettingsScreenHeader from './SettingsScreenHeader';
 
 const TABS = [
   { key: 'server', label: 'Mail server' },
@@ -133,7 +134,7 @@ export const EmailSettings = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title="Email"
               actions={

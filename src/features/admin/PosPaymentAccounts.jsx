@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { PageHeader, SkeletonCard } from '../../components/ui/Primitives';
+import { SkeletonCard } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
 import { getPosTenderAccounts, setPosTenderAccount, clearPosTenderAccount } from '../../api/posTenderAccounts';
+import SettingsScreenHeader from '../settings/SettingsScreenHeader';
 
 /**
  * Where the counter's money goes.
@@ -18,10 +19,15 @@ import { getPosTenderAccounts, setPosTenderAccount, clearPosTenderAccount } from
  * where its money lands, or it does not take that tender.
  */
 
+/*
+ * `spoken` is the tender inside a sentence, and it is not the label lowercased:
+ * UPI is an abbreviation and stays in capitals, so `label.toLowerCase()` read
+ * "the counter cannot take upi".
+ */
 const TENDERS = [
-  { key: 'CASH', label: 'Cash', needs: 'a cash account' },
-  { key: 'UPI', label: 'UPI', needs: 'a bank account' },
-  { key: 'CARD', label: 'Card', needs: 'a bank account' },
+  { key: 'CASH', label: 'Cash', spoken: 'cash', needs: 'a cash account' },
+  { key: 'UPI', label: 'UPI', spoken: 'UPI', needs: 'a bank account' },
+  { key: 'CARD', label: 'Card', spoken: 'card', needs: 'a bank account' },
 ];
 
 export default function PosPaymentAccounts({ currentCompany = null, branchLabel = '' }) {
@@ -69,7 +75,7 @@ export default function PosPaymentAccounts({ currentCompany = null, branchLabel 
 
   return (
     <div className="space-y-3">
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title="POS payment accounts"
         description={
@@ -86,7 +92,7 @@ export default function PosPaymentAccounts({ currentCompany = null, branchLabel 
       ) : null}
 
       <section className="ui-card overflow-hidden">
-        {TENDERS.map(({ key, label, needs }) => {
+        {TENDERS.map(({ key, label, spoken, needs }) => {
           const current = tenders[key] || { status: 'UNCONFIGURED', controlKind: key === 'CASH' ? 'CASH' : 'BANK' };
           const options = accounts.filter((a) => a.controlKind === current.controlKind);
           const configured = current.status === 'DIRECT';
@@ -97,7 +103,7 @@ export default function PosPaymentAccounts({ currentCompany = null, branchLabel 
                 <span className="text-sm font-medium">{label}</span>
                 {!configured ? (
                   <span className="ui-caption block mt-0.5">
-                    Not configured — the counter cannot take {label.toLowerCase()} until it has {needs}.
+                    Not configured — the counter cannot take {spoken} until it has {needs}.
                   </span>
                 ) : null}
               </span>

@@ -118,8 +118,8 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="ui-label">Parent</label>
-        <select
+        <label className="ui-label" htmlFor="accountgrouptypeforms-parent">Parent</label>
+        <select id="accountgrouptypeforms-parent"
           value={formData.parent}
           onChange={(e) => setFormData((p) => ({ ...p, parent: e.target.value }))}
           className="ui-select w-full"
@@ -133,8 +133,8 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
       </div>
 
       <div>
-        <label className="ui-label">Group Name</label>
-        <input
+        <label className="ui-label" htmlFor="accountgrouptypeforms-group-name">Group Name</label>
+        <input id="accountgrouptypeforms-group-name"
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
@@ -263,8 +263,8 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="ui-label">Group</label>
-          <select
+          <label className="ui-label" htmlFor="accountgrouptypeforms-group">Group</label>
+          <select id="accountgrouptypeforms-group"
             value={formData.typeId}
             onChange={(e) => setFormData((p) => ({ ...p, typeId: e.target.value, parentGroupId: '' }))}
             className="ui-select w-full"
@@ -278,8 +278,8 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
           </select>
         </div>
         <div>
-          <label className="ui-label">Group Category</label>
-          <select
+          <label className="ui-label" htmlFor="accountgrouptypeforms-group-category">Group Category</label>
+          <select id="accountgrouptypeforms-group-category"
             value={formData.groupCategory}
             onChange={(e) => setFormData((p) => ({ ...p, groupCategory: e.target.value }))}
             className="ui-select w-full"
@@ -293,8 +293,8 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
       </div>
 
       <div>
-        <label className="ui-label">Group Name</label>
-        <input
+        <label className="ui-label" htmlFor="accountgrouptypeforms-group-name-2">Group Name</label>
+        <input id="accountgrouptypeforms-group-name-2"
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}

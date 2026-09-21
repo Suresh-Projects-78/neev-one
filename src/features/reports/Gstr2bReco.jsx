@@ -179,7 +179,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
                     <th className="ui-th">Supplier inv no</th>
                     <th className="ui-th">Vendor</th>
                     <th className="ui-th">GSTIN</th>
-                    <th className="ui-th">Date</th>
+                    <th className="ui-th ui-col-h-center">Date</th>
                     <th className="ui-th ui-num">Total</th>
                   </tr>
                 </thead>
@@ -202,7 +202,7 @@ export default function Gstr2bReco({ db, currentCompany }) {
                   <tr>
                     <th className="ui-th">Supplier</th>
                     <th className="ui-th">Invoice no</th>
-                    <th className="ui-th">Date</th>
+                    <th className="ui-th ui-col-h-center">Date</th>
                     <th className="ui-th ui-num">Taxable</th>
                     <th className="ui-th ui-num">ITC (I+C+S)</th>
                     <th className="ui-th ui-num">Total</th>

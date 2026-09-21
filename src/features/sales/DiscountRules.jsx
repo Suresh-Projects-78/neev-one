@@ -210,12 +210,12 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
         <div className="ui-card space-y-4 p-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="ui-label">Rule name</label>
-              <input type="text" value={form.name} onChange={set('name')} className="ui-input w-full" placeholder="Bulk buy / Diwali offer" />
+              <label className="ui-label" htmlFor="discountrules-rule-name">Rule name</label>
+              <input id="discountrules-rule-name" type="text" value={form.name} onChange={set('name')} className="ui-input w-full" placeholder="Bulk buy / Diwali offer" />
             </div>
             <div>
-              <label className="ui-label">Discount type</label>
-              <select value={form.type} onChange={set('type')} className="ui-select w-full">
+              <label className="ui-label" htmlFor="discountrules-discount-type">Discount type</label>
+              <select id="discountrules-discount-type" value={form.type} onChange={set('type')} className="ui-select w-full">
                 <option value="PERCENT">Percentage</option>
                 <option value="FIXED">Fixed amount per unit</option>
               </select>
@@ -225,8 +225,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               <input type="number" min="0" step="0.01" value={form.value} onChange={set('value')} className="ui-input w-full" placeholder="Ignored when tiers are set" />
             </div>
             <div>
-              <label className="ui-label">Applies to items</label>
-              <select value={form.itemScope} onChange={set('itemScope')} className="ui-select w-full">
+              <label className="ui-label" htmlFor="discountrules-applies-to-items">Applies to items</label>
+              <select id="discountrules-applies-to-items" value={form.itemScope} onChange={set('itemScope')} className="ui-select w-full">
                 <option value="ALL">All items</option>
                 <option value="ITEM">One item</option>
                 <option value="ITEMS">Multiple items</option>
@@ -235,8 +235,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
             </div>
             {form.itemScope === 'ITEM' ? (
               <div>
-                <label className="ui-label">Item</label>
-                <select value={form.itemId} onChange={set('itemId')} className="ui-select w-full">
+                <label className="ui-label" htmlFor="discountrules-item">Item</label>
+                <select id="discountrules-item" value={form.itemId} onChange={set('itemId')} className="ui-select w-full">
                   <option value="">Select item</option>
                   {items.map((i) => (
                     <option key={i.id} value={i.id}>{i.name}</option>
@@ -267,8 +267,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               </div>
             ) : form.itemScope === 'CATEGORY' ? (
               <div>
-                <label className="ui-label">Category</label>
-                <select value={form.category} onChange={set('category')} className="ui-select w-full">
+                <label className="ui-label" htmlFor="discountrules-category">Category</label>
+                <select id="discountrules-category" value={form.category} onChange={set('category')} className="ui-select w-full">
                   <option value="">Select category</option>
                   {categories.map((c) => (
                     <option key={c} value={c}>{c}</option>
@@ -282,8 +282,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               <div />
             )}
             <div>
-              <label className="ui-label">Applies to customers</label>
-              <select value={form.customerScope} onChange={set('customerScope')} className="ui-select w-full">
+              <label className="ui-label" htmlFor="discountrules-applies-to-customers">Applies to customers</label>
+              <select id="discountrules-applies-to-customers" value={form.customerScope} onChange={set('customerScope')} className="ui-select w-full">
                 <option value="ALL">All customers</option>
                 <option value="CUSTOMER">One customer</option>
                 <option value="CUSTOMERS">Multiple customers</option>
@@ -314,8 +314,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               </div>
             ) : form.customerScope === 'CUSTOMER' ? (
               <div>
-                <label className="ui-label">Customer</label>
-                <select value={form.customerId} onChange={set('customerId')} className="ui-select w-full">
+                <label className="ui-label" htmlFor="discountrules-customer">Customer</label>
+                <select id="discountrules-customer" value={form.customerId} onChange={set('customerId')} className="ui-select w-full">
                   <option value="">Select customer</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.id}>{getCustomerDisplayName(c)}</option>
@@ -324,8 +324,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               </div>
             ) : form.customerScope === 'GROUP' ? (
               <div>
-                <label className="ui-label">Customer group</label>
-                <select value={form.groupId} onChange={set('groupId')} className="ui-select w-full">
+                <label className="ui-label" htmlFor="discountrules-customer-group">Customer group</label>
+                <select id="discountrules-customer-group" value={form.groupId} onChange={set('groupId')} className="ui-select w-full">
                   <option value="">Select group</option>
                   {groups.map((g) => (
                     <option key={g.id} value={g.id}>{g.name}</option>
@@ -336,12 +336,12 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
               <div />
             )}
             <div>
-              <label className="ui-label">Valid from (promotional)</label>
-              <input type="date" value={form.validFrom} onChange={set('validFrom')} className="ui-input w-full" />
+              <label className="ui-label" htmlFor="discountrules-valid-from-promotional">Valid from (promotional)</label>
+              <input id="discountrules-valid-from-promotional" type="date" value={form.validFrom} onChange={set('validFrom')} className="ui-input w-full" />
             </div>
             <div>
-              <label className="ui-label">Valid to</label>
-              <input type="date" value={form.validTo} onChange={set('validTo')} className="ui-input w-full" />
+              <label className="ui-label" htmlFor="discountrules-valid-to">Valid to</label>
+              <input id="discountrules-valid-to" type="date" value={form.validTo} onChange={set('validTo')} className="ui-input w-full" />
             </div>
           </div>
 
@@ -431,7 +431,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                 <th className="ui-th">Scope</th>
                 <th className="ui-th">Discount</th>
                 <th className="ui-th">Window</th>
-                <th className="ui-th">Status</th>
+                <th className="ui-th ui-col-h-center">Status</th>
                 <th className="px-4 py-2.5"></th>
               </tr>
             </thead>

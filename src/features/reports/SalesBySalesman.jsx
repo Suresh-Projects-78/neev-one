@@ -80,12 +80,12 @@ export default function SalesBySalesman({ db, currentCompany }) {
 
       <div className="ui-card p-4 flex flex-wrap items-end gap-3">
         <div>
-          <label className="ui-label">From</label>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ui-input" />
+          <label className="ui-label" htmlFor="salesbysalesman-from">From</label>
+          <input id="salesbysalesman-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="ui-input" />
         </div>
         <div>
-          <label className="ui-label">To</label>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ui-input" />
+          <label className="ui-label" htmlFor="salesbysalesman-to">To</label>
+          <input id="salesbysalesman-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="ui-input" />
         </div>
         {(from || to) ? (
           <button type="button" onClick={() => { setFrom(''); setTo(''); }} className="ui-btn ui-btn-secondary">

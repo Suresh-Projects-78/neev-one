@@ -251,13 +251,13 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
             <p className="ui-muted mt-1 text-sm">GSTIN and state drive every tax split, so they are worth thirty seconds now.</p>
             <div className="mt-4 space-y-3">
               <div>
-                <label className="ui-label">Company name</label>
-                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="ui-input" autoFocus />
+                <label className="ui-label" htmlFor="onboardingwizard-company-name">Company name</label>
+                <input id="onboardingwizard-company-name" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="ui-input" autoFocus />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="ui-label">GSTIN (optional)</label>
-                  <input
+                  <label className="ui-label" htmlFor="onboardingwizard-gstin-optional">GSTIN (optional)</label>
+                  <input id="onboardingwizard-gstin-optional"
                     type="text"
                     value={gstin}
                     onChange={(e) => {
@@ -273,8 +273,8 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
                   />
                 </div>
                 <div>
-                  <label className="ui-label">State</label>
-                  <select value={state} onChange={(e) => setState(e.target.value)} className="ui-select ui-surface">
+                  <label className="ui-label" htmlFor="onboardingwizard-state">State</label>
+                  <select id="onboardingwizard-state" value={state} onChange={(e) => setState(e.target.value)} className="ui-select ui-surface">
                     <option value="">Select a state</option>
                     {STATE_NAMES.map((name) => (
                       <option key={name} value={name}>
@@ -322,8 +322,8 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
             <p className="ui-muted mt-1 text-sm">A name and a state is enough to raise the first invoice. The rest can come later.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="ui-label">Customer name</label>
-                <input
+                <label className="ui-label" htmlFor="onboardingwizard-customer-name">Customer name</label>
+                <input id="onboardingwizard-customer-name"
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
@@ -333,8 +333,8 @@ export default function OnboardingWizard({ setDb, currentCompany, onDone, onCrea
                 />
               </div>
               <div>
-                <label className="ui-label">State</label>
-                <select value={customerState} onChange={(e) => setCustomerState(e.target.value)} className="ui-select ui-surface">
+                <label className="ui-label" htmlFor="onboardingwizard-state-2">State</label>
+                <select id="onboardingwizard-state-2" value={customerState} onChange={(e) => setCustomerState(e.target.value)} className="ui-select ui-surface">
                   <option value="">Select a state</option>
                   {STATE_NAMES.map((name) => (
                     <option key={name} value={name}>

@@ -53,3 +53,6 @@ _backup_before_onedrive_restore
 .env.test
 prisma/test.db
 .gstack/
+
+# Prisma generates the payroll client into the source tree; it is built, not written.
+server/src/generated/

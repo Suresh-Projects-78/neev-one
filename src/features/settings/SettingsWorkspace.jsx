@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 import { breadcrumbFor, categoryFor, groupedForCategory, settingFor } from './settingsRegistry';
+import { SETTINGS_ACTIONS_SLOT_ID, SettingsFrameContext } from './settingsFrame';
 
 /**
  * A category, with its settings down the side.
@@ -78,12 +79,23 @@ export default function SettingsWorkspace({ categoryId, activeKey, can, isEnable
   if (!category) return children || null;
 
   return (
+    <SettingsFrameContext.Provider value>
     <div className="space-y-6">
       <Breadcrumb crumbs={crumbs} onNavigate={onNavigate} />
 
-      <div>
-        <h1 className="ui-t-page">{item?.title || category.title}</h1>
-        <p className="ui-muted ui-t-body mt-1">{item?.description || category.description}</p>
+      {/* One heading for the page, and the screen's own controls beside it.
+          The screens used to print a second `PageHeader` here, so the title
+          appeared twice and the page carried two `<h1>`s; their actions now
+          arrive through `SettingsPageActions` and land in the slot below. */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="ui-t-page">{item?.title || category.title}</h1>
+          <p className="ui-muted ui-t-body mt-1">{item?.description || category.description}</p>
+        </div>
+        <div
+          id={SETTINGS_ACTIONS_SLOT_ID}
+          className="flex flex-wrap items-center justify-end gap-2 min-w-0 max-w-full"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[15rem_minmax(0,1fr)]">
@@ -119,5 +131,6 @@ export default function SettingsWorkspace({ categoryId, activeKey, can, isEnable
         <div className="min-w-0">{children}</div>
       </div>
     </div>
+    </SettingsFrameContext.Provider>
   );
 }

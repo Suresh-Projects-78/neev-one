@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Coins, Plus } from 'lucide-react';
 
 import { createCurrency, listCurrencies, listRates, saveRate } from '../../api/currencies';
-import { EmptyState, PageHeader, Spinner } from '../../components/ui/Primitives';
+import { EmptyState, Spinner } from '../../components/ui/Primitives';
+import SettingsScreenHeader from './SettingsScreenHeader';
 
 /**
  * Currencies and exchange rates — requirement 8.
@@ -83,7 +84,7 @@ export default function CurrencySettings() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="currency"
         title="Currencies and exchange rates"
         description={`The books are kept in ${baseCurrency}. A document in any other currency is translated at the rate in force on its own date.`}
@@ -99,8 +100,8 @@ export default function CurrencySettings() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div>
-            <label className="ui-label">Code *</label>
-            <input
+            <label className="ui-label" htmlFor="currencysettings-code">Code *</label>
+            <input id="currencysettings-code"
               value={draft.code}
               onChange={(e) => setDraft((p) => ({ ...p, code: e.target.value.toUpperCase() }))}
               className="ui-input uppercase"
@@ -110,8 +111,8 @@ export default function CurrencySettings() {
             />
           </div>
           <div className="md:col-span-2">
-            <label className="ui-label">Name *</label>
-            <input
+            <label className="ui-label" htmlFor="currencysettings-name">Name *</label>
+            <input id="currencysettings-name"
               value={draft.name}
               onChange={(e) => setDraft((p) => ({ ...p, name: e.target.value }))}
               className="ui-input"
@@ -120,8 +121,8 @@ export default function CurrencySettings() {
             />
           </div>
           <div>
-            <label className="ui-label">Symbol</label>
-            <input
+            <label className="ui-label" htmlFor="currencysettings-symbol">Symbol</label>
+            <input id="currencysettings-symbol"
               value={draft.symbol}
               onChange={(e) => setDraft((p) => ({ ...p, symbol: e.target.value }))}
               className="ui-input"
@@ -150,8 +151,8 @@ export default function CurrencySettings() {
             </p>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div>
-                <label className="ui-label">Currency *</label>
-                <select
+                <label className="ui-label" htmlFor="currencysettings-currency">Currency *</label>
+                <select id="currencysettings-currency"
                   value={rateDraft.code}
                   onChange={(e) => setRateDraft((p) => ({ ...p, code: e.target.value }))}
                   className="ui-select"
@@ -166,8 +167,8 @@ export default function CurrencySettings() {
                 </select>
               </div>
               <div>
-                <label className="ui-label">Date *</label>
-                <input
+                <label className="ui-label" htmlFor="currencysettings-date">Date *</label>
+                <input id="currencysettings-date"
                   type="date"
                   value={rateDraft.date}
                   onChange={(e) => setRateDraft((p) => ({ ...p, date: e.target.value }))}

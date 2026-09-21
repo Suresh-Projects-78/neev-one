@@ -557,11 +557,11 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
             <thead>
               <tr>
                 <ColumnHeader label="DC #" col="number" state={dcFilters} />
-                <ColumnHeader label="Date" col="date" state={dcFilters} />
+                <ColumnHeader label="Date" col="date" state={dcFilters} align="center" />
                 <ColumnHeader label="Customer" col="customer" state={dcFilters} />
                 <ColumnHeader label="Purpose" col="purpose" state={dcFilters} />
                 <ColumnHeader label="Goods value" col="value" state={dcFilters} className="ui-num" align="right" />
-                <ColumnHeader label="Status" col="status" state={dcFilters} />
+                <ColumnHeader label="Status" col="status" state={dcFilters} align="center" />
                 <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>

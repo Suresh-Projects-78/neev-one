@@ -474,6 +474,17 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
         aria-expanded={open}
         aria-label={`Sort and filter ${typeof label === 'string' ? label : col}`}
       >
+        {/* A centred column centres its LABEL over the values, not the
+            label-plus-chevron unit — that put "Date" half a chevron left of
+            every date under it. An invisible mirror of the icon group on the
+            other side keeps the label on the column's axis whatever the icon
+            group happens to be showing. */}
+        {align === 'center' ? (
+          <span className="flex items-center gap-0.5 shrink-0 invisible" aria-hidden="true">
+            {sorted ? <span className="text-xs">{state.sort.dir === 'asc' ? '\u25b2' : '\u25bc'}</span> : null}
+            <ChevronDown size={14} />
+          </span>
+        ) : null}
         <span className="truncate">{label}</span>
         <span className="flex items-center gap-0.5 shrink-0">
           {sorted ? <span aria-hidden="true" className="text-xs">{state.sort.dir === 'asc' ? '\u25b2' : '\u25bc'}</span> : null}

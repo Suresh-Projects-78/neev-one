@@ -47,6 +47,30 @@ export const createLedgerAccount = ({ name, accountType, controlKind, sourceKey 
 export const getJournalEntries = (limit = 50) => apiFetch(`${base()}/entries?limit=${limit}`, opts);
 
 /**
+ * The postings a document still has in the books, if any.
+ *
+ * Asked before an issued document is offered for editing. The obvious query —
+ * "is there a POSTED entry for this document?" — is wrong, and quietly so: a
+ * reversal copies the original's source document, so after a cancellation the
+ * only POSTED row is the contra, whose amounts are the negation of the entry it
+ * undid. A live posting is one that is POSTED and is not a contra that one of
+ * this document's own entries points at, which is exactly how the server
+ * decides whether to refuse an edit (`postingState.ts`).
+ *
+ * Deliberately not read from the document's status: a Draft invoice posts
+ * today, so Draft does not mean "not in the books" — the entries do.
+ */
+export const getDocumentPostings = async (docType, docId) => {
+  const key = String(docId || '').trim();
+  if (!key) return [];
+  const query = `docType=${encodeURIComponent(String(docType || ''))}&docId=${encodeURIComponent(key)}&limit=200`;
+  const { entries } = await apiFetch(`${base()}/entries?${query}`, opts);
+  const rows = Array.isArray(entries) ? entries : [];
+  const contras = new Set(rows.map((e) => e?.reversedById).filter(Boolean));
+  return rows.filter((e) => e?.status === 'POSTED' && !contras.has(e.id));
+};
+
+/**
  * A manual journal entry, posted to the general ledger on the server.
  *
  * The route has existed since the ledger was built and nothing called it: a

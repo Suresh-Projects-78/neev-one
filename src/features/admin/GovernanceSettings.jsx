@@ -14,7 +14,8 @@ import {
   getUserRestrictions,
   removeUserRestriction,
 } from '../../api/governance';
-import { EmptyState, PageHeader, Spinner, SkeletonCard } from '../../components/ui/Primitives';
+import { EmptyState, Spinner, SkeletonCard } from '../../components/ui/Primitives';
+import SettingsScreenHeader from '../settings/SettingsScreenHeader';
 
 const TABS = [
   { key: 'profiles', label: 'Role profiles' },
@@ -107,7 +108,7 @@ export const GovernanceSettings = () => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title="Governance"
         actions={

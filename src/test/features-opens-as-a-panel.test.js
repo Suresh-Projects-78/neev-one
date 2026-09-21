@@ -5,16 +5,15 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 /**
- * Features is a destination from Home and a tool from everywhere else.
+ * Sidebar Features = destination. Contextual Features = temporary tool.
  *
- * Both faces target the same thing; which one the rail shows is decided by
- * where the user is standing, never by the destination. From Home the rail
- * goes to the full page, like any rail entry. From inside a module it opens
- * the panel over the screen — <main> is keyed on `active`, so navigating out
- * of a half-typed invoice would remount it empty. What this holds is that the
- * decision is one explicit function reading the current route, that the panel
- * state is never derived from the route, and that the rail never hard-codes
- * either answer.
+ * The rail goes to the full page from anywhere, like every other rail entry.
+ * The panel is reached only from a contextual trigger (⌘K) while working in
+ * a module — <main> is keyed on `active`, so navigating out of a half-typed
+ * invoice would remount it empty. What this holds is that the rail never
+ * opens the panel, that the contextual decision is one explicit function
+ * reading the current route, and that the panel state is never derived from
+ * the route.
  */
 
 const APP = readFileSync('src/App.jsx', 'utf8');
@@ -22,27 +21,21 @@ const PANEL = readFileSync('src/features/features/FeaturesPanel.jsx', 'utf8');
 const CSS = readFileSync('src/index.css', 'utf8');
 
 describe('the rail', () => {
-  it('asks one decision function, from the current route, never the destination', () => {
-    expect(APP).toContain("import { featuresPresentationFor } from './features/features/featuresPresentation';");
-    expect(APP).toMatch(/if \(featuresPresentationFor\(active\) === 'page'\) \{\s*goTo\('features'\);\s*return;\s*\}\s*openFeatures\(trigger\);/);
-    expect(APP).toContain(
-      "onClick={(e) => (isFeatures ? handleFeaturesNavigation(e.currentTarget) : goTo(entry.key))}"
-    );
-    /* Neither hard-coded answer may come back. */
-    expect(APP).not.toContain("onClick={() => goTo(entry.key)}\n");
+  it('treats Features as a destination from anywhere, like every other entry', () => {
+    /* A click on the rail is "take me there". From Home, from an invoice
+       half-typed, from a report — the full page, never the panel. */
+    expect(APP).toContain("onClick={() => goTo(entry.key)}");
+    expect(APP).not.toContain('handleFeaturesNavigation(e.currentTarget)');
+    expect(APP).not.toMatch(/isFeatures \? handleFeaturesNavigation/);
     expect(APP).not.toContain('openFeatures(e.currentTarget)');
-  });
-
-  it('puts an open panel away when its own entry is pressed again, without navigating', () => {
-    expect(APP).toMatch(/const handleFeaturesNavigation = useCallback\(\s*\(trigger = null\) => \{\s*if \(featuresOpen\) \{\s*setFeaturesOpen\(false\);\s*return;\s*\}/);
   });
 
   it('lights the route it is on, never an overlay merely open over it', () => {
     expect(APP).toContain('data-active={isRoute}');
     expect(APP).toContain('data-active={isGroupActive || undefined}');
     expect(APP).not.toMatch(/data-active=\{[^}]*featuresOpen/);
-    /* The open panel is announced on the entry, not painted as a route. */
-    expect(APP).toContain('aria-expanded={isFeatures ? featuresOpen : undefined}');
+    /* The rail never opens the panel, so it has nothing to announce as expanded. */
+    expect(APP).not.toContain('aria-expanded={isFeatures');
   });
 
   it('puts the panel away on the way to anywhere, including where it already is', () => {
@@ -63,11 +56,23 @@ describe('the rail', () => {
     const aside = APP.slice(APP.indexOf('<aside'), APP.indexOf('<nav', APP.indexOf('<aside')));
     expect(aside).not.toMatch(/\binert=/);
   });
+});
 
-  it('sends ⌘K through the same decision', () => {
+describe('the contextual trigger (⌘K)', () => {
+  it('asks one decision function, from the current route, never the destination', () => {
+    expect(APP).toContain("import { featuresPresentationFor } from './features/features/featuresPresentation';");
+    expect(APP).toMatch(/if \(featuresPresentationFor\(active\) === 'page'\) \{\s*goTo\('features'\);\s*return;\s*\}\s*openFeatures\(trigger\);/);
+  });
+
+  it('puts an open panel away when asked again, without navigating', () => {
+    expect(APP).toMatch(/const handleFeaturesNavigation = useCallback\(\s*\(trigger = null\) => \{\s*if \(featuresOpen\) \{\s*setFeaturesOpen\(false\);\s*return;\s*\}/);
+  });
+
+  it('is the only caller of that decision', () => {
     const from = APP.indexOf('<CommandPalette');
     const site = APP.slice(from, APP.indexOf('<main', from));
     expect(site).toMatch(/if \(item\.key === 'features'\) \{\s*handleFeaturesNavigation\(\);\s*return;/);
+    expect((APP.match(/handleFeaturesNavigation\(/g) || []).length).toBe(1); /* the palette, and nothing else */
   });
 });
 

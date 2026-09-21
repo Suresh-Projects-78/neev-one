@@ -486,23 +486,23 @@ export function SettingsUsers({ orgId }) {
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="ui-label">Full Name *</label>
-                <input className="ui-input w-full" value={form.fullName} onChange={onChange('fullName')} required />
+                <label className="ui-label" htmlFor="settingsusers-full-name">Full Name *</label>
+                <input id="settingsusers-full-name" className="ui-input w-full" value={form.fullName} onChange={onChange('fullName')} required />
               </div>
               <div>
-                <label className="ui-label">Email *</label>
-                <input type="email" className="ui-input w-full" value={form.email} onChange={onChange('email')} required />
+                <label className="ui-label" htmlFor="settingsusers-email">Email *</label>
+                <input id="settingsusers-email" type="email" className="ui-input w-full" value={form.email} onChange={onChange('email')} required />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="ui-label">Temp Password *</label>
-                <input type="password" className="ui-input w-full" value={form.password} onChange={onChange('password')} required />
+                <label className="ui-label" htmlFor="settingsusers-temp-password">Temp Password *</label>
+                <input id="settingsusers-temp-password" type="password" className="ui-input w-full" value={form.password} onChange={onChange('password')} required />
               </div>
               <div>
-                <label className="ui-label">Role</label>
-                <select
+                <label className="ui-label" htmlFor="settingsusers-role">Role</label>
+                <select id="settingsusers-role"
                   className="ui-select w-full ui-surface"
                   value={form.roleId}
                   onChange={(e) => {
@@ -769,8 +769,8 @@ export function SettingsUsers({ orgId }) {
           <div className="ui-t-sec">Edit User</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="ui-label">Full Name *</label>
-              <input
+              <label className="ui-label" htmlFor="settingsusers-full-name-2">Full Name *</label>
+              <input id="settingsusers-full-name-2"
                 className="ui-input w-full"
                 value={editForm.fullName}
                 onChange={(e) => setEditForm((p) => ({ ...p, fullName: e.target.value }))}
@@ -778,8 +778,8 @@ export function SettingsUsers({ orgId }) {
               />
             </div>
             <div>
-              <label className="ui-label">Email *</label>
-              <input
+              <label className="ui-label" htmlFor="settingsusers-email-2">Email *</label>
+              <input id="settingsusers-email-2"
                 type="email"
                 className="ui-input w-full"
                 value={editForm.email}
@@ -790,8 +790,8 @@ export function SettingsUsers({ orgId }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="ui-label">Role</label>
-              <select
+              <label className="ui-label" htmlFor="settingsusers-role-2">Role</label>
+              <select id="settingsusers-role-2"
                 className="ui-select w-full ui-surface"
                 value={editForm.roleId}
                 onChange={(e) => setEditForm((p) => ({ ...p, roleId: e.target.value }))}
@@ -805,8 +805,8 @@ export function SettingsUsers({ orgId }) {
               </select>
             </div>
             <div>
-              <label className="ui-label">Status</label>
-              <select
+              <label className="ui-label" htmlFor="settingsusers-status">Status</label>
+              <select id="settingsusers-status"
                 className="ui-select w-full ui-surface"
                 value={editForm.isActive ? 'active' : 'inactive'}
                 onChange={(e) => setEditForm((p) => ({ ...p, isActive: e.target.value === 'active' }))}
@@ -846,7 +846,7 @@ export function SettingsUsers({ orgId }) {
                 <th className="ui-th">Name</th>
                 <th className="ui-th">Email</th>
                 <th className="ui-th">Role</th>
-                <th className="ui-th">Status</th>
+                <th className="ui-th ui-col-h-center">Status</th>
                 <th className="ui-th ui-num">Actions</th>
               </tr>
             </thead>

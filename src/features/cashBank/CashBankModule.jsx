@@ -1100,8 +1100,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="ui-label">Date</label>
-              <input
+              <label className="ui-label" htmlFor="cashbankmodule-date">Date</label>
+              <input id="cashbankmodule-date"
                 type="date"
                 value={form.date}
                 onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
@@ -1111,8 +1111,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
             </div>
             {!isCategoriseExisting ? (
               <div>
-                <label className="ui-label">Type</label>
-                <select
+                <label className="ui-label" htmlFor="cashbankmodule-type">Type</label>
+                <select id="cashbankmodule-type"
                   value={form.direction}
                   onChange={(e) => setForm((p) => ({ ...p, direction: e.target.value }))}
                   className="ui-select w-full"
@@ -1152,8 +1152,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="ui-label">Amount</label>
-              <input
+              <label className="ui-label" htmlFor="cashbankmodule-amount">Amount</label>
+              <input id="cashbankmodule-amount"
                 type="number"
                 value={form.amount}
                 onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
@@ -1191,7 +1191,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                     <tr>
                       <th className="ui-th w-12">Sel</th>
                       <th className="ui-th">Invoice #</th>
-                      <th className="ui-th">Date</th>
+                      <th className="ui-th ui-col-h-center">Date</th>
                       <th className="ui-th ui-num">Outstanding</th>
                       <th className="ui-th ui-num">Allocate</th>
                     </tr>
@@ -1274,7 +1274,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                     <tr>
                       <th className="ui-th w-12">Sel</th>
                       <th className="ui-th">Doc #</th>
-                      <th className="ui-th">Date</th>
+                      <th className="ui-th ui-col-h-center">Date</th>
                       <th className="ui-th ui-num">Outstanding</th>
                       <th className="ui-th ui-num">Allocate</th>
                     </tr>
@@ -1331,8 +1331,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           ) : null}
 
           <div>
-            <label className="ui-label">Narration</label>
-            <input
+            <label className="ui-label" htmlFor="cashbankmodule-narration">Narration</label>
+            <input id="cashbankmodule-narration"
               type="text"
               value={form.narration}
               onChange={(e) => setForm((p) => ({ ...p, narration: e.target.value }))}
@@ -2193,13 +2193,13 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                       disabled={txns.length === 0}
                     />
                   </th>
-                  <ColumnHeader label="Date" col="date" state={txnFilters} />
+                  <ColumnHeader label="Date" col="date" state={txnFilters} align="center" />
                   <ColumnHeader label="Description" col="description" state={txnFilters} />
                   <ColumnHeader label="Ledger" col="ledger" state={txnFilters} />
                   <ColumnHeader label="Narration" col="narration" state={txnFilters} />
                   <ColumnHeader label="Payment" col="payment" state={txnFilters} className="ui-num" align="right" />
                   <ColumnHeader label="Receipts" col="receipt" state={txnFilters} className="ui-num" align="right" />
-                  <ColumnHeader label="Status" col="status" state={txnFilters} />
+                  <ColumnHeader label="Status" col="status" state={txnFilters} align="center" />
                   <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>

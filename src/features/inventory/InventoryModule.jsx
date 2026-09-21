@@ -252,7 +252,7 @@ const ItemLedgerView = ({ db, currentCompany, itemId, fromDate, toDate, warehous
         <table className="ui-table w-full">
           <thead className="ui-sunken border-b">
             <tr>
-              <th className="ui-th">Date</th>
+              <th className="ui-th ui-col-h-center">Date</th>
               <th className="ui-th">Voucher</th>
               <th className="ui-th">Number</th>
               <th className="ui-th ui-num">In</th>

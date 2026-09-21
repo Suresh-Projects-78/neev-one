@@ -49,23 +49,23 @@ export function UserCreateForm({ onCreated }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="ui-label">Email (User ID)</label>
-          <input className="ui-input w-full" value={form.email} onChange={onChange('email')} required />
+          <label className="ui-label" htmlFor="usercreateform-email-user-id">Email (User ID)</label>
+          <input id="usercreateform-email-user-id" className="ui-input w-full" value={form.email} onChange={onChange('email')} required />
         </div>
         <div>
-          <label className="ui-label">Username (optional)</label>
-          <input className="ui-input w-full" value={form.username} onChange={onChange('username')} />
+          <label className="ui-label" htmlFor="usercreateform-username-optional">Username (optional)</label>
+          <input id="usercreateform-username-optional" className="ui-input w-full" value={form.username} onChange={onChange('username')} />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="ui-label">Full Name</label>
-          <input className="ui-input w-full" value={form.fullName} onChange={onChange('fullName')} required />
+          <label className="ui-label" htmlFor="usercreateform-full-name">Full Name</label>
+          <input id="usercreateform-full-name" className="ui-input w-full" value={form.fullName} onChange={onChange('fullName')} required />
         </div>
         <div>
-          <label className="ui-label">Password</label>
-          <input type="password" className="ui-input w-full" value={form.password} onChange={onChange('password')} required />
+          <label className="ui-label" htmlFor="usercreateform-password">Password</label>
+          <input id="usercreateform-password" type="password" className="ui-input w-full" value={form.password} onChange={onChange('password')} required />
         </div>
       </div>
 

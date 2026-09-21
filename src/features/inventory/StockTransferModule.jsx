@@ -604,8 +604,8 @@ export const StockTransferEditor = ({
         <div />
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-44">
-            <label className="ui-label">Voucher No.</label>
-            <input
+            <label className="ui-label" htmlFor="stocktransfermodule-voucher-no">Voucher No.</label>
+            <input id="stocktransfermodule-voucher-no"
               type="text"
               value={form.number}
               onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))}
@@ -615,8 +615,8 @@ export const StockTransferEditor = ({
             />
           </div>
           <div className="w-44">
-            <label className="ui-label">Date</label>
-            <input
+            <label className="ui-label" htmlFor="stocktransfermodule-date">Date</label>
+            <input id="stocktransfermodule-date"
               type="date"
               value={form.date}
               onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
@@ -646,8 +646,8 @@ export const StockTransferEditor = ({
 
         {mode === 'branch' ? (
           <div>
-            <label className="ui-label">From Warehouse *</label>
-            <select
+            <label className="ui-label" htmlFor="stocktransfermodule-from-warehouse">From Warehouse *</label>
+            <select id="stocktransfermodule-from-warehouse"
               value={normalizeId(form.sourceWarehouseId)}
               onChange={(e) => {
                 const nextId = String(e.target.value || '').trim();
@@ -675,8 +675,8 @@ export const StockTransferEditor = ({
 
         {mode === 'branch' ? (
           <div>
-            <label className="ui-label">To Branch *</label>
-            <select
+            <label className="ui-label" htmlFor="stocktransfermodule-to-branch">To Branch *</label>
+            <select id="stocktransfermodule-to-branch"
               value={form.targetBranchId}
               onChange={(e) => {
                 const nextBranchId = String(e.target.value || '').trim();
@@ -702,8 +702,8 @@ export const StockTransferEditor = ({
 
 
         <div>
-          <label className="ui-label">Receiver Warehouse *</label>
-          <select
+          <label className="ui-label" htmlFor="stocktransfermodule-receiver-warehouse">Receiver Warehouse *</label>
+          <select id="stocktransfermodule-receiver-warehouse"
             value={form.targetWarehouseId}
             onChange={(e) => {
               const nextId = String(e.target.value || '').trim();
@@ -1001,8 +1001,8 @@ const ReceiveTransferForm = ({ transfer, db, currentCompany, onConfirm, onCancel
       </div>
 
       <div>
-        <label className="ui-label">Note (optional)</label>
-        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} className="ui-input w-full" placeholder="Damaged in transit, short packed…" />
+        <label className="ui-label" htmlFor="stocktransfermodule-note-optional">Note (optional)</label>
+        <input id="stocktransfermodule-note-optional" type="text" value={note} onChange={(e) => setNote(e.target.value)} className="ui-input w-full" placeholder="Damaged in transit, short packed…" />
       </div>
 
       {anyMismatch ? (
@@ -1940,8 +1940,8 @@ export const StockTransfersList = ({
                 <ColumnHeader label="Transfer #" col="number" state={transferColFilters} />
                 <ColumnHeader label="From" col="from" state={transferColFilters} />
                 <ColumnHeader label="To" col="to" state={transferColFilters} />
-                <ColumnHeader label="Date" col="date" state={transferColFilters} />
-                <ColumnHeader label="Status" col="status" state={transferColFilters} />
+                <ColumnHeader label="Date" col="date" state={transferColFilters} align="center" />
+                <ColumnHeader label="Status" col="status" state={transferColFilters} align="center" />
                 <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>

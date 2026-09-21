@@ -615,8 +615,8 @@ const AuthGate = ({ onAuth }) => {
                 {mode === 'login' && (
                   <>
                     <div>
-                      <label className="ui-label">Email Address</label>
-                      <input
+                      <label className="ui-label" htmlFor="authgate-email-address">Email Address</label>
+                      <input id="authgate-email-address"
                         type="email"
                         value={email}
                         onChange={(e) => {
@@ -668,8 +668,8 @@ const AuthGate = ({ onAuth }) => {
                 {mode === 'signup' && signupStep === 1 && (
                   <>
                     <div>
-                      <label className="ui-label">Full Name</label>
-                      <input
+                      <label className="ui-label" htmlFor="authgate-full-name">Full Name</label>
+                      <input id="authgate-full-name"
                         type="text"
                         value={name}
                         onChange={(e) => {
@@ -682,8 +682,8 @@ const AuthGate = ({ onAuth }) => {
                       />
                     </div>
                     <div>
-                      <label className="ui-label">Email Address</label>
-                      <input
+                      <label className="ui-label" htmlFor="authgate-email-address-2">Email Address</label>
+                      <input id="authgate-email-address-2"
                         type="email"
                         value={email}
                         onChange={(e) => {
@@ -696,8 +696,8 @@ const AuthGate = ({ onAuth }) => {
                       />
                     </div>
                     <div>
-                      <label className="ui-label">Mobile (Optional)</label>
-                      <input
+                      <label className="ui-label" htmlFor="authgate-mobile-optional">Mobile (Optional)</label>
+                      <input id="authgate-mobile-optional"
                         type="tel"
                         value={mobile}
                         onChange={(e) => {
@@ -709,8 +709,8 @@ const AuthGate = ({ onAuth }) => {
                       />
                     </div>
                     <div>
-                      <label className="ui-label">Password</label>
-                      <input
+                      <label className="ui-label" htmlFor="authgate-password">Password</label>
+                      <input id="authgate-password"
                         type="password"
                         value={password}
                         onChange={(e) => {
@@ -723,8 +723,8 @@ const AuthGate = ({ onAuth }) => {
                       />
                     </div>
                     <div>
-                      <label className="ui-label">Confirm Password</label>
-                      <input
+                      <label className="ui-label" htmlFor="authgate-confirm-password">Confirm Password</label>
+                      <input id="authgate-confirm-password"
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => {

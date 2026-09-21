@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 
-import { PageHeader } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
 import { getDocSettings } from '../../utils/docSettings';
+import SettingsScreenHeader from './SettingsScreenHeader';
 
 /**
  * Only the documents this product can actually print.
@@ -79,7 +79,7 @@ export const TermsSettings = ({ db, setDb, currentCompany }) => {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title="Terms & Conditions"
         actions={

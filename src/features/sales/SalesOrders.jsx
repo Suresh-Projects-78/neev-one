@@ -704,14 +704,14 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
             <thead>
               <tr>
                 <ColumnHeader label="SO #" col="number" state={soFilters} />
-                <ColumnHeader label="Date" col="date" state={soFilters} />
+                <ColumnHeader label="Date" col="date" state={soFilters} align="center" />
                 <ColumnHeader label="Customer" col="customer" state={soFilters} />
                 <ColumnHeader label="Amount" col="total" state={soFilters} className="ui-num" align="right" />
                 {/* Three numbers, one column: an order is read by how far along
                     it is, and three separate columns of quantities read as
                     three unrelated figures. */}
                 <th scope="col">Ordered / Delivered / Billed</th>
-                <ColumnHeader label="Status" col="status" state={soFilters} />
+                <ColumnHeader label="Status" col="status" state={soFilters} align="center" />
                 <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>

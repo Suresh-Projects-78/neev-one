@@ -231,9 +231,10 @@ describe('FeaturesPanel', () => {
 
 
 /**
- * The rail, deciding. The same decision the shell uses, over a screen that
- * behaves like a form: from a module it opens the panel and the form survives;
- * from Home it navigates. Node identity, not equal text.
+ * The shell, deciding. The rail entry is a destination and always navigates;
+ * the contextual trigger (⌘K) uses the same decision the shell uses, over a
+ * screen that behaves like a form: from a module it opens the panel and the
+ * form survives; from Home it navigates. Node identity, not equal text.
  */
 import { featuresPresentationFor } from './featuresPresentation';
 
@@ -244,7 +245,7 @@ const Rail = ({ start }) => {
     setOpen(false);
     setActive(key);
   };
-  const onFeatures = () => {
+  const onFeaturesTool = () => {
     if (open) return setOpen(false);
     if (featuresPresentationFor(active) === 'page') return goTo('features');
     setOpen(true);
@@ -252,13 +253,16 @@ const Rail = ({ start }) => {
   return (
     <div>
       <aside>
-        <button type="button" onClick={onFeatures} aria-expanded={open}>
+        <button type="button" onClick={() => goTo('features')}>
           Features
         </button>
         <button type="button" onClick={() => goTo('purchases')}>
           Purchases
         </button>
       </aside>
+      <button type="button" onClick={onFeaturesTool} aria-expanded={open}>
+        Features tool
+      </button>
       <main id="main-content" key={active} data-route={active}>
         {active === 'features' ? <h1>Features page</h1> : <input aria-label="Customer" defaultValue="" />}
       </main>
@@ -267,14 +271,24 @@ const Rail = ({ start }) => {
   );
 };
 
-describe('the rail decides from where you are', () => {
+describe('the rail is a destination', () => {
+  it('goes to the full page from a working screen, never the panel', () => {
+    render(<Rail start="invoices" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Features page' })).toBeInTheDocument();
+    expect(document.getElementById('main-content').getAttribute('data-route')).toBe('features');
+  });
+});
+
+describe('the contextual trigger decides from where you are', () => {
   it('opens the panel over a working screen and gives the same node back', async () => {
     render(<Rail start="invoices" />);
     const main = document.getElementById('main-content');
     const customer = screen.getByLabelText('Customer');
     fireEvent.change(customer, { target: { value: 'Acme Pvt Ltd' } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Features tool' }));
     await screen.findByRole('dialog');
     expect(main.getAttribute('data-route')).toBe('invoices');
     expect(document.getElementById('main-content')).toBe(main);
@@ -288,7 +302,7 @@ describe('the rail decides from where you are', () => {
 
   it('navigates to the page from Home', async () => {
     render(<Rail start="dashboard" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Features tool' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Features page' })).toBeInTheDocument();
   });
@@ -296,9 +310,9 @@ describe('the rail decides from where you are', () => {
   it('pressed again while open, closes the panel and stays', async () => {
     render(<Rail start="invoices" />);
     const main = document.getElementById('main-content');
-    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Features tool' }));
     await screen.findByRole('dialog');
-    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Features tool' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(document.getElementById('main-content')).toBe(main);
     expect(main.getAttribute('data-route')).toBe('invoices');
@@ -306,7 +320,7 @@ describe('the rail decides from where you are', () => {
 
   it('another destination closes the panel and goes there in one click', async () => {
     render(<Rail start="invoices" />);
-    fireEvent.click(screen.getByRole('button', { name: 'Features' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Features tool' }));
     await screen.findByRole('dialog');
     fireEvent.click(screen.getByRole('button', { name: 'Purchases' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

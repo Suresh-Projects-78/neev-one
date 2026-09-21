@@ -235,12 +235,12 @@ export function FiltersButton({ period, onPeriodChange, dateFrom, dateTo, onDate
             {period === 'custom' ? (
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="ui-label">From</label>
-                  <input type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
+                  <label className="ui-label" htmlFor="listpageparts-from">From</label>
+                  <input id="listpageparts-from" type="date" value={dateFrom} onChange={(e) => onDateFromChange(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
                 </div>
                 <div>
-                  <label className="ui-label">To</label>
-                  <input type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
+                  <label className="ui-label" htmlFor="listpageparts-to">To</label>
+                  <input id="listpageparts-to" type="date" value={dateTo} onChange={(e) => onDateToChange(e.target.value)} className="ui-input w-full px-2 py-1.5 text-sm" />
                 </div>
               </div>
             ) : null}

@@ -3,10 +3,12 @@ import {
   Bell,
   Boxes,
   Building2,
+  CalendarClock,
   Coins,
   FileStack,
   FileText,
   Landmark,
+  Layers,
   NotebookPen,
   Package,
   Plus,
@@ -18,8 +20,10 @@ import {
   SlidersHorizontal,
   Tags,
   HardDriveDownload,
+  Repeat,
   Upload,
   Users,
+  Wallet,
 } from 'lucide-react';
 
 /**
@@ -64,6 +68,12 @@ export const SETTINGS_CATEGORIES = [
     title: 'Tax & Compliance',
     icon: BadgePercent,
     description: 'GST registration, rates and what the returns read.',
+  },
+  {
+    id: 'payroll',
+    title: 'Payroll',
+    icon: Wallet,
+    description: 'Salary components, pay groups, periods and the statutory rules.',
   },
   {
     id: 'security',
@@ -133,6 +143,15 @@ export const SETTINGS_ITEMS = [
    */
   { key: 'settingsDataBackup', standalone: true, title: 'Backup', category: 'platform', icon: HardDriveDownload, perm: 'ACCOUNTING::Ledger::VIEW', group: 'System', description: 'Take a copy of this company\u2019s data.', keywords: ['backup', 'export', 'download', 'copy', 'restore', 'archive'] },
   { key: 'dataImport', standalone: true, title: 'Data & Import', category: 'platform', icon: Upload, perm: 'ACCOUNTING::Ledger::VIEW', feature: 'imports', group: 'System', description: 'Bring journals, invoices and bills in from a file.', keywords: ['import', 'csv', 'migrate', 'template', 'upload'] },
+  // Payroll — the configuration a pay run reads, kept out of the Payroll rail.
+  // Somebody running payroll on the 28th should not be walking past setup
+  // screens to reach it. The rest of this category (pay groups, periods,
+  // rules, ledger mapping, compliance, templates, numbering) is registered as
+  // each screen lands: a registry entry pointing at a screen that does not
+  // render is a settings hub that opens onto nothing.
+  { key: 'payrollComponents', title: 'Salary Components', category: 'payroll', icon: Layers, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll', group: 'Compensation', description: 'The earnings, deductions and employer costs a salary is built from.', keywords: ['basic', 'hra', 'allowance', 'deduction', 'component', 'earning'] },
+  { key: 'payrollPayGroups', title: 'Pay Groups', category: 'payroll', icon: Users, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll', group: 'Compensation', description: 'Populations paid on the same rhythm — monthly staff, weekly labour, contractors.', keywords: ['pay group', 'frequency', 'monthly', 'weekly', 'cycle'] },
+  { key: 'payrollPeriods', title: 'Payroll Periods', category: 'payroll', icon: CalendarClock, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll', group: 'Compensation', description: 'The pay cycles a run belongs to, and which of them are closed.', keywords: ['period', 'cycle', 'month', 'lock', 'close'] },
 ];
 
 /**

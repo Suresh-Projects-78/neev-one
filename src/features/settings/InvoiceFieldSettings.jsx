@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Lock, Plus, Trash2, EyeOff, Eye } from 'lucide-react';
 
-import { PageHeader } from '../../components/ui/Primitives';
 import { notify } from '../../components/ui/notify';
 import {
   INVOICE_PREF_GROUPS,
@@ -22,6 +21,7 @@ import {
   saveInvoicePaymentDetails,
   listBankAccounts,
 } from '../../utils/invoicePrefs';
+import SettingsScreenHeader from './SettingsScreenHeader';
 
 /**
  * Which fields an invoice carries, for this company.
@@ -150,7 +150,9 @@ export const InvoiceFieldSettings = ({
   const header = embedded ? (
     <div className="flex items-center justify-between gap-3 flex-wrap">
       <button type="button" onClick={onBack} className="ui-btn ui-btn-ghost ui-btn-sm">
-        <ArrowLeft size={14} aria-hidden="true" /> Back to the invoice
+        {/* The drawer opens over a bill as well as an invoice, and said
+            "invoice" either way. The caller already names the document. */}
+        <ArrowLeft size={14} aria-hidden="true" /> Back to the {docLabel ? docLabel.toLowerCase() : 'invoice'}
       </button>
       <div className="flex items-center gap-2">
         <span className="ui-pill ui-pill-neutral">
@@ -174,7 +176,7 @@ export const InvoiceFieldSettings = ({
     <div className="space-y-6">
       {header}
       {embedded ? null : (
-      <PageHeader
+      <SettingsScreenHeader
         entity="settings"
         title={customOnly ? `Custom Fields${docLabel ? ` — ${docLabel}` : ''}` : 'Invoice Settings'}
         actions={

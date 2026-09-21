@@ -33,6 +33,7 @@ describe('the groups', () => {
       'Inventory',
       'Cash & Bank',
       'Accounting',
+      'Payroll',
       'Taxation',
       'Users & Permissions',
       'Notifications',

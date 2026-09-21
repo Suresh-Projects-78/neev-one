@@ -84,24 +84,24 @@ export function BranchCreateForm({ orgId, onCreated }) {
 
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 sm:col-span-4">
-          <label className="ui-label">Branch Code</label>
-          <input className="ui-input w-full max-w-40" value={form.branchCode} onChange={onChange('branchCode')} required />
+          <label className="ui-label" htmlFor="branchcreateform-branch-code">Branch Code</label>
+          <input id="branchcreateform-branch-code" className="ui-input w-full max-w-40" value={form.branchCode} onChange={onChange('branchCode')} required />
         </div>
         <div className="col-span-12 sm:col-span-8">
-          <label className="ui-label">Branch Name</label>
-          <input className="ui-input w-full" value={form.branchName} onChange={onChange('branchName')} required />
+          <label className="ui-label" htmlFor="branchcreateform-branch-name">Branch Name</label>
+          <input id="branchcreateform-branch-name" className="ui-input w-full" value={form.branchName} onChange={onChange('branchName')} required />
         </div>
       </div>
 
       <div>
-        <label className="ui-label">Address</label>
-        <input className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} required />
+        <label className="ui-label" htmlFor="branchcreateform-address">Address</label>
+        <input id="branchcreateform-address" className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} required />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="ui-label">City</label>
-          <input className="ui-input w-full" value={form.city} onChange={onChange('city')} />
+          <label className="ui-label" htmlFor="branchcreateform-city">City</label>
+          <input id="branchcreateform-city" className="ui-input w-full" value={form.city} onChange={onChange('city')} />
         </div>
         <div>
           <PopupSelect
@@ -118,38 +118,38 @@ export function BranchCreateForm({ orgId, onCreated }) {
           />
         </div>
         <div>
-          <label className="ui-label">Country</label>
-          <input className="ui-input w-full" value={form.country} onChange={onChange('country')} required />
+          <label className="ui-label" htmlFor="branchcreateform-country">Country</label>
+          <input id="branchcreateform-country" className="ui-input w-full" value={form.country} onChange={onChange('country')} required />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="ui-label">GST Registration</label>
-          <select className="ui-select w-full" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+          <label className="ui-label" htmlFor="branchcreateform-gst-registration">GST Registration</label>
+          <select id="branchcreateform-gst-registration" className="ui-select w-full" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
             <option value="REGULAR">Regular</option>
             <option value="COMPOSITION">Composition</option>
             <option value="UNREGISTERED">Unregistered</option>
           </select>
         </div>
         <div className="col-span-2">
-          <label className="ui-label">GSTIN</label>
-          <input className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
+          <label className="ui-label" htmlFor="branchcreateform-gstin">GSTIN</label>
+          <input id="branchcreateform-gstin" className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="ui-label">Phone</label>
-          <input className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
+          <label className="ui-label" htmlFor="branchcreateform-phone">Phone</label>
+          <input id="branchcreateform-phone" className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
         </div>
         <div>
-          <label className="ui-label">Email</label>
-          <input className="ui-input w-full" value={form.email} onChange={onChange('email')} />
+          <label className="ui-label" htmlFor="branchcreateform-email">Email</label>
+          <input id="branchcreateform-email" className="ui-input w-full" value={form.email} onChange={onChange('email')} />
         </div>
         <div>
-          <label className="ui-label">Contact Person</label>
-          <input className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
+          <label className="ui-label" htmlFor="branchcreateform-contact-person">Contact Person</label>
+          <input id="branchcreateform-contact-person" className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
         </div>
       </div>
 

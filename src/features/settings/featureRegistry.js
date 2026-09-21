@@ -27,6 +27,7 @@ import {
   Upload,
   UserRoundCheck,
   Users,
+  Wallet,
   Warehouse,
 } from 'lucide-react';
 
@@ -56,6 +57,7 @@ export const FEATURE_GROUPS = [
   { key: 'inventory', label: 'Inventory' },
   { key: 'cashbank', label: 'Cash & Bank' },
   { key: 'accounting', label: 'Accounting' },
+  { key: 'payroll', label: 'Payroll' },
   { key: 'taxation', label: 'Taxation' },
   { key: 'governance', label: 'Users & Permissions' },
   { key: 'communication', label: 'Notifications' },
@@ -94,6 +96,19 @@ const ASSIGNMENT = {
   salesmen:        { group: 'sales', icon: Users },
   discountRules:   { group: 'sales', icon: Tags },
   priceLists:      { group: 'sales', icon: Tags },
+
+  /* Payroll */
+  payroll:              { group: 'payroll', icon: Wallet,       config: 'payrollComponents', configLabel: 'Set up' },
+  payrollCompensation:  { group: 'payroll', icon: Layers,       config: 'payrollComponents', configLabel: 'Configure' },
+  payrollAdjustments:   { group: 'payroll', icon: Percent },
+  payrollLoans:         { group: 'payroll', icon: Landmark },
+  payrollPf:            { group: 'payroll', icon: BadgePercent, config: 'payrollCompliance', configLabel: 'Configure' },
+  payrollEsi:           { group: 'payroll', icon: BadgePercent, config: 'payrollCompliance', configLabel: 'Configure' },
+  payrollProfessionalTax:{ group: 'payroll', icon: BadgePercent, config: 'payrollCompliance', configLabel: 'Configure' },
+  payrollTds:           { group: 'payroll', icon: BadgePercent, config: 'payrollCompliance', configLabel: 'Configure' },
+  payrollPayments:      { group: 'payroll', icon: Landmark },
+  payrollAccounting:    { group: 'payroll', icon: Landmark,     config: 'payrollLedgerMapping', configLabel: 'Map ledgers' },
+  payrollReports:       { group: 'payroll', icon: Table2 },
 
   /* Purchases & Expenses */
   purchaseOrders:  { group: 'purchases', icon: ShoppingCart },

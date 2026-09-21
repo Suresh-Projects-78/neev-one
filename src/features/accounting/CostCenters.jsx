@@ -73,8 +73,8 @@ export default function CostCenters({ db, setDb, currentCompany }) {
 
       <div className="ui-card flex flex-wrap items-end gap-3 p-4">
         <div>
-          <label className="ui-label">New cost center</label>
-          <input
+          <label className="ui-label" htmlFor="costcenters-new-cost-center">New cost center</label>
+          <input id="costcenters-new-cost-center"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}

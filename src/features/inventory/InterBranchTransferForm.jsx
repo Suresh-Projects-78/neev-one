@@ -45,8 +45,8 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="ui-label">Source Branch</label>
-          <select className="ui-select w-full" value={sourceBranchId} onChange={(e) => setSourceBranchId(e.target.value)} required>
+          <label className="ui-label" htmlFor="interbranchtransferform-source-branch">Source Branch</label>
+          <select id="interbranchtransferform-source-branch" className="ui-select w-full" value={sourceBranchId} onChange={(e) => setSourceBranchId(e.target.value)} required>
             <option value="">Select</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -56,8 +56,8 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
           </select>
         </div>
         <div>
-          <label className="ui-label">Destination Branch</label>
-          <select className="ui-select w-full" value={targetBranchId} onChange={(e) => setTargetBranchId(e.target.value)} required>
+          <label className="ui-label" htmlFor="interbranchtransferform-destination-branch">Destination Branch</label>
+          <select id="interbranchtransferform-destination-branch" className="ui-select w-full" value={targetBranchId} onChange={(e) => setTargetBranchId(e.target.value)} required>
             <option value="">Select</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -74,8 +74,8 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
           {lines.map((l, idx) => (
             <div key={idx} className="grid grid-cols-12 gap-3 items-end">
               <div className="col-span-8">
-                <label className="ui-label">Item</label>
-                <select className="ui-select w-full" value={l.itemId} onChange={(e) => updateLine(idx, { itemId: e.target.value })}>
+                <label className="ui-label" htmlFor="interbranchtransferform-item">Item</label>
+                <select id="interbranchtransferform-item" className="ui-select w-full" value={l.itemId} onChange={(e) => updateLine(idx, { itemId: e.target.value })}>
                   <option value="">Select</option>
                   {items.map((it) => (
                     <option key={it.id} value={it.id}>
@@ -85,8 +85,8 @@ export function InterBranchTransferForm({ orgId, branches = [], items = [], onCr
                 </select>
               </div>
               <div className="col-span-3">
-                <label className="ui-label">Qty</label>
-                <input
+                <label className="ui-label" htmlFor="interbranchtransferform-qty">Qty</label>
+                <input id="interbranchtransferform-qty"
                   type="number"
                   min="0"
                   step="1"

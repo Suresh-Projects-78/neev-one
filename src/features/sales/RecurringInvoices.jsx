@@ -585,8 +585,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                   onChange={(customerId) => setDraft((p) => ({ ...p, customerId }))}
                 />
                 <div>
-                  <label className="ui-label">Notes (optional)</label>
-                  <input
+                  <label className="ui-label" htmlFor="recurringinvoices-notes-optional">Notes (optional)</label>
+                  <input id="recurringinvoices-notes-optional"
                     type="text"
                     value={draft.notes}
                     onChange={(e) => setDraft((p) => ({ ...p, notes: e.target.value }))}
@@ -707,8 +707,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
           <div className="grid gap-3 sm:grid-cols-4">
             {mode === 'COPY' ? (
             <div className="sm:col-span-2">
-              <label className="ui-label">Repeat this invoice</label>
-              <select value={sourceInvoiceId} onChange={(e) => setSourceInvoiceId(e.target.value)} className="ui-select w-full">
+              <label className="ui-label" htmlFor="recurringinvoices-repeat-this-invoice">Repeat this invoice</label>
+              <select id="recurringinvoices-repeat-this-invoice" value={sourceInvoiceId} onChange={(e) => setSourceInvoiceId(e.target.value)} className="ui-select w-full">
                 <option value="">Select invoice</option>
                 {invoices
                   .filter((i) => String(i.status || '') !== 'Cancelled')
@@ -724,8 +724,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
             </div>
             ) : null}
             <div>
-              <label className="ui-label">Frequency</label>
-              <select value={frequency} onChange={(e) => setFrequency(e.target.value)} className="ui-select w-full">
+              <label className="ui-label" htmlFor="recurringinvoices-frequency">Frequency</label>
+              <select id="recurringinvoices-frequency" value={frequency} onChange={(e) => setFrequency(e.target.value)} className="ui-select w-full">
                 <option value="WEEKLY">Weekly</option>
                 <option value="MONTHLY">Monthly</option>
                 <option value="QUARTERLY">Quarterly</option>
@@ -751,12 +751,12 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
               </div>
             </div>
             <div>
-              <label className="ui-label">Start date</label>
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="ui-input w-full" />
+              <label className="ui-label" htmlFor="recurringinvoices-start-date">Start date</label>
+              <input id="recurringinvoices-start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="ui-input w-full" />
             </div>
             <div>
-              <label className="ui-label">End date (optional)</label>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="ui-input w-full" />
+              <label className="ui-label" htmlFor="recurringinvoices-end-date-optional">End date (optional)</label>
+              <input id="recurringinvoices-end-date-optional" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="ui-input w-full" />
             </div>
             <div className="sm:col-span-2">
               {/* An end date and a count are two different instructions.
@@ -997,7 +997,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                   <ColumnHeader label="Frequency" col="frequency" state={recFilters} />
                   <ColumnHeader label="Amount" col="total" state={recFilters} className="ui-num" align="right" />
                   <ColumnHeader label="Next invoice date" col="nextRunDate" state={recFilters} type="date" />
-                  <ColumnHeader label="Status" col="status" state={recFilters} />
+                  <ColumnHeader label="Status" col="status" state={recFilters} align="center" />
                   <th scope="col" className="w-10"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>

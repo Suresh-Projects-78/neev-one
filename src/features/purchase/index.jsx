@@ -1629,9 +1629,9 @@ export const PurchaseOrdersList = ({
             <tr>
               <ColumnHeader label="PO #" col="number" state={poFilters} />
               <ColumnHeader label="Vendor" col="vendor" state={poFilters} />
-              <ColumnHeader label="Date" col="date" state={poFilters} />
+              <ColumnHeader label="Date" col="date" state={poFilters} align="center" />
               <ColumnHeader label="Amount" col="amount" state={poFilters} className="ui-num" align="right" />
-              <ColumnHeader label="Status" col="status" state={poFilters} />
+              <ColumnHeader label="Status" col="status" state={poFilters} align="center" />
               <ColumnHeader label="Warehouse" col="warehouse" state={poFilters} />
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
@@ -2367,8 +2367,8 @@ export const PurchaseOrderForm = ({
       </div>
 
       <div>
-        <label className="ui-label">Notes</label>
-        <textarea value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full" rows={3} />
+        <label className="ui-label" htmlFor="index-notes">Notes</label>
+        <textarea id="index-notes" value={formData.notes} onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))} className="ui-input w-full" rows={3} />
       </div>
 
       {hasCustomFieldsAt(customFields, 'header', 'reference', 'notes') ? (
@@ -3036,11 +3036,11 @@ const billStatusReason = (doc, status, company, nowMs) => {
             <tr>
               <ColumnHeader label="Bill #" col="number" state={colFilters} />
               <ColumnHeader label="Vendor" col="vendor" state={colFilters} />
-              <ColumnHeader label="Date" col="date" state={colFilters} />
+              <ColumnHeader label="Date" col="date" state={colFilters} align="center" />
               <ColumnHeader label="Ref No" col="refNo" state={colFilters} />
-              <ColumnHeader label="Ref Date" col="refDate" state={colFilters} />
+              <ColumnHeader label="Ref Date" col="refDate" state={colFilters} align="center" />
               <ColumnHeader label="Amount" col="total" state={colFilters} className="ui-num" align="right" />
-              <ColumnHeader label="Status" col="status" state={colFilters} />
+              <ColumnHeader label="Status" col="status" state={colFilters} align="center" />
               <ColumnHeader label="Warehouse" col="warehouse" state={colFilters} />
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
@@ -4115,8 +4115,8 @@ export const DebitNoteForm = ({
         </div>
 
             <div>
-          <label className="ui-label">Debit Note Date</label>
-          <input
+          <label className="ui-label" htmlFor="index-debit-note-date">Debit Note Date</label>
+          <input id="index-debit-note-date"
             type="date"
             value={formData.date}
             onChange={(e) => setFormData((p) => ({ ...p, date: e.target.value }))}
@@ -4536,9 +4536,9 @@ export const DebitNotesList = ({ db, setDb, openModal, currentCompany, onNewDebi
               <ColumnHeader label="Debit note #" col="number" state={dnFilters} />
               <ColumnHeader label="Original bill" col="original" state={dnFilters} />
               <ColumnHeader label="Vendor" col="vendor" state={dnFilters} />
-              <ColumnHeader label="Date" col="date" state={dnFilters} />
+              <ColumnHeader label="Date" col="date" state={dnFilters} align="center" />
               <ColumnHeader label="Amount" col="amount" state={dnFilters} className="ui-num" align="right" />
-              <ColumnHeader label="Status" col="status" state={dnFilters} />
+              <ColumnHeader label="Status" col="status" state={dnFilters} align="center" />
               <ColumnHeader label="Warehouse" col="warehouse" state={dnFilters} />
               <th scope="col" className="ui-num"><span className="sr-only">On account</span></th>
             </tr>

@@ -739,9 +739,9 @@ const SalesOverview = ({
                   <tr>
                     <th className="ui-th">Invoice No.</th>
                     <th className="ui-th">Customer</th>
-                    <th className="ui-th">Date</th>
+                    <th className="ui-th ui-col-h-center">Date</th>
                     <th className="ui-th text-end">Amount</th>
-                    <th className="ui-th">Status</th>
+                    <th className="ui-th ui-col-h-center">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -789,7 +789,7 @@ const SalesOverview = ({
                   <tr>
                     <th className="ui-th">Credit Note No.</th>
                     <th className="ui-th">Customer</th>
-                    <th className="ui-th">Date</th>
+                    <th className="ui-th ui-col-h-center">Date</th>
                     <th className="ui-th text-end">Amount</th>
                   </tr>
                 </thead>

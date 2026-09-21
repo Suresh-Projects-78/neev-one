@@ -59,8 +59,8 @@ export function WarehouseCreateForm({ orgId, branches = [], onCreated }) {
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="ui-label">Branch</label>
-          <select className="ui-select w-full" value={form.branchId} onChange={onChange('branchId')} required>
+          <label className="ui-label" htmlFor="warehousecreateform-branch">Branch</label>
+          <select id="warehousecreateform-branch" className="ui-select w-full" value={form.branchId} onChange={onChange('branchId')} required>
             <option value="">Select branch</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
@@ -70,58 +70,58 @@ export function WarehouseCreateForm({ orgId, branches = [], onCreated }) {
           </select>
         </div>
         <div>
-          <label className="ui-label">Warehouse Name</label>
-          <input className="ui-input w-full" value={form.name} onChange={onChange('name')} required />
+          <label className="ui-label" htmlFor="warehousecreateform-warehouse-name">Warehouse Name</label>
+          <input id="warehousecreateform-warehouse-name" className="ui-input w-full" value={form.name} onChange={onChange('name')} required />
         </div>
       </div>
 
       <div>
-        <label className="ui-label">Address</label>
-        <input className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} />
+        <label className="ui-label" htmlFor="warehousecreateform-address">Address</label>
+        <input id="warehousecreateform-address" className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} />
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="ui-label">City</label>
-          <input className="ui-input w-full" value={form.city} onChange={onChange('city')} />
+          <label className="ui-label" htmlFor="warehousecreateform-city">City</label>
+          <input id="warehousecreateform-city" className="ui-input w-full" value={form.city} onChange={onChange('city')} />
         </div>
         <div>
-          <label className="ui-label">State</label>
-          <input className="ui-input w-full" value={form.state} onChange={onChange('state')} />
+          <label className="ui-label" htmlFor="warehousecreateform-state">State</label>
+          <input id="warehousecreateform-state" className="ui-input w-full" value={form.state} onChange={onChange('state')} />
         </div>
         <div>
-          <label className="ui-label">Country</label>
-          <input className="ui-input w-full" value={form.country} onChange={onChange('country')} />
+          <label className="ui-label" htmlFor="warehousecreateform-country">Country</label>
+          <input id="warehousecreateform-country" className="ui-input w-full" value={form.country} onChange={onChange('country')} />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="ui-label">GST Registration</label>
-          <select className="ui-select w-full" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+          <label className="ui-label" htmlFor="warehousecreateform-gst-registration">GST Registration</label>
+          <select id="warehousecreateform-gst-registration" className="ui-select w-full" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
             <option value="REGULAR">Regular</option>
             <option value="COMPOSITION">Composition</option>
             <option value="UNREGISTERED">Unregistered</option>
           </select>
         </div>
         <div className="col-span-2">
-          <label className="ui-label">GSTIN</label>
-          <input className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
+          <label className="ui-label" htmlFor="warehousecreateform-gstin">GSTIN</label>
+          <input id="warehousecreateform-gstin" className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="ui-label">Phone</label>
-          <input className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
+          <label className="ui-label" htmlFor="warehousecreateform-phone">Phone</label>
+          <input id="warehousecreateform-phone" className="ui-input w-full" value={form.phone} onChange={onChange('phone')} />
         </div>
         <div>
-          <label className="ui-label">Email</label>
-          <input className="ui-input w-full" value={form.email} onChange={onChange('email')} />
+          <label className="ui-label" htmlFor="warehousecreateform-email">Email</label>
+          <input id="warehousecreateform-email" className="ui-input w-full" value={form.email} onChange={onChange('email')} />
         </div>
         <div>
-          <label className="ui-label">Contact Person</label>
-          <input className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
+          <label className="ui-label" htmlFor="warehousecreateform-contact-person">Contact Person</label>
+          <input id="warehousecreateform-contact-person" className="ui-input w-full" value={form.contactPerson} onChange={onChange('contactPerson')} />
         </div>
       </div>
 

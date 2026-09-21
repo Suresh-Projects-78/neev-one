@@ -236,8 +236,8 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="ui-label">Ledger Name</label>
-        <input
+        <label className="ui-label" htmlFor="accountpicker-ledger-name">Ledger Name</label>
+        <input id="accountpicker-ledger-name"
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
@@ -293,8 +293,8 @@ export const AccountForm = ({ db, setDb, currentCompany, initialData = null, exc
       </div>
 
       <div>
-        <label className="ui-label">Opening Balance</label>
-        <input
+        <label className="ui-label" htmlFor="accountpicker-opening-balance">Opening Balance</label>
+        <input id="accountpicker-opening-balance"
           type="number"
           value={formData.openingBalance}
           onChange={(e) => setFormData((p) => ({ ...p, openingBalance: e.target.value }))}

@@ -802,8 +802,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
             className="space-y-4"
           >
             <div>
-              <label className="ui-label">Group Name</label>
-              <input
+              <label className="ui-label" htmlFor="vendorpicker-group-name">Group Name</label>
+              <input id="vendorpicker-group-name"
                 type="text"
                 value={groupDraftName}
                 onChange={(e) => setGroupDraftName(e.target.value)}

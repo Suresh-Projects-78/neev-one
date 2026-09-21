@@ -833,8 +833,8 @@ export const CustomerForm = ({
             className="space-y-4"
           >
             <div>
-              <label className="ui-label">Group Name</label>
-              <input
+              <label className="ui-label" htmlFor="customerpicker-group-name">Group Name</label>
+              <input id="customerpicker-group-name"
                 type="text"
                 value={groupDraftName}
                 onChange={(e) => setGroupDraftName(e.target.value)}

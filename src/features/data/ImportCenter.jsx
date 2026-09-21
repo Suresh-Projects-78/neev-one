@@ -242,8 +242,8 @@ export default function ImportCenter({ onBack = null, initialDocType = '' }) {
       <div className="ui-card p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="ui-label">What are you importing?</label>
-            <select
+            <label className="ui-label" htmlFor="importcenter-what-are-you-importing">What are you importing?</label>
+            <select id="importcenter-what-are-you-importing"
               value={docType}
               onChange={(e) => {
                 setDocType(e.target.value);

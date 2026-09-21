@@ -195,11 +195,11 @@ export default function JournalEntriesList({ db, setDb, currentCompany, onNewJou
           <thead>
             <tr>
               <ColumnHeader label="JV #" col="number" state={jvFilters} />
-              <ColumnHeader label="Date" col="date" state={jvFilters} />
+              <ColumnHeader label="Date" col="date" state={jvFilters} align="center" />
               <ColumnHeader label="Narration" col="narration" state={jvFilters} />
               <th scope="col" className="ui-num">Debit</th>
               <th scope="col" className="ui-num">Credit</th>
-              <ColumnHeader label="Status" col="status" state={jvFilters} />
+              <ColumnHeader label="Status" col="status" state={jvFilters} align="center" />
               <th scope="col"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
