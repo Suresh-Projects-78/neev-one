@@ -84,6 +84,10 @@ family.
 | Money | Inter | 13 / 18 | 400 | tabular-nums, right-aligned |
 | Label, caption | Inter | 12 / 16 | 500 | `.04em`, uppercase |
 
+All visible headings use weight 700. Table headings use the shared graphite
+header surface and step to the next grey on hover, so sortable and filterable
+columns provide a clear cursor response without introducing another colour.
+
 Nothing below 12px. Nothing between 16 and 24.
 
 ## Color

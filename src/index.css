@@ -680,6 +680,7 @@
   --st-all-soft: 244 244 245; --st-all-strong: 228 228 231; --st-all-key: 39 39 42; --st-all-ink: 24 24 27;
   --nav-fg: 24 24 27; --nav-fg-muted: 82 82 91; --nav-fg-subtle: 113 113 122;
   --rail-bg: 255 255 255; --rail-border: 228 228 231; --rail-hover: 244 244 245; --rail-active: 228 228 231;
+  --heading-bg: 228 228 231; --heading-hover: 212 212 216;
   --nav-dashboard: 212 212 216; --nav-sales: 212 212 216; --nav-crm: 212 212 216;
   --nav-purchases: 212 212 216; --nav-cashbank: 212 212 216; --nav-expenses: 212 212 216;
   --nav-inventory: 212 212 216; --nav-journal: 212 212 216; --nav-approvals: 212 212 216;
@@ -713,6 +714,7 @@
   --link: 212 212 216; --link-hover: 250 250 250; --info: 161 161 170; --info-soft: 39 39 42;
   --st-all-soft: 39 39 42; --st-all-strong: 63 63 70; --st-all-key: 212 212 216; --st-all-ink: 244 244 245;
   --rail-bg: 3 3 4; --rail-border: 39 39 42; --rail-hover: 24 24 27; --rail-active: 63 63 70;
+  --heading-bg: 39 39 42; --heading-hover: 63 63 70;
   --nav-fg: 244 244 245; --nav-fg-muted: 161 161 170; --nav-fg-subtle: 113 113 122;
   --nav-dashboard: 212 212 216; --nav-sales: 212 212 216; --nav-crm: 212 212 216;
   --nav-purchases: 212 212 216; --nav-cashbank: 212 212 216; --nav-expenses: 212 212 216;
@@ -758,6 +760,10 @@
     background-color: rgb(var(--app-bg));
     color: rgb(var(--fg));
     overscroll-behavior: none;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 700;
   }
 
   /* Visible focus on every interactive element — never removed. */
@@ -811,7 +817,7 @@
   /* --- typography --- */
   .ui-title {
     color: rgb(var(--fg));
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
   .ui-muted {
@@ -1171,7 +1177,7 @@
   .ui-nav-item[data-active='true'] {
     background-color: rgb(var(--surface-sunken));
     color: rgb(var(--fg));
-    font-weight: 600;
+    font-weight: 700;
   }
   .ui-nav-item[data-level='module'][data-active='true'],
   .ui-nav-item[data-active='true'][data-level='module'] {
@@ -1318,20 +1324,24 @@
     position: sticky;
     top: 0;
     z-index: var(--z-base);
-    background-color: rgb(var(--surface-sunken));
-    color: rgb(var(--fg-muted));
+    background-color: rgb(var(--heading-bg));
+    color: rgb(var(--fg));
     /* Matches .ui-th, which this outranks on specificity. The two disagreed,
        so a column heading was 12px here and 11px anywhere a plain .ui-th was
        used — one rule quietly winning is how a scale drifts. */
     font-size: 0.6875rem;   /* 11px */
     line-height: 1rem;      /* 16px */
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     text-align: left;
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid rgb(var(--border));
     white-space: nowrap;
+    transition: background-color var(--dur-state) ease, color var(--dur-state) ease;
+  }
+  .ui-table thead th:hover {
+    background-color: rgb(var(--heading-hover));
   }
 
   .coa-table thead th {
@@ -1382,7 +1392,7 @@
        and the wider spacing buys back the width the smaller size gives up. */
     font-size: 0.6875rem;     /* 11px */
     line-height: 1rem;        /* 16px */
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: rgb(var(--fg-subtle));
@@ -2420,7 +2430,7 @@
   /* Section heading between cards, for screens that stack several. */
   .ui-section-label {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: rgb(var(--fg-subtle));
@@ -2480,7 +2490,7 @@
     font-variant-numeric: tabular-nums;
     color: rgb(var(--fg));
   }
-  .ui-h1 { font-size: 1.5rem; line-height: 1.25; font-weight: 600; letter-spacing: -0.02em; }
+  .ui-h1 { font-size: 1.5rem; line-height: 1.25; font-weight: 700; letter-spacing: -0.02em; }
 
   /* --- the ramp (DESIGN.md) ------------------------------------------------
      The audit found 1,857 of 2,019 type usages sitting at 12-14px, which is
@@ -2500,7 +2510,7 @@
   .ui-t-sec {
     font-size: 1rem;          /* 16px */
     line-height: 1.5rem;      /* 24px */
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.005em;
     color: rgb(var(--fg));
   }
