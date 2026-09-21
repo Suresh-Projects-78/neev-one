@@ -59,12 +59,12 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
         accountId: accountInList,
         from: period.dateFrom,
         to: period.dateTo,
-      }),
+      }).filter((row) => !(row.kind === 'statement' && row.status === 'Uncategorised')),
     [db, companyId, accountInList, period.dateFrom, period.dateTo]
   );
 
-  const unreconciled = rows.filter((r) => r.status !== 'Reconciled');
-  const reconciled = rows.filter((r) => r.status === 'Reconciled');
+  const unreconciled = rows.filter((r) => !r.reconciled);
+  const reconciled = rows.filter((r) => r.reconciled);
   const shown = tab === 'unreconciled' ? unreconciled : tab === 'reconciled' ? reconciled : rows;
 
   /*
@@ -120,7 +120,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
       return next;
     });
 
-  const allShownSelected = shown.length > 0 && shown.every((r) => r.status === 'Reconciled' || selected.has(String(r.id)));
+  const allShownSelected = shown.length > 0 && shown.every((r) => r.reconciled || selected.has(String(r.id)));
 
   /* §9: sets Bank Date = Transaction Date for the unreconciled rows in hand —
      the selected ones, or all of them when nothing is selected. It stages;
@@ -338,11 +338,11 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                         type="checkbox"
                         className="ui-checkbox"
                         aria-label="Select every unreconciled row shown"
-                        checked={allShownSelected && shown.some((r) => r.status !== 'Reconciled')}
+                        checked={allShownSelected && shown.some((r) => !r.reconciled)}
                         onChange={(e) =>
                           setSelected(
                             e.target.checked
-                              ? new Set(shown.filter((r) => r.status !== 'Reconciled').map((r) => String(r.id)))
+                              ? new Set(shown.filter((r) => !r.reconciled).map((r) => String(r.id)))
                               : new Set()
                           )
                         }
@@ -370,7 +370,7 @@ export default function BankReconciliation({ db, setDb, currentCompany, onImport
                     </tr>
                   ) : (
                     shown.map((r) => {
-                      const done = r.status === 'Reconciled';
+                      const done = r.reconciled;
                       return (
                         <tr key={r.id}>
                           <td>

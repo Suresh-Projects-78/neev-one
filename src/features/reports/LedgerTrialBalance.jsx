@@ -5,6 +5,7 @@ import { getAccountLedgerLines, getTrialBalance } from '../../api/ledger';
 import { EmptyState, PageHeader, Spinner, TableSkeleton } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
 import { csvSafeValue } from '../../utils/csv';
+import { useFeatures } from '../../permissions/useFeatures';
 
 /**
  * Trial balance from the general ledger.
@@ -14,6 +15,8 @@ import { csvSafeValue } from '../../utils/csv';
  * one that must foot to zero.
  */
 export const LedgerTrialBalance = ({ currentCompany }) => {
+  const { isEnabled } = useFeatures();
+  const branchesEnabled = isEnabled('branches');
   const [data, setData] = useState(null);
   const [allBranches, setAllBranches] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -37,13 +40,14 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
   };
 
   const load = (scope = allBranches) => {
+    const effectiveScope = branchesEnabled ? scope : false;
     setLoading(true);
     setError('');
     const wantCompare = compare && fromDate && toDate;
     const prior = wantCompare ? priorWindow(fromDate, toDate) : null;
     return Promise.all([
-      getTrialBalance(scope, fromDate, toDate),
-      prior ? getTrialBalance(scope, prior.from, prior.to) : Promise.resolve(null),
+      getTrialBalance(effectiveScope, fromDate, toDate),
+      prior ? getTrialBalance(effectiveScope, prior.from, prior.to) : Promise.resolve(null),
     ])
       .then(([cur, prev]) => {
         setData(cur);
@@ -60,7 +64,7 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
 
   const openDrill = (row) => {
     setDrill({ loading: true, name: row.name });
-    getAccountLedgerLines(row.accountId, { from: fromDate, to: toDate, allBranches })
+    getAccountLedgerLines(row.accountId, { from: fromDate, to: toDate, allBranches: branchesEnabled ? allBranches : false })
       .then((res) => setDrill(res))
       .catch((e) => setDrill({ error: String(e?.message || e), name: row.name }));
   };
@@ -109,10 +113,10 @@ export const LedgerTrialBalance = ({ currentCompany }) => {
               />
               Compare
             </label>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            {branchesEnabled ? <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" className="ui-checkbox" checked={allBranches} onChange={(e) => setAllBranches(e.target.checked)} />
               All branches
-            </label>
+            </label> : null}
             <button type="button" className="ui-btn ui-btn-secondary" onClick={() => load()}>
               <RefreshCw size={16} aria-hidden="true" /> Refresh
             </button>

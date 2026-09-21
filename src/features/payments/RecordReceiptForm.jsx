@@ -3,7 +3,7 @@ import { Landmark, Percent } from 'lucide-react';
 
 import { cashReceiptWarning } from '../../utils/cashLimits';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
-import { DocFormActions, DocFormFootnote } from '../../components/DocumentForm';
+import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { blockIfClosed } from '../../utils/bookClose';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
@@ -107,7 +107,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     otherCharges: initialData?.otherCharges ? String(initialData.otherCharges) : '',
   }));
 
-  const { modes, loading: modesLoading, error: modesError } = usePaymentModes();
+  const { modes, loading: modesLoading, error: modesError } = usePaymentModes(db, companyId);
   const [saving, setSaving] = useState(false);
 
   // With exactly one cash/bank ledger there is no choice to make, so treat it
@@ -125,8 +125,12 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     return modes.find((m) => m.controlKind === wanted)?.id || modes[0]?.id || '';
   }, [hideMode, formData.mode, modes]);
 
+  const requestedLedgerAccountId = String(formData.ledgerAccountId || '').trim();
+  const resolvedRequestedMode = modes.find(
+    (mode) => String(mode.id) === requestedLedgerAccountId || String(mode.localId) === requestedLedgerAccountId
+  );
   const ledgerAccountId =
-    formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
+    resolvedRequestedMode?.id || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
   /*
    * The mode is the operator's, but the account picks its opening guess.
@@ -1154,84 +1158,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           ) : null}
         </section>
 
-      {/*
-        The receipt in one column: what settled the invoice, what came off it,
-        and what actually reached the account. The last figure is the one that
-        should match the bank statement, so it is the one set apart.
-      */}
-      <div className="ui-card p-4">
-        <div className="ui-t-sec mb-3">Receipt Summary</div>
-        {/*
-          Three figures, because there are three.
-
-          It used to list eight — amount received, TDS, bank charges, other
-          charges, total allocated, advance, invoices selected, net — of which
-          two named boxes that no longer exist and three were the same number
-          under different words. What is left is what the allocation came to,
-          what the customer withheld, and what the bank will therefore show.
-        */}
-        <div className="space-y-1.5 text-sm">
-          <div className="flex justify-between">
-            <span className="ui-muted">Total allocation</span>
-            <span className="ui-money">{formatMoney(computed.totalAmount, currentCompany)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="ui-muted">TDS deducted</span>
-            <span className="ui-money">{formatMoney(computed.tds, currentCompany)}</span>
-          </div>
-          {computed.advance > 0 ? (
-            /* Only when there is one: money waiting on a party is worth saying,
-               and a line reading nought on every other receipt is not. */
-            <div className="flex justify-between">
-              <span className="ui-muted">On account (unallocated)</span>
-              <span className="ui-money">{formatMoney(computed.advance, currentCompany)}</span>
-            </div>
-          ) : null}
-
-          <div
-            className="flex justify-between items-center mt-2 rounded-lg px-3 py-2"
-            style={{
-              backgroundColor: 'rgb(var(--brand) / 0.08)',
-              color: 'rgb(var(--brand-ink))',
-              fontWeight: 600,
-            }}
-          >
-            <span>Bank amount (Total receipt)</span>
-            <span className="ui-money">{formatMoney(computed.netCash, currentCompany)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Notes and narration are two different things kept apart: the narration
-          is the line the ledger prints beside the entry, up in the head with
-          the rest of the document; this is whatever else the operator wants to
-          record against it. */}
-      <div>
-        <label className="ui-label" htmlFor="rcpt-notes">Notes</label>
-        <textarea
-          id="rcpt-notes"
-          value={formData.notes}
-          onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-          className="ui-input w-full"
-          rows={3}
-          placeholder="Add any additional notes here..."
-        />
-      </div>
-
-      <DocFormFootnote />
-
-      {/* What actually reaches the account, kept on screen while invoices are
-          being ticked off — the invoice form's running total, for the figure
-          that has to match the bank statement. */}
-      <div className="ui-entry-summary">
-        <span className="ui-t-label">Net into the account</span>
-        <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
-        <span className="ui-caption">
-          {computed.lines.length} invoice(s) allocated
-          {computed.deductions > 0 ? ` · ${formatMoney(computed.deductions, currentCompany)} deducted` : ''}
-        </span>
-        <FieldErrorSummary errors={fieldErrors.errors} />
-      </div>
+      <FieldErrorSummary errors={fieldErrors.errors} />
     </form>
   );
 };

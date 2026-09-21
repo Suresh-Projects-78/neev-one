@@ -37,21 +37,17 @@ describe('the seeded TDS groups', () => {
     expect(receivable.isSystem).toBe(true);
   });
 
-  /* The specified hierarchy, and room beside it: Statutory Payables /
-     Receivables are the parents, so TCS and other statutory heads join
-     later as siblings rather than a re-parenting. */
-  it('each sits under its Statutory parent', () => {
+  it('each sits under the requested current balance-sheet parent', () => {
     const payable = byName('tds payable');
     const receivable = byName('tds receivable');
-    const statPay = byName('statutory payables');
-    const statRec = byName('statutory receivables');
-    expect(String(statPay?.id)).toBe(String(payable.parentGroupId));
-    expect(String(statRec?.id)).toBe(String(receivable.parentGroupId));
-    expect(statPay.isSystem).toBe(true);
-    expect(statRec.isSystem).toBe(true);
-    /* And the parents hang off the right types' roots. */
-    expect(statPay.parentGroupId ?? null).toBeNull();
-    expect(statRec.parentGroupId ?? null).toBeNull();
+    const currentLiabilities = byName('current liabilities');
+    const currentAssets = byName('current assets');
+    expect(String(currentLiabilities?.id)).toBe(String(payable.parentGroupId));
+    expect(String(currentAssets?.id)).toBe(String(receivable.parentGroupId));
+    expect(currentLiabilities.isSystem).toBe(true);
+    expect(currentAssets.isSystem).toBe(true);
+    expect(currentLiabilities.parentGroupId ?? null).toBeNull();
+    expect(currentAssets.parentGroupId ?? null).toBeNull();
   });
 
   it('the engine reads the right side off each, nesting included', () => {

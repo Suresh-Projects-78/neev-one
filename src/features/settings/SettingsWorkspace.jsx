@@ -42,7 +42,7 @@ const LocalNavItem = ({ item, selected, onSelect }) => {
           ? {
               /* Tinted, not filled: the row should read as chosen without
                  becoming the loudest thing on the screen. */
-              backgroundColor: 'rgb(var(--surface-tertiary))',
+              backgroundColor: 'rgb(var(--brand) / 0.10)',
               color: 'rgb(var(--fg))',
               boxShadow: 'inset 2px 0 0 rgb(var(--brand))',
             }

@@ -113,6 +113,29 @@ describe('what an import writes', () => {
     expect(latest.db.payments).toHaveLength(0);
     expect(latest.db.bankTransactions.every((t) => t.ledgerId === undefined || t.ledgerId === null)).toBe(true);
   });
+
+  it('allocates a mapped ledger and creates its balanced journal during import', async () => {
+    const user = userEvent.setup();
+    render(<Host />);
+    const mapped = [
+      'Cash / bank account,Date,Payments,Receipts,Narration,Ref No / UTR,Ledger Name',
+      'HDFC Current A/c,03-09-2026,450,,,UTR900333,Bank Charges',
+    ].join('\n');
+
+    await user.click(screen.getByRole('button', { name: /More/i }));
+    await user.click(await screen.findByRole('menuitem', { name: /Paste statement rows/i }));
+    fireEvent.change(await screen.findByLabelText('Statement rows'), { target: { value: mapped } });
+    await user.click(screen.getByRole('button', { name: 'Import rows' }));
+
+    await waitFor(() => expect(latest.db.bankTransactions).toHaveLength(1));
+    expect(latest.db.bankTransactions[0]).toMatchObject({ ledgerId: 610, allocationStatus: 'Allocated' });
+    expect(latest.db.journalEntries).toHaveLength(1);
+    expect(latest.db.journalEntries[0]).toMatchObject({
+      totalDebit: 450,
+      totalCredit: 450,
+      sourceBankTransactionId: latest.db.bankTransactions[0].id,
+    });
+  });
 });
 
 describe('importing the same statement twice', () => {

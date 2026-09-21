@@ -34,6 +34,9 @@ const CONDITIONS = [
   { id: 'notEmpty', label: 'Is not empty' },
 ];
 
+const TEXT_CONDITIONS = CONDITIONS.filter((condition) => !['gt', 'lt'].includes(condition.id));
+const NUMBER_CONDITIONS = CONDITIONS.filter((condition) => ['', 'equals', 'notEquals', 'gt', 'lt', 'empty', 'notEmpty'].includes(condition.id));
+
 const asText = (v) => String(v ?? '').trim();
 
 /** Numeric when both sides look numeric — so 100 sorts after 9, not before. */
@@ -194,6 +197,8 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
   const key = column.key;
   const current = state.filters[key] || { values: null, op: '', value: '', from: '', to: '' };
   const isDate = column.type === 'date';
+  const isNumber = column.type === 'number';
+  const isChoice = column.type === 'choice';
   const all = useMemo(() => state.valuesFor(key), [state, key]);
 
   const [search, setSearch] = useState('');
@@ -219,10 +224,30 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
     };
   }, [onClose]);
 
+  const displayValue = (raw) => {
+    if (!isNumber || raw === '') return raw;
+    const number = Number(raw);
+    return Number.isFinite(number)
+      ? new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(number)
+      : raw;
+  };
+  const displayTextValue = (raw) => (isNumber || isDate ? displayValue(raw) : String(raw || '').toUpperCase());
   const shown = search.trim()
-    ? all.filter((v) => v.toLowerCase().includes(search.trim().toLowerCase()))
+    ? all.filter((v) => `${v} ${displayValue(v)}`.toLowerCase().includes(search.trim().toLowerCase()))
     : all;
   const allShownChecked = shown.length > 0 && shown.every((v) => checked.has(v));
+  const dateTree = useMemo(() => {
+    if (!isDate) return [];
+    const years = new Map();
+    shown.forEach((iso) => {
+      const [year = '(blank)', month = '', day = ''] = String(iso || '').slice(0, 10).split('-');
+      if (!years.has(year)) years.set(year, new Map());
+      const months = years.get(year);
+      if (!months.has(month)) months.set(month, []);
+      months.get(month).push({ iso, day });
+    });
+    return [...years.entries()].sort(([a], [b]) => b.localeCompare(a));
+  }, [isDate, shown]);
 
   const toggle = (v) =>
     setChecked((prev) => {
@@ -274,30 +299,28 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
   const top = placeAbove
     ? Math.max(MARGIN, (anchorRect?.top || 0) - GAP - maxHeight)
     : Math.max(MARGIN, (anchorRect?.bottom || 0) + GAP);
-  const left = Math.min(Math.max(MARGIN, (anchorRect?.left || 0) - MARGIN), viewportW - 300);
+  const left = Math.min(Math.max(MARGIN, (anchorRect?.left || 0) - MARGIN), viewportW - 352);
 
   return (
     <div
       ref={panelRef}
-      className="fixed flex w-72 flex-col overflow-hidden ui-surface border rounded-xl shadow-lg p-3 gap-3 text-sm"
+      className="fixed flex w-[21.5rem] flex-col overflow-hidden ui-surface border rounded-md shadow-lg p-2 gap-1 text-xs"
       style={{ top, left, maxHeight, zIndex: 'var(--z-popover)' }}
       role="dialog"
       aria-label={`Filter ${column.label || key}`}
     >
-      <div className="font-medium ui-fg">{column.label || key}</div>
-
-      <div>
-        <div className="ui-caption mb-1">Sort</div>
-        <div className="flex gap-2">
+      <div className="border-b pb-1" style={{ borderColor: 'rgb(var(--border))' }}>
+        <div className="flex flex-col">
           <button
             type="button"
             onClick={() => {
               state.setSort({ key, dir: 'asc' });
               onClose();
             }}
-            className={`ui-btn ui-btn-secondary ui-btn-sm flex-1 text-xs ${state.sort?.key === key && state.sort?.dir === 'asc' ? 'ui-sunken' : ''}`}
+            className={`flex items-center gap-2 rounded px-2 py-1.5 text-left text-xs ui-hover-sunken ${state.sort?.key === key && state.sort?.dir === 'asc' ? 'ui-sunken' : ''}`}
           >
-            A → Z
+            <span className="w-5 text-center font-medium ui-muted" aria-hidden="true">A↓</span>
+            {isDate ? 'Sort Oldest to Newest' : isNumber ? 'Sort Smallest to Largest' : 'Sort A to Z'}
           </button>
           <button
             type="button"
@@ -305,15 +328,20 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               state.setSort({ key, dir: 'desc' });
               onClose();
             }}
-            className={`ui-btn ui-btn-secondary ui-btn-sm flex-1 text-xs ${state.sort?.key === key && state.sort?.dir === 'desc' ? 'ui-sunken' : ''}`}
+            className={`flex items-center gap-2 rounded px-2 py-1.5 text-left text-xs ui-hover-sunken ${state.sort?.key === key && state.sort?.dir === 'desc' ? 'ui-sunken' : ''}`}
           >
-            Z → A
+            <span className="w-5 text-center font-medium ui-muted" aria-hidden="true">Z↓</span>
+            {isDate ? 'Sort Newest to Oldest' : isNumber ? 'Sort Largest to Smallest' : 'Sort Z to A'}
           </button>
         </div>
       </div>
 
-      <div>
-        <div className="ui-caption mb-1">Filter</div>
+      <details className="border-b py-1" style={{ borderColor: 'rgb(var(--border))' }}>
+        <summary className="flex cursor-pointer list-none items-center justify-between rounded px-2 py-1.5 text-xs ui-hover-sunken">
+          <span>{isDate ? 'Date Filters' : isNumber ? 'Number Filters' : isChoice ? 'Select Values' : 'Text Filters'}</span>
+          <span aria-hidden="true">›</span>
+        </summary>
+        <div className="px-2 pb-2 pt-1">
         {isDate ? (
           /* The window this column used to need a page-wide band for. */
           <div className="flex items-center gap-1">
@@ -333,10 +361,10 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               aria-label={`${column.label || key} to`}
             />
           </div>
-        ) : (
+        ) : isChoice ? null : (
         <div className="flex gap-2">
           <select value={op} onChange={(e) => setOp(e.target.value)} className="ui-select flex-1 px-2 text-xs ui-ctl-compact">
-            {CONDITIONS.map((c) => (
+            {(isNumber ? NUMBER_CONDITIONS : TEXT_CONDITIONS).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.label}
               </option>
@@ -345,7 +373,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
           <input
             type="text"
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => setValue(isNumber ? e.target.value : e.target.value.toUpperCase())}
             disabled={!op || op === 'empty' || op === 'notEmpty'}
             className="ui-input w-24 px-2 text-xs ui-ctl-compact"
             placeholder="Value"
@@ -353,23 +381,35 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
           />
         </div>
         )}
-      </div>
+        </div>
+      </details>
 
-      <div className="relative">
+      <button
+        type="button"
+        onClick={clearNow}
+        disabled={!state.filters[key] && state.sort?.key !== key}
+        className="flex items-center gap-2 rounded px-2 py-1.5 text-left text-xs ui-hover-sunken disabled:opacity-40"
+      >
+        <span className="w-5 text-center" aria-hidden="true">⌫</span>
+        Clear Filter From “{column.label || key}”
+        <span className="sr-only">Clear Filter</span>
+      </button>
+
+      <div className="relative mt-1">
         <SearchIcon size={14} className="absolute left-2 top-1/2 -translate-y-1/2 ui-muted" aria-hidden="true" />
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => setSearch(e.target.value.toUpperCase())}
           className="ui-input w-full pl-7 pr-2 text-xs ui-ctl-compact"
-          placeholder="Search"
+          placeholder="SEARCH (ALL)"
           aria-label="Search values"
         />
       </div>
 
       {/* The one part that grows without limit, so it is the part that
           scrolls — the sort buttons and the footer stay reachable. */}
-      <div className="min-h-16 flex-1 min-w-0 overflow-y-auto border rounded-lg p-2 space-y-1">
+      <div className="min-h-52 flex-1 min-w-0 overflow-y-auto border p-2 space-y-1">
         <label className="flex items-center gap-2 cursor-pointer font-medium">
           <input
             type="checkbox"
@@ -383,23 +423,42 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               })
             }
           />
-          (Select All)
+          (SELECT ALL)
         </label>
         {shown.length === 0 ? <div className="ui-muted text-xs px-1">No values</div> : null}
-        {shown.map((v) => (
+        {isDate ? dateTree.map(([year, months]) => (
+          <details key={year} open className="rounded-md">
+            <summary className="cursor-pointer font-medium">{year}</summary>
+            <div className="pl-3 space-y-1">
+              {[...months.entries()].sort(([a], [b]) => b.localeCompare(a)).map(([month, days]) => (
+                <details key={`${year}-${month}`}>
+                  <summary className="cursor-pointer">{month ? new Date(`${year}-${month}-01T00:00:00`).toLocaleString(undefined, { month: 'long' }) : '(blank)'}</summary>
+                  <div className="pl-3 space-y-1">
+                    {days.map(({ iso, day }) => (
+                      <label key={iso || '(blank)'} className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" className="ui-checkbox" checked={checked.has(iso)} onChange={() => toggle(iso)} />
+                        <span>{day || '(blank)'}</span>
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </details>
+        )) : shown.map((v) => (
           <label key={v || '(blank)'} className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="ui-checkbox" checked={checked.has(v)} onChange={() => toggle(v)} />
-            <span className="truncate">{v === '' ? '(blank)' : v}</span>
+            <span className="truncate">{v === '' ? '(BLANK)' : displayTextValue(v)}</span>
           </label>
         ))}
       </div>
 
-      <div className="flex justify-end gap-2">
-        <button type="button" onClick={clearNow} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-          Clear Filter
+      <div className="flex justify-end gap-2 pt-1">
+        <button type="button" onClick={onClose} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
+          Cancel
         </button>
         <button type="button" onClick={applyNow} className="ui-btn ui-btn-primary ui-btn-sm text-xs">
-          Apply Filter
+          OK<span className="sr-only">Apply Filter</span>
         </button>
       </div>
     </div>
@@ -423,36 +482,12 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
     else setLocalOpen(false);
   };
 
-  /*
-   * The column owns its geometry; the header inherits it.
-   *
-   * `ui-col-h-<align>` is the one place the header's text-align comes from,
-   * so a right-aligned money column has a right-aligned heading whether or
-   * not the caller also passed `ui-num`. The sort control then fills the
-   * cell and packs its contents toward the same edge:
-   *
-   *   left   [Customer ▾            ]   label first, chevron beside it
-   *   right  [            ▾ Amount  ]   chevron first, label on the edge
-   *
-   * Right columns run row-reverse on purpose. With the chevron after the
-   * label, "Amount" ended 26px short of the figures under it — every money
-   * heading in the product sat visibly left of its own column. The label is
-   * what the eye lines up with the digits, so the label takes the edge.
-   */
-  const headClass = `ui-col-h ui-col-h-${align} ${className}`.trim();
-
   if (!col) {
-    return <th scope="col" className={headClass}>{label}</th>;
+    return <th scope="col" className={className}>{label}</th>;
   }
 
-  /* row-reverse flips main-start to the right, so packing at START is what
-     puts the label on the right edge; `justify-end` there packs LEFT, which
-     is the mistake the first cut made and measured as a 23px gap. */
-  const pack =
-    align === 'right' ? 'justify-start flex-row-reverse' : align === 'center' ? 'justify-center' : 'justify-start';
-
   return (
-    <th scope="col" className={headClass}>
+    <th scope="col" className={className}>
       <button
         type="button"
         onClick={(e) => {
@@ -464,12 +499,8 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
            16px inside a 33px header cell — so half the header was dead to
            the pointer and the whole of it was under the 24px a pointer
            target is meant to be. `-my-1.5` gives the padding back to the cell
-           so no row gets taller. `-mx-1 px-1` cancel, so the label's edge is
-           the cell's content edge — the same edge every cell below it uses.
-           The width has to say so too: `w-full` is 100% of the content box,
-           so with a -4px left margin the box ended 4px short on the right
-           and a right-aligned label sat 8px inside the figures' edge. */
-        className={`w-[calc(100%+0.5rem)] flex items-center gap-1 ${pack} rounded-md px-1 -mx-1 py-1.5 -my-1.5 ui-hover-sunken`}
+           so no row gets taller. */
+        className={`w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} rounded-lg px-1 -mx-1 py-1.5 -my-1.5 ui-hover-sunken`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={`Sort and filter ${typeof label === 'string' ? label : col}`}

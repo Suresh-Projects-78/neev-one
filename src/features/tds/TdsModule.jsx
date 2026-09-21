@@ -6,6 +6,7 @@ import { LIST_PERIODS, usePeriodFilter } from '../../components/ListControls';
 import PopupSelect from '../../components/pickers/PopupSelect';
 import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
+import { useFeatures } from '../../permissions/useFeatures';
 import { companyTdsProfile } from './engine';
 import { TDS_NATURES, natureByCode } from './ruleMaster';
 import { datasetChecksum, filingFor, quarterValidation, returnCsv, returnDataset } from './returns';
@@ -52,6 +53,8 @@ const SEVERITY_STYLE = {
 };
 
 export default function TdsModule({ db, setDb = null, currentCompany, onNewChallan = null, onOpenSettings = null }) {
+  const { isEnabled } = useFeatures();
+  const branchesEnabled = isEnabled('branches');
   const companyId = currentCompany?.id;
   const profile = companyTdsProfile(currentCompany);
   const period = usePeriodFilter();
@@ -65,8 +68,8 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
   const [ledgerId, setLedgerId] = useState('');
 
   const filter = useMemo(
-    () => ({ from: period.dateFrom, to: period.dateTo, quarter, side, partyId, natureCode, status, branchId, ledgerId }),
-    [period.dateFrom, period.dateTo, quarter, side, partyId, natureCode, status, branchId, ledgerId]
+    () => ({ from: period.dateFrom, to: period.dateTo, quarter, side, partyId, natureCode, status, branchId: branchesEnabled ? branchId : '', ledgerId }),
+    [period.dateFrom, period.dateTo, quarter, side, partyId, natureCode, status, branchId, ledgerId, branchesEnabled]
   );
 
   /* Every option list is derived from the events themselves — the report
@@ -317,7 +320,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               <option value="Reversal">Reversal</option>
             </select>
           </div>
-          {branchOptions.length ? (
+          {branchesEnabled && branchOptions.length ? (
             <div className="min-w-0 w-40">
               <label className="ui-label" htmlFor="tds-f-branch">Branch</label>
               <select id="tds-f-branch" className="ui-select w-full" value={branchId} onChange={(e) => setBranchId(e.target.value)}>

@@ -224,10 +224,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       .filter((a) => a.companyId === companyId)
       .filter((a) => {
         const gid = a?.groupId;
-        return (
-          isUnderNamedRoot(gid, 'bank accounts') ||
-          isUnderNamedRoot(gid, 'cash-in-hand')
-        );
+        return ['bank', 'banks', 'bank account', 'bank accounts', 'cash', 'cash-in-hand', 'cash in hand', 'cash & bank', 'cash and bank', 'cash / bank', 'cash/bank']
+          .some((root) => isUnderNamedRoot(gid, root));
       })
       .slice()
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
@@ -1422,10 +1420,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         'bank account',
         'cash account',
         'account',
-        // Backward-compatible with the earlier template naming
-        'ledger name',
-        'ledger',
       ]);
+      const ledgerIdx = pickIdx(['mapped ledger', 'allocation ledger', 'ledger name', 'ledger']);
       const dateIdx = pickIdx(['date', 'txn date', 'transaction date', 'value date']);
       const typeIdx = pickIdx(['type', 'txn type', 'transaction type', 'dr/cr']);
       const paymentIdx = pickIdx(['payment', 'payments', 'paid', 'debit', 'withdrawal', 'dr']);
@@ -1489,6 +1485,12 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       const incomingLoose = new Map();
 
       const accountNameToId = new Map(cashBankAccounts.map((a) => [String(a.name || '').trim().toLowerCase(), Number(a.id)]));
+      const ledgerNameToId = new Map(
+        safeArray(db.chartOfAccounts)
+          .filter((a) => Number(a?.companyId) === Number(companyId))
+          .map((a) => [String(a.name || '').trim().toLowerCase(), Number(a.id)])
+      );
+      const cashBankIds = new Set(cashBankAccounts.map((a) => String(a.id)));
       const fallbackAccountId = Number(selectedAccount?.id || cashBankAccounts[0]?.id || 0);
       const unknownAccounts = new Set();
       let firstImportedAccountId = null;
@@ -1500,6 +1502,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       const narration = narrationIdx >= 0 ? String(r[narrationIdx] || '').trim() : '';
       const reference = refIdx >= 0 ? String(r[refIdx] || '').trim() : '';
         const accountText = accountIdx >= 0 ? String(r[accountIdx] || '').trim() : '';
+        const ledgerText = ledgerIdx >= 0 ? String(r[ledgerIdx] || '').trim() : '';
 
         const hasPayRecColumns = paymentIdx >= 0 || receiptsIdx >= 0;
         const paymentRaw = paymentIdx >= 0 ? parseAmount(r[paymentIdx]) : 0;
@@ -1540,6 +1543,14 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
         if (firstImportedAccountId === null) firstImportedAccountId = cashBankAccountId;
 
+        const resolvedLedgerId = ledgerText ? ledgerNameToId.get(ledgerText.toLowerCase()) || null : null;
+        const mappedLedgerId = resolvedLedgerId && String(resolvedLedgerId) !== String(cashBankAccountId) ? resolvedLedgerId : null;
+        const typeUpper = String(typeText || '').trim().toUpperCase();
+        const transactionType =
+          (mappedLedgerId && cashBankIds.has(String(mappedLedgerId))) || typeUpper.includes('CONTRA') || typeUpper.includes('TRANSFER')
+            ? 'Contra'
+            : direction === 'IN' ? 'Receipt' : 'Payment';
+
         const shaped = { cashBankAccountId, date: finalDate, direction, amount, narration, reference };
         const sk = strictKey(shaped);
         const lk = looseKey(shaped);
@@ -1569,6 +1580,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           narration,
           reference,
           cashBankAccountId,
+          ledgerId: mappedLedgerId,
+          ledgerName: ledgerText,
+          transactionType,
           /* Which line of the pasted or uploaded statement this came from —
              the trail back to the source when a figure is questioned. */
           sourceRow: rows.indexOf(r) + 1,
@@ -1634,7 +1648,8 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         cashBankAccountId: Number(t.cashBankAccountId),
         date: t.date,
         direction: t.direction,
-        ledgerId: undefined,
+        ledgerId: t.ledgerId || undefined,
+        transactionType: t.transactionType || (t.direction === 'IN' ? 'Receipt' : 'Payment'),
         amount: t.amount,
         narration: t.narration,
         description: t.narration,
@@ -1647,7 +1662,40 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         sourceRow: t.sourceRow,
         createdAt: new Date().toISOString(),
       }));
-      return { ...prev, bankTransactions: [...list, ...appended] };
+      let nextJournalId = safeArray(prev.journalEntries).reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0) + 1;
+      const mappedJournals = [];
+      const finalAppended = appended.map((txn) => {
+        if (!txn.ledgerId) return txn;
+        const incoming = String(txn.direction || '').toUpperCase() === 'IN';
+        const fromId = incoming ? String(txn.ledgerId) : String(txn.cashBankAccountId);
+        const toId = incoming ? String(txn.cashBankAccountId) : String(txn.ledgerId);
+        const from = safeArray(prev.chartOfAccounts).find((a) => String(a.id) === fromId);
+        const to = safeArray(prev.chartOfAccounts).find((a) => String(a.id) === toId);
+        if (!from || !to) return txn;
+        const journalId = nextJournalId++;
+        mappedJournals.push({
+          id: journalId,
+          companyId,
+          number: `${txn.transactionType === 'Contra' ? 'AUTO-CONTRA' : 'AUTO-BANK'}-${txn.id}`,
+          date: txn.date,
+          narration: txn.narration || `Transfer from ${from.name} to ${to.name}`,
+          lines: [
+            { accountId: toId, accountName: to.name || '', accountCode: to.code || '', debit: txn.amount, credit: 0 },
+            { accountId: fromId, accountName: from.name || '', accountCode: from.code || '', debit: 0, credit: txn.amount },
+          ],
+          totalDebit: txn.amount,
+          totalCredit: txn.amount,
+          voucherKind: txn.transactionType === 'Contra' ? 'contra' : 'bank-allocation',
+          sourceBankTransactionId: txn.id,
+          createdAt: new Date().toISOString(),
+        });
+        return { ...txn, linkedJournalEntryId: journalId, allocationStatus: 'Allocated' };
+      });
+      return {
+        ...prev,
+        bankTransactions: [...list, ...finalAppended],
+        journalEntries: [...safeArray(prev.journalEntries), ...mappedJournals],
+      };
     });
 
     setView('all');

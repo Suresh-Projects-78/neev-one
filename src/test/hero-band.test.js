@@ -75,8 +75,8 @@ describe('the landing band is one component', () => {
        module title is 26/32 with the tight tracking a page title takes; the
        point of the assertion is that the number is in this file and not in a
        caller's. */
-    expect(band).toMatch(/fontSize: 20/);
-    expect(band).toMatch(/letterSpacing: '-0\.01em'/);
+    expect(band).toMatch(/fontSize: 26/);
+    expect(band).toMatch(/letterSpacing: '-0\.025em'/);
     expect(band).toMatch(/ui-btn ui-btn-primary/);
     expect(band).not.toMatch(/className=\{.*props/);
   });
