@@ -666,6 +666,71 @@
   --shadow-lift: 0 12px 32px -12px rgb(0 0 0 / 0.65), 0 2px 8px -2px rgb(0 0 0 / 0.4);
 }
 
+/* Graphite theme: monochrome product chrome with colour reserved for financial meaning. */
+:root {
+  --app-bg: 244 244 245; --surface: 255 255 255; --surface-raised: 255 255 255;
+  --surface-sunken: 247 247 248; --border: 228 228 231; --border-strong: 161 161 170;
+  --border-field: 212 212 216; --doc-section: 250 250 250;
+  --fg: 9 9 11; --fg-muted: 63 63 70; --fg-subtle: 113 113 122;
+  --brand: 24 24 27; --brand-deep: 9 9 11; --brand-hover: 39 39 42; --brand-pressed: 9 9 11;
+  --brand-soft: 244 244 245; --brand-subtle: 250 250 250; --brand-border: 212 212 216;
+  --brand-ink: 24 24 27; --brand-panel: 9 9 11; --on-brand: 255 255 255;
+  --doc-link: 39 39 42; --doc-link-wash: 244 244 245; --accent-soft: var(--brand-soft);
+  --ring: 63 63 70; --link: 39 39 42; --link-hover: 9 9 11; --info: 82 82 91; --info-soft: 244 244 245;
+  --st-all-soft: 244 244 245; --st-all-strong: 228 228 231; --st-all-key: 39 39 42; --st-all-ink: 24 24 27;
+  --nav-fg: 244 244 245; --nav-fg-muted: 161 161 170; --nav-fg-subtle: 113 113 122;
+  --rail-bg: 15 15 17; --rail-border: 39 39 42; --rail-hover: 39 39 42; --rail-active: 63 63 70;
+  --nav-dashboard: 212 212 216; --nav-sales: 212 212 216; --nav-crm: 212 212 216;
+  --nav-purchases: 212 212 216; --nav-cashbank: 212 212 216; --nav-expenses: 212 212 216;
+  --nav-inventory: 212 212 216; --nav-journal: 212 212 216; --nav-approvals: 212 212 216;
+  --nav-reports: 212 212 216; --nav-masterdata: 212 212 216; --nav-settings: 212 212 216;
+  --nav-dashboard-ink: 244 244 245; --nav-sales-ink: 244 244 245; --nav-crm-ink: 244 244 245;
+  --nav-purchases-ink: 244 244 245; --nav-cashbank-ink: 244 244 245; --nav-expenses-ink: 244 244 245;
+  --nav-inventory-ink: 244 244 245; --nav-journal-ink: 244 244 245; --nav-approvals-ink: 244 244 245;
+  --nav-reports-ink: 244 244 245; --nav-masterdata-ink: 244 244 245; --nav-settings-ink: 244 244 245;
+  --ov-blue: 63 63 70; --ov-blue-soft: 228 228 231; --ov-blue-wash: 250 250 250;
+  --ov-green: 82 82 91; --ov-green-soft: 228 228 231; --ov-green-wash: 250 250 250;
+  --ov-amber: 82 82 91; --ov-amber-soft: 228 228 231; --ov-amber-wash: 250 250 250;
+  --ov-violet: 63 63 70; --ov-violet-soft: 228 228 231; --ov-violet-wash: 250 250 250;
+  --ov-orange: 39 39 42; --ov-orange-soft: 228 228 231; --ov-orange-wash: 250 250 250;
+  --kpi-line: 228 228 231;
+  --kpi-sales-bg: 250 250 250; --kpi-sales-ink: 24 24 27;
+  --kpi-invoices-bg: 244 244 245; --kpi-invoices-ink: 39 39 42;
+  --kpi-received-bg: 240 253 244; --kpi-received-ink: 21 128 61;
+  --kpi-due-bg: 250 250 250; --kpi-due-ink: 63 63 70;
+  --kpi-overdue-bg: 254 242 242; --kpi-overdue-ink: 185 28 28;
+  --kpi-credit-bg: 244 244 245; --kpi-credit-ink: 39 39 42;
+}
+
+:root[data-theme='dark'] {
+  --app-bg: 9 9 11; --surface: 18 18 21; --surface-sunken: 24 24 27; --surface-raised: 39 39 42;
+  --border: 39 39 42; --border-strong: 82 82 91; --border-field: 63 63 70; --doc-section: 24 24 27;
+  --fg: 250 250 250; --fg-muted: 161 161 170; --fg-subtle: 161 161 170;
+  --brand: 250 250 250; --brand-deep: 212 212 216; --brand-hover: 228 228 231; --brand-pressed: 255 255 255;
+  --brand-soft: 39 39 42; --brand-subtle: 24 24 27; --brand-border: 82 82 91; --brand-ink: 250 250 250;
+  --on-brand: 9 9 11; --on-primary: 9 9 11; --on-accent: 9 9 11; --accent-soft: 39 39 42;
+  --ring: 212 212 216; --doc-link: 228 228 231; --doc-link-wash: 39 39 42;
+  --link: 212 212 216; --link-hover: 250 250 250; --info: 161 161 170; --info-soft: 39 39 42;
+  --st-all-soft: 39 39 42; --st-all-strong: 63 63 70; --st-all-key: 212 212 216; --st-all-ink: 244 244 245;
+  --rail-bg: 3 3 4; --rail-border: 39 39 42; --rail-hover: 24 24 27; --rail-active: 63 63 70;
+  --nav-fg: 244 244 245; --nav-fg-muted: 161 161 170; --nav-fg-subtle: 113 113 122;
+  --nav-dashboard: 212 212 216; --nav-sales: 212 212 216; --nav-crm: 212 212 216;
+  --nav-purchases: 212 212 216; --nav-cashbank: 212 212 216; --nav-expenses: 212 212 216;
+  --nav-inventory: 212 212 216; --nav-journal: 212 212 216; --nav-approvals: 212 212 216;
+  --nav-reports: 212 212 216; --nav-masterdata: 212 212 216; --nav-settings: 212 212 216;
+  --nav-dashboard-ink: 244 244 245; --nav-sales-ink: 244 244 245; --nav-crm-ink: 244 244 245;
+  --nav-purchases-ink: 244 244 245; --nav-cashbank-ink: 244 244 245; --nav-expenses-ink: 244 244 245;
+  --nav-inventory-ink: 244 244 245; --nav-journal-ink: 244 244 245; --nav-approvals-ink: 244 244 245;
+  --nav-reports-ink: 244 244 245; --nav-masterdata-ink: 244 244 245; --nav-settings-ink: 244 244 245;
+  --kpi-line: 39 39 42;
+  --kpi-sales-bg: 24 24 27; --kpi-sales-ink: 250 250 250;
+  --kpi-invoices-bg: 32 32 35; --kpi-invoices-ink: 228 228 231;
+  --kpi-received-bg: 5 46 22; --kpi-received-ink: 74 222 128;
+  --kpi-due-bg: 32 32 35; --kpi-due-ink: 212 212 216;
+  --kpi-overdue-bg: 69 10 10; --kpi-overdue-ink: 248 113 113;
+  --kpi-credit-bg: 24 24 27; --kpi-credit-ink: 228 228 231;
+}
+
 @layer base {
   html {
     /* Inter, matching the reference the module overviews are drawn from. */
@@ -2809,9 +2874,21 @@
      element that should reach it. It runs edge to edge now, separated from
      the content by a single hairline. */
   .ui-rail {
-    background-color: rgb(var(--surface));
-    border-inline-end: 1px solid rgb(var(--border));
+    background-color: rgb(var(--rail-bg));
+    border-inline-end: 1px solid rgb(var(--rail-border));
+    color: rgb(var(--nav-fg));
   }
+
+  .ui-rail .ui-nav-item:hover { background-color: rgb(var(--rail-hover)); color: rgb(var(--nav-fg)); }
+  .ui-rail .ui-nav-item[data-active='true'],
+  .ui-rail .ui-nav-item[data-level='module'][data-active='true'],
+  .ui-rail .ui-nav-item:not([data-level='module'])[data-active='true'] {
+    background-color: rgb(var(--rail-active));
+    color: rgb(var(--nav-fg));
+  }
+  .ui-rail .ui-nav-item[data-active='true'][data-tone] svg,
+  .ui-rail .ui-nav-item:not([data-level='module'])[data-active='true'][data-tone] svg { color: rgb(var(--nav-fg)); }
+  .ui-rail .ui-nav-item[data-active='true']::before { background-color: rgb(var(--surface)); }
 
   /* The two pickers in the top bar say where you are working — the branch and
      the warehouse every document will be filed against. They were plain

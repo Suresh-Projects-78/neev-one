@@ -13,7 +13,7 @@ Preview (rendered): https://claude.ai/code/artifact/b5f06c26-a4de-4879-979f-fbb1
 - **Direction:** Instrument — industrial-utilitarian, refined.
 - **Decoration level:** minimal. Typography and spacing carry the page.
 - **Mood:** a precision tool. Data is the interface; chrome gets out of the way.
-- **Removed:** ambient orange orbs (`ui-ambient`) leave product screens. They stay on auth and marketing.
+- **Removed:** ambient colour effects (`ui-ambient`) leave product screens. Product chrome stays monochrome.
 
 ## Do's and Don'ts
 
@@ -88,11 +88,11 @@ Nothing below 12px. Nothing between 16 and 24.
 
 ## Color
 - **Approach:** restrained. One accent, and it means one thing.
-- **Brand `#FF6B00`** (`--brand`): primary action and active navigation. Nothing else. Rare in this category — Tally blue, Zoho red, QuickBooks green. Its readable-on-light partner is `#C2410C` (`--brand-ink`), used for brand-coloured text and marks where the fill would not carry contrast.
+- **Brand `#18181B`** (`--brand`): primary action and active navigation. The dark theme inverts it to off-white. This keeps controls strong without adding decorative colour.
 - **Money semantics, never the accent:** in `#15803D`, out / late `#B91C1C`, attention `#A16207`.
-- **Column hues:** document number `#C2410C`, party name `#0F766E`. A row reads as fields, not prose.
-- **Neutrals:** warm (stone), `#FAFAF9` → `#1C1917`, biased toward the orange so they read as chosen.
-- **Dark mode:** redefine tokens only, never restyle components inside a theme block. Accent lifts to `#FF8A33`; money greens and reds lighten for contrast on dark ground.
+- **Product chrome:** graphite only. Module icons, navigation, buttons, filters, and neutral KPI cards use the zinc ramp.
+- **Neutrals:** cool graphite, `#FAFAFA` → `#09090B`, with white document surfaces and a black navigation rail.
+- **Dark mode:** redefine tokens only, never restyle components inside a theme block. Surfaces use true neutral blacks; money greens, ambers, and reds remain available for meaning.
 
 ## Spacing
 - **Base:** 8px.
