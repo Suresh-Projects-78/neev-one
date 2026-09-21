@@ -678,8 +678,8 @@
   --doc-link: 39 39 42; --doc-link-wash: 244 244 245; --accent-soft: var(--brand-soft);
   --ring: 63 63 70; --link: 39 39 42; --link-hover: 9 9 11; --info: 82 82 91; --info-soft: 244 244 245;
   --st-all-soft: 244 244 245; --st-all-strong: 228 228 231; --st-all-key: 39 39 42; --st-all-ink: 24 24 27;
-  --nav-fg: 244 244 245; --nav-fg-muted: 161 161 170; --nav-fg-subtle: 113 113 122;
-  --rail-bg: 15 15 17; --rail-border: 39 39 42; --rail-hover: 39 39 42; --rail-active: 63 63 70;
+  --nav-fg: 24 24 27; --nav-fg-muted: 82 82 91; --nav-fg-subtle: 113 113 122;
+  --rail-bg: 255 255 255; --rail-border: 228 228 231; --rail-hover: 244 244 245; --rail-active: 228 228 231;
   --nav-dashboard: 212 212 216; --nav-sales: 212 212 216; --nav-crm: 212 212 216;
   --nav-purchases: 212 212 216; --nav-cashbank: 212 212 216; --nav-expenses: 212 212 216;
   --nav-inventory: 212 212 216; --nav-journal: 212 212 216; --nav-approvals: 212 212 216;
@@ -2888,7 +2888,7 @@
   }
   .ui-rail .ui-nav-item[data-active='true'][data-tone] svg,
   .ui-rail .ui-nav-item:not([data-level='module'])[data-active='true'][data-tone] svg { color: rgb(var(--nav-fg)); }
-  .ui-rail .ui-nav-item[data-active='true']::before { background-color: rgb(var(--surface)); }
+  .ui-rail .ui-nav-item[data-active='true']::before { background-color: rgb(var(--brand)); }
 
   /* The two pickers in the top bar say where you are working — the branch and
      the warehouse every document will be filed against. They were plain

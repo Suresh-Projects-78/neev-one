@@ -91,7 +91,7 @@ Nothing below 12px. Nothing between 16 and 24.
 - **Brand `#18181B`** (`--brand`): primary action and active navigation. The dark theme inverts it to off-white. This keeps controls strong without adding decorative colour.
 - **Money semantics, never the accent:** in `#15803D`, out / late `#B91C1C`, attention `#A16207`.
 - **Product chrome:** graphite only. Module icons, navigation, buttons, filters, and neutral KPI cards use the zinc ramp.
-- **Neutrals:** cool graphite, `#FAFAFA` → `#09090B`, with white document surfaces and a black navigation rail.
+- **Neutrals:** cool graphite, `#FAFAFA` → `#09090B`, with white document surfaces and a white navigation rail separated by a quiet grey rule.
 - **Dark mode:** redefine tokens only, never restyle components inside a theme block. Surfaces use true neutral blacks; money greens, ambers, and reds remain available for meaning.
 
 ## Spacing
