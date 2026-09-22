@@ -141,6 +141,11 @@ const DEFAULT_JOURNALS: Array<{ code: string; name: string; type: string }> = [
   { code: 'CSH', name: 'Cash', type: 'CASH' },
   { code: 'JV', name: 'Journal', type: 'GENERAL' },
   { code: 'OPN', name: 'Opening', type: 'OPENING' },
+  /* Payroll writes the largest entry most companies make each month, and a
+     book of its own is how an accountant expects to find it — the same reason
+     sales and purchases have theirs. Seeded like the rest, so an organisation
+     that predates payroll gains it the next time the ledger is set up. */
+  { code: 'PAY', name: 'Payroll', type: 'GENERAL' },
 ];
 
 // India: 1 April to 31 March.

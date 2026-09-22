@@ -23,6 +23,9 @@ DB="${NEEV_DB:-/opt/neev/data/prod.db}"
 # Left empty, or absent on disk, payroll is skipped with a warning rather than
 # failing the accounting backup.
 PAYROLL_DB="${NEEV_PAYROLL_DB:-/opt/neev/data/payroll.db}"
+# Who works here. Its own database, so its own archive — and the one whose loss
+# would make every other module's employee references dangle.
+PEOPLE_DB="${NEEV_PEOPLE_DB:-/opt/neev/data/people.db}"
 DEST="${NEEV_BACKUP_DIR:-/var/backups/neev-one}"
 KEEP="${NEEV_BACKUP_KEEP:-30}"
 
@@ -152,4 +155,36 @@ if [ -n "$PAYROLL_DB" ] && [ -f "$PAYROLL_DB" ]; then
 elif [ -n "$PAYROLL_DB" ]; then
   # Not fatal: an installation that has never switched payroll on has no file.
   echo "backup: no payroll database at $PAYROLL_DB — skipping (set NEEV_PAYROLL_DB, or ignore if payroll is unused)" >&2
+fi
+
+# ----------------------------------------------------------------- people
+if [ -n "$PEOPLE_DB" ] && [ -f "$PEOPLE_DB" ]; then
+  PEOPLE_ARCHIVE="$DEST/neev-people-$STAMP.db"
+  if ! sqlite3 "$PEOPLE_DB" ".backup '$PEOPLE_ARCHIVE'"; then
+    rm -f "$PEOPLE_ARCHIVE"
+    die "sqlite3 could not back up $PEOPLE_DB (locked, or unreadable)"
+  fi
+  gzip "$PEOPLE_ARCHIVE"
+  PEOPLE_ARCHIVE="$PEOPLE_ARCHIVE.gz"
+
+  if [ "${1:-}" = "--verify" ]; then
+    PROBE3="$(mktemp -d)"
+    trap 'rm -rf "$PROBE3"' EXIT
+    gunzip -c "$PEOPLE_ARCHIVE" > "$PROBE3/probe.db"
+    INTEGRITY="$(sqlite3 "$PROBE3/probe.db" 'PRAGMA integrity_check;' 2>&1 | head -1 || true)"
+    [ "$INTEGRITY" = "ok" ] || die "restored people copy failed integrity check: $INTEGRITY"
+
+    live="$(sqlite3 "$PEOPLE_DB" 'SELECT COUNT(*) FROM Employee;' 2>/dev/null || echo missing)"
+    restored="$(sqlite3 "$PROBE3/probe.db" 'SELECT COUNT(*) FROM Employee;' 2>/dev/null || echo missing)"
+    [ "$live" = "missing" ] && die "live people database has no Employee table"
+    [ "$restored" = "missing" ] && die "restored people copy has no Employee table"
+    [ "$live" = "$restored" ] || die "Employee: live has $live rows, the restore has $restored"
+    echo "  Employee: $restored rows"
+    echo "verified: $PEOPLE_ARCHIVE restores and matches the live people row counts"
+  fi
+
+  ls -1t "$DEST"/neev-people-*.db.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
+  echo "people backup written: $PEOPLE_ARCHIVE"
+elif [ -n "$PEOPLE_DB" ]; then
+  echo "backup: no people database at $PEOPLE_DB — skipping (set NEEV_PEOPLE_DB)" >&2
 fi

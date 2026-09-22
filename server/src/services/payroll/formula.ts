@@ -45,6 +45,25 @@ export const FORMULA_VARIABLES: { name: string; description: string }[] = [
 
 const VARIABLE_NAMES = new Set(FORMULA_VARIABLES.map((v) => v.name));
 
+/**
+ * A structure's own component codes are variables too.
+ *
+ * `HRA = BASIC * 0.4` is how salary is actually written down, and it only works
+ * if the parser will accept BASIC as a name. So the caller passes the codes
+ * that exist in the structure being evaluated, and anything outside that set is
+ * still refused — a formula referring to a component this structure does not
+ * have is a mistake worth catching at save time rather than a silent zero.
+ */
+const allowedNames = (extra?: Iterable<string>) => {
+  if (!extra) return VARIABLE_NAMES;
+  const set = new Set(VARIABLE_NAMES);
+  for (const name of extra) {
+    const clean = String(name || '').trim().toUpperCase();
+    if (clean) set.add(clean);
+  }
+  return set;
+};
+
 /** The only functions a formula may call. */
 const FUNCTIONS: Record<string, { arity: number; apply: (args: number[]) => number }> = {
   IF: { arity: 3, apply: ([cond, a, b]) => (cond ? a : b) },
@@ -150,7 +169,7 @@ class Parser {
   private pos = 0;
   private readonly used = new Set<string>();
 
-  constructor(private readonly tokens: Token[]) {}
+  constructor(private readonly tokens: Token[], private readonly names: Set<string>) {}
 
   private peek(): Token {
     return this.tokens[this.pos];
@@ -227,8 +246,8 @@ class Parser {
         }
         return { kind: 'call', name: t.value, args };
       }
-      if (!VARIABLE_NAMES.has(t.value)) {
-        throw new FormulaError(`${t.value} is not something a formula can use. Available: ${[...VARIABLE_NAMES].join(', ')}.`);
+      if (!this.names.has(t.value)) {
+        throw new FormulaError(`${t.value} is not something this formula can use. Available: ${[...this.names].join(', ')}.`);
       }
       this.used.add(t.value);
       return { kind: 'variable', name: t.value };
@@ -298,11 +317,11 @@ export type CompiledFormula = {
  * A payroll run evaluates the same handful of formulas for every employee, so
  * the parse is done once per component and the tree is walked per person.
  */
-export function compileFormula(source: string): CompiledFormula {
+export function compileFormula(source: string, extraVariables?: Iterable<string>): CompiledFormula {
   const text = String(source || '').trim();
   if (!text) throw new FormulaError('There is no formula here.');
   if (text.length > 500) throw new FormulaError('This formula is too long to be readable. Split it across components.');
-  const { node, variables } = new Parser(tokenize(text)).parse();
+  const { node, variables } = new Parser(tokenize(text), allowedNames(extraVariables)).parse();
   return {
     source: text,
     variables,
@@ -325,9 +344,13 @@ export type FormulaVerdict =
  * can be perfectly well formed and still be unable to produce a number —
  * dividing by a variable that is zero for everybody, most often.
  */
-export function validateFormula(source: string, sample?: Record<string, number>): FormulaVerdict {
+export function validateFormula(
+  source: string,
+  sample?: Record<string, number>,
+  extraVariables?: Iterable<string>
+): FormulaVerdict {
   try {
-    const compiled = compileFormula(source);
+    const compiled = compileFormula(source, extraVariables);
     const values = sample || {
       BASIC: 40000, GROSS: 80000, CTC: 1200000, MONTHLY_CTC: 100000, ANNUAL_CTC: 1200000,
       WORKING_DAYS: 30, PAYABLE_DAYS: 30, LWP_DAYS: 0, VARIABLE_PAY: 0, OVERTIME: 0,
@@ -340,6 +363,10 @@ export function validateFormula(source: string, sample?: Record<string, number>)
 }
 
 /** One-shot evaluation, for callers that do not hold on to the compiled form. */
-export function evaluateFormula(source: string, vars: Record<string, number>): number {
-  return compileFormula(source).evaluate(vars);
+export function evaluateFormula(
+  source: string,
+  vars: Record<string, number>,
+  extraVariables?: Iterable<string>
+): number {
+  return compileFormula(source, extraVariables).evaluate(vars);
 }

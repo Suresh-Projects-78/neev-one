@@ -48,12 +48,10 @@ datasource db {
 // attribution. Payroll owns no second ledger, no second audit table and no
 // second cost-centre list.
 //
-// What it has to add is an employee. The schema had none — `Salesman` is a
-// commission payee, and `Party` is a customer or a vendor — so `Employee` below
-// is a deliberately small, shared master, and everything payroll-specific about
-// a person lives in `EmployeePayrollProfile` beside it. The master is not
-// payroll's: attendance, leave and the rest attach to the same row when they
-// come, which is what stops the parallel employee system this was warned about.
+// The person is not payroll's either. `Employee` lives in the people database,
+// and payroll holds `employeeId` across that boundary — the same way it holds
+// `ledgerAccountId`. Attendance, timesheets and the rest point at the same
+// person, which is what stops five modules each growing their own staff list.
 //
 // The rule that shapes most of what follows: an approved payroll must be
 // reproducible forever. Salary structures, components and statutory rates all
@@ -61,45 +59,14 @@ datasource db {
 // So a calculated slip does not reference live configuration — it carries a
 // snapshot of everything that produced it, and the engine version that did.
 
-/// A person the company pays. Small on purpose: the payroll-only fields are
-/// next door, and an HR module later adds its own table beside this one.
-model Employee {
-  id        String  @id @default(cuid())
-  accountId String
-  orgId     String
-  /// Null = not tied to one location, the same convention masters use.
-  branchId  String?
-
-  /// Human-facing identifier, unique within the org when set.
-  code        String?
-  name        String
-  email       String?
-  phone       String?
-  designation String?
-  department  String?
-
-  dateOfJoining String?
-  dateOfLeaving String?
-  /// ACTIVE | ON_NOTICE | LEFT | SUSPENDED
-  status        String  @default("ACTIVE")
-
-  /// If this person also signs in, the account they sign in with.
-  userId String?
-
-  notes String?
-
-  createdByUserId String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@unique([orgId, code])
-  @@index([accountId, orgId, status])
-  @@index([accountId, orgId, branchId])
-}
 
 /// Everything payroll needs to know about a person, and nothing else does.
-/// Separate from `Employee` so payroll data can be permissioned as a unit —
-/// a bank account and a PAN are not ordinary directory fields.
+///
+/// The person themselves lives in the people database; `employeeId` points at
+/// them across that boundary. This row is the payroll half — a bank account, a
+/// PAN, the statutory identifiers — and it is here rather than beside the
+/// person because these are the fields that make payroll worth stealing, and
+/// they should not be readable by everything that reads a staff directory.
 model EmployeePayrollProfile {
   id         String @id @default(cuid())
   accountId  String
@@ -880,6 +847,18 @@ model PayrollPayment {
 
   /// DRAFT | PROCESSING | COMPLETED | PARTIAL | FAILED | CANCELLED
   status String @default("DRAFT")
+
+  /// The `JournalEntry` that cleared salaries payable against the bank.
+  ///
+  /// The payment row is its own posting receipt — unlike a run, which posts
+  /// through `PayrollPosting` — because one payment produces exactly one
+  /// journal and there is nothing else to record about it.
+  journalEntryId String?
+  /// UNPOSTED | POSTING | POSTED. `POSTING` is a claim, not a result: it says
+  /// an attempt is under way, so a second press cannot write a second journal.
+  postingStatus  String  @default("UNPOSTED")
+  postedAt       DateTime?
+  postedByUserId String?
 
   createdByUserId String
   createdAt       DateTime @default(now())

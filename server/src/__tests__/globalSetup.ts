@@ -26,6 +26,18 @@ export default function setup() {
       { cwd: serverRoot, env: { ...process.env, PAYROLL_DATABASE_URL: url }, stdio: 'inherit' }
     );
 
+  const pushPeople = (url: string) =>
+    execFileSync(
+      'npx',
+      ['prisma', 'db', 'push', '--schema', 'prisma/people/schema.prisma', '--skip-generate', '--accept-data-loss', '--force-reset'],
+      { cwd: serverRoot, env: { ...process.env, PEOPLE_DATABASE_URL: url }, stdio: 'inherit' }
+    );
+
+  const peopleUrl = String(process.env.PEOPLE_DATABASE_URL || '').trim();
+  const peopleFile = peopleUrl.startsWith('file:')
+    ? resolve(serverRoot, 'prisma/people', peopleUrl.slice('file:'.length).split('?')[0].replace(/^\.\//, ''))
+    : '';
+
   const payrollUrl = String(process.env.PAYROLL_DATABASE_URL || '').trim();
   const payrollFile = payrollUrl.startsWith('file:')
     ? resolve(serverRoot, 'prisma/payroll', payrollUrl.slice('file:'.length).split('?')[0].replace(/^\.\//, ''))
@@ -43,6 +55,7 @@ export default function setup() {
       stdio: 'inherit',
     });
     if (payrollUrl) pushPayroll(payrollUrl);
+    if (peopleUrl) pushPeople(peopleUrl);
     return;
   }
 
@@ -74,12 +87,17 @@ export default function setup() {
     for (const suffix of ['', '-journal']) rmSync(`${payrollFile}${suffix}`, { force: true });
     pushPayroll(payrollUrl);
   }
+  if (peopleUrl) {
+    for (const suffix of ['', '-journal']) rmSync(`${peopleFile}${suffix}`, { force: true });
+    pushPeople(peopleUrl);
+  }
 
   // Per-run databases would otherwise pile up in prisma/ one file per run.
   return () => {
     for (const suffix of ['', '-journal']) {
       rmSync(`${dbFile}${suffix}`, { force: true });
       if (payrollFile) rmSync(`${payrollFile}${suffix}`, { force: true });
+      if (peopleFile) rmSync(`${peopleFile}${suffix}`, { force: true });
     }
   };
 }

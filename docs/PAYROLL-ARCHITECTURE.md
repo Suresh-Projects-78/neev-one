@@ -1,3 +1,35 @@
+# Neev's databases, and why there are several
+
+Neev is several applications sharing a shell. Each keeps its own database:
+
+| Database | Holds | State |
+| --- | --- | --- |
+| accounting | ledger, documents, tenancy, masters | live |
+| people | who works here | live |
+| payroll | salaries, payslips, statutory | live |
+| attendance | time and presence | planned |
+| projects & timesheets | work, and time against it | planned |
+
+The rule is that a field belongs to the module that has to be **right** about
+it. A bank account is payroll's, not a staff directory's. A joining date is
+people's, and payroll reads it rather than keeping its own copy.
+
+Every module holds the others' identifiers as plain strings — `employeeId`,
+`orgId`, `ledgerAccountId` — with no cross-database foreign keys, because there
+is no such thing. Referential integrity across a boundary is the application's
+job, enforced where the two meet.
+
+## People
+
+One person record, shared by payroll and by attendance, timesheets and leave
+when they arrive, owned by none of them. The failure it prevents is five modules
+each growing their own staff list: five spellings of one name, five joining
+dates, and no answer to which is right.
+
+`Employee` lives there. `EmployeePayrollProfile` — the bank account, the PAN,
+the statutory numbers — stays in payroll, because those are the fields that make
+payroll worth stealing and a directory should not be a place to read them.
+
 # Payroll — a separate application inside Neev
 
 Payroll is its own bounded context. It has its own database, its own generated
@@ -67,7 +99,9 @@ many times the button is pressed.
 
 | Path | What it is |
 | --- | --- |
-| `server/prisma/schema.prisma` | Accounting. No payroll model appears here. |
+| `server/prisma/schema.prisma` | Accounting. No payroll or people model appears here. |
+| `server/prisma/people/schema.prisma` | People. The person record. |
+| `server/src/utils/peoplePrisma.ts` | The people client, and `PeopleDb`. |
 | `server/prisma/payroll/schema.prisma` | Payroll. 25 models. |
 | `server/prisma/payroll/migrations/` | Payroll migration history. |
 | `server/src/generated/payroll/` | Payroll client. Generated, not committed. |
@@ -76,23 +110,39 @@ many times the button is pressed.
 
 ## Operating it
 
-`PAYROLL_DATABASE_URL` must be set wherever the API runs. `scripts/migrate.ts`
-refuses to finish a deploy without it, rather than starting an API whose payroll
-routes throw on first use.
+`PAYROLL_DATABASE_URL` and `PEOPLE_DATABASE_URL` must both be set wherever the
+API runs. `scripts/migrate.ts` refuses to finish a deploy without either, rather
+than starting an API whose routes throw on first use.
 
 ```bash
 npm run payroll:migrate    # develop against it
 npm run payroll:deploy     # apply migrations
-npm run prisma:generate    # generates BOTH clients
+npm run people:migrate     # and the person record
+npm run prisma:generate    # generates ALL THREE clients
 ```
 
-Both clients are generated in CI and on deploy. **A backup that copies only the
-accounting database is not a backup of payroll** — take `payroll.db` with the
-same `sqlite3 .backup` treatment as `prod.db`, never a plain `cp`.
+All three clients are generated in CI and on deploy. **A backup that copies only the
+accounting database is not a backup** — `deploy/backup.sh` takes all three, each
+as its own archive, each verified against the live row counts. Separate archives
+on purpose: restoring accounting to last Tuesday must not drag payroll or the
+staff list back with it.
 
 ## History
 
 Payroll's tables were briefly created in the accounting schema
 (`20260921060104_payroll_foundation`) and moved out in
-`20260921062126_remove_payroll_from_accounting`. Both migrations are kept
-because that is what happened; only local development ever applied the first.
+`20260921062126_remove_payroll_from_accounting`. `Employee` was likewise created
+in payroll and moved to people in `employee_moves_to_people`. The migrations are
+kept because that is what happened; only local development ever applied the
+earlier ones.
+
+## Adding the next database
+
+Attendance and timesheets follow the same shape, and the checklist is what this
+document exists to record: a schema folder with its own `generator` output and
+`datasource`, a client in `server/src/utils/`, a `*_DATABASE_URL` in
+`.env.example`, generate in CI and `deploy.sh`, deploy in `scripts/migrate.ts`
+with a refusal when the URL is missing, per-run files in `vitest.config.ts` and
+`globalSetup.ts`, and its own archive in `deploy/backup.sh`. Miss the last one
+and the data is not backed up; miss the fifth and the deploy starts an API whose
+routes throw.

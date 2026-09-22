@@ -17,11 +17,13 @@ import request from 'supertest';
 const { buildApp } = await import('../app.js');
 const { prisma } = await import('../utils/prisma.js');
 const { payrollPrisma } = await import('../utils/payrollPrisma.js');
+const { peoplePrisma } = await import('../utils/peoplePrisma.js');
 
 const app = buildApp().listen(0);
 afterAll(async () => {
   await new Promise((done) => app.close(done));
   await payrollPrisma.$disconnect();
+  await peoplePrisma.$disconnect();
 });
 
 const rnd = () => Math.random().toString(36).slice(2, 8);
@@ -89,6 +91,21 @@ describe('the boundary between payroll and the books', () => {
   it('holds them in the payroll database, which answers for the same tables', async () => {
     await expect(payrollPrisma.salaryComponent.count()).resolves.toBeGreaterThanOrEqual(0);
     await expect(payrollPrisma.salarySlip.count()).resolves.toBeGreaterThanOrEqual(0);
+  });
+
+  it('keeps the person in the people database, not in payroll', async () => {
+    /* Five modules will need the same person — payroll, attendance,
+       timesheets, leave. One record, owned by none of them, so no two can
+       disagree about a name or a joining date. */
+    await expect(peoplePrisma.employee.count()).resolves.toBeGreaterThanOrEqual(0);
+    await expect(payrollPrisma.$queryRawUnsafe('SELECT 1 FROM Employee LIMIT 1')).rejects.toThrow();
+    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM Employee LIMIT 1')).rejects.toThrow();
+  });
+
+  it('keeps what only payroll needs in payroll', async () => {
+    /* A bank account and a PAN are payroll's, not a staff directory's. */
+    await expect(payrollPrisma.employeePayrollProfile.count()).resolves.toBeGreaterThanOrEqual(0);
+    await expect(peoplePrisma.$queryRawUnsafe('SELECT 1 FROM EmployeePayrollProfile LIMIT 1')).rejects.toThrow();
   });
 
   it('still keeps one ledger — payroll adds no journal table of its own', async () => {

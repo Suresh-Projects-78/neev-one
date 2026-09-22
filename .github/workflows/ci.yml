@@ -28,7 +28,7 @@ jobs:
         working-directory: server
 
       - name: Generate Prisma client
-        run: npx prisma generate && npx prisma generate --schema prisma/payroll/schema.prisma
+        run: npx prisma generate && npx prisma generate --schema prisma/payroll/schema.prisma && npx prisma generate --schema prisma/people/schema.prisma
         working-directory: server
 
       - name: Lint
@@ -122,6 +122,7 @@ jobs:
             # Two databases, two clients: payroll keeps its own.
             npx prisma generate
             npx prisma generate --schema prisma/payroll/schema.prisma
+            npx prisma generate --schema prisma/people/schema.prisma
             # The pre-deploy check earns the --accept-data-loss below.
             #
             # Prisma refuses to add a unique constraint without that flag,

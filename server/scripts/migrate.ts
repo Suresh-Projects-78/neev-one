@@ -109,6 +109,18 @@ async function main() {
   }
   console.log('Applying payroll migrations.');
   run(['migrate', 'deploy', '--schema', 'prisma/payroll/schema.prisma']);
+
+  /* People is the third database: who works here, shared by payroll and by
+     everything that comes after it. */
+  if (!String(process.env.PEOPLE_DATABASE_URL || '').trim()) {
+    console.error(
+      'PEOPLE_DATABASE_URL is not set. The employee record lives in its own database — add it to the environment ' +
+        'file (see server/.env.example) before deploying.'
+    );
+    process.exit(1);
+  }
+  console.log('Applying people migrations.');
+  run(['migrate', 'deploy', '--schema', 'prisma/people/schema.prisma']);
 }
 
 main().catch(async (e) => {

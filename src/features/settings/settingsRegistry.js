@@ -146,12 +146,13 @@ export const SETTINGS_ITEMS = [
   // Payroll — the configuration a pay run reads, kept out of the Payroll rail.
   // Somebody running payroll on the 28th should not be walking past setup
   // screens to reach it. The rest of this category (pay groups, periods,
-  // rules, ledger mapping, compliance, templates, numbering) is registered as
+  // rules, ledger mapping, templates, numbering) is registered as
   // each screen lands: a registry entry pointing at a screen that does not
   // render is a settings hub that opens onto nothing.
   { key: 'payrollComponents', title: 'Salary Components', category: 'payroll', icon: Layers, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll', group: 'Compensation', description: 'The earnings, deductions and employer costs a salary is built from.', keywords: ['basic', 'hra', 'allowance', 'deduction', 'component', 'earning'] },
   { key: 'payrollPayGroups', title: 'Pay Groups', category: 'payroll', icon: Users, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll', group: 'Compensation', description: 'Populations paid on the same rhythm — monthly staff, weekly labour, contractors.', keywords: ['pay group', 'frequency', 'monthly', 'weekly', 'cycle'] },
   { key: 'payrollPeriods', title: 'Payroll Periods', category: 'payroll', icon: CalendarClock, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll', group: 'Compensation', description: 'The pay cycles a run belongs to, and which of them are closed.', keywords: ['period', 'cycle', 'month', 'lock', 'close'] },
+  { key: 'payrollCompliance', title: 'Compliance', category: 'payroll', icon: BadgePercent, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll', group: 'Statutory', description: 'Provident fund, ESI, professional tax and income tax — which apply, and the rates behind them.', keywords: ['pf', 'epf', 'esi', 'professional tax', 'pt', 'tds', 'income tax', 'statutory', 'compliance'] },
 ];
 
 /**

@@ -14,7 +14,7 @@ import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, ArrowRight, BadgePercent, Ban, BarChart3, Bell, BookOpen, Boxes, Building2, CalendarClock, Check, ChevronDown, ClipboardList, Coins, Download, FileStack, FileText, FolderTree, Info, Landmark, Layers, LayoutDashboard, ListChecks, LogOut, MoreVertical, NotebookPen, Package, PanelLeftClose, PanelLeftOpen, Pencil, Percent, Plus, Receipt, RefreshCw, Search, Settings, Shield, ShoppingCart, SlidersHorizontal, Table2, Tags, Trash2, TrendingDown, TrendingUp, Truck, Undo2, Upload, UserRound, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, BadgePercent, Ban, BarChart3, Bell, BookOpen, Boxes, Building2, CalendarClock, Check, ChevronDown, ClipboardList, Coins, Download, FileStack, FileText, FolderTree, Info, Landmark, Layers, LayoutDashboard, ListChecks, LogOut, MoreVertical, NotebookPen, Package, PanelLeftClose, PanelLeftOpen, Pencil, Percent, Plus, Receipt, RefreshCw, Search, Settings, Shield, ShoppingCart, SlidersHorizontal, Table2, Tags, Trash2, TrendingDown, TrendingUp, Truck, Undo2, Upload, UserRound, Users, Wallet } from 'lucide-react';
 /* Duotone icons for the module rail — the two-tone fill is what reads as a
    "coloured icon" rather than a tinted outline. Leaf items stay lucide, tinted
    with their module colour, so the two sets never mix at the same level. */
@@ -184,6 +184,17 @@ import PosPaymentAccounts from './features/admin/PosPaymentAccounts';
 import SalaryComponents from './features/payroll/SalaryComponents';
 import PayGroups from './features/payroll/PayGroups';
 import PayrollPeriods from './features/payroll/PayrollPeriods';
+import SalaryStructures from './features/payroll/SalaryStructures';
+import SalaryAssignments from './features/payroll/SalaryAssignments';
+import PayRuns from './features/payroll/PayRuns';
+import SalarySlips from './features/payroll/SalarySlips';
+import PayrollCompliance from './features/payroll/PayrollCompliance';
+import PayrollPayments from './features/payroll/PayrollPayments';
+import PayrollAdjustments from './features/payroll/PayrollAdjustments';
+import PayrollLoans from './features/payroll/PayrollLoans';
+import SalaryRevisions from './features/payroll/SalaryRevisions';
+import PayrollOverview from './features/payroll/PayrollOverview';
+import PayrollReports from './features/payroll/PayrollReports';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
@@ -11833,6 +11844,7 @@ const AppShell = () => {
           { key: 'payrollOverview', label: 'Overview', icon: BarChart3, perm: 'PAYROLL::Payroll Runs::VIEW', feature: 'payroll' },
           { key: 'payrollRuns', label: 'Pay Runs', icon: CalendarClock, perm: 'PAYROLL::Payroll Runs::VIEW', feature: 'payroll' },
           { key: 'salarySlips', label: 'Salary Slips', icon: FileText, perm: 'PAYROLL::Salary Slips::VIEW', feature: 'payroll' },
+          { key: 'payrollPayments', label: 'Payments', icon: ArrowUpRight, perm: 'PAYROLL::Payroll Payments::VIEW', feature: 'payroll' },
           { key: 'payrollAdjustments', label: 'Adjustments', icon: Percent, perm: 'PAYROLL::Payroll Adjustments::VIEW', feature: 'payrollAdjustments' },
           { key: 'salaryStructures', label: 'Salary Structures', icon: Layers, perm: 'PAYROLL::Salary Structures::VIEW', feature: 'payrollCompensation' },
           { key: 'salaryAssignments', label: 'Salary Assignments', icon: Users, perm: 'PAYROLL::Salary Assignments::VIEW', feature: 'payrollCompensation' },
@@ -13807,6 +13819,29 @@ const AppShell = () => {
         return <PayGroups />;
       case 'payrollPeriods':
         return <PayrollPeriods />;
+      case 'salaryStructures':
+        return <SalaryStructures />;
+      case 'salaryAssignments':
+        return <SalaryAssignments />;
+      case 'payrollRuns':
+        return <PayRuns />;
+      case 'salarySlips':
+        return <SalarySlips />;
+      case 'payrollPayments':
+        return <PayrollPayments />;
+      case 'payrollAdjustments':
+        return <PayrollAdjustments />;
+      case 'payrollLoans':
+        return <PayrollLoans />;
+      case 'salaryRevisions':
+        return <SalaryRevisions />;
+      case 'payrollOverview':
+        return <PayrollOverview onOpen={setActive} />;
+      case 'payrollReports':
+        return <PayrollReports />;
+      case 'payrollCompliance':
+      case 'payrollCompliancePage':
+        return <PayrollCompliance />;
       case 'settingsAccount':
         return (
           <AccountOverview

@@ -45,7 +45,18 @@ const METHODS = [
   { id: 'BALANCING', label: 'Balance of CTC' },
 ];
 
-const BASES = ['BASIC', 'GROSS', 'CTC', 'MONTHLY_CTC'];
+/*
+ * Annual and per-period CTC both exist and are a thousand rupees apart in
+ * meaning: half of an annual CTC as a MONTHLY component pays twelve times what
+ * anybody intended. The list says which is which rather than leaving the
+ * difference to be discovered on a payslip.
+ */
+const BASES = [
+  { id: 'BASIC', label: 'Basic' },
+  { id: 'GROSS', label: 'Gross for the period' },
+  { id: 'MONTHLY_CTC', label: 'CTC for the period' },
+  { id: 'CTC', label: 'CTC for the whole year' },
+];
 const SCHEMES = ['PF', 'ESI', 'PT', 'TDS', 'LWF'];
 
 const blank = (type) => ({
@@ -437,7 +448,7 @@ const ComponentForm = ({ initial, onClose, onSaved }) => {
                 >
                   <option value="">Choose one</option>
                   {BASES.map((b) => (
-                    <option key={b} value={b}>{b}</option>
+                    <option key={b.id} value={b.id}>{b.label}</option>
                   ))}
                 </select>
               </div>

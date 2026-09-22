@@ -25,9 +25,14 @@ const TEST_DATABASE_URL =
 const TEST_PAYROLL_DATABASE_URL =
   process.env.TEST_PAYROLL_DATABASE_URL || `file:./test-payroll-${process.pid}.db?connection_limit=1`;
 
+/* People is a third database for the same reasons, so a third file per run. */
+const TEST_PEOPLE_DATABASE_URL =
+  process.env.TEST_PEOPLE_DATABASE_URL || `file:./test-people-${process.pid}.db?connection_limit=1`;
+
 // globalSetup runs in this same process and reads them from here.
 process.env.DATABASE_URL = TEST_DATABASE_URL;
 process.env.PAYROLL_DATABASE_URL = TEST_PAYROLL_DATABASE_URL;
+process.env.PEOPLE_DATABASE_URL = TEST_PEOPLE_DATABASE_URL;
 
 export default defineConfig({
   test: {
@@ -50,6 +55,7 @@ export default defineConfig({
       // halves of the run agree on which database they are using.
       DATABASE_URL: TEST_DATABASE_URL,
       PAYROLL_DATABASE_URL: TEST_PAYROLL_DATABASE_URL,
+      PEOPLE_DATABASE_URL: TEST_PEOPLE_DATABASE_URL,
       // Deterministic and fast: rate limiting is exercised by one test that
       // enables it explicitly, and 4 bcrypt rounds keep the suite quick.
       DISABLE_RATE_LIMIT: 'true',
