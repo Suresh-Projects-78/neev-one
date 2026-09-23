@@ -12,6 +12,11 @@ export default defineConfig([
   globalIgnores([
     'dist',
     'server/dist',
+    // Prisma's generated clients. Gitignored, so they were never linted on a
+    // fresh clone — but CI generates all three before linting, and `eslint .`
+    // then walked thousands of lines of machine-written code and failed the
+    // build on unused variables in a file nobody wrote.
+    'server/src/generated/**',
     'out',
     '.video',
     '.claude/**',
