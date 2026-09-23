@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import { APPS } from '../../platform/apps';
+import ClorMark from '../../components/brand/ClorMark';
 
 import { useTheme } from '../../components/ui/useTheme';
 import { useTilt } from '../../components/ui/useTilt';
@@ -94,9 +95,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
       >
         <div className="ui-container flex h-16 items-center justify-between gap-4">
           <a href="#top" className="flex items-center gap-2.5">
-            <span className="ui-brand-mark">
-              <Scale size={18} aria-hidden="true" />
-            </span>
+            <ClorMark size={26} />
             <span className="ui-display text-lg">Clor</span>
           </a>
 

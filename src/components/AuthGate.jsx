@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ClorMark from './brand/ClorMark';
 
 import ModulePicker from '../features/settings/ModulePicker';
 import CompanyFormFields, { emptyCompanyForm } from '../features/companies/CompanyFormFields';
@@ -486,12 +487,10 @@ const AuthGate = ({ onAuth }) => {
           <div className="relative z-10 p-12 flex flex-col w-full text-white">
             <div>
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl grid place-items-center ui-surface/10 backdrop-blur-sm ring-1 ring-white/15">
-                  <BookIcon className="w-6 h-6" />
-                </div>
+                <ClorMark size={44} />
                 <div>
                   <p className="ui-display text-2xl">Clor</p>
-                  <p className="text-white/55 text-xs tracking-wide">GST accounting, kept straight</p>
+                  <p className="text-white/55 text-xs tracking-wide">One platform. One set of records.</p>
                 </div>
               </div>
 
@@ -557,11 +556,7 @@ const AuthGate = ({ onAuth }) => {
             {/* Mobile logo */}
             <div className="lg:hidden mb-8 text-center">
               <div className="inline-flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl grid place-items-center" style={{ backgroundColor: 'rgb(var(--brand))', color: 'rgb(var(--on-brand))' }}>
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                </div>
+                <ClorMark size={40} />
                 <span className="ui-display text-xl">Clor</span>
               </div>
             </div>
