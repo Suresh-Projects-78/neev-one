@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowLeft, Ban, Check, Download, Plus, X } from 'lucide-
 import { PageHeader, SkeletonCard, EmptyState } from '../../components/ui/Primitives';
 import { confirmDialog, notify } from '../../components/ui/notify';
 import { listPayrollRuns } from '../../api/payrollRuns';
-import { getLedgerAccounts } from '../../api/ledger';
+import { paymentAccounts } from '../../api/payrollAccounting';
 import { downloadCsv } from '../../utils/csv';
 import {
   listPayrollPayments,
@@ -81,13 +81,13 @@ export default function PayrollPayments() {
       const [paymentRows, runRows, ledger] = await Promise.all([
         listPayrollPayments(),
         listPayrollRuns(),
-        getLedgerAccounts().catch(() => ({ accounts: [] })),
+        paymentAccounts().catch(() => []),
       ]);
       setPayments(paymentRows);
       /* Only a payroll somebody has approved can be paid, so only those are
          offered. */
       setRuns(runRows.filter((r) => ['APPROVED', 'LOCKED', 'POSTED', 'PAID'].includes(r.status)));
-      setBanks((ledger.accounts || []).filter((a) => ['CASH', 'BANK'].includes(a.controlKind)));
+      setBanks(ledger);
       setError('');
     } catch (e) {
       setError(String(e?.message || 'Could not load salary payments.'));

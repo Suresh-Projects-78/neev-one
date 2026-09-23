@@ -5,7 +5,7 @@ import { SkeletonCard, EmptyState } from '../../components/ui/Primitives';
 import SettingsScreenHeader from '../settings/SettingsScreenHeader';
 import { notify } from '../../components/ui/notify';
 import { listSalaryComponents, setComponentLedgers } from '../../api/payrollComponents';
-import { getLedgerAccounts } from '../../api/ledger';
+import { expenseAccounts, withheldToAccounts } from '../../api/payrollAccounting';
 
 /**
  * Where each part of a salary lands in the books.
@@ -48,16 +48,22 @@ const TYPE_LABEL = {
 
 export default function PayrollLedgerMapping() {
   const [components, setComponents] = useState([]);
-  const [accounts, setAccounts] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [withheldTo, setWithheldTo] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const [rows, ledger] = await Promise.all([listSalaryComponents(), getLedgerAccounts()]);
+      const [rows, expense, withheld] = await Promise.all([
+        listSalaryComponents(),
+        expenseAccounts(),
+        withheldToAccounts(),
+      ]);
       setComponents(rows);
-      setAccounts(Array.isArray(ledger.accounts) ? ledger.accounts.filter((a) => a.isActive !== false) : []);
+      setExpenses(expense);
+      setWithheldTo(withheld);
       setError('');
     } catch (e) {
       setError(String(e?.message || 'Could not load the ledger mapping.'));
@@ -70,20 +76,9 @@ export default function PayrollLedgerMapping() {
     load();
   }, [load]);
 
-  /* An expense account for a cost, a liability for something owed. Offering
-     the whole chart of accounts invites posting salaries to sales. */
-  const expenses = useMemo(() => accounts.filter((a) => a.accountType === 'EXPENSE'), [accounts]);
-  /*
-   * A deduction lands in a liability or an asset, depending on why it was
-   * taken. PF, ESI and tax are owed onward — a liability. A loan recovery is
-   * the company taking back what it lent, which reduces the asset that loan
-   * created; posting it to a liability would leave the loan on the books as
-   * still owed and the company owing the money to itself.
-   */
-  const withheldTo = useMemo(
-    () => accounts.filter((a) => a.accountType === 'LIABILITY' || a.accountType === 'ASSET'),
-    [accounts]
-  );
+  /* Which accounts each kind may post to is decided by the integration
+     boundary, not by filtering a chart of accounts on the screen. */
+  const accounts = useMemo(() => [...expenses, ...withheldTo], [expenses, withheldTo]);
 
   const missing = useMemo(
     () =>
