@@ -14,7 +14,7 @@ import Toaster from './components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, BadgePercent, Ban, BarChart3, Bell, BookOpen, Boxes, Building2, CalendarClock, Check, ChevronDown, ClipboardList, Coins, Download, FileStack, FileText, FolderTree, Info, Landmark, Layers, LayoutDashboard, ListChecks, LogOut, MoreVertical, NotebookPen, Package, PanelLeftClose, PanelLeftOpen, Pencil, Percent, Plus, Receipt, RefreshCw, Search, Settings, Shield, ShoppingCart, SlidersHorizontal, Table2, Tags, Trash2, TrendingDown, TrendingUp, Truck, Undo2, Upload, UserRound, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowLeftRight, ArrowRight, ArrowUpRight, BadgePercent, LayoutGrid, Ban, BarChart3, Bell, BookOpen, Boxes, Building2, CalendarClock, Check, ChevronDown, ClipboardList, Coins, Download, FileStack, FileText, FolderTree, Info, Landmark, Layers, LayoutDashboard, ListChecks, LogOut, MoreVertical, NotebookPen, Package, PanelLeftClose, PanelLeftOpen, Pencil, Percent, Plus, Receipt, RefreshCw, Search, Settings, Shield, ShoppingCart, SlidersHorizontal, Table2, Tags, Trash2, TrendingDown, TrendingUp, Truck, Undo2, Upload, UserRound, Users, Wallet } from 'lucide-react';
 /* Duotone icons for the module rail — the two-tone fill is what reads as a
    "coloured icon" rather than a tinted outline. Leaf items stay lucide, tinted
    with their module colour, so the two sets never mix at the same level. */
@@ -208,6 +208,7 @@ import PayrollOverview from './features/payroll/PayrollOverview';
 import PayrollReports from './features/payroll/PayrollReports';
 import PayrollLedgerMapping from './features/payroll/PayrollLedgerMapping';
 import PayrollSetup from './features/payroll/PayrollSetup';
+import { APPS, landingApp } from './platform/apps';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
@@ -12091,6 +12092,31 @@ const AppShell = () => {
         perm: 'SETTINGS::Company Profile::VIEW',
       },
       { type: 'item', key: 'settings', label: 'Settings', icon: PhSettings, tone: 'settings', ph: true, perm: 'SETTINGS::Company Profile::VIEW' },
+      /*
+       * The other applications, at the foot of the rail.
+       *
+       * Clor is a platform, and a company using Accounting should be able to
+       * see that Payroll exists without being told. Apps the company already
+       * has open straight into themselves; the rest lead to the screen that
+       * explains what they are and switches them on.
+       *
+       * This is deliberately the last thing in the rail rather than the first:
+       * the apps somebody already uses are what they came for, and an app
+       * switcher at the top would put the rarest action above every daily one.
+       */
+      {
+        type: 'group',
+        key: 'appsMenu',
+        label: 'More apps',
+        tone: 'settings',
+        icon: LayoutGrid,
+        ph: true,
+        items: APPS.filter((app) => app.available && app.id !== 'accounting').map((app) => ({
+          key: app.home && isEnabled(app.feature) ? app.home : `${app.id}Setup`,
+          label: isEnabled(app.feature) ? app.name : `${app.name} — not added`,
+          icon: app.icon,
+        })),
+      },
     ],
     /*
      * `isEnabled` belongs here.
@@ -12174,6 +12200,27 @@ const AppShell = () => {
   );
 
   useScreenUrl({ active, setActive, isKnown: isKnownScreen });
+
+  /*
+   * Land in the app you actually use.
+   *
+   * Accounting was the whole product, so everybody arrived at its dashboard.
+   * A company that bought Clor for Payroll and nothing else then landed in a
+   * ledger they do not keep, and had to go looking for the thing they pay for.
+   *
+   * Only when there is exactly one app, and only when the URL has not already
+   * asked for a screen — a link someone was sent, or a page they reloaded,
+   * outranks this. It runs once the feature flags have loaded, because before
+   * that every app reads as subscribed.
+   */
+  const landedRef = useRef(false);
+  useEffect(() => {
+    if (landedRef.current || featuresLoading) return;
+    landedRef.current = true;
+    if (window.location.hash && window.location.hash !== '#/') return;
+    const home = landingApp(isEnabled);
+    if (home?.home && home.home !== 'dashboard') setActive(home.home);
+  }, [featuresLoading, isEnabled]);
 
   /* What the keyboard does, on `?`. */
   const shortcutSheet = useShortcutSheet();

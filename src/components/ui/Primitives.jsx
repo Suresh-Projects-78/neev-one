@@ -41,7 +41,7 @@ export const EntityMark = ({ entity, size = 18 }) => {
          Eleven category hues told the areas apart and read as grey at 18px on
          a near-white tile — the mark was doing identity work nobody could see.
          One orange on a tint of itself is legible at a glance and says
-         "this is Neev One"; which area you are in is what the title beside it
+         "this is Clor"; which area you are in is what the title beside it
          and the rail's own coloured icon already say. */
       className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
       style={{ backgroundColor: 'rgb(var(--brand) / 0.12)', color: 'rgb(var(--brand-ink))' }}

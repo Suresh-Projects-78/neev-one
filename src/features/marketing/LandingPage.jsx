@@ -12,6 +12,8 @@ import {
   Upload,
 } from 'lucide-react';
 
+import { APPS } from '../../platform/apps';
+
 import { useTheme } from '../../components/ui/useTheme';
 import { useTilt } from '../../components/ui/useTilt';
 
@@ -95,19 +97,33 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
             <span className="ui-brand-mark">
               <Scale size={18} aria-hidden="true" />
             </span>
-            <span className="ui-display text-lg">Neev One</span>
+            <span className="ui-display text-lg">Clor</span>
           </a>
 
-          <nav className="hidden md:flex items-center gap-7 text-sm" aria-label="Primary">
-            <a className="ui-link" href="#what">
-              What it does
-            </a>
-            <a className="ui-link" href="#how">
-              How it works
-            </a>
-            <a className="ui-link" href="#trust">
-              Why trust it
-            </a>
+          {/*
+            The apps, not a tour of one of them.
+
+            This header read "What it does / How it works / Why trust it" —
+            three links about the accounting product, from when that was the
+            whole of Clor. Clor is a platform now, and the first thing somebody
+            arriving should learn is which applications it has. The ones not
+            built yet are listed and marked, because a company choosing a
+            platform is choosing where it is going as much as what it does
+            today.
+          */}
+          <nav className="hidden md:flex items-center gap-6 text-sm" aria-label="Applications">
+            {APPS.map((app) => (
+              <a
+                key={app.id}
+                className="ui-link inline-flex items-center gap-1.5"
+                href={`#app-${app.id}`}
+                title={app.blurb}
+              >
+                <app.icon size={15} aria-hidden="true" />
+                {app.name}
+                {app.available ? null : <span className="ui-caption">soon</span>}
+              </a>
+            ))}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -136,16 +152,26 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
         <div className="ui-ambient" aria-hidden="true" />
         <div className="ui-container ui-section relative">
           <div className="max-w-3xl ui-stagger">
-            <p className="ui-eyebrow">GST accounting · India</p>
+            {/*
+              The platform, not one of its applications.
+
+              This hero pitched double-entry bookkeeping, from when Accounting
+              was the whole product. It is now one app of four, and somebody
+              arriving should learn what Clor is before they learn what its
+              ledger does. The specimen below still shows a real trial balance,
+              because a claim about software is worth less than the thing
+              itself.
+            */}
+            <p className="ui-eyebrow">Business software · India</p>
 
             <h1 className="ui-display mt-4 text-[clamp(2.5rem,6vw,4.25rem)]">
-              Books that balance themselves.
+              One platform. One set of records.
             </h1>
 
             <p className="ui-lede mt-6">
-              Neev One posts every invoice, receipt, bill and journal to a real double-entry ledger
-              the moment you save it. No month-end reconciliation ritual, no spreadsheet standing in
-              for the truth.
+              Clor runs your books, your payroll and your people on the same records. Salaries post
+              themselves into the ledger, nobody exports a file to anybody, and the month closes
+              because the numbers already agree — not because somebody reconciled them.
             </p>
 
             <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -159,7 +185,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
             </div>
 
             <p className="mt-5 text-sm ui-subtle">
-              Runs on your own server. Your books never leave it.
+              Runs on your own server. Your records never leave it.
             </p>
           </div>
 
@@ -223,9 +249,59 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
       </section>
 
       {/* --- what it does ----------------------------------------------- */}
+      {/* --- the applications --------------------------------------------
+        Directly after the hero, because "what is Clor" is answered by the
+        list of applications rather than by a tour of one of them. Each card
+        carries the anchor its header link points at, so choosing an app from
+        the nav lands on the app rather than somewhere near it.
+
+        The ones not built yet are shown and marked rather than hidden: a
+        company choosing a platform is choosing where it is going, and a
+        roadmap stated plainly is worth more than a shorter list that looks
+        complete.
+      --------------------------------------------------------------------- */}
+      <section id="apps" className="ui-section">
+        <div className="ui-container">
+          <p className="ui-eyebrow">One platform</p>
+          <h2 className="ui-display mt-3 text-[clamp(1.875rem,3.5vw,2.75rem)] max-w-[22ch]">
+            Four applications that already know each other.
+          </h2>
+          <p className="mt-4 max-w-[58ch] text-base leading-relaxed ui-muted">
+            Each one runs on its own and keeps its own records. Payroll posts its journal into
+            Accounting without anybody exporting a file, because they are parts of the same
+            platform rather than two programs that happen to be sold together.
+          </p>
+
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ui-stagger">
+            {APPS.map((app) => (
+              <article key={app.id} id={`app-${app.id}`} className="ui-stat scroll-mt-24">
+                <div className="flex items-center justify-between gap-3">
+                  <span
+                    className="grid place-items-center w-9 h-9 rounded-lg"
+                    style={{ backgroundColor: 'rgb(var(--brand-soft))', color: 'rgb(var(--brand))' }}
+                  >
+                    <app.icon size={18} aria-hidden="true" />
+                  </span>
+                  {app.available ? null : (
+                    <span className="ui-pill ui-pill-neutral">Coming</span>
+                  )}
+                </div>
+                <h3 className="mt-4 font-medium">{app.name}</h3>
+                <p className="mt-2 text-sm leading-relaxed ui-muted">{app.blurb}</p>
+              </article>
+            ))}
+          </div>
+
+          <p className="mt-8 text-sm ui-muted">
+            Start with one. Add the others when you need them — nothing has to be migrated, because
+            they were never separate products.
+          </p>
+        </div>
+      </section>
+
       <section id="what" className="ui-section">
         <div className="ui-container">
-          <p className="ui-eyebrow">What it does</p>
+          <p className="ui-eyebrow">Clor Accounting</p>
           <h2 className="ui-display mt-3 text-[clamp(1.875rem,3.5vw,2.75rem)] max-w-[20ch]">
             Six things most accounting software leaves to you.
           </h2>
@@ -341,7 +417,7 @@ export default function LandingPage({ onSignIn, onGetStarted }) {
 
       <footer className="border-t" style={{ borderColor: 'rgb(var(--border))' }}>
         <div className="ui-container flex flex-wrap items-center justify-between gap-3 py-7 text-sm ui-subtle">
-          <span>© 2026 Neev One</span>
+          <span>© 2026 Clor</span>
           <span>Self-hosted GST accounting</span>
         </div>
       </footer>
