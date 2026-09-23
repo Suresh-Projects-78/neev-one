@@ -337,6 +337,7 @@ import SalesOverview from './features/sales/SalesOverview';
 import GovernanceSettings from './features/admin/GovernanceSettings';
 import ApprovalsInbox from './features/approvals/ApprovalsInbox';
 import LedgerTrialBalance from './features/reports/LedgerTrialBalance';
+import ReportsWorkspace from './features/reports/ReportsWorkspace';
 import { FeatureProvider } from './permissions/FeatureProvider';
 import { useFeatures } from './permissions/useFeatures';
 import { useTheme } from './components/ui/useTheme';
@@ -6147,72 +6148,14 @@ const SalesReports = ({ db, currentCompany }) => {
  * one line saying what question it answers, grouped by category. Tiles are
  * clickable cards, so they take the hover lift.
  */
-const REPORT_META = {
-  ledgerTrialBalance: { icon: BookOpen, desc: 'Every posting to every account, in order — drill into any account\u2019s ledger.' },
-  trialBalance: { icon: BookOpen, desc: 'Every account\u2019s closing balance. Must foot to zero.' },
-  profitLoss: { icon: BarChart3, desc: 'What you earned and what it cost, over a period.' },
-  balanceSheet: { icon: FileStack, desc: 'What the business owns and owes, at a date.' },
-  cashFlow: { icon: Coins, desc: 'Where money came from and where it went.' },
-  gstr1: { icon: BadgePercent, desc: 'Outward supplies, ready for the GSTR-1 return.' },
-  gstr3b: { icon: BadgePercent, desc: 'Summary return: tax on sales less input credit.' },
-  gstr2bReco: { icon: BadgePercent, desc: 'Match the portal\u2019s 2B against your bills — know which ITC is safe.' },
-  tallyExport: { icon: FileStack, desc: 'Masters + vouchers as Tally XML — what the CA asks for.' },
-  tdsTcs: { icon: Landmark, desc: 'Per-party 194Q/206C accumulation and the payable for challan filing.' },
-  fixedAssets: { icon: Building2, desc: 'Asset register + WDV depreciation schedule with the yearly journal.' },
-  yearEndClose: { icon: BookOpen, desc: 'P&L to capital, then lock the year against back-dating.' },
-  costCenters: { icon: BarChart3, desc: 'P&L by branch/project — who actually makes money.' },
-  salesReports: { icon: ClipboardList, desc: 'Billing by status and totals across customers.' },
-};
-
-const ReportsOverview = ({ sections, onNavigate }) => {
-  return (
-    <div className="space-y-6">
-      <PageHeader
-        entity="report"
-        title="Reports"
-      />
-
-      {sections.map((sec) => (
-        <section key={sec.key} aria-label={sec.title}>
-          <h3 className="ui-card-label mb-3" style={{ color: 'rgb(var(--fg))' }}>{sec.title}</h3>
-          <div className="ui-stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {(sec.items || []).map((r) => {
-              const meta = REPORT_META[r.key] || {};
-              const Icon = meta.icon || FileText;
-              return (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => onNavigate?.(r.key)}
-                  className="ui-card ui-lift group flex items-start gap-3.5 p-5 text-left"
-                >
-                  <span
-                    className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl"
-                    style={{ backgroundColor: 'rgb(var(--accent-soft))', color: 'rgb(var(--brand-ink))' }}
-                    aria-hidden="true"
-                  >
-                    <Icon size={18} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{r.label}</span>
-                      <ArrowRight
-                        size={16}
-                        className="ui-subtle flex-shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
-                        aria-hidden="true"
-                      />
-                    </span>
-                    {meta.desc ? <span className="ui-caption mt-1 block leading-snug">{meta.desc}</span> : null}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-};
+const ReportsOverview = ({ db, currentCompany, onNavigate, isEnabled }) => (
+  <ReportsWorkspace
+    db={db}
+    currentCompany={currentCompany}
+    onNavigate={onNavigate}
+    isEnabled={isEnabled}
+  />
+);
 
 const TemplatePreview = ({ companyName, voucherLabel, templateId, accentBarClass }) => {
   const title = `${voucherLabel} Preview`;
@@ -11924,6 +11867,7 @@ const AppShell = () => {
         ph: true,
         items: [
           { key: 'sales', label: 'Overview', icon: BarChart3, perm: 'SALES::Invoices::VIEW' },
+          { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
           { key: 'invoices', label: 'Invoices', icon: FileText, perm: 'SALES::Invoices::VIEW' },
           { key: 'pos', label: 'POS', icon: Receipt, perm: 'SALES::Invoices::CREATE', feature: 'pos' },
           { key: 'receipts', label: 'Receipts', icon: Receipt, perm: 'SALES::Receipts::VIEW', feature: 'standaloneReceiptsPayments' },
@@ -11935,28 +11879,12 @@ const AppShell = () => {
         ],
       },
       {
-        // Chasing money and talking to customers is its own job, done by its
-        // own people. It does not belong inside the invoicing menu.
         type: 'group',
         key: 'crmMenu',
         label: 'CRM',
         tone: 'crm',
         icon: Users,
-        /*
-         * The people, not just the chasing.
-         *
-         * This group held a single entry — Payment Reminders — while Customers,
-         * Vendors and Salesmen sat under Master Data among items, units, tax
-         * rates and document numbering. So a module named for dealing with
-         * people contained no people, and the people were filed with the
-         * catalogue and the configuration.
-         *
-         * Master Data keeps what the business sells and how documents behave.
-         * Who the business deals with lives here, next to chasing them.
-         */
         items: [
-          { key: 'customers', label: 'Customers', icon: Users, perm: 'MASTERS::Customers::VIEW' },
-          { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
           { key: 'salesmen', label: 'Salesmen', icon: Users, perm: 'SALES::Invoices::VIEW', feature: 'salesmen' },
           { key: 'paymentReminders', label: 'Payment Reminders', icon: Bell, perm: 'SALES::Receipts::VIEW', feature: 'paymentReminders' },
         ],
@@ -11970,6 +11898,7 @@ const AppShell = () => {
         ph: true,
         items: [
           { key: 'purchaseOverview', label: 'Overview', icon: BarChart3, perm: 'PURCHASE::Bills::VIEW' },
+          { key: 'vendors', label: 'Vendors', icon: Truck, perm: 'MASTERS::Vendors::VIEW' },
           { key: 'bills', label: 'Bills', icon: FileStack, perm: 'PURCHASE::Bills::VIEW' },
           { key: 'payments', label: 'Payments', icon: NotebookPen, perm: 'PURCHASE::Payments::VIEW', feature: 'standaloneReceiptsPayments' },
           { key: 'purchaseOrders', label: 'Purchase Orders', icon: ShoppingCart, perm: 'PURCHASE::Purchase Orders::VIEW', feature: 'purchaseOrders' },
@@ -13839,7 +13768,18 @@ const AppShell = () => {
           />
         );
       case 'customers':
-        return <CustomersList db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} />;
+        return (
+          <CustomersList
+            db={dbForUser}
+            setDb={setDb}
+            openModal={openModal}
+            currentCompany={currentCompany}
+            onNewTransaction={(customer) => {
+              setActive('invoices');
+              setInvoiceEditor({ open: true, initial: { customerId: String(customer?.id || '') } });
+            }}
+          />
+        );
       case 'inventoryOverview':
         return <InventoryOverview db={db} currentCompany={currentCompany} />;
       case 'stockAdjustment':
@@ -13877,7 +13817,14 @@ const AppShell = () => {
       case 'cashFlow':
         return <CashFlowStatement db={dbForUser} currentCompany={currentCompany} />;
       case 'reports':
-        return <ReportsOverview sections={reportSections} onNavigate={(key) => setActive(key)} />;
+        return (
+          <ReportsOverview
+            db={dbForUser}
+            currentCompany={currentCompany}
+            onNavigate={(key) => setActive(key)}
+            isEnabled={isEnabled}
+          />
+        );
       case 'gstr1':
         return <Gstr1Report db={dbForUser} currentCompany={currentCompany} />;
       case 'gstr3b':

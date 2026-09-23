@@ -1,16 +1,18 @@
 /**
  * Where the fields sit.
  *
- * The head of the receipt is one three-column grid, not two halves with a rule
- * between them, and the reference falls directly under the account it names
- * the instrument of. These are layout facts the screenshots kept catching and
- * the test suite did not.
+ * The receipt follows the same 60/40 structure as the expense voucher. Account
+ * and instrument details stay on the left, document identity stays on the
+ * right, and narration closes the form after allocation and TDS.
  */
 import { useState } from 'react';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../api/payments', () => ({ createPayment: vi.fn(async () => ({})) }));
+vi.mock('../../api/payments', () => ({
+  createPayment: vi.fn(async () => ({})),
+  listPaymentModes: vi.fn(async () => []),
+}));
 
 import RecordReceiptForm from './RecordReceiptForm';
 
@@ -45,14 +47,14 @@ const Host = ({ tds = false }) => {
 };
 
 describe('the head of the receipt', () => {
-  it('is one grid of three columns, not two halves with a rule', () => {
+  it('uses the same 60/40 split as the expense form', () => {
     render(<Host />);
     const heading = screen.getByText('Receipt Details');
     const grid = heading.closest('section').querySelector('.grid');
-    expect(grid.className).toMatch(/lg:grid-cols-3/);
-    /* The rule belonged to a two-column split that no longer exists. */
-    expect(grid.className).not.toMatch(/grid-cols-12/);
-    expect(heading.closest('section').querySelector('[style*="border-inline-start"]')).toBeNull();
+    expect(grid.className).toMatch(/lg:grid-cols-12/);
+    expect(grid.children[0].className).toMatch(/lg:col-span-7/);
+    expect(grid.children[1].className).toMatch(/lg:col-span-5/);
+    expect(grid.children[1].getAttribute('style')).toMatch(/border-inline-start/);
   });
 
   /*
@@ -60,33 +62,16 @@ describe('the head of the receipt', () => {
    * under the one it qualifies. With a three-column grid that is a statement
    * about DOM order: cell 4 falls under cell 1, 5 under 2, 6 under 3.
    */
-  it('carries all six fields', () => {
+  it('keeps account and instrument fields on the left and voucher identity on the right', () => {
     render(<Host />);
     const grid = screen.getByText('Receipt Details').closest('section').querySelector('.grid');
-    for (const label of [
-      /Received into/, /Receipt No\./, /Receipt Date/,
-      /Receipt Mode/, /Reference \/ UTR \/ Cheque No\./, /Narration \/ Description/,
-    ]) {
-      expect(within(grid).getByText(label)).toBeInTheDocument();
-    }
-    expect(grid.children).toHaveLength(6);
-  });
-
-  it('puts each second-row field under the one it qualifies', () => {
-    render(<Host />);
-    const grid = screen.getByText('Receipt Details').closest('section').querySelector('.grid');
-    const cells = [...grid.children];
-    const at = (re) => cells.findIndex((c) => within(c).queryByText(re));
-
-    expect(at(/Received into/)).toBe(0);
-    expect(at(/Receipt No\./)).toBe(1);
-    expect(at(/Receipt Date/)).toBe(2);
-    /* The mode under the account the money landed in. */
-    expect(at(/Receipt Mode/)).toBe(3);
-    /* The instrument's number under the receipt's own number. */
-    expect(at(/Reference \/ UTR \/ Cheque No\./)).toBe(4);
-    /* The sentence under the date. */
-    expect(at(/Narration \/ Description/)).toBe(5);
+    const [left, right] = [...grid.children];
+    expect(within(left).getByText(/Received into/)).toBeInTheDocument();
+    expect(within(left).getByLabelText(/Reference \/ UTR \/ Cheque No\./)).toBeInTheDocument();
+    expect(within(left).getByLabelText('Receipt Mode')).toBeInTheDocument();
+    expect(within(right).getByText(/Receipt No\./)).toBeInTheDocument();
+    expect(within(right).getByText(/Receipt Date/)).toBeInTheDocument();
+    expect(within(grid).queryByText(/Narration \/ Description/)).toBeNull();
   });
 
   it('opens the mode on what the account implies, and lets it be changed', async () => {
@@ -107,29 +92,7 @@ describe('the head of the receipt', () => {
   });
 });
 
-describe('the receipt summary', () => {
-  it('states three figures, not the eight it used to', () => {
-    render(<Host />);
-    /* The heading and the figures are siblings, so the card is the parent. */
-    const card = screen.getByText('Receipt Summary').parentElement;
-    expect(within(card).getByText('Total allocation')).toBeInTheDocument();
-    expect(within(card).getByText('TDS deducted')).toBeInTheDocument();
-    expect(within(card).getByText('Bank amount (Total receipt)')).toBeInTheDocument();
-    /* Named boxes that no longer exist, and the same number under three
-       different words. */
-    expect(within(card).queryByText('Amount received')).toBeNull();
-    expect(within(card).queryByText('Bank charges')).toBeNull();
-    expect(within(card).queryByText('Invoices selected')).toBeNull();
-  });
-
-  it('keeps Notes as its own thing, apart from the narration', () => {
-    render(<Host />);
-    /* Two different jobs: the narration is the line the ledger prints, in the
-       head with the rest of the document; Notes is everything else. */
-    expect(screen.getByLabelText('Notes').tagName).toBe('TEXTAREA');
-    expect(screen.getByLabelText('Narration / Description').tagName).toBe('INPUT');
-  });
-
+describe('the receipt totals', () => {
   it('keeps the on-account line for the receipts that have one', () => {
     render(<Host />);
     /* Nothing allocated, nothing waiting — so the line is not drawn at all
@@ -184,7 +147,7 @@ describe('the allocation table', () => {
  * checked by eye is a list that drifts.
  */
 describe('the page reads in the order it is worked in', () => {
-  it('goes details, allocation, TDS, summary, notes', () => {
+  it('goes details, allocation, TDS, then narration', () => {
     render(<Host tds />);
     const sections = [...document.querySelectorAll('h3')].map((h) => h.textContent.trim());
     /* TDS used to sit above the allocation, asking what was withheld from a
@@ -195,9 +158,9 @@ describe('the page reads in the order it is worked in', () => {
       'Ledger allocation',
       'TDS (optional)',
     ]);
-    const order = ['Receipt Details', 'Ledger allocation', 'TDS (optional)', 'Receipt Summary', 'Notes'];
+    const order = ['Receipt Details', 'Ledger allocation', 'TDS (optional)', 'Narration / Description'];
     const tops = order.map((t) => {
-      const el = t === 'Notes' ? screen.getByLabelText('Notes') : screen.getByText(t);
+      const el = t === 'Narration / Description' ? screen.getByLabelText(t) : screen.getByText(t);
       return [...document.querySelectorAll('*')].indexOf(el);
     });
     expect(tops).toEqual([...tops].sort((a, b) => a - b));
@@ -220,11 +183,6 @@ describe('nothing on the screen has gone missing', () => {
     ['TDS section', () => screen.getByText('TDS (optional)')],
     ['TDS Ledger', () => screen.getByLabelText('TDS Ledger')],
     ['TDS Amount', () => screen.getByLabelText('TDS Amount')],
-    ['Receipt Summary', () => screen.getByText('Receipt Summary')],
-    ['Total allocation', () => screen.getByText('Total allocation')],
-    ['TDS deducted', () => screen.getByText('TDS deducted')],
-    ['Bank amount (Total receipt)', () => screen.getByText('Bank amount (Total receipt)')],
-    ['Notes', () => screen.getByLabelText('Notes')],
   ];
 
   it('has every one of them', () => {

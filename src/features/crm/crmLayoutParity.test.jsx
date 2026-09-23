@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
@@ -126,6 +126,31 @@ describe.each(PAGES)('$name, laid out like every other list', (page) => {
 });
 
 describe('what the party lists say about money', () => {
+  it('opens the complete customer page from a customer row', () => {
+    render(<CustomersList db={db} setDb={noop} currentCompany={COMPANY} />);
+    fireEvent.click(screen.getByText('Acme Traders'));
+
+    expect(screen.getByRole('heading', { name: 'Acme Traders' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Summary' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getAllByRole('tab')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('tab', { name: 'Statement' }));
+    expect(screen.getByLabelText('Transaction type')).toBeTruthy();
+    expect(screen.getByLabelText('Transaction period')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Transaction period'), { target: { value: 'custom' } });
+    expect(screen.getByLabelText('Custom period from')).toBeTruthy();
+    expect(screen.getByLabelText('Custom period to')).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Custom period from'), { target: { value: '2026-08-01' } });
+    fireEvent.change(screen.getByLabelText('Custom period to'), { target: { value: '2026-09-30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(screen.queryByLabelText('Custom period from')).toBeNull();
+    expect(screen.getByLabelText('Transaction period').selectedOptions[0].textContent).toContain('2026-08-01');
+    expect(screen.getByText('INV-1')).toBeTruthy();
+    for (const heading of ['Date', 'Type', 'Voucher No.', 'Debit', 'Credit', 'Balance']) {
+      expect(screen.getByRole('columnheader', { name: heading })).toBeTruthy();
+    }
+    expect(screen.getByText('Customer details')).toBeTruthy();
+  });
+
   it('shows what a customer actually owes, not a stored zero', () => {
     // The old column read the `balance` field, which nothing ever wrote to.
     render(<CustomersList db={db} setDb={noop} currentCompany={COMPANY} />);

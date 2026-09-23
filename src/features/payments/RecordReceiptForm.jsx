@@ -860,9 +860,10 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           <span className="ui-sec-mark" aria-hidden="true"><Landmark size={16} /></span>
           <h3>Receipt Details</h3>
         </div>
-        <div className="ui-doc-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-        {!hideMode ? (
-          <div className="min-w-0">
+        <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+          <div className="lg:col-span-7 space-y-4">
+          {!hideMode ? (
+            <div className="min-w-0">
             <label className="ui-label">
               Received into <span className="text-[rgb(var(--neg))]">*</span>
             </label>
@@ -894,8 +895,46 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 Accounts or Cash-in-Hand group, and it appears here.
               </p>
             ) : null}
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
+              <input
+                id="rcpt-reference"
+                type="text"
+                value={formData.reference}
+                onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+                className="ui-input w-full"
+                placeholder="Txn / UTR / Cheque no"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-mode">Receipt Mode</label>
+              <select
+                id="rcpt-mode"
+                value={receiptMode}
+                onChange={(e) => {
+                  setModeTouched(true);
+                  setFormData((p) => ({ ...p, mode: e.target.value }));
+                }}
+                className="ui-select w-full"
+              >
+                {(RECEIPT_MODES.includes(receiptMode) ? RECEIPT_MODES : [receiptMode, ...RECEIPT_MODES]).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        ) : null}
+          </div>
+
+          <div
+            className="lg:col-span-5 lg:ps-6"
+            style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
             <DocNumberField
               className="min-w-0"
@@ -908,7 +947,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               }}
               disabled={lockReceiptNumber}
               voucherKey="receipt"
-      title="Receipt numbering"
+              title="Receipt numbering"
               sampleLabel="Next receipt will be"
               manualLabel="Typed on each receipt"
               branchId={receiptBranchId || null}
@@ -932,53 +971,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               />
             </div>
 
-            {/*
-              Row two, in the same three columns, so each field sits under the
-              one it qualifies: the mode under the account the money landed in,
-              the instrument's number under the receipt's own number, and the
-              sentence under the date.
-            */}
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-mode">Receipt Mode</label>
-              <select
-                id="rcpt-mode"
-                value={receiptMode}
-                onChange={(e) => {
-                  setModeTouched(true);
-                  setFormData((p) => ({ ...p, mode: e.target.value }));
-                }}
-                className="ui-select w-full"
-              >
-                {/* A record saved under an older label still shows its own. */}
-                {(RECEIPT_MODES.includes(receiptMode) ? RECEIPT_MODES : [receiptMode, ...RECEIPT_MODES]).map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
             </div>
-
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
-              <input
-                id="rcpt-reference"
-                type="text"
-                value={formData.reference}
-                onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="Txn / UTR / Cheque no"
-              />
-            </div>
-
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-narration">Narration / Description</label>
-              <input
-                id="rcpt-narration"
-                type="text"
-                value={formData.narration}
-                onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="E.g. Payment received, UTR, remarks etc."
-              />
-            </div>
+          </div>
         </div>
       </section>
 
@@ -1157,6 +1151,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             </p>
           ) : null}
         </section>
+
+        <div>
+          <label className="ui-label" htmlFor="rcpt-narration">Narration / Description</label>
+          <input
+            id="rcpt-narration"
+            type="text"
+            value={formData.narration}
+            onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
+            className="ui-input w-full"
+            placeholder="E.g. payment received, UTR, remarks etc."
+          />
+        </div>
 
       <FieldErrorSummary errors={fieldErrors.errors} />
     </form>

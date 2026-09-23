@@ -3,7 +3,7 @@
    which is everything a dense financial UI asks of type. Numbers and codes
    are Inter too, marked by tabular-nums and alignment rather than a second
    family. display=swap so text is never invisible while fonts load. */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400..800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -3610,7 +3610,6 @@
   }
 }
 
-
 /* ------------------------------------------------------------------ *
  * The dashboard hero's ground.
  *
@@ -3790,4 +3789,92 @@
     transform: scaleY(0.85);
     opacity: 0.8;
   }
+}
+
+/* Application-wide typography emphasis.
+   Inter's variable range lets the interface gain roughly 10–15% stroke
+   strength without jumping a full named weight and making dense forms feel
+   cramped. Explicit Tailwind weight utilities are raised by the same amount
+   so typography stays consistent across older and newer screens. */
+body { font-weight: 500; }
+.font-normal { font-weight: 500; }
+.font-medium { font-weight: 600; }
+.font-semibold { font-weight: 700; }
+.font-bold { font-weight: 800; }
+.font-extrabold { font-weight: 800; }
+
+h1, h2, h3, h4, h5, h6,
+.ui-t-page, .ui-t-sec, .ui-t-doc, .ui-title, .ui-card-title,
+.ui-section-label {
+  font-weight: 800 !important;
+}
+
+.ui-btn, .ui-label, .ui-card-label, .ui-tab, .ui-nav-item {
+  font-weight: 600;
+}
+
+/* One shared reading size for page content, navigation, controls and data.
+   Captions and column labels remain smaller because they are supporting text;
+   page/document headings keep the established larger hierarchy. */
+.ui-content, .ui-nav-item, .ui-btn, .ui-input, .ui-select,
+input, select, textarea, .ui-table tbody, .ui-t-body {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+.ui-content, .ui-input, .ui-select, input, select, textarea,
+.ui-table tbody, .ui-t-body, .ui-t-cell, .ui-caption,
+.ui-money, .ui-amount, .ui-money-lg {
+  font-weight: 500;
+}
+
+/* Match the full selector strength of the original rail rules. The earlier
+   light child rule was more specific than the general typography override,
+   which is why the sidebar still appeared unchanged. */
+.ui-rail .ui-nav-item { font-size: 0.875rem; font-weight: 600; }
+.ui-rail .ui-nav-item[data-level='module'] { font-weight: 700; }
+.ui-rail .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse) { font-weight: 600; }
+.ui-rail .ui-nav-item[data-active='true'],
+.ui-rail .ui-nav-item:not([data-level='module'])[data-active='true'] {
+  font-weight: 700;
+}
+
+/* Structured heading bands use the shared neutral heading surface. This is
+   deliberately limited to card and table headers; painting every standalone
+   page title would create large blocks and waste working space. */
+.ui-card-head {
+  background-color: rgb(var(--heading-bg));
+}
+.ui-table thead th {
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+/* One typeface and one heading scale everywhere. Some older screens still
+   carried local `text-sm`/`text-lg` utilities on semantic headings, making an
+   h2 smaller than a neighbouring card label. Element-level sizes are made
+   authoritative here so the same heading means the same thing on every page. */
+body, button, input, select, textarea, table,
+.font-sans, .font-serif, .font-mono {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+h1, h1[class], .ui-t-page {
+  font-size: 1.75rem !important;
+  line-height: 2.25rem !important;
+  letter-spacing: -0.025em;
+}
+h2, h2[class], .ui-t-doc {
+  font-size: 1.25rem !important;
+  line-height: 1.75rem !important;
+  letter-spacing: -0.015em;
+}
+h3, h3[class], .ui-t-sec, .ui-card-title {
+  font-size: 1rem !important;
+  line-height: 1.5rem !important;
+  letter-spacing: -0.005em;
+}
+h4, h4[class], h5, h5[class], h6, h6[class] {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+  letter-spacing: 0;
 }
