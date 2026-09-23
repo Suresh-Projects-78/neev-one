@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronDown, ListChecks, Plus, Upload } from 'lucide-react';
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, ChevronDown, Eye, MoreVertical, Pencil, Plus, Trash2, Undo2, Upload } from 'lucide-react';
 
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { LIST_PERIODS, usePeriodFilter } from '../../components/ListControls';
@@ -7,7 +7,8 @@ import PopupSelect from '../../components/pickers/PopupSelect';
 import Popover from '../../components/ui/Popover';
 import { EmptyState, StatusPill } from '../../components/ui/Primitives';
 import { formatMoney } from '../../utils/money';
-import { cashBankIndex, cashBankTotals, cashBankTransactions } from './transactions';
+import { cashBankIndex, cashBankTransactions } from './transactions';
+import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
 /**
  * What happened to the money.
@@ -39,6 +40,10 @@ export default function CashBankTransactions({
      a view of a payment, a journal or an imported line, never a record of its
      own, so acting on it means going to the thing itself. */
   onOpenSource = null,
+  onEditSource = null,
+  onDeleteSource = null,
+  onUncategorise = null,
+  onAllocateStatement = null,
   onOpenReconciliation = null,
   onOpenAccounts = null,
 }) {
@@ -49,6 +54,7 @@ export default function CashBankTransactions({
   const [accountId, setAccountId] = useState('');
   const newBtnRef = useRef(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [openActionId, setOpenActionId] = useState(null);
 
   /* An account that has since been deleted reads as "All accounts" rather than
      as a dangling id — the same rule the branch field on a document follows. */
@@ -64,8 +70,6 @@ export default function CashBankTransactions({
     [db, companyId, accountInList, period.dateFrom, period.dateTo]
   );
 
-  const totals = useMemo(() => cashBankTotals(rows), [rows]);
-
   const newItems = [
     onNewPayment ? { key: 'payment', label: 'Payment', icon: ArrowUpRight, onSelect: onNewPayment } : null,
     onNewReceipt ? { key: 'receipt', label: 'Receipt', icon: ArrowDownLeft, onSelect: onNewReceipt } : null,
@@ -78,25 +82,37 @@ export default function CashBankTransactions({
       title="Transactions"
       company={currentCompany}
       moreItems={[
+        onImportStatement ? { key: 'import', label: 'Import statement', Icon: Upload } : null,
+        exportMenuItem('Export statement'),
         onOpenReconciliation ? { key: 'reco', label: 'Reconciliation' } : null,
         onOpenAccounts ? { key: 'accounts', label: 'Bank & cash accounts' } : null,
       ].filter(Boolean)}
       onMoreSelect={(key) => {
+        if (key === 'import') onImportStatement?.();
+        const format = exportFormatFromKey(key);
+        if (format) {
+          runListExport({
+            format,
+            title: 'Cash & bank transactions',
+            fileName: 'Cash_Bank_Transactions',
+            label: 'transaction(s)',
+            rows,
+            columns: [
+              { key: 'date', label: 'Date' },
+              { key: 'accountName', label: 'Account' },
+              { key: 'ledgerName', label: 'Ledger Name' },
+              { key: 'type', label: 'Type' },
+              { key: 'amount', label: 'Amount' },
+              { key: 'status', label: 'Status' },
+            ],
+          });
+        }
         if (key === 'reco') onOpenReconciliation?.();
         if (key === 'accounts') onOpenAccounts?.();
       }}
       headerExtras={
-        onImportStatement ? (
-          <button type="button" onClick={onImportStatement} className="ui-btn ui-btn-secondary">
-            <Upload size={16} aria-hidden="true" /> Import Statement
-          </button>
-        ) : null
-      }
-      primary={
         newItems.length ? (
           <>
-            {/* One primary verb — and a cash book has three shapes of entry
-                under it, so it opens rather than guessing which was meant. */}
             <button
               type="button"
               ref={newBtnRef}
@@ -114,16 +130,7 @@ export default function CashBankTransactions({
                   {newItems.map((item) => {
                     const Icon = item.icon;
                     return (
-                      <button
-                        key={item.key}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setNewOpen(false);
-                          item.onSelect?.();
-                        }}
-                        className="ui-hover-sunken flex w-full items-center gap-2 px-3 py-2 text-left text-sm"
-                      >
+                      <button key={item.key} type="button" role="menuitem" onClick={() => { setNewOpen(false); item.onSelect?.(); }} className="ui-hover-sunken flex w-full items-center gap-2 px-3 py-2 text-left text-sm">
                         <Icon size={16} aria-hidden="true" /> {item.label}
                       </button>
                     );
@@ -134,12 +141,6 @@ export default function CashBankTransactions({
           </>
         ) : null
       }
-      cards={[
-        { label: 'Payments', value: totals.payments, tone: 'neg', Icon: ArrowUpRight },
-        { label: 'Receipts', value: totals.receipts, tone: 'paid', Icon: ArrowDownLeft },
-        { label: 'Contra entries', value: totals.contra, tone: 'sent', Icon: ArrowLeftRight },
-        { label: 'Vouchers', value: totals.count, count: true, tone: 'draft', Icon: ListChecks },
-      ]}
       above={
         /* Account, then period, on one line — the order somebody asks the
            question in, and the only two narrowings this list has. */
@@ -240,19 +241,35 @@ export default function CashBankTransactions({
                       {formatMoney(r.amount, currentCompany)}
                     </td>
                     <td>
-                      <StatusPill status={r.status} />
-                    </td>
-                    <td className="text-end">
-                      {onOpenSource ? (
+                      {r.kind === 'statement' && r.status === 'Uncategorised' && onAllocateStatement ? (
                         <button
                           type="button"
-                          onClick={() => onOpenSource(r)}
-                          className="ui-btn ui-btn-ghost ui-btn-sm"
-      title="Open the document this movement came from"
+                          onClick={() => onAllocateStatement(r)}
+                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--accent))]"
+                          title={`Record this as ${r.type}`}
                         >
-                          View
+                          <StatusPill status={r.status} />
                         </button>
-                      ) : null}
+                      ) : (
+                        <StatusPill status={r.status} />
+                      )}
+                    </td>
+                    <td className="text-end">
+                      <div className="relative inline-block text-left">
+                        <button type="button" onClick={() => setOpenActionId((id) => id === r.id ? null : r.id)} className="ui-btn ui-btn-ghost ui-btn-sm" title="Actions" aria-label="Actions">
+                          <MoreVertical size={18} aria-hidden="true" />
+                        </button>
+                        {openActionId === r.id ? (
+                          <div className="absolute right-0 z-20 mt-1 w-36 overflow-hidden rounded-lg border ui-surface shadow-lg">
+                            <button type="button" className="ui-hover-sunken flex w-full items-center gap-2 px-3 py-2 text-left text-sm" onClick={() => { setOpenActionId(null); onOpenSource?.(r); }}><Eye size={15} /> View</button>
+                            <button type="button" className="ui-hover-sunken flex w-full items-center gap-2 px-3 py-2 text-left text-sm" onClick={() => { setOpenActionId(null); onEditSource?.(r); }}><Pencil size={15} /> Edit</button>
+                            {r.kind === 'statement' && r.status === 'Categorised' && onUncategorise ? (
+                              <button type="button" className="ui-hover-sunken flex w-full items-center gap-2 px-3 py-2 text-left text-sm" onClick={() => { setOpenActionId(null); onUncategorise(r); }}><Undo2 size={15} /> Mark as uncategorised</button>
+                            ) : null}
+                            <button type="button" className="ui-hover-sunken flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[rgb(var(--neg))]" onClick={() => { setOpenActionId(null); onDeleteSource?.(r); }}><Trash2 size={15} /> Delete</button>
+                          </div>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 );

@@ -4,7 +4,7 @@ import { notify, confirmDialog } from './components/ui/notify';
 import { blockIfClosed } from './utils/bookClose';
 import { pushMaster, removeMaster, saveMaster } from './utils/masterSync';
 import { postJournalToLedger, reverseJournalOnLedger } from './utils/journalSync';
-import { createDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
+import { createDocApi, deleteDocApi, updateDocApi, hasApiSession as hasDocsApiSession } from './api/purchaseDocs';
 import { useServerDocSync } from './hooks/useServerDocSync';
 import useTdsSync from './features/tds/useTdsSync';
 import { useCompanyFromServer } from './hooks/useCompanyFromServer';
@@ -41,12 +41,12 @@ import VendorPicker, { VendorForm } from './components/pickers/VendorPicker';
 import { CustomerForm } from './components/pickers/CustomerPicker';
 import { buildLedgerStatement, getDefaultDocSettings, initDB, initEmptyDB, normalizeDB } from './data/db';
 import { nextFreeVoucherNumber } from './utils/docSettings';
-import { dueDateFor, termDaysFor, termsLabel } from './utils/paymentTerms';
+import { dueDateFor } from './utils/paymentTerms';
 import { exportLedgerToExcel, exportLedgerToPdf, printLedger } from './utils/ledgerExport';
 import { formatMoney, round2 } from './utils/money';
 import { downloadCsvTemplate, parseCsv, readFileText } from './utils/csv';
 import { useColumnFilters, ColumnHeader } from './components/ColumnFilters';
-import { ListToolbar, exportRows, useListSearch } from './components/ListToolbar';
+import { ListToolbar, useListSearch } from './components/ListToolbar';
 import { getVendorDisplayName } from './utils/contacts';
 import {
   ACCENT_OPTIONS,
@@ -73,6 +73,7 @@ import {
 } from './features/payments/TransactionsList';
 import RecordReceiptForm from './features/payments/RecordReceiptForm';
 import RecordDisbursementForm from './features/payments/RecordDisbursementForm';
+import { cashBankIndex } from './features/cashBank/transactions';
 
 const InvoicePreview = lazy(() => import('./features/sales/InvoicePreview'));
 import AuthGate from './components/AuthGate';
@@ -139,6 +140,16 @@ const HUB_SCREENS = new Set([
   'trialBalance',
   'yearEndClose',
 ]);
+
+const HUB_SCREEN_FEATURES = {
+  costCenters: ['costCenters'],
+  dataImport: ['imports'],
+  discountRules: ['discountRules'],
+  inventoryOverview: ['inventory'],
+  paymentsExpense: ['expenses'],
+  salesBySalesman: ['salesmen'],
+  stockAdjustment: ['inventory'],
+};
 import {
   CreditNoteForm,
   CreditNotesList,
@@ -202,7 +213,7 @@ import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } fr
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
 import { TDS_NATURES, natureByCode, natureForSection, resolveRule, ruleReference } from './features/tds/ruleMaster';
 import { tdsEventFrom } from './features/tds/engine';
-import { tdsGroupSide } from './utils/tdsLedgers';
+import { tdsGroupSide, tdsLedgerRate, tdsPayableLedgers } from './utils/tdsLedgers';
 import { formatDateIn, localDateIso, todayIso } from './utils/dates';
 import {
   ledgerHasPostings,
@@ -222,6 +233,7 @@ import InvoiceFieldSettings from './features/settings/InvoiceFieldSettings';
 import { DocFormActions, DocFormFootnote } from './components/DocumentForm';
 import MasterFormPage from './components/MasterFormPage';
 import DocNumberField from './components/DocNumberField';
+import LedgerField from './components/pickers/LedgerField';
 import ItemForm from './features/masters/ItemForm';
 import FormSection from './components/ui/FormSection';
 import EmailSettings from './features/settings/EmailSettings';
@@ -334,15 +346,16 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   // This screen had no search at all — the only way to find a voucher was to
   // scroll, or to know its date and narrow the period around it.
   const expenseSearch = useListSearch(expenses, ['number', 'vendorName', 'description', 'refNo', 'date']);
-  const [statusFilter, setStatusFilter] = useState('All');
   const [isCreating, setIsCreating] = useState(false);
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [editingExpense, setEditingExpense] = useState(null);
+  const [expenseActionMenu, setExpenseActionMenu] = useState(null);
+  const [fromDate] = useState('');
+  const [toDate] = useState('');
   const importInputRef = useRef(null);
   const expenseColFilters = useColumnFilters();
 
   const getDerivedStatus = (expense) => {
-    const total = Number(expense?.total ?? 0);
+    const total = Math.max(0, Number(expense?.total ?? 0) - Number(expense?.tdsAmount ?? 0));
     const paid = Number(expense?.paidAmount ?? 0);
 
     const raw = String(expense?.status || '').trim();
@@ -362,21 +375,8 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     return 'Unpaid';
   };
 
-  const inPeriod = (e) => {
-    const d = String(e?.date || '').slice(0, 10);
-    if (!d) return !fromDate && !toDate;
-    if (fromDate && d < fromDate) return false;
-    if (toDate && d > toDate) return false;
-    return true;
-  };
-
   const filteredExpenses = expenseColFilters.applyFilters(
     expenseSearch.filtered
-      .filter((e) => {
-        const derived = getDerivedStatus(e);
-        if (statusFilter !== 'All' && derived !== statusFilter) return false;
-        return inPeriod(e);
-      })
       .slice()
       .sort((a, b) => {
         const da = String(a?.date || '');
@@ -387,34 +387,14 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     {
       number: (r) => r.number,
       date: (r) => r.date,
-      dueDate: (r) => r.dueDate,
-      description: (r) => r.description,
       vendor: (r) => r.vendorName,
-      refNo: (r) => r.refNo,
-      refDate: (r) => r.refDate,
       amount: (r) => r.total,
+      gst: (r) => r.gstTotal,
+      tds: (r) => r.tdsAmount,
+      payable: (r) => Math.max(0, Number(r.total || 0) - Number(r.tdsAmount || 0)),
       status: (r) => getDerivedStatus(r),
-      /* The two new columns filter and sort like the rest; without these their
-         headings opened a panel that did nothing. */
-      paidAmount: (r) => Math.min(Number(r.paidAmount || 0), Number(r.total || 0)),
-      balance: (r) => Math.max(0, Number(r.total || 0) - Math.min(Number(r.paidAmount || 0), Number(r.total || 0))),
     }
   );
-
-  // Over the filtered set, so the figure always describes what is on screen.
-  const expenseTotals = useMemo(() => {
-    let spent = 0;
-    let unpaid = 0;
-    for (const e of filteredExpenses) {
-      const total = Number(e.total || 0);
-      spent += total;
-      unpaid += Math.max(0, total - Number(e.paidAmount || 0));
-    }
-    return [
-      { label: 'Spent', value: formatMoney(spent, currentCompany) },
-      { label: 'Unpaid', value: formatMoney(unpaid, currentCompany), tone: unpaid > 0 ? 'neg' : undefined },
-    ];
-  }, [filteredExpenses, currentCompany]);
 
 
   const ledgerNamesOf = (e) =>
@@ -639,7 +619,7 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
         currentCompany={currentCompany}
         initialData={{
           vendorId: expense?.vendorId ? String(expense.vendorId) : '',
-          amount: String(Math.max(0, Number(expense?.total ?? 0) - Number(expense?.paidAmount ?? 0)) || ''),
+          amount: String(Math.max(0, Number(expense?.total ?? 0) - Number(expense?.tdsAmount ?? 0) - Number(expense?.paidAmount ?? 0)) || ''),
           date: new Date().toISOString().slice(0, 10),
         }}
         onClose={() => openModal(null)}
@@ -647,23 +627,47 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
     );
   };
 
-  /*
-   * The status counts the tabs carry.
-   *
-   * Counted over the period and the search, not the whole book: a strip of
-   * counts describing rows the table is not showing is two sets of figures on
-   * one screen with nothing saying so.
-   */
-  const expenseStatusCounts = useMemo(() => {
-    const inScope = expenseSearch.filtered.filter((e) => inPeriod(e));
-    const counts = { All: inScope.length };
-    for (const e of inScope) {
-      const st = getDerivedStatus(e);
-      counts[st] = (counts[st] || 0) + 1;
+  const raiseExpenseCreditNote = (expense) => {
+    openModal(
+      <DebitNoteForm
+        db={db}
+        setDb={setDb}
+        currentCompany={currentCompany}
+        initialData={{
+          date: new Date().toISOString().slice(0, 10),
+          vendorId: expense?.vendorId ? String(expense.vendorId) : '',
+          items: (expense?.lines || []).map((line) => ({
+            description: line.ledgerName || line.description || 'Expense credit',
+            quantity: 1,
+            rate: Number(line.amount || 0),
+            gstRate: Number(line.gstRate || 0),
+          })),
+        }}
+        screenTitle="Raise Credit Note"
+        onClose={() => openModal(null)}
+      />,
+      { title: 'Raise Credit Note', maxWidthClass: 'max-w-5xl' }
+    );
+  };
+
+  const deleteExpense = async (expense) => {
+    const ok = await confirmDialog({
+      title: 'Delete expense?',
+      message: `Delete expense ${expense?.number || ''}?`,
+      confirmLabel: 'Delete',
+    });
+    if (!ok) return;
+    if (expense?.backendDocId && hasDocsApiSession()) {
+      try {
+        await deleteDocApi('expense', expense.backendDocId);
+      } catch (err) {
+        notify.error(String(err?.message || 'Expense could not be deleted.'));
+        return;
+      }
     }
-    return counts;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expenseSearch.filtered, fromDate, toDate]);
+    setDb((prev) => ({ ...prev, expenses: (prev.expenses || []).filter((row) => String(row.id) !== String(expense.id)) }));
+    notify.success('Expense deleted.');
+  };
 
   const EXPENSE_STATUS_TABS = [
     { value: 'All', label: 'All', tone: 'all' },
@@ -684,8 +688,9 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             currentCompany={currentCompany}
             openModal={openModal}
             screenTitle="New Expense"
-            onBack={() => setIsCreating(false)}
-            onClose={() => setIsCreating(false)}
+            initialData={editingExpense}
+            onBack={() => { setEditingExpense(null); setIsCreating(false); }}
+            onClose={() => { setEditingExpense(null); setIsCreating(false); }}
           />
         </div>
       </div>
@@ -756,47 +761,6 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
            screen for. */
         { label: 'Overdue', value: expenseFlow.overdue, tone: 'overdue', Icon: AlertTriangle },
       ]}
-      tabs={EXPENSE_STATUS_TABS}
-      tabsLabel="Expense status"
-      statusValue={statusFilter}
-      statusCounts={expenseStatusCounts}
-      onStatusChange={setStatusFilter}
-      /* The period rides the far end of the status row, which was empty
-         across two thirds of the page. As a band of its own between the pills
-         and the rows it was a second toolbar, eighty pixels tall, above the
-         list somebody came to read. */
-      tabsExtras={
-        <>
-          <label className="ui-label mb-0" htmlFor="expense-from">From</label>
-          <input
-            id="expense-from"
-            type="date"
-            value={fromDate}
-            onChange={(e) => setFromDate(e.target.value)}
-            className="ui-input w-auto text-sm"
-          />
-          <label className="ui-label mb-0" htmlFor="expense-to">To</label>
-          <input
-            id="expense-to"
-            type="date"
-            value={toDate}
-            onChange={(e) => setToDate(e.target.value)}
-            className="ui-input w-auto text-sm"
-          />
-          {fromDate || toDate ? (
-            <button
-              type="button"
-              onClick={() => {
-                setFromDate('');
-                setToDate('');
-              }}
-              className="ui-btn ui-btn-ghost ui-btn-sm"
-            >
-              Clear
-            </button>
-          ) : null}
-        </>
-      }
       above={
         <input
           ref={importInputRef}
@@ -812,33 +776,35 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
       }
     >
       <div className="ui-table-scroll">
-        <table className="ui-table ui-table-wide ui-table-sticky">
+        <table className="ui-table ui-table-wide ui-table-sticky table-fixed">
+          <colgroup>
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '25%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '3%' }} />
+          </colgroup>
           <thead>
             <tr>
-              <ColumnHeader label="Expense no." col="number" state={expenseColFilters} />
-              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} />
-              <ColumnHeader label="Expense date" col="date" state={expenseColFilters} />
-              <ColumnHeader label="Due date" col="dueDate" state={expenseColFilters} align="center" />
-              <ColumnHeader label="Narration" col="description" state={expenseColFilters} />
-              <ColumnHeader label="Reference no." col="refNo" state={expenseColFilters} />
-              {/* Filterable like every column beside it. Left as a plain
-                  heading it also wore the table's uppercase, so one column in
-                  the row read in a different case from the rest. */}
-              <ColumnHeader label="Ref date" col="refDate" state={expenseColFilters} />
-              <ColumnHeader label="Amount" col="amount" state={expenseColFilters} className="ui-num" align="right" />
-              <ColumnHeader label="Status" col="status" state={expenseColFilters} align="center" />
-              {/* What has been paid and what is left. The status said "Partly
-                  paid" and the list made you open the voucher to learn by how
-                  much. */}
-              <ColumnHeader label="Paid amount" col="paidAmount" state={expenseColFilters} className="ui-num" align="right" />
-              <ColumnHeader label="Balance" col="balance" state={expenseColFilters} className="ui-num" align="right" />
-              <th scope="col"><span className="sr-only">Actions</span></th>
+              <ColumnHeader label="Voucher No." col="number" state={expenseColFilters} className="text-sm font-semibold" />
+              <ColumnHeader label="Date" col="date" state={expenseColFilters} type="date" className="text-sm font-semibold" align="center" />
+              <ColumnHeader label="Vendor" col="vendor" state={expenseColFilters} className="text-sm font-semibold" />
+              <ColumnHeader label="Amount" col="amount" state={expenseColFilters} type="number" className="ui-num text-sm font-semibold" align="right" />
+              <ColumnHeader label="GST" col="gst" state={expenseColFilters} type="number" className="ui-num text-sm font-semibold" align="right" />
+              <ColumnHeader label="TDS" col="tds" state={expenseColFilters} type="number" className="ui-num text-sm font-semibold" align="right" />
+              <ColumnHeader label="Payable Amount" col="payable" state={expenseColFilters} type="number" className="ui-num text-sm font-semibold" align="right" />
+              <ColumnHeader label="Status" col="status" state={expenseColFilters} type="choice" className="text-sm font-semibold" align="center" />
+              <th scope="col" className="text-sm font-semibold text-center">Action</th>
             </tr>
           </thead>
           <tbody className="ui-rows">
             {filteredExpenses.length === 0 ? (
               <tr>
-                <td colSpan="12" className="p-0">
+                <td colSpan="9" className="p-0">
                   {/*
                     Was the bare words "No expenses found", where Bills gets an
                     icon, a sentence explaining what the record is for, and a
@@ -873,8 +839,7 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
             ) : (
               filteredExpenses.map((expense) => {
                 const derived = getDerivedStatus(expense);
-                const expensePaid = Math.min(Number(expense.paidAmount || 0), Number(expense.total || 0));
-                const expenseBalance = Math.max(0, Number(expense.total || 0) - expensePaid);
+                const expensePayable = Math.max(0, Number(expense.total || 0) - Number(expense.tdsAmount || 0));
                 return (
                   <tr
                     key={expense.id}
@@ -885,29 +850,27 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
                     }}
                   >
                   <td className="px-4 py-2.5 ui-col-entity">{expense.number || '-'}</td>
-                  <td className="px-4 py-2.5 ui-col-entity">{expense.vendorName || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-meta">{expense.date}</td>
-                  <td className="px-4 py-2.5 ui-col-meta">{expense.dueDate || '-'}</td>
-                  <td className="px-4 py-2.5 ui-col-meta truncate" title={expense.description || ''}>{expense.description}</td>
-                  <td className="px-4 py-2.5 ui-col-id">{expense.refNo || '-'}</td>
-                  <td className="px-4 py-2.5 ui-col-meta">{expense.refDate || '-'}</td>
+                  <td className="px-4 py-2.5 ui-col-entity">{expense.vendorName || '-'}</td>
                   <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expense.total, currentCompany)}</td>
+                  <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expense.gstTotal || 0, currentCompany)}</td>
+                  <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expense.tdsAmount || 0, currentCompany)}</td>
+                  <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expensePayable, currentCompany)}</td>
                   <td className="px-4 py-2.5 ui-col-meta">
                     <StatusPill status={derived} />
                   </td>
-                  <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expensePaid, currentCompany)}</td>
-                  <td className="px-4 py-2.5 ui-col-amount">{formatMoney(expenseBalance, currentCompany)}</td>
-                  <td className="px-4 py-2.5 ui-col-meta">
+                  <td className="px-2 py-2.5 ui-col-meta text-center" onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
                     <button
                       type="button"
-                      onClick={() => openRecordPayment(expense)}
-                      disabled={derived === 'Paid' || derived === 'Draft'}
-                      className={`px-3 py-1 rounded-lg text-sm border ${ derived === 'Paid' || derived === 'Draft'
-                          ? 'ui-sunken ui-muted ui-border-c cursor-not-allowed'
-                          : 'ui-surface ui-hover-sunken ui-border-c'
-                      }`}
+                      className="p-2 rounded-lg ui-hover-sunken inline-flex"
+                      aria-label="Expense actions"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        const rect = event.currentTarget.getBoundingClientRect();
+                        setExpenseActionMenu((current) => current?.id === expense.id ? null : { id: expense.id, rect });
+                      }}
                     >
-                      Record Payment
+                      <MoreVertical size={18} />
                     </button>
                   </td>
                 </tr>
@@ -917,12 +880,26 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
           </tbody>
         </table>
       </div>
-      <TableTotals
-        count={filteredExpenses.length}
-        totalCount={expenses.length}
-        noun="vouchers"
-        figures={expenseTotals}
-      />
+      {expenseActionMenu ? (() => {
+        const expense = expenses.find((row) => String(row.id) === String(expenseActionMenu.id));
+        if (!expense) return null;
+        const derived = getDerivedStatus(expense);
+        const width = 192;
+        const left = Math.max(8, Math.min(window.innerWidth - width - 8, expenseActionMenu.rect.right - width));
+        const top = Math.max(8, Math.min(window.innerHeight - 190, expenseActionMenu.rect.bottom + 4));
+        return (
+          <div
+            className="fixed z-50 w-48 ui-surface border ui-border-c rounded-lg shadow-lg overflow-hidden"
+            style={{ left, top }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" className="w-full px-3 py-2 text-left text-sm ui-hover-sunken" onClick={() => { setExpenseActionMenu(null); setEditingExpense(expense); setIsCreating(true); }}>Edit</button>
+            <button type="button" className="w-full px-3 py-2 text-left text-sm ui-hover-sunken disabled:opacity-50" disabled={derived === 'Paid' || derived === 'Draft'} onClick={() => { setExpenseActionMenu(null); openRecordPayment(expense); }}>Record Payment</button>
+            <button type="button" className="w-full px-3 py-2 text-left text-sm ui-hover-sunken" onClick={() => { setExpenseActionMenu(null); raiseExpenseCreditNote(expense); }}>Raise Credit Note</button>
+            <button type="button" className="w-full px-3 py-2 text-left text-sm ui-hover-sunken text-[rgb(var(--neg))]" onClick={() => { setExpenseActionMenu(null); deleteExpense(expense); }}>Delete</button>
+          </div>
+        );
+      })() : null}
     </DocumentListShell>
   );
 };
@@ -975,6 +952,8 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
     vendorId: initialData?.vendorId ?? '',
     refNo: initialData?.refNo || '',
     refDate: initialData?.refDate || '',
+    tdsRate: initialData?.tdsRate ?? '',
+    tdsLedgerId: initialData?.tdsLedgerId ?? '',
     lines: Array.isArray(initialData?.lines) && initialData.lines.length ? initialData.lines : [emptyExpenseLine()],
   }));
 
@@ -1048,6 +1027,9 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       total: round2(subtotal + gstTotal),
     };
   }, [formData.lines, vendorChargesGst, isIntra]);
+  const tdsRate = Math.max(0, Math.min(100, Number(formData.tdsRate) || 0));
+  const tdsAmount = round2((computed.subtotal * tdsRate) / 100);
+  const netPayable = round2(Math.max(0, computed.total - tdsAmount));
 
   const updateLine = (idx, patch) =>
     setFormData((p) => ({ ...p, lines: p.lines.map((l, i) => (i === idx ? { ...l, ...patch } : l)) }));
@@ -1064,57 +1046,6 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
 
   // Creating the ledger without leaving the voucher: the picker is limited to
   // expense groups, and the new ledger drops straight into the current line.
-  const expenseGroupIds = useMemo(() => {
-    const groups = (db.accountGroups || []).filter((g) => g.companyId === currentCompany.id);
-    const byId = new Map(groups.map((g) => [String(g.id), g]));
-    const isExpense = (g) => {
-      let cur = g;
-      const seen = new Set();
-      while (cur && !seen.has(String(cur.id))) {
-        seen.add(String(cur.id));
-        if (String(cur.groupCategory || '').trim() === 'Expense') return true;
-        cur = cur.parentGroupId ? byId.get(String(cur.parentGroupId)) : null;
-      }
-      return false;
-    };
-    return groups.filter(isExpense).map((g) => String(g.id));
-  }, [db.accountGroups, currentCompany.id]);
-
-  const openLedgerCreate = (lineIdxRaw = null) => {
-    // Guard against being wired straight to onClick, where the argument would
-    // be a click event rather than a line index.
-    const lineIdx = Number.isInteger(lineIdxRaw) ? lineIdxRaw : null;
-    if (typeof openModal !== 'function') {
-      notify.error('Create the ledger under Master Data → Chart of Accounts.');
-      return;
-    }
-    openModal(
-      <ChartAccountForm
-        db={db}
-        setDb={setDb}
-        currentCompany={currentCompany}
-        openModal={openModal}
-        includeGroupIds={expenseGroupIds}
-        onCreated={(created) => {
-          if (!created?.id) return;
-          const idx = lineIdx === null ? formData.lines.findIndex((l) => !String(l.ledgerId || '').trim()) : lineIdx;
-          const target = idx >= 0 ? idx : formData.lines.length;
-          setFormData((p) => {
-            const lines = target >= p.lines.length ? [...p.lines, emptyExpenseLine()] : [...p.lines];
-            lines[target] = {
-              ...lines[target],
-              ledgerId: String(created.id),
-              gstRate: created.gstRate !== null && created.gstRate !== undefined ? Number(created.gstRate) : 0,
-            };
-            return { ...p, lines };
-          });
-        }}
-        onClose={() => openModal(null)}
-      />,
-      { title: 'New Expense Ledger', maxWidthClass: 'max-w-4xl' }
-    );
-  };
-
   const addLine = () => setFormData((p) => ({ ...p, lines: [...p.lines, emptyExpenseLine()] }));
   const removeLine = (idx) =>
     setFormData((p) => ({ ...p, lines: p.lines.length > 1 ? p.lines.filter((_, i) => i !== idx) : p.lines }));
@@ -1130,7 +1061,9 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       if (lockExpenseNumber) expenseNumber = String(generatedExpenseNumber || '').trim();
       else if (!expenseNumber) expenseNumber = String(generatedExpenseNumber || '').trim();
     }
-    const expenseNumberClash = db.expenses.some((ex) => ex.companyId === currentCompany.id && String(ex.number || '').trim() === expenseNumber);
+    const expenseNumberClash = db.expenses.some(
+      (ex) => ex.companyId === currentCompany.id && String(ex.id) !== String(initialData?.id ?? '') && String(ex.number || '').trim() === expenseNumber
+    );
     const usableLines = computed.rows.filter((r) => String(r.ledgerId || '').trim() && r.amount > 0);
 
     // One pass, every failure, each at its own field.
@@ -1143,6 +1076,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
     );
     expenseErrors.require('date', formData.date, 'Voucher date is required');
     expenseErrors.require('dueDate', formData.dueDate, 'Due date is required');
+    expenseErrors.require('vendorId', formData.vendorId, 'Select a vendor');
     expenseErrors.check('lines', usableLines.length > 0, 'Add at least one line with a ledger and an amount.');
     expenseErrors.check(
       'lines',
@@ -1172,7 +1106,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
     let serverNumber = '';
     if (!wantsDraft && hasDocsApiSession()) {
       try {
-        const saved = await createDocApi('expense', {
+        const payload = {
           number: expenseNumber || undefined,
           date: formData.date,
           dueDate: formData.dueDate || null,
@@ -1189,6 +1123,9 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
           igstTotal: computed.igstTotal,
           gstTotal: computed.gstTotal,
           total: computed.total,
+          tdsAmount,
+          tdsLedgerId: formData.tdsLedgerId || null,
+          tdsLedgerName: expenseTdsLedgers.find((ledger) => String(ledger.id) === String(formData.tdsLedgerId))?.name || null,
           status: 'Unpaid',
           items: usableLines.map((r) => ({
             description: `${ledgerName(r.ledgerId)}${r.description ? ` — ${r.description}` : ''}`,
@@ -1199,7 +1136,10 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
             gstAmount: r.gstAmount,
             lineTotal: r.lineTotal,
           })),
-        });
+        };
+        const saved = initialData?.backendDocId
+          ? await updateDocApi('expense', initialData.backendDocId, payload)
+          : await createDocApi('expense', payload);
         backendDocId = saved?.id || null;
         serverNumber = String(saved?.number || '');
       } catch (err) {
@@ -1209,7 +1149,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
     }
 
     const newExpense = {
-      id: (db.expenses || []).reduce((m, x) => Math.max(m, Number(x?.id) || 0), 0) + 1,
+      id: initialData?.id ?? ((db.expenses || []).reduce((m, x) => Math.max(m, Number(x?.id) || 0), 0) + 1),
       companyId: currentCompany.id,
       backendDocId,
       number: serverNumber || expenseNumber,
@@ -1232,6 +1172,11 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       igstTotal: computed.igstTotal,
       gstTotal: computed.gstTotal,
       total: computed.total,
+      tdsRate,
+      tdsAmount,
+      tdsLedgerId: formData.tdsLedgerId || undefined,
+      tdsLedgerName: tdsPayableLedgers(db, currentCompany.id).find((ledger) => String(ledger.id) === String(formData.tdsLedgerId))?.name || undefined,
+      netPayable,
       amount: computed.subtotal,
       paidAmount: 0,
       status: wantsDraft ? 'Draft' : 'Unpaid',
@@ -1241,16 +1186,20 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
       createdAt: new Date().toISOString(),
     };
 
+    const nextExpenses = initialData?.id
+      ? db.expenses.map((expense) => String(expense.id) === String(initialData.id) ? newExpense : expense)
+      : [...db.expenses, newExpense];
     setDb({
       ...db,
-      expenses: [...db.expenses, newExpense],
+      expenses: nextExpenses,
       companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'expense', usedNumber: expenseNumber, branchId: activeBranchId || null }),
     });
     onClose?.();
-    notify.success('Expense created!');
+    notify.success(initialData?.id ? 'Expense updated!' : 'Expense created!');
   };
 
   const costCenters = (db.costCenters || []).filter((c) => c.companyId === currentCompany.id);
+  const expenseTdsLedgers = tdsPayableLedgers(db, currentCompany.id);
 
   // The shared document contract: same keys on an expense voucher as on a
   // bill.
@@ -1265,7 +1214,6 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
     <form ref={formRef} onSubmit={handleSubmit} onKeyDown={onFormKeyDown} noValidate className="space-y-6">
       <DocFormActions
         title={screenTitle}
-        subtitle={screenTitle ? 'Book a spend against one or more expense ledgers.' : ''}
         onBack={onBack}
         sticky={Boolean(screenTitle)}
         primaryLabel="Submit Expense"
@@ -1289,7 +1237,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         number, and the fields on the two halves lined up with nothing.
       */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
-        <div className="lg:col-span-6 space-y-4">
+        <div className="lg:col-span-7 space-y-4">
           {/* Vendor drives GST on every line below, so it leads. */}
           <div>
             <VendorPicker
@@ -1297,9 +1245,13 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
               setDb={setDb}
               currentCompany={currentCompany}
               value={formData.vendorId}
-              onChange={(vendorId) => setFormData((prev) => ({ ...prev, vendorId }))}
-              label="Vendor"
+              onChange={(vendorId) => {
+                expenseErrors.clearField('vendorId');
+                setFormData((prev) => ({ ...prev, vendorId }));
+              }}
+              label="Vendor *"
             />
+            <FieldError error={expenseErrors.error('vendorId')} id={expenseErrors.errorId('vendorId')} />
             {formData.vendorId ? (
               <div className="text-xs ui-muted mt-1">
                 {vendorChargesGst
@@ -1336,10 +1288,10 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         </div>
 
         <div
-          className="lg:col-span-6 space-y-4 lg:ps-6"
+          className="lg:col-span-5 space-y-4 lg:ps-6"
           style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <DocNumberField
               id="expense-number"
               label="Voucher No."
@@ -1381,9 +1333,7 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
               />
               <FieldError error={expenseErrors.error('date')} id={expenseErrors.errorId('date')} />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="min-w-0">
               <label className="ui-label" htmlFor="expense-due-date">
                 Due Date <span className="text-[rgb(var(--neg-ink))]">*</span>
@@ -1401,14 +1351,11 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                 {...expenseErrors.props('dueDate')}
               />
               <FieldError error={expenseErrors.error('dueDate')} id={expenseErrors.errorId('dueDate')} />
-              {vendor ? (
-                <div className="text-xs ui-muted mt-1">
-                  {termDaysFor(vendor, 0) > 0 ? termsLabel(vendor, 0) : 'No credit period — due on the expense date'}
-                </div>
-              ) : null}
             </div>
+          </div>
 
-            {costCenters.length ? (
+          {costCenters.length ? (
+          <div className="grid grid-cols-2 gap-2">
               <div className="min-w-0">
                 <label className="ui-label" htmlFor="expense-cost-center">Cost Center</label>
                 <select
@@ -1423,20 +1370,15 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                   ))}
                 </select>
               </div>
-            ) : null}
           </div>
+          ) : null}
         </div>
       </div>
 
       <div>
         <div className="flex justify-between items-center mb-2">
           <label className="ui-label">Expense Ledgers (Direct / Indirect Expenses)</label>
-          <span className="flex items-center gap-3">
-            <FieldError error={expenseErrors.error('lines')} id={expenseErrors.errorId('lines')} />
-            <button type="button" onClick={addLine} className="ui-fg ui-hover-fg text-sm flex items-center gap-1">
-              <Plus size={16} /> Add Row
-            </button>
-          </span>
+          <FieldError error={expenseErrors.error('lines')} id={expenseErrors.errorId('lines')} />
         </div>
 
         {expenseLedgers.length === 0 ? (
@@ -1447,7 +1389,17 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
         ) : null}
 
         <div className="border rounded-lg overflow-x-auto">
-          <table className="ui-table w-full ui-table-wide">
+          <table className="ui-table w-full table-fixed min-w-[52rem]">
+            <colgroup>
+              <col className="w-10" />
+              <col style={{ width: '43%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '11%' }} />
+              <col style={{ width: '7%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '10%' }} />
+              <col className="w-10" />
+            </colgroup>
             <thead className="ui-sunken border-b">
               <tr>
                 <th className="ui-th w-10">#</th>
@@ -1466,26 +1418,18 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                 return (
                   <tr key={idx} data-line-row={idx}>
                     <td className="px-3 py-2 ui-muted">{idx + 1}</td>
-                    <td className="px-3 py-2">
-                      <select
+                    <td className="px-2 py-2">
+                      <LedgerField
+                        db={db}
+                        setDb={setDb}
+                        currentCompany={currentCompany}
+                        options={expenseLedgers}
                         value={line.ledgerId || ''}
-                        onChange={(e) => {
-                          if (e.target.value === NEW_LEDGER_OPTION) {
-                            openLedgerCreate(idx);
-                            return;
-                          }
-                          onPickLedger(idx, e.target.value);
-                        }}
-                        className="ui-select w-full px-2 py-1"
-                      >
-                        <option value="">Select ledger</option>
-                        {expenseLedgers.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.name}
-                          </option>
-                        ))}
-                        <option value={NEW_LEDGER_OPTION}>+ Create new ledger…</option>
-                      </select>
+                        onChange={(ledgerId) => onPickLedger(idx, ledgerId)}
+                        placeholder="Type an expense ledger"
+                        ariaLabel={`Expense ledger, line ${idx + 1}`}
+                        openModal={openModal}
+                      />
                     </td>
                     <td className="px-3 py-2">
                       <input
@@ -1507,18 +1451,18 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                         step="0.01"
                         value={line.amount}
                         onChange={(e) => updateLine(idx, { amount: e.target.value })}
-                        className="ui-input ui-input-plain ui-mono w-32 px-2 py-1"
+                        className="ui-input ui-input-plain ui-mono w-full px-2 py-1"
                         aria-label={`Amount, line ${idx + 1}`}
                       />
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-1.5 py-2">
                       {/* An unregistered vendor cannot charge GST, so the rate is
                           not a choice at all — showing NA beats a dead dropdown. */}
                       {vendorChargesGst ? (
                         <select
                           value={String(line.gstRate ?? 0)}
                           onChange={(e) => updateLine(idx, { gstRate: Number(e.target.value) })}
-                          className="ui-select w-24 px-2 py-1"
+                          className="ui-select w-full px-1 py-1"
                         >
                           {[0, 0.25, 3, 5, 12, 18, 28].map((r) => (
                             <option key={r} value={String(r)}>{r}%</option>
@@ -1528,10 +1472,10 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
                         <span className="ui-muted text-sm" title="GST applies only to registered vendors">NA</span>
                       )}
                     </td>
-                    <td className="ui-col-amount px-3 py-2 text-right">
+                    <td className="ui-col-amount px-2 py-2 text-right">
                       {vendorChargesGst ? formatMoney(row.gstAmount, currentCompany) : <span className="ui-muted">NA</span>}
                     </td>
-                    <td className="ui-col-amount px-3 py-2 text-right">{formatMoney(row.lineTotal, currentCompany)}</td>
+                    <td className="ui-col-amount px-2 py-2 text-right">{formatMoney(row.lineTotal, currentCompany)}</td>
                     <td className="px-3 py-2 text-right">
                       <button type="button" onClick={() => removeLine(idx)} className="text-[rgb(var(--neg))]" aria-label={`Remove line ${idx + 1}`}>
                         <Trash2 size={16} />
@@ -1543,6 +1487,9 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
             </tbody>
           </table>
         </div>
+        <button type="button" onClick={addLine} className="ui-btn ui-btn-soft ui-btn-sm mt-3">
+          <Plus size={16} aria-hidden="true" /> Add Row
+        </button>
       </div>
 
       {/* Narration reads as a summary of the lines, so it comes after them —
@@ -1595,10 +1542,53 @@ const ExpenseForm = ({ db, setDb, currentCompany, openModal, onClose, initialDat
             <span>Total Expense:</span>
             <span className="ui-money">{formatMoney(computed.total, currentCompany)}</span>
           </div>
+          <div className="flex items-center justify-between gap-4 border-t pt-2">
+            <label className="ui-label mb-0" htmlFor="expense-tds-rate">Less: TDS</label>
+            <span className="flex flex-wrap items-center justify-end gap-2">
+              <select
+                value={formData.tdsLedgerId}
+                onChange={(e) => {
+                  const ledgerId = e.target.value;
+                  const ledger = expenseTdsLedgers.find((row) => String(row.id) === String(ledgerId));
+                  setFormData((prev) => ({
+                    ...prev,
+                    tdsLedgerId: ledgerId,
+                    tdsRate: ledger ? String(tdsLedgerRate(ledger, vendor?.tdsDeducteeType || 'COMPANY')) : '',
+                  }));
+                }}
+                className="ui-select min-w-56 px-2 py-1"
+                aria-label="TDS payable ledger"
+              >
+                <option value="">Select TDS ledger</option>
+                {expenseTdsLedgers.map((ledger) => (
+                  <option key={ledger.id} value={ledger.id}>
+                    {ledger.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                id="expense-tds-rate"
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={formData.tdsRate}
+                onChange={(e) => setFormData((prev) => ({ ...prev, tdsRate: e.target.value }))}
+                className="ui-input ui-money w-20 px-2 py-1 text-right"
+                aria-label="TDS percentage"
+                disabled={!formData.tdsLedgerId}
+              />
+              <span className="ui-muted text-sm">%</span>
+              <span className="ui-money w-28 text-right">− {formatMoney(tdsAmount, currentCompany)}</span>
+            </span>
+          </div>
+          <div className="ui-total-row border-t pt-2">
+            <span>Net Payable:</span>
+            <span className="ui-money">{formatMoney(netPayable, currentCompany)}</span>
+          </div>
         </div>
       </div>
 
-      <DocFormFootnote />
     </form>
   );
 };
@@ -1927,8 +1917,10 @@ const InventoryOverview = ({ db, currentCompany }) => {
   );
 };
 
-const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
-  const accounts = db.chartOfAccounts.filter((a) => a.companyId === currentCompany.id);
+const ChartOfAccounts = ({ db, setDb, openModal, currentCompany, onOpenLedger = null }) => {
+  const accounts = db.chartOfAccounts.filter(
+    (a) => a.companyId === currentCompany.id && !a.hiddenFromChart
+  );
   const [coaView, setCoaView] = useState('ledgers');
   /*
    * The ledger master opens as a screen, not a dialog.
@@ -1942,9 +1934,166 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   const [ledgerSearch, setLedgerSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
   const menuRef = useRef(null);
+  const coaImportInputRef = useRef(null);
 
   const MENU_WIDTH = 192; // w-48
   const MENU_HEIGHT_ESTIMATE = 120;
+
+  const downloadChartTemplate = () => {
+    downloadCsvTemplate({
+      fileName: 'Chart_of_Accounts_Import_Template',
+      columns: [
+        { key: 'Record Type', label: 'Record Type' },
+        { key: 'Name', label: 'Name' },
+        { key: 'Parent', label: 'Parent' },
+        { key: 'Code', label: 'Code' },
+        { key: 'Opening Balance', label: 'Opening Balance' },
+      ],
+      sample: [
+        {
+          'Record Type': 'GROUP',
+          Name: 'Digital Banks',
+          Parent: 'Bank Accounts',
+          Code: '',
+          'Opening Balance': '',
+        },
+        {
+          'Record Type': 'LEDGER',
+          Name: 'HDFC Current Account',
+          Parent: 'Digital Banks',
+          Code: 'BANK-001',
+          'Opening Balance': '0',
+        },
+      ],
+    });
+    notify.success('Chart of Accounts import template downloaded. Use GROUP or LEDGER in Record Type.');
+  };
+
+  const exportChart = (format) => {
+    const groups = accountGroups.map((group) => ({
+      recordType: 'GROUP',
+      name: group.name,
+      parent:
+        accountGroups.find((parent) => String(parent.id) === String(group.parentGroupId))?.name ||
+        typeById.get(String(group.typeId))?.name ||
+        '',
+      code: '',
+      openingBalance: '',
+    }));
+    const ledgers = accounts.map((account) => ({
+      recordType: 'LEDGER',
+      name: account.name,
+      parent: groupById.get(String(account.groupId))?.name || '',
+      code: account.code || '',
+      openingBalance: Number(account.openingBalance || 0),
+    }));
+    runListExport({
+      format,
+      title: 'Chart of Accounts',
+      fileName: `Chart_of_Accounts_${currentCompany?.name || 'company'}`,
+      label: 'account row(s)',
+      columns: [
+        { key: 'recordType', label: 'Record Type' },
+        { key: 'name', label: 'Name' },
+        { key: 'parent', label: 'Parent' },
+        { key: 'code', label: 'Code' },
+        { key: 'openingBalance', label: 'Opening Balance' },
+      ],
+      rows: [...groups, ...ledgers],
+    });
+  };
+
+  const importChart = async (file) => {
+    try {
+      const { rows } = parseCsv(await readFileText(file));
+      if (!rows.length) return notify.error('That file has no data rows.');
+
+      const nextGroups = [...(Array.isArray(db.accountGroups) ? db.accountGroups : [])];
+      const nextAccounts = [...(Array.isArray(db.chartOfAccounts) ? db.chartOfAccounts : [])];
+      const companyTypes = (Array.isArray(db.accountTypes) ? db.accountTypes : []).filter(
+        (type) => type.companyId === currentCompany.id && !type.isLegacy
+      );
+      let nextGroupId = nextGroups.reduce((max, row) => Math.max(max, Number(row?.id || 0)), 0) + 1;
+      let nextAccountId = nextAccounts.reduce((max, row) => Math.max(max, Number(row?.id || 0)), 0) + 1;
+      const problems = [];
+      let createdGroups = 0;
+      let createdLedgers = 0;
+      const lower = (value) => String(value || '').trim().toLowerCase();
+      const findGroup = (name) => nextGroups.find(
+        (group) => group.companyId === currentCompany.id && !group.isLegacy && lower(group.name) === lower(name)
+      );
+      const findType = (name) => companyTypes.find((type) => lower(type.name) === lower(name));
+
+      for (const [index, row] of rows.entries()) {
+        if (lower(row['Record Type']) !== 'group') continue;
+        const name = String(row.Name || '').trim();
+        const parentName = String(row.Parent || '').trim();
+        if (!name || !parentName) {
+          problems.push(`Row ${index + 2}: group Name and Parent are required.`);
+          continue;
+        }
+        if (findGroup(name)) continue;
+        const parentGroup = findGroup(parentName);
+        const parentType = findType(parentName);
+        if (!parentGroup && !parentType) {
+          problems.push(`Row ${index + 2}: parent “${parentName}” was not found.`);
+          continue;
+        }
+        nextGroups.push({
+          id: nextGroupId++,
+          companyId: currentCompany.id,
+          typeId: Number(parentGroup?.typeId ?? parentType.id),
+          name,
+          parentGroupId: parentGroup?.id ?? null,
+          groupCategory: String(parentGroup?.groupCategory || 'General').trim() || 'General',
+          isUserDefined: true,
+          createdAt: new Date().toISOString(),
+        });
+        createdGroups += 1;
+      }
+
+      for (const [index, row] of rows.entries()) {
+        if (lower(row['Record Type']) !== 'ledger') continue;
+        const name = String(row.Name || '').trim();
+        const parentName = String(row.Parent || '').trim();
+        const parent = findGroup(parentName);
+        if (!name || !parent) {
+          problems.push(`Row ${index + 2}: ledger Name and a valid Parent group are required.`);
+          continue;
+        }
+        const duplicate = nextAccounts.some(
+          (account) => account.companyId === currentCompany.id && !account.hiddenFromChart && lower(account.name) === lower(name)
+        );
+        if (duplicate) continue;
+        const type = companyTypes.find((item) => String(item.id) === String(parent.typeId));
+        nextAccounts.push({
+          id: nextAccountId++,
+          companyId: currentCompany.id,
+          code: String(row.Code || '').trim(),
+          name,
+          groupId: parent.id,
+          ledgerCategory: String(parent.groupCategory || 'General').trim() || 'General',
+          type: String(type?.accountClass || 'Asset'),
+          subType: String(type?.name || ''),
+          main: String(type?.main || 'Balance Sheet'),
+          openingBalance: Number(row['Opening Balance'] || 0) || 0,
+          balance: Number(row['Opening Balance'] || 0) || 0,
+          isUserDefined: true,
+          hiddenFromChart: false,
+          createdAt: new Date().toISOString(),
+        });
+        createdLedgers += 1;
+      }
+
+      if (!createdGroups && !createdLedgers) {
+        return notify.error(problems[0] || 'No new groups or ledgers were found in the file.');
+      }
+      setDb({ ...db, accountGroups: nextGroups, chartOfAccounts: nextAccounts });
+      notify.success(`Imported ${createdGroups} group(s) and ${createdLedgers} ledger(s).${problems.length ? ` ${problems.length} row(s) skipped.` : ''}`);
+    } catch (error) {
+      notify.error(error?.message || 'Unable to import the Chart of Accounts file.');
+    }
+  };
 
   const LedgerCreateChooser = ({ onClose }) => {
     /*
@@ -2134,7 +2283,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
         const typeRow = g?.typeId ? typeById.get(String(g.typeId)) : null;
         return {
           ...g,
-          _parent: typeRow ? typeRowToParent(typeRow) : '-',
+          _parent: groupById.get(String(g.parentGroupId))?.name || (typeRow ? typeRowToParent(typeRow) : '-'),
         };
       })
       .sort((a, b) => {
@@ -2143,13 +2292,13 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
         if (pa !== pb) return pa.localeCompare(pb);
         return String(a.name || '').localeCompare(String(b.name || ''));
       });
-  }, [accountGroups, typeById]);
+  }, [accountGroups, groupById, typeById]);
 
   const visibleGroupRows = useMemo(() => {
     const q = String(groupSearch || '').trim().toLowerCase();
     if (!q) return groupRows;
     return groupRows.filter((g) => {
-      const hay = `${String(g?.name || '')} ${String(g?._parent || '')} ${String(g?.groupCategory || '')}`.toLowerCase();
+      const hay = `${String(g?.name || '')} ${String(g?._parent || '')}`.toLowerCase();
       return hay.includes(q);
     });
   }, [groupRows, groupSearch]);
@@ -2163,11 +2312,10 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   const openEditLedger = (ledger) => setLedgerForm({ mode: 'edit', ledger });
 
   const openEditGroup = (group) => {
-    if (group?.isSystem && !group?.isUserDefined) {
-      notify.error('System groups cannot be edited.');
+    if (group?.isSystem) {
+      notify.error('Default ledger groups cannot be edited.');
       return;
     }
-
     setLedgerForm({ mode: 'editGroup', group });
   };
 
@@ -2231,8 +2379,10 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     const id = String(groupId || '').trim();
     if (!id) return { ok: false, reason: 'Invalid group.' };
 
-    const group = groupById.get(id);
-    if (group?.isSystem && !group?.isUserDefined) return { ok: false, reason: 'System groups cannot be deleted.' };
+    const usedByChildGroup = accountGroups.some(
+      (g) => String(g?.parentGroupId || '').trim() === id
+    );
+    if (usedByChildGroup) return { ok: false, reason: 'Group contains one or more child groups.' };
 
     const usedByLedger = accounts.some((a) => String(a?.groupId || '').trim() === id);
     if (usedByLedger) return { ok: false, reason: 'Group is used by one or more ledgers.' };
@@ -2241,6 +2391,10 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
   };
 
   const deleteGroup = async (group) => {
+    if (group?.isSystem) {
+      notify.error('Default ledger groups cannot be deleted.');
+      return;
+    }
     const check = canDeleteGroup(group?.id);
     if (!check.ok) {
       notify.error(`Cannot delete this group. ${check.reason}`);
@@ -2250,36 +2404,32 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
     const ok = await confirmDialog({ title: 'Please confirm', message: `Delete group "${String(group?.name || '').trim() || 'this group'}"?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
 
+    const deletedDefaults = new Set(
+      Array.isArray(currentCompany?.docSettings?.deletedDefaultAccountGroups)
+        ? currentCompany.docSettings.deletedDefaultAccountGroups.map((name) => String(name || '').trim().toLowerCase())
+        : []
+    );
+    if (group?.isSystem) deletedDefaults.add(String(group?.name || '').trim().toLowerCase());
+    const companies = (Array.isArray(db.companies) ? db.companies : []).map((company) =>
+      company.id === currentCompany.id
+        ? {
+            ...company,
+            docSettings: {
+              ...(company.docSettings || {}),
+              deletedDefaultAccountGroups: [...deletedDefaults],
+            },
+          }
+        : company
+    );
+
     setDb({
       ...db,
+      companies,
       accountGroups: (Array.isArray(db.accountGroups) ? db.accountGroups : []).filter(
         (g) => !(g.companyId === currentCompany.id && String(g.id) === String(group.id))
       ),
     });
   };
-
-  /*
-   * What the chart is worth, and where it is unfinished.
-   *
-   * A chart of accounts is read for two things: whether the ledgers somebody
-   * needs exist, and whether anything is sitting where it should not be. The
-   * suspense balance is the second one — money posted against no real account
-   * is money nobody has explained yet.
-   */
-  const coaHeadline = useMemo(() => {
-    let debit = 0;
-    let credit = 0;
-    let suspense = 0;
-    let unposted = 0;
-    for (const a of ledgerRows) {
-      const bal = Number(a.balance || 0);
-      if (bal > 0) debit += bal;
-      else credit += Math.abs(bal);
-      if (/suspense|uncategorised|uncategorized/i.test(String(a.name || ''))) suspense += Math.abs(bal);
-      if (!String(a.serverLedgerAccountId || '').trim()) unposted += 1;
-    }
-    return { ledgers: ledgerRows.length, groups: groupRows.length, debit, credit, suspense, unposted };
-  }, [ledgerRows, groupRows]);
 
   /*
    * The form takes the screen, the way the customer and vendor masters do. Back
@@ -2300,7 +2450,7 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
 
   if (ledgerForm?.mode === 'newGroup') {
     return (
-      <SimpleAccountGroupCreateForm
+      <AccountGroupForm
         fullPage
         db={db}
         setDb={setDb}
@@ -2346,38 +2496,23 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
           ? { value: ledgerSearch, onChange: setLedgerSearch, placeholder: 'Search ledgers…', label: 'Search ledgers' }
           : { value: groupSearch, onChange: setGroupSearch, placeholder: 'Search groups…', label: 'Search groups' }
       }
-      moreItems={[exportMenuItem(coaView === 'ledgers' ? 'Export ledgers' : 'Export groups')]}
+      moreItems={[
+        { key: 'coa-import', label: 'Import Chart of Accounts', Icon: Upload },
+        { key: 'coa-template', label: 'Download import template', Icon: FileText },
+        exportMenuItem('Export Chart of Accounts'),
+      ]}
       onMoreSelect={(k) => {
-        const format = exportFormatFromKey(k);
-        if (!format) return;
-        if (coaView === 'ledgers') {
-          runListExport({
-            format,
-            title: 'Chart of accounts — ledgers',
-            fileName: `ChartOfAccounts_${currentCompany?.name || 'company'}`,
-            label: 'ledger(s)',
-            columns: [
-              { key: 'code', label: 'Code' },
-              { key: 'name', label: 'Ledger' },
-              { key: 'group', label: 'Group', value: (r) => r._groupName || r.groupName || '' },
-              { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
-              { key: 'openingBalance', label: 'Opening', value: (r) => Number(r.openingBalance || 0) },
-              { key: 'balance', label: 'Balance', value: (r) => Number(r.balance || 0) },
-            ],
-            rows: visibleLedgerRows,
-          });
+        if (k === 'coa-import') {
+          coaImportInputRef.current?.click();
           return;
         }
-        exportRows({
-          fileName: `AccountGroups_${currentCompany?.name || 'company'}`,
-          label: 'group(s)',
-          columns: [
-            { key: 'name', label: 'Group' },
-            { key: 'parent', label: 'Parent', value: (r) => r._parent || '' },
-            { key: 'groupCategory', label: 'Category' },
-          ],
-          rows: visibleGroupRows,
-        });
+        if (k === 'coa-template') {
+          downloadChartTemplate();
+          return;
+        }
+        const format = exportFormatFromKey(k);
+        if (!format) return;
+        exportChart(format);
       }}
       primary={
         coaView === 'ledgers' ? (
@@ -2390,27 +2525,30 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
           </button>
         )
       }
-      cards={[
-        { label: 'Ledgers', value: coaHeadline.ledgers, count: true, tone: 'draft', Icon: BookOpen },
-        { label: 'Groups', value: coaHeadline.groups, count: true, tone: 'sent', Icon: FolderTree },
-        { label: 'Debit balances', value: coaHeadline.debit, tone: 'paid', Icon: TrendingUp },
-        { label: 'Credit balances', value: coaHeadline.credit, tone: 'outstanding', Icon: TrendingDown },
-        { label: 'In suspense', value: coaHeadline.suspense, tone: 'overdue', Icon: Ban },
-      ]}
-      /* Ledgers and Groups are two views of one chart, not two statuses — but
-         they are the choice this screen is built around, so they take the place
-         the status tabs hold everywhere else. */
       tabs={[
         { value: 'ledgers', label: 'Ledgers', tone: 'all' },
         { value: 'groups', label: 'Groups', tone: 'sent' },
       ]}
-      tabsLabel="Chart view"
+      tabsLabel="Chart of Accounts view"
       statusValue={coaView}
       statusCounts={{ ledgers: ledgerRows.length, groups: groupRows.length }}
-      onStatusChange={(v) => {
+      onStatusChange={(value) => {
         setOpenMenu(null);
-        setCoaView(v);
+        setCoaView(value);
       }}
+      above={
+        <input
+          ref={coaImportInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0] || null;
+            event.target.value = '';
+            if (file) importChart(file);
+          }}
+        />
+      }
       tip={{
         storageKey: 'neev.tip.chartOfAccounts',
         Icon: BookOpen,
@@ -2420,20 +2558,25 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
       <div className="space-y-6">
         {coaView === 'ledgers' ? (
           <div className="ui-table-scroll">
-            <table className="ui-table ui-table-wide ui-table-sticky">
+            <table className="ui-table ui-table-wide ui-table-sticky coa-table">
+              <colgroup>
+                <col style={{ width: '40%' }} />
+                <col style={{ width: '30%' }} />
+                <col style={{ width: '22%' }} />
+                <col style={{ width: '8%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col">Ledger</th>
                   <th scope="col">Group</th>
                   <th scope="col">Parent</th>
-                  <th scope="col" className="ui-num">Balance</th>
-                  <th scope="col"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="ui-rows">
                 {visibleLedgerRows.length === 0 ? (
                   <tr>
-                    <td colSpan="5">
+                    <td colSpan="4">
                       <EmptyState
                         icon={BookOpen}
                         kind="new"
@@ -2463,12 +2606,17 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                     return (
                       <tr key={a.id}>
                         <td className="ui-col-entity">
-                          {a.name}
+                          <button
+                            type="button"
+                            onClick={() => onOpenLedger?.(String(a.id))}
+                            className="font-semibold text-left text-[rgb(var(--brand))] hover:underline"
+                          >
+                            {a.name}
+                          </button>
                           {a.active === false ? <span className="ui-chip ml-2">Inactive</span> : null}
                         </td>
                         <td className="ui-col-meta ui-fg">{a._groupName || '-'}</td>
                         <td className="ui-col-meta ui-fg">{a._parent || '-'}</td>
-                        <td className="ui-col-amount">{formatMoney(a.balance || 0, currentCompany)}</td>
                         <td
                           className="text-right"
                           onMouseDown={(e) => e.stopPropagation()}
@@ -2503,19 +2651,23 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
           </div>
         ) : (
           <div className="ui-table-scroll">
-            <table className="ui-table ui-table-wide ui-table-sticky">
+            <table className="ui-table ui-table-wide ui-table-sticky coa-table">
+              <colgroup>
+                <col style={{ width: '48%' }} />
+                <col style={{ width: '44%' }} />
+                <col style={{ width: '8%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th scope="col">Group</th>
                   <th scope="col">Parent</th>
-                  <th scope="col">Category</th>
-                  <th scope="col"><span className="sr-only">Actions</span></th>
+                  <th scope="col" className="text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="ui-rows">
                 {visibleGroupRows.length === 0 ? (
                   <tr>
-                    <td colSpan="4">
+                    <td colSpan="3">
                       <EmptyState
                         icon={FolderTree}
                         kind="new"
@@ -2546,31 +2698,34 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
                       <tr key={g.id}>
                         <td className="ui-col-entity">{g.name}</td>
                         <td className="ui-col-meta ui-fg">{g._parent || '-'}</td>
-                        <td className="ui-col-meta ui-fg">{String(g.groupCategory || 'General')}</td>
                         <td
                           className="text-right"
                           onMouseDown={(e) => e.stopPropagation()}
                           onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <button
-                            type="button"
-                            onMouseDown={(e) => e.stopPropagation()}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (openMenu?.buttonKey === buttonKey) {
-                                setOpenMenu(null);
-                              } else {
-                                openRowMenu('group', g.id, e.currentTarget);
-                              }
-                            }}
-                            className="p-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c inline-flex"
-                            aria-label="Group actions"
-                            data-coa-menu-button={buttonKey}
-                          >
-                            <MoreVertical size={18} />
-                          </button>
+                          {g.isSystem ? (
+                            <span className="ui-chip">Default</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onPointerDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (openMenu?.buttonKey === buttonKey) {
+                                  setOpenMenu(null);
+                                } else {
+                                  openRowMenu('group', g.id, e.currentTarget);
+                                }
+                              }}
+                              className="p-2 rounded-lg border ui-surface ui-hover-sunken ui-border-c inline-flex"
+                              aria-label="Group actions"
+                              data-coa-menu-button={buttonKey}
+                            >
+                              <MoreVertical size={18} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -2637,7 +2792,9 @@ const ChartOfAccounts = ({ db, setDb, openModal, currentCompany }) => {
             const group = groupRows.find((x) => String(x.id) === String(openMenu.id));
             if (!group) return null;
 
-            const editDisabled = Boolean(group?.isSystem && !group?.isUserDefined);
+            if (group.isSystem) return null;
+
+            const editDisabled = false;
             const canDel = canDeleteGroup(group?.id);
             const deleteDisabled = !canDel.ok;
 
@@ -10923,7 +11080,9 @@ const Gstr3bReport = ({ db, currentCompany }) => {
 
 const AppShell = () => {
   const { can, loading: permsLoading } = usePermissions();
-  const { isEnabled } = useFeatures();
+  const { isEnabled, loading: featuresLoading } = useFeatures();
+  const branchesFeatureEnabled = isEnabled('branches');
+  const warehousesFeatureEnabled = isEnabled('warehouses');
   const { theme, toggle: toggleTheme } = useTheme();
   const { density, set: setDensity } = useDensity();
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
@@ -11402,14 +11561,16 @@ const AppShell = () => {
   const allowedBranchIdSet = useMemo(() => new Set(allowedBranchIds.map((x) => String(x))), [allowedBranchIds]);
 
   const branchesForUser = useMemo(() => {
+    if (!branchesFeatureEnabled) return [];
     if (!hasBranchRestriction) return branches;
     return (Array.isArray(branches) ? branches : []).filter((b) => allowedBranchIdSet.has(String(b?.id)));
-  }, [branches, hasBranchRestriction, allowedBranchIdSet]);
+  }, [branches, hasBranchRestriction, allowedBranchIdSet, branchesFeatureEnabled]);
 
   const warehousesForUser = useMemo(() => {
+    if (!warehousesFeatureEnabled) return [];
     if (!hasBranchRestriction) return warehouses;
     return (Array.isArray(warehouses) ? warehouses : []).filter((w) => allowedBranchIdSet.has(String(w?.branchId)));
-  }, [warehouses, hasBranchRestriction, allowedBranchIdSet]);
+  }, [warehouses, hasBranchRestriction, allowedBranchIdSet, warehousesFeatureEnabled]);
 
   const allowedWarehouseIdSet = useMemo(() => {
     return new Set((Array.isArray(warehousesForUser) ? warehousesForUser : []).map((w) => String(w?.id)));
@@ -11655,7 +11816,7 @@ const AppShell = () => {
   const [invoiceEditor, setInvoiceEditor] = useState({ open: false, initial: null });
   const [estimateEditor, setEstimateEditor] = useState({ open: false, initial: null });
   const [receiptEditor, setReceiptEditor] = useState({ open: false });
-  const [paymentEditor, setPaymentEditor] = useState({ open: false });
+  const [paymentEditor, setPaymentEditor] = useState({ open: false, initial: null });
   const [billEditor, setBillEditor] = useState({ open: false, initial: null });
 
   /*
@@ -11820,8 +11981,8 @@ const AppShell = () => {
         ph: true,
         items: [
           { key: 'inventory', label: 'Inventory', icon: Package, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'inventory' },
-          { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', feature: 'stockTransfers' },
-          { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', feature: 'stockTransfers' },
+          { key: 'warehouseTransfers', label: 'Warehouse Transfers', icon: Truck, perm: 'INVENTORY::Stock Transfer::VIEW', features: ['stockTransfers', 'warehouses'] },
+          { key: 'branchTransfers', label: 'Branch Transfers', icon: Truck, perm: 'INVENTORY::Inter-branch transfer::VIEW', features: ['stockTransfers', 'branches'] },
           { key: 'batchSerial', label: 'Batches & Serials', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchSerial' },
           { key: 'stockAdjustments', label: 'Stock Adjustments', icon: ClipboardList, perm: 'INVENTORY::Stock Adjustment::VIEW' },
           { key: 'batchStock', label: 'Batch Stock & Expiry', icon: Boxes, perm: 'INVENTORY::Stock Adjustment::VIEW', feature: 'batchExpiry' },
@@ -11993,15 +12154,23 @@ const AppShell = () => {
   const isKnownScreen = useCallback(
     (key) => {
       const want = String(key || '');
-      if (isSettingsKey(want) || SETTINGS_KEYS.has(want)) return true;
-      if (HUB_SCREENS.has(want)) return true;
+      const featureList = HUB_SCREEN_FEATURES[want] || [];
+      if (HUB_SCREENS.has(want)) return featureList.every((feature) => isEnabled(feature));
+      if (visibleSettings({ can, isEnabled }).some((item) => String(item.key) === want)) return true;
       for (const node of navModel || []) {
-        if (node?.key === want) return true;
-        for (const item of node?.items || []) if (String(item?.key) === want) return true;
+        const candidates = node.type === 'group' ? node.items || [] : [node];
+        const item = candidates.find((candidate) => String(candidate?.key) === want);
+        if (!item) continue;
+        return (
+          (!item.perm || can(item.perm)) &&
+          (!item.permAny || item.permAny.some((permission) => can(permission))) &&
+          isEnabled(item.feature) &&
+          (!item.features || item.features.every((feature) => isEnabled(feature)))
+        );
       }
       return false;
     },
-    [navModel]
+    [navModel, can, isEnabled]
   );
 
   useScreenUrl({ active, setActive, isKnown: isKnownScreen });
@@ -12250,7 +12419,8 @@ const AppShell = () => {
     const allow = (entry) =>
       (!entry.perm || can(entry.perm)) &&
       (!entry.permAny || entry.permAny.some((k) => can(k))) &&
-      isEnabled(entry.feature);
+      isEnabled(entry.feature) &&
+      (!entry.features || entry.features.every((feature) => isEnabled(feature)));
     return navModel
       .map((entry) => {
         if (entry.type !== 'group') return allow(entry) ? entry : null;
@@ -12271,6 +12441,12 @@ const AppShell = () => {
       })
       .filter(Boolean);
   }, [navModel, can, permsLoading, isEnabled]);
+
+  useEffect(() => {
+    if (featuresLoading || permsLoading) return;
+    if (active === 'ledger' || active === 'partyDetail') return;
+    if (!isKnownScreen(active)) setActive('dashboard');
+  }, [active, featuresLoading, permsLoading, isKnownScreen]);
 
   /**
    * Palette entries come from the already permission- and feature-filtered nav,
@@ -13074,11 +13250,12 @@ const AppShell = () => {
                   db={dbForUser}
                   setDb={setDb}
                   currentCompany={currentCompany}
+                  initialData={paymentEditor.initial || null}
                   /* What is being made, not what the button does — the button
                      already says Record Payment right beside it. */
-                  screenTitle="New Payment"
-                  onBack={() => setPaymentEditor({ open: false })}
-                  onClose={() => setPaymentEditor({ open: false })}
+                  screenTitle={paymentEditor.initial?.id ? 'Edit Payment' : 'New Payment'}
+                  onBack={() => setPaymentEditor({ open: false, initial: null })}
+                  onClose={() => setPaymentEditor({ open: false, initial: null })}
                 />
               </div>
             </div>
@@ -13091,7 +13268,7 @@ const AppShell = () => {
             setDb={setDb}
             openModal={openModal}
             currentCompany={currentCompany}
-            onRecordPayment={() => setPaymentEditor({ open: true })}
+            onRecordPayment={() => setPaymentEditor({ open: true, initial: null })}
           />
         );
       case 'bankCash':
@@ -13102,14 +13279,97 @@ const AppShell = () => {
        * are categorised, which §5 keeps and the new list deliberately does
        * not do. The key itself now opens the cash book.
        */
-      case 'cashBank':
+      case 'cashBank': {
+        const openStatementVoucher = (row) => {
+          const txn = (Array.isArray(db.bankTransactions) ? db.bankTransactions : []).find(
+            (item) => String(item?.id) === String(row?.sourceId) && Number(item?.companyId) === Number(currentCompany?.id)
+          );
+          if (!txn) return;
+
+          const close = () => openModal(null);
+          const selectedCashBankAccount = (Array.isArray(dbForUser.chartOfAccounts) ? dbForUser.chartOfAccounts : []).find(
+            (account) => String(account?.id) === String(txn.cashBankAccountId)
+          );
+          const linkVoucher = (field) => (voucher) => {
+            if (!voucher?.id) return;
+            setDb((prev) => ({
+              ...prev,
+              bankTransactions: (Array.isArray(prev.bankTransactions) ? prev.bankTransactions : []).map((item) =>
+                String(item?.id) === String(txn.id) && Number(item?.companyId) === Number(currentCompany.id)
+                  ? { ...item, [field]: voucher.id, allocationStatus: 'Allocated', updatedAt: new Date().toISOString() }
+                  : item
+              ),
+            }));
+          };
+          const initial = {
+            date: txn.date,
+            amount: txn.amount,
+            ledgerAccountId: String(selectedCashBankAccount?.serverLedgerAccountId || selectedCashBankAccount?.backendLedgerId || txn.cashBankAccountId || ''),
+            cashBankAccountId: txn.cashBankAccountId,
+            sourceBankTransactionId: txn.id,
+            reference: txn.reference || '',
+            notes: txn.narration || txn.description || '',
+          };
+
+          if (row.type === 'Contra') {
+            const mappedId = txn.ledgerId ? String(txn.ledgerId) : '';
+            const bankId = String(txn.cashBankAccountId || '');
+            const incoming = String(txn.direction || '').toUpperCase() === 'IN';
+            openModal(
+              <Suspense fallback={null}>
+                <ContraForm
+                  db={dbForUser}
+                  setDb={setDb}
+                  currentCompany={currentCompany}
+                  initialData={{
+                    ...initial,
+                    fromId: incoming ? mappedId : bankId,
+                    toId: incoming ? bankId : mappedId,
+                    narration: initial.notes,
+                  }}
+                  onSaved={linkVoucher('linkedJournalEntryId')}
+                  onClose={close}
+                />
+              </Suspense>,
+              { title: 'Contra Record Form', maxWidthClass: 'max-w-2xl' }
+            );
+            return;
+          }
+
+          if (row.type === 'Receipt') {
+            openModal(
+              <RecordReceiptForm
+                db={dbForUser}
+                setDb={setDb}
+                currentCompany={currentCompany}
+                initialData={initial}
+                onSaved={linkVoucher('linkedPaymentId')}
+                onClose={close}
+              />,
+              { title: 'Record Receipt', maxWidthClass: 'max-w-4xl' }
+            );
+            return;
+          }
+
+          openModal(
+            <RecordDisbursementForm
+              db={dbForUser}
+              setDb={setDb}
+              currentCompany={currentCompany}
+              initialData={initial}
+              onSaved={linkVoucher('linkedPaymentId')}
+              onClose={close}
+            />,
+            { title: 'Record Payment', maxWidthClass: 'max-w-4xl' }
+          );
+        };
         return (
           <CashBankTransactions
             db={dbForUser}
             currentCompany={currentCompany}
             onNewPayment={() => {
               setActive('payments');
-              setPaymentEditor({ open: true });
+              setPaymentEditor({ open: true, initial: null });
             }}
             onNewReceipt={() => {
               setActive('receipts');
@@ -13131,16 +13391,142 @@ const AppShell = () => {
             onImportStatement={() => setActive('cashBankImport')}
             onOpenReconciliation={() => setActive('bankReco')}
             onOpenAccounts={() => setActive('bankCashAccounts')}
+            onAllocateStatement={openStatementVoucher}
+            onUncategorise={(row) => {
+              setDb((prev) => ({
+                ...prev,
+                bankTransactions: (prev.bankTransactions || []).map((item) =>
+                  String(item?.id) === String(row?.sourceId)
+                    ? {
+                        ...item,
+                        ledgerId: undefined,
+                        linkedPaymentId: null,
+                        linkedJournalEntryId: null,
+                        contraJournalEntryId: null,
+                        allocationJournalId: null,
+                        allocationStatus: 'Uncategorised',
+                        reconciled: false,
+                        bankDate: null,
+                      }
+                    : item
+                ),
+                payments: (prev.payments || []).map((item) =>
+                  String(item?.sourceBankTransactionId) === String(row?.sourceId)
+                    ? { ...item, sourceBankTransactionId: null }
+                    : item
+                ),
+                journalEntries: (prev.journalEntries || []).filter((item) => {
+                  const generated = /^AUTO-(BANK|CONTRA)-/.test(String(item?.number || ''));
+                  return !(generated && String(item?.sourceBankTransactionId) === String(row?.sourceId));
+                }),
+                bankAllocations: (prev.bankAllocations || []).filter(
+                  (item) => String(item?.bankTransactionId || item?.transactionId) !== String(row?.sourceId)
+                ),
+              }));
+            }}
+            onEditSource={(row) => {
+              if (row?.kind === 'payment') {
+                const source = (Array.isArray(db.payments) ? db.payments : []).find((item) => String(item?.id) === String(row.sourceId));
+                if (row.type === 'Receipt') {
+                  setActive('receipts');
+                  setReceiptEditor({ open: true, initial: source || null });
+                } else {
+                  setActive('payments');
+                  setPaymentEditor({ open: true, initial: source || null });
+                }
+              } else if (row?.kind === 'contra') {
+                setActive('journalEntries');
+              } else if (row?.kind === 'statement') {
+                const txn = (Array.isArray(db.bankTransactions) ? db.bankTransactions : []).find(
+                  (item) => String(item?.id) === String(row.sourceId)
+                );
+                if (!txn) return;
+                const accounts = cashBankIndex(dbForUser, currentCompany.id).accounts;
+                openModal(
+                  <form
+                    className="space-y-4"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const nextAccountId = String(new FormData(event.currentTarget).get('cashBankAccountId') || '');
+                      if (!nextAccountId) return;
+                      const nextAccount = accounts.find((account) => String(account.id) === nextAccountId);
+                      setDb((prev) => ({
+                        ...prev,
+                        bankTransactions: (prev.bankTransactions || []).map((item) =>
+                          String(item?.id) === String(txn.id)
+                            ? { ...item, cashBankAccountId: Number(nextAccountId), updatedAt: new Date().toISOString() }
+                            : item
+                        ),
+                        payments: (prev.payments || []).map((item) =>
+                          String(item?.sourceBankTransactionId) === String(txn.id)
+                            ? {
+                                ...item,
+                                cashBankAccountId: Number(nextAccountId),
+                                ledgerAccountId: String(nextAccount?.serverLedgerAccountId || nextAccount?.backendLedgerId || nextAccountId),
+                              }
+                            : item
+                        ),
+                      }));
+                      openModal(null);
+                    }}
+                  >
+                    <div>
+                      <label className="ui-label" htmlFor="edit-bank-transaction-account">Cash / bank account</label>
+                      <select id="edit-bank-transaction-account" name="cashBankAccountId" className="ui-select w-full" defaultValue={String(txn.cashBankAccountId || '')} required>
+                        <option value="">Select account</option>
+                        {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                      </select>
+                      <p className="ui-caption mt-1">Only ledgers under Cash or Bank groups are available.</p>
+                    </div>
+                    <div className="flex justify-end gap-2 border-t pt-3">
+                      <button type="button" className="ui-btn ui-btn-secondary" onClick={() => openModal(null)}>Cancel</button>
+                      <button type="submit" className="ui-btn ui-btn-primary">Save</button>
+                    </div>
+                  </form>,
+                  { title: 'Edit transaction account', maxWidthClass: 'max-w-lg' }
+                );
+              }
+            }}
+            onDeleteSource={async (row) => {
+              const ok = await confirmDialog({ title: 'Delete transaction?', message: 'Delete this transaction and its link from Cash & Bank?', confirmLabel: 'Delete' });
+              if (!ok) return;
+              setDb((prev) => {
+                if (row?.kind === 'payment') return { ...prev, payments: (prev.payments || []).filter((item) => String(item?.id) !== String(row.sourceId)) };
+                if (row?.kind === 'contra') return { ...prev, journalEntries: (prev.journalEntries || []).filter((item) => String(item?.id) !== String(row.sourceId)) };
+                if (row?.kind === 'statement') return { ...prev, bankTransactions: (prev.bankTransactions || []).filter((item) => String(item?.id) !== String(row.sourceId)) };
+                return prev;
+              });
+            }}
             onOpenSource={(row) => {
-              /* The row is a view; the document is the thing. Each kind lives
-                 on its own screen, and the ledger drill-down already knows how
-                 to show a journal. */
-              if (row?.kind === 'payment') setActive(row.type === 'Receipt' ? 'receipts' : 'payments');
-              else if (row?.kind === 'contra') setActive('journalEntries');
-              else if (row?.kind === 'statement') setActive('cashBankImport');
+              openModal(
+                <div className="space-y-4">
+                  <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {[
+                      ['Date', row?.date || '—'],
+                      ['Account', row?.accountName || '—'],
+                      ['Ledger name', row?.ledgerName || '—'],
+                      ['Type', row?.type || '—'],
+                      ['Amount', formatMoney(Number(row?.amount || 0), currentCompany)],
+                      ['Status', row?.status || '—'],
+                      ['Voucher / reference', row?.number || '—'],
+                      ['Bank date', row?.bankDate || '—'],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg border p-3">
+                        <dt className="ui-caption">{label}</dt>
+                        <dd className={label === 'Amount' ? 'ui-money mt-1' : 'mt-1 font-medium'}>{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="flex justify-end border-t pt-3">
+                    <button type="button" className="ui-btn ui-btn-secondary" onClick={() => openModal(null)}>Close</button>
+                  </div>
+                </div>,
+                { title: 'Transaction entry', maxWidthClass: 'max-w-2xl' }
+              );
             }}
           />
         );
+      }
       case 'cashBankImport': {
         const companyId = currentCompany.id;
 
@@ -13165,7 +13551,7 @@ const AppShell = () => {
         };
 
         const includeGroupIds = groups
-          .filter((g) => isUnderNamedRoot(g.id, 'bank accounts') || isUnderNamedRoot(g.id, 'cash-in-hand'))
+          .filter((g) => ['bank', 'banks', 'bank account', 'bank accounts', 'cash', 'cash-in-hand', 'cash in hand', 'cash & bank', 'cash and bank', 'cash / bank', 'cash/bank'].some((root) => isUnderNamedRoot(g.id, root)))
           .map((g) => g.id);
 
         const openLedgerCreate = (initialName = '', onCreated) => {
@@ -13495,7 +13881,7 @@ const AppShell = () => {
       case 'mdm':
         return <MdmOverview />;
       case 'accounts':
-        return <ChartOfAccounts db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} />;
+        return <ChartOfAccounts db={dbForUser} setDb={setDb} openModal={openModal} currentCompany={currentCompany} onOpenLedger={openLedger} />;
       case 'trialBalance':
         return <TrialBalance db={dbForUser} currentCompany={currentCompany} onOpenLedger={openLedger} />;
       case 'profitLoss':
@@ -13932,7 +14318,7 @@ const AppShell = () => {
           .filter((g) => g.companyId === currentCompany.id)
           .filter((g) => {
             const name = String(g?.name || '').trim().toLowerCase();
-            return name === 'bank accounts' || name === 'cash-in-hand';
+            return ['bank', 'banks', 'bank account', 'bank accounts', 'cash', 'cash-in-hand', 'cash in hand', 'cash & bank', 'cash and bank', 'cash / bank', 'cash/bank'].includes(name);
           })
           .map((g) => g.id);
         /* Creating or editing an account takes the whole screen, the way the
@@ -14282,7 +14668,7 @@ const AppShell = () => {
                 one warehouse showed nothing at all — so a new org, which has
                 none, had no warehouse control and no route to make one. They
                 show from the first one now, and say so when there are none. */}
-            {branchesForUser.length >= 1 ? (
+            {branchesFeatureEnabled && branchesForUser.length >= 1 ? (
               <span className="ui-scope-field hidden md:inline-flex">
                 <PhBranch size={16} weight="fill" aria-hidden="true" />
               <select
@@ -14300,7 +14686,7 @@ const AppShell = () => {
               </span>
             ) : null}
 
-            {warehousesForActiveBranch.length >= 1 ? (
+            {warehousesFeatureEnabled && warehousesForActiveBranch.length >= 1 ? (
               <span className="ui-scope-field hidden md:inline-flex">
                 <PhWarehouse size={16} weight="fill" aria-hidden="true" />
               <select
@@ -14317,7 +14703,7 @@ const AppShell = () => {
                 ))}
               </select>
               </span>
-            ) : warehousesLoading ? null : (
+            ) : !warehousesFeatureEnabled || warehousesLoading ? null : (
               /* None yet. Stock, transfers and every document's warehouse field
                  depend on there being one, so this says so and goes there. */
               <button

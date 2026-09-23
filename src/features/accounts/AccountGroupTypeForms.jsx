@@ -119,7 +119,8 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label className="ui-label" htmlFor="accountgrouptypeforms-parent">Parent</label>
-        <select id="accountgrouptypeforms-parent"
+        <select
+            id="accountgrouptypeforms-parent"
           value={formData.parent}
           onChange={(e) => setFormData((p) => ({ ...p, parent: e.target.value }))}
           className="ui-select w-full"
@@ -134,7 +135,8 @@ export const AccountTypeForm = ({ db, setDb, currentCompany, initialData = null,
 
       <div>
         <label className="ui-label" htmlFor="accountgrouptypeforms-group-name">Group Name</label>
-        <input id="accountgrouptypeforms-group-name"
+        <input
+            id="accountgrouptypeforms-group-name"
           type="text"
           value={formData.name}
           onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
@@ -168,37 +170,55 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
 
   const groups = useMemo(() => {
     return safeArray(db.accountGroups)
-      .filter((g) => g.companyId === currentCompany.id)
+      .filter((g) => g.companyId === currentCompany.id && !g.isLegacy)
       .slice()
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [db.accountGroups, currentCompany.id]);
 
+  const unavailableGroupIds = useMemo(() => {
+    if (!isEdit) return new Set();
+    const unavailable = new Set([String(initialData.id)]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const group of groups) {
+        if (unavailable.has(String(group.parentGroupId)) && !unavailable.has(String(group.id))) {
+          unavailable.add(String(group.id));
+          changed = true;
+        }
+      }
+    }
+    return unavailable;
+  }, [groups, initialData, isEdit]);
+
   const [formData, setFormData] = useState(() => {
     if (isEdit) {
       return {
-        typeId: String(initialData?.typeId || ''),
         name: String(initialData?.name || ''),
-        groupCategory: String(initialData?.groupCategory || 'General'),
+        under: initialData?.parentGroupId
+          ? `group:${String(initialData.parentGroupId)}`
+          : `type:${String(initialData?.typeId || '')}`,
       };
     }
 
     const defaultType = accountTypes[0]?.id ? String(accountTypes[0].id) : '';
     return {
-      typeId: defaultType,
       name: '',
-      groupCategory: 'General',
+      under: defaultType ? `type:${defaultType}` : '',
     };
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const typeId = String(formData.typeId || '').trim();
     const name = String(formData.name || '').trim();
-    const groupCategory = String(formData.groupCategory || 'General').trim() || 'General';
+    const [underKind, underId] = String(formData.under || '').split(':');
+    const parentGroup = underKind === 'group' ? groups.find((group) => String(group.id) === underId) : null;
+    const parentType = underKind === 'type' ? accountTypes.find((type) => String(type.id) === underId) : null;
+    const typeId = String(parentGroup?.typeId ?? parentType?.id ?? '').trim();
 
     if (!typeId) {
-      notify.error('Group is required');
+      notify.error('Select the group this ledger group is under');
       return;
     }
     if (!name) {
@@ -206,16 +226,18 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
       return;
     }
 
-    const existing = groups.filter((g) => String(g.typeId) === typeId);
-    const clash = existing.some(
+    const clash = groups.some(
       (g) =>
         String(g.name || '').trim().toLowerCase() === name.toLowerCase() &&
         (!isEdit || String(g.id) !== String(initialData.id))
     );
     if (clash) {
-      notify.error('Group already exists under this Parent');
+      notify.error('A ledger group with this name already exists');
       return;
     }
+
+    const parentGroupId = parentGroup?.id ?? null;
+    const groupCategory = String(parentGroup?.groupCategory || initialData?.groupCategory || 'General').trim() || 'General';
 
     const nextId = groups.reduce((m, g) => Math.max(m, Number(g?.id || 0)), 0) + 1;
 
@@ -224,13 +246,36 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
         ...initialData,
         typeId: Number(typeId),
         name,
-        parentGroupId: null,
+        parentGroupId,
         groupCategory,
+        isUserDefined: true,
         updatedAt: new Date().toISOString(),
       };
 
+      const originalName = String(initialData?.name || '').trim().toLowerCase();
+      const renamedSystemGroup = Boolean(initialData?.isSystem && originalName && originalName !== name.toLowerCase());
+      const companies = renamedSystemGroup
+        ? safeArray(db.companies).map((company) => {
+            if (company.id !== currentCompany.id) return company;
+            const removed = new Set(
+              safeArray(company?.docSettings?.deletedDefaultAccountGroups).map((value) =>
+                String(value || '').trim().toLowerCase()
+              )
+            );
+            removed.add(originalName);
+            return {
+              ...company,
+              docSettings: {
+                ...(company.docSettings || {}),
+                deletedDefaultAccountGroups: [...removed],
+              },
+            };
+          })
+        : db.companies;
+
       setDb({
         ...db,
+        companies,
         accountGroups: safeArray(db.accountGroups).map((g) =>
           g.companyId === currentCompany.id && String(g.id) === String(initialData.id) ? updated : g
         ),
@@ -245,7 +290,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
       companyId: currentCompany.id,
       typeId: Number(typeId),
       name,
-      parentGroupId: null,
+      parentGroupId,
       groupCategory,
       isUserDefined: true,
       createdAt: new Date().toISOString(),
@@ -261,47 +306,45 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
 
   const fields = (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="ui-label" htmlFor="accountgrouptypeforms-group">Group</label>
-          <select id="accountgrouptypeforms-group"
-            value={formData.typeId}
-            onChange={(e) => setFormData((p) => ({ ...p, typeId: e.target.value, parentGroupId: '' }))}
-            className="ui-select w-full"
-          >
-            <option value="">Select</option>
-            {accountTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.main} • {t.name}
-              </option>
-            ))}
-          </select>
+          <label className="ui-label" htmlFor="accountgrouptypeforms-ledger-group-name">Ledger Group Name *</label>
+          <input
+            id="accountgrouptypeforms-ledger-group-name"
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
+            className="ui-input w-full"
+            placeholder="e.g., Digital Banks"
+            required
+          />
         </div>
         <div>
-          <label className="ui-label" htmlFor="accountgrouptypeforms-group-category">Group Category</label>
-          <select id="accountgrouptypeforms-group-category"
-            value={formData.groupCategory}
-            onChange={(e) => setFormData((p) => ({ ...p, groupCategory: e.target.value }))}
+          <label className="ui-label" htmlFor="accountgrouptypeforms-under">Under *</label>
+          <select
+            id="accountgrouptypeforms-under"
+            value={formData.under}
+            onChange={(e) => setFormData((p) => ({ ...p, under: e.target.value }))}
             className="ui-select w-full"
+            required
           >
-            <option value="Customer">Customer Group</option>
-            <option value="Vendor">Vendor Group</option>
-            <option value="General">General Group</option>
-            <option value="Expense">Expense Group</option>
+            <option value="">Select parent group</option>
+            <optgroup label="Primary Groups">
+              {accountTypes.map((type) => (
+                <option key={`type:${type.id}`} value={`type:${type.id}`}>
+                  {type.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Ledger Groups">
+              {groups.filter((group) => !unavailableGroupIds.has(String(group.id))).map((group) => (
+                <option key={`group:${group.id}`} value={`group:${group.id}`}>
+                  {group.name}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </div>
-      </div>
-
-      <div>
-        <label className="ui-label" htmlFor="accountgrouptypeforms-group-name-2">Group Name</label>
-        <input id="accountgrouptypeforms-group-name-2"
-          type="text"
-          value={formData.name}
-          onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-          className="ui-input w-full"
-          placeholder="e.g., Sundry Debtors"
-          required
-        />
       </div>
 
       {/* On a screen the bar carries these; in a dialog they are the only way
@@ -312,7 +355,7 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
             Cancel
           </button>
           <button type="submit" className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">
-            {isEdit ? 'Update' : 'Create'}
+            {isEdit ? 'Save changes' : 'Save'}
           </button>
         </div>
       )}
@@ -323,12 +366,12 @@ export const AccountGroupForm = ({ db, setDb, currentCompany, initialData = null
     <form onSubmit={handleSubmit} className={fullPage ? '' : 'space-y-4'}>
       {fullPage ? (
         <MasterFormPage
-          title={isEdit ? 'Edit Group' : 'New Group'}
-          subtitle="A heading in the chart of accounts, and what it rolls up to."
+          title={isEdit ? 'Edit Ledger Group' : 'New Ledger Group'}
+          subtitle="Create a group under a primary group or another ledger group."
           onBack={onClose}
-          primaryLabel={isEdit ? 'Update' : 'Create'}
-          heading="Group Details"
-          description="The type and parent decide which statement everything under this group lands on."
+          primaryLabel={isEdit ? 'Save changes' : 'Save'}
+          heading="Ledger Group Details"
+          description="The selected parent controls where this group appears in the financial statements."
         >
           {fields}
         </MasterFormPage>

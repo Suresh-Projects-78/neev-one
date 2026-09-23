@@ -41,13 +41,8 @@ const weightOf = (selector) => {
 };
 
 describe('money is not emphasis', () => {
-  /* 500, one step, everywhere. The 2026-09-08 decision took money to 400 so
-     that a screen of figures did not read as a screen of emphasis; the slate
-     system re-decided it: the labels dropped to muted slate, so a figure at
-     500 is the one thing in a row set in ink and medium — read first, and
-     still not bold. */
-  it('the table money cell is medium weight', () => {
-    expect(weightOf('.ui-col-amount.ui-col-amount')).toBe(500);
+  it('the table money cell is normal weight', () => {
+    expect(weightOf('.ui-col-amount.ui-col-amount')).toBe(400);
   });
 
   /*
@@ -55,9 +50,9 @@ describe('money is not emphasis', () => {
    * size and colour; a weight on top of that made every number on every list
    * read as emphasis, which is a page with none.
    */
-  it('the headline figure and the document total are the large KPI tier', () => {
-    expect(weightOf('.ui-money-lg')).toBe(600);
-    expect(weightOf('.ui-total-row > :last-child')).toBe(600);
+  it('the headline figure and the document total are normal weight too', () => {
+    expect(weightOf('.ui-money-lg')).toBe(400);
+    expect(weightOf('.ui-total-row > :last-child')).toBe(400);
   });
 
   it('no money role reintroduces a weight', () => {
@@ -66,7 +61,7 @@ describe('money is not emphasis', () => {
     for (const rule of roles) {
       const m = /font-weight:\s*(\d+)/.exec(rule);
       // A role may set a colour; none of them may shout.
-      expect(`${rule.slice(0, 42)} -> ${m ? m[1] : '500'}`).toBe(`${rule.slice(0, 42)} -> 500`);
+      expect(`${rule.slice(0, 42)} -> ${m ? m[1] : '400'}`).toBe(`${rule.slice(0, 42)} -> 400`);
     }
   });
 
@@ -80,30 +75,34 @@ describe('money is not emphasis', () => {
 });
 
 describe('a status hue is a background, never type', () => {
-  it('the filter tab takes its text colour from the neutral ramp', () => {
+  /*
+   * DESIGN.md rule 6 is the authority here: "Pills and filter tabs keep grey
+   * text on a pale tint; the word carries the meaning and the tint places it."
+   *
+   * This block previously asserted something stricter — no tint at all, and a
+   * single brand-filled selection. That was one reading of the rule, and the
+   * graphite system took the other, which is the one DESIGN.md actually
+   * writes down. What the rule forbids is the hue getting into the *type*, and
+   * that is what these now hold.
+   */
+  it('the filter tab keeps grey text, whatever its status hue', () => {
     const unselected = block('.ui-segment {\n    background-color');
     expect(unselected).toMatch(/color:\s*rgb\(var\(--fg-muted\)\)/);
-    expect(unselected).not.toMatch(/--seg-ink/);
-    /* No tint either: seven tinted chips above a table of figures were seven
-       emphases. The hue lives in the count, where it says something. */
-    expect(unselected).toMatch(/background-color:\s*transparent/);
+    /* The hue is the background. It must not become the text colour. */
+    expect(unselected).not.toMatch(/color:\s*rgb\(var\(--seg-ink/);
   });
 
-  it('the selected tab is the one dark thing in the strip', () => {
+  it('the selected tab is marked by depth, not by coloured type', () => {
     const selected = block(".ui-segment[aria-selected='true'] {");
-    expect(selected).toMatch(/background-color:\s*rgb\(var\(--brand\)\)/);
-    expect(selected).toMatch(/color:\s*rgb\(var\(--on-brand\)\)/);
-    expect(selected).not.toMatch(/--seg-ink/);
+    expect(selected).toMatch(/background-color:\s*rgb\(var\(--seg-strong/);
+    expect(selected).toMatch(/color:\s*rgb\(var\(--fg\)\)/);
+    expect(selected).not.toMatch(/color:\s*rgb\(var\(--seg-ink/);
   });
 
-  /* The pill is the one place the status colour is allowed in the type: one
-     word in a cell, on its own soft ground, says what it is. The filter strip
-     above keeps the neutral rule — seven coloured words there compete. */
-  it('the status pill wears its semantic ink on the soft ground', () => {
+  it('the status pill follows the same rule', () => {
     const pill = block('.ui-pill-status {');
-    expect(pill).toMatch(/color:\s*rgb\(var\(--seg-ink/);
-    expect(pill).toMatch(/background-color:\s*rgb\(var\(--seg-soft/);
-    expect(pill).not.toMatch(/--seg-strong/);
+    expect(pill).toMatch(/color:\s*rgb\(var\(--fg-muted\)\)/);
+    expect(pill).not.toMatch(/--seg-ink/);
   });
 });
 
@@ -172,17 +171,17 @@ describe('every amount wears the money face', () => {
   });
 
   /* The two inline money classes must not drift apart on weight again. */
-  it('the inline money classes agree on weight 500', () => {
+  it('the inline money classes agree on weight 400', () => {
     const shared = block('.ui-money,\n  .ui-amount');
-    expect(shared).toMatch(/font-weight:\s*500/);
+    expect(shared).toMatch(/font-weight:\s*400/);
     expect(shared).toMatch(/Inter/);
   });
 
-  /* A headline figure sits on the large-KPI tier: 600, never 700. */
-  it('the KPI figure is not bold', () => {
+  /* A headline figure is emphasised by its size, not by its weight as well. */
+  it('the KPI figure is not also bold', () => {
     const weights = [...CSS.matchAll(/\.ui-kpi\s*\{[^}]*font-weight:\s*(\d+)/g)].map((m) => Number(m[1]));
     expect(weights.length).toBeGreaterThan(0);
-    for (const w of weights) expect(w).toBeLessThanOrEqual(600);
+    for (const w of weights) expect(w).toBeLessThanOrEqual(500);
   });
 });
 

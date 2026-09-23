@@ -53,9 +53,14 @@ export const LedgerField = ({
   openModal = null,
 }) => {
   const ledgers = useMemo(() => {
-    if (Array.isArray(options)) return options;
-    return safeArray(db?.chartOfAccounts)
-      .filter((a) => Number(a?.companyId) === Number(currentCompany?.id) && a?.isActive !== false)
+    const source = Array.isArray(options) ? options : safeArray(db?.chartOfAccounts);
+    return source
+      .filter(
+        (a) =>
+          Number(a?.companyId) === Number(currentCompany?.id) &&
+          a?.isActive !== false &&
+          !a?.hiddenFromChart
+      )
       .slice()
       .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }, [options, db?.chartOfAccounts, currentCompany?.id]);

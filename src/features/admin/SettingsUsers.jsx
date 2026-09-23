@@ -17,6 +17,7 @@ import { listUsers,
   setUserCompanies, createRole } from '../../api/admin';
 import Modal from '../../components/ui/Modal';
 import Popover from '../../components/ui/Popover';
+import { useFeatures } from '../../permissions/useFeatures';
 
 const normalizeId = (v) => String(v ?? '').trim();
 
@@ -29,6 +30,8 @@ const getBranchLabel = (b) => {
 };
 
 export function SettingsUsers({ orgId }) {
+  const { isEnabled } = useFeatures();
+  const branchesEnabled = isEnabled('branches');
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [newRoleDraft, setNewRoleDraft] = useState(null); // null closed, string = name being typed
@@ -99,11 +102,15 @@ export function SettingsUsers({ orgId }) {
         usersErr = e;
       }
 
-      try {
-        const bRes = await listBranches(orgId);
-        setBranches(Array.isArray(bRes.branches) ? bRes.branches : []);
-      } catch (e) {
-        branchesErr = e;
+      if (branchesEnabled) {
+        try {
+          const bRes = await listBranches(orgId);
+          setBranches(Array.isArray(bRes.branches) ? bRes.branches : []);
+        } catch (e) {
+          branchesErr = e;
+          setBranches([]);
+        }
+      } else {
         setBranches([]);
       }
 
@@ -121,7 +128,7 @@ export function SettingsUsers({ orgId }) {
 
   useEffect(() => {
     loadData();
-  }, [orgId]);
+  }, [orgId, branchesEnabled]);
 
   const openCreate = () => {
     // default selection for branch mode
@@ -563,7 +570,7 @@ export function SettingsUsers({ orgId }) {
               </div>
             </div>
 
-            <div className="border rounded-lg p-4 space-y-3">
+            {branchesEnabled ? <div className="border rounded-lg p-4 space-y-3">
               <div>
                 <div className="text-sm font-semibold">Branch Access</div>
                 <div className="text-xs ui-muted">Choose which branches this user can access</div>
@@ -616,7 +623,7 @@ export function SettingsUsers({ orgId }) {
                   )}
                 </div>
               </div>
-            </div>
+            </div> : null}
 
             <div className="flex justify-end gap-2">
               <button type="button" onClick={closeCreate} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
@@ -691,7 +698,7 @@ export function SettingsUsers({ orgId }) {
         </Modal>
       ) : null}
 
-      {assignBranchesModalOpen ? (
+      {branchesEnabled && assignBranchesModalOpen ? (
         <Modal
           onClose={closeAssignBranches}
           title={`Assign Branches${assignBranchesUser?.fullName || assignBranchesUser?.name ? `: ${assignBranchesUser.fullName || assignBranchesUser.name}` : ''}`}
@@ -908,13 +915,13 @@ export function SettingsUsers({ orgId }) {
                           >
                             Companies
                           </button>
-                          <button
+                          {branchesEnabled ? <button
                             type="button"
                             onClick={() => openAssignBranches(u)}
                             className="w-full text-left px-3 py-2 text-sm ui-hover-sunken"
                           >
                             Assign Branches
-                          </button>
+                          </button> : null}
                           <button
                             type="button"
                             onClick={() => doChangePassword(u)}

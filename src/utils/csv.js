@@ -60,7 +60,7 @@ export function downloadCsv({ fileName, columns, rows }) {
 
 /** A header-only CSV the user fills in and imports back. */
 export function downloadCsvTemplate({ fileName, columns, sample }) {
-  downloadCsv({ fileName, columns, rows: sample ? [sample] : [] });
+  downloadCsv({ fileName, columns, rows: Array.isArray(sample) ? sample : sample ? [sample] : [] });
 }
 
 /**

@@ -84,25 +84,15 @@ describe('the three types, and only three', () => {
   });
 });
 
-describe('the figures above the list', () => {
-  it('total each type and count the rows', () => {
-    view();
-    const card = (label) => screen.getByText(label).closest('div').parentElement;
-    expect(within(card('Payments')).getByText(/1,00,000\.00/)).toBeInTheDocument();
-    expect(within(card('Receipts')).getByText(/85,000\.00/)).toBeInTheDocument();
-    expect(within(card('Contra entries')).getByText(/25,000\.00/)).toBeInTheDocument();
-    expect(within(card('Vouchers')).getByText('4')).toBeInTheDocument();
-  });
-
-  it('follows the account that was chosen', async () => {
+describe('the account filter', () => {
+  it('filters the rows without a totals band', async () => {
     const user = userEvent.setup();
     view();
+    expect(screen.queryByRole('region', { name: 'Summary' })).toBeNull();
     await user.click(screen.getByRole('combobox', { name: 'Account' }));
     await user.click(screen.getByRole('option', { name: 'Petty Cash' }));
 
     /* The cash account saw one receipt and one leg of the transfer. */
-    const card = (label) => screen.getByText(label).closest('div').parentElement;
-    expect(within(card('Vouchers')).getByText('2')).toBeInTheDocument();
     expect(screen.queryByText('ABC Traders')).toBeNull();
   });
 });
@@ -116,7 +106,8 @@ describe('acting on a row', () => {
     view({ onOpenSource: opened });
 
     const row = screen.getByText('ABC Traders').closest('tr');
-    await user.click(within(row).getByRole('button', { name: 'View' }));
+    await user.click(within(row).getByRole('button', { name: 'Actions' }));
+    await user.click(screen.getByRole('button', { name: 'View' }));
 
     expect(opened).toHaveBeenCalledWith(expect.objectContaining({ kind: 'payment', type: 'Payment' }));
   });
@@ -149,9 +140,13 @@ describe('starting an entry', () => {
     expect(payment).toHaveBeenCalled();
   });
 
-  it('keeps importing a statement beside it, not under it', () => {
+  it('keeps import and export under More', async () => {
+    const user = userEvent.setup();
     const importing = vi.fn();
     view({ onImportStatement: importing });
-    expect(screen.getByRole('button', { name: /Import Statement/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Import Statement/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /More/ }));
+    expect(await screen.findByRole('menuitem', { name: /Import statement/i })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /Export statement/i })).toBeInTheDocument();
   });
 });

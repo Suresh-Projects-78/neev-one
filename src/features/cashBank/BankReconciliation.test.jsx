@@ -111,6 +111,34 @@ describe('the shape of the screen', () => {
     /* No control edits the transaction date anywhere. */
     expect(screen.queryByLabelText(/Transaction date for/)).toBeNull();
   });
+
+  it('does not offer an uncategorised statement row for reconciliation', async () => {
+    const user = userEvent.setup();
+    const withUncategorised = {
+      ...db0,
+      bankTransactions: [{
+        id: 90,
+        companyId: 1,
+        cashBankAccountId: 502,
+        date: '2026-09-03',
+        direction: 'OUT',
+        amount: 1250,
+        narration: 'Unknown bank debit',
+        imported: true,
+      }],
+    };
+    render(
+      <BankReconciliation
+        db={withUncategorised}
+        setDb={() => {}}
+        currentCompany={COMPANY}
+        onImportStatement={() => {}}
+      />
+    );
+    await pickAccount(user);
+    expect(screen.queryByText('Unknown bank debit')).toBeNull();
+    expect(screen.getByText('2 of 3')).toBeInTheDocument();
+  });
 });
 
 describe('staging and submitting', () => {

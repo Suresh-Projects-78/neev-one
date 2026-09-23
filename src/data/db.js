@@ -110,13 +110,10 @@ export const normalizeDB = (db) => {
     const groups = next.accountGroups.filter((g) => Number(g.companyId) === Number(companyId));
 
     const TEMPLATE_TYPES = [
-      { main: 'Balance Sheet', accountClass: 'Asset', name: 'Current Assets' },
-      { main: 'Balance Sheet', accountClass: 'Asset', name: 'Fixed Assets' },
-      { main: 'Balance Sheet', accountClass: 'Liability', name: 'Current Liabilities' },
-      { main: 'Balance Sheet', accountClass: 'Liability', name: 'Non Current Liabilities' },
-      { main: 'Balance Sheet', accountClass: 'Equity', name: 'Capital & Equity' },
-      { main: 'P&L', accountClass: 'Income', name: 'Income' },
+      { main: 'Balance Sheet', accountClass: 'Asset', name: 'Assets' },
+      { main: 'Balance Sheet', accountClass: 'Liability', name: 'Liabilities' },
       { main: 'P&L', accountClass: 'Expense', name: 'Expenses' },
+      { main: 'P&L', accountClass: 'Income', name: 'Income' },
     ];
 
     const ensureType = ({ main, accountClass, name }) => {
@@ -145,51 +142,53 @@ export const normalizeDB = (db) => {
     }
 
     const TEMPLATE_GROUPS = [
-      // P&L
-      { typeName: 'Expenses', name: 'Indirect Expenses', groupCategory: 'Expense' },
+      { typeName: 'Assets', name: 'Current Assets' },
+      { typeName: 'Assets', name: 'Bank Accounts', parentName: 'Current Assets' },
+      { typeName: 'Assets', name: 'Cash-in-Hand', parentName: 'Current Assets' },
+      { typeName: 'Assets', name: 'Deposits (Asset)', parentName: 'Current Assets' },
+      { typeName: 'Assets', name: 'TDS Receivable', parentName: 'Current Assets' },
+      { typeName: 'Assets', name: 'Loans & Advances (Asset)', parentName: 'Current Assets' },
+      { typeName: 'Assets', name: 'Inventory', parentName: 'Current Assets' },
+      { typeName: 'Assets', name: 'Sundry Debtors', parentName: 'Current Assets', groupCategory: 'Customer' },
+      { typeName: 'Assets', name: 'Fixed Assets' },
+      { typeName: 'Assets', name: 'Investments' },
+
+      { typeName: 'Liabilities', name: 'Capital Account' },
+      { typeName: 'Liabilities', name: 'Reserves & Surplus' },
+      { typeName: 'Liabilities', name: 'Current Liabilities' },
+      { typeName: 'Liabilities', name: 'Duties & Taxes', parentName: 'Current Liabilities' },
+      { typeName: 'Liabilities', name: 'TDS Payable', parentName: 'Current Liabilities' },
+      { typeName: 'Liabilities', name: 'Provisions', parentName: 'Current Liabilities' },
+      { typeName: 'Liabilities', name: 'Sundry Creditors', parentName: 'Current Liabilities', groupCategory: 'Vendor' },
+      { typeName: 'Liabilities', name: 'Loans (Liability)' },
+      { typeName: 'Liabilities', name: 'Bank OD A/c', parentName: 'Loans (Liability)' },
+      { typeName: 'Liabilities', name: 'Secured Loans', parentName: 'Loans (Liability)' },
+      { typeName: 'Liabilities', name: 'Unsecured Loans', parentName: 'Loans (Liability)' },
+      { typeName: 'Liabilities', name: 'Suspense A/c' },
+      { typeName: 'Liabilities', name: 'Profit & Loss A/c' },
+
       { typeName: 'Expenses', name: 'Direct Expenses', groupCategory: 'Expense' },
-      { typeName: 'Income', name: 'Indirect Income', groupCategory: 'General' },
-      { typeName: 'Income', name: 'Direct Income', groupCategory: 'General' },
-      { typeName: 'Income', name: 'Sales Accounts', groupCategory: 'General' },
+      { typeName: 'Expenses', name: 'Indirect Expenses', groupCategory: 'Expense' },
       { typeName: 'Expenses', name: 'Purchase Accounts', groupCategory: 'Expense' },
 
-      // Balance Sheet - Current Assets
-      { typeName: 'Current Assets', name: 'Sundry Debtors', groupCategory: 'Customer' },
-      { typeName: 'Current Assets', name: 'Cash-in-Hand', groupCategory: 'General' },
-      { typeName: 'Current Assets', name: 'Bank Accounts', groupCategory: 'General' },
-      { typeName: 'Current Assets', name: 'Deposits (Asset)', groupCategory: 'General' },
-      { typeName: 'Current Assets', name: 'Loans & Advances (Asset)', groupCategory: 'General' },
-      { typeName: 'Current Assets', name: 'Stock-in-Hand', groupCategory: 'General' },
-      { typeName: 'Current Assets', name: 'Input GST', groupCategory: 'General' },
-
-      // Balance Sheet - Current Liabilities
-      { typeName: 'Current Liabilities', name: 'Investments', groupCategory: 'General' },
-      { typeName: 'Current Liabilities', name: 'Sundry Creditors', groupCategory: 'Vendor' },
-      { typeName: 'Current Liabilities', name: 'Duties & Taxes', groupCategory: 'General' },
-      { typeName: 'Current Liabilities', name: 'Output GST', groupCategory: 'General' },
-      { typeName: 'Current Liabilities', name: 'Provisions', groupCategory: 'General' },
-      { typeName: 'Current Liabilities', name: 'Short term Loans', groupCategory: 'General' },
-      { typeName: 'Current Liabilities', name: 'Outstanding Expenses', groupCategory: 'General' },
-
-      // Balance Sheet - Non Current Liabilities
-      { typeName: 'Non Current Liabilities', name: 'Long term Loans', groupCategory: 'General' },
-
-      // Balance Sheet - Fixed Assets
-      { typeName: 'Fixed Assets', name: 'Plant & Machinery', groupCategory: 'General' },
-      { typeName: 'Fixed Assets', name: 'Furniture & Fixtures', groupCategory: 'General' },
-      { typeName: 'Fixed Assets', name: 'Computers', groupCategory: 'General' },
-      { typeName: 'Fixed Assets', name: 'Vehicles', groupCategory: 'General' },
-      { typeName: 'Fixed Assets', name: 'Buildings', groupCategory: 'General' },
-      { typeName: 'Fixed Assets', name: 'Leasehold Assets', groupCategory: 'General' },
-
-      // Balance Sheet - Capital & Equity
-      { typeName: 'Capital & Equity', name: 'Capital Accounts', groupCategory: 'General' },
-      { typeName: 'Capital & Equity', name: 'Reserves & Surplus', groupCategory: 'General' },
+      { typeName: 'Income', name: 'Direct Incomes' },
+      { typeName: 'Income', name: 'Indirect Incomes' },
+      { typeName: 'Income', name: 'Sales Accounts' },
     ];
 
     const templateGroupKeySet = new Set();
 
     const ensureGroup = ({ typeId, name, parentGroupId = null, groupCategory = 'General', isLegacy = false }) => {
+      const company = (Array.isArray(next.companies) ? next.companies : []).find(
+        (row) => Number(row?.id) === Number(companyId)
+      );
+      const removedDefaults = new Set(
+        Array.isArray(company?.docSettings?.deletedDefaultAccountGroups)
+          ? company.docSettings.deletedDefaultAccountGroups.map((value) => String(value || '').trim().toLowerCase())
+          : []
+      );
+      if (removedDefaults.has(String(name || '').trim().toLowerCase())) return null;
+
       const found = groups.find(
         (g) =>
           Number(g.typeId) === Number(typeId) &&
@@ -198,6 +197,7 @@ export const normalizeDB = (db) => {
       if (found) {
         found.isSystem = true;
         found.groupCategory = found.groupCategory || groupCategory;
+        found.parentGroupId = parentGroupId;
         found.isLegacy = Boolean(found.isLegacy) && isLegacy;
         return found;
       }
@@ -208,49 +208,27 @@ export const normalizeDB = (db) => {
       return created;
     };
 
-    // Create template groups
-    for (const g of TEMPLATE_GROUPS) {
+    // Create parent groups first, then resolve child parent ids.
+    for (const g of TEMPLATE_GROUPS.filter((row) => !row.parentName)) {
       const typeRow = typeByName.get(g.typeName);
       if (!typeRow) continue;
       templateGroupKeySet.add(`${Number(typeRow.id)}__${String(g.name).trim().toLowerCase()}`);
       ensureGroup({ typeId: typeRow.id, name: g.name, groupCategory: g.groupCategory, isLegacy: false });
     }
-
-    /*
-     * The statutory branch of the chart, seeded as system groups:
-     *
-     *   Current Assets → Statutory Receivables → TDS Receivable
-     *   Current Liabilities → Statutory Payables → TDS Payable
-     *
-     * Everything TDS hangs off the chart: the ledger form shows its TDS tab
-     * for ledgers under a TDS group, the engine reads the side (payable /
-     * receivable) from the group chain's own names, and the journal
-     * recognises a deduction by the ledger it touches. Without these groups
-     * a fresh company had to invent them by hand, correctly named, before
-     * any of that worked.
-     *
-     * The Statutory parents are deliberately one level up: TCS and other
-     * statutory heads join them later as siblings, not as a re-parenting.
-     * Users create ORDINARY ledgers underneath ("TDS Payable — Contractor")
-     * through the existing New Ledger flow — the group is the accounting
-     * classification; tax behaviour lives in the nature/rule master, never
-     * in the ledger.
-     */
-    {
-      const liabilities = typeByName.get('Current Liabilities');
-      const assets = typeByName.get('Current Assets');
-      if (liabilities) {
-        templateGroupKeySet.add(`${Number(liabilities.id)}__statutory payables`);
-        templateGroupKeySet.add(`${Number(liabilities.id)}__tds payable`);
-        const statPay = ensureGroup({ typeId: liabilities.id, name: 'Statutory Payables', groupCategory: 'General', isLegacy: false });
-        ensureGroup({ typeId: liabilities.id, name: 'TDS Payable', parentGroupId: statPay.id, groupCategory: 'General', isLegacy: false });
-      }
-      if (assets) {
-        templateGroupKeySet.add(`${Number(assets.id)}__statutory receivables`);
-        templateGroupKeySet.add(`${Number(assets.id)}__tds receivable`);
-        const statRec = ensureGroup({ typeId: assets.id, name: 'Statutory Receivables', groupCategory: 'General', isLegacy: false });
-        ensureGroup({ typeId: assets.id, name: 'TDS Receivable', parentGroupId: statRec.id, groupCategory: 'General', isLegacy: false });
-      }
+    for (const g of TEMPLATE_GROUPS.filter((row) => row.parentName)) {
+      const typeRow = typeByName.get(g.typeName);
+      if (!typeRow) continue;
+      const parent = groups.find(
+        (row) => Number(row.typeId) === Number(typeRow.id) && String(row.name || '').trim().toLowerCase() === g.parentName.toLowerCase()
+      );
+      templateGroupKeySet.add(`${Number(typeRow.id)}__${String(g.name).trim().toLowerCase()}`);
+      ensureGroup({
+        typeId: typeRow.id,
+        name: g.name,
+        parentGroupId: parent?.id ?? null,
+        groupCategory: g.groupCategory,
+        isLegacy: false,
+      });
     }
 
     // Keep Primary fallback groups (legacy/hidden)
@@ -351,21 +329,17 @@ export const normalizeDB = (db) => {
 
      if (name.includes('receivable') || name.includes('debtors')) return 'sundry debtors';
      if (name.includes('payable') || name.includes('creditors')) return 'sundry creditors';
-     if (name === "owner's equity" || name.includes('capital')) return 'capital accounts';
-     if (name.includes('fixed assets') || (accountClass === 'Asset' && subType.includes('fixed'))) return 'plant & machinery';
+     if (name === "owner's equity" || name.includes('capital')) return 'capital account';
+     if (name.includes('fixed assets') || (accountClass === 'Asset' && subType.includes('fixed'))) return 'fixed assets';
 
     if (accountClass === 'Asset') {
       if (name.includes('cash')) return 'cash-in-hand';
       if (name.includes('bank')) return 'bank accounts';
-      if (name.includes('inventory') || name.includes('stock')) return 'stock-in-hand';
+      if (name.includes('inventory') || name.includes('stock')) return 'inventory';
       if (name.includes('deposit')) return 'deposits (asset)';
       if (name.includes('advance') || name.includes('loan')) return 'loans & advances (asset)';
       if (subType.includes('fixed')) {
-        if (name.includes('vehicle')) return 'vehicles';
-        if (name.includes('computer')) return 'computers';
-        if (name.includes('furniture')) return 'furniture & fixtures';
-        if (name.includes('building')) return 'buildings';
-        return 'plant & machinery';
+        return 'fixed assets';
       }
       // Default for other assets
       return 'loans & advances (asset)';
@@ -374,21 +348,25 @@ export const normalizeDB = (db) => {
     if (accountClass === 'Liability') {
       if (name.includes('creditor') || name.includes('payable')) return 'sundry creditors';
       if (name.includes('tax') || name.includes('gst') || name.includes('duty')) return 'duties & taxes';
-      if (name.includes('outstanding')) return 'outstanding expenses';
       if (name.includes('provision')) return 'provisions';
-      if (name.includes('loan')) return subType.includes('non current') ? 'long term loans' : 'short term loans';
+      if (name.includes('overdraft') || name.includes('bank od')) return 'bank od a/c';
+      if (name.includes('unsecured')) return 'unsecured loans';
+      if (name.includes('secured')) return 'secured loans';
+      if (name.includes('loan')) return 'loans (liability)';
       if (name.includes('investment')) return 'investments';
-      return 'outstanding expenses';
+      if (name.includes('suspense')) return 'suspense a/c';
+      if (name.includes('profit') || name.includes('loss')) return 'profit & loss a/c';
+      return 'current liabilities';
     }
 
     if (accountClass === 'Equity') {
       if (name.includes('reserve') || name.includes('surplus')) return 'reserves & surplus';
-      return 'capital accounts';
+      return 'capital account';
     }
 
     if (accountClass === 'Income') {
       if (name.includes('sale')) return 'sales accounts';
-      return 'indirect income';
+      return 'indirect incomes';
     }
 
     if (accountClass === 'Expense') {
@@ -1418,6 +1396,15 @@ export const normalizeDB = (db) => {
       };
     });
 
+    /* The built-in Cash ledger has no user ledger code. Older books seeded it
+       as 1000, which then leaked into Receipt/Payment labels as though the user
+       had assigned it. Restrict this cleanup to the exact legacy default. */
+    next.chartOfAccounts = safeArray(next.chartOfAccounts).map((account) =>
+      lower(account?.name) === 'cash' && String(account?.code || '').trim() === '1000'
+        ? { ...account, code: '' }
+        : account
+    );
+
     // Ensure every company has AR/AP control ledgers so accrual postings always hit chartOfAccounts.
     // Also auto-link customers/vendors to these control ledgers when they don't have accountId.
     {
@@ -1520,13 +1507,47 @@ export const normalizeDB = (db) => {
         // Named exactly "Cash" because that is the name receipts and payments
         // look for; the group it sits in is Cash-in-Hand.
         ensureControlAccount(companyId, {
-          code: '1000',
+          code: '',
           name: 'Cash',
           type: 'Asset',
           subType: 'Current Assets',
           main: 'Balance Sheet',
           groupId: findGroupIdByName(companyId, 'cash-in-hand'),
         });
+
+        /* Standard statutory ledgers for the common purchase-side TDS
+           deductions. TDS Payable is already a system group; these ordinary
+           ledgers give a fresh or existing company usable section accounts. */
+        const tdsPayableGroupId = findGroupIdByName(companyId, 'tds payable');
+        if (tdsPayableGroupId) {
+          [
+            { name: 'TDS 194C - Contract', oldName: 'TDS on Contractors', section: '194C' },
+            { name: 'TDS 194J - Professional', oldName: 'TDS on Professional Fees', section: '194J(b)' },
+            { name: 'TDS 194J - Technical', oldName: 'TDS on Technical Services', section: '194J(a)' },
+            { name: 'TDS 194H - Commission', oldName: 'TDS on Commission or Brokerage', section: '194H' },
+            { name: 'TDS 194I - Rent', oldName: 'TDS on Rent', section: '194I(b)' },
+          ].forEach(({ name, oldName, section }) => {
+            const existing = safeArray(next.chartOfAccounts).find(
+              (account) =>
+                Number(account?.companyId) === companyId &&
+                Number(account?.groupId) === Number(tdsPayableGroupId) &&
+                (String(account?.tdsSection || '') === section || lower(account?.name) === lower(oldName) || lower(account?.name) === lower(name))
+            );
+            const id = existing?.id || ensureControlAccount(companyId, {
+              code: '',
+              name,
+              type: 'Liability',
+              subType: 'Current Liabilities',
+              main: 'Balance Sheet',
+              groupId: tdsPayableGroupId,
+            });
+            next.chartOfAccounts = safeArray(next.chartOfAccounts).map((account) =>
+              String(account.id) === String(id)
+                ? { ...account, name, groupId: tdsPayableGroupId, tdsSection: section, tdsSide: 'PAYABLE' }
+                : account
+            );
+          });
+        }
 
         /**
          * The ledger stock is carried in.
@@ -2100,6 +2121,97 @@ export const normalizeDB = (db) => {
       return { ...c, ...patch };
     });
     if (changed) next.companies = healed;
+  }
+
+  /*
+   * Replace the old visible chart once with the compact hierarchy requested
+   * for new books. Existing technical accounts remain available to historic
+   * postings, but are retired from selectors and the Chart of Accounts list;
+   * deleting their ids would orphan saved vouchers. Cash is the only opening
+   * ledger in the visible chart and deliberately has no ledger code.
+   */
+  {
+    const targetGroupNames = new Set([
+      'current assets', 'bank accounts', 'cash-in-hand', 'deposits (asset)',
+      'tds receivable', 'loans & advances (asset)', 'inventory', 'sundry debtors',
+      'fixed assets', 'investments', 'capital account', 'reserves & surplus',
+      'current liabilities', 'duties & taxes', 'tds payable', 'provisions',
+      'sundry creditors', 'loans (liability)', 'bank od a/c', 'secured loans',
+      'unsecured loans', 'suspense a/c', 'profit & loss a/c', 'direct expenses',
+      'indirect expenses', 'purchase accounts', 'direct incomes', 'indirect incomes',
+      'sales accounts',
+    ]);
+
+    for (const company of Array.isArray(next.companies) ? next.companies : []) {
+      const companyId = Number(company?.id);
+      if (!companyId) continue;
+      const settings = company?.docSettings && typeof company.docSettings === 'object' ? company.docSettings : {};
+      const migrations = settings.migrations && typeof settings.migrations === 'object' ? settings.migrations : {};
+      if (migrations.coaCompactHierarchyV2Applied) continue;
+
+      next.accountGroups = (Array.isArray(next.accountGroups) ? next.accountGroups : []).map((group) => {
+        if (Number(group?.companyId) !== companyId) return group;
+        const keep = targetGroupNames.has(String(group?.name || '').trim().toLowerCase());
+        return { ...group, isLegacy: !keep, isSystem: keep || Boolean(group?.isSystem) };
+      });
+
+      const cashGroup = (Array.isArray(next.accountGroups) ? next.accountGroups : []).find(
+        (group) =>
+          Number(group?.companyId) === companyId &&
+          !group?.isLegacy &&
+          String(group?.name || '').trim().toLowerCase() === 'cash-in-hand'
+      );
+      let cashKept = false;
+      next.chartOfAccounts = (Array.isArray(next.chartOfAccounts) ? next.chartOfAccounts : []).map((account) => {
+        if (Number(account?.companyId) !== companyId) return account;
+        const isCash = !cashKept && String(account?.name || '').trim().toLowerCase() === 'cash';
+        if (isCash) {
+          cashKept = true;
+          return {
+            ...account,
+            code: '',
+            groupId: cashGroup?.id ?? account.groupId,
+            type: 'Asset',
+            subType: 'Assets',
+            main: 'Balance Sheet',
+            ledgerCategory: 'General',
+            hiddenFromChart: false,
+          };
+        }
+        return { ...account, hiddenFromChart: true };
+      });
+
+      if (!cashKept && cashGroup) {
+        const nextId = (Array.isArray(next.chartOfAccounts) ? next.chartOfAccounts : []).reduce(
+          (max, account) => Math.max(max, Number(account?.id || 0)),
+          0
+        ) + 1;
+        next.chartOfAccounts.push({
+          id: nextId,
+          companyId,
+          code: '',
+          name: 'Cash',
+          ledgerCategory: 'General',
+          groupId: cashGroup.id,
+          type: 'Asset',
+          subType: 'Assets',
+          main: 'Balance Sheet',
+          openingBalance: 0,
+          balance: 0,
+          isSystem: true,
+          hiddenFromChart: false,
+        });
+      }
+
+      const appliedAt = new Date().toISOString();
+      const nextSettings = {
+        ...settings,
+        migrations: { ...migrations, coaCompactHierarchyV2Applied: true, coaCompactHierarchyV2AppliedAt: appliedAt },
+      };
+      next.companies = next.companies.map((row) =>
+        Number(row?.id) === companyId ? { ...row, docSettings: nextSettings } : row
+      );
+    }
   }
 
   return next;

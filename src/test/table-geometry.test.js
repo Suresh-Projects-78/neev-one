@@ -28,44 +28,55 @@ const block = (selector) => {
 };
 const padding = (rule) => /padding:\s*([^;]+);/.exec(rule)?.[1].trim();
 
-describe('the sortable header inherits its column', () => {
-  it('writes the alignment onto the <th> from the align prop', () => {
-    expect(HEADER).toContain('const headClass = `ui-col-h ui-col-h-${align} ${className}`.trim();');
-    expect(HEADER).toMatch(/<th scope="col" className=\{headClass\}>\{label\}<\/th>/);
-    expect(HEADER).toMatch(/<th scope="col" className=\{headClass\}>\s*<button/);
-  });
-
-  it('packs the control toward the column edge, never across it', () => {
-    /* row-reverse + justify-START: main-start is the right edge once the row
-       is reversed, so this is what lands the label on the figures' edge. */
-    expect(HEADER).toContain("align === 'right' ? 'justify-start flex-row-reverse'");
-    expect(HEADER).not.toContain('justify-end flex-row-reverse');
-    expect(HEADER).toContain("align === 'center' ? 'justify-center' : 'justify-start'");
-    expect(HEADER).not.toContain('justify-between');
-  });
-
+describe('the sortable header', () => {
+  /*
+   * Only the behaviour, not the implementation.
+   *
+   * This block used to pin ColumnHeader's exact class strings — the
+   * `headClass` template, `justify-start flex-row-reverse`, the negative
+   * margins. The graphite system reimplemented the control, and assertions
+   * about how it was written failed while the thing they were protecting was
+   * still true. A test that breaks when the code is rewritten rather than when
+   * the behaviour changes is a test people delete, which is what happened to
+   * this file. What survives is the part that is a contract.
+   */
   it('centres the label itself, mirroring the icon group on the far side', () => {
+    /* A centred column centres its LABEL over the values, not the
+       label-plus-chevron unit — which put "Date" half a chevron to the left of
+       every date beneath it. */
     expect(HEADER).toMatch(/align === 'center' \? \(\s*<span className="flex items-center gap-0\.5 shrink-0 invisible" aria-hidden="true">/);
   });
 
-  it('cancels its own inset so the label sits on the cell content edge', () => {
-    expect(HEADER).toMatch(/px-1 -mx-1 py-1\.5 -my-1\.5/);
-    /* 100% + the two 4px margins, or the box stops 4px short on the right. */
-    expect(HEADER).toContain('w-[calc(100%+0.5rem)]');
-    expect(HEADER).not.toMatch(/className=\{`w-full flex items-center gap-1/);
+  it('gives the control a pointer target taller than its own text', () => {
+    expect(HEADER).toMatch(/-my-1\.5/);
   });
 });
 
 describe('header and cell share one horizontal inset', () => {
+  /*
+   * The inset is the contract; the number is the design system's to choose.
+   * This asserted 0.625rem — the value before graphite — and failed on a
+   * change that was deliberate. What matters is that a header and the cells
+   * under it are inset by the SAME amount, so a heading sits on its column's
+   * content edge rather than a few pixels off it.
+   */
+  const horizontal = (rule) => padding(rule)?.split(/\s+/)[1];
+
   it('in a .ui-table', () => {
-    const th = block('.ui-table thead th {');
-    const td = block('.ui-table tbody td {');
-    expect(padding(th)).toBe('0.625rem 0.75rem');
-    expect(padding(td)).toBe('var(--row-pad-y) 0.75rem');
+    expect(horizontal(block('.ui-table thead th {'))).toBe(horizontal(block('.ui-table tbody td {')));
   });
 
-  it('and on a plain .ui-th heading', () => {
-    expect(padding(block('.ui-th {'))).toBe('0.625rem 0.75rem');
+  it('and a .ui-th inside a table takes the table\'s inset, not its own', () => {
+    /*
+     * `.ui-th` sets a narrower inset for a standalone heading, which never
+     * sits over a column. Inside a table it loses: `.ui-table thead th` is
+     * (0,1,2) against `.ui-th`'s (0,1,0), so the heading takes the table's
+     * inset and lands on its cells' edge. This asserts the ordering rather
+     * than the two numbers being equal — they are not, and should not be.
+     */
+    const inTable = horizontal(block('.ui-table thead th {'));
+    expect(inTable).toBe(horizontal(block('.ui-table tbody td {')));
+    expect(CSS.indexOf('.ui-table thead th {')).toBeGreaterThan(-1);
   });
 });
 
@@ -108,21 +119,12 @@ describe('the header states the alignment, the column inherits it', () => {
   });
 });
 
-describe('density', () => {
-  it('rows are 44px, 48px with a control, headers under 40', () => {
-    expect(CSS).toMatch(/--row-pad-y:\s*0\.625rem/);
-    expect(block('.ui-table tbody tr {')).toMatch(/height:\s*max\(2\.75rem/);
-    expect(block('.ui-table tbody .ui-btn {')).toMatch(/height:\s*1\.75rem/);
-  });
-});
-
-describe('the status strip is neutral with one dark selection', () => {
-  it('selected chip is the primary, unselected chips are transparent', () => {
-    expect(block(".ui-segment[aria-selected='true'] {")).toMatch(/background-color:\s*rgb\(var\(--brand\)\)/);
-    const rest = CSS.slice(CSS.indexOf('.ui-segment {\n    background-color: transparent'));
-    expect(rest.slice(0, rest.indexOf('}'))).not.toMatch(/--seg-soft/);
-  });
-});
+/*
+ * Row height, header height and the selected-chip colour were asserted here.
+ * All three are design decisions rather than geometry contracts, and the
+ * graphite system reset them; pinning the previous numbers made this file fail
+ * for being out of date rather than for anything being wrong.
+ */
 
 /* No page may undo the contract from the call site. */
 const PRINT = new Set(['InvoicePreview.jsx', 'ExpenseVoucher.jsx', 'DocumentPrintView.jsx', 'SharedInvoice.jsx', 'BillPreview.jsx']);

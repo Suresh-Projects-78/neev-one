@@ -21,7 +21,7 @@ import { cashBankIndex } from './transactions';
  * through the same engine, and lands in the same series — which is also why
  * the cash book already knows how to show it.
  */
-const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
+const ContraForm = ({ db, setDb, currentCompany, onClose, initialData = null, onSaved = null }) => {
   const companyId = currentCompany?.id;
   const { accounts } = useMemo(() => cashBankIndex(db, companyId), [db, companyId]);
 
@@ -40,12 +40,12 @@ const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
   });
 
   const [form, setForm] = useState(() => ({
-    number: generated || `JV-${Date.now()}`,
-    date: new Date().toISOString().slice(0, 10),
-    fromId: '',
-    toId: '',
-    amount: '',
-    narration: '',
+    number: String(initialData?.number || generated || `JV-${Date.now()}`),
+    date: String(initialData?.date || new Date().toISOString().slice(0, 10)),
+    fromId: String(initialData?.fromId || ''),
+    toId: String(initialData?.toId || ''),
+    amount: initialData?.amount !== undefined && initialData?.amount !== null ? String(initialData.amount) : '',
+    narration: String(initialData?.narration || initialData?.notes || ''),
   }));
   const set = (patch) => setForm((prev) => ({ ...prev, ...patch }));
   const [saving, setSaving] = useState(false);
@@ -100,25 +100,27 @@ const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
       entry: { date: form.date, narration, lines },
     });
 
+    const nextId = (db.journalEntries || []).reduce((m, j) => Math.max(m, Number(j?.id || 0)), 0) + 1;
+    const savedJournal = {
+      id: nextId,
+      companyId,
+      number,
+      date: form.date,
+      narration,
+      lines,
+      totalDebit: amount,
+      totalCredit: amount,
+      voucherKind: 'contra',
+      sourceBankTransactionId: initialData?.sourceBankTransactionId,
+      createdAt: new Date().toISOString(),
+      ...ledgerPatch,
+    };
     setDb((prev) => {
-      const nextId = (prev.journalEntries || []).reduce((m, j) => Math.max(m, Number(j?.id || 0)), 0) + 1;
       return {
         ...prev,
         journalEntries: [
           ...(prev.journalEntries || []),
-          {
-            id: nextId,
-            companyId,
-            number,
-            date: form.date,
-            narration,
-            lines,
-            totalDebit: amount,
-            totalCredit: amount,
-            voucherKind: 'contra',
-            createdAt: new Date().toISOString(),
-            ...ledgerPatch,
-          },
+          savedJournal,
         ],
         companies: bumpCompanyNextNumber({
           db: prev,
@@ -132,6 +134,7 @@ const ContraForm = ({ db, setDb, currentCompany, onClose }) => {
 
     setSaving(false);
     notify.success(`${formatMoney(amount, currentCompany)} moved from ${from.name} to ${to.name}.`);
+    onSaved?.(savedJournal);
     onClose?.();
   };
 

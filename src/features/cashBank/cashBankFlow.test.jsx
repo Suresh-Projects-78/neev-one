@@ -99,7 +99,7 @@ describe('the whole flow, one seam at a time', () => {
     expect(db0.journalEntries).toHaveLength(0);
     expect(db0.payments).toHaveLength(0);
     const [row0] = cashBankTransactions(db0, 1, { accountId: '502' });
-    expect(row0).toMatchObject({ kind: 'statement', status: 'Unallocated', amount: 10000 });
+    expect(row0).toMatchObject({ kind: 'statement', status: 'Uncategorised', amount: 10000 });
 
     /* 2. Allocation: the whole line is bank charges. Posting writes ONE
        journal through the engine — nothing else moves. */

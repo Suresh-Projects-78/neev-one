@@ -16,6 +16,10 @@ const lanHosts = Object.values(os.networkInterfaces())
   .map((n) => n.address)
 
 const knownHosts = ['localhost', '127.0.0.1', '.trycloudflare.com', ...lanHosts]
+// Keep the development proxy aligned with the API port configured in
+// `server/.env`. A stale 4001 default made every sign-in fail before the
+// request reached the running API on 4002.
+const apiTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:4002'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -27,7 +31,7 @@ export default defineConfig({
     allowedHosts: knownHosts,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:4001',
+        target: apiTarget,
         changeOrigin: true,
         secure: false,
       },
@@ -52,7 +56,7 @@ export default defineConfig({
     allowedHosts: knownHosts,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:4001',
+        target: apiTarget,
         changeOrigin: true,
         secure: false,
       },

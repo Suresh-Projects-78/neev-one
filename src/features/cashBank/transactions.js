@@ -15,6 +15,7 @@
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 const lower = (s) => String(s || '').trim().toLowerCase();
 const day = (v) => String(v || '').slice(0, 10);
+const CASH_BANK_ROOTS = new Set(['bank', 'banks', 'bank account', 'bank accounts', 'cash', 'cash-in-hand', 'cash in hand', 'cash & bank', 'cash and bank', 'cash / bank', 'cash/bank']);
 
 /** Whether a group, or anything above it, is named `rootLowerName`. */
 const isUnderNamedRoot = (groupById, groupId, rootLowerName) => {
@@ -44,11 +45,7 @@ export const cashBankIndex = (db, companyId) => {
 
   const accounts = safeArray(db?.chartOfAccounts)
     .filter((a) => Number(a?.companyId) === cid)
-    .filter(
-      (a) =>
-        isUnderNamedRoot(groupById, a.groupId, 'bank accounts') ||
-        isUnderNamedRoot(groupById, a.groupId, 'cash-in-hand')
-    );
+    .filter((a) => [...CASH_BANK_ROOTS].some((root) => isUnderNamedRoot(groupById, a.groupId, root)));
 
   const byKey = new Map();
   for (const a of accounts) {
@@ -87,6 +84,9 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
   /* Payments and receipts, as entered on their own forms. */
   for (const p of safeArray(db?.payments)) {
     if (Number(p?.companyId) !== cid) continue;
+    /* A voucher raised from a statement line is represented by that statement
+       line below. Showing both would turn one bank movement into two rows. */
+    if (p?.sourceBankTransactionId !== null && p?.sourceBankTransactionId !== undefined && String(p.sourceBankTransactionId) !== '') continue;
     const account = byKey.get(String(p?.ledgerAccountId || '').trim());
     if (!account) continue;
     if (want && String(account.id) !== want) continue;
@@ -103,7 +103,8 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
       amount: Math.abs(Number(p.amount ?? 0)),
       /* Which way the cash moved, for balance arithmetic downstream. */
       flow: lower(p.voucherType) === 'receipt' ? 'IN' : 'OUT',
-      status: p.reconciled === true ? 'Reconciled' : 'Unallocated',
+      status: 'Categorised',
+      reconciled: p.reconciled === true,
       number: String(p.number || ''),
       bankDate: day(p.bankDate) || '',
     });
@@ -147,7 +148,8 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
       amount: Math.abs(Number(lines[fromIdx]?.credit || 0)),
       /* From the shown account's side: the debited account received. */
       flow: shown === target ? 'IN' : 'OUT',
-      status: j.reconciled === true ? 'Reconciled' : 'Unallocated',
+      status: 'Categorised',
+      reconciled: j.reconciled === true,
       number: String(j.number || ''),
       bankDate: day(j.bankDate) || '',
     });
@@ -164,20 +166,22 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
    * voucher row above already shows the movement with its party and number,
    * and one movement must be one row, not the fact and its echo.
    */
-  const answeredTxnIds = new Set(
-    safeArray(db?.payments)
-      .filter((pmt) => Number(pmt?.companyId) === cid)
-      .map((pmt) => String(pmt?.sourceBankTransactionId ?? ''))
-      .filter(Boolean)
-  );
   for (const t of safeArray(db?.bankTransactions)) {
-    if (answeredTxnIds.has(String(t?.id)) || (t?.linkedPaymentId !== null && t?.linkedPaymentId !== undefined && String(t.linkedPaymentId) !== '')) continue;
     if (Number(t?.companyId) !== cid) continue;
     const account = byKey.get(String(t?.cashBankAccountId || '').trim());
     if (!account) continue;
     if (want && String(account.id) !== want) continue;
     if (!inWindow(t.date)) continue;
     const ledger = safeArray(db?.chartOfAccounts).find((a) => String(a.id) === String(t.ledgerId || ''));
+    const linkedPayment = safeArray(db?.payments).find(
+      (p) => String(p?.id) === String(t?.linkedPaymentId || '') || String(p?.sourceBankTransactionId || '') === String(t?.id)
+    );
+    const isContra = ['CONTRA', 'TRANSFER', 'INTER-BANK TRANSFER', 'INTER BANK TRANSFER'].includes(
+      String(t.transactionType || t.type || '').trim().toUpperCase()
+    ) || Boolean(t.linkedJournalEntryId || t.contraJournalEntryId);
+    const allocated = Boolean(
+      t.ledgerId || t.linkedPaymentId || t.linkedJournalEntryId || t.contraJournalEntryId || t.allocationJournalId || linkedPayment
+    );
     rows.push({
       id: `bank-${t.id}`,
       kind: 'statement',
@@ -185,14 +189,16 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
       date: day(t.date),
       accountId: String(account.id),
       accountName: String(account.name || ''),
-      ledgerName: String(ledger?.name || t.description || '—'),
-      type: String(t.direction || '').toUpperCase() === 'IN' ? 'Receipt' : 'Payment',
+      ledgerName: String(ledger?.name || linkedPayment?.partyName || linkedPayment?.vendorName || linkedPayment?.customerName || t.description || '—'),
+      type: isContra ? 'Contra' : String(t.direction || '').toUpperCase() === 'IN' ? 'Receipt' : 'Payment',
       amount: Math.abs(Number(t.amount ?? 0)),
       flow: String(t.direction || '').toUpperCase() === 'IN' ? 'IN' : 'OUT',
       bankDate: day(t.bankDate) || '',
       /* Allocated to a ledger, and reconciled against the bank, are two
          different questions — a row can be the first without the second. */
-      status: t.reconciled === true ? 'Reconciled' : 'Unallocated',
+      status: allocated ? 'Categorised' : 'Uncategorised',
+      reconciled: t.reconciled === true,
+      linkedVoucherId: t.linkedPaymentId || t.linkedJournalEntryId || t.contraJournalEntryId || linkedPayment?.id || null,
       number: String(t.refNo || ''),
     });
   }

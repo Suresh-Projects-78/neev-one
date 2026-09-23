@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
-import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '../../components/DocumentForm';
+import { DocFormActions } from '../../components/DocumentForm';
 import { notify } from '../../components/ui/notify';
 import { blockIfClosed } from '../../utils/bookClose';
 
@@ -11,7 +11,6 @@ import { postJournalToLedger } from '../../utils/journalSync';
 import { useFieldErrors } from '../../components/ui/useFieldErrors';
 import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createPayment } from '../../api/payments';
-import { amountInWordsInr } from '../../utils/money';
 import usePaymentModes, { modeLabel } from './usePaymentModes';
 import { formatMoney, round2 } from '../../utils/money';
 import { payableOutstanding, sourceTdsOf } from '../../utils/onAccount';
@@ -121,7 +120,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     notes: initial.notes,
   }));
 
-  const { modes, loading: modesLoading, error: modesError } = usePaymentModes();
+  const { modes, loading: modesLoading, error: modesError } = usePaymentModes(db, companyId);
   const [saving, setSaving] = useState(false);
 
   // With exactly one cash/bank ledger there is no choice to make, so treat it
@@ -139,8 +138,12 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     return modes.find((m) => m.controlKind === wanted)?.id || modes[0]?.id || '';
   }, [hideMode, formData.mode, modes]);
 
+  const requestedLedgerAccountId = String(formData.ledgerAccountId || '').trim();
+  const resolvedRequestedMode = modes.find(
+    (mode) => String(mode.id) === requestedLedgerAccountId || String(mode.localId) === requestedLedgerAccountId
+  );
   const ledgerAccountId =
-    formData.ledgerAccountId || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
+    resolvedRequestedMode?.id || (modes.length === 1 ? modes[0].id : '') || impliedByBook;
 
   const [allocations, setAllocations] = useState(() => ({}));
   /* Where the money goes when it is not a bill: GST, a late fee, a bank
@@ -253,6 +256,11 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
         dueDate: e.dueDate || '',
         total: Number(e.total ?? e.amount ?? 0),
         balance: getDocBalance(e, debitNotes),
+        /* Expenses can deduct TDS when they are booked, exactly as bills do.
+           Carry the saved deduction into the allocation dialog; the balance
+           is already net, and this explains the difference visibly. */
+        tdsAmount: Number(e.tdsAmount ?? 0),
+        tdsNatureCode: String(e.tdsNatureCode || e.tdsSection || ''),
       }));
 
     /*
@@ -825,10 +833,6 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
     onClose?.();
   };
 
-  const selectedCount = useMemo(() => {
-    return Object.values(allocations).filter((v) => Boolean(v?.selected)).length;
-  }, [allocations]);
-
   /*
    * The shared document contract. A payment has no line grid, so this is the
    * part that matters on a settlement screen: Ctrl+S saves, Ctrl+Enter
@@ -1135,99 +1139,7 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       ) : null}
 
 
-      {/*
-        The bills on the left and what the payment comes to on the right,
-        because the summary is read while the allocation is being typed —
-        underneath it, the two figures that catch a mistake were off the
-        bottom of the screen exactly when they mattered.
-      */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
-        <div className="min-w-0 space-y-4">
-        <div>
-          <label className="ui-label" htmlFor="recorddisbursementform-notes">Notes</label>
-          <textarea id="recorddisbursementform-notes"
-            value={formData.notes}
-            onChange={(e) => setFormData((p) => ({ ...p, notes: e.target.value }))}
-            className="ui-input w-full"
-            rows={3}
-          />
-        </div>
-
-        </div>
-
-        <div className="min-w-0">
-        {/*
-          The payment in one column: what settles the bills, what is held back,
-          what was put against something, and what is left over. The last two are
-          the ones that catch a mistake — money allocated to nothing, or a payment
-          that settles less than it moves.
-        */}
-        <section className="ui-card p-4" aria-label="Payment summary">
-          <h3 className="ui-t-sec">Payment summary</h3>
-          <dl className="mt-3 space-y-2 text-sm">
-            {[
-              ['Amount paid', computed.totalAmount],
-              ['TDS deduction', computed.tds],
-              ['Bank charges', computed.bankCharges],
-              ['Other deductions', computed.otherCharges],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between gap-3">
-                <dt className="ui-muted">{label}</dt>
-                <dd className="ui-money">{formatMoney(value, currentCompany)}</dd>
-              </div>
-            ))}
-
-            <div
-              className="flex items-center justify-between gap-3 border-t pt-2"
-              style={{ borderColor: 'rgb(var(--border))' }}
-            >
-              <dt className="ui-muted">Total deductions</dt>
-              <dd className="ui-money">{formatMoney(computed.deductions, currentCompany)}</dd>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <dt className="ui-muted">Total allocated</dt>
-              <dd className="ui-money">{formatMoney(computed.allocated, currentCompany)}</dd>
-            </div>
-          </dl>
-
-          <div
-            className="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
-            style={{ backgroundColor: 'rgb(var(--brand) / 0.08)' }}
-          >
-            <span className="text-sm font-medium">Advance (unallocated)</span>
-            <span className="ui-money">{formatMoney(computed.advance, currentCompany)}</span>
-          </div>
-
-          <div
-            className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-3"
-            style={{ backgroundColor: 'rgb(var(--brand) / 0.12)' }}
-          >
-            <span className="text-sm font-medium">Net payment amount</span>
-            <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
-          </div>
-
-          <AmountInWordsBand words={amountInWordsInr(computed.netCash)} />
-        </section>
-        </div>
-      </div>
-
-      {/* The footnote already knows how to carry one; a payment against the
-          wrong bill is a dispute six months later, and this is the line that
-          says somebody checked. */}
-      <DocFormFootnote declaration="the payment above is against the documents selected, and the details are correct." />
-
-      {/* What actually leaves the account, kept on screen while bills are
-          ticked off — the invoice form's running total, for the figure that has
-          to match the bank statement. */}
-      <div className="ui-entry-summary">
-        {/* What actually leaves, since that is what the label says. With TDS
-            held back this read the gross and disagreed with the summary a few
-            inches above it. */}
-        <span className="ui-t-label">Paid from the account</span>
-        <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
-        <span className="ui-caption">{selectedCount} bill(s) allocated</span>
-        <FieldErrorSummary errors={fieldErrors.errors} />
-      </div>
+      <FieldErrorSummary errors={fieldErrors.errors} />
     </form>
   );
 };

@@ -114,14 +114,15 @@ describe('what appears in the cash book', () => {
 
 describe('status', () => {
   /* §5: an imported line is nobody's accounting entry until it is allocated. */
-  it('leaves an imported line unallocated', () => {
+  it('leaves an imported line uncategorised', () => {
     const row = cashBankTransactions(db, 1).find((r) => r.kind === 'statement');
-    expect(row.status).toBe('Unallocated');
+    expect(row.status).toBe('Uncategorised');
   });
 
-  it('says reconciled once the entry has been', () => {
+  it('keeps reconciliation separate from categorisation', () => {
     const row = cashBankTransactions(db, 1).find((r) => r.number === 'RCPT-0045');
-    expect(row.status).toBe('Reconciled');
+    expect(row.status).toBe('Categorised');
+    expect(row.reconciled).toBe(true);
   });
 });
 
