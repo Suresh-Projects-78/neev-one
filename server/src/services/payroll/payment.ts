@@ -1,7 +1,6 @@
-import { prisma } from '../../utils/prisma.js';
 import { payrollPrisma } from '../../utils/payrollPrisma.js';
 import { peoplePrisma } from '../../utils/peoplePrisma.js';
-import { ensureLedgerSetup, postEntry } from '../ledger.js';
+import { accountingFor, type AccountingClient } from './accounting/client.js';
 
 /**
  * Paying people, and clearing what they were owed.
@@ -187,8 +186,10 @@ export async function createPayment(opts: {
   reference?: string | null;
   /** Leave empty to pay everyone the preview says is payable. */
   slipIds?: string[];
+  accounting?: AccountingClient;
 }) {
   const { accountId, orgId, runId, userId } = opts;
+  const accounting = opts.accounting ?? accountingFor(accountId);
 
   const run = await payrollPrisma.payrollRun.findFirst({ where: { accountId, orgId, id: runId } });
   if (!run) throw new PayrollPaymentError('NO_RUN', 'No such payroll run.', 404);
@@ -203,10 +204,7 @@ export async function createPayment(opts: {
   }
 
   if (opts.ledgerAccountId) {
-    const ledger = await prisma.ledgerAccount.findFirst({
-      where: { accountId, orgId, id: opts.ledgerAccountId },
-      select: { id: true, name: true, isActive: true },
-    });
+    const ledger = await accounting.getLedger(orgId, opts.ledgerAccountId);
     if (!ledger) throw new PayrollPaymentError('NO_LEDGER', 'No such cash or bank account.', 404);
     if (!ledger.isActive) throw new PayrollPaymentError('LEDGER_INACTIVE', `${ledger.name} is no longer active.`);
   }
@@ -431,7 +429,12 @@ export type PaymentPostingPreview = {
 };
 
 /** What clearing this payment would write to the books. */
-export async function previewPaymentPosting(accountId: string, orgId: string, paymentId: string): Promise<PaymentPostingPreview> {
+export async function previewPaymentPosting(
+  accountId: string,
+  orgId: string,
+  paymentId: string,
+  accounting: AccountingClient = accountingFor(accountId)
+): Promise<PaymentPostingPreview> {
   const problems: PaymentPostingPreview['problems'] = [];
 
   const payment = await payrollPrisma.payrollPayment.findFirst({
@@ -464,10 +467,8 @@ export async function previewPaymentPosting(accountId: string, orgId: string, pa
   }
 
   const [payable, cash] = await Promise.all([
-    prisma.ledgerAccount.findFirst({ where: { accountId, orgId, controlKind: 'AP', isActive: true }, select: { id: true, name: true } }),
-    payment.ledgerAccountId
-      ? prisma.ledgerAccount.findFirst({ where: { accountId, orgId, id: payment.ledgerAccountId }, select: { id: true, name: true, isActive: true } })
-      : Promise.resolve(null),
+    accounting.getPayablesAccount(orgId),
+    payment.ledgerAccountId ? accounting.getLedger(orgId, payment.ledgerAccountId) : Promise.resolve(null),
   ]);
 
   if (!payable) problems.push({ code: 'NO_PAYABLE_ACCOUNT', message: 'This company has no payables account for salaries to be owed to.' });
@@ -514,14 +515,16 @@ export async function postPayment(opts: {
   branchId: string;
   userId: string;
   paymentId: string;
+  accounting?: AccountingClient;
 }) {
   const { accountId, orgId, branchId, userId, paymentId } = opts;
+  const accounting = opts.accounting ?? accountingFor(accountId);
 
   const payment = await payrollPrisma.payrollPayment.findFirst({ where: { accountId, orgId, id: paymentId } });
   if (!payment) throw new PayrollPaymentError('NO_PAYMENT', 'No such payment.', 404);
   if (payment.postingStatus === 'POSTED') return { payment, replayed: true as const };
 
-  const preview = await previewPaymentPosting(accountId, orgId, paymentId);
+  const preview = await previewPaymentPosting(accountId, orgId, paymentId, accounting);
   if (preview.problems.length) throw new PayrollPaymentError('POSTING_BLOCKED', preview.problems[0].message);
   if (!preview.lines.length) throw new PayrollPaymentError('NOTHING_TO_POST', 'This payment has nothing to post.');
 
@@ -530,10 +533,7 @@ export async function postPayment(opts: {
    * attempt that died before it could record the id. Adopt it — writing a
    * second would take the money out of the bank twice.
    */
-  const orphan = await prisma.journalEntry.findFirst({
-    where: { accountId, orgId, sourceDocType: PAYMENT_SOURCE_DOC_TYPE, sourceDocId: paymentId, status: 'POSTED' },
-    select: { id: true },
-  });
+  const orphan = await accounting.findEntryBySource(orgId, PAYMENT_SOURCE_DOC_TYPE, paymentId);
 
   if (payment.postingStatus === 'POSTING' && !orphan) {
     throw new PayrollPaymentError('POSTING_IN_PROGRESS', 'This payment is already being posted. Refresh in a moment to see the entry.');
@@ -553,10 +553,8 @@ export async function postPayment(opts: {
 
   let journalEntryId = orphan?.id || null;
   if (!journalEntryId) {
-    await ensureLedgerSetup(accountId, orgId, userId);
-    const entry = await postEntry({
-      accountId,
-      orgId,
+    const entry = await accounting.postJournalEntry({
+      companyId: orgId,
       branchId,
       userId,
       date: payment.paymentDate,

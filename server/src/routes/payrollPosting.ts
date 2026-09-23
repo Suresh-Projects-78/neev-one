@@ -6,7 +6,7 @@ import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { payrollPrisma } from '../utils/payrollPrisma.js';
-import { prisma } from '../utils/prisma.js';
+import { accountingFor } from '../services/payroll/accounting/client.js';
 import { PAYROLL_MODULE, PAYROLL_RESOURCE, payrollRouteOk } from '../services/payroll/guards.js';
 import { PayrollPostingError, previewPosting, postPayrollRun } from '../services/payroll/posting.js';
 
@@ -99,10 +99,7 @@ payrollPostingRouter.get(
     /* The journal as accounting holds it, so the receipt can be checked
        against the books rather than believed. */
     const entry = posting.journalEntryId
-      ? await prisma.journalEntry.findFirst({
-          where: { accountId, orgId, id: posting.journalEntryId },
-          select: { id: true, entryNo: true, date: true, status: true, narration: true },
-        })
+      ? await accountingFor(accountId).getJournalEntry(orgId, posting.journalEntryId)
       : null;
 
     res.json({

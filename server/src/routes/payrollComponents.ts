@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { prisma } from '../utils/prisma.js';
+import { accountingFor } from '../services/payroll/accounting/client.js';
 import { payrollPrisma } from '../utils/payrollPrisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
@@ -233,12 +233,9 @@ payrollComponentsRouter.put(
        a month's payroll. */
     const wanted = [parsed.data.expenseLedgerId, parsed.data.liabilityLedgerId].filter(Boolean) as string[];
     if (wanted.length) {
-      const found = await prisma.ledgerAccount.findMany({
-        where: { accountId, orgId, id: { in: wanted } },
-        select: { id: true, name: true, isActive: true },
-      });
+      const accounting = accountingFor(accountId);
       for (const id of wanted) {
-        const ledger = found.find((l) => l.id === id);
+        const ledger = await accounting.getLedger(orgId, id);
         if (!ledger) return res.status(404).json({ error: 'No such ledger account.' });
         if (!ledger.isActive) return res.status(409).json({ error: `${ledger.name} is no longer active.` });
       }

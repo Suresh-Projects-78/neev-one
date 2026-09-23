@@ -6,7 +6,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { payrollPrisma } from '../utils/payrollPrisma.js';
 import { peoplePrisma } from '../utils/peoplePrisma.js';
-import { prisma } from '../utils/prisma.js';
+import { accountingFor } from '../services/payroll/accounting/client.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { PAYROLL_MODULE, PAYROLL_RESOURCE, orgMatches } from '../services/payroll/guards.js';
 
@@ -71,7 +71,7 @@ payrollSetupRouter.get(
         where: { orgId, payrollStatus: 'IN_PAYROLL' },
         select: { employeeId: true },
       }),
-      prisma.ledgerAccount.count({ where: { accountId, orgId, isActive: true } }),
+      accountingFor(accountId).getLedgers(orgId).then((l) => l.length),
     ]);
 
     const openPeriods = periods.filter((p) => !p.isLocked).length;

@@ -7,7 +7,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { payrollPrisma } from '../utils/payrollPrisma.js';
 import { peoplePrisma } from '../utils/peoplePrisma.js';
-import { prisma } from '../utils/prisma.js';
+import { accountingFor } from '../services/payroll/accounting/client.js';
 import { PAYROLL_MODULE, PAYROLL_RESOURCE, payrollRouteOk } from '../services/payroll/guards.js';
 import {
   PayrollPaymentError,
@@ -125,7 +125,7 @@ payrollPaymentsRouter.get(
       }),
       payrollPrisma.payrollRun.findFirst({ where: { orgId, id: payment.runId }, select: { id: true, number: true, status: true } }),
       payment.ledgerAccountId
-        ? prisma.ledgerAccount.findFirst({ where: { accountId, orgId, id: payment.ledgerAccountId }, select: { id: true, name: true } })
+        ? accountingFor(accountId).getLedger(orgId, payment.ledgerAccountId)
         : Promise.resolve(null),
     ]);
     const byPerson = new Map(people.map((p) => [p.id, p]));

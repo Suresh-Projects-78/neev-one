@@ -1,6 +1,5 @@
-import { prisma } from '../../utils/prisma.js';
 import { payrollPrisma } from '../../utils/payrollPrisma.js';
-import { ensureLedgerSetup, postEntry } from '../ledger.js';
+import { accountingFor, type AccountingClient } from './accounting/client.js';
 
 /**
  * Payroll into the books.
@@ -97,7 +96,10 @@ const key = (ledgerAccountId: string, costCenterId: string | null) => `${ledgerA
 export async function previewPosting(
   accountId: string,
   orgId: string,
-  runId: string
+  runId: string,
+  /* Injected so a test can preview a posting without an accounting database,
+     and so this reads as a call to another application rather than a query. */
+  accounting: AccountingClient = accountingFor(accountId)
 ): Promise<PostingPreview> {
   const problems: PostingPreview['problems'] = [];
 
@@ -151,12 +153,9 @@ export async function previewPosting(
       if (l) ledgerIds.add(l);
     }
   }
-  const ledgers = ledgerIds.size
-    ? await prisma.ledgerAccount.findMany({
-        where: { accountId, orgId, id: { in: [...ledgerIds] } },
-        select: { id: true, name: true, code: true, isActive: true },
-      })
-    : [];
+  /* By id, not from the pick-list: a mapping pointing at a ledger somebody
+     deactivated must say so, rather than read as one that never existed. */
+  const ledgers = await accounting.getLedgersByIds(orgId, [...ledgerIds]);
   const byLedger = new Map(ledgers.map((l) => [l.id, l]));
 
   const buckets = new Map<string, Bucket>();
@@ -190,10 +189,7 @@ export async function previewPosting(
 
   /* The account net pay is owed to. Nothing is withheld here — this is the
      employee's own money, waiting to be transferred. */
-  const payable = await prisma.ledgerAccount.findFirst({
-    where: { accountId, orgId, controlKind: 'AP', isActive: true },
-    select: { id: true, name: true },
-  });
+  const payable = await accounting.getPayablesAccount(orgId);
   if (!payable) {
     problems.push({ code: 'NO_PAYABLE_ACCOUNT', message: 'This company has no payables account for salaries to be owed to.' });
   }
@@ -296,8 +292,10 @@ export async function postPayrollRun(opts: {
   userId: string;
   runId: string;
   postingDate?: string;
+  accounting?: AccountingClient;
 }) {
   const { accountId, orgId, branchId, userId, runId } = opts;
+  const accounting = opts.accounting ?? accountingFor(accountId);
 
   const run = await payrollPrisma.payrollRun.findFirst({ where: { accountId, orgId, id: runId } });
   if (!run) throw new PayrollPostingError('NO_RUN', 'No such payroll run.', 404);
@@ -325,7 +323,7 @@ export async function postPayrollRun(opts: {
     );
   }
 
-  const preview = await previewPosting(accountId, orgId, runId);
+  const preview = await previewPosting(accountId, orgId, runId, accounting);
   if (preview.problems.length) {
     throw new PayrollPostingError('POSTING_BLOCKED', preview.problems[0].message);
   }
@@ -380,26 +378,19 @@ export async function postPayrollRun(opts: {
    * attempt wrote before it could finish. Adopt it; writing a second would
    * double the company's salary cost.
    */
-  const orphan = await prisma.journalEntry.findFirst({
-    where: {
-      accountId,
-      orgId,
-      sourceDocType: PAYROLL_SOURCE_DOC_TYPE,
-      sourceDocId: runId,
-      status: 'POSTED',
-    },
-    select: { id: true },
-  });
+  const orphan = await accounting.findEntryBySource(orgId, PAYROLL_SOURCE_DOC_TYPE, runId);
 
   let journalEntryId = orphan?.id || null;
 
   if (!journalEntryId) {
-    /* The payroll book, and the control accounts, for an organisation that has
-       never posted payroll before. Idempotent, so it costs a lookup. */
-    await ensureLedgerSetup(accountId, orgId, userId);
-    const entry = await postEntry({
-      accountId,
-      orgId,
+    /*
+     * Payroll hands Accounting a payload and Accounting decides what to make
+     * of it. The idempotency key is derived from the run, so the same run
+     * asking twice is recognisably the same act however far apart the two
+     * attempts are.
+     */
+    const entry = await accounting.postJournalEntry({
+      companyId: orgId,
       branchId,
       userId,
       date: postingDate,
