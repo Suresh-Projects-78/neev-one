@@ -241,6 +241,32 @@ describe('a payroll that recovers one', () => {
     expect(first.slipNumber).toBeTruthy();
   });
 
+  it('names the recovery component on the payslip when it is not in the structure', async () => {
+    /* Same cause as the adjustment case: a loan-recovery deduction added
+       after people were assigned lives outside every structure, and the
+       payslip line was falling back to a generic "Loan recovery". */
+    const c = await makeOwner();
+    const ids = await setUp(c);
+
+    const offStructure = await api
+      .post(c, '/components', {
+        name: 'Advance Recovery', code: 'ADVREC', type: 'DEDUCTION',
+        calculationMethod: 'FIXED', isVariable: true, displayOrder: 85,
+      })
+      .expect(201);
+
+    const made = await api.post(c, '/loans', loanBody(ids, { recoveryComponentId: offStructure.body.component.id })).expect(201);
+    await api.post(c, `/loans/${made.body.loan.id}/approve`).expect(200);
+
+    const runId = await runPayroll(c, ids.months[0]);
+    const slipId = (await api.get(c, `/slips?runId=${runId}`).expect(200)).body.slips[0].id;
+    const slip = (await api.get(c, `/slips/${slipId}`).expect(200)).body.slip;
+
+    const line = slip.deductions.find((l: any) => l.amount === 10_000);
+    expect(line.code).toBe('ADVREC');
+    expect(line.name).toBe('Advance Recovery');
+  });
+
   it('does not take a second month’s instalment in the first month', async () => {
     const c = await makeOwner();
     const ids = await setUp(c);

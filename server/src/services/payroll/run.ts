@@ -144,15 +144,35 @@ async function loadRunContext(orgId: string, runId: string) {
     where: { orgId, id: { in: structureIds } },
     include: { components: true },
   });
-  const componentIds = [...new Set(structures.flatMap((s) => s.components.map((c) => c.componentId)))];
-  const components = await payrollPrisma.salaryComponent.findMany({ where: { orgId, id: { in: componentIds } } });
-
   /* Four rules for four hundred people: read once, applied per employee. */
   const statutoryRules = await loadRules(orgId);
 
   /* Loan instalments falling due this period, read in one query for the same
      reason. */
   const recoveries = await recoveriesDue(orgId, run.periodId, employeeIds);
+
+  /*
+   * Components a payslip can name.
+   *
+   * The structure's own, plus every component an adjustment or a loan recovery
+   * points at. Those are almost never in a structure — a structure locks its
+   * components the moment anybody is assigned to it, so a bonus or a loan
+   * deduction added afterwards lives outside every structure in the company.
+   *
+   * Reading only the structure's left those lines named "Adjustment" and "Loan
+   * recovery" on the payslip, with no ledger mapping: the person could not see
+   * what they had been paid for, two different bonuses collapsed into one
+   * column on the register, and posting fell back to looking the mapping up
+   * again. The names are the component's; this is where they come from.
+   */
+  const componentIds = [
+    ...new Set([
+      ...structures.flatMap((s) => s.components.map((c) => c.componentId)),
+      ...adjustments.map((a) => a.componentId),
+      ...recoveries.map((r) => r.componentId),
+    ]),
+  ];
+  const components = await payrollPrisma.salaryComponent.findMany({ where: { orgId, id: { in: componentIds } } });
 
   return {
     statutoryRules,

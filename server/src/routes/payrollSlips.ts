@@ -6,6 +6,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { payrollPrisma } from '../utils/payrollPrisma.js';
 import { peoplePrisma } from '../utils/peoplePrisma.js';
+import { snapshotPerson } from '../services/payroll/payment.js';
 import { PAYROLL_MODULE, PAYROLL_RESOURCE, payrollRouteOk } from '../services/payroll/guards.js';
 import { levelFor, resolveAccess } from '../services/access.js';
 
@@ -107,10 +108,27 @@ payrollSlipsRouter.get(
     const byEmployee = new Map(employees.map((e) => [e.id, e]));
     const byPeriod = new Map(periods.map((p) => [p.id, p]));
 
+    /*
+     * A payslip names who it paid, even after they leave.
+     *
+     * The directory is the better name while somebody is in it — a corrected
+     * spelling, a married name. It is the worse one afterwards: a person who
+     * has been removed still has payslips, and a list of them reading
+     * "Unknown" is a list nobody can reconcile. The payslip recorded who they
+     * were, which is what the snapshot is for.
+     */
+    const named = (s: (typeof slips)[number]) => {
+      const live = byEmployee.get(s.employeeId);
+      if (live) return live;
+      const snap = snapshotPerson(s.employeeSnapshotJson);
+      if (!snap.name) return null;
+      return { id: s.employeeId, name: snap.name, code: snap.code, designation: null, department: null };
+    };
+
     res.json({
       slips: slips.map((s) => ({
         ...summary(s),
-        employee: byEmployee.get(s.employeeId) || null,
+        employee: named(s),
         period: byPeriod.get(s.periodId) || null,
       })),
     });

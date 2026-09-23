@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowRight } from 'lucide-react';
 
 import { PageHeader, SkeletonCard, EmptyState } from '../../components/ui/Primitives';
 import { getPayrollOverview } from '../../api/payrollOverview';
+import { getPayrollSetup } from '../../api/payrollSetup';
 
 /**
  * Where payroll is this month, and what is in the way.
@@ -36,12 +37,21 @@ const percentChange = (from, to) => {
 
 export default function PayrollOverview({ onOpen = () => {} }) {
   const [overview, setOverview] = useState(null);
+  const [setup, setSetup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
-      setOverview(await getPayrollOverview());
+      const [state, readiness] = await Promise.all([
+        getPayrollOverview(),
+        /* Setup is a nicety here, not a dependency: an overview that fails to
+           load because a checklist could not be fetched is worse than one
+           without the checklist. */
+        getPayrollSetup().catch(() => null),
+      ]);
+      setOverview(state);
+      setSetup(readiness);
       setError('');
     } catch (e) {
       setError(String(e?.message || 'Could not load payroll.'));
@@ -90,6 +100,30 @@ export default function PayrollOverview({ onOpen = () => {} }) {
           </button>
         }
       />
+
+      {/*
+        * Setup comes before anything else while it is unfinished.
+        *
+        * A company halfway through setting payroll up lands here and sees an
+        * overview of nothing, with no indication that the emptiness is because
+        * three steps are outstanding rather than because nobody has been paid
+        * yet. Those are very different problems and the screen should not make
+        * them look alike.
+        */}
+      {setup && !setup.ready ? (
+        <div className="ui-card p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="ui-sec-head">Payroll is not ready to run yet</div>
+            <p className="ui-caption">
+              {setup.done} of {setup.total} steps done
+              {setup.nextStep ? ` · next: ${setup.nextStep.title} — ${setup.nextStep.detail}` : ''}
+            </p>
+          </div>
+          <button type="button" className="ui-btn ui-btn-primary shrink-0" onClick={() => onOpen('payrollSetup')}>
+            Finish setting up <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
 
       {!currentPeriod ? (
         <EmptyState

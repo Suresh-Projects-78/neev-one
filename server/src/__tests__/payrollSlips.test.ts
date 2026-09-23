@@ -14,6 +14,7 @@ import request from 'supertest';
 const { buildApp } = await import('../app.js');
 const { prisma } = await import('../utils/prisma.js');
 const { payrollPrisma } = await import('../utils/payrollPrisma.js');
+const { peoplePrisma } = await import('../utils/peoplePrisma.js');
 
 const app = buildApp().listen(0);
 afterAll(async () => {
@@ -132,6 +133,27 @@ describe('the list of payslips', () => {
     expect(s.employee.name).toBe('Asha Menon');
     expect(s.period.name).toMatch(/Sept 2026/);
     expect(s.netPay).toBe(69800);
+  });
+
+  it('still names somebody who has left the staff directory', async () => {
+    /*
+     * Found in a browser walkthrough: the list read the live directory and
+     * showed "Unknown" for anybody removed from it, while the payslip itself
+     * had their name in its snapshot all along. A list of payslips nobody can
+     * put a name to is a list nobody can reconcile.
+     */
+    await peoplePrisma.employee.deleteMany({ where: { orgId: owner.orgId, id: employeeId } });
+
+    const got = await api.get(owner, `/slips?runId=${runId}`).expect(200);
+    expect(got.body.slips[0].employee.name).toBe('Asha Menon');
+
+    /* Put her back, so the tests after this one still find her. */
+    await peoplePrisma.employee.create({
+      data: {
+        id: employeeId, accountId: (await payrollPrisma.salarySlip.findFirst({ where: { id: slipId } }))!.accountId,
+        orgId: owner.orgId, name: 'Asha Menon', code: 'EMP001', status: 'ACTIVE', createdByUserId: 'test',
+      },
+    });
   });
 
   it('narrows to one person', async () => {

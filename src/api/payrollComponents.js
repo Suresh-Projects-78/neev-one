@@ -59,3 +59,20 @@ export async function deleteSalaryComponent(id) {
 export async function validateSalaryFormula(formula) {
   return apiFetch(`${base()}/validate-formula`, { ...opts, method: 'POST', body: { formula } });
 }
+
+/**
+ * Where a component posts, on its own.
+ *
+ * Separate from editing the component because it is a different decision, and
+ * because it stays possible after a component is on a payslip — which is the
+ * case that matters, since a company finds out it has no mapping at the moment
+ * it first tries to post.
+ */
+export async function setComponentLedgers(id, { expenseLedgerId = null, liabilityLedgerId = null } = {}) {
+  const { component } = await apiFetch(`${base()}/${encodeURIComponent(id)}/ledgers`, {
+    ...opts,
+    method: 'PUT',
+    body: { expenseLedgerId, liabilityLedgerId },
+  });
+  return component;
+}

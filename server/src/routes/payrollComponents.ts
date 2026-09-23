@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
+import { prisma } from '../utils/prisma.js';
 import { payrollPrisma } from '../utils/payrollPrisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
@@ -197,6 +198,60 @@ payrollComponentsRouter.post(
       data: { ...body, accountId, orgId, createdByUserId: req.auth!.userId },
     });
     res.status(201).json({ component: shape(row) });
+  }
+);
+
+/**
+ * Where a component posts, on its own.
+ *
+ * Separate from editing the component because it is a different decision made
+ * by a different person: what somebody is paid is a compensation question, and
+ * which ledger it lands in is an accounting one. Keeping them apart also means
+ * a component already on a payslip can still be mapped — which is the case that
+ * matters, because a company discovers it has no mapping at the moment it first
+ * tries to post, by which time payslips exist.
+ */
+payrollComponentsRouter.put(
+  '/orgs/:orgId/payroll/components/:id/ledgers',
+  requirePermission(MODULE, PermissionAction.EDIT, RESOURCE),
+  async (req, res) => {
+    if (!(await payrollRouteOk(req, res))) return;
+    const { accountId, orgId } = req.tenant!;
+
+    const existing = await payrollPrisma.salaryComponent.findFirst({ where: { id: String(req.params.id), accountId, orgId } });
+    if (!existing) return res.status(404).json({ error: 'No such salary component.' });
+
+    const schema = z.object({
+      expenseLedgerId: z.string().trim().min(1).optional().nullable(),
+      liabilityLedgerId: z.string().trim().min(1).optional().nullable(),
+    });
+    const parsed = schema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: 'Say which accounts this posts to.' });
+
+    /* An account that has been deleted or deactivated would post to nothing,
+       and the failure would surface only at the moment somebody tries to post
+       a month's payroll. */
+    const wanted = [parsed.data.expenseLedgerId, parsed.data.liabilityLedgerId].filter(Boolean) as string[];
+    if (wanted.length) {
+      const found = await prisma.ledgerAccount.findMany({
+        where: { accountId, orgId, id: { in: wanted } },
+        select: { id: true, name: true, isActive: true },
+      });
+      for (const id of wanted) {
+        const ledger = found.find((l) => l.id === id);
+        if (!ledger) return res.status(404).json({ error: 'No such ledger account.' });
+        if (!ledger.isActive) return res.status(409).json({ error: `${ledger.name} is no longer active.` });
+      }
+    }
+
+    const row = await payrollPrisma.salaryComponent.update({
+      where: { id: existing.id },
+      data: {
+        expenseLedgerId: parsed.data.expenseLedgerId ?? null,
+        liabilityLedgerId: parsed.data.liabilityLedgerId ?? null,
+      },
+    });
+    res.json({ component: shape(row) });
   }
 );
 

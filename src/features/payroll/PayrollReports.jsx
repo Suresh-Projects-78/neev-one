@@ -36,6 +36,13 @@ const SCHEME_NAMES = {
 
 const money = (n) => `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 
+/* The sign belongs outside the currency symbol: "−₹6,360", never "₹-6,360". */
+const signedMoney = (n) => {
+  if (n == null) return '—';
+  const v = Number(n);
+  return `${v < 0 ? '−' : v > 0 ? '+' : ''}${money(Math.abs(v))}`;
+};
+
 const signedPercent = (n) => {
   if (n == null) return '—';
   const v = Number(n);
@@ -377,7 +384,7 @@ const Variance = ({ data }) => (
               </td>
               <td className="ui-col-amount">{r.previousNetPay == null ? '—' : money(r.previousNetPay)}</td>
               <td className="ui-col-amount">{money(r.netPay)}</td>
-              <td className="ui-col-amount">{r.change == null ? '—' : money(r.change)}</td>
+              <td className="ui-col-amount">{signedMoney(r.change)}</td>
               <td className="ui-col-amount">{signedPercent(r.percent)}</td>
               <td className="ui-col-meta">{r.isNew ? 'First payslip' : 'Moved more than the threshold'}</td>
             </tr>

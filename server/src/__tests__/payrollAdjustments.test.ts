@@ -195,6 +195,42 @@ describe('a payroll that pays one', () => {
     expect(slip.netPay).toBe(63_000);
   });
 
+  it('names the component on the payslip, even when it is not in the structure', async () => {
+    /*
+     * Found in a browser walkthrough. A structure locks its components the
+     * moment anybody is assigned to it, so a bonus added afterwards lives
+     * outside every structure in the company — and the payslip line was
+     * falling back to a generic "Adjustment", with no ledger mapping. The
+     * person could not see what they had been paid for, and two different
+     * bonuses collapsed into one column on the salary register.
+     */
+    const c = await makeOwner();
+    const ids = await setUp(c);
+
+    /* A component deliberately NOT in anybody's structure. */
+    const offStructure = await api
+      .post(c, '/components', {
+        name: 'Retention Bonus', code: 'RETENTION', type: 'EARNING',
+        calculationMethod: 'FIXED', isVariable: true, displayOrder: 55,
+      })
+      .expect(201);
+
+    const made = await api
+      .post(c, '/adjustments', {
+        employeeId: ids.employeeId, componentId: offStructure.body.component.id, periodId: ids.marchId, amount: 12_000,
+      })
+      .expect(201);
+    await api.post(c, `/adjustments/${made.body.adjustment.id}/approve`).expect(200);
+
+    const runId = await runPayroll(c, ids.marchId);
+    const slipId = (await api.get(c, `/slips?runId=${runId}`).expect(200)).body.slips[0].id;
+    const slip = (await api.get(c, `/slips/${slipId}`).expect(200)).body.slip;
+
+    const line = slip.earnings.find((l: any) => l.amount === 12_000);
+    expect(line.code).toBe('RETENTION');
+    expect(line.name).toBe('Retention Bonus');
+  });
+
   it('marks it spent, and says which payroll spent it', async () => {
     const c = await makeOwner();
     const ids = await setUp(c);

@@ -195,6 +195,8 @@ import PayrollLoans from './features/payroll/PayrollLoans';
 import SalaryRevisions from './features/payroll/SalaryRevisions';
 import PayrollOverview from './features/payroll/PayrollOverview';
 import PayrollReports from './features/payroll/PayrollReports';
+import PayrollLedgerMapping from './features/payroll/PayrollLedgerMapping';
+import PayrollSetup from './features/payroll/PayrollSetup';
 import ModulePicker from './features/settings/ModulePicker';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, FormRow as PartyFormRow } from './components/pickers/customerFormParts';
 import { TDS_SECTIONS, tdsSection } from './utils/tds';
@@ -11839,20 +11841,40 @@ const AppShell = () => {
         tone: 'payroll',
         icon: Wallet,
         ph: true,
-        feature: 'payroll',
-        items: [
-          { key: 'payrollOverview', label: 'Overview', icon: BarChart3, perm: 'PAYROLL::Payroll Runs::VIEW', feature: 'payroll' },
-          { key: 'payrollRuns', label: 'Pay Runs', icon: CalendarClock, perm: 'PAYROLL::Payroll Runs::VIEW', feature: 'payroll' },
-          { key: 'salarySlips', label: 'Salary Slips', icon: FileText, perm: 'PAYROLL::Salary Slips::VIEW', feature: 'payroll' },
-          { key: 'payrollPayments', label: 'Payments', icon: ArrowUpRight, perm: 'PAYROLL::Payroll Payments::VIEW', feature: 'payroll' },
-          { key: 'payrollAdjustments', label: 'Adjustments', icon: Percent, perm: 'PAYROLL::Payroll Adjustments::VIEW', feature: 'payrollAdjustments' },
-          { key: 'salaryStructures', label: 'Salary Structures', icon: Layers, perm: 'PAYROLL::Salary Structures::VIEW', feature: 'payrollCompensation' },
-          { key: 'salaryAssignments', label: 'Salary Assignments', icon: Users, perm: 'PAYROLL::Salary Assignments::VIEW', feature: 'payrollCompensation' },
-          { key: 'salaryRevisions', label: 'Salary Revisions', icon: RefreshCw, perm: 'PAYROLL::Salary Revisions::VIEW', feature: 'payrollCompensation' },
-          { key: 'payrollLoans', label: 'Loans & Advances', icon: Landmark, perm: 'PAYROLL::Payroll Loans::VIEW', feature: 'payrollLoans' },
-          { key: 'payrollCompliancePage', label: 'Compliance', icon: BadgePercent, perm: 'PAYROLL::Payroll Settings::VIEW', feature: 'payroll' },
-          { key: 'payrollReports', label: 'Reports', icon: Table2, perm: 'PAYROLL::Payroll Reports::VIEW', feature: 'payrollReports' },
-        ],
+        /*
+         * Deliberately not gated on the feature.
+         *
+         * Payroll is an application, and an application a company has not
+         * bought yet is still one they should be able to find — hiding it
+         * means the only way to discover payroll exists is to go looking
+         * through a list of feature switches. Before it is in use the group
+         * holds one item, which invites somebody to start; after, the app.
+         */
+        items: isEnabled('payroll')
+          ? [
+          { key: 'payrollOverview', label: 'Overview', icon: BarChart3, perm: 'PAYROLL::Payroll Runs::VIEW' },
+          { key: 'payrollRuns', label: 'Pay Runs', icon: CalendarClock, perm: 'PAYROLL::Payroll Runs::VIEW' },
+          { key: 'salarySlips', label: 'Salary Slips', icon: FileText, perm: 'PAYROLL::Salary Slips::VIEW' },
+          { key: 'payrollPayments', label: 'Payments', icon: ArrowUpRight, perm: 'PAYROLL::Payroll Payments::VIEW' },
+          /*
+           * No sub-features below this line.
+           *
+           * Adjustments, loans, revisions and reports were each behind their
+           * own flag, which meant one application arrived in pieces: a company
+           * with payroll on still could not see its own reports, and nothing
+           * on screen explained why. Payroll is one thing a company either
+           * uses or does not.
+           */
+          { key: 'payrollAdjustments', label: 'Adjustments', icon: Percent, perm: 'PAYROLL::Payroll Adjustments::VIEW' },
+          { key: 'salaryStructures', label: 'Salary Structures', icon: Layers, perm: 'PAYROLL::Salary Structures::VIEW' },
+          { key: 'salaryAssignments', label: 'Salary Assignments', icon: Users, perm: 'PAYROLL::Salary Assignments::VIEW' },
+          { key: 'salaryRevisions', label: 'Salary Revisions', icon: RefreshCw, perm: 'PAYROLL::Salary Revisions::VIEW' },
+          { key: 'payrollLoans', label: 'Loans & Advances', icon: Landmark, perm: 'PAYROLL::Payroll Loans::VIEW' },
+          { key: 'payrollCompliancePage', label: 'Compliance', icon: BadgePercent, perm: 'PAYROLL::Payroll Settings::VIEW' },
+          { key: 'payrollReports', label: 'Reports', icon: Table2, perm: 'PAYROLL::Payroll Reports::VIEW' },
+          { key: 'payrollSetup', label: 'Set up Payroll', icon: SlidersHorizontal, perm: 'PAYROLL::Payroll Settings::VIEW' },
+            ]
+          : [{ key: 'payrollSetup', label: 'Start using Payroll', icon: Wallet, perm: 'PAYROLL::Payroll Settings::VIEW' }],
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tone: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
       { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, tone: 'approvals', feature: 'approvals' },
@@ -11909,7 +11931,16 @@ const AppShell = () => {
       },
       { type: 'item', key: 'settings', label: 'Settings', icon: PhSettings, tone: 'settings', ph: true, perm: 'SETTINGS::Company Profile::VIEW' },
     ],
-    [branchCountLabel, warehouseCountLabel, featureCountLabel, gstStateLabel, emailStateLabel]
+    /*
+     * `isEnabled` belongs here.
+     *
+     * Without it the rail was built once — while the feature flags were still
+     * loading, when everything reads as enabled — and never rebuilt. A company
+     * without payroll could be shown the whole payroll menu until something
+     * else happened to invalidate this memo, and switching an application on
+     * did nothing visible until the page was reloaded.
+     */
+    [branchCountLabel, warehouseCountLabel, featureCountLabel, gstStateLabel, emailStateLabel, isEnabled]
   );
 
   /*
@@ -13813,34 +13844,61 @@ const AppShell = () => {
             branchLabel={branches.find((b) => String(b.id) === String(activeBranchId))?.branchName || ''}
           />
         );
+      /*
+       * Every payroll screen falls back to setup before the app is in use.
+       *
+       * Reaching one of these with payroll off used to show a red "not
+       * switched on for this organisation" — a true sentence nobody can act
+       * on, on a screen with no way forward. The setup screen is the same
+       * answer with a next step.
+       */
       case 'payrollComponents':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <SalaryComponents />;
       case 'payrollPayGroups':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayGroups />;
       case 'payrollPeriods':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayrollPeriods />;
       case 'salaryStructures':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <SalaryStructures />;
       case 'salaryAssignments':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <SalaryAssignments />;
       case 'payrollRuns':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayRuns />;
       case 'salarySlips':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <SalarySlips />;
       case 'payrollPayments':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayrollPayments />;
       case 'payrollAdjustments':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayrollAdjustments />;
       case 'payrollLoans':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayrollLoans />;
       case 'salaryRevisions':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <SalaryRevisions />;
       case 'payrollOverview':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayrollOverview onOpen={setActive} />;
       case 'payrollReports':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayrollReports />;
+      case 'payrollLedgerMapping':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
+        return <PayrollLedgerMapping />;
+      case 'payrollSetup':
+        return <PayrollSetup onOpen={setActive} />;
       case 'payrollCompliance':
       case 'payrollCompliancePage':
+        if (!isEnabled('payroll')) return <PayrollSetup onOpen={setActive} />;
         return <PayrollCompliance />;
       case 'settingsAccount':
         return (
