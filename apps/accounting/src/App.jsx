@@ -8,7 +8,6 @@ import { createDocApi, deleteDocApi, updateDocApi, hasApiSession as hasDocsApiSe
 import { useServerDocSync } from '@ui/hooks/useServerDocSync';
 import useTdsSync from './features/tds/useTdsSync';
 import { useCompanyFromServer } from '@ui/hooks/useCompanyFromServer';
-import OnboardingWizard, { shouldOnboard, markOnboardingSeen } from './components/OnboardingWizard';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from '@ui/utils/gstrExport';
 import Toaster from '@ui/components/ui/Toaster';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
@@ -11316,19 +11315,6 @@ const AppShell = () => {
      is the working copy, the server is where every device meets. */
   useTdsSync(db, setDb, isAuthenticated ? currentCompany : null);
 
-  const [onboardDismissed, setOnboardDismissed] = useState(false);
-  // Latch it. shouldOnboard asks whether there are no customers and no
-  // invoices, and step two of the wizard creates a customer — so recomputing
-  // this every render made the wizard close itself the moment somebody
-  // completed a step, before the third step ("raise the first invoice", the
-  // whole point of it) had ever been on screen. It also meant finish() never
-  // ran, so the seen-it flag was never written and the wizard came back on the
-  // next load. Whether to open is a question about the moment of arrival; once
-  // open, only the user closes it.
-  const [onboardLatched, setOnboardLatched] = useState(false);
-  const onboardEligible = isAuthenticated && shouldOnboard(db, currentCompany);
-  if (onboardEligible && !onboardLatched && !onboardDismissed) setOnboardLatched(true);
-  const showOnboarding = isAuthenticated && !onboardDismissed && onboardLatched;
 
   /*
    * Recurring invoices are raised by the server, not here.
@@ -14310,22 +14296,6 @@ const AppShell = () => {
           itself is untouched — this paints over --app-bg, never replaces it. */}
       <div className="ui-ambient ui-ambient-quiet ui-ambient-fixed" aria-hidden="true" />
       <Toaster />
-      {showOnboarding ? (
-        <OnboardingWizard
-          setDb={setDb}
-          currentCompany={currentCompany}
-          onDone={() => {
-            // Persisted as well as dismissed. Setting only React state meant
-            // the answer lasted until the next reload.
-            markOnboardingSeen(currentCompany);
-            setOnboardDismissed(true);
-          }}
-          onCreateInvoice={() => {
-            setActive('invoices');
-            setInvoiceEditor({ open: true, initial: null });
-          }}
-        />
-      ) : null}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 ui-btn ui-btn-primary"

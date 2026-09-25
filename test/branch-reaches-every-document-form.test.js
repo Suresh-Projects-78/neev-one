@@ -96,8 +96,8 @@ describe('the branch list reaches every document form', () => {
   /* And the form itself still asks — a test that only checks the plumbing
      passes just as well once the field is deleted. */
   it('the bill form renders a branch field', () => {
-    const src = readFileSync(src('features/purchase/index.jsx'), 'utf8');
-    expect(src).toContain('id="bill-branch-field"');
-    expect(src).toContain('label="Branch"');
+    const text = readFileSync(src('features/purchase/index.jsx'), 'utf8');
+    expect(text).toContain('id="bill-branch-field"');
+    expect(text).toContain('label="Branch"');
   });
 });

@@ -155,37 +155,48 @@ export function SessionProvider({ children }) {
   );
 
   /**
-   * A new account, its first company, and the apps it starts with.
+   * A new account. Only that.
    *
-   * Three calls, in the order the server expects: create the user, create the
-   * company under it, then switch on whichever apps were ticked. The company
-   * arrives with a chart of accounts already, which is why Accounting needs no
-   * switch of its own.
+   * It used to create the first company in the same breath, which made a
+   * company something an account has one of — and then the wizard on the way
+   * in asked for it a second time. An accountant has several companies and a
+   * group has one per entity, so the two acts are separate: this one produces
+   * somebody who is signed in with no books, which is a real state the shell
+   * knows how to draw.
    */
   const signUp = useCallback(
-    async ({ fullName, email, password, company, gstin, state, apps = [] }) => {
-      /*
-       * Two calls, and the second one can fail on its own.
-       *
-       * A GSTIN with a bad check digit is refused by the server — correctly —
-       * but by then the account exists. Pressing the button again would then
-       * fail at the first call with "user already exists", stranding somebody
-       * one step from a working company. So the account is created only if
-       * this browser is not already holding one.
-       */
-      if (!readToken()) {
-        const res = await apiSignup({ email, password, fullName });
-        writeToken(res.token);
-      }
+    async ({ fullName, email, password }) => {
+      const res = await apiSignup({ email, password, fullName });
+      writeToken(res.token);
+      const data = await apiMe();
+      return adopt(data);
+    },
+    [adopt]
+  );
 
+  /**
+   * A company, and the apps it starts with.
+   *
+   * The same call whether it is the first company on a new account or the
+   * fourth on an old one — there is no such thing as a "first company" path,
+   * because a second one created down a different route is a second set of
+   * defaults to keep in step.
+   *
+   * The company arrives from the server with a chart of accounts already,
+   * which is why Accounting needs no feature switch of its own.
+   */
+  const createCompany = useCallback(
+    async ({ name, gstin, state, apps = [] }) => {
       await setupCompany({
-        companyName: company,
+        companyName: name,
         ...(gstin ? { gstin } : {}),
         ...(state ? { state } : {}),
       });
 
       const data = await apiMe();
-      const next = adopt(data);
+      /* The company just created, not whichever one sorts first. */
+      const made = (data?.orgs || []).find((m) => String(m.org?.name || '') === String(name));
+      const next = adopt({ ...data, activeOrgId: made?.orgId || data?.activeOrgId });
 
       for (const app of apps) {
         const key = APP_FEATURE[app];
@@ -228,8 +239,8 @@ export function SessionProvider({ children }) {
   );
 
   const value = useMemo(
-    () => ({ user, tenant, tenants, restoring, signIn, signUp, signOut, setTenantId, addApp }),
-    [user, tenant, tenants, restoring, signIn, signUp, signOut, addApp]
+    () => ({ user, tenant, tenants, restoring, signIn, signUp, createCompany, signOut, setTenantId, addApp }),
+    [user, tenant, tenants, restoring, signIn, signUp, createCompany, signOut, addApp]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

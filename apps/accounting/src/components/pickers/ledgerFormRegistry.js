@@ -18,20 +18,23 @@
  * into its own module, at which point this file has nothing to do and can go.
  */
 
-let LedgerForm = null;
-
-/** App.jsx calls this once, at module load. */
-export function registerLedgerForm(component) {
-  LedgerForm = component || null;
-}
-
 /**
- * The form, or null where nothing has registered one.
+ * A slot, rather than a getter.
+ *
+ * The field renders whatever is in here as `<ledgerForms.ChartAccountForm />`.
+ * Reading it through a call instead — `const Form = ledgerForm()` — is
+ * indistinguishable, to the compiler, from defining a component during render,
+ * and it says so. A property read is the same value and tells the truth: the
+ * component is defined once, at module load, and only looked up here.
  *
  * Null is a real answer: a screen rendered outside the accounting app — a
  * test, a story — has no master form, and the field hides its create route
  * rather than failing.
  */
-export function ledgerForm() {
-  return LedgerForm;
+export const ledgerForms = { ChartAccountForm: null };
+
+/** App.jsx calls this once, at module load. */
+export function registerLedgerForm(component) {
+  ledgerForms.ChartAccountForm = component || null;
 }
+

@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import Modal from '@ui/components/ui/Modal';
 import Popover from '@ui/components/ui/Popover';
 
-import { ledgerForm } from './ledgerFormRegistry';
+import { ledgerForms } from './ledgerFormRegistry';
 
 import { rankedSearch, soleConfidentMatch } from '@ui/utils/rankedSearch';
 import { useListboxKeys, openOnKey, focusNextAfter } from '@ui/components/pickers/useListboxKeys';
@@ -92,7 +92,6 @@ export const LedgerField = ({
    * was briefly the latter, and the button then vanished anywhere the registry
    * had not been filled, including in this field's own tests.
    */
-  const ChartAccountForm = ledgerForm();
   const [search, setSearch] = useState('');
 
   const selected = value ? ledgers.find((a) => String(a.id) === String(value)) : null;
@@ -274,12 +273,12 @@ export const LedgerField = ({
           <Suspense fallback={<div className="ui-skel rounded-xl" style={{ height: 320 }} aria-hidden="true" />}>
           {/* Said out loud rather than shown as an empty dialog: a missing
               registration is a wiring mistake, and a blank modal hides it. */}
-          {!ChartAccountForm ? (
+          {!ledgerForms.ChartAccountForm ? (
             <p className="ui-muted p-6 text-sm">
               The ledger form is not available on this screen. Make the ledger from Master Data.
             </p>
           ) : (
-          <ChartAccountForm
+          <ledgerForms.ChartAccountForm
             db={db}
             setDb={setDb}
             currentCompany={currentCompany}

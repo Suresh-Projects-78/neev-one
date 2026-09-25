@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ChevronDown, LayoutGrid, LogOut, Moon, Plus, Sun } from 'lucide-react';
 
 import { useTheme } from '@ui/components/ui/useTheme';
@@ -6,6 +6,7 @@ import { useTheme } from '@ui/components/ui/useTheme';
 import { APPS, appById, availableApps, landingApp, subscribedApps } from './registry';
 import { useSession } from './session';
 import ClorMark from './ClorMark';
+import CompanySetup from './CompanySetup';
 import Home from './Home';
 import ScreenBoundary from './ScreenBoundary';
 import SignIn from './SignIn';
@@ -40,7 +41,19 @@ export default function Shell() {
      as none: treating it as none would flash an empty rail. */
   const subscriptions = tenant?.subscriptions;
   const mine = useMemo(() => subscribedApps(subscriptions || []), [subscriptions]);
-  const [activeAppId, setActiveAppId] = useState(null);
+  /*
+   * Which app is open, derived rather than stored.
+   *
+   * What is stored is the app somebody chose; which one is *open* is that
+   * choice where this company has it, and the landing app where it does not.
+   * Written as an effect that corrected the stored value, a company switch
+   * drew one frame of a rail belonging to an app the new company has not
+   * bought — and an app with no landing app corrected itself forever.
+   */
+  const [chosenAppId, setChosenAppId] = useState(null);
+  const activeAppId = mine.some((a) => a.id === chosenAppId)
+    ? chosenAppId
+    : landingApp(subscriptions || [])?.id || null;
   const [screenKey, setScreenKey] = useState(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [showMoreApps, setShowMoreApps] = useState(false);
@@ -51,21 +64,6 @@ export default function Shell() {
    * the only three there are — everything past sign-in is an app's business.
    */
   const [publicPage, setPublicPage] = useState('home');
-
-  /*
-   * Changing company can change which apps exist. Somebody looking at Payroll
-   * who switches to a company without it must not be left on a screen that
-   * company has not bought.
-   */
-  useEffect(() => {
-    if (!subscriptions) return;
-    const stillMine = mine.some((a) => a.id === activeAppId);
-    if (!stillMine) {
-      setActiveAppId(landingApp(subscriptions)?.id || null);
-      setScreenKey(null);
-      setShowMoreApps(false);
-    }
-  }, [subscriptions, mine, activeAppId]);
 
   /*
    * A token in this browser is checked before anything is drawn.
@@ -82,7 +80,7 @@ export default function Shell() {
     );
   }
 
-  if (!user || !tenant) {
+  if (!user) {
     if (publicPage === 'signin') {
       return <SignIn onHome={() => setPublicPage('home')} onSignUp={() => setPublicPage('signup')} />;
     }
@@ -92,15 +90,28 @@ export default function Shell() {
     return <Home onSignIn={() => setPublicPage('signin')} onGetStarted={() => setPublicPage('signup')} />;
   }
 
+  /*
+   * Signed in, with nothing to be signed in to.
+   *
+   * This used to fall through to the marketing page, which is why sign-up had
+   * to create a company: without one the account it made vanished behind the
+   * front door. It is a real state — a new account before its first company,
+   * and an account whose last company was removed — so it gets a real screen.
+   */
+  if (!tenant) return <CompanySetup />;
+
   const app = appById(activeAppId);
-  const screen = screenKey || app?.home || null;
+  /* A screen the open app does not have is not a screen: the same company
+     switch that changes the app leaves last app's screen key behind, and
+     honouring it shows "Nothing selected" instead of the new app's home. */
+  const screen = (screenKey && app?.screens?.[screenKey] ? screenKey : app?.home) || null;
   const Screen = app?.screens?.[screen] || null;
   /* An app may draw its own navigation instead of handing the shell a list. */
   const Root = app?.Root || null;
 
   const openApp = (id) => {
     const next = appById(id);
-    setActiveAppId(id);
+    setChosenAppId(id);
     setScreenKey(next?.home || null);
     setSwitcherOpen(false);
     setShowMoreApps(false);
