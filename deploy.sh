@@ -57,7 +57,7 @@ show_lock() {
 if [ "${1:-}" = "--status" ]; then
   "${SSH[@]}" 'systemctl is-active neev-api caddy postgresql | paste -sd" / " -; echo; free -m | head -2; echo
     set -a; . /opt/neev/.env; set +a
-    psql "$PGADMIN_URL" -qtc "SELECT pg_size_pretty(pg_database_size('"'"'neevone'"'"'))" 2>/dev/null \
+    psql "$PGADMIN_URL" -qtAc "SELECT pg_size_pretty(pg_database_size('"'"'neevone'"'"'))" 2>/dev/null \
       | sed "s/^/database: /" || echo "database: unreachable"'
   printf '\napp: '; curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 "$URL/"
   step "Deployment lock"

@@ -115,6 +115,14 @@ jobs:
           ssh -i ~/.ssh/deploy -o BatchMode=yes "ubuntu@$DEPLOY_HOST" 'set -e
             cd /opt/neev/server
             set -a; . /opt/neev/.env; set +a
+            # A dump before anything is installed or migrated. A backup taken
+            # after a migration is a backup of the problem. As the postgres
+            # superuser: every tenant table FORCEs row-level security, so
+            # pg_dump as the owner refuses rather than dumping half a table.
+            mkdir -p /opt/neev/backups
+            sudo -u postgres pg_dump -d neevone \
+              | gzip > "/opt/neev/backups/neevone-ci-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+            ls -1t /opt/neev/backups/neevone-*.sql.gz | tail -n +15 | xargs -r rm --
             # --include=dev explicitly: /opt/neev/.env sets NODE_ENV=production,
             # which makes npm skip devDependencies — and tsc lives there, so the
             # build fails with "tsc: not found".
@@ -136,6 +144,11 @@ jobs:
             # Versioned migrations, and a one-time baseline for the database
             # db push built. See server/prisma/migrations/README.md.
             npx tsx scripts/migrate.ts
+            # Grants, after the migrations that created the tables to grant on.
+            # A table this deploy adds is unreadable by the application role
+            # until this runs, and the symptom is a permission error on one
+            # screen rather than a failed deploy.
+            node scripts/provisionAppRole.mjs
             npm run build
             sudo systemctl restart neev-api'
 
