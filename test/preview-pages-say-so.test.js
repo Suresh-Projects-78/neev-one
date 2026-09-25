@@ -33,7 +33,7 @@ const SRC_DIRS = [
   join(ROOT, 'apps/payroll/src'),
 ];
 const SRC = SRC_DIRS[0];
-const src = (rel) => SRC_DIRS.map((d) => join(d, rel)).find((p) => existsSync(p)) || src(rel);
+const src = (rel) => SRC_DIRS.map((d) => join(d, rel)).find((p) => existsSync(p)) || join(SRC_DIRS[0], rel);
 
 
 const jsxFiles = (dir) =>

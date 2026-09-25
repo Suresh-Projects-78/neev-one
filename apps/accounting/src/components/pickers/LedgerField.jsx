@@ -84,8 +84,14 @@ export const LedgerField = ({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState('select');
 
-  /* Whatever the app registered, or null outside it — in which case the field
-     is a picker and quietly offers no create route. */
+  /*
+   * Whatever the app registered.
+   *
+   * Whether this field offers to create is the caller's decision, through
+   * `canCreate` — not a consequence of which modules happen to have loaded. It
+   * was briefly the latter, and the button then vanished anywhere the registry
+   * had not been filled, including in this field's own tests.
+   */
   const ChartAccountForm = ledgerForm();
   const [search, setSearch] = useState('');
 
@@ -239,7 +245,7 @@ export const LedgerField = ({
             )}
           </div>
 
-          {canCreate && ChartAccountForm ? (
+          {canCreate ? (
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
@@ -253,7 +259,7 @@ export const LedgerField = ({
         </Popover>
       ) : null}
 
-      {open && mode === 'create' && ChartAccountForm ? (
+      {open && mode === 'create' ? (
         /*
          * The Chart of Accounts form itself, not a second one.
          *
@@ -266,6 +272,13 @@ export const LedgerField = ({
          */
         <Modal onClose={() => close()} title="New Ledger" maxWidthClass="max-w-5xl">
           <Suspense fallback={<div className="ui-skel rounded-xl" style={{ height: 320 }} aria-hidden="true" />}>
+          {/* Said out loud rather than shown as an empty dialog: a missing
+              registration is a wiring mistake, and a blank modal hides it. */}
+          {!ChartAccountForm ? (
+            <p className="ui-muted p-6 text-sm">
+              The ledger form is not available on this screen. Make the ledger from Master Data.
+            </p>
+          ) : (
           <ChartAccountForm
             db={db}
             setDb={setDb}
@@ -283,6 +296,7 @@ export const LedgerField = ({
             }}
             onClose={() => setMode('select')}
           />
+          )}
           </Suspense>
         </Modal>
       ) : null}

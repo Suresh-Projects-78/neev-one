@@ -134,7 +134,7 @@ export function ListToolbar({
                       fileName: exportFileName || 'export',
                       columns: exportColumns,
                       rows: exportRows,
-                      footNote: `${exportRows.length} row(s) · exported from Neev One`,
+                      footNote: `${exportRows.length} row(s) · exported from Clor`,
                     });
                   }}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-[rgb(var(--surface-sunken))]"

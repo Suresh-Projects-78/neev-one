@@ -427,7 +427,7 @@ export function ExportButton({ title, fileName, sheetName, columns, rows, subtit
                 onClick={() => {
                   setOpen(false);
                   if (o.k === 'pdf') {
-                    exportListPdf({ ...common, title, subtitle, footNote: `${rows.length} row(s) · exported from Neev One` });
+                    exportListPdf({ ...common, title, subtitle, footNote: `${rows.length} row(s) · exported from Clor` });
                   } else if (o.k === 'xlsx') {
                     exportListXlsx({ ...common, subtitle, sheetName: sheetName || title });
                   } else {

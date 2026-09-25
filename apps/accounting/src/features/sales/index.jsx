@@ -325,7 +325,7 @@ const statusReason = (doc, status, company, nowMs) => {
         ...common,
         title: `Invoices — ${currentCompany?.name || 'Company'}`,
         subtitle,
-        footNote: `${filteredInvoices.length} invoice(s) · exported from Neev One`,
+        footNote: `${filteredInvoices.length} invoice(s) · exported from Clor`,
       });
     } else if (kind === 'xlsx') {
       exportListXlsx({ ...common, subtitle, sheetName: 'Invoices' });

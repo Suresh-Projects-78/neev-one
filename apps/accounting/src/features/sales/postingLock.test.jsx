@@ -13,7 +13,7 @@ import { renderHook, waitFor } from '@testing-library/react';
  */
 
 const apiFetch = vi.fn();
-vi.mock('../../api/http', () => ({
+vi.mock('@platform/http', () => ({
   apiFetch: (...args) => apiFetch(...args),
   authHeaders: () => ({}),
 }));

@@ -5,7 +5,7 @@
  * twenty-five seconds of wall clock and is never touched.
  */
 import { describe, expect, it } from 'vitest';
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -33,7 +33,6 @@ const SRC_DIRS = [
   join(ROOT, 'apps/payroll/src'),
 ];
 const SRC = SRC_DIRS[0];
-const src = (rel) => SRC_DIRS.map((d) => join(d, rel)).find((p) => existsSync(p)) || src(rel);
 
 
 const jsxFiles = (dir) =>

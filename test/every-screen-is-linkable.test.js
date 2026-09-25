@@ -47,7 +47,7 @@ const SRC_DIRS = [
   join(ROOT, 'apps/payroll/src'),
 ];
 const SRC = SRC_DIRS[0];
-const src = (rel) => SRC_DIRS.map((d) => join(d, rel)).find((p) => existsSync(p)) || src(rel);
+const src = (rel) => SRC_DIRS.map((d) => join(d, rel)).find((p) => existsSync(p)) || join(SRC_DIRS[0], rel);
 
 const app = readFileSync(src('App.jsx'), 'utf8');
 const registry = readFileSync(src('features/settings/settingsRegistry.js'), 'utf8');

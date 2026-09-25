@@ -6,7 +6,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 vi.mock('@ui/permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => true }) }));
-vi.mock('../../api/http', () => ({ apiFetch: vi.fn(async () => ({})) }));
+vi.mock('@platform/http', () => ({ apiFetch: vi.fn(async () => ({})) }));
 vi.mock('@ui/api/masters', async (importOriginal) => ({
   ...(await importOriginal()),
   createVendor: vi.fn(),

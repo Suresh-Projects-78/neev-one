@@ -60,7 +60,7 @@ export const runListExport = ({
       ...common,
       title: title || fileName,
       subtitle,
-      footNote: footNote || `${Array.isArray(rows) ? rows.length : 0} ${label} · exported from Neev One`,
+      footNote: footNote || `${Array.isArray(rows) ? rows.length : 0} ${label} · exported from Clor`,
     });
     return;
   }
