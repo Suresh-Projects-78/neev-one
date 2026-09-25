@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown, LayoutGrid, LogOut, Moon, Plus, Sun } from 'lucide-react';
 
 import { useTheme } from '@ui/components/ui/useTheme';
+import { useDismissable } from '@ui/components/ui/useDismissable';
 
 import { APPS, appById, availableApps, landingApp, subscribedApps } from './registry';
 import { useSession } from './session';
@@ -56,6 +57,9 @@ export default function Shell() {
     : landingApp(subscriptions || [])?.id || null;
   const [screenKey, setScreenKey] = useState(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  /* Closes on a click anywhere else, and on Escape. It did neither: the only
+     way out of the app switcher was to click the app switcher again. */
+  const switcherRef = useDismissable(switcherOpen, () => setSwitcherOpen(false));
   const [showMoreApps, setShowMoreApps] = useState(false);
 
   /*
@@ -141,7 +145,7 @@ export default function Shell() {
         {/* The app switcher. Named for the app you are in, because that is the
             question it answers before it is the control it offers. */}
         {app ? (
-          <div className="relative">
+          <div className="relative" ref={switcherRef}>
             <button
               type="button"
               className="ui-btn ui-btn-secondary ui-btn-sm"

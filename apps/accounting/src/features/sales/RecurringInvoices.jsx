@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { CalendarClock, Download, FileText, MoreVertical, Pause, PauseCircle, Play, Plus, Receipt, RefreshCw, Settings, Trash2 } from 'lucide-react';
 import { EmptyState, StatusPill } from '@ui/components/ui/Primitives';
+import { useDismissable } from '@ui/components/ui/useDismissable';
 import DocumentListShell from '@ui/components/list/DocumentListShell';
 import { useListSearch } from '@ui/components/ListToolbar';
 import { notify, confirmDialog } from '@ui/components/ui/notify';
@@ -39,6 +40,10 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
 
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [rowMenu, setRowMenu] = useState(null);
+  /* One row's menu is open at a time, so one ref is enough — it is attached to
+     whichever row that is. Without it the menu stayed open over the rows below
+     it until you found its own button again. */
+  const rowMenuRef = useDismissable(Boolean(rowMenu), () => setRowMenu(null));
   // A schedule can copy an invoice that already exists, or be written from
   // scratch — a retainer that has never been billed once still needs to repeat.
   const [mode, setMode] = useState('NEW');
@@ -1053,7 +1058,7 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
                       </td>
                       <td><StatusPill status={status} /></td>
                       <td className="text-right">
-                        <div className="relative inline-block">
+                        <div className="relative inline-block" ref={rowMenu === t.id ? rowMenuRef : undefined}>
                           <button
                             type="button"
                             onClick={() => setRowMenu(rowMenu === t.id ? null : t.id)}

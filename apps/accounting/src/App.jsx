@@ -299,6 +299,7 @@ import { useFieldErrors } from '@ui/components/ui/useFieldErrors';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
 import { onPlatformContextChange, orgId as platformOrgId } from '@platform/context';
 import { registerLedgerForm } from './components/pickers/ledgerFormRegistry';
+import { useDismissable } from '@ui/components/ui/useDismissable';
 const normalizeId = (v) => String(v ?? '').trim();
 
 const getBranchLabel = (b) => {
@@ -11091,7 +11092,7 @@ const AppShell = () => {
    */
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const accountMenuRef = useRef(null);
+  const accountMenuRef = useDismissable(accountMenuOpen, () => setAccountMenuOpen(false));
   /**
    * Where to draw the account menu.
    *
@@ -11248,22 +11249,6 @@ const AppShell = () => {
     });
   }, [isAuthenticated, dbStorageKey, setDb]);
 
-
-  useEffect(() => {
-    if (!accountMenuOpen) return undefined;
-    const onDown = (e) => {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target)) setAccountMenuOpen(false);
-    };
-    const onKey = (e) => {
-      if (e.key === 'Escape') setAccountMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [accountMenuOpen]);
 
 
   // A 401 from any API call means the session is over; drop back to sign-in
@@ -11427,18 +11412,10 @@ const AppShell = () => {
 
   const isOrgAdmin = Boolean(authCtx?.data?.isOrgAdmin);
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
-  const orgMenuRef = useRef(null);
-
-  useEffect(() => {
-    if (!orgMenuOpen) return;
-    const onMouseDown = (e) => {
-      if (!orgMenuRef.current) return;
-      if (orgMenuRef.current.contains(e.target)) return;
-      setOrgMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [orgMenuOpen]);
+  /* Closed by a click anywhere else and by Escape — the second of which it did
+     not have, so the company switcher was the one header menu the keyboard
+     could not put away. */
+  const orgMenuRef = useDismissable(orgMenuOpen, () => setOrgMenuOpen(false));
 
 
   const availableOrgs = useMemo(() => {
@@ -12222,10 +12199,12 @@ const AppShell = () => {
     },
     [featuresOpen, active, goTo, openFeatures]
   );
-  const [quickOpen, setQuickOpen] = useState(false);
-  const quickRef = useRef(null);
+  /* There is no quick-actions menu any more — the header strip says where you
+     are, and Command-K reaches the same list from anywhere. Its state and its
+     ref outlived it by several releases, wired into the dismissal effect
+     below and attached to no element at all. */
   const [notifOpen, setNotifOpen] = useState(false);
-  const notifRef = useRef(null);
+  const notifRef = useDismissable(notifOpen, () => setNotifOpen(false));
   const [notifSeenKey, setNotifSeenKey] = useState(() => localStorage.getItem('notifSeenKey') || '');
   // Pinned per mount so overdue bucketing is stable across renders.
   const [shellNowTs] = useState(() => Date.now());
@@ -12244,17 +12223,6 @@ const AppShell = () => {
     return () => document.removeEventListener('keydown', onKey);
   }, [mobileNavOpen]);
 
-  // Close the two header popovers on outside click, same contract as the
-  // org and profile menus.
-  useEffect(() => {
-    if (!quickOpen && !notifOpen) return undefined;
-    const onDown = (e) => {
-      if (quickOpen && !quickRef.current?.contains(e.target)) setQuickOpen(false);
-      if (notifOpen && !notifRef.current?.contains(e.target)) setNotifOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
-  }, [quickOpen, notifOpen]);
 
   /**
    * Notification feed computed from the books — never invented. Two event

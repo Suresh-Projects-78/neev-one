@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import HeroBand from '@ui/components/ui/HeroBand';
+import { useDismissable } from '@ui/components/ui/useDismissable';
 import {
   AlertTriangle,
   BarChart3,
@@ -95,6 +96,10 @@ const SalesOverview = ({
   const [breakdownBy, setBreakdownBy] = useState('customer');
   const [periodOpen, setPeriodOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  /* Both close on a click anywhere else, and on Escape. Neither did: the only
+     way to put one away was to click the button that opened it again. */
+  const periodRef = useDismissable(periodOpen, () => setPeriodOpen(false));
+  const moreRef = useDismissable(moreOpen, () => setMoreOpen(false));
 
   const periods = useMemo(() => buildPeriods(nowTs), [nowTs]);
   const period = periods.find((p) => p.key === periodKey) || periods[0];
@@ -472,7 +477,7 @@ const SalesOverview = ({
            every module overview. */
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
-          <div className="relative">
+          <div className="relative" ref={periodRef}>
             <button
               type="button"
               onClick={() => setPeriodOpen((v) => !v)}
@@ -527,7 +532,7 @@ const SalesOverview = ({
             <Download size={16} aria-hidden="true" /> Export
           </button>
 
-          <div className="relative">
+          <div className="relative" ref={moreRef}>
             <button
               type="button"
               onClick={() => setMoreOpen((v) => !v)}

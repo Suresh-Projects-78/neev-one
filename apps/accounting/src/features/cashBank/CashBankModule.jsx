@@ -3,6 +3,7 @@ import { notify, confirmDialog } from '@ui/components/ui/notify';
 import { CheckCircle2, ClipboardList, Download, FileSpreadsheet, Link2, MoreVertical, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 
 import Modal from '@ui/components/ui/Modal';
+import { useDismissable } from '@ui/components/ui/useDismissable';
 import AllocationDialog from './AllocationDialog';
 import { allocationSummary, allocationsForTxn } from './allocations';
 import RecordReceiptForm from '../payments/RecordReceiptForm';
@@ -1689,6 +1690,10 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
   const accountsEmpty = cashBankAccounts.length === 0;
 
   const [openActionId, setOpenActionId] = useState(null);
+  /* One row's actions at a time, so one ref, attached to that row's cell. The
+     menu used to sit over the rows below it until its own button was pressed
+     again. */
+  const actionsRef = useDismissable(Boolean(openActionId), () => setOpenActionId(null));
 
   const [selectedTxnIds, setSelectedTxnIds] = useState(() => new Set());
 
@@ -2223,12 +2228,18 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                             </button>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right relative">
+                        <td
+                          className="px-4 py-3 text-right relative"
+                          ref={String(openActionId || '') === String(t.id) ? actionsRef : undefined}
+                        >
                           {t.readOnly ? null : (<>
                           <button
                             type="button"
                             onClick={() => setOpenActionId((p) => (String(p) === String(t.id) ? null : t.id))}
                             className="inline-flex items-center justify-center w-9 h-9 rounded-lg border ui-surface ui-hover-sunken ui-border-c"
+                            aria-haspopup="menu"
+                            aria-expanded={String(openActionId || '') === String(t.id)}
+                            aria-label="Actions"
       title="Actions"
                           >
                             <MoreVertical size={18} />

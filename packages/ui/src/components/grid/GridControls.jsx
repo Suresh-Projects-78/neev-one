@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import { useDismissable } from '../ui/useDismissable';
 import { Bookmark } from 'lucide-react';
 
 /**
@@ -45,24 +47,18 @@ export default function GridControls({ grid }) {
 
   const close = () => setOpen(false);
 
+  /* Dismissal — outside click and Escape — is the shared hook's, so this menu
+     behaves like every other one. The panel itself is portalled to the body
+     and so is not inside this element; it carries data-layout-pop, which is
+     what the hook looks for before treating a click as "outside". */
+  useDismissable(open, close, rootRef);
+
   useEffect(() => {
     if (!open) return undefined;
-    const onDown = (e) => {
-      if (rootRef.current?.contains(e.target)) return;
-      if (e.target.closest?.('[data-layout-pop]')) return;
-      close();
-    };
-    const onKey = (e) => {
-      if (e.key === 'Escape') close();
-    };
     const onMove = () => place();
-    window.addEventListener('mousedown', onDown);
-    window.addEventListener('keydown', onKey);
     window.addEventListener('resize', onMove);
     window.addEventListener('scroll', onMove, true);
     return () => {
-      window.removeEventListener('mousedown', onDown);
-      window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onMove);
       window.removeEventListener('scroll', onMove, true);
     };

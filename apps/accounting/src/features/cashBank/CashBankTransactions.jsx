@@ -6,6 +6,7 @@ import { LIST_PERIODS, usePeriodFilter } from '@ui/components/ListControls';
 import PopupSelect from '@ui/components/pickers/PopupSelect';
 import Popover from '@ui/components/ui/Popover';
 import { EmptyState, StatusPill } from '@ui/components/ui/Primitives';
+import { useDismissable } from '@ui/components/ui/useDismissable';
 import { formatMoney } from '@ui/utils/money';
 import { cashBankIndex, cashBankTransactions } from './transactions';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
@@ -55,6 +56,9 @@ export default function CashBankTransactions({
   const newBtnRef = useRef(null);
   const [newOpen, setNewOpen] = useState(false);
   const [openActionId, setOpenActionId] = useState(null);
+  /* One row's actions are open at a time, so one ref, attached to that row. It
+     used to close only when its own button was pressed again. */
+  const actionsRef = useDismissable(Boolean(openActionId), () => setOpenActionId(null));
 
   /* An account that has since been deleted reads as "All accounts" rather than
      as a dangling id — the same rule the branch field on a document follows. */
@@ -255,7 +259,10 @@ export default function CashBankTransactions({
                       )}
                     </td>
                     <td className="text-end">
-                      <div className="relative inline-block text-left">
+                      <div
+                        className="relative inline-block text-left"
+                        ref={openActionId === r.id ? actionsRef : undefined}
+                      >
                         <button type="button" onClick={() => setOpenActionId((id) => id === r.id ? null : r.id)} className="ui-btn ui-btn-ghost ui-btn-sm" title="Actions" aria-label="Actions">
                           <MoreVertical size={18} aria-hidden="true" />
                         </button>

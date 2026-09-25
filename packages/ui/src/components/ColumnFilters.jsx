@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { ChevronDown, Search as SearchIcon } from 'lucide-react';
+import { useDismissable } from './ui/useDismissable';
 
 /**
  * Column filters, the way a spreadsheet does them.
@@ -209,20 +210,11 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
   const [to, setTo] = useState(current.to || '');
   const panelRef = useRef(null);
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
-    };
-    const onDown = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    document.addEventListener('mousedown', onDown);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.removeEventListener('mousedown', onDown);
-    };
-  }, [onClose]);
+  /* Outside click and Escape, through the shared hook — the panel exists only
+     while it is open, so `open` is simply true here. Its ref is the panel
+     itself rather than a wrapper: the column header that opened it is in the
+     table, nowhere near this, and the header owns its own toggle. */
+  useDismissable(true, onClose, panelRef);
 
   const displayValue = (raw) => {
     if (!isNumber || raw === '') return raw;

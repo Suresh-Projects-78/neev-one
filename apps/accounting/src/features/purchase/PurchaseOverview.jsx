@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import HeroBand from '@ui/components/ui/HeroBand';
+import { useDismissable } from '@ui/components/ui/useDismissable';
 import {
   AlertTriangle,
   BarChart3,
@@ -64,6 +65,10 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
   const [periodKey, setPeriodKey] = useState('thisMonth');
   const [periodOpen, setPeriodOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  /* Both close on a click anywhere else, and on Escape. Neither did: the only
+     way to put one away was to click the button that opened it again. */
+  const periodRef = useDismissable(periodOpen, () => setPeriodOpen(false));
+  const moreRef = useDismissable(moreOpen, () => setMoreOpen(false));
   const [grain, setGrain] = useState('daily');
   const [breakdownBy, setBreakdownBy] = useState('vendor');
 
@@ -318,7 +323,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
         /* No caption — see the note on Panel. */
         right={
           <div className="flex items-center gap-2 flex-wrap justify-end">
-          <div className="relative">
+          <div className="relative" ref={periodRef}>
             <button
               type="button"
               onClick={() => setPeriodOpen((v) => !v)}
@@ -377,7 +382,7 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
             <Plus size={16} aria-hidden="true" /> New Bill
           </button>
 
-          <div className="relative">
+          <div className="relative" ref={moreRef}>
             <button
               type="button"
               onClick={() => setMoreOpen((v) => !v)}
