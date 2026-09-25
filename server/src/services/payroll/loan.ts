@@ -1,4 +1,5 @@
 import { payrollPrisma } from '../../utils/payrollPrisma.js';
+import { round2 } from '../../utils/money.js';
 
 /**
  * Money lent to somebody, and taken back out of their pay.
@@ -23,7 +24,6 @@ import { payrollPrisma } from '../../utils/payrollPrisma.js';
  * account for at the end.
  */
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export class PayrollLoanError extends Error {
   code: string;

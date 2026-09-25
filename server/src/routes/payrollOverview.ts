@@ -7,6 +7,7 @@ import { PermissionAction } from '../constants/enums.js';
 import { payrollPrisma } from '../utils/payrollPrisma.js';
 import { peoplePrisma } from '../utils/peoplePrisma.js';
 import { PAYROLL_MODULE, PAYROLL_RESOURCE, payrollRouteOk } from '../services/payroll/guards.js';
+import { round2 } from '../utils/money.js';
 
 /**
  * The state of payroll, in one request.
@@ -23,7 +24,6 @@ import { PAYROLL_MODULE, PAYROLL_RESOURCE, payrollRouteOk } from '../services/pa
 export const payrollOverviewRouter = Router();
 payrollOverviewRouter.use(requireAuth, requireTenantContext);
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /** What still has to happen before this payroll is finished. */
 const STAGE: Record<string, string> = {

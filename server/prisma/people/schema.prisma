@@ -27,7 +27,7 @@ generator peopleClient {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("PEOPLE_DATABASE_URL")
 }
 

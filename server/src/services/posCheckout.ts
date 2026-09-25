@@ -525,16 +525,25 @@ export async function checkoutPosSale(
     });
   } catch (e: any) {
     if (String(e?.code) === 'P2002') {
-      const target = String(e?.meta?.target ?? '');
       /*
-       * Two tills — or one till and its own retry — racing on the same key.
-       * Whoever lost the race did not lose the sale: the winner's is committed,
-       * and that is what the loser is handed. The unique index is what makes
-       * this correct; catching it and shrugging would not be.
+       * Which index was hit, decided by looking rather than by asking.
+       *
+       * This used to read `e.meta.target` for the word "sourceKey". SQLite
+       * fills that in; PostgreSQL reports "Unique constraint failed on the
+       * (not available)", so the check silently stopped matching and a second
+       * tap at the till was answered with "that number is already used"
+       * instead of the receipt it had just produced. The same sale, reported
+       * as a numbering error.
+       *
+       * So: if this checkout key already has a committed sale, that sale is
+       * the answer, whatever the driver chose to say about the index. Only
+       * when there is no such sale is this really a clash over a number.
        */
+      const committed = await findCommittedCheckout(prisma, ctx, checkoutId);
+      if (committed) return committed;
+
+      const target = String(e?.meta?.target ?? '');
       if (target.includes('sourceKey')) {
-        const committed = await findCommittedCheckout(prisma, ctx, checkoutId);
-        if (committed) return committed;
         throw new PosCheckoutError(
           'POS_CHECKOUT_CONFLICT',
           `Checkout ${checkoutId} collided with itself but left nothing behind. Report it rather than retrying.`

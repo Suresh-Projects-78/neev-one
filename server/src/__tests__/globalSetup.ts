@@ -1,103 +1,207 @@
 import { execFileSync } from 'node:child_process';
-import { rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { PrismaClient } from '@prisma/client';
+
 /**
- * Gives the test suite its own SQLite file.
+ * Gives this run its own database, with a schema per application inside it.
  *
- * The suite used to run against the same dev.db the dev server writes to, so
- * `npm test` while `npm start` was up produced intermittent failures that had
- * nothing to do with the code under test — two processes writing one SQLite
- * file. Tests now own their database and start from a known-empty schema.
+ * The suite used to own three SQLite files, which is why it stopped working
+ * the day the product moved to PostgreSQL: `prisma db push` against
+ * `file:./test.db` cannot apply a `postgresql` schema, and the whole suite
+ * died in setup before a single test ran.
+ *
+ * So the databases are created here and dropped at the end. Named for the
+ * process id, because two runs at once must not reset each other — that was
+ * the original reason for per-run files and it has not changed.
+ *
+ * Creating a database needs a connection to a database that already exists, so
+ * the run borrows `postgres` for the two statements it needs. Prisma is used
+ * for it rather than `psql`, so the suite depends on nothing but the driver it
+ * already has.
  */
-export default function setup() {
-  const serverRoot = resolve(__dirname, '../..');
 
-  /*
-   * Payroll is a separate database, so it is a separate push. Relative SQLite
-   * paths resolve from the schema's own directory, which for payroll is
-   * `prisma/payroll` — the file lands beside its schema, not beside the
-   * accounting one.
-   */
-  const pushPayroll = (url: string) =>
-    execFileSync(
-      'npx',
-      ['prisma', 'db', 'push', '--schema', 'prisma/payroll/schema.prisma', '--skip-generate', '--accept-data-loss', '--force-reset'],
-      { cwd: serverRoot, env: { ...process.env, PAYROLL_DATABASE_URL: url }, stdio: 'inherit' }
-    );
+const dbNameOf = (url: string) => new URL(url).pathname.replace(/^\//, '');
 
-  const pushPeople = (url: string) =>
-    execFileSync(
-      'npx',
-      ['prisma', 'db', 'push', '--schema', 'prisma/people/schema.prisma', '--skip-generate', '--accept-data-loss', '--force-reset'],
-      { cwd: serverRoot, env: { ...process.env, PEOPLE_DATABASE_URL: url }, stdio: 'inherit' }
-    );
+/**
+ * A connection to the admin database, for CREATE and DROP.
+ *
+ * Derived from this run's own DATABASE_URL rather than read from a second
+ * variable: globalSetup does not always share an environment with the config
+ * that computed it, and an empty admin URL fails as an unreadable Prisma
+ * initialisation error rather than as a missing setting.
+ */
+/*
+ * The owner, not the application role.
+ *
+ * The suite creates databases, pushes a schema and applies policies — none of
+ * which the application role may do, and rightly: a role that can alter the
+ * tables it is being kept out of is not much of a boundary. Tests then connect
+ * as the application role, because row-level security is skipped entirely for
+ * a superuser and a suite that ran as one would prove nothing.
+ */
+const adminUrl = (database = 'postgres') => {
+  const url = new URL(String(process.env.PGADMIN_URL || process.env.PG_ADMIN_URL || process.env.DATABASE_URL || ''));
+  url.pathname = `/${database}`;
+  url.search = '';
+  return url.toString();
+};
 
-  const peopleUrl = String(process.env.PEOPLE_DATABASE_URL || '').trim();
-  const peopleFile = peopleUrl.startsWith('file:')
-    ? resolve(serverRoot, 'prisma/people', peopleUrl.slice('file:'.length).split('?')[0].replace(/^\.\//, ''))
-    : '';
+const admin = (database?: string) => new PrismaClient({ datasources: { db: { url: adminUrl(database) } } });
 
-  const payrollUrl = String(process.env.PAYROLL_DATABASE_URL || '').trim();
-  const payrollFile = payrollUrl.startsWith('file:')
-    ? resolve(serverRoot, 'prisma/payroll', payrollUrl.slice('file:'.length).split('?')[0].replace(/^\.\//, ''))
-    : '';
+const quote = (name: string) => `"${name.replace(/"/g, '""')}"`;
 
-  /*
-   * Pointed at Postgres, there is no file to delete and the schema is pushed to
-   * whatever TEST_DATABASE_URL names. The suite itself is identical either way.
-   */
-  const external = String(process.env.TEST_DATABASE_URL || '').trim();
-  if (external) {
-    execFileSync('npx', ['prisma', 'db', 'push', '--skip-generate', '--accept-data-loss', '--force-reset'], {
-      cwd: serverRoot,
-      env: { ...process.env, DATABASE_URL: external },
-      stdio: 'inherit',
-    });
-    if (payrollUrl) pushPayroll(payrollUrl);
-    if (peopleUrl) pushPeople(peopleUrl);
+async function createDatabase(name: string) {
+  const db = admin();
+  try {
+    /* Dropped first: a database left behind by a run that was killed would
+       otherwise be reused with an old schema in it. */
+    await db.$executeRawUnsafe(`DROP DATABASE IF EXISTS ${quote(name)} WITH (FORCE)`);
+    await db.$executeRawUnsafe(`CREATE DATABASE ${quote(name)}`);
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+async function dropDatabase(name: string) {
+  const db = admin();
+  try {
+    /* WITH (FORCE) rather than a polite DROP: Prisma's pool may still be
+       closing when the suite ends, and a single lingering connection makes
+       DROP DATABASE wait forever. */
+    await db.$executeRawUnsafe(`DROP DATABASE IF EXISTS ${quote(name)} WITH (FORCE)`);
+  } catch {
+    /* A database left behind is untidy, not a failed test run. */
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+/**
+ * The policies, which `prisma db push` does not carry.
+ *
+ * Push builds a database from the schema file, and row-level security is not
+ * expressible there — it lives in a hand-written migration. Without this the
+ * suite would run against tables with no policies on them and every isolation
+ * test would pass by doing nothing.
+ */
+async function applyPolicies(url: string, migrationDir: string) {
+  const file = resolve(process.cwd(), migrationDir, 'migration.sql');
+  let sql = '';
+  try {
+    sql = readFileSync(file, 'utf8');
+  } catch (e) {
+    /* Loud, not silent: a suite that quietly runs without policies would show
+       every isolation test passing while proving nothing. */
+    console.warn(`[setup] no policies applied from ${file}: ${(e as Error).message}`);
     return;
   }
 
-  /*
-   * The file vitest.config.ts chose for this run. Reading it back rather than
-   * naming it again keeps the two halves of the run from disagreeing about
-   * which database they are using — which is how one run came to reset another
-   * run's database mid-flight.
-   */
-  const configured = String(process.env.DATABASE_URL || '').trim();
-  const fromUrl = configured.startsWith('file:')
-    ? configured.slice('file:'.length).split('?')[0]
-    : 'prisma/test.db';
-  const dbFile = resolve(serverRoot, fromUrl.startsWith('/') ? fromUrl : `prisma/${fromUrl.replace(/^\.\//, '')}`);
+  const statements = sql
+    .split(';')
+    .map((s) => s.replace(/^\s*--.*$/gm, '').trim())
+    .filter(Boolean);
 
-  // Start clean: a schema left over from an older run would hide migrations
-  // that never got applied.
-  for (const suffix of ['', '-journal']) {
-    rmSync(`${dbFile}${suffix}`, { force: true });
+  const db = new PrismaClient({ datasources: { db: { url } } });
+  try {
+    for (const statement of statements) await db.$executeRawUnsafe(statement);
+    console.log(`[setup] ${statements.length} policy statements applied to ${new URL(url).pathname.slice(1)}`);
+  } catch (e) {
+    console.error('[setup] policies failed:', (e as Error).message.slice(0, 300));
+    throw e;
+  } finally {
+    await db.$disconnect();
   }
+}
 
-  execFileSync('npx', ['prisma', 'db', 'push', '--skip-generate', '--accept-data-loss'], {
-    cwd: serverRoot,
-    env: { ...process.env, DATABASE_URL: `file:${dbFile}` },
-    stdio: 'inherit',
-  });
-
-  if (payrollUrl) {
-    for (const suffix of ['', '-journal']) rmSync(`${payrollFile}${suffix}`, { force: true });
-    pushPayroll(payrollUrl);
-  }
-  if (peopleUrl) {
-    for (const suffix of ['', '-journal']) rmSync(`${peopleFile}${suffix}`, { force: true });
-    pushPeople(peopleUrl);
-  }
-
-  // Per-run databases would otherwise pile up in prisma/ one file per run.
-  return () => {
-    for (const suffix of ['', '-journal']) {
-      rmSync(`${dbFile}${suffix}`, { force: true });
-      if (payrollFile) rmSync(`${payrollFile}${suffix}`, { force: true });
-      if (peopleFile) rmSync(`${peopleFile}${suffix}`, { force: true });
+/**
+ * Lets the application role into a database the owner has just built.
+ *
+ * Without this the suite connects as a role with no privileges at all and
+ * every test fails on permission rather than on behaviour — which reads like a
+ * broken product and is a missing GRANT.
+ */
+async function grantToAppRole(database: string, schemas: string[]) {
+  const role = String(process.env.CLOR_APP_ROLE || 'clor_app');
+  const db = admin(database);
+  try {
+    for (const schema of schemas) {
+      await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA "${schema}" TO "${role}"`);
+      await db.$executeRawUnsafe(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "${schema}" TO "${role}"`);
+      await db.$executeRawUnsafe(`GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "${schema}" TO "${role}"`);
     }
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+const push = (schema: string | null, env: Record<string, string>) =>
+  execFileSync(
+    'npx',
+    [
+      'prisma',
+      'db',
+      'push',
+      ...(schema ? ['--schema', schema] : []),
+      '--skip-generate',
+      '--accept-data-loss',
+      '--force-reset',
+    ],
+    { cwd: process.cwd(), env: { ...process.env, ...env }, stdio: 'inherit' }
+  );
+
+export default async function setup() {
+  const accounting = String(process.env.DATABASE_URL || '');
+  const payroll = String(process.env.PAYROLL_DATABASE_URL || '');
+  const people = String(process.env.PEOPLE_DATABASE_URL || '');
+
+  if (!accounting.startsWith('postgres')) {
+    throw new Error(
+      `The suite expects PostgreSQL. DATABASE_URL is "${accounting.slice(0, 32)}…" — see vitest.config.ts.`
+    );
+  }
+
+  /*
+   * A run pointed at databases somebody else owns — CI, a shared server — is
+   * given the schema but is not allowed to create or drop anything.
+   */
+  const ownsDatabases = !process.env.TEST_DATABASE_URL;
+
+  /* All three URLs name the same database and differ only in their schema,
+     which is the shape the product is deployed in. */
+  const database = dbNameOf(accounting);
+  const schemaOf = (url: string) => new URL(url).searchParams.get('schema') || 'public';
+  const schemas = [schemaOf(accounting), schemaOf(payroll), schemaOf(people)];
+
+  if (ownsDatabases) {
+    await createDatabase(database);
+    const db = admin(database);
+    try {
+      for (const schema of schemas) await db.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
+    } finally {
+      await db.$disconnect();
+    }
+  }
+
+  /* Built by the owner; used by the application role. Each push carries the
+     schema in its URL, so the three land beside each other rather than on top
+     of one another. */
+  const asOwner = (url: string) => `${adminUrl(database)}?schema=${schemaOf(url)}`;
+
+  push(null, { DATABASE_URL: asOwner(accounting) });
+  push('prisma/payroll/schema.prisma', { PAYROLL_DATABASE_URL: asOwner(payroll) });
+  push('prisma/people/schema.prisma', { PEOPLE_DATABASE_URL: asOwner(people) });
+
+  await applyPolicies(asOwner(accounting), 'prisma/migrations/20260924120000_row_level_security');
+  await applyPolicies(asOwner(payroll), 'prisma/payroll/migrations/20260924120000_row_level_security');
+  await applyPolicies(asOwner(people), 'prisma/people/migrations/20260924120000_row_level_security');
+
+  await grantToAppRole(database, schemas);
+
+  if (!ownsDatabases) return undefined;
+
+  return async () => {
+    await dropDatabase(database);
   };
 }

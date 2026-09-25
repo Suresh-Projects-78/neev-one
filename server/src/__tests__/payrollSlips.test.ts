@@ -282,6 +282,6 @@ describe('the boundary', () => {
   });
 
   it('keeps payslips out of the accounting database', async () => {
-    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM SalarySlip LIMIT 1')).rejects.toThrow();
+    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM "SalarySlip" LIMIT 1')).rejects.toThrow();
   });
 });

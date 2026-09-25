@@ -37,7 +37,7 @@ generator payrollClient {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("PAYROLL_DATABASE_URL")
 }
 

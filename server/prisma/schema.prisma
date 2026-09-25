@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -83,7 +83,8 @@ model Branch {
   country      String
 
   gstin               String?
-  // SQLite-compatible: store enum as string (REGULAR | COMPOSITION | UNREGISTERED)
+  // Stored as a string rather than a Postgres enum: adding a value to an enum
+  // is a migration, and these lists grow. (REGULAR | COMPOSITION | UNREGISTERED)
   gstRegistrationType String  @default("UNREGISTERED")
   phone               String?
   email               String?
@@ -267,7 +268,8 @@ model Role {
 
   name        String
   description String?
-  // SQLite-compatible: store enum as string (ADMIN | ACCOUNTANT | SALES | CUSTOM)
+  // Stored as a string rather than a Postgres enum: adding a value to an enum
+  // is a migration, and these lists grow. (ADMIN | ACCOUNTANT | SALES | CUSTOM)
   roleType    String
 
   createdByUserId String
@@ -287,7 +289,8 @@ model Permission {
   id        String  @id @default(cuid())
   module    String
   subModule String?
-  // SQLite-compatible: store enum as string (VIEW | CREATE | EDIT | DELETE | APPROVE | EXPORT)
+  // Stored as a string rather than a Postgres enum: adding a value to an enum
+  // is a migration, and these lists grow. (VIEW | CREATE | EDIT | DELETE | APPROVE | EXPORT)
   action    String
 
   rolePermissions RolePermission[]

@@ -1,5 +1,6 @@
 import { payrollPrisma } from '../../utils/payrollPrisma.js';
 import { accountingFor, type AccountingClient } from './accounting/client.js';
+import { round2 } from '../../utils/money.js';
 
 /**
  * Payroll into the books.
@@ -72,7 +73,6 @@ export class PayrollPostingError extends Error {
   }
 }
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const paise = (n: number) => Math.round(n * 100);
 
 /**
@@ -346,7 +346,44 @@ export async function postPayrollRun(opts: {
    * journal exists — so a crash between the claim and the journal leaves a
    * receipt that says "unfinished", which the next attempt completes.
    */
+  /*
+   * Take the claim, rather than merely find one.
+   *
+   * The unique index on (orgId, runId) decides who may create the receipt, and
+   * that half worked. The hole was the other half: an attempt that *found* a
+   * DRAFT receipt someone else had just created treated it as its own and
+   * carried on, so two attempts posted two journals and doubled the company's
+   * salary cost. On SQLite the writes were serial enough to hide it; on
+   * PostgreSQL it reproduced about one run in five.
+   *
+   * So the right to post is taken with a conditional update. Exactly one
+   * attempt can move a receipt out of DRAFT, and whoever loses is told the
+   * posting is under way.
+   *
+   * IN_PROGRESS is not a terminal state: an attempt that dies between the
+   * claim and the journal leaves the receipt held, and the reclaim below
+   * releases it once it is plainly stale. Combined with the orphan adoption
+   * further down, a crashed attempt finishes rather than duplicates.
+   */
+  const CLAIM_STALE_AFTER_MS = 2 * 60 * 1000;
+
+  /**
+   * Whether this call, and not some other one, holds the right to post.
+   *
+   * Two ways to hold it: you inserted the receipt — the unique index on
+   * (orgId, runId) means only one call can — or you moved an existing one out
+   * of DRAFT, which `updateMany` reports as a row count and so is equally
+   * exclusive.
+   *
+   * What it must NOT depend on is who is signed in. An earlier version treated
+   * a receipt already marked POSTING by the same user as its own, which is
+   * precisely the case the test exercises: one person pressing the button
+   * twice. Both calls continued, both wrote a journal, and the company's
+   * salary cost appeared twice in its own books.
+   */
+  let mine = false;
   let claim = existing;
+
   if (!claim) {
     try {
       claim = await payrollPrisma.payrollPosting.create({
@@ -358,19 +395,47 @@ export async function postPayrollRun(opts: {
           postingDate,
           totalDebit: preview.totalDebit,
           totalCredit: preview.totalCredit,
-          status: 'DRAFT',
+          status: 'POSTING',
           createdByUserId: userId,
         },
       });
+      mine = true;
     } catch (e: any) {
       if (e?.code !== 'P2002') throw e;
-      const winner = await payrollPrisma.payrollPosting.findFirst({ where: { orgId, runId } });
-      if (winner?.status === 'POSTED') return { posting: winner, replayed: true as const };
+      /* Somebody inserted it between our look and our write. */
+      claim = await payrollPrisma.payrollPosting.findFirst({ where: { orgId, runId } });
+      if (!claim) throw e;
+    }
+  }
+
+  if (!mine) {
+    if (claim.status === 'POSTED') return { posting: claim, replayed: true as const };
+
+    /*
+     * Take it, or be told it is taken. A receipt still marked POSTING long
+     * after it was touched belonged to an attempt that died; releasing it is
+     * what lets a crash be finished rather than block the run forever.
+     */
+    const stale = new Date(Date.now() - CLAIM_STALE_AFTER_MS);
+    const taken = await payrollPrisma.payrollPosting.updateMany({
+      where: {
+        id: claim.id,
+        OR: [{ status: 'DRAFT' }, { status: 'POSTING', updatedAt: { lt: stale } }],
+      },
+      data: { status: 'POSTING', createdByUserId: userId },
+    });
+
+    if (taken.count !== 1) {
+      const now = await payrollPrisma.payrollPosting.findFirst({ where: { id: claim.id } });
+      if (now?.status === 'POSTED') return { posting: now, replayed: true as const };
       throw new PayrollPostingError(
         'POSTING_IN_PROGRESS',
         'This payroll is already being posted. Refresh in a moment to see the entry.'
       );
     }
+
+    mine = true;
+    claim = await payrollPrisma.payrollPosting.findFirst({ where: { id: claim.id } });
   }
 
   /*

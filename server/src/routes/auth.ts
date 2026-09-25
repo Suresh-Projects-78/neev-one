@@ -438,11 +438,52 @@ authRouter.get('/me', async (req: Request, res: Response) => {
     }
   };
 
+  /*
+   * The branch each company opens in.
+   *
+   * Every tenant-scoped route requires an `x-branch-id`, including the route
+   * that lists branches — so a client holding only a token could establish
+   * context for the company it logged into and for no other. Switching company
+   * was therefore impossible from a cold start: the header it needed could
+   * only be learnt from a call that already needed the header.
+   *
+   * The platform shell is the thing that owns tenant context, so the platform
+   * answers it: one branch per company, the first the user is a member of.
+   */
+  const branchMemberships = await prisma.userBranchMembership.findMany({
+    where: { userId: auth.userId, orgId: { in: orgMemberships.map((m) => m.orgId) } },
+    select: { orgId: true, branchId: true },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const defaultBranchByOrg: Record<string, string> = {};
+  for (const m of branchMemberships) {
+    if (!defaultBranchByOrg[m.orgId]) defaultBranchByOrg[m.orgId] = m.branchId;
+  }
+
+  /*
+   * An org's creator has access to every branch in it but may hold no
+   * membership row yet — the middleware writes one on first use. Without a
+   * fallback their own company would come back with no branch at all.
+   */
+  const missing = orgMemberships.filter((m) => !defaultBranchByOrg[m.orgId]).map((m) => m.orgId);
+  if (missing.length) {
+    const firstBranches = await prisma.branch.findMany({
+      where: { orgId: { in: missing } },
+      select: { id: true, orgId: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    for (const b of firstBranches) {
+      if (!defaultBranchByOrg[b.orgId]) defaultBranchByOrg[b.orgId] = b.id;
+    }
+  }
+
   return res.json({
     user,
     orgs: orgMemberships.map((m) => ({
       orgId: m.orgId,
       accountId: m.accountId,
+      branchId: defaultBranchByOrg[m.orgId] || null,
       org: {
         id: m.org.id,
         name: m.org.name,

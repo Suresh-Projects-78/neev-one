@@ -1,3 +1,4 @@
+import { round2 } from '../../../utils/money.js';
 /**
  * The statutory deductions: provident fund, ESI, professional tax, income tax.
  *
@@ -85,7 +86,6 @@ export type StatutoryAmount = {
   exemptReason?: string;
 };
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 const applyRounding = (value: number, mode: StatutoryRuleInput['rounding']): number => {
   if (mode === 'UP') return Math.ceil(value);

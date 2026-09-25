@@ -1,6 +1,7 @@
 import { payrollPrisma } from '../../utils/payrollPrisma.js';
 import { peoplePrisma } from '../../utils/peoplePrisma.js';
 import { accountingFor, type AccountingClient } from './accounting/client.js';
+import { round2 } from '../../utils/money.js';
 
 /**
  * Paying people, and clearing what they were owed.
@@ -48,7 +49,6 @@ export class PayrollPaymentError extends Error {
   }
 }
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const paise = (n: number) => Math.round(n * 100);
 
 /**

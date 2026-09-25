@@ -2,7 +2,9 @@
 export default {
   content: [
     './index.html',
-    './src/**/*.{js,ts,jsx,tsx}',
+    './main.jsx',
+    './packages/**/*.{js,ts,jsx,tsx}',
+    './apps/**/*.{js,ts,jsx,tsx}',
   ],
   // Component classes in @layer components are purged when the class name never
   // appears literally in the scanned source. These variants are composed at

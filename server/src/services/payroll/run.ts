@@ -3,6 +3,7 @@ import { peoplePrisma } from '../../utils/peoplePrisma.js';
 import { calculateStructure, ENGINE_VERSION, type EngineComponent } from './engine/calculator.js';
 import { loadRules, applyStatutory } from './statutory/resolve.js';
 import { recoveriesDue, recoverable, type DueRecovery } from './loan.js';
+import { round2 } from '../../utils/money.js';
 
 /**
  * A payroll run: turning a population and a period into payslips.
@@ -414,6 +415,43 @@ export async function validateRun(orgId: string, runId: string): Promise<{ issue
     }
     const who = employee.name;
     const profile = ctx.profiles.get(employee.id);
+
+    /*
+     * Being in the staff directory is not being in payroll.
+     *
+     * A payroll profile is where somebody's bank account, PAN and UAN live,
+     * and which statutory schemes apply to them. Without one there is nowhere
+     * to pay the money, no number to deduct tax against, and nothing to file.
+     *
+     * The rule was described in the eligibility filter above — "they are
+     * eligible and will fail validation with a reason" — and the reason was
+     * never written. So a run happily paid people with no profile while
+     * payroll's own setup screen, which counts profiles, said nobody was in
+     * payroll. Seven payslips and a screen saying there was no one: both
+     * correct, because they were counting different things.
+     */
+    if (!profile) {
+      add({
+        severity: 'ERROR',
+        code: 'NO_PAYROLL_PROFILE',
+        employeeId: employee.id,
+        message: `${who} is on the staff list but not in payroll — no bank account, PAN or statutory details. Add their payroll details, or take them out of this run.`,
+      });
+      continue;
+    }
+
+    if (profile.payrollStatus !== 'IN_PAYROLL') {
+      /* Held after they were included: somebody put them on hold between the
+         run being started and being checked. */
+      add({
+        severity: 'ERROR',
+        code: 'NOT_IN_PAYROLL',
+        employeeId: employee.id,
+        message: `${who} is ${String(profile.payrollStatus || 'not in payroll').toLowerCase().replace(/_/g, ' ')}, so this payroll cannot pay them.`,
+      });
+      continue;
+    }
+
     const assignment = assignmentOn(ctx, employee.id, ctx.period.endDate) || assignmentOn(ctx, employee.id, ctx.period.startDate);
 
     if (!assignment) {
@@ -904,4 +942,3 @@ export async function calculateRun(orgId: string, runId: string, userId: string)
   return { slips: results, issues };
 }
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;

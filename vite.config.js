@@ -1,4 +1,5 @@
 import os from 'node:os'
+import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
@@ -24,6 +25,14 @@ const apiTarget = process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:4002'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      /* Shared platform UI. Apps import from here; never from each other. */
+      '@ui': fileURLToPath(new URL('./packages/ui/src', import.meta.url)),
+      /* Session, tenant and transport — owned by the shell, read by apps. */
+      '@platform': fileURLToPath(new URL('./packages/platform', import.meta.url)),
+    },
+  },
   server: {
     // Quick tunnels get a fresh random hostname each time they start, so the
     // host cannot be listed literally. Vite rejects unknown Host headers by

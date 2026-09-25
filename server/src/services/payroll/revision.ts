@@ -2,6 +2,7 @@ import { payrollPrisma } from '../../utils/payrollPrisma.js';
 import { peoplePrisma } from '../../utils/peoplePrisma.js';
 import { calculateStructure, type EngineComponent, type EngineResult } from './engine/calculator.js';
 import { loadRules, applyStatutory } from './statutory/resolve.js';
+import { round2 } from '../../utils/money.js';
 
 /**
  * A salary revision, and what it actually costs.
@@ -24,7 +25,6 @@ import { loadRules, applyStatutory } from './statutory/resolve.js';
  * on the screen, not one recomputed under today's rates.
  */
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 export class SalaryRevisionError extends Error {
   code: string;

@@ -19,6 +19,20 @@ import { fileURLToPath } from 'node:url';
  *
  * A failure here is not a style complaint. It means an import has been added
  * that will have to be undone before either application can move.
+ *
+ * ## Why this still exists alongside the boundary linter
+ *
+ * `npm run lint:boundaries` (dependency-cruiser) enforces the same rule from
+ * the module graph, which is strictly better at the mechanical part: it
+ * resolves aliases, follows re-exports, and cannot be fooled by an import
+ * written a different way. It is also a separate command that a person has to
+ * remember to run.
+ *
+ * These stay because they assert things a dependency graph does not describe:
+ * that the adapter's interface is the only shape Payroll knows Accounting by,
+ * and that the two databases are reachable only through their own clients. The
+ * overlap on imports is deliberate — the graph catches the spelling, this
+ * catches the intent, and the cheap one runs on every `npm test`.
  */
 
 const HERE = dirname(fileURLToPath(import.meta.url));

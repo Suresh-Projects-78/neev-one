@@ -424,6 +424,12 @@ describe('the same checkout, twice', () => {
 
     // Whichever order they landed in, one economic checkout exists and both
     // callers were told about the same one.
+    /* Asserted as a pair, so a failure names the statuses and the errors
+       rather than saying "expected false to be true". */
+    expect({ statuses: [a.status, b.status].sort(), errors: [a.body?.error, b.body?.error] }).toEqual({
+      statuses: expect.arrayContaining([expect.any(Number)]),
+      errors: [undefined, undefined],
+    });
     expect([a.status, b.status].every((s) => s === 200 || s === 201)).toBe(true);
     expect(a.body.invoice.id).toBe(b.body.invoice.id);
 

@@ -8,6 +8,7 @@ import { payrollPrisma } from '../utils/payrollPrisma.js';
 import { peoplePrisma } from '../utils/peoplePrisma.js';
 import { PAYROLL_MODULE, PAYROLL_RESOURCE, payrollRouteOk } from '../services/payroll/guards.js';
 import { snapshotPerson } from '../services/payroll/payment.js';
+import { round2 } from '../utils/money.js';
 
 /**
  * Payroll reports.
@@ -25,7 +26,6 @@ export const payrollReportsRouter = Router();
 payrollReportsRouter.use(requireAuth, requireTenantContext);
 
 const RESOURCE = PAYROLL_RESOURCE.reports;
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 /**
  * The payslips a report covers, with who they belong to.

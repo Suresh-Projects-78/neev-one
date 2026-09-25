@@ -56,3 +56,9 @@ prisma/test.db
 
 # Prisma generates the payroll client into the source tree; it is built, not written.
 server/src/generated/
+
+# Generated Prisma clients. Rebuilt by `npm --prefix server run prisma:generate`.
+server/src/generated/
+
+# Secrets: the JWT key and the database URLs.
+server/.env

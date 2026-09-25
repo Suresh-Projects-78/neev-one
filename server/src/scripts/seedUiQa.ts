@@ -39,15 +39,32 @@ import { prisma } from '../utils/prisma.js';
  *
  * A comment saying "don't run this in production" is not a guard; it is a
  * wish. This refuses on any signal that the target is real: an explicit
- * NODE_ENV, or a DATABASE_URL that is not the local file the dev server uses.
+ * NODE_ENV, a database that names production, or a host that is not this
+ * machine.
+ *
+ * "Local" used to mean a `file:` URL, from when every database was SQLite.
+ * A local Postgres is just as local, and a remote SQLite file is not — so the
+ * test is the host, not the driver.
  */
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+const isLocalDatabase = (url: string) => {
+  if (!url) return true;
+  if (/^file:/.test(url)) return true;
+  try {
+    return LOCAL_HOSTS.has(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+};
+
 const assertNotProduction = () => {
   const env = String(process.env.NODE_ENV || '').toLowerCase();
   const url = String(process.env.DATABASE_URL || '');
 
   const reasons: string[] = [];
   if (env === 'production' || env === 'prod') reasons.push(`NODE_ENV=${env}`);
-  if (url && !/^file:/.test(url)) reasons.push(`DATABASE_URL is not a local file (${url.slice(0, 24)}…)`);
+  if (!isLocalDatabase(url)) reasons.push(`DATABASE_URL is not on this machine (${url.slice(0, 24)}…)`);
   if (/prod/i.test(url)) reasons.push('DATABASE_URL names a production database');
   if (process.env.NEEV_ALLOW_SEED === 'never') reasons.push('NEEV_ALLOW_SEED=never');
 

@@ -1,4 +1,6 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath, URL } from 'node:url';
+
 import react from '@vitejs/plugin-react';
 
 /**
@@ -12,10 +14,20 @@ import react from '@vitejs/plugin-react';
  */
 export default defineConfig({
   plugins: [react()],
+  /* The same aliases the app is built with. A test that cannot resolve `@ui`
+     fails on the import rather than on the behaviour it was written for. */
+  resolve: {
+    alias: {
+      '@ui': fileURLToPath(new URL('./packages/ui/src', import.meta.url)),
+      '@platform': fileURLToPath(new URL('./packages/platform', import.meta.url)),
+    },
+  },
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.{js,jsx}'],
-    setupFiles: ['src/test/setup.js'],
+    /* The tree moved: screens live under apps/, shared UI under packages/,
+       and the cross-cutting suite that reads the whole codebase is in test/. */
+    include: ['apps/**/*.test.{js,jsx}', 'packages/**/*.test.{js,jsx}', 'test/**/*.test.{js,jsx}'],
+    setupFiles: ['test/setup.js'],
     globals: true,
     css: false,
     /*

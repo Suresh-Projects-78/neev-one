@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
+import { round2 } from '../utils/money.js';
 
 /**
  * Foreign currency — requirement 8.
@@ -29,7 +30,9 @@ export const isBase = (currency: string, baseCurrency: string) =>
   String(currency || '').toUpperCase() === String(baseCurrency || '').toUpperCase();
 
 /** Rounds to 2dp through integer minor units, the same way the ledger does. */
-export const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+/* Re-exported, not redefined: currency conversion rounds the same way the
+   ledger does, or a converted invoice and its entry disagree. */
+export { round2 };
 
 export async function baseCurrencyFor(accountId: string, orgId: string) {
   const org = await prisma.org.findFirst({ where: { id: orgId, accountId }, select: { baseCurrency: true } });

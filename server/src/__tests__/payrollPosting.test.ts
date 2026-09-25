@@ -19,7 +19,8 @@ import request from 'supertest';
 const { buildApp } = await import('../app.js');
 const { prisma } = await import('../utils/prisma.js');
 const { payrollPrisma } = await import('../utils/payrollPrisma.js');
-const { PAYROLL_SOURCE_DOC_TYPE } = await import('../services/payroll/posting.js');
+const { PAYROLL_SOURCE_DOC_TYPE, postPayrollRun, PayrollPostingError } = await import('../services/payroll/posting.js');
+const { accountingFor } = await import('../services/payroll/accounting/client.js');
 
 const app = buildApp().listen(0);
 afterAll(async () => {
@@ -138,7 +139,15 @@ async function setUpCompany(c: Ctx) {
 
 async function addPerson(c: Ctx, structureId: string, name: string, ctc: number) {
   const made = await api
-    .post(c, '/employees', { name, code: `E${rnd().toUpperCase()}`, dateOfJoining: '2026-01-01', status: 'ACTIVE' })
+    .post(c, '/employees', {
+      name,
+      code: `E${rnd().toUpperCase()}`,
+      dateOfJoining: '2026-01-01',
+      status: 'ACTIVE',
+      /* Somebody a payroll can actually pay: a profile is where the bank
+         account and the PAN live, and a run refuses without one. */
+      payroll: { payrollStatus: 'IN_PAYROLL', taxRegime: 'NEW', bankAccountNumber: '123412341234', pan: 'ABCDE1234F' },
+    })
     .expect(201);
   await api
     .post(c, '/assignments', { employeeId: made.body.employee.id, structureId, effectiveFrom: '2026-01-01', annualCtc: ctc })
@@ -273,13 +282,23 @@ describe('posting', () => {
     await addPerson(c2, s2.structureId, 'Race Person', 900_000);
     const id = await approvedRun(c2, s2);
 
-    const [a, b] = await Promise.all([api.post(c2, `/runs/${id}/post`), api.post(c2, `/runs/${id}/post`)]);
+    /*
+     * Five at once, not two.
+     *
+     * With two the collision is real but intermittent — the bug this guards
+     * reproduced about one run in five, which means a passing run proved
+     * nothing. Five attempts make the overlap near certain, so a regression
+     * fails the suite instead of waiting to be unlucky in production.
+     */
+    const attempts = await Promise.all(
+      Array.from({ length: 5 }, () => api.post(c2, `/runs/${id}/post`))
+    );
 
-    /* One of them posts. The other is either told it was already done, or that
+    /* One of them posts. The rest are either told it was already done, or that
        the posting is under way — never a second journal. */
-    const statuses = [a.status, b.status].sort();
+    const statuses = attempts.map((r) => r.status).sort();
     expect(statuses[0]).toBeLessThan(300);
-    expect([200, 201, 409]).toContain(statuses[1]);
+    for (const status of statuses.slice(1)) expect([200, 201, 409]).toContain(status);
 
     const entries = await prisma.journalEntry.count({
       where: { orgId: c2.orgId, sourceDocType: PAYROLL_SOURCE_DOC_TYPE, sourceDocId: id },
@@ -382,7 +401,7 @@ describe('what will not be posted', () => {
 
 describe('the boundary still holds', () => {
   it('leaves payroll with no ledger of its own', async () => {
-    await expect(payrollPrisma.$queryRawUnsafe('SELECT 1 FROM JournalEntry LIMIT 1')).rejects.toThrow();
+    await expect(payrollPrisma.$queryRawUnsafe('SELECT 1 FROM "JournalEntry" LIMIT 1')).rejects.toThrow();
   });
 
   it('keeps the payroll journal an ordinary entry the books can see', async () => {
@@ -396,5 +415,83 @@ describe('the boundary still holds', () => {
     /* Its own book, the way sales and purchases have theirs. */
     expect(entry!.journal.code).toBe('PAY');
     expect(entry!.lines.length).toBeGreaterThanOrEqual(2);
+  });
+
+  /**
+   * The same overlap, made certain rather than likely.
+   *
+   * The test above fires five requests and hopes they collide; they usually do
+   * not, because one Node process interleaves them only where they await. This
+   * one holds the first attempt open at the exact moment that matters — after
+   * it has claimed the run, before it has written the journal — and starts the
+   * second one there. That is the interleaving that doubled a company's salary
+   * cost, and it now fails the suite every time rather than one run in five.
+   */
+  it('refuses a second attempt that starts while the first is mid-journal', async () => {
+    const c3 = await makeOwner();
+    const s3 = await setUpCompany(c3);
+    await addPerson(c3, s3.structureId, 'Held Person', 900_000);
+    const id = await approvedRun(c3, s3);
+
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let reachedJournal: () => void = () => {};
+    const atJournal = new Promise<void>((resolve) => {
+      reachedJournal = resolve;
+    });
+
+    const real = accountingFor(c3.accountId);
+    /*
+     * A proxy, not a spread. The adapter is a class instance, so spreading it
+     * copies its fields and drops every method on the prototype — the first
+     * attempt then failed on `getLedgersByIds is not a function` long before
+     * it reached the moment this test is about. Reflect with the target as the
+     * receiver keeps `this` pointing at the real adapter.
+     */
+    const held = new Proxy(real, {
+      get(target, key) {
+        if (key === 'postJournalEntry') {
+          return async (payload: any) => {
+            reachedJournal();
+            await gate;
+            return target.postJournalEntry(payload);
+          };
+        }
+        const value = Reflect.get(target, key, target);
+        return typeof value === 'function' ? value.bind(target) : value;
+      },
+    });
+
+    const first = postPayrollRun({
+      accountId: c3.accountId,
+      orgId: c3.orgId,
+      branchId: c3.branchId,
+      userId: (await prisma.user.findFirstOrThrow({ where: { accountId: c3.accountId } })).id,
+      runId: id,
+      accounting: held,
+    });
+
+    await atJournal;
+
+    /* The claim is taken and no journal exists yet — the worst moment. */
+    await expect(
+      postPayrollRun({
+        accountId: c3.accountId,
+        orgId: c3.orgId,
+        branchId: c3.branchId,
+        userId: (await prisma.user.findFirstOrThrow({ where: { accountId: c3.accountId } })).id,
+        runId: id,
+      })
+    ).rejects.toThrow(PayrollPostingError);
+
+    release();
+    await first;
+
+    const entries = await prisma.journalEntry.count({
+      where: { orgId: c3.orgId, sourceDocType: PAYROLL_SOURCE_DOC_TYPE, sourceDocId: id },
+    });
+    expect(entries).toBe(1);
   });
 });

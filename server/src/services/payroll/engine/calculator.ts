@@ -1,4 +1,5 @@
 import { compileFormula, FormulaError } from '../formula.js';
+import { round2 } from '../../../utils/money.js';
 
 /**
  * What a salary structure works out to.
@@ -127,7 +128,6 @@ export type EngineResult = {
   warnings: { code: string; message: string }[];
 };
 
-const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 
 const applyRounding = (value: number, mode: Rounding): number => {
   if (mode === 'UP') return Math.ceil(value);

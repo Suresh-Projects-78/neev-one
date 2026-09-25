@@ -83,9 +83,9 @@ describe('the boundary between payroll and the books', () => {
      * the join which would leak it cannot be written. This asks the accounting
      * client for the table and expects to be told there is no such thing.
      */
-    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM SalaryComponent LIMIT 1')).rejects.toThrow();
-    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM SalarySlip LIMIT 1')).rejects.toThrow();
-    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM EmployeePayrollProfile LIMIT 1')).rejects.toThrow();
+    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM "SalaryComponent" LIMIT 1')).rejects.toThrow();
+    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM "SalarySlip" LIMIT 1')).rejects.toThrow();
+    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM "EmployeePayrollProfile" LIMIT 1')).rejects.toThrow();
   });
 
   it('holds them in the payroll database, which answers for the same tables', async () => {
@@ -98,21 +98,21 @@ describe('the boundary between payroll and the books', () => {
        timesheets, leave. One record, owned by none of them, so no two can
        disagree about a name or a joining date. */
     await expect(peoplePrisma.employee.count()).resolves.toBeGreaterThanOrEqual(0);
-    await expect(payrollPrisma.$queryRawUnsafe('SELECT 1 FROM Employee LIMIT 1')).rejects.toThrow();
-    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM Employee LIMIT 1')).rejects.toThrow();
+    await expect(payrollPrisma.$queryRawUnsafe('SELECT 1 FROM "Employee" LIMIT 1')).rejects.toThrow();
+    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM "Employee" LIMIT 1')).rejects.toThrow();
   });
 
   it('keeps what only payroll needs in payroll', async () => {
     /* A bank account and a PAN are payroll's, not a staff directory's. */
     await expect(payrollPrisma.employeePayrollProfile.count()).resolves.toBeGreaterThanOrEqual(0);
-    await expect(peoplePrisma.$queryRawUnsafe('SELECT 1 FROM EmployeePayrollProfile LIMIT 1')).rejects.toThrow();
+    await expect(peoplePrisma.$queryRawUnsafe('SELECT 1 FROM "EmployeePayrollProfile" LIMIT 1')).rejects.toThrow();
   });
 
   it('still keeps one ledger — payroll adds no journal table of its own', async () => {
     /* Payroll posts into Neev's books through the accounting service. It must
        not have grown a second set of them. */
-    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM JournalEntry LIMIT 1')).resolves.toBeDefined();
-    await expect(payrollPrisma.$queryRawUnsafe('SELECT 1 FROM JournalEntry LIMIT 1')).rejects.toThrow();
+    await expect(prisma.$queryRawUnsafe('SELECT 1 FROM "JournalEntry" LIMIT 1')).resolves.toBeDefined();
+    await expect(payrollPrisma.$queryRawUnsafe('SELECT 1 FROM "JournalEntry" LIMIT 1')).rejects.toThrow();
   });
 });
 

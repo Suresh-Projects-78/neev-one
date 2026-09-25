@@ -1,35 +1,56 @@
+import { userInfo } from 'node:os';
+
+import dotenv from 'dotenv';
 import { defineConfig } from 'vitest/config';
 
+/* The developer's own .env names the PostgreSQL server; without loading it the
+   fallback below invents a URL with no user, and Prisma fails to connect with
+   an error that names nothing. */
+dotenv.config();
+
 /**
- * One database per run, not one database.
+ * One database per run, with a schema per application inside it.
  *
- * The suite shared `prisma/test.db`, and globalSetup resets it before anything
- * starts. Two runs at once — a watch and a one-off, two terminals, a script
- * touching the file — meant the second reset the database out from under the
- * first, and tests failed to collect with nothing wrong with them. It looked
- * like flakiness and was contention.
+ * The product is one PostgreSQL database whose boundary between applications
+ * is the schema, so the suite is shaped the same way — a test that passes
+ * against three databases proves nothing about a deployment that has one.
  *
- * Keyed on the process id so concurrent runs cannot collide. Overridable with
- * TEST_DATABASE_URL, which is also how the same suite is pointed at Postgres:
+ * The database is named for this process, so two runs — a watch and a one-off,
+ * two terminals, a script — cannot reset each other mid-flight, and it is
+ * dropped at the end.
  *
- *   TEST_DATABASE_URL=postgresql://…  npm test
+ * Point it somewhere else with TEST_DATABASE_URL, which is how CI aims the
+ * same suite at its own server.
  */
-const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL || `file:./test-${process.pid}.db?connection_limit=1`;
+const pgBase = () => {
+  /* The admin connection the run borrows to create its own databases. Taken
+     from the developer's own DATABASE_URL so the suite needs no second piece
+     of configuration to find the server. */
+  const from =
+    process.env.TEST_PG_URL ||
+    process.env.DATABASE_URL ||
+    `postgresql://${encodeURIComponent(userInfo().username)}@localhost:5432/postgres`;
+  const url = new URL(from);
+  url.pathname = '/postgres';
+  url.search = '';
+  return url.toString();
+};
 
-/*
- * Payroll keeps its own database in production, so it keeps its own in the
- * suite. Two files per run, keyed on the same process id for the same reason:
- * a second run must not reset either of them out from under the first.
- */
-const TEST_PAYROLL_DATABASE_URL =
-  process.env.TEST_PAYROLL_DATABASE_URL || `file:./test-payroll-${process.pid}.db?connection_limit=1`;
+const dbName = `clor_test_${process.pid}`;
 
-/* People is a third database for the same reasons, so a third file per run. */
-const TEST_PEOPLE_DATABASE_URL =
-  process.env.TEST_PEOPLE_DATABASE_URL || `file:./test-people-${process.pid}.db?connection_limit=1`;
+const urlFor = (schema: string) => {
+  const url = new URL(pgBase());
+  url.pathname = `/${dbName}`;
+  url.search = `?schema=${schema}`;
+  return url.toString();
+};
+
+const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL || urlFor('accounting');
+const TEST_PAYROLL_DATABASE_URL = process.env.TEST_PAYROLL_DATABASE_URL || urlFor('payroll');
+const TEST_PEOPLE_DATABASE_URL = process.env.TEST_PEOPLE_DATABASE_URL || urlFor('people');
 
 // globalSetup runs in this same process and reads them from here.
+process.env.PG_ADMIN_URL = pgBase();
 process.env.DATABASE_URL = TEST_DATABASE_URL;
 process.env.PAYROLL_DATABASE_URL = TEST_PAYROLL_DATABASE_URL;
 process.env.PEOPLE_DATABASE_URL = TEST_PEOPLE_DATABASE_URL;
@@ -39,20 +60,10 @@ export default defineConfig({
     environment: 'node',
     // Kills global-agent keep-alive; see the file for the port-reuse race.
     setupFiles: ['src/__tests__/setupAgent.ts'],
-    // Creates prisma/test.db and pushes the schema before any test runs.
+    // Creates this run's three databases and pushes the schemas into them.
     globalSetup: ['src/__tests__/globalSetup.ts'],
     env: {
-      // The suite owns its database. Sharing dev.db with a running dev server
-      // made runs fail intermittently on SQLite write contention, which looked
-      // like flaky application code and was not.
-      // Relative SQLite paths resolve from the schema's directory
-      // (server/prisma), the same way the dev URL "file:./dev.db" does.
-      // connection_limit=1: Prisma keeps a small pool even for SQLite, and two
-      // connections to one file turn into "database is locked" retries and
-      // occasional stale reads right after a write. One connection makes every
-      // query strictly serial, which is exactly what a test suite wants.
-      // Set above, and shared with globalSetup through the environment so both
-      // halves of the run agree on which database they are using.
+      PG_ADMIN_URL: pgBase(),
       DATABASE_URL: TEST_DATABASE_URL,
       PAYROLL_DATABASE_URL: TEST_PAYROLL_DATABASE_URL,
       PEOPLE_DATABASE_URL: TEST_PEOPLE_DATABASE_URL,
@@ -62,24 +73,26 @@ export default defineConfig({
       BCRYPT_ROUNDS: '4',
       JWT_SECRET: 'test-secret-do-not-use-in-production',
       // CI has no .env; without these jsonwebtoken rejects sign options.
-      JWT_ISSUER: 'accounting',
-      JWT_AUDIENCE: 'accounting-web',
+      JWT_ISSUER: 'clor',
+      JWT_AUDIENCE: 'clor-web',
       // Failure-path tests point at a host that does not answer; a short
       // timeout keeps them fast instead of waiting on the OS.
       SMTP_TIMEOUT_MS: '800',
     },
     include: ['src/**/*.test.ts'],
-    // The suite shares one SQLite file; parallel files would deadlock on writes.
+    /*
+     * Still serial, though Postgres would allow otherwise.
+     *
+     * Many tests assert on counts within an organisation and several seed
+     * global masters; running files together makes those assertions depend on
+     * what another file happened to be doing. The isolation to fix that is a
+     * transaction per test, which is a change to every test rather than to
+     * this file.
+     */
     fileParallelism: false,
-    // One process for the whole suite, not one worker per file. With a worker
-    // per file, fire-and-forget async work from a finished file (mailer
-    // deliveries writing outbox rows) keeps hitting SQLite while the next
-    // file's worker starts its own connection — "database is locked" then
-    // surfaces as random 401/403/500s and socket hangups. A single fork means
-    // one Prisma client serialising every write.
     pool: 'forks',
     poolOptions: { forks: { singleFork: true } },
-    hookTimeout: 60_000,
+    hookTimeout: 120_000,
     testTimeout: 60_000,
   },
 });

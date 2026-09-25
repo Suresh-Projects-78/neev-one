@@ -1,0 +1,596 @@
+import React, { useMemo, useEffect, useRef, useState } from 'react';
+import { TableSkeleton } from '@ui/components/ui/Primitives';
+import { exportRows } from '@ui/components/ListToolbar';
+import { confirmDialog, notify } from '@ui/components/ui/notify';
+import { listBranches, createBranch, updateBranch, deleteBranch } from '../../api/admin';
+import PopupSelect from '@ui/components/pickers/PopupSelect';
+import { GST_STATE_BY_CODE, getGstStateFromGstin } from '@ui/utils/gst';
+import Popover from '@ui/components/ui/Popover';
+
+export function SettingsBranches({ orgId, onBranchesChanged }) {
+  const [branches, setBranches] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [openMenuForBranchId, setOpenMenuForBranchId] = useState(null);
+  /** The trigger the open menu hangs from; only one row's menu is open. */
+  const menuAnchorRef = useRef(null);
+  const [viewBranchId, setViewBranchId] = useState(null);
+  const [editingBranchId, setEditingBranchId] = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [form, setForm] = useState({
+    branchCode: '',
+    branchName: '',
+    addressLine1: '',
+    city: '',
+    state: '',
+    country: 'India',
+    gstRegistrationType: 'UNREGISTERED',
+    gstin: '',
+  });
+
+  const [editForm, setEditForm] = useState({
+    branchCode: '',
+    branchName: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    country: 'India',
+    gstRegistrationType: 'UNREGISTERED',
+    gstin: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+  });
+
+  const stateOptions = useMemo(() => {
+    return Object.keys(GST_STATE_BY_CODE || {})
+      .sort()
+      .map((code) => ({
+        code,
+        value: String(GST_STATE_BY_CODE[code] || '').trim(),
+        label: String(GST_STATE_BY_CODE[code] || '').trim(),
+      }))
+      .filter((o) => o.value);
+  }, []);
+
+  const loadBranches = async () => {
+    if (!orgId) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await listBranches(orgId);
+      setBranches(Array.isArray(res.branches) ? res.branches : []);
+    } catch (err) {
+      setError(err.message || 'Failed to load branches');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBranches();
+  }, [orgId]);
+
+  const onChange = (k) => (e) => {
+    const next = e.target.value;
+    if (k === 'gstin') {
+      const maybeState = getGstStateFromGstin(String(next || '').trim());
+      setForm((p) => ({ ...p, gstin: next, state: maybeState ? maybeState : p.state }));
+      setError('');
+      return;
+    }
+    setForm((p) => ({ ...p, [k]: next }));
+    setError('');
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!String(form.state || '').trim()) {
+      setError('State is required — pick the branch state.');
+      notify.error('State is required — pick the branch state.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      const payload = {
+        ...form,
+        gstin: form.gstin || null,
+      };
+      const res = await createBranch(orgId, payload);
+      setBranches((prev) => [...prev, res.branch]);
+      /*
+       * Saving opens what was saved. A create used to drop you back on the
+       * list with a toast, so the only way to check what had actually been
+       * stored was to find the row again and open it — and with several
+       * branches that is a search through a list you have just added to.
+       */
+      if (res?.branch?.id) setViewBranchId(String(res.branch.id));
+      setForm({ branchCode: '', branchName: '', addressLine1: '', city: '', state: '', country: 'India', gstRegistrationType: 'UNREGISTERED', gstin: '' });
+      setShowForm(false);
+      notify.success(`Branch "${res.branch?.branchName || payload.branchName}" created.`);
+      onBranchesChanged?.();
+    } catch (err) {
+      setError(err.message || 'Failed to create branch');
+      notify.error(err.message || 'Failed to create branch');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeBranch = async (id) => {
+    if (!await confirmDialog({ title: 'Please confirm', message: 'Delete this branch?', confirmLabel: 'Yes, continue' })) return;
+    try {
+      await deleteBranch(orgId, id);
+      setBranches((prev) => prev.filter((b) => b.id !== id));
+      onBranchesChanged?.();
+    } catch (err) {
+      setError(err.message || 'Failed to delete');
+    }
+  };
+
+  const openView = (id) => {
+    setViewBranchId(String(id));
+    setEditingBranchId(null);
+    setOpenMenuForBranchId(null);
+  };
+
+  const closeView = () => {
+    setViewBranchId(null);
+    setEditingBranchId(null);
+  };
+
+  const beginEdit = (b) => {
+    setViewBranchId(String(b.id));
+    setEditingBranchId(String(b.id));
+    setEditForm({
+      branchCode: String(b.branchCode || ''),
+      branchName: String(b.branchName || ''),
+      addressLine1: String(b.addressLine1 || ''),
+      addressLine2: String(b.addressLine2 || ''),
+      city: String(b.city || ''),
+      state: String(b.state || ''),
+      country: String(b.country || 'India'),
+      gstRegistrationType: String(b.gstRegistrationType || 'UNREGISTERED'),
+      gstin: String(b.gstin || ''),
+      contactPerson: String(b.contactPerson || ''),
+      phone: String(b.phone || ''),
+      email: String(b.email || ''),
+    });
+    setOpenMenuForBranchId(null);
+    setError('');
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingBranchId) return;
+    setEditSaving(true);
+    setError('');
+    try {
+      const payload = {
+        branchCode: String(editForm.branchCode || '').trim(),
+        branchName: String(editForm.branchName || '').trim(),
+        addressLine1: String(editForm.addressLine1 || '').trim(),
+        addressLine2: String(editForm.addressLine2 || '').trim() || null,
+        city: String(editForm.city || '').trim() || null,
+        state: String(editForm.state || '').trim(),
+        country: String(editForm.country || '').trim() || 'India',
+        gstRegistrationType: String(editForm.gstRegistrationType || 'UNREGISTERED').trim(),
+        gstin: String(editForm.gstin || '').trim() || null,
+        contactPerson: String(editForm.contactPerson || '').trim() || null,
+        phone: String(editForm.phone || '').trim() || null,
+        email: String(editForm.email || '').trim() || null,
+      };
+
+      if (!payload.branchCode) throw new Error('Branch code is required');
+      if (!payload.branchName) throw new Error('Branch name is required');
+      if (!payload.addressLine1) throw new Error('Address is required');
+      if (!payload.state) throw new Error('State is required');
+      if (payload.gstRegistrationType !== 'UNREGISTERED' && !payload.gstin) {
+        throw new Error('GSTIN is required for registered branches');
+      }
+
+      const res = await updateBranch(orgId, editingBranchId, payload);
+      const updated = res?.branch;
+      if (updated) {
+        setBranches((prev) => prev.map((x) => (String(x.id) === String(updated.id) ? updated : x)));
+      } else {
+        await loadBranches();
+      }
+      // Back to the view of the record just saved, not out of it entirely.
+      setEditingBranchId(null);
+      setViewBranchId(String(editingBranchId));
+      notify.success(`Branch "${payload.branchName}" saved.`);
+    } catch (err) {
+      setError(err.message || 'Failed to update branch');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const query = String(search || '').trim().toLowerCase();
+  const filteredBranches = query
+    ? branches.filter((b) => {
+        const code = String(b?.branchCode || '').toLowerCase();
+        const name = String(b?.branchName || '').toLowerCase();
+        const city = String(b?.city || '').toLowerCase();
+        const state = String(b?.state || '').toLowerCase();
+        const addr = String(b?.addressLine1 || '').toLowerCase();
+        const gstin = String(b?.gstin || '').toLowerCase();
+        const phone = String(b?.phone || '').toLowerCase();
+        const email = String(b?.email || '').toLowerCase();
+        return [code, name, city, state, addr, gstin, phone, email].some((s) => s.includes(query));
+      })
+    : branches;
+
+  const selectedBranch = viewBranchId ? branches.find((b) => String(b.id) === String(viewBranchId)) || null : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="ui-t-sec">Branches</div>
+        <button
+          type="button"
+          onClick={() => setShowForm(!showForm)}
+          className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
+        >
+          + Create Branch
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="w-full max-w-sm">
+          <div className="relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search branches"
+              className="ui-input w-full ui-surface"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs ui-muted whitespace-nowrap">{filteredBranches.length} rows</span>
+          <button
+            type="button"
+            onClick={() =>
+              exportRows({
+                fileName: 'Branches',
+                label: 'branch(es)',
+                columns: [
+              { key: 'branchCode', label: 'Code' },
+              { key: 'branchName', label: 'Branch' },
+              { key: 'city', label: 'City' },
+              { key: 'state', label: 'State' },
+              { key: 'gstin', label: 'GSTIN' },
+                ],
+                rows: filteredBranches,
+              })
+            }
+            className="ui-btn ui-btn-secondary"
+          >
+            Export
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="text-sm text-[rgb(var(--neg))] bg-[rgb(var(--neg-soft))] border border-[rgb(var(--neg)/0.35)] rounded-lg p-3">{error}</div>}
+
+      {selectedBranch ? (
+        <div className="ui-surface border rounded-xl p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="ui-t-sec">Branch Details</div>
+              <div className="text-xs ui-muted">{selectedBranch.branchCode || ''}</div>
+            </div>
+            <div className="flex gap-2">
+              {editingBranchId ? null : (
+                <button
+                  type="button"
+                  onClick={() => beginEdit(selectedBranch)}
+                  className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken"
+                >
+                  Edit
+                </button>
+              )}
+              <button type="button" onClick={closeView} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
+                Close
+              </button>
+            </div>
+          </div>
+
+          {editingBranchId ? (
+            <form onSubmit={saveEdit} className="space-y-4">
+              <div className="grid grid-cols-12 gap-4">
+                <div className="col-span-12 sm:col-span-4">
+                  <label className="ui-label" htmlFor="settingsbranches-branch-code">Branch Code *</label>
+                  <input id="settingsbranches-branch-code" className="ui-input w-full max-w-40" value={editForm.branchCode} onChange={(e) => setEditForm((p) => ({ ...p, branchCode: e.target.value }))} required />
+                </div>
+                <div className="col-span-12 sm:col-span-8">
+                  <label className="ui-label" htmlFor="settingsbranches-branch-name">Branch Name *</label>
+                  <input id="settingsbranches-branch-name" className="ui-input w-full" value={editForm.branchName} onChange={(e) => setEditForm((p) => ({ ...p, branchName: e.target.value }))} required />
+                </div>
+              </div>
+
+              <div>
+                <label className="ui-label" htmlFor="settingsbranches-address">Address *</label>
+                <input id="settingsbranches-address" className="ui-input w-full" value={editForm.addressLine1} onChange={(e) => setEditForm((p) => ({ ...p, addressLine1: e.target.value }))} required />
+              </div>
+
+              <div>
+                <label className="ui-label" htmlFor="settingsbranches-address-line-2">Address Line 2</label>
+                <input id="settingsbranches-address-line-2" className="ui-input w-full" value={editForm.addressLine2} onChange={(e) => setEditForm((p) => ({ ...p, addressLine2: e.target.value }))} />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="ui-label" htmlFor="settingsbranches-city">City</label>
+                  <input id="settingsbranches-city" className="ui-input w-full" value={editForm.city} onChange={(e) => setEditForm((p) => ({ ...p, city: e.target.value }))} />
+                </div>
+                <div>
+                  <PopupSelect
+                    label="State *"
+                    value={editForm.state}
+                    onChange={(v) => {
+                      setEditForm((p) => ({ ...p, state: v }));
+                      setError('');
+                    }}
+                    options={stateOptions}
+                    placeholder="Select state"
+      title="Select State"
+                    maxWidthClass="max-w-2xl"
+                  />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="settingsbranches-country">Country</label>
+                  <input id="settingsbranches-country" className="ui-input w-full" value={editForm.country} onChange={(e) => setEditForm((p) => ({ ...p, country: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="ui-label" htmlFor="settingsbranches-gst-registration">GST Registration</label>
+                  <select id="settingsbranches-gst-registration" className="ui-select w-full ui-surface" value={editForm.gstRegistrationType} onChange={(e) => setEditForm((p) => ({ ...p, gstRegistrationType: e.target.value }))}>
+                    <option value="REGULAR">Regular</option>
+                    <option value="COMPOSITION">Composition</option>
+                    <option value="UNREGISTERED">Unregistered</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="settingsbranches-gstin">GSTIN</label>
+                  <input id="settingsbranches-gstin"
+                    className="ui-input w-full"
+                    value={editForm.gstin}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      const maybeState = getGstStateFromGstin(String(next || '').trim());
+                      setEditForm((p) => ({ ...p, gstin: next, state: maybeState ? maybeState : p.state }));
+                      setError('');
+                    }}
+                    placeholder="15-char GSTIN"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="ui-label" htmlFor="settingsbranches-contact-person">Contact Person</label>
+                  <input id="settingsbranches-contact-person" className="ui-input w-full" value={editForm.contactPerson} onChange={(e) => setEditForm((p) => ({ ...p, contactPerson: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="settingsbranches-phone">Phone</label>
+                  <input id="settingsbranches-phone" className="ui-input w-full" value={editForm.phone} onChange={(e) => setEditForm((p) => ({ ...p, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="ui-label" htmlFor="settingsbranches-email">Email</label>
+                  <input id="settingsbranches-email" type="email" className="ui-input w-full" value={editForm.email} onChange={(e) => setEditForm((p) => ({ ...p, email: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setEditingBranchId(null)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">
+                  Cancel
+                </button>
+                <button type="submit" disabled={editSaving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
+                  {editSaving ? 'Saving…' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="grid grid-cols-12 gap-4 text-sm">
+              <div className="col-span-12 sm:col-span-4">
+                <div className="ui-detail-label">Branch Code</div>
+                <div className="ui-detail-value ui-detail-mono">{selectedBranch.branchCode || '—'}</div>
+              </div>
+              <div className="col-span-12 sm:col-span-8">
+                <div className="ui-detail-label">Branch Name</div>
+                <div className="ui-detail-value">{selectedBranch.branchName || '—'}</div>
+              </div>
+
+              <div className="col-span-12 sm:col-span-6">
+                <div className="ui-detail-label">Address</div>
+                <div className="ui-detail-value">{[selectedBranch.addressLine1, selectedBranch.addressLine2].filter(Boolean).join(', ') || '—'}</div>
+              </div>
+              <div className="col-span-12 sm:col-span-6">
+                <div className="ui-detail-label">Location</div>
+                <div className="ui-detail-value">{[selectedBranch.city, selectedBranch.state, selectedBranch.country].filter(Boolean).join(', ') || '—'}</div>
+              </div>
+
+              <div className="col-span-12 sm:col-span-4">
+                <div className="ui-detail-label">GST Registration</div>
+                <div className="ui-detail-value">{selectedBranch.gstRegistrationType || 'UNREGISTERED'}</div>
+              </div>
+              <div className="col-span-12 sm:col-span-4">
+                <div className="ui-detail-label">GSTIN</div>
+                <div className="ui-detail-value ui-detail-mono">{selectedBranch.gstin || '—'}</div>
+              </div>
+              <div className="col-span-12 sm:col-span-4">
+                <div className="ui-detail-label">Status</div>
+                <div className="ui-detail-value">{selectedBranch.isActive !== false ? 'Active' : 'Inactive'}</div>
+              </div>
+
+              <div className="col-span-12 sm:col-span-4">
+                <div className="ui-detail-label">Contact Person</div>
+                <div className="ui-detail-value">{selectedBranch.contactPerson || '—'}</div>
+              </div>
+              <div className="col-span-12 sm:col-span-4">
+                <div className="ui-detail-label">Phone</div>
+                <div className="ui-detail-value">{selectedBranch.phone || '—'}</div>
+              </div>
+              <div className="col-span-12 sm:col-span-4">
+                <div className="ui-detail-label">Email</div>
+                <div className="ui-detail-value">{selectedBranch.email || '—'}</div>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {showForm && (
+        <form onSubmit={onSubmit} className="ui-surface border rounded-xl p-5 space-y-4">
+          <div className="ui-t-sec">New Branch</div>
+          <div className="grid grid-cols-12 gap-4">
+            <div className="col-span-12 sm:col-span-4">
+              <label className="ui-label" htmlFor="settingsbranches-branch-code-2">Branch Code *</label>
+              <input id="settingsbranches-branch-code-2" className="ui-input w-full max-w-40" value={form.branchCode} onChange={onChange('branchCode')} required />
+            </div>
+            <div className="col-span-12 sm:col-span-8">
+              <label className="ui-label" htmlFor="settingsbranches-branch-name-2">Branch Name *</label>
+              <input id="settingsbranches-branch-name-2" className="ui-input w-full" value={form.branchName} onChange={onChange('branchName')} required />
+            </div>
+          </div>
+          <div>
+            <label className="ui-label" htmlFor="settingsbranches-address-2">Address *</label>
+            <input id="settingsbranches-address-2" className="ui-input w-full" value={form.addressLine1} onChange={onChange('addressLine1')} required />
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="ui-label" htmlFor="settingsbranches-city-2">City</label>
+              <input id="settingsbranches-city-2" className="ui-input w-full" value={form.city} onChange={onChange('city')} />
+            </div>
+            <div>
+              <PopupSelect
+                label="State *"
+                value={form.state}
+                onChange={(v) => {
+                  setForm((p) => ({ ...p, state: v }));
+                  setError('');
+                }}
+                options={stateOptions}
+                placeholder="Select state"
+      title="Select State"
+                maxWidthClass="max-w-2xl"
+              />
+            </div>
+            <div>
+              <label className="ui-label" htmlFor="settingsbranches-country-2">Country</label>
+              <input id="settingsbranches-country-2" className="ui-input w-full" value={form.country} onChange={onChange('country')} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="ui-label" htmlFor="settingsbranches-gst-registration-2">GST Registration</label>
+              <select id="settingsbranches-gst-registration-2" className="ui-select w-full ui-surface" value={form.gstRegistrationType} onChange={onChange('gstRegistrationType')}>
+                <option value="REGULAR">Regular</option>
+                <option value="COMPOSITION">Composition</option>
+                <option value="UNREGISTERED">Unregistered</option>
+              </select>
+            </div>
+            <div>
+              <label className="ui-label" htmlFor="settingsbranches-gstin-2">GSTIN</label>
+              <input id="settingsbranches-gstin-2" className="ui-input w-full" value={form.gstin} onChange={onChange('gstin')} placeholder="15-char GSTIN" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg border ui-surface ui-hover-sunken">Cancel</button>
+            <button type="submit" disabled={saving} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary disabled:opacity-50">
+              {saving ? 'Creating…' : 'Create Branch'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="ui-surface border rounded-xl overflow-hidden">
+        {loading ? (
+          <TableSkeleton rows={6} cols={4} />
+        ) : branches.length === 0 ? (
+          <div className="px-6 py-10 text-center ui-muted">No branches yet. Click "Create Branch" to add one.</div>
+        ) : filteredBranches.length === 0 ? (
+          <div className="px-6 py-10 text-center ui-muted">No branches found.</div>
+        ) : (
+          <table className="ui-table w-full ui-settled">
+            <thead className="ui-sunken border-b">
+              <tr>
+                <th className="ui-th w-32">Branch Code</th>
+                <th className="ui-th">Location</th>
+                <th className="ui-th">Address</th>
+                <th className="ui-th ui-col-h-center">Status</th>
+                <th className="ui-th">GSTIN</th>
+                <th className="ui-th ui-num">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {filteredBranches.map((b) => (
+                <tr key={b.id} className="ui-hover-sunken">
+                  <td className="px-4 py-3 ui-fg">
+                    <button type="button" className="text-left hover:underline" onClick={() => openView(b.id)}>
+                      <div className="font-mono">{b.branchCode || '—'}</div>
+                      <div className="text-xs ui-muted">{b.branchName || ''}</div>
+                    </button>
+                  </td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{[b.city, b.state].filter(Boolean).join(', ') || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3 ui-fg">{b.addressLine1 || '—'}</td>
+                  <td className="ui-col-meta px-4 py-3">
+                    <span className={`px-2 py-1 rounded-lg text-xs font-medium ${b.isActive !== false ? 'bg-[rgb(var(--pos-soft))] text-[rgb(var(--pos))]' : 'bg-[rgb(var(--neg-soft))] text-[rgb(var(--neg))]'}`}>
+                      {b.isActive !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="ui-col-id px-4 py-3 ui-fg font-mono">{b.gstin || '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="relative inline-block text-left" data-branch-actions>
+                      <button
+                        type="button"
+                        ref={openMenuForBranchId === b.id ? menuAnchorRef : null}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuForBranchId((prev) => (prev === b.id ? null : b.id));
+                        }}
+                        className="px-2 py-1 rounded-lg border ui-surface ui-hover-sunken"
+                        aria-label="Branch actions"
+                      >
+                        ⋯
+                      </button>
+
+                      {openMenuForBranchId === b.id ? (
+                        <Popover
+                          anchorRef={menuAnchorRef}
+                          onClose={() => setOpenMenuForBranchId(null)}
+                          minWidth={176}
+                          maxWidth={240}
+                        >
+                          <button type="button" onClick={() => openView(b.id)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
+                            View
+                          </button>
+                          <button type="button" onClick={() => beginEdit(b)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => removeBranch(b.id)} className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]">
+                            Delete
+                          </button>
+                        </Popover>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}

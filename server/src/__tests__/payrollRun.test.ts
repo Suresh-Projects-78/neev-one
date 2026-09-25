@@ -200,6 +200,61 @@ describe('a payroll that is not ready', () => {
     expect(refused.body.code).toBe('RUN_HAS_ERRORS');
   });
 
+  it('refuses to pay somebody who is on the staff list but not in payroll', async () => {
+    /*
+     * A payroll profile holds the bank account, the PAN and which statutory
+     * schemes apply. Without one there is nowhere to send the money, nothing
+     * to deduct tax against and nothing to file — so a run that included such
+     * a person was producing a payslip that could not be acted on.
+     *
+     * It did exactly that: seven people paid while payroll's own setup screen,
+     * which counts profiles, reported that nobody was in payroll. Both numbers
+     * were right; they were counting different things.
+     */
+    const c = await makeOwner();
+    const setup = await setUpPayroll(c);
+    structureId = setup.structureId;
+    await addPerson(c, 'In payroll', 600_000);
+    await addPerson(c, 'On the staff list only', 600_000, { payroll: undefined });
+
+    const run = await api.post(c, '/runs', { periodId: setup.periodId }).expect(201);
+    const check = await api.post(c, `/runs/${run.body.run.id}/validate`).expect(200);
+
+    expect(check.body.canCalculate).toBe(false);
+    const issue = check.body.issues.find((i: any) => i.code === 'NO_PAYROLL_PROFILE');
+    expect(issue).toBeTruthy();
+    expect(issue.message).toMatch(/On the staff list only/);
+    /* The message has to say what to do about it, not only what is wrong. */
+    expect(issue.message).toMatch(/payroll details/i);
+
+    const refused = await api.post(c, `/runs/${run.body.run.id}/calculate`);
+    expect(refused.status).toBe(409);
+  });
+
+  it('refuses to pay somebody put on hold after the run was started', async () => {
+    const c = await makeOwner();
+    const setup = await setUpPayroll(c);
+    structureId = setup.structureId;
+    await addPerson(c, 'Still paid', 600_000);
+    const held = await addPerson(c, 'Put on hold', 600_000);
+
+    const run = await api.post(c, '/runs', { periodId: setup.periodId }).expect(201);
+
+    /* The update takes the whole employee, not a patch, so the name comes
+       with it. */
+    await api
+      .put(c, `/employees/${held}`, {
+        name: 'Put on hold',
+        status: 'ACTIVE',
+        payroll: { payrollStatus: 'ON_HOLD', taxRegime: 'NEW' },
+      })
+      .expect(200);
+
+    const check = await api.post(c, `/runs/${run.body.run.id}/validate`).expect(200);
+    expect(check.body.canCalculate).toBe(false);
+    expect(check.body.issues.some((i: any) => i.code === 'NOT_IN_PAYROLL')).toBe(true);
+  });
+
   it('calculates once the person without a salary is taken out', async () => {
     const c = await makeOwner();
     const setup = await setUpPayroll(c);
