@@ -72,19 +72,54 @@ const psql = (db, sql) => {
 
 const literal = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
-/* The role is cluster-wide, so it is created once against any database. */
+/*
+ * The role is cluster-wide, so it is created once against any database.
+ *
+ * Its attributes are set at CREATE and never re-asserted afterwards. Only a
+ * superuser may change the SUPERUSER or BYPASSRLS attribute of a role — even
+ * to turn them off, and even on a role it created itself — so an unconditional
+ * `ALTER ROLE ... NOSUPERUSER NOBYPASSRLS` fails for the very owner role this
+ * script is meant to be run as, on every run after the first. The attributes
+ * are checked below instead, which is what was wanted: a statement that says
+ * "make it so" and a statement that says "it is so" are worth the same when
+ * they pass and very different when they do not.
+ */
 psql(
   databases[0],
   `DO $$
    BEGIN
      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN
-       EXECUTE format('CREATE ROLE %I LOGIN PASSWORD %L', '${role}', ${literal(password)});
+       EXECUTE format(
+         'CREATE ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD %L',
+         '${role}', ${literal(password)}
+       );
      ELSE
        EXECUTE format('ALTER ROLE %I LOGIN PASSWORD %L', '${role}', ${literal(password)});
      END IF;
-     /* Said out loud rather than assumed: these two are what make the policies
-        apply to this role at all. */
-     EXECUTE format('ALTER ROLE %I NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE', '${role}');
+   END $$;`
+);
+
+/*
+ * And then the part that matters, verified rather than assumed.
+ *
+ * Row-level security is not enforced against a superuser or a role with
+ * BYPASSRLS — not "usually not": PostgreSQL skips policies entirely, whatever
+ * the table says. A role that has quietly acquired either attribute turns
+ * every policy in this database into decoration, and nothing else in the
+ * system would notice. Fixing it needs a superuser, so this says so rather
+ * than trying and failing obscurely.
+ */
+psql(
+  databases[0],
+  `DO $$
+   DECLARE r record;
+   BEGIN
+     SELECT rolsuper, rolbypassrls INTO r FROM pg_roles WHERE rolname = '${role}';
+     IF r.rolsuper OR r.rolbypassrls THEN
+       RAISE EXCEPTION
+         'The application role % is a superuser or has BYPASSRLS, so row-level security does not apply to it. Fix with: ALTER ROLE % NOSUPERUSER NOBYPASSRLS; (as a superuser)',
+         '${role}', '${role}';
+     END IF;
    END $$;`
 );
 
