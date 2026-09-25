@@ -14,20 +14,26 @@
  * pre-deploy check is any use — so every helper it needs is inlined rather than
  * imported. Two earlier versions of this file failed on exactly that, first by
  * querying a column the deploy had not created yet and then by importing a
- * module the deploy had not copied yet.
+ * module the deploy had not copied yet. The one import is a sibling in this
+ * directory, which the same rsync brings.
  *
- * The one change here that is not additive: `User.email` moves from
- * unique-per-account to unique across the product. If two accounts have
- * registered the same address, `prisma db push` either refuses or takes rows
- * with it. That is the blocking check.
+ * It connects as the owner, not as the application.
+ *
+ * Every tenant table carries a row-level security policy keyed on the company
+ * the request is for, and the application role is subject to them — so the
+ * application role, asked "how many companies are there", is told none. A
+ * report that says a live database is empty is not a cautious report; it is a
+ * wrong one, and it would have been believed.
  */
 import { readFileSync } from 'node:fs';
 
-import { PrismaClient } from '@prisma/client';
+import { appSchema, ownerClient } from './ownerDb.js';
 
-const prisma = new PrismaClient();
 const FIX = process.argv.includes('--fix');
 let blocking = 0;
+
+const prisma = ownerClient();
+const SCHEMA = appSchema();
 
 /* Inlined from src/services/slug.ts, which is not on the server before deploy. */
 const RESERVED = new Set(['www', 'api', 'app', 'admin', 'mail', 'static', 'assets', 'help', 'status', 'billing']);
@@ -49,12 +55,43 @@ async function freeSlug(name: string, taken: Set<string>) {
   return `${seed.slice(0, 25)}-${Date.now().toString(36).slice(-5)}`;
 }
 
+/*
+ * Identifiers are quoted and counts are cast.
+ *
+ * Prisma's models are mapped to tables named exactly as the model is, capital
+ * letter and all, and PostgreSQL folds an unquoted name to lower case — so
+ * `FROM User` looks for a table called `user`, which is not there. And
+ * `COUNT(*)` is a bigint, which arrives as a BigInt that will not compare
+ * against a number or serialise into a log line.
+ */
+const t = (table: string) => `"${SCHEMA}"."${table}"`;
+
 async function main() {
   console.log('Pre-deploy check\n================\n');
 
+  /*
+   * A database with none of our tables yet.
+   *
+   * Every check below asks what would happen to rows that are already there,
+   * which on a database the first migration has not touched is no question at
+   * all — and asking it raises "relation does not exist", which reads like a
+   * broken check rather than an empty one. The deploy that follows creates
+   * everything.
+   */
+  const [{ n: tables }] = await prisma.$queryRawUnsafe<Array<{ n: number }>>(
+    'SELECT COUNT(*)::int AS n FROM information_schema.tables WHERE table_schema = $1',
+    SCHEMA
+  );
+  if (tables === 0) {
+    console.log(`No tables in the "${SCHEMA}" schema yet — this database has never been migrated.`);
+    console.log('Nothing existing can be lost.\n\nRESULT: safe to deploy.');
+    await prisma.$disconnect();
+    process.exit(0);
+  }
+
   /* 1. The only change that can lose rows. */
   const dupes = await prisma.$queryRawUnsafe<Array<{ email: string; n: number }>>(
-    'SELECT lower(email) AS email, COUNT(*) AS n FROM User GROUP BY lower(email) HAVING n > 1'
+    `SELECT lower(email) AS email, COUNT(*)::int AS n FROM ${t('User')} GROUP BY lower(email) HAVING COUNT(*) > 1`
   );
   if (dupes.length === 0) {
     console.log('email uniqueness   OK — no address is registered twice, so the constraint can tighten safely.');
@@ -62,7 +99,7 @@ async function main() {
     blocking += 1;
     console.log(`email uniqueness   BLOCKED — ${dupes.length} address(es) registered more than once:`);
     for (const d of dupes.slice(0, 20)) console.log(`                     ${d.email}  x${d.n}`);
-    console.log('                   Resolve these by hand first. db push cannot.');
+    console.log('                   Resolve these by hand first. A migration cannot.');
   }
 
   /*
@@ -72,7 +109,7 @@ async function main() {
   let orgRows: Array<{ id: string; name: string; slug: string | null }> | null = null;
   try {
     orgRows = await prisma.$queryRawUnsafe<Array<{ id: string; name: string; slug: string | null }>>(
-      'SELECT id, name, slug FROM Org'
+      `SELECT id, name, slug FROM ${t('Org')}`
     );
   } catch {
     orgRows = null;
@@ -94,7 +131,7 @@ async function main() {
       for (const org of missing) {
         const slug = await freeSlug(org.name || 'company', taken);
         taken.add(slug);
-        await prisma.$executeRawUnsafe('UPDATE Org SET slug = ? WHERE id = ?', slug, org.id);
+        await prisma.$executeRawUnsafe(`UPDATE ${t('Org')} SET slug = $1 WHERE id = $2`, slug, org.id);
         console.log(`                     ${org.name} -> ${slug}`);
       }
     }
@@ -125,7 +162,8 @@ async function main() {
   const live = new Set(
     (
       await prisma.$queryRawUnsafe<Array<{ name: string }>>(
-        "SELECT name FROM sqlite_master WHERE type = 'table'"
+        'SELECT table_name AS name FROM information_schema.tables WHERE table_schema = $1',
+        SCHEMA
       )
     ).map((r) => r.name)
   );
@@ -141,10 +179,16 @@ async function main() {
     console.log('\nnew tables         none — every model this deploy declares already exists.');
   }
 
-  const [{ n: orgs }] = await prisma.$queryRawUnsafe<Array<{ n: number }>>('SELECT COUNT(*) AS n FROM Org');
-  const [{ n: users }] = await prisma.$queryRawUnsafe<Array<{ n: number }>>('SELECT COUNT(*) AS n FROM User');
-  const [{ n: parties }] = await prisma.$queryRawUnsafe<Array<{ n: number }>>('SELECT COUNT(*) AS n FROM Party');
-  console.log(`\nlive data          ${orgs} companies · ${users} users · ${parties} customers and vendors`);
+  const one = async (table: string) => {
+    const [{ n }] = await prisma.$queryRawUnsafe<Array<{ n: number }>>(
+      `SELECT COUNT(*)::int AS n FROM ${t(table)}`
+    );
+    return n;
+  };
+  console.log(
+    `\nlive data          ${await one('Org')} companies · ${await one('User')} users · ` +
+      `${await one('Party')} customers and vendors`
+  );
 
   console.log(blocking ? '\nRESULT: DO NOT DEPLOY. Resolve the blocking item above.' : '\nRESULT: safe to deploy.');
   await prisma.$disconnect();

@@ -55,7 +55,10 @@ show_lock() {
 }
 
 if [ "${1:-}" = "--status" ]; then
-  "${SSH[@]}" 'systemctl is-active neev-api caddy | paste -sd" / " -; echo; free -m | head -2; echo; du -sh /opt/neev/data/prod.db 2>/dev/null || echo "no database yet"'
+  "${SSH[@]}" 'systemctl is-active neev-api caddy postgresql | paste -sd" / " -; echo; free -m | head -2; echo
+    set -a; . /opt/neev/.env; set +a
+    psql "$PGADMIN_URL" -qtc "SELECT pg_size_pretty(pg_database_size('"'"'neevone'"'"'))" 2>/dev/null \
+      | sed "s/^/database: /" || echo "database: unreachable"'
   printf '\napp: '; curl -s -o /dev/null -w '%{http_code}\n' --max-time 20 "$URL/"
   step "Deployment lock"
   if "${SSH[@]}" "[ -d '$LOCK' ]"; then
@@ -133,15 +136,31 @@ if [ "${1:-}" = "--api" ]; then
     --exclude node_modules --exclude 'prisma/*.db' --exclude dist \
     -e "ssh -i $KEY" server/ "ubuntu@$HOST:/opt/neev/server/"
 
+  step "Backing up the database"
+  # Before anything is installed, migrated or restarted. A backup taken after a
+  # migration is a backup of the problem.
+  "${SSH[@]}" 'set -e
+    set -a; . /opt/neev/.env; set +a
+    mkdir -p /opt/neev/backups
+    f="/opt/neev/backups/neevone-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+    # One dump of one database: every schema, consistent to the same instant.
+    # That consistency is the whole reason the apps share a database.
+    # PGADMIN_URL points at `postgres`, the maintenance database every cluster
+    # has and the one place none of this data is. Same credentials, our database.
+    dump_url=$(printf %s "$PGADMIN_URL" | sed "s#/postgres\$#/neevone#")
+    pg_dump "$dump_url" | gzip > "$f"
+    ls -lh "$f" | awk "{print \"  \" \$5 \" \" \$9}"
+    # Keep a fortnight. Older ones are on the operator, not on this script.
+    ls -1t /opt/neev/backups/neevone-*.sql.gz | tail -n +15 | xargs -r rm --'
+
   step "Installing, migrating and rebuilding on the server"
-  # db push applies what the schema needs. It is safe to repeat for an ADDITIVE
-  # change — a new table, a new nullable column — and it is not safe for one
-  # that tightens a constraint, which can refuse or take rows with it. Run
-  # `npx tsx scripts/preflight.ts` against the live database before deploying a
-  # schema change; it names anything that would be lost.
+  # Migrations are versioned and applied as the OWNER — the application role
+  # cannot create tables, which is the point of it. scripts/migrate.ts builds
+  # the owner connection from PGADMIN_URL and applies each application's
+  # schema in turn.
   #
-  # Its output is kept, unlike the other steps. `set -e` already aborts the
-  # deploy when push fails, but silencing it meant the failure arrived with no
+  # Output is kept, unlike the other steps. `set -e` already aborts the deploy
+  # when a migration fails, but silencing it meant the failure arrived with no
   # reason attached and the schema half applied.
   "${SSH[@]}" 'set -e
     cd /opt/neev/server
@@ -150,16 +169,18 @@ if [ "${1:-}" = "--api" ]; then
     # which makes npm skip devDependencies, and tsc is one of them.
     npm ci --include=dev --no-audit --no-fund >/dev/null 2>&1
     npx prisma generate >/dev/null 2>&1
-    # Payroll keeps its own database, so it has its own client.
+    # One client per application, each pointed at its own schema.
     npx prisma generate --schema prisma/payroll/schema.prisma >/dev/null 2>&1
     npx prisma generate --schema prisma/people/schema.prisma >/dev/null 2>&1
     # See the CI workflow: the check earns the flag rather than the flag being
     # passed blindly. It exits 1 when something would really be lost, and
     # `set -e` stops the deploy before the schema is touched.
     npx tsx scripts/preflight.ts
-    # Versioned migrations, and a one-time baseline for the database db push
-    # built. See server/prisma/migrations/README.md.
     npx tsx scripts/migrate.ts
+    # Grants, after the migrations that created the tables to grant on. A new
+    # table is unreadable by the application role until this runs, and the
+    # symptom is a permission error on one screen rather than a failed deploy.
+    node scripts/provisionAppRole.mjs
     # Every addition to the permission catalogue leaves existing Owner roles
     # short of it — the seed runs once, at org creation. Four of six live orgs
     # were missing 92 grants between them, which is why a settings page added

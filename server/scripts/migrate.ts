@@ -1,130 +1,108 @@
 /**
- * Applies outstanding migrations, baselining an existing database first.
+ * Applies outstanding migrations to every schema, as the owner.
  *
- * Deploys used to run `prisma db push --accept-data-loss`: Prisma looks at the
- * schema, looks at the database, and works out the difference itself. That is
- * fine while nothing is at stake and wrong once there is data — no history, no
- * rollback, nothing to review before it runs, and no record of what was applied
- * where.
+ * Two things this has to get right, and both are about who is connected.
  *
- * The catch in switching is that every database that already exists was built
- * by `db push` and already has the tables the baseline migration would create.
- * Running it would fail on the first CREATE TABLE. So the baseline is recorded
- * as applied instead, once, and only when it has not been recorded already.
+ * **The role.** The application connects as `clor_app`, which owns nothing and
+ * cannot bypass row-level security — that is the whole point of it. A role
+ * that cannot bypass RLS also cannot conveniently alter the tables it is being
+ * kept out of, so migrations run as the owner instead, built here from
+ * PGADMIN_URL. Running them as the application role fails halfway through with
+ * a permission error, which is a worse way to learn this than a sentence.
  *
- * Safe to run on every deploy and on a brand-new database, which is the point:
- * one command that does the right thing in both cases, rather than a step
- * somebody has to remember.
+ * **The schema.** One database, one schema per application. Prisma is told
+ * which schema through the connection URL, so "apply the payroll migrations"
+ * means running with an owner URL that carries `?schema=payroll` — not with
+ * whatever `PAYROLL_DATABASE_URL` happens to say, which is the application's
+ * credentials.
+ *
+ * Safe on a brand-new database and on one already migrated: `migrate deploy`
+ * applies what is missing and says so when there is nothing to do. Run after
+ * this, not before: scripts/provisionAppRole.mjs, which grants the application
+ * role access to whatever the migrations have just created.
  */
 import { execFileSync } from 'node:child_process';
-import { readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
 // This package is ESM, so __dirname has to be derived.
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SERVER_ROOT = resolve(HERE, '..');
-const MIGRATIONS = resolve(SERVER_ROOT, 'prisma/migrations');
 
-const run = (args: string[]) =>
-  execFileSync('npx', ['prisma', ...args], { cwd: SERVER_ROOT, stdio: 'inherit' });
+/** The applications, in the order a failure should stop at. */
+const APPS = [
+  { name: 'accounting', schemaFile: 'prisma/schema.prisma', runtimeVar: 'DATABASE_URL' },
+  { name: 'payroll', schemaFile: 'prisma/payroll/schema.prisma', runtimeVar: 'PAYROLL_DATABASE_URL' },
+  { name: 'people', schemaFile: 'prisma/people/schema.prisma', runtimeVar: 'PEOPLE_DATABASE_URL' },
+] as const;
 
-/** The first migration on disk, which is the baseline by definition. */
-const baselineName = () => {
-  const dirs = readdirSync(MIGRATIONS, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
-  return dirs[0] || null;
+const need = (name: string, why: string) => {
+  const value = String(process.env[name] || '').trim();
+  if (!value) {
+    console.error(`${name} is not set. ${why}`);
+    process.exit(1);
+  }
+  return value;
 };
 
-async function alreadyRecorded(name: string) {
-  try {
-    const rows = await prisma.$queryRawUnsafe<Array<{ n: number }>>(
-      'SELECT COUNT(*) AS n FROM _prisma_migrations WHERE migration_name = ?',
-      name
+/**
+ * The owner's connection, pointed at one application's schema.
+ *
+ * The database name is taken from the application's own URL rather than from
+ * PGADMIN_URL, which points at `postgres` — the maintenance database every
+ * cluster has, and the one place a migration must not land.
+ */
+const ownerUrlFor = (admin: string, runtime: string, schema: string) => {
+  const url = new URL(admin);
+  url.pathname = new URL(runtime).pathname;
+  url.search = `?schema=${schema}`;
+  return url.toString();
+};
+
+function main() {
+  const admin = need(
+    'PGADMIN_URL',
+    'It is the owner connection — the role that may create tables. The application role cannot.'
+  );
+
+  for (const app of APPS) {
+    const runtime = need(
+      app.runtimeVar,
+      `${app.name} keeps its tables in its own schema — add it to the environment file (see server/.env.example).`
     );
-    return Number(rows?.[0]?.n || 0) > 0;
-  } catch {
-    // No _prisma_migrations table: this database has never been migrated.
-    return false;
-  }
-}
 
-/** Whether this database has any of our tables — i.e. db push built it. */
-async function hasExistingSchema() {
-  try {
-    await prisma.$queryRawUnsafe('SELECT 1 FROM Account LIMIT 1');
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function main() {
-  const baseline = baselineName();
-  if (!baseline) {
-    console.error('No migrations found. Nothing to apply.');
-    process.exit(1);
-  }
-
-  const recorded = await alreadyRecorded(baseline);
-  const existing = await hasExistingSchema();
-
-  if (!recorded && existing) {
     /*
-     * Built by db push before migrations existed. Record the baseline rather
-     * than run it — the tables are already there and running it would fail on
-     * the first CREATE TABLE.
+     * A schema Prisma has not been given is a schema it creates on first
+     * connect, unowned by anything the grants know about. Saying it here means
+     * the failure is "no such schema" at migration time rather than an empty
+     * set of books at run time.
      */
-    console.log(`Baselining an existing database: marking ${baseline} as applied.`);
-    await prisma.$disconnect();
-    run(['migrate', 'resolve', '--applied', baseline]);
-  } else {
-    await prisma.$disconnect();
-    if (!recorded) console.log('New database: the baseline will be applied like any other migration.');
+    const declared = new URL(runtime).searchParams.get('schema');
+    if (declared !== app.name) {
+      console.error(
+        `${app.runtimeVar} points at schema "${declared || '(none)'}", not "${app.name}". ` +
+          'One schema per application is the boundary between them.'
+      );
+      process.exit(1);
+    }
+
+    console.log(`\nApplying ${app.name} migrations.`);
+    execFileSync('npx', ['prisma', 'migrate', 'deploy', '--schema', app.schemaFile], {
+      cwd: SERVER_ROOT,
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        /* Prisma reads the URL named in the datasource block of each schema
+           file, so all three are set to this one application's owner URL —
+           the other two are not used by this invocation. */
+        DATABASE_URL: ownerUrlFor(admin, runtime, app.name),
+        PAYROLL_DATABASE_URL: ownerUrlFor(admin, runtime, app.name),
+        PEOPLE_DATABASE_URL: ownerUrlFor(admin, runtime, app.name),
+      },
+    });
   }
 
-  run(['migrate', 'deploy']);
-
-  /*
-   * Payroll is a second database, so it is a second deploy.
-   *
-   * It has no baseline problem — it never existed before migrations did, so
-   * `migrate deploy` is the whole story. It runs after accounting because a
-   * failure here must not leave the accounting schema half applied, and
-   * because payroll is the newer of the two: an environment that has not been
-   * given `PAYROLL_DATABASE_URL` yet should fail loudly here rather than start
-   * an API whose payroll routes throw on first use.
-   */
-  if (!String(process.env.PAYROLL_DATABASE_URL || '').trim()) {
-    console.error(
-      'PAYROLL_DATABASE_URL is not set. Payroll keeps its own database — add it to the environment file ' +
-        '(see server/.env.example) before deploying.'
-    );
-    process.exit(1);
-  }
-  console.log('Applying payroll migrations.');
-  run(['migrate', 'deploy', '--schema', 'prisma/payroll/schema.prisma']);
-
-  /* People is the third database: who works here, shared by payroll and by
-     everything that comes after it. */
-  if (!String(process.env.PEOPLE_DATABASE_URL || '').trim()) {
-    console.error(
-      'PEOPLE_DATABASE_URL is not set. The employee record lives in its own database — add it to the environment ' +
-        'file (see server/.env.example) before deploying.'
-    );
-    process.exit(1);
-  }
-  console.log('Applying people migrations.');
-  run(['migrate', 'deploy', '--schema', 'prisma/people/schema.prisma']);
+  console.log('\nEvery schema is up to date.');
 }
 
-main().catch(async (e) => {
-  console.error('Migration failed:', e instanceof Error ? e.message : e);
-  await prisma.$disconnect();
-  process.exit(1);
-});
+main();

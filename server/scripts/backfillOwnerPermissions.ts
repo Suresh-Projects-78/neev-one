@@ -15,11 +15,17 @@
  *   npx tsx scripts/backfillOwnerPermissions.ts          # report only
  *   npx tsx scripts/backfillOwnerPermissions.ts --fix    # grant what is missing
  */
-import { PrismaClient } from '@prisma/client';
-
 import { flattenCatalog } from '../src/constants/permissionCatalog.js';
 
-const prisma = new PrismaClient();
+import { ownerClient } from './ownerDb.js';
+
+/*
+ * As the owner, because row-level security applies to the application role and
+ * this script belongs to no company. Run as the application it found no orgs
+ * at all and printed "nothing to do" — the same line it prints when everything
+ * is in order. See ownerDb.ts.
+ */
+const prisma = ownerClient();
 const FIX = process.argv.includes('--fix');
 
 async function main() {
