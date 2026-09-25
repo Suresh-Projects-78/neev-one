@@ -11,6 +11,8 @@ import {
   updateSalaryComponent,
   deleteSalaryComponent,
   validateSalaryFormula,
+  ruleCatalogue,
+  setComponentConditions,
 } from '../api/payrollComponents';
 
 /**
@@ -88,7 +90,36 @@ const blank = (type) => ({
   costCentreBehaviour: 'EMPLOYEE',
   displayOrder: 0,
   isActive: true,
+  appliesTo: 'STRUCTURE',
+  oneTimeDate: null,
+  thresholdBase: '',
+  thresholdOperator: '',
+  thresholdAmount: 0,
+  thresholdRangeEnd: 0,
+  hasMaxLimit: false,
+  maximumAmount: 0,
+  exceedBehaviour: 'CAP',
+  conditions: [],
 });
+
+/**
+ * Who a component reaches, in one phrase.
+ *
+ * On the row, because a rule nobody can see from the list is a rule the next
+ * person duplicates rather than reuses — and because "why did this allowance
+ * appear on her payslip and not his" is answered here or not at all.
+ */
+const describeWho = (c) => {
+  const named = (c.employeeTargets || []).length;
+  const extra = named ? ` · ${named} named` : '';
+  const when = c.oneTimeDate ? ` · once on ${c.oneTimeDate}` : '';
+  if (c.appliesTo === 'ALL_EMPLOYEES') return `Everybody${extra}${when}`;
+  if (c.appliesTo === 'CONDITIONS') {
+    const n = (c.conditions || []).length;
+    return `${n} condition${n === 1 ? '' : 's'}${extra}${when}`;
+  }
+  return `On a structure${extra}${when}`;
+};
 
 /** How a component works, in the words somebody configuring payroll would use. */
 const describeMethod = (c) => {
@@ -209,6 +240,7 @@ export default function SalaryComponents() {
                   <th scope="col" className="ui-th">Component</th>
                   <th scope="col" className="ui-th">Code</th>
                   <th scope="col" className="ui-th">How it is worked out</th>
+                  <th scope="col" className="ui-th">Who gets it</th>
                   <th scope="col" className="ui-th ui-col-h-center">Taxable</th>
                   <th scope="col" className="ui-th ui-col-h-center">Prorated</th>
                   <th scope="col" className="ui-th">Counts towards</th>
@@ -230,6 +262,7 @@ export default function SalaryComponents() {
                       <td className="ui-col-entity">{c.name}</td>
                       <td className="ui-col-id">{c.code}</td>
                       <td className="ui-col-meta">{describeMethod(c)}</td>
+                      <td className="ui-col-meta">{describeWho(c)}</td>
                       <td className="ui-col-h-center">{c.isTaxable ? 'Yes' : 'No'}</td>
                       <td className="ui-col-h-center">{c.prorate ? 'Yes' : 'No'}</td>
                       <td className="ui-col-meta">{wages.length ? wages.join(', ') : '—'}</td>
@@ -285,6 +318,28 @@ const ComponentDrawer = ({ component, onClose, onSaved }) => (
 const ComponentForm = ({ initial, onClose, onSaved }) => {
   const [form, setForm] = useState(initial);
   const [saving, setSaving] = useState(false);
+  /*
+   * The fields and comparisons a rule may use, read from the server.
+   *
+   * Not a list in this file. The eligibility service evaluates exactly these,
+   * and a second catalogue here drifts the day somebody adds a field to one of
+   * them — the symptom being a rule that saves and matches nobody.
+   */
+  const [catalogue, setCatalogue] = useState({ fields: [], operators: [] });
+  useEffect(() => {
+    let cancelled = false;
+    ruleCatalogue()
+      .then((c) => {
+        if (!cancelled) setCatalogue({ fields: c.fields || [], operators: c.operators || [] });
+      })
+      .catch(() => {
+        /* A catalogue that cannot be read leaves the rule editor empty and
+           says so there, rather than failing the whole form. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [formulaCheck, setFormulaCheck] = useState(null);
   const checkedFor = useRef('');
 
@@ -319,15 +374,38 @@ const ComponentForm = ({ initial, onClose, onSaved }) => {
     e.preventDefault();
     setSaving(true);
     try {
+      /* `conditions` and `employeeTargets` are rows with their own endpoints,
+         not fields of the component: sending them here would have every save
+         of a name rewrite the rule set. */
+      const { conditions, employeeTargets: _named, ...rest } = form;
       const payload = {
-        ...form,
+        ...rest,
         amount: Number(form.amount || 0),
         percentage: Number(form.percentage || 0),
         displayOrder: Number(form.displayOrder || 0),
+        thresholdAmount: Number(form.thresholdAmount || 0),
+        thresholdRangeEnd: Number(form.thresholdRangeEnd || 0),
+        maximumAmount: Number(form.maximumAmount || 0),
+        thresholdOperator: form.thresholdBase ? form.thresholdOperator || 'GT' : null,
+        thresholdBase: form.thresholdBase || null,
         statutoryScheme: form.calculationMethod === 'STATUTORY' ? form.statutoryScheme : null,
       };
-      if (isNew) await createSalaryComponent(payload);
-      else await updateSalaryComponent(initial.id, payload);
+      const saved = isNew ? await createSalaryComponent(payload) : await updateSalaryComponent(initial.id, payload);
+
+      /*
+       * The rules, second, and only where they are the ones being used.
+       *
+       * A component that reaches people through a structure has no conditions
+       * to save, and writing an empty set for it would quietly clear a rule
+       * somebody had parked while switching modes to look at something.
+       */
+      if (form.appliesTo === 'CONDITIONS') {
+        await setComponentConditions(saved.id, (conditions || []).map((c) => ({
+          field: c.field,
+          operator: c.operator,
+          value: c.value ?? '',
+        })));
+      }
       notify.success(`${form.name} saved.`);
       onSaved();
     } catch (err) {
@@ -519,6 +597,153 @@ const ComponentForm = ({ initial, onClose, onSaved }) => {
         ) : null}
       </section>
 
+      {/*
+        Who gets it, and within what limits.
+        *
+        * Two questions that look alike and are answered at different moments:
+        * the conditions decide who the component is for, from facts about the
+        * person, before any arithmetic; the threshold and the ceiling are about
+        * the number it comes to, and are settled during the calculation. The
+        * form keeps them in one section because somebody configuring an
+        * allowance thinks of them together, and labels them apart because the
+        * engine does not.
+        */}
+      <section className="space-y-3">
+        <h3 className="ui-t-sec">Who gets it</h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="ui-label" htmlFor="component-applies">Reaches</label>
+            <select
+              id="component-applies"
+              className="ui-select w-full"
+              value={form.appliesTo || 'STRUCTURE'}
+              onChange={(e) => set({ appliesTo: e.target.value })}
+            >
+              <option value="STRUCTURE">Only where a salary structure lists it</option>
+              <option value="ALL_EMPLOYEES">Everybody being paid</option>
+              <option value="CONDITIONS">Everybody who matches the conditions below</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="ui-label" htmlFor="component-onetime">One period only</label>
+            <input
+              id="component-onetime"
+              type="date"
+              className="ui-input w-full"
+              value={form.oneTimeDate || ''}
+              onChange={(e) => set({ oneTimeDate: e.target.value || null })}
+            />
+            <span className="ui-caption">
+              A date rather than a switch: &ldquo;the March bonus&rdquo; has to survive being read in June.
+            </span>
+          </div>
+        </div>
+
+        {form.appliesTo === 'CONDITIONS' ? (
+          <ConditionEditor
+            catalogue={catalogue}
+            conditions={form.conditions || []}
+            onChange={(conditions) => set({ conditions })}
+          />
+        ) : null}
+
+        <h3 className="ui-t-sec pt-2">Limits on the amount</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="sm:col-span-2">
+            <label className="ui-label" htmlFor="component-threshold-base">Only pay when</label>
+            <select
+              id="component-threshold-base"
+              className="ui-select w-full"
+              value={form.thresholdBase || ''}
+              onChange={(e) => set({ thresholdBase: e.target.value, thresholdOperator: e.target.value ? form.thresholdOperator || 'GT' : '' })}
+            >
+              <option value="">No threshold</option>
+              {BASES.map((b) => (
+                <option key={b.id} value={b.id}>{b.label}</option>
+              ))}
+            </select>
+          </div>
+          {form.thresholdBase ? (
+            <>
+              <div>
+                <label className="ui-label" htmlFor="component-threshold-op">is</label>
+                <select
+                  id="component-threshold-op"
+                  className="ui-select w-full"
+                  value={form.thresholdOperator || 'GT'}
+                  onChange={(e) => set({ thresholdOperator: e.target.value })}
+                >
+                  <option value="GT">more than</option>
+                  <option value="GE">at least</option>
+                  <option value="LT">less than</option>
+                  <option value="LE">at most</option>
+                  <option value="EQ">exactly</option>
+                  <option value="NE">anything but</option>
+                  <option value="RANGE">between</option>
+                </select>
+              </div>
+              <div>
+                <label className="ui-label" htmlFor="component-threshold-amount">Amount</label>
+                <input
+                  id="component-threshold-amount"
+                  type="number"
+                  min="0"
+                  className="ui-input ui-num w-full"
+                  value={form.thresholdAmount ?? 0}
+                  onChange={(e) => set({ thresholdAmount: e.target.value })}
+                />
+              </div>
+              {form.thresholdOperator === 'RANGE' ? (
+                <div className="sm:col-start-4">
+                  <label className="ui-label" htmlFor="component-threshold-end">and</label>
+                  <input
+                    id="component-threshold-end"
+                    type="number"
+                    min="0"
+                    className="ui-input ui-num w-full"
+                    value={form.thresholdRangeEnd ?? 0}
+                    onChange={(e) => set({ thresholdRangeEnd: e.target.value })}
+                  />
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <Check field="hasMaxLimit" label="Has a maximum" hint="Measured on the full period, before any proration." />
+          {form.hasMaxLimit ? (
+            <>
+              <div>
+                <label className="ui-label" htmlFor="component-max">Maximum</label>
+                <input
+                  id="component-max"
+                  type="number"
+                  min="0"
+                  className="ui-input ui-num w-full"
+                  value={form.maximumAmount ?? 0}
+                  onChange={(e) => set({ maximumAmount: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="ui-label" htmlFor="component-exceed">Past the maximum</label>
+                <select
+                  id="component-exceed"
+                  className="ui-select w-full"
+                  value={form.exceedBehaviour || 'CAP'}
+                  onChange={(e) => set({ exceedBehaviour: e.target.value })}
+                >
+                  <option value="CAP">Pay the maximum</option>
+                  <option value="EXCLUDE">Pay nothing</option>
+                </select>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </section>
+
       <section className="space-y-3">
         <h3 className="ui-t-sec">What it counts towards</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2.5">
@@ -543,5 +768,132 @@ const ComponentForm = ({ initial, onClose, onSaved }) => {
         </button>
       </div>
     </form>
+  );
+};
+
+/**
+ * The rules that decide who a component is for.
+ *
+ * Every row is ANDed with the ones above it, and the screen says so in words
+ * rather than leaving it to be inferred from layout — an engine with AND and
+ * OR needs brackets, brackets need a shape nobody can see in a form, and the
+ * result is rules whose own authors cannot say what they mean. Two populations
+ * are two components, each named for the people it pays.
+ *
+ * The fields and comparisons come from the server, so this offers exactly what
+ * the engine evaluates. A field this does not know about is a rule that saves
+ * cleanly and matches nobody.
+ */
+const ConditionEditor = ({ catalogue, conditions, onChange }) => {
+  const fields = catalogue.fields || [];
+  const operators = catalogue.operators || [];
+  const needsValue = (op) => operators.find((o) => o.operator === op)?.needsValue !== false;
+
+  const update = (i, patch) => onChange(conditions.map((c, n) => (n === i ? { ...c, ...patch } : c)));
+  const add = () =>
+    onChange([...conditions, { field: fields[0]?.field || '', operator: 'EQ', value: '' }]);
+  const remove = (i) => onChange(conditions.filter((_, n) => n !== i));
+
+  if (!fields.length) {
+    return (
+      <p className="ui-caption">
+        The list of things a rule can test could not be read, so conditions cannot be edited here.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {conditions.map((c, i) => {
+        const field = fields.find((f) => f.field === c.field);
+        return (
+          <div key={i} className="grid grid-cols-1 sm:grid-cols-[3rem_1fr_1fr_1fr_2.5rem] gap-2 items-end">
+            <span className="ui-caption pb-2">{i === 0 ? 'Where' : 'and'}</span>
+
+            <div>
+              <label className="sr-only" htmlFor={`cond-field-${i}`}>What to test</label>
+              <select
+                id={`cond-field-${i}`}
+                className="ui-select w-full"
+                value={c.field}
+                onChange={(e) => update(i, { field: e.target.value, value: '' })}
+              >
+                {fields.map((f) => (
+                  <option key={f.field} value={f.field}>{f.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="sr-only" htmlFor={`cond-op-${i}`}>Comparison</label>
+              <select
+                id={`cond-op-${i}`}
+                className="ui-select w-full"
+                value={c.operator}
+                onChange={(e) => update(i, { operator: e.target.value })}
+              >
+                {operators.map((o) => (
+                  <option key={o.operator} value={o.operator}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="sr-only" htmlFor={`cond-value-${i}`}>Value</label>
+              {needsValue(c.operator) ? (
+                field?.choices ? (
+                  <select
+                    id={`cond-value-${i}`}
+                    className="ui-select w-full"
+                    value={c.value || ''}
+                    onChange={(e) => update(i, { value: e.target.value })}
+                  >
+                    <option value="">Choose…</option>
+                    {field.choices.map((choice) => (
+                      <option key={choice} value={choice}>{choice}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    id={`cond-value-${i}`}
+                    className="ui-input w-full"
+                    type={field?.kind === 'number' ? 'number' : 'text'}
+                    value={c.value || ''}
+                    onChange={(e) => update(i, { value: e.target.value })}
+                    placeholder={
+                      c.operator === 'IN' || c.operator === 'NOT_IN' ? 'Sales, Support' : ''
+                    }
+                  />
+                )
+              ) : (
+                <span className="ui-caption">Nothing to compare against.</span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="ui-icon-btn"
+              onClick={() => remove(i)}
+              aria-label={`Remove condition ${i + 1}`}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+            </button>
+          </div>
+        );
+      })}
+
+      <button type="button" className="ui-btn ui-btn-secondary ui-btn-sm" onClick={add}>
+        <Plus size={14} aria-hidden="true" /> Add a condition
+      </button>
+
+      {conditions.length === 0 ? (
+        <p className="ui-caption">
+          A conditional component with no conditions pays nobody. To pay everybody, set
+          <span className="ui-fg"> Reaches </span> to everybody instead.
+        </p>
+      ) : (
+        <p className="ui-caption">Every condition has to hold. Somebody named below overrides all of them.</p>
+      )}
+    </div>
   );
 };

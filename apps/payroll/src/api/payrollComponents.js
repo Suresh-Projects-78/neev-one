@@ -77,3 +77,48 @@ export async function setComponentLedgers(id, { expenseLedgerId = null, liabilit
   });
   return component;
 }
+
+/**
+ * The fields and comparisons a rule may use, from the server.
+ *
+ * Not a list in this file. The eligibility service evaluates exactly these,
+ * and a second catalogue in the browser drifts the day somebody adds a field
+ * to one of them — the symptom being a rule that saves cleanly and matches
+ * nobody, silently, because an unknown field has no value to compare.
+ */
+export async function ruleCatalogue() {
+  return apiFetch(`${base()}/rule-catalogue`, opts);
+}
+
+/**
+ * The conditions on a component, replaced as a set.
+ *
+ * As a set because they are ANDed and mean nothing apart: removing one widens
+ * the population it pays, so a half-saved rule set pays the wrong people for
+ * however long the rest takes.
+ */
+export async function setComponentConditions(id, conditions) {
+  const { component } = await apiFetch(`${base()}/${encodeURIComponent(id)}/conditions`, {
+    ...opts,
+    method: 'PUT',
+    body: { conditions },
+  });
+  return component;
+}
+
+/** Naming one person in or out, which beats whatever the conditions say. */
+export async function setComponentEmployee(id, { employeeId, mode }) {
+  const { target } = await apiFetch(`${base()}/${encodeURIComponent(id)}/employees`, {
+    ...opts,
+    method: 'POST',
+    body: { employeeId, mode },
+  });
+  return target;
+}
+
+export async function removeComponentEmployee(id, employeeId) {
+  return apiFetch(`${base()}/${encodeURIComponent(id)}/employees/${encodeURIComponent(employeeId)}`, {
+    ...opts,
+    method: 'DELETE',
+  });
+}

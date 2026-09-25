@@ -59,7 +59,6 @@ datasource db {
 // So a calculated slip does not reference live configuration — it carries a
 // snapshot of everything that produced it, and the engine version that did.
 
-
 /// Everything payroll needs to know about a person, and nothing else does.
 ///
 /// The person themselves lives in the people database; `employeeId` points at
@@ -193,6 +192,51 @@ model SalaryComponent {
   /// When STATUTORY, which engine computes it: PF | ESI | PT | TDS.
   statutoryScheme String?
 
+  // ---- Who gets this component, and when ----------------------------------
+  //
+  // A component used to reach an employee one way only: somebody put it on the
+  // structure that employee is assigned to. That is right for the spine of a
+  // salary — basic, HRA, PF — and wrong for everything conditional. A
+  // transport allowance for the Chennai office, a hardship allowance for one
+  // grade, a one-off festival bonus: each of those meant forking a structure,
+  // and a forked structure is a second thing to keep in step for the rest of
+  // its life.
+  //
+  // STRUCTURE — as before: only where a structure lists it.
+  // ALL_EMPLOYEES — everybody being paid, no structure edit.
+  // CONDITIONS — everybody who matches `conditions`, all of which must hold.
+  //
+  // Targeting is narrowed by `employeeTargets`: named inclusions and named
+  // exclusions. An exclusion always wins, because the reason somebody is
+  // excluded is usually the exception the rule cannot express.
+  /// STRUCTURE | ALL_EMPLOYEES | CONDITIONS
+  appliesTo String @default("STRUCTURE")
+
+  /// The single period this applies in, as YYYY-MM-DD. Null = every period.
+  /// A date rather than a flag: "the March bonus" has to survive being read
+  /// in June without somebody remembering to switch it off.
+  oneTimeDate String?
+
+  // ---- A threshold, evaluated against the pay it is computed from ---------
+  //
+  // "Only if basic is over 25,000", "only between 30,000 and 50,000". Kept
+  // apart from `conditions` above because it is answered at calculation time
+  // from computed pay, not at selection time from a fact about the person —
+  // and mixing the two is how a rule engine stops being explainable.
+  /// BASIC | GROSS | CTC | MONTHLY_CTC | TAXABLE_GROSS | a component code
+  thresholdBase     String?
+  /// GT | GE | LT | LE | EQ | NE | RANGE
+  thresholdOperator String?
+  thresholdAmount   Decimal @default(0)
+  /// The upper bound when the operator is RANGE.
+  thresholdRangeEnd Decimal @default(0)
+
+  // ---- A ceiling ----------------------------------------------------------
+  hasMaxLimit     Boolean @default(false)
+  maximumAmount   Decimal @default(0)
+  /// CAP — pay the maximum. EXCLUDE — pay nothing at all past it.
+  exceedBehaviour String  @default("CAP")
+
   isTaxable             Boolean @default(true)
   prorate               Boolean @default(true)
   includeInPfWage       Boolean @default(false)
@@ -216,8 +260,67 @@ model SalaryComponent {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  conditions      SalaryComponentCondition[]
+  employeeTargets SalaryComponentEmployee[]
+
   @@unique([orgId, code])
   @@index([accountId, orgId, type, isActive])
+}
+
+/// One test a person has to pass for a component to apply to them.
+///
+/// Several rows on one component are ANDed. That is a deliberate limit: an
+/// engine with AND and OR needs brackets, and brackets in a form nobody can
+/// see the shape of produce rules whose authors cannot say what they mean. Two
+/// different populations are two components, each with a name that says which.
+model SalaryComponentCondition {
+  id          String @id @default(cuid())
+  accountId   String
+  orgId       String
+  componentId String
+
+  /// What is being tested. A path the eligibility service knows how to read —
+  /// `department`, `designation`, `branchId`, `payGroupId`, `taxRegime`,
+  /// `professionalTaxState`, `annualCtc`, `monthsOfService`. The catalogue
+  /// lives in services/payroll/eligibility.ts, which is also what the screen
+  /// offers, so the two cannot drift.
+  field    String
+  /// EQ | NE | GT | GE | LT | LE | IN | NOT_IN | CONTAINS | IS_SET | IS_NOT_SET
+  operator String
+  /// Always text. A number is parsed by the operator that needs one, and a
+  /// list is comma-separated — one column that reads back exactly as it was
+  /// typed beats three that have to agree.
+  value    String?
+
+  displayOrder Int @default(0)
+
+  component SalaryComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, orgId, componentId])
+}
+
+/// A person named on a component, in or out.
+///
+/// Exclusion beats inclusion, and both beat the conditions: somebody who has
+/// been named has been thought about, and a rule that overrides a decision
+/// somebody made by hand is a rule that will be worked around.
+model SalaryComponentEmployee {
+  id          String @id @default(cuid())
+  accountId   String
+  orgId       String
+  componentId String
+  employeeId  String
+
+  /// INCLUDE | EXCLUDE
+  mode String
+
+  createdByUserId String
+  createdAt       DateTime @default(now())
+
+  component SalaryComponent @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@unique([componentId, employeeId])
+  @@index([accountId, orgId, employeeId])
 }
 
 /// A reusable salary template. Effective-dated, because a structure that is
@@ -856,7 +959,7 @@ model PayrollPayment {
   journalEntryId String?
   /// UNPOSTED | POSTING | POSTED. `POSTING` is a claim, not a result: it says
   /// an attempt is under way, so a second press cannot write a second journal.
-  postingStatus  String  @default("UNPOSTED")
+  postingStatus  String    @default("UNPOSTED")
   postedAt       DateTime?
   postedByUserId String?
 

@@ -4,6 +4,7 @@ import { calculateStructure, ENGINE_VERSION, type EngineComponent } from './engi
 import { loadRules, applyStatutory } from './statutory/resolve.js';
 import { recoveriesDue, recoverable, type DueRecovery } from './loan.js';
 import { round2 } from '../../utils/money.js';
+import { componentApplies, monthsOfService, type EligibilityFacts } from './eligibility.js';
 
 /**
  * A payroll run: turning a population and a period into payslips.
@@ -173,7 +174,33 @@ async function loadRunContext(orgId: string, runId: string) {
       ...recoveries.map((r) => r.componentId),
     ]),
   ];
-  const components = await payrollPrisma.salaryComponent.findMany({ where: { orgId, id: { in: componentIds } } });
+
+  /*
+   * And the components that reach people without a structure.
+   *
+   * A component can say it applies to everybody, or to everybody matching a
+   * set of conditions — see services/payroll/eligibility.ts. Those are not on
+   * anybody's structure by definition, so reading only the structures' would
+   * leave them out of the run entirely and the rule would do nothing at all.
+   *
+   * Read for the whole org rather than per employee: it is one query for a
+   * handful of rows, and whether each one applies is decided per person
+   * afterwards, in memory.
+   */
+  const components = await payrollPrisma.salaryComponent.findMany({
+    where: {
+      orgId,
+      OR: [
+        /* Named by a structure, an adjustment or a recovery — wanted whatever
+           its state, because a payslip that already carries the line still has
+           to be able to name it. */
+        { id: { in: componentIds } },
+        /* Reaching people on its own, which only a live component may do. */
+        { isActive: true, appliesTo: { in: ['ALL_EMPLOYEES', 'CONDITIONS'] } },
+      ],
+    },
+    include: { conditions: { orderBy: { displayOrder: 'asc' } }, employeeTargets: true },
+  });
 
   return {
     statutoryRules,
@@ -213,41 +240,127 @@ function assignmentOn(ctx: LoadedRun, employeeId: string, onDate: string) {
   );
 }
 
-/** A structure's lines merged with the components behind them. */
-function engineComponentsFor(ctx: LoadedRun, structureId: string): EngineComponent[] {
+/**
+ * What the engine is asked to calculate for one person.
+ *
+ * Two sources, and they meet here. The salary structure they are assigned to
+ * is the spine — basic, HRA, PF — and is the same for everyone on it. Beside
+ * it are the components that reach people on their own terms: applying to
+ * everybody, or to everybody matching a set of conditions, or to one person
+ * who has been named. See services/payroll/eligibility.ts for why those exist
+ * at all; the short version is that the alternative was forking a structure
+ * per exception, and forked structures drift.
+ *
+ * A structure line is still checked, because a component on a structure can
+ * also carry an exclusion — "this allowance, but not for Priya" — and the
+ * exclusion has to win there too, or the only way to honour it would be a
+ * second structure, which is the thing being avoided.
+ */
+function engineComponentsFor(
+  ctx: LoadedRun,
+  structureId: string,
+  facts: EligibilityFacts
+): { components: EngineComponent[]; skipped: Array<{ code: string; name: string; reason: string }> } {
   const structure = ctx.structures.get(structureId);
-  if (!structure) return [];
   const out: EngineComponent[] = [];
-  for (const line of structure.components) {
+  const skipped: Array<{ code: string; name: string; reason: string }> = [];
+  const seen = new Set<string>();
+  const period = { periodStart: ctx.period.startDate, periodEnd: ctx.period.endDate };
+
+  const asEngine = (
+    c: NonNullable<ReturnType<LoadedRun['components']['get']>>,
+    line?: { calculationMethod: string | null; amount: unknown; percentage: unknown; formula: string | null; calculationBase: string | null; isBalancing: boolean; displayOrder: number }
+  ): EngineComponent => ({
+    componentId: c.id,
+    code: c.code,
+    name: c.name,
+    type: c.type as EngineComponent['type'],
+    calculationMethod: (line?.calculationMethod || c.calculationMethod) as EngineComponent['calculationMethod'],
+    amount: Number(line?.amount ?? c.amount ?? 0),
+    percentage: Number(line?.percentage ?? c.percentage ?? 0),
+    formula: line?.formula ?? c.formula ?? null,
+    calculationBase: line?.calculationBase ?? c.calculationBase ?? null,
+    rounding: c.rounding as EngineComponent['rounding'],
+    statutoryScheme: c.statutoryScheme,
+    isTaxable: c.isTaxable,
+    prorate: c.prorate,
+    includeInPfWage: c.includeInPfWage,
+    includeInEsiWage: c.includeInEsiWage,
+    includeInGratuityWage: c.includeInGratuityWage,
+    includeInGross: c.includeInGross,
+    includeInNetPay: c.includeInNetPay,
+    isVariable: c.isVariable,
+    isBalancing: line?.isBalancing ?? false,
+    thresholdBase: c.thresholdBase,
+    thresholdOperator: c.thresholdOperator,
+    thresholdAmount: Number(c.thresholdAmount ?? 0),
+    thresholdRangeEnd: Number(c.thresholdRangeEnd ?? 0),
+    hasMaxLimit: c.hasMaxLimit,
+    maximumAmount: Number(c.maximumAmount ?? 0),
+    exceedBehaviour: c.exceedBehaviour,
+    displayOrder: line?.displayOrder ?? c.displayOrder,
+    expenseLedgerId: c.expenseLedgerId,
+    liabilityLedgerId: c.liabilityLedgerId,
+  });
+
+  const targeting = (c: { appliesTo: string | null; oneTimeDate: string | null; conditions?: unknown; employeeTargets?: unknown }) => ({
+    appliesTo: c.appliesTo,
+    oneTimeDate: c.oneTimeDate,
+    conditions: (c.conditions as Array<{ field: string; operator: string; value: string | null }>) || [],
+    employeeTargets: (c.employeeTargets as Array<{ employeeId: string; mode: string }>) || [],
+  });
+
+  for (const line of structure?.components || []) {
     const c = ctx.components.get(line.componentId);
     if (!c) continue;
-    out.push({
-      componentId: c.id,
-      code: c.code,
-      name: c.name,
-      type: c.type as EngineComponent['type'],
-      calculationMethod: (line.calculationMethod || c.calculationMethod) as EngineComponent['calculationMethod'],
-      amount: Number(line.amount ?? c.amount ?? 0),
-      percentage: Number(line.percentage ?? c.percentage ?? 0),
-      formula: line.formula ?? c.formula ?? null,
-      calculationBase: line.calculationBase ?? c.calculationBase ?? null,
-      rounding: c.rounding as EngineComponent['rounding'],
-      statutoryScheme: c.statutoryScheme,
-      isTaxable: c.isTaxable,
-      prorate: c.prorate,
-      includeInPfWage: c.includeInPfWage,
-      includeInEsiWage: c.includeInEsiWage,
-      includeInGratuityWage: c.includeInGratuityWage,
-      includeInGross: c.includeInGross,
-      includeInNetPay: c.includeInNetPay,
-      isVariable: c.isVariable,
-      isBalancing: line.isBalancing,
-      displayOrder: line.displayOrder,
-      expenseLedgerId: c.expenseLedgerId,
-      liabilityLedgerId: c.liabilityLedgerId,
-    });
+    const verdict = componentApplies(targeting(c), facts, { onStructure: true, ...period });
+    seen.add(c.id);
+    if (!verdict.applies) {
+      skipped.push({ code: c.code, name: c.name, reason: verdict.reason });
+      continue;
+    }
+    out.push(asEngine(c, line));
   }
-  return out;
+
+  /* The ones that reach this person without going through a structure. */
+  for (const c of ctx.components.values()) {
+    if (seen.has(c.id)) continue;
+    const appliesTo = String(c.appliesTo || 'STRUCTURE').toUpperCase();
+    if (appliesTo !== 'ALL_EMPLOYEES' && appliesTo !== 'CONDITIONS') continue;
+    const verdict = componentApplies(targeting(c), facts, { onStructure: false, ...period });
+    if (!verdict.applies) continue;
+    out.push(asEngine(c));
+  }
+
+  return { components: out, skipped };
+}
+
+/** One person, as the eligibility rules are allowed to see them. */
+function factsFor(ctx: LoadedRun, employeeId: string, onDate: string): EligibilityFacts {
+  const employee = ctx.employees.get(employeeId);
+  const profile = ctx.profiles.get(employeeId);
+  const assignment = assignmentOn(ctx, employeeId, onDate);
+  const annualCtc = assignment ? Number(assignment.annualCtc || 0) : null;
+  return {
+    employeeId,
+    department: employee?.department ?? null,
+    designation: employee?.designation ?? null,
+    status: employee?.status ?? null,
+    branchId: employee?.branchId ?? null,
+    dateOfJoining: employee?.dateOfJoining ?? null,
+    payrollStatus: profile?.payrollStatus ?? null,
+    payGroupId: profile?.payGroupId ?? null,
+    costCenterId: profile?.costCenterId ?? null,
+    taxRegime: profile?.taxRegime ?? null,
+    professionalTaxState: profile?.professionalTaxState ?? null,
+    pfApplicable: profile?.pfApplicable ?? null,
+    esiApplicable: profile?.esiApplicable ?? null,
+    ptApplicable: profile?.ptApplicable ?? null,
+    annualCtc,
+    monthlyCtc: assignment ? Number(assignment.monthlyCtc || 0) : null,
+    structureId: assignment?.structureId ?? null,
+    monthsOfService: monthsOfService(employee?.dateOfJoining ?? null, onDate),
+  };
 }
 
 /**
@@ -502,7 +615,29 @@ export async function validateRun(orgId: string, runId: string): Promise<{ issue
     /* The engine is the authority on whether the numbers work, so it is asked
        rather than guessed at — a circular structure or a negative net is found
        here, before anybody presses Calculate. */
-    const engine = engineComponentsFor(ctx, assignment.structureId);
+    const { components: engine, skipped } = engineComponentsFor(
+      ctx,
+      assignment.structureId,
+      factsFor(ctx, employee.id, ctx.period.endDate)
+    );
+
+    /*
+     * A component the rules kept off this payslip, said out loud.
+     *
+     * Silence here is the failure mode of every rule engine: an allowance
+     * stops arriving, the payslip simply does not mention it, and the first
+     * anybody knows is the employee asking. A notice at validation time is
+     * where that question gets answered before the run.
+     */
+    for (const s of skipped) {
+      add({
+        severity: 'INFO',
+        code: 'COMPONENT_SKIPPED',
+        employeeId: employee.id,
+        message: `${who}: ${s.name} does not apply — ${s.reason}.`,
+      });
+    }
+
     if (!engine.length) {
       add({
         severity: 'ERROR',
@@ -612,7 +747,11 @@ export async function calculateRun(orgId: string, runId: string, userId: string)
     const input = inputFor(ctx, employee.id);
     const adjustments = ctx.adjustmentsByEmployee.get(employee.id) || [];
 
-    const engine = engineComponentsFor(ctx, assignment.structureId);
+    const { components: engine } = engineComponentsFor(
+      ctx,
+      assignment.structureId,
+      factsFor(ctx, employee.id, ctx.period.endDate)
+    );
     const { result, statutory } = calculateWithStatutory(
       ctx,
       engine,

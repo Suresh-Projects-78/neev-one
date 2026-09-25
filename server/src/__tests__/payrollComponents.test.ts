@@ -295,3 +295,56 @@ describe('one organisation cannot see another’s salary structure', () => {
     expect(theirs.body.components).toHaveLength(1);
   });
 });
+
+describe('a component read back and saved unchanged', () => {
+  it('is accepted, thresholds and all', async () => {
+    /*
+     * The round trip every screen makes: read the row, edit one field, send
+     * the whole thing back. It was a 400 — the route returned '' for a
+     * threshold nobody had set and then refused '' on the way in, so saving a
+     * name failed on a field the person had never seen.
+     */
+    const made = await create(owner, { ...EARNING, name: 'Round trip', code: `RT${rnd().toUpperCase()}` }).expect(201);
+    const read = (await list(owner)).body.components.find((c: any) => c.id === made.body.component.id);
+
+    expect(read.thresholdOperator).toBe('');
+    const again = await update(owner, read.id, { ...read, name: 'Round trip, renamed' }).expect(200);
+    expect(again.body.component.name).toBe('Round trip, renamed');
+  });
+
+  it('keeps a threshold it was given', async () => {
+    const made = await create(owner, {
+      ...EARNING,
+      name: 'Over 25k only',
+      code: `TH${rnd().toUpperCase()}`,
+      thresholdBase: 'BASIC',
+      thresholdOperator: 'GT',
+      thresholdAmount: 25000,
+    }).expect(201);
+    expect(made.body.component.thresholdOperator).toBe('GT');
+    expect(made.body.component.thresholdAmount).toBe(25000);
+  });
+
+  it('refuses half a threshold', async () => {
+    /* A base with no comparison never fires, silently. */
+    const refused = await create(owner, {
+      ...EARNING,
+      name: 'Half a rule',
+      code: `HR${rnd().toUpperCase()}`,
+      thresholdBase: 'BASIC',
+      thresholdOperator: '',
+    });
+    expect(refused.status).toBe(400);
+  });
+
+  it('refuses a maximum of nothing', async () => {
+    const refused = await create(owner, {
+      ...EARNING,
+      name: 'Zero cap',
+      code: `ZC${rnd().toUpperCase()}`,
+      hasMaxLimit: true,
+      maximumAmount: 0,
+    });
+    expect(refused.status).toBe(400);
+  });
+});

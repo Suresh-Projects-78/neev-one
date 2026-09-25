@@ -4,7 +4,15 @@ import { ArrowRight, Check, Wallet } from 'lucide-react';
 import { PageHeader, SkeletonCard } from '@ui/components/ui/Primitives';
 import { notify } from '@ui/components/ui/notify';
 import { getPayrollSetup } from '../api/payrollSetup';
-import { getFeatures, setFeatures } from '../api/features';
+/*
+ * Switching payroll on goes through the platform, not through a module of this
+ * app's own. There is one record of what a company has bought — the feature
+ * flags the shell reads — and this screen was importing `../api/features`,
+ * which has never existed. That import is why this screen was in the build and
+ * in nobody's navigation: mounting it broke the page.
+ */
+import { setFeature } from '@platform/auth';
+import { orgId as platformOrgId, branchId as platformBranchId } from '@platform/context';
 import { useFeatures } from '@ui/permissions/useFeatures';
 
 /**
@@ -57,8 +65,7 @@ export default function PayrollSetup({ onOpen = () => {} }) {
   const start = async () => {
     setStarting(true);
     try {
-      const current = await getFeatures();
-      await setFeatures({ ...(current.features || {}), payroll: true });
+      await setFeature(platformOrgId(), platformBranchId(), 'payroll', true);
       notify.success('Payroll is on. Work through the steps below and it is ready to run.');
       reloadFeatures?.();
       load();

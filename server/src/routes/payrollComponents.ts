@@ -9,6 +9,8 @@ import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { validateFormula } from '../services/payroll/formula.js';
 import { PAYROLL_MODULE, PAYROLL_RESOURCE, payrollRouteOk } from '../services/payroll/guards.js';
+import { peoplePrisma } from '../utils/peoplePrisma.js';
+import { CONDITION_FIELDS, OPERATORS } from '../services/payroll/eligibility.js';
 
 /**
  * The lines a payslip can be built from.
@@ -76,6 +78,47 @@ const bodySchema = z.object({
 
   displayOrder: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
+
+  // ---- Who it applies to, and within what limits -------------------------
+  //
+  // The conditions themselves and the named employees are not here: they are
+  // rows, they are edited one at a time, and folding them into this body would
+  // mean every save of a component's name rewrote its whole rule set. They
+  // have their own endpoints below.
+  appliesTo: z.enum(['STRUCTURE', 'ALL_EMPLOYEES', 'CONDITIONS']).default('STRUCTURE'),
+  oneTimeDate: z
+    .preprocess(
+      (v) => (String(v ?? '').trim() === '' ? null : v),
+      z
+        .string()
+        .trim()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, 'A one-time date is written as YYYY-MM-DD.')
+        .nullable()
+    )
+    .optional(),
+
+  /*
+   * An empty string means "no threshold", and has to, because that is what a
+   * browser sends from a select whose first option is "No threshold" — and
+   * what this route sends back when there is none. Without this, reading a
+   * component and saving it again unchanged was a 400: the round trip every
+   * screen makes, refused for a field nobody had touched.
+   */
+  thresholdBase: z
+    .preprocess((v) => (String(v ?? '').trim() === '' ? null : v), z.string().trim().max(40).nullable())
+    .optional(),
+  thresholdOperator: z
+    .preprocess(
+      (v) => (String(v ?? '').trim() === '' ? null : v),
+      z.enum(['GT', 'GE', 'LT', 'LE', 'EQ', 'NE', 'RANGE']).nullable()
+    )
+    .optional(),
+  thresholdAmount: z.number().finite().min(0).default(0),
+  thresholdRangeEnd: z.number().finite().min(0).default(0),
+
+  hasMaxLimit: z.boolean().default(false),
+  maximumAmount: z.number().finite().min(0).default(0),
+  exceedBehaviour: z.enum(['CAP', 'EXCLUDE']).default('CAP'),
 });
 
 type Body = z.infer<typeof bodySchema>;
@@ -116,6 +159,21 @@ function methodProblems(body: Body): string | null {
   if (body.type === 'EMPLOYER_CONTRIBUTION' && body.includeInNetPay) {
     return 'An employer contribution is a company cost and cannot be part of net pay.';
   }
+
+  /* A threshold with no base, or a base with no threshold, is half a rule —
+     and half a rule is one that silently never fires. */
+  if (body.thresholdOperator && !String(body.thresholdBase || '').trim()) {
+    return 'A threshold needs to say what it is measured against.';
+  }
+  if (!body.thresholdOperator && String(body.thresholdBase || '').trim()) {
+    return 'A threshold base needs a condition to go with it.';
+  }
+  if (body.thresholdOperator === 'RANGE' && body.thresholdRangeEnd <= body.thresholdAmount) {
+    return 'A range ends above where it starts.';
+  }
+  if (body.hasMaxLimit && body.maximumAmount <= 0) {
+    return 'A maximum of zero pays nothing at all. Set an amount, or turn the limit off.';
+  }
   return null;
 }
 
@@ -146,6 +204,29 @@ const shape = (row: any) => ({
   costCentreBehaviour: row.costCentreBehaviour,
   displayOrder: row.displayOrder ?? 0,
   isActive: !!row.isActive,
+  appliesTo: row.appliesTo || 'STRUCTURE',
+  oneTimeDate: row.oneTimeDate || null,
+  thresholdBase: row.thresholdBase || '',
+  thresholdOperator: row.thresholdOperator || '',
+  thresholdAmount: Number(row.thresholdAmount ?? 0),
+  thresholdRangeEnd: Number(row.thresholdRangeEnd ?? 0),
+  hasMaxLimit: !!row.hasMaxLimit,
+  maximumAmount: Number(row.maximumAmount ?? 0),
+  exceedBehaviour: row.exceedBehaviour || 'CAP',
+  /* Included where they were asked for, so a screen that opens a component
+     gets its rules in the same breath rather than in a second round trip. */
+  conditions: Array.isArray(row.conditions)
+    ? row.conditions.map((c: any) => ({
+        id: c.id,
+        field: c.field,
+        operator: c.operator,
+        value: c.value ?? '',
+        displayOrder: c.displayOrder ?? 0,
+      }))
+    : undefined,
+  employeeTargets: Array.isArray(row.employeeTargets)
+    ? row.employeeTargets.map((t: any) => ({ id: t.id, employeeId: t.employeeId, mode: t.mode }))
+    : undefined,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,
 });
@@ -171,6 +252,10 @@ payrollComponentsRouter.get(
         ...(String(req.query.active || '') === 'true' ? { isActive: true } : {}),
       },
       orderBy: [{ type: 'asc' }, { displayOrder: 'asc' }, { name: 'asc' }],
+      /* With their rules. The screen shows who a component applies to in the
+         list itself — a rule nobody can see from the list is a rule that gets
+         duplicated by the next person who needs one like it. */
+      include: { conditions: { orderBy: { displayOrder: 'asc' } }, employeeTargets: true },
     });
     res.json({ components: rows.map(shape) });
   }
@@ -342,5 +427,171 @@ payrollComponentsRouter.post(
     const formula = String(req.body?.formula || '').trim();
     const verdict = validateFormula(formula);
     res.json(verdict);
+  }
+);
+
+/**
+ * The rule catalogue, from the one place that can answer it.
+ *
+ * The screen offers these fields and these operators, and the eligibility
+ * service reads them. A second list in the browser drifts the day somebody
+ * adds a field to one of them, and the symptom is a rule that saves cleanly
+ * and matches nobody — silently, because an unknown field has no value to
+ * compare against.
+ */
+payrollComponentsRouter.get(
+  '/orgs/:orgId/payroll/components/rule-catalogue',
+  requirePermission(MODULE, PermissionAction.VIEW, RESOURCE),
+  async (req, res) => {
+    if (!(await payrollRouteOk(req, res))) return;
+    res.json({ fields: CONDITION_FIELDS, operators: OPERATORS });
+  }
+);
+
+/**
+ * The conditions on one component, replaced as a set.
+ *
+ * As a set rather than row by row, because the conditions of a component are
+ * read together and mean nothing apart: they are ANDed, so removing one
+ * widens the population, and a partial save would widen it for however long
+ * the next request takes. One request, one meaning.
+ */
+payrollComponentsRouter.put(
+  '/orgs/:orgId/payroll/components/:id/conditions',
+  requirePermission(MODULE, PermissionAction.EDIT, RESOURCE),
+  async (req, res) => {
+    if (!(await payrollRouteOk(req, res))) return;
+    const { accountId, orgId } = req.tenant!;
+
+    const existing = await payrollPrisma.salaryComponent.findFirst({
+      where: { id: String(req.params.id), accountId, orgId },
+    });
+    if (!existing) return res.status(404).json({ error: 'No such salary component.' });
+
+    const known: Set<string> = new Set(CONDITION_FIELDS.map((f) => f.field));
+    const operators: Set<string> = new Set(OPERATORS.map((o) => String(o.operator)));
+    const needsValue = new Map(OPERATORS.map((o) => [String(o.operator), o.needsValue]));
+
+    const schema = z.object({
+      conditions: z
+        .array(
+          z.object({
+            field: z.string().trim().min(1),
+            operator: z.string().trim().min(1),
+            value: z.string().trim().max(200).optional().nullable(),
+          })
+        )
+        .max(20, 'Twenty conditions on one component is a sign it should be two components.'),
+    });
+    const parsed = schema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0]?.message || 'Invalid conditions.' });
+
+    /*
+     * Every field and operator checked here, not only in the browser.
+     *
+     * The engine treats a field it does not know as "does not match", which is
+     * the safe reading at calculation time and a terrible one at save time: the
+     * rule would save, look right on screen, and pay nobody. Refusing here is
+     * how somebody finds out while they are still looking at it.
+     */
+    for (const c of parsed.data.conditions) {
+      if (!known.has(c.field)) return res.status(400).json({ error: `There is nothing called "${c.field}" to test.` });
+      if (!operators.has(c.operator)) {
+        return res.status(400).json({ error: `"${c.operator}" is not a comparison this can make.` });
+      }
+      if (needsValue.get(c.operator) && !String(c.value || '').trim()) {
+        return res.status(400).json({ error: `"${c.field}" needs a value to compare against.` });
+      }
+    }
+
+    await payrollPrisma.$transaction([
+      payrollPrisma.salaryComponentCondition.deleteMany({ where: { orgId, componentId: existing.id } }),
+      payrollPrisma.salaryComponentCondition.createMany({
+        data: parsed.data.conditions.map((c, i) => ({
+          accountId,
+          orgId,
+          componentId: existing.id,
+          field: c.field,
+          operator: c.operator,
+          value: c.value ?? null,
+          displayOrder: i,
+        })),
+      }),
+    ]);
+
+    const row = await payrollPrisma.salaryComponent.findFirst({
+      where: { id: existing.id },
+      include: { conditions: { orderBy: { displayOrder: 'asc' } }, employeeTargets: true },
+    });
+    res.json({ component: shape(row) });
+  }
+);
+
+/**
+ * Naming one person in, or out.
+ *
+ * One at a time, unlike the conditions: naming somebody is a decision about
+ * that person and nobody else, and replacing the whole list to add one name
+ * would make two people editing two different exceptions overwrite each other.
+ */
+payrollComponentsRouter.post(
+  '/orgs/:orgId/payroll/components/:id/employees',
+  requirePermission(MODULE, PermissionAction.EDIT, RESOURCE),
+  async (req, res) => {
+    if (!(await payrollRouteOk(req, res))) return;
+    const { accountId, orgId } = req.tenant!;
+
+    const existing = await payrollPrisma.salaryComponent.findFirst({
+      where: { id: String(req.params.id), accountId, orgId },
+    });
+    if (!existing) return res.status(404).json({ error: 'No such salary component.' });
+
+    const schema = z.object({
+      employeeId: z.string().trim().min(1),
+      mode: z.enum(['INCLUDE', 'EXCLUDE']),
+    });
+    const parsed = schema.safeParse(req.body || {});
+    if (!parsed.success) return res.status(400).json({ error: 'Say which employee, and whether they are in or out.' });
+
+    /* The person has to exist in this company's People record. A rule naming
+       an id that is not anybody is a rule that does nothing, for ever. */
+    const employee = await peoplePrisma.employee.findFirst({
+      where: { id: parsed.data.employeeId, accountId, orgId },
+      select: { id: true },
+    });
+    if (!employee) return res.status(404).json({ error: 'No such employee.' });
+
+    const row = await payrollPrisma.salaryComponentEmployee.upsert({
+      where: { componentId_employeeId: { componentId: existing.id, employeeId: employee.id } },
+      update: { mode: parsed.data.mode },
+      create: {
+        accountId,
+        orgId,
+        componentId: existing.id,
+        employeeId: employee.id,
+        mode: parsed.data.mode,
+        createdByUserId: req.auth!.userId,
+      },
+    });
+    res.status(201).json({ target: { id: row.id, employeeId: row.employeeId, mode: row.mode } });
+  }
+);
+
+payrollComponentsRouter.delete(
+  '/orgs/:orgId/payroll/components/:id/employees/:employeeId',
+  requirePermission(MODULE, PermissionAction.EDIT, RESOURCE),
+  async (req, res) => {
+    if (!(await payrollRouteOk(req, res))) return;
+    const { accountId, orgId } = req.tenant!;
+
+    const existing = await payrollPrisma.salaryComponent.findFirst({
+      where: { id: String(req.params.id), accountId, orgId },
+    });
+    if (!existing) return res.status(404).json({ error: 'No such salary component.' });
+
+    await payrollPrisma.salaryComponentEmployee.deleteMany({
+      where: { orgId, componentId: existing.id, employeeId: String(req.params.employeeId) },
+    });
+    res.json({ ok: true });
   }
 );

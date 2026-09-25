@@ -67,6 +67,26 @@ export type EngineComponent = {
   includeInNetPay: boolean;
   isVariable: boolean;
   isBalancing: boolean;
+  /*
+   * A threshold, and a ceiling.
+   *
+   * Both live here rather than in the eligibility service beside the other
+   * rules about who gets a component, and the split is the point: eligibility
+   * answers "does this apply to this person" from facts about the person, and
+   * can be decided before any arithmetic. These two are questions about a
+   * number this engine has not produced yet — is basic over 25,000, is the
+   * result past its cap — so they are answered here, beside the number, where
+   * the trace that explains them is already being written.
+   */
+  thresholdBase?: string | null;
+  /** GT | GE | LT | LE | EQ | NE | RANGE */
+  thresholdOperator?: string | null;
+  thresholdAmount?: number;
+  thresholdRangeEnd?: number;
+  hasMaxLimit?: boolean;
+  maximumAmount?: number;
+  /** CAP — pay the maximum. EXCLUDE — pay nothing past it. */
+  exceedBehaviour?: string | null;
   displayOrder: number;
   expenseLedgerId?: string | null;
   liabilityLedgerId?: string | null;
@@ -143,20 +163,94 @@ const applyRounding = (value: number, mode: Rounding): number => {
  * Everything else depends on nothing, which is what lets the first pass start.
  */
 function dependenciesOf(c: EngineComponent, codes: Set<string>): string[] {
+  /* A threshold is read before the component settles, so whatever it is
+     measured against has to have settled first. Left out of this list, a
+     component gated on GROSS was tested against a GROSS of zero and never
+     paid — the component resolved early, correctly, on a base that was not
+     true yet. */
+  const gate = thresholdBaseOf(c);
+  const withGate = (deps: string[]) => (gate ? [...deps, gate] : deps);
+
   if (c.calculationMethod === 'PERCENTAGE') {
     const base = String(c.calculationBase || '').trim().toUpperCase();
-    return base ? [base] : [];
+    return withGate(base ? [base] : []);
   }
   if (c.calculationMethod === 'FORMULA' && c.formula) {
     try {
-      return compileFormula(c.formula, codes).variables;
+      return withGate(compileFormula(c.formula, codes).variables);
     } catch {
       /* An unreadable formula is reported when it is evaluated, not here —
          a dependency scan is not the place to raise it. */
-      return [];
+      return withGate([]);
     }
   }
-  return [];
+  return withGate([]);
+}
+
+/** The name a component's threshold is measured against, if it has one. */
+function thresholdBaseOf(c: EngineComponent): string | null {
+  const op = String(c.thresholdOperator || '').trim().toUpperCase();
+  if (!op) return null;
+  const base = String(c.thresholdBase || '').trim().toUpperCase();
+  return base || null;
+}
+
+/**
+ * Whether a component's threshold is met, and the sentence that says so.
+ *
+ * Returns null where there is no threshold — which is most components, and is
+ * not the same as a threshold that passed. A trace should say "only paid over
+ * 25,000, and basic is 31,000" where that is why the line is there, and say
+ * nothing at all where no such rule exists.
+ */
+function thresholdVerdict(
+  c: EngineComponent,
+  read: (name: string) => number | null
+): { met: boolean; text: string } | null {
+  const operator = String(c.thresholdOperator || '').trim().toUpperCase();
+  if (!operator) return null;
+
+  const base = thresholdBaseOf(c);
+  const actual = base ? read(base) : null;
+  const amount = Number(c.thresholdAmount) || 0;
+  const rangeEnd = Number(c.thresholdRangeEnd) || 0;
+
+  /*
+   * A threshold measured against something this structure does not have is not
+   * met. Paying it instead would make a typo in a base name — HRA against
+   * `BASIC_PAY` where the code is `BASIC` — pay everybody unconditionally,
+   * which is the expensive way round and the one nobody checks.
+   */
+  if (actual === null) {
+    return { met: false, text: `Only paid when ${base || 'a base'} is known, and it is not` };
+  }
+
+  const met = (() => {
+    switch (operator) {
+      case 'GT': return actual > amount;
+      case 'GE': return actual >= amount;
+      case 'LT': return actual < amount;
+      case 'LE': return actual <= amount;
+      case 'EQ': return actual === amount;
+      case 'NE': return actual !== amount;
+      case 'RANGE': return actual >= amount && actual <= rangeEnd;
+      default: return false;
+    }
+  })();
+
+  const phrase: Record<string, string> = {
+    GT: `over ${amount}`, GE: `at least ${amount}`,
+    LT: `under ${amount}`, LE: `at most ${amount}`,
+    EQ: `exactly ${amount}`, NE: `anything but ${amount}`,
+    RANGE: `between ${amount} and ${rangeEnd}`,
+  };
+  const rule = phrase[operator] || `${operator} ${amount}`;
+  return {
+    met,
+    text: met
+      ? `Paid because ${base} (${actual}) is ${rule}`
+      : `Not paid: ${base} (${actual}) is not ${rule}`,
+  };
 }
 
 export function calculateStructure(components: EngineComponent[], input: EngineInput): EngineResult {
@@ -326,7 +420,59 @@ export function calculateStructure(components: EngineComponent[], input: EngineI
       return;
     }
 
-    const full = round2(Math.max(0, value));
+    /*
+     * The threshold, before anything else is done with the number.
+     *
+     * It is read from FULL-period amounts, never prorated ones. "Only over
+     * 25,000" is a statement about the salary, not about what a half month of
+     * it comes to — testing the prorated figure would switch an allowance off
+     * for anybody who took unpaid leave, which is the month they would least
+     * expect their allowance to change.
+     */
+    const gate = thresholdVerdict(c, (name) => {
+      const v = vars[name] ?? fullAmounts.get(name);
+      return v === undefined ? null : Number(v);
+    });
+    if (gate && !gate.met) {
+      resolved.set(code, 0);
+      fullAmounts.set(code, 0);
+      vars[code] = 0;
+      trace.push({
+        ...step,
+        ruleText: gate.text,
+        computedAmount: 0,
+        prorationFactor: null,
+        roundingApplied: null,
+      });
+      return;
+    }
+
+    let full = round2(Math.max(0, value));
+    let capNote: string | null = null;
+
+    /*
+     * The ceiling, applied to the full amount for the same reason.
+     *
+     * Two behaviours, because both are real policies. CAP pays the maximum —
+     * a transport allowance of 10% of basic, never more than 3,000. EXCLUDE
+     * pays nothing at all once the figure is past it — a low-income supplement
+     * that stops rather than tapering. Silently capping where somebody meant
+     * to stop would overpay every senior employee by the cap, monthly.
+     */
+    if (c.hasMaxLimit) {
+      const ceiling = Number(c.maximumAmount) || 0;
+      if (full > ceiling) {
+        const behaviour = String(c.exceedBehaviour || 'CAP').toUpperCase();
+        if (behaviour === 'EXCLUDE') {
+          capNote = `Not paid: ${round2(full)} is over the maximum of ${ceiling}`;
+          full = 0;
+        } else {
+          capNote = `Capped at ${ceiling}, from ${round2(full)}`;
+          full = round2(ceiling);
+        }
+      }
+    }
+
     /* Proration is days worked over days expected, and only for components
        that say they shrink. A fixed reimbursement usually does not. */
     const factor = c.prorate ? proration : 1;
@@ -341,6 +487,9 @@ export function calculateStructure(components: EngineComponent[], input: EngineI
 
     trace.push({
       ...step,
+      /* The cap and the threshold both belong in the sentence, because both
+         are the answer to "why is this line what it is". */
+      ruleText: [step.ruleText, gate?.text, capNote].filter(Boolean).join(' · '),
       computedAmount: finalValue,
       prorationFactor: factor === 1 ? null : round2(factor),
       roundingApplied: round2(finalValue - prorated) || null,

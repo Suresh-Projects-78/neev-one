@@ -347,3 +347,123 @@ describe('a weekly structure', () => {
     expect(r.lines.find((l) => l.code === 'BASIC')?.amount).toBe(5000);
   });
 });
+
+/**
+ * Thresholds and ceilings.
+ *
+ * Both were added when the eligibility rules arrived, and both deliberately
+ * live here rather than beside those rules: they are questions about a number
+ * this engine produces, and the engine is the only place that number exists.
+ *
+ * The trap each one hides is the same shape — a rule that silently pays, or
+ * silently does not, with a payslip that looks ordinary either way.
+ */
+describe('a component that only applies over a threshold', () => {
+  const gated = (over: Partial<EngineComponent> = {}) =>
+    component({
+      code: 'SUPP', name: 'Supplement', type: 'EARNING',
+      calculationMethod: 'FIXED', amount: 2000,
+      thresholdBase: 'BASIC', thresholdOperator: 'GT', thresholdAmount: 30000,
+      displayOrder: 9,
+      ...over,
+    });
+
+  const runWith = (extra: EngineComponent, input: Partial<EngineInput> = {}) =>
+    calculateStructure([BASIC, HRA, extra], {
+      annualCtc: 1_200_000, periodsPerYear: 12, workingDays: 30, payableDays: 30, lwpDays: 0,
+      ...input,
+    });
+
+  it('pays it when the threshold is met, and says why', () => {
+    /* Basic is 50% of a 100,000 monthly CTC = 50,000, which is over 30,000. */
+    const result = runWith(gated());
+    const line = result.lines.find((l) => l.code === 'SUPP');
+    expect(line?.amount).toBe(2000);
+    expect(result.trace.find((t) => t.code === 'SUPP')?.ruleText).toContain('over 30000');
+  });
+
+  it('does not pay it when the threshold is not met, and says why', () => {
+    const result = runWith(gated({ thresholdAmount: 60000 }));
+    expect(result.lines.find((l) => l.code === 'SUPP')?.amount).toBe(0);
+    expect(result.trace.find((t) => t.code === 'SUPP')?.ruleText).toContain('is not over 60000');
+  });
+
+  it('honours a range on both sides', () => {
+    const inside = runWith(gated({ thresholdOperator: 'RANGE', thresholdAmount: 40000, thresholdRangeEnd: 60000 }));
+    expect(inside.lines.find((l) => l.code === 'SUPP')?.amount).toBe(2000);
+
+    const outside = runWith(gated({ thresholdOperator: 'RANGE', thresholdAmount: 10000, thresholdRangeEnd: 20000 }));
+    expect(outside.lines.find((l) => l.code === 'SUPP')?.amount).toBe(0);
+  });
+
+  it('waits for its base to settle before testing it', () => {
+    /*
+     * The ordering trap. A component gated on GROSS resolves in the first pass
+     * if the threshold is not counted as a dependency — and at that point
+     * GROSS is zero, so the gate fails and the component is never paid. The
+     * bug pays nothing, on a payslip that shows nothing missing.
+     */
+    const onGross = gated({ thresholdBase: 'GROSS', thresholdOperator: 'GT', thresholdAmount: 50000 });
+    const result = runWith(onGross);
+    expect(result.lines.find((l) => l.code === 'SUPP')?.amount).toBe(2000);
+  });
+
+  it('refuses to pay when the base is not a thing this structure has', () => {
+    /* A typo in a base name — BASIC_PAY where the code is BASIC — must not pay
+       unconditionally. The permissive reading is the expensive one. */
+    const result = runWith(gated({ thresholdBase: 'BASIC_PAY' }));
+    expect(result.lines.find((l) => l.code === 'SUPP')?.amount).toBe(0);
+  });
+
+  it('tests the full salary, not a month shortened by unpaid leave', () => {
+    /* "Only over 30,000" is a statement about the salary. Testing the prorated
+       figure would switch the allowance off in the month somebody took leave,
+       which is the month they would least expect it to change. */
+    const result = runWith(gated({ thresholdAmount: 40000 }), { payableDays: 15 });
+    expect(result.lines.find((l) => l.code === 'SUPP')?.amount).toBe(1000);
+  });
+});
+
+describe('a component with a ceiling', () => {
+  const capped = (over: Partial<EngineComponent> = {}) =>
+    component({
+      code: 'TRANSPORT', name: 'Transport', type: 'EARNING',
+      calculationMethod: 'PERCENTAGE', percentage: 10, calculationBase: 'BASIC',
+      hasMaxLimit: true, maximumAmount: 3000, displayOrder: 9,
+      ...over,
+    });
+
+  const runWith = (extra: EngineComponent) =>
+    calculateStructure([BASIC, HRA, extra], {
+      annualCtc: 1_200_000, periodsPerYear: 12, workingDays: 30, payableDays: 30, lwpDays: 0,
+    });
+
+  it('pays the maximum rather than the calculated amount', () => {
+    /* 10% of a 50,000 basic is 5,000, capped at 3,000. */
+    const result = runWith(capped());
+    expect(result.lines.find((l) => l.code === 'TRANSPORT')?.amount).toBe(3000);
+    expect(result.trace.find((t) => t.code === 'TRANSPORT')?.ruleText).toContain('Capped at 3000');
+  });
+
+  it('leaves an amount under the ceiling alone', () => {
+    const result = runWith(capped({ maximumAmount: 9000 }));
+    expect(result.lines.find((l) => l.code === 'TRANSPORT')?.amount).toBe(5000);
+    expect(result.trace.find((t) => t.code === 'TRANSPORT')?.ruleText).not.toContain('Capped');
+  });
+
+  it('pays nothing at all where the policy is to stop, not to cap', () => {
+    /* Two real policies, and capping where somebody meant to stop overpays
+       every senior employee by the cap, every month. */
+    const result = runWith(capped({ exceedBehaviour: 'EXCLUDE' }));
+    expect(result.lines.find((l) => l.code === 'TRANSPORT')?.amount).toBe(0);
+    expect(result.trace.find((t) => t.code === 'TRANSPORT')?.ruleText).toContain('over the maximum');
+  });
+
+  it('caps the full amount and prorates afterwards', () => {
+    /* Capping after proration would pay a full cap for half a month. */
+    const result = calculateStructure([BASIC, HRA, capped()], {
+      annualCtc: 1_200_000, periodsPerYear: 12, workingDays: 30, payableDays: 15, lwpDays: 15,
+    });
+    expect(result.lines.find((l) => l.code === 'TRANSPORT')?.amount).toBe(1500);
+  });
+});
