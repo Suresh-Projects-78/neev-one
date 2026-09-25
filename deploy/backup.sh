@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # A backup of the live books, and a restore that has been proved to work.
 #
-# The previous version of this file backed up a Docker volume. Production does
-# not run Docker — it runs the API under systemd with SQLite at
-# /opt/neev/data/prod.db — so the script had never taken a single backup, and
-# the box was found with no archive of any kind on it.
+# Two rewrites, for the same reason each time: this script described a
+# deployment that did not exist. It first backed up a Docker volume on a box
+# that runs systemd, and then three SQLite files on a box that now runs
+# PostgreSQL — so on 25 Sep 2026 the nightly job was pointed at
+# /opt/neev/data/prod.db, which had been migrated away an hour earlier. A
+# backup script that names the wrong source does not fail loudly; it writes
+# something, every night, that nobody looks at until the day it matters.
 #
-#   ./backup.sh                     # back up, using the paths below
+#   ./backup.sh                     # back up
 #   ./backup.sh --verify            # back up, then prove the archive restores
-#   ./backup.sh --restore FILE DEST # restore an archive to a path
+#   ./backup.sh --restore FILE DB   # restore an archive into a NEW database
 #
 # Install (on the server, once):
 #   sudo cp deploy/backup.sh /usr/local/bin/neev-backup
@@ -16,175 +19,114 @@
 #   ( crontab -l 2>/dev/null; echo "30 2 * * * /usr/local/bin/neev-backup --verify >> /var/log/neev-backup.log 2>&1" ) | crontab -
 set -euo pipefail
 
-DB="${NEEV_DB:-/opt/neev/data/prod.db}"
-# Payroll keeps its own database. A backup that takes only the accounting file
-# is not a backup of the payroll — and payroll is the data whose loss is least
-# recoverable, because nobody can reconstruct last year's payslips from memory.
-# Left empty, or absent on disk, payroll is skipped with a warning rather than
-# failing the accounting backup.
-PAYROLL_DB="${NEEV_PAYROLL_DB:-/opt/neev/data/payroll.db}"
-# Who works here. Its own database, so its own archive — and the one whose loss
-# would make every other module's employee references dangle.
-PEOPLE_DB="${NEEV_PEOPLE_DB:-/opt/neev/data/people.db}"
+# ## Why this runs as the postgres superuser and nothing else will do
+#
+# Every tenant table has `FORCE ROW LEVEL SECURITY`, which subjects the table's
+# OWNER to its own policies — that is deliberate, and it is what makes the
+# policies real rather than decorative. It also means pg_dump as the owner
+# fails outright:
+#
+#   ERROR: query would be affected by row-level security policy for table ...
+#
+# PostgreSQL refuses rather than dumping a partial table, which is the right
+# refusal and exactly the one you do not want discovered by a restore. A
+# superuser is exempt from RLS entirely, so the dump is complete. The
+# application role is subject to the policies with no company set and would
+# quietly back up nothing at all, which is why it appears nowhere here.
+PG=(sudo -u postgres)
+
+DB_NAME="${NEEV_DB_NAME:-neevone}"
 DEST="${NEEV_BACKUP_DIR:-/var/backups/neev-one}"
 KEEP="${NEEV_BACKUP_KEEP:-30}"
 
 die() { echo "backup: $*" >&2; exit 1; }
 
+command -v pg_dump >/dev/null || die "pg_dump is not installed (apt-get install -y postgresql-client)"
+"${PG[@]}" psql -qtAc 'SELECT 1' >/dev/null 2>&1 \
+  || die "cannot connect as the postgres superuser — this needs sudo -u postgres"
+
 # ---------------------------------------------------------------- restore
 if [ "${1:-}" = "--restore" ]; then
-  ARCHIVE="${2:?usage: backup.sh --restore ARCHIVE DEST}"
-  TARGET="${3:?usage: backup.sh --restore ARCHIVE DEST}"
+  ARCHIVE="${2:?usage: backup.sh --restore ARCHIVE TARGET_DB}"
+  TARGET="${3:?usage: backup.sh --restore ARCHIVE TARGET_DB}"
   [ -f "$ARCHIVE" ] || die "no such archive: $ARCHIVE"
-  # Never restore over a live database by accident: the caller names the target
-  # and it must not already exist.
-  [ -e "$TARGET" ] && die "refusing to overwrite $TARGET — move it aside first"
-  gunzip -c "$ARCHIVE" > "$TARGET" || die "archive will not decompress: $ARCHIVE"
+  [ "$TARGET" = "$DB_NAME" ] && die "refusing to restore over the live database — restore beside it and swap"
 
-  # Acted on, not printed. A restore that reports "ok" on a corrupt file and
-  # carries on is the exact failure this whole script exists to prevent.
-  # `|| true` so a malformed database does not abort under `set -e` before the
-  # check below can report it and clean the useless file away.
-  INTEGRITY="$(sqlite3 "$TARGET" 'PRAGMA integrity_check;' 2>&1 | head -1 || true)"
-  if [ "$INTEGRITY" != "ok" ]; then
-    rm -f "$TARGET"
-    die "restored file is not a usable database: $INTEGRITY"
+  # Never restore over an existing database by accident: the caller names the
+  # target and it must not already be there.
+  if "${PG[@]}" psql -qtAc "SELECT 1 FROM pg_database WHERE datname = '$TARGET'" | grep -q 1; then
+    die "database $TARGET already exists — drop it or choose another name"
   fi
-  echo "restored: $ARCHIVE -> $TARGET (integrity ok)"
+
+  "${PG[@]}" psql -qc "CREATE DATABASE \"$TARGET\"" >/dev/null
+  if ! gunzip -c "$ARCHIVE" | "${PG[@]}" psql -d "$TARGET" -v ON_ERROR_STOP=1 -q >/dev/null; then
+    "${PG[@]}" psql -qc "DROP DATABASE \"$TARGET\"" >/dev/null
+    die "archive would not restore: $ARCHIVE"
+  fi
+  echo "restored: $ARCHIVE -> $TARGET"
   exit 0
 fi
 
 # ----------------------------------------------------------------- backup
-command -v sqlite3 >/dev/null || die "sqlite3 is not installed (apt-get install -y sqlite3)"
-[ -f "$DB" ] || die "no database at $DB (set NEEV_DB)"
-
 mkdir -p "$DEST"
 STAMP="$(date +%Y%m%d-%H%M%S)"
-ARCHIVE="$DEST/neev-one-$STAMP.db"
+ARCHIVE="$DEST/neev-one-$STAMP.sql.gz"
 
-# sqlite3's own .backup, not cp: a plain copy taken mid-write is a corrupt file
-# that looks fine until the day you need it.
+# One dump of one database: every application's schema, consistent to the same
+# instant. That consistency is the reason the apps share a database — three
+# databases cannot be dumped to the same moment, and a salary journal that is
+# in one archive and not the other is a set of books that does not balance.
 #
-# The exit status is checked explicitly. A locked database makes sqlite3 write
-# an empty file, and this script once reported success on one - an archive that
-# exists, compresses, decompresses, and contains nothing.
-if ! sqlite3 "$DB" ".backup '$ARCHIVE'"; then
+# pipefail, because gzip succeeds happily on an empty stream — which is exactly
+# what a failed dump produces, and exactly what an unusable archive looks like
+# from the outside.
+set -o pipefail
+if ! "${PG[@]}" pg_dump -d "$DB_NAME" | gzip > "$ARCHIVE"; then
   rm -f "$ARCHIVE"
-  die "sqlite3 could not back up $DB (locked, or unreadable)"
+  die "pg_dump failed for $DB_NAME"
 fi
-gzip "$ARCHIVE"
-ARCHIVE="$ARCHIVE.gz"
 
 # ---------------------------------------------------------------- verify
 #
 # The part that makes this a backup rather than a hope. An archive nobody has
-# restored is a file of unknown value, and the moment you find out is the moment
-# you can least afford to.
+# restored is a file of unknown value, and the moment you find out is the
+# moment you can least afford to.
 if [ "${1:-}" = "--verify" ]; then
-  PROBE="$(mktemp -d)"
-  trap 'rm -rf "$PROBE"' EXIT
-  gunzip -c "$ARCHIVE" > "$PROBE/probe.db"
+  PROBE="neev_verify_$$"
+  cleanup() { "${PG[@]}" psql -qc "DROP DATABASE IF EXISTS \"$PROBE\"" >/dev/null 2>&1 || true; }
+  trap cleanup EXIT
 
-  INTEGRITY="$(sqlite3 "$PROBE/probe.db" 'PRAGMA integrity_check;' 2>&1 | head -1 || true)"
-  [ "$INTEGRITY" = "ok" ] || die "restored copy failed integrity check: $INTEGRITY"
+  "${PG[@]}" psql -qc "CREATE DATABASE \"$PROBE\"" >/dev/null
+  gunzip -c "$ARCHIVE" | "${PG[@]}" psql -d "$PROBE" -v ON_ERROR_STOP=1 -q >/dev/null \
+    || die "the archive just written does not restore: $ARCHIVE"
 
   # Present and readable is not the same as complete.
   #
   # Every table here is COMPARED against the live database, not merely listed.
-  # An earlier version listed four and compared two - and the two it compared
+  # An earlier version listed four and compared two — and the two it compared
   # happened to be empty on both sides, so an entirely empty archive passed
   # while the source held forty-nine accounts. What is only printed is
   # decoration; the comparison is the test.
   total=0
-  for table in Account Org User Invoice Party JournalEntry; do
-    live="$(sqlite3 "$DB" "SELECT COUNT(*) FROM \"$table\";" 2>/dev/null || echo missing)"
-    restored="$(sqlite3 "$PROBE/probe.db" "SELECT COUNT(*) FROM \"$table\";" 2>/dev/null || echo missing)"
-    [ "$live" = "missing" ] && die "live database has no $table table"
-    [ "$restored" = "missing" ] && die "restored copy has no $table table"
-    [ "$live" = "$restored" ] || die "$table: live has $live rows, the restore has $restored"
+  for qualified in \
+    accounting.Account accounting.Org accounting.User accounting.Invoice \
+    accounting.Party accounting.JournalEntry payroll.PayrollRun people.Employee
+  do
+    schema="${qualified%%.*}"; table="${qualified##*.}"
+    live="$("${PG[@]}" psql -d "$DB_NAME" -qtAc "SELECT COUNT(*) FROM \"$schema\".\"$table\"" 2>/dev/null || echo missing)"
+    restored="$("${PG[@]}" psql -d "$PROBE" -qtAc "SELECT COUNT(*) FROM \"$schema\".\"$table\"" 2>/dev/null || echo missing)"
+    [ "$live" = "missing" ] && die "live database has no $qualified table"
+    [ "$restored" = "missing" ] && die "the restored copy has no $qualified table"
+    [ "$live" = "$restored" ] || die "$qualified: live has $live rows, the restore has $restored"
     total=$((total + live))
-    echo "  $table: $restored rows"
+    echo "  $qualified: $restored rows"
   done
 
   # Every table empty is what a silently-failed backup looks like.
-  [ "$total" -gt 0 ] || die "every table is empty - this is not a backup of a live database"
+  [ "$total" -gt 0 ] || die "every table is empty — this is not a backup of a live database"
 
-  echo "verified: $ARCHIVE restores, passes integrity, and matches the live row counts"
+  echo "verified: $ARCHIVE restores and matches the live row counts"
 fi
 
-ls -1t "$DEST"/neev-one-*.db.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
-echo "backup written: $ARCHIVE"
-
-# ---------------------------------------------------------------- payroll
-#
-# The same treatment, its own archive. Separate files rather than one combined
-# archive, because the two databases are restored independently: recovering
-# accounting to last Tuesday must not drag payroll back with it.
-if [ -n "$PAYROLL_DB" ] && [ -f "$PAYROLL_DB" ]; then
-  PAYROLL_ARCHIVE="$DEST/neev-payroll-$STAMP.db"
-  if ! sqlite3 "$PAYROLL_DB" ".backup '$PAYROLL_ARCHIVE'"; then
-    rm -f "$PAYROLL_ARCHIVE"
-    die "sqlite3 could not back up $PAYROLL_DB (locked, or unreadable)"
-  fi
-  gzip "$PAYROLL_ARCHIVE"
-  PAYROLL_ARCHIVE="$PAYROLL_ARCHIVE.gz"
-
-  if [ "${1:-}" = "--verify" ]; then
-    PROBE2="$(mktemp -d)"
-    trap 'rm -rf "$PROBE2"' EXIT
-    gunzip -c "$PAYROLL_ARCHIVE" > "$PROBE2/probe.db"
-    INTEGRITY="$(sqlite3 "$PROBE2/probe.db" 'PRAGMA integrity_check;' 2>&1 | head -1 || true)"
-    [ "$INTEGRITY" = "ok" ] || die "restored payroll copy failed integrity check: $INTEGRITY"
-
-    # Compared, not listed, for the reason spelled out above. SalarySlip is the
-    # one that matters: an archive without payslips is not a payroll backup,
-    # whatever else it contains.
-    for table in SalaryComponent SalaryStructure SalaryAssignment SalarySlip; do
-      live="$(sqlite3 "$PAYROLL_DB" "SELECT COUNT(*) FROM \"$table\";" 2>/dev/null || echo missing)"
-      restored="$(sqlite3 "$PROBE2/probe.db" "SELECT COUNT(*) FROM \"$table\";" 2>/dev/null || echo missing)"
-      [ "$live" = "missing" ] && die "live payroll database has no $table table"
-      [ "$restored" = "missing" ] && die "restored payroll copy has no $table table"
-      [ "$live" = "$restored" ] || die "$table: live has $live rows, the restore has $restored"
-      echo "  $table: $restored rows"
-    done
-    echo "verified: $PAYROLL_ARCHIVE restores and matches the live payroll row counts"
-  fi
-
-  ls -1t "$DEST"/neev-payroll-*.db.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
-  echo "payroll backup written: $PAYROLL_ARCHIVE"
-elif [ -n "$PAYROLL_DB" ]; then
-  # Not fatal: an installation that has never switched payroll on has no file.
-  echo "backup: no payroll database at $PAYROLL_DB — skipping (set NEEV_PAYROLL_DB, or ignore if payroll is unused)" >&2
-fi
-
-# ----------------------------------------------------------------- people
-if [ -n "$PEOPLE_DB" ] && [ -f "$PEOPLE_DB" ]; then
-  PEOPLE_ARCHIVE="$DEST/neev-people-$STAMP.db"
-  if ! sqlite3 "$PEOPLE_DB" ".backup '$PEOPLE_ARCHIVE'"; then
-    rm -f "$PEOPLE_ARCHIVE"
-    die "sqlite3 could not back up $PEOPLE_DB (locked, or unreadable)"
-  fi
-  gzip "$PEOPLE_ARCHIVE"
-  PEOPLE_ARCHIVE="$PEOPLE_ARCHIVE.gz"
-
-  if [ "${1:-}" = "--verify" ]; then
-    PROBE3="$(mktemp -d)"
-    trap 'rm -rf "$PROBE3"' EXIT
-    gunzip -c "$PEOPLE_ARCHIVE" > "$PROBE3/probe.db"
-    INTEGRITY="$(sqlite3 "$PROBE3/probe.db" 'PRAGMA integrity_check;' 2>&1 | head -1 || true)"
-    [ "$INTEGRITY" = "ok" ] || die "restored people copy failed integrity check: $INTEGRITY"
-
-    live="$(sqlite3 "$PEOPLE_DB" 'SELECT COUNT(*) FROM Employee;' 2>/dev/null || echo missing)"
-    restored="$(sqlite3 "$PROBE3/probe.db" 'SELECT COUNT(*) FROM Employee;' 2>/dev/null || echo missing)"
-    [ "$live" = "missing" ] && die "live people database has no Employee table"
-    [ "$restored" = "missing" ] && die "restored people copy has no Employee table"
-    [ "$live" = "$restored" ] || die "Employee: live has $live rows, the restore has $restored"
-    echo "  Employee: $restored rows"
-    echo "verified: $PEOPLE_ARCHIVE restores and matches the live people row counts"
-  fi
-
-  ls -1t "$DEST"/neev-people-*.db.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
-  echo "people backup written: $PEOPLE_ARCHIVE"
-elif [ -n "$PEOPLE_DB" ]; then
-  echo "backup: no people database at $PEOPLE_DB — skipping (set NEEV_PEOPLE_DB)" >&2
-fi
+ls -1t "$DEST"/neev-one-*.sql.gz 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm --
+echo "backup written: $ARCHIVE ($(du -h "$ARCHIVE" | cut -f1))"

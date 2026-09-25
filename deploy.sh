@@ -194,6 +194,13 @@ fi
 step "Checking it came back up"
 "${SSH[@]}" 'systemctl is-active neev-api caddy | paste -sd" / " -'
 printf 'app: '; curl -s -o /dev/null -w '%{http_code}\n' --max-time 25 "$URL/"
-printf 'api: '; curl -s -w ' [%{http_code}]\n' --max-time 25 "$URL/api/health"
+# Not /api/health — that is behind the tenant middleware, so it answers 401
+# to a monitor and 401 to a database that has fallen over, which makes it
+# useless for telling those apart. A rejected login is a round trip through
+# Express, Prisma and PostgreSQL: 401 means the whole path is alive.
+printf 'api: '
+curl -s -o /dev/null -w '%{http_code} (401 = alive and refusing a bad password)\n' --max-time 25 \
+  -X POST "$URL/api/auth/login" -H 'Content-Type: application/json' \
+  -d '{"email":"deploy-probe@example.invalid","password":"not-a-password"}'
 
 printf '\n\033[1mLive:\033[0m %s\n' "$URL"
