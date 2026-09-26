@@ -115,58 +115,27 @@ describe('what is genuinely different', () => {
     expect(screen.queryByLabelText(/^Price List$/)).toBeNull();
   });
 
-  /*
-   * Both parties carry a TDS profile now, and it says different things: what
-   * this company deducts from a vendor, and what a customer is expected to
-   * deduct from what they pay. The fields are the same; what the transactions
-   * do with them is not.
-   *
-   * It names a NATURE, never a section or a rate — those follow from the rule
-   * in force on each document's own date.
-   */
-  it('carries a TDS profile that names a nature, not a section', async () => {
+  it('keeps only PAN, GST and MSME details in the vendor statutory section', async () => {
     const user = userEvent.setup();
     renderVendor();
     await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
 
-    expect(screen.getByLabelText('TDS nature')).toBeInTheDocument();
-    expect(screen.getByLabelText('TDS applicable')).toBeInTheDocument();
-    expect(screen.getByLabelText('Deductee type')).toBeInTheDocument();
-    expect(screen.queryByLabelText('TDS Configuration')).toBeNull();
-    expect(screen.queryByLabelText(/Rate \(%\)/)).toBeNull();
-  });
+    expect(screen.getByLabelText('GSTIN')).toBeInTheDocument();
+    expect(screen.getByLabelText('PAN')).toBeInTheDocument();
+    expect(screen.getByLabelText('MSME registered')).toHaveValue('no');
+    expect(screen.queryByLabelText('MSME / Udyam number')).toBeNull();
+    expect(screen.queryByLabelText('TDS applicable')).toBeNull();
+    expect(screen.queryByLabelText('GST Registration / Treatment')).toBeNull();
+    expect(screen.queryByLabelText('Others')).toBeNull();
 
-  /* Prompt 9's remaining fields: the party's own ledger default, and the
-     declaration paperwork inside the same disclosure. */
-  it('offers a Default TDS Payable Ledger for the vendor', async () => {
-    const user = userEvent.setup();
-    renderVendor();
-    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
-    expect(screen.getByLabelText('Default TDS Payable Ledger')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Default TDS Receivable Ledger')).toBeNull();
-  });
+    await user.selectOptions(screen.getByLabelText('MSME registered'), 'yes');
+    expect(screen.getByLabelText('MSME / Udyam number')).toBeRequired();
 
-  it('the certificate disclosure carries number, rate, validity, limit and 15G/15H', async () => {
-    const user = userEvent.setup();
-    renderVendor();
-    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
-    await user.click(screen.getByText(/Lower \/ nil deduction certificate/));
+    await user.type(screen.getByLabelText('MSME / Udyam number'), 'udyam-ka-01-1234567');
+    expect(screen.getByLabelText('MSME / Udyam number')).toHaveValue('UDYAM-KA-01-1234567');
 
-    for (const label of ['Certificate number', 'Certificate rate (%)', 'Valid from', 'Valid to', 'Certificate limit (₹)', '15G / 15H reference', '15G / 15H period']) {
-      expect(screen.getByLabelText(label)).toBeInTheDocument();
-    }
-  });
-
-  /* Most parties hold no certificate, so it stays folded away. */
-  it('keeps the section 197 certificate behind a disclosure', async () => {
-    const user = userEvent.setup();
-    renderVendor();
-    await user.click(screen.getByRole('tab', { name: 'Statutory Details' }));
-
-    const disclosure = screen.getByText(/Lower \/ nil deduction certificate/);
-    expect(disclosure.closest('details').open).toBe(false);
-    await user.click(disclosure);
-    expect(screen.getByLabelText('Certificate rate (%)')).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('MSME registered'), 'no');
+    expect(screen.queryByLabelText('MSME / Udyam number')).toBeNull();
   });
 
   it('does not offer a Vendor Type field, which the spec forbids', () => {

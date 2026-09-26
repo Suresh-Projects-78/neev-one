@@ -19,7 +19,7 @@ import { FieldError, FieldErrorSummary } from '../../components/ui/Primitives';
 import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '../../api/purchaseDocs';
 import { resolvePurchaseRate } from '../../utils/pricing';
 import { isTracked, needsExpiry } from '../../utils/batches';
-import { Ban, Building2, SlidersHorizontal, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
+import { Ban, Building2, SlidersHorizontal, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, Lock, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
 import { EmptyState, TableTotals, StatusPill } from '../../components/ui/Primitives';
 
 import VendorPicker from '../../components/pickers/VendorPicker';
@@ -74,16 +74,29 @@ import { useFeatures } from '../../permissions/useFeatures';
 
 export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, warehouses = [], defaultWarehouseId = '', branches = [], onOpenBillSettings = null, screenTitle = '', onBack = null }) => {
   const fieldErrors = useFieldErrors('bill');
+  const { isEnabled: featureIsEnabled } = useFeatures();
+  const branchesEnabled = featureIsEnabled('branches');
+  const warehousesEnabled = featureIsEnabled('warehouses');
   const activeBranchId = String(localStorage.getItem('activeBranchId') || localStorage.getItem('branchId') || '').trim();
+  const companyWarehouses = (Array.isArray(warehouses) ? warehouses : []).filter((row) => !row?.companyId || Number(row.companyId) === Number(currentCompany?.id));
+  const companyBranches = (Array.isArray(branches) ? branches : []).filter((row) => !row?.companyId || Number(row.companyId) === Number(currentCompany?.id));
+  const effectiveDefaultWarehouseId = String(
+    initialData?.warehouseId || defaultWarehouseId || (!warehousesEnabled ? companyWarehouses[0]?.id : '') || ''
+  ).trim();
+  const effectiveDefaultBranchId = String(
+    initialData?.branchId || activeBranchId ||
+    companyWarehouses.find((row) => String(row?.id) === effectiveDefaultWarehouseId)?.branchId ||
+    currentCompany?.profile?.backendBranchId || (!branchesEnabled ? companyBranches[0]?.id : '') || ''
+  ).trim();
   const resolveBranchIdFromWarehouseId = (warehouseId) => {
     const wid = String(warehouseId || '').trim();
-    if (!wid) return activeBranchId || '';
+    if (!wid) return effectiveDefaultBranchId || '';
     const w = (Array.isArray(warehouses) ? warehouses : []).find((x) => String(x?.id || '').trim() === wid) || null;
-    return String(w?.branchId || '').trim() || activeBranchId || '';
+    return String(w?.branchId || '').trim() || effectiveDefaultBranchId || '';
   };
 
-  const initWarehouseId = String(initialData?.warehouseId || defaultWarehouseId || '').trim();
-  const initBranchId = resolveBranchIdFromWarehouseId(initWarehouseId) || '';
+  const initWarehouseId = effectiveDefaultWarehouseId;
+  const initBranchId = String(initialData?.branchId || resolveBranchIdFromWarehouseId(initWarehouseId) || effectiveDefaultBranchId || '').trim();
   const billDocSettingsInit = getDocSettings(db, currentCompany, { branchId: initBranchId || null });
   const billNumberingInit = billDocSettingsInit?.numbering?.bill;
   const isBillAutoInit = String(billNumberingInit?.mode || '').toLowerCase() === 'auto';
@@ -146,7 +159,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       refNo: '',
       refDate: '',
       vendorId: '',
-      warehouseId: String(defaultWarehouseId || '').trim(),
+      warehouseId: effectiveDefaultWarehouseId,
       tdsLedgerId: '',
       tdsNatureCode: '',
       tdsDeducteeType: 'COMPANY',
@@ -199,7 +212,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
    * as the sales invoice, so the two documents are filled in the same way.
    */
   const [branchId, setBranchId] = useState(
-    () => initBranchId || getLastSelection('branch', currentCompany?.id) || activeBranchId || ''
+    () => initBranchId || getLastSelection('branch', currentCompany?.id) || effectiveDefaultBranchId || ''
   );
 
   /* A remembered branch that no longer exists reads as nothing, not as an id. */
@@ -245,6 +258,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     const inScope = scope ? list.filter((w) => String(w?.branchId || '').trim() === scope) : list;
     return inScope.slice().sort((a, b) => String(a?.name || '').localeCompare(String(b?.name || '')));
   }, [warehouses, branchIdInList]);
+  const lockedBranchName = branchLabel(companyBranches.find((row) => String(row?.id) === String(branchIdForNumbering || effectiveDefaultBranchId)) || {}) || 'Default branch';
+  const lockedWarehouseName = companyWarehouses.find((row) => String(row?.id) === String(formData.warehouseId || effectiveDefaultWarehouseId))?.name || 'Default warehouse';
 
   const onBranchChange = (nextBranchId) => {
     const next = String(nextBranchId || '').trim();
@@ -492,7 +507,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       'That number is already used. Change it, or adjust numbering in Company Profile.'
     );
     fieldErrors.require('date', formData.date, 'Bill date is required');
-    fieldErrors.require('warehouseId', formData.warehouseId, 'Warehouse is required');
+    if (warehousesEnabled) fieldErrors.require('warehouseId', formData.warehouseId, 'Warehouse is required');
     fieldErrors.require('vendorId', formData.vendorId, 'Vendor is required');
     fieldErrors.check(
       'items',
@@ -543,6 +558,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     if (!wantsDraft && hasApiSession()) {
       try {
         const saved = await createDocApi('bill', {
+          branchId: String(branchIdInList || branchIdForNumbering || effectiveDefaultBranchId || '').trim() || undefined,
+          warehouseId: String(formData.warehouseId || effectiveDefaultWarehouseId || '').trim() || undefined,
           number: billNumber || undefined,
           date: formData.date,
           dueDate: formData.dueDate || null,
@@ -589,8 +606,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       ...formData,
       backendDocId,
       number: serverNumber || billNumber,
-      warehouseId: String(formData.warehouseId || '').trim(),
-      branchId: String(branchIdInList || branchIdForNumbering || '').trim(),
+      warehouseId: String(formData.warehouseId || effectiveDefaultWarehouseId || '').trim(),
+      branchId: String(branchIdInList || branchIdForNumbering || effectiveDefaultBranchId || '').trim(),
       /* customFields ride in on the spread of formData above. */
       tdsLedgerId: tdsAmount > 0 ? String(tds.ledgerId || formData.tdsLedgerId || '') : '',
       tdsNatureCode: tdsAmount > 0 ? tds.natureCode : '',
@@ -778,8 +795,9 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
             the form — gets the full width underneath instead of being squeezed
             into half of it.
           */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div id="bill-branch-field">
+            {branchesEnabled ? (
               <PopupSelect
                 label="Branch"
       title="branches"
@@ -793,13 +811,16 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                 placeholder="Select Branch"
                 showValueSubtext={false}
               />
+            ) : (
+              <div><label className="ui-label" htmlFor="bill-branch-locked">Branch</label><div className="relative"><Lock size={14} className="ui-muted pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2" /><input id="bill-branch-locked" className="ui-input ui-sunken w-full ps-8" readOnly value={lockedBranchName} title="Branches are disabled; the default branch is used automatically." /></div></div>
+            )}
             </div>
 
             <div
               ref={(el) => fieldErrors.register('warehouseId', el)}
               data-invalid-within={fieldErrors.error('warehouseId') ? 'true' : undefined}
             >
-              <WarehouseField
+              {warehousesEnabled ? <WarehouseField
                 value={formData.warehouseId}
                 onChange={(warehouseId) => {
                   fieldErrors.clearField('warehouseId');
@@ -812,8 +833,8 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
                 icon={Package}
                 showSourceHint={false}
                 className="ui-select w-full ui-surface"
-              />
-              <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} />
+              /> : <div><label className="ui-label" htmlFor="bill-warehouse-locked">Warehouse</label><div className="relative"><Lock size={14} className="ui-muted pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2" /><input id="bill-warehouse-locked" className="ui-input ui-sunken w-full ps-8" readOnly value={lockedWarehouseName} title="Warehouses are disabled; the default warehouse is used automatically." /></div></div>}
+              {warehousesEnabled ? <FieldError error={fieldErrors.error('warehouseId')} id={fieldErrors.errorId('warehouseId')} /> : null}
             </div>
           </div>
 

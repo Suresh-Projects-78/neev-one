@@ -11,6 +11,7 @@ import { useCompanyFromServer } from './hooks/useCompanyFromServer';
 import OnboardingWizard, { shouldOnboard, markOnboardingSeen } from './components/OnboardingWizard';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from './utils/gstrExport';
 import Toaster from './components/ui/Toaster';
+import ResizableTables from './components/ResizableTables';
 import StockTransferModule, { StockTransferEditor } from './features/inventory/StockTransferModule';
 import { computeInventorySummaryByItemId, isStockItem } from './utils/inventory';
 import React, { Fragment, Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -169,12 +170,14 @@ const HUB_SCREENS = new Set([
   'docTemplates',
   'financials',
   'fixedAssets',
+  'gstCompliance',
   'gstr1',
   'gstr2bReco',
   'gstr3b',
   'inventoryOverview',
   'ledgerTrialBalance',
   'mdm',
+  'msmeCompliance',
   'paymentsExpense',
   'profitLoss',
   'salesBySalesman',
@@ -6148,12 +6151,16 @@ const SalesReports = ({ db, currentCompany }) => {
  * one line saying what question it answers, grouped by category. Tiles are
  * clickable cards, so they take the hover lift.
  */
-const ReportsOverview = ({ db, currentCompany, onNavigate, isEnabled }) => (
+const ReportsOverview = ({ db, currentCompany, onNavigate, isEnabled, branches = [], warehouses = [], defaultBranchId = '', defaultWarehouseId = '' }) => (
   <ReportsWorkspace
     db={db}
     currentCompany={currentCompany}
     onNavigate={onNavigate}
     isEnabled={isEnabled}
+    branches={branches}
+    warehouses={warehouses}
+    defaultBranchId={defaultBranchId}
+    defaultWarehouseId={defaultWarehouseId}
   />
 );
 
@@ -11053,6 +11060,156 @@ const Gstr3bReport = ({ db, currentCompany }) => {
   );
 };
 
+const GST_REPORT_OPTIONS = [
+  ['gstr1', 'GSTR-1 (Outward Supplies)'],
+  ['gstr3b', 'GSTR-3B'],
+  ['itc', 'Input Tax Credit (ITC)'],
+  ['reconciliation', 'GST Reconciliation'],
+  ['einvoice', 'E-Invoice Register'],
+  ['eway', 'E-Way Bill Register'],
+  ['hsn', 'HSN Summary'],
+  ['documents', 'Document Summary'],
+];
+
+const GstComplianceWorkspace = ({ db, currentCompany, branches = [], initialReport = 'gstr1' }) => {
+  const today = new Date();
+  const fyStart = today.getMonth() < 3 ? today.getFullYear() - 1 : today.getFullYear();
+  const [report, setReport] = useState(initialReport);
+  const [financialYear, setFinancialYear] = useState(`${fyStart}-${String(fyStart + 1).slice(-2)}`);
+  const [period, setPeriod] = useState('all');
+  const [branchId, setBranchId] = useState('');
+  const [search, setSearch] = useState('');
+
+  const inScope = useCallback((row) => {
+    if (!row || row.companyId !== currentCompany.id) return false;
+    if (branchId && String(row.branchId || '') !== branchId) return false;
+    const date = String(row.date || row.invoiceDate || row.billDate || '');
+    if (!date) return true;
+    const year = Number(date.slice(0, 4));
+    const month = Number(date.slice(5, 7));
+    const fy = month >= 4 ? year : year - 1;
+    if (fy !== Number(financialYear.slice(0, 4))) return false;
+    return period === 'all' || String(month).padStart(2, '0') === period;
+  }, [branchId, currentCompany.id, financialYear, period]);
+
+  const scopedDb = useMemo(() => {
+    const next = { ...db };
+    for (const key of ['invoices', 'creditNotes', 'bills', 'debitNotes', 'expenses']) {
+      next[key] = (Array.isArray(db[key]) ? db[key] : []).filter(inScope);
+    }
+    return next;
+  }, [db, inScope]);
+
+  const sumTax = useCallback((rows) => (rows || []).reduce((sum, row) => sum + Number(row.gstTotal || 0), 0), []);
+  const outputGst = sumTax(scopedDb.invoices) - sumTax(scopedDb.creditNotes);
+  const inputGst = sumTax(scopedDb.bills) + sumTax(scopedDb.expenses) - sumTax(scopedDb.debitNotes);
+  const netPayable = Math.max(0, outputGst - inputGst);
+
+  const outwardDocs = useMemo(() => [
+    ...(scopedDb.invoices || []).map((row) => ({ ...row, complianceType: 'Invoice', sign: 1 })),
+    ...(scopedDb.creditNotes || []).map((row) => ({ ...row, complianceType: 'Credit Note', sign: -1 })),
+  ], [scopedDb]);
+  const inwardDocs = useMemo(() => [
+    ...(scopedDb.bills || []).map((row) => ({ ...row, complianceType: 'Purchase Bill', sign: 1 })),
+    ...(scopedDb.expenses || []).map((row) => ({ ...row, complianceType: 'Expense', sign: 1 })),
+    ...(scopedDb.debitNotes || []).map((row) => ({ ...row, complianceType: 'Debit Note', sign: -1 })),
+  ], [scopedDb]);
+
+  const quick = useMemo(() => {
+    if (report === 'gstr1') {
+      const invoices = scopedDb.invoices || [];
+      return [
+        ['B2B', invoices.filter((r) => String(r.customerGstin || r.gstin || '').trim()).length],
+        ['B2C', invoices.filter((r) => !String(r.customerGstin || r.gstin || '').trim()).length],
+        ['Exports', invoices.filter((r) => /export/i.test(String(r.supplyType || r.taxTreatment || ''))).length],
+        ['Credit/Debit Notes', (scopedDb.creditNotes || []).length],
+        ['Nil/Exempt', invoices.filter((r) => Number(r.gstTotal || 0) === 0).length],
+      ];
+    }
+    if (report === 'itc') return [['Purchase bills', (scopedDb.bills || []).length], ['Expenses', (scopedDb.expenses || []).length], ['Eligible ITC', formatMoney(inputGst, currentCompany)]];
+    if (report === 'reconciliation') return [['Books ITC', formatMoney(inputGst, currentCompany)], ['Matched', 0], ['Needs review', inwardDocs.length]];
+    if (report === 'hsn') return [['Documents', outwardDocs.length], ['Taxable value', formatMoney(outwardDocs.reduce((s, r) => s + r.sign * Number(r.subtotal || 0), 0), currentCompany)]];
+    return [['Documents', report === 'gstr3b' ? outwardDocs.length + inwardDocs.length : outwardDocs.length], ['Output GST', formatMoney(outputGst, currentCompany)], ['Input GST', formatMoney(inputGst, currentCompany)]];
+  }, [currentCompany, inputGst, inwardDocs.length, outputGst, outwardDocs, report, scopedDb]);
+
+  const rows = report === 'itc' || report === 'reconciliation' ? inwardDocs : outwardDocs;
+  const visibleRows = rows.filter((row) => !search || [row.number, row.invoiceNumber, row.billNumber, row.customerName, row.vendorName, row.reference].some((v) => String(v || '').toLowerCase().includes(search.toLowerCase())));
+  const selectedLabel = GST_REPORT_OPTIONS.find(([key]) => key === report)?.[1] || 'GST Report';
+
+  const exportCurrent = () => {
+    const header = ['Type', 'Number', 'Date', 'Party', 'GSTIN', 'Taxable Value', 'GST', 'Total'];
+    const body = visibleRows.map((r) => [r.complianceType, r.number || r.invoiceNumber || r.billNumber || '', r.date || '', r.customerName || r.vendorName || '', r.customerGstin || r.vendorGstin || r.gstin || '', Number(r.subtotal || r.taxableTotal || 0) * r.sign, Number(r.gstTotal || 0) * r.sign, Number(r.total || 0) * r.sign]);
+    const csv = [header, ...body].map((line) => line.map((cell) => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${selectedLabel.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div><h1 className="ui-t-page">GST</h1><p className="ui-muted text-sm">View, analyse and prepare your GST returns</p></div>
+        <div className="flex flex-wrap gap-2">
+          <select aria-label="Financial Year" className="ui-select" value={financialYear} onChange={(e) => setFinancialYear(e.target.value)}>
+            {[fyStart - 2, fyStart - 1, fyStart, fyStart + 1].map((year) => <option key={year} value={`${year}-${String(year + 1).slice(-2)}`}>FY {year}-{String(year + 1).slice(-2)}</option>)}
+          </select>
+          <select aria-label="Period" className="ui-select" value={period} onChange={(e) => setPeriod(e.target.value)}>
+            <option value="all">All periods</option>
+            {['April','May','June','July','August','September','October','November','December','January','February','March'].map((name, index) => {
+              const month = ((index + 3) % 12) + 1;
+              return <option key={name} value={String(month).padStart(2, '0')}>{name}</option>;
+            })}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['Output GST', outputGst, `${outwardDocs.length} outward documents`, 'var(--ov-blue-wash)'],
+          ['Input GST', inputGst, `${inwardDocs.length} inward documents`, 'var(--ov-green-wash)'],
+          ['Net GST Payable', netPayable, outputGst > inputGst ? 'Payable after available ITC' : 'No net amount payable', 'var(--ov-amber-wash)'],
+          ['ITC Available', inputGst, 'Based on purchase bills and expenses', 'var(--ov-violet-wash)'],
+        ].map(([label, value, note, tone]) => <div key={label} className="ui-card p-4" style={{ backgroundColor: `rgb(${tone})` }}><div className="ui-t-label">{label}</div><div className="mt-1 ui-money-lg">{formatMoney(value, currentCompany)}</div><div className="mt-1 text-xs ui-muted">{note}</div></div>)}
+      </div>
+
+      <section className="ui-card p-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="min-w-[17rem] flex-1 sm:flex-none"><label className="ui-label" htmlFor="gst-report-select">Select Report</label><select id="gst-report-select" className="ui-select w-full font-semibold" value={report} onChange={(e) => setReport(e.target.value)}>{GST_REPORT_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
+          <div><label className="ui-label" htmlFor="gst-branch">Branch</label><select id="gst-branch" className="ui-select" value={branchId} onChange={(e) => setBranchId(e.target.value)}><option value="">All branches</option>{branches.map((branch) => <option key={branch.id} value={String(branch.id)}>{branch.name}</option>)}</select></div>
+          <div><label className="ui-label" htmlFor="gst-gstin">GSTIN</label><input id="gst-gstin" className="ui-input ui-mono w-44" value={currentCompany.gstin || 'Not configured'} readOnly /></div>
+          <button type="button" className="ui-btn ui-btn-primary">Apply</button>
+        </div>
+      </section>
+
+      <div className="flex flex-wrap gap-2">{quick.map(([label, value]) => <div key={label} className="ui-card min-w-36 px-4 py-3"><div className="text-xs ui-muted">{label}</div><div className="mt-0.5 font-bold">{value}</div></div>)}</div>
+
+      <section className="ui-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b ui-border-c p-3">
+          <div><h2 className="ui-t-sec">{selectedLabel}</h2><p className="text-xs ui-muted">Selected GST report for the current compliance period</p></div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative"><Search size={15} className="ui-muted absolute start-3 top-1/2 -translate-y-1/2" /><input aria-label="Search GST report" className="ui-input w-64 ps-9" placeholder="Search number, party, reference…" value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+            <button type="button" className="ui-btn ui-btn-secondary"><SlidersHorizontal size={15} /> Layout</button>
+            <button type="button" className="ui-btn ui-btn-secondary" onClick={exportCurrent}><Download size={15} /> Export</button>
+          </div>
+        </div>
+        <div className="p-3">
+          {report === 'gstr1' ? <Gstr1Report db={scopedDb} currentCompany={currentCompany} /> : report === 'gstr3b' ? <Gstr3bReport db={scopedDb} currentCompany={currentCompany} /> : report === 'reconciliation' ? <Gstr2bReco db={scopedDb} currentCompany={currentCompany} /> : (
+            <div className="overflow-auto"><table className="ui-table w-full"><thead><tr><th className="ui-th">Type</th><th className="ui-th">Document No.</th><th className="ui-th">Date</th><th className="ui-th">Party</th><th className="ui-th">GSTIN</th><th className="ui-th ui-num">Taxable Value</th><th className="ui-th ui-num">GST</th><th className="ui-th ui-num">Total Amount</th></tr></thead><tbody>{visibleRows.length ? visibleRows.map((row, index) => <tr key={`${row.id || row.number}-${index}`} className="ui-hover-sunken cursor-pointer"><td className="ui-td">{row.complianceType}</td><td className="ui-td ui-link">{row.number || row.invoiceNumber || row.billNumber || '—'}</td><td className="ui-td">{row.date || '—'}</td><td className="ui-td">{row.customerName || row.vendorName || '—'}</td><td className="ui-td ui-mono">{row.customerGstin || row.vendorGstin || row.gstin || '—'}</td><td className="ui-td ui-num">{formatMoney(Number(row.subtotal || row.taxableTotal || 0) * row.sign, currentCompany)}</td><td className="ui-td ui-num">{formatMoney(Number(row.gstTotal || 0) * row.sign, currentCompany)}</td><td className="ui-td ui-num">{formatMoney(Number(row.total || 0) * row.sign, currentCompany)}</td></tr>) : <tr><td colSpan="8" className="px-4 py-12 text-center ui-muted">No entries match this report and period.</td></tr>}</tbody><tfoot><tr className="font-bold"><td className="ui-td" colSpan="5">Total ({visibleRows.length})</td><td className="ui-td ui-num">{formatMoney(visibleRows.reduce((s, r) => s + Number(r.subtotal || r.taxableTotal || 0) * r.sign, 0), currentCompany)}</td><td className="ui-td ui-num">{formatMoney(visibleRows.reduce((s, r) => s + Number(r.gstTotal || 0) * r.sign, 0), currentCompany)}</td><td className="ui-td ui-num">{formatMoney(visibleRows.reduce((s, r) => s + Number(r.total || 0) * r.sign, 0), currentCompany)}</td></tr></tfoot></table></div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+};
+
+const MsmeComplianceWorkspace = ({ db, currentCompany }) => {
+  const vendors = (db.vendors || []).filter((vendor) => vendor.companyId === currentCompany.id && (vendor.msmeRegistered || String(vendor.msmeNumber || '').trim()));
+  return <div className="space-y-4"><div><h1 className="ui-t-page">MSME</h1><p className="ui-muted text-sm">Track registered vendors and MSME payment compliance</p></div><div className="grid gap-3 sm:grid-cols-3"><div className="ui-card p-4"><div className="ui-t-label">Registered vendors</div><div className="ui-money-lg">{vendors.length}</div></div><div className="ui-card p-4"><div className="ui-t-label">With Udyam number</div><div className="ui-money-lg">{vendors.filter((v) => String(v.msmeNumber || '').trim()).length}</div></div><div className="ui-card p-4"><div className="ui-t-label">Details missing</div><div className="ui-money-lg">{vendors.filter((v) => !String(v.msmeNumber || '').trim()).length}</div></div></div><div className="ui-card overflow-auto"><table className="ui-table w-full"><thead><tr><th className="ui-th">Vendor</th><th className="ui-th">Vendor Code</th><th className="ui-th">PAN</th><th className="ui-th">GSTIN</th><th className="ui-th">MSME / Udyam Number</th><th className="ui-th">Status</th></tr></thead><tbody>{vendors.length ? vendors.map((vendor) => <tr key={vendor.id}><td className="ui-td font-semibold">{vendor.displayName || vendor.name}</td><td className="ui-td ui-mono">{vendor.code || '—'}</td><td className="ui-td ui-mono">{vendor.pan || '—'}</td><td className="ui-td ui-mono">{vendor.gstin || '—'}</td><td className="ui-td ui-mono">{vendor.msmeNumber || '—'}</td><td className="ui-td"><span className="ui-badge ui-badge-success">Registered</span></td></tr>) : <tr><td colSpan="6" className="px-4 py-12 text-center ui-muted">No MSME registered vendors yet.</td></tr>}</tbody></table></div></div>;
+};
+
 const AppShell = () => {
   const { can, loading: permsLoading } = usePermissions();
   const { isEnabled, loading: featuresLoading } = useFeatures();
@@ -11340,6 +11497,10 @@ const AppShell = () => {
   useTdsSync(db, setDb, isAuthenticated ? currentCompany : null);
 
   const [onboardDismissed, setOnboardDismissed] = useState(false);
+  // The guided setup belongs to the company-creation flow. Normal sign-in can
+  // briefly look like an empty book while server data hydrates, which used to
+  // reopen this wizard for established companies on every login.
+  const [onboardingRequested, setOnboardingRequested] = useState(false);
   // Latch it. shouldOnboard asks whether there are no customers and no
   // invoices, and step two of the wizard creates a customer — so recomputing
   // this every render made the wizard close itself the moment somebody
@@ -11349,7 +11510,8 @@ const AppShell = () => {
   // next load. Whether to open is a question about the moment of arrival; once
   // open, only the user closes it.
   const [onboardLatched, setOnboardLatched] = useState(false);
-  const onboardEligible = isAuthenticated && shouldOnboard(db, currentCompany);
+  const onboardEligible =
+    isAuthenticated && onboardingRequested && shouldOnboard(db, currentCompany);
   if (onboardEligible && !onboardLatched && !onboardDismissed) setOnboardLatched(true);
   const showOnboarding = isAuthenticated && !onboardDismissed && onboardLatched;
 
@@ -11531,18 +11693,21 @@ const AppShell = () => {
 
   // Branch/warehouse authority comes from the server (/auth/me) only. Never from
   // a locally-stored identity, which the user controls.
-  const hasBranchRestriction = useMemo(() => !isOrgAdmin, [isOrgAdmin]);
+  const hasBranchRestriction = useMemo(
+    () => branchesFeatureEnabled && !isOrgAdmin,
+    [branchesFeatureEnabled, isOrgAdmin],
+  );
 
   const allowedBranchIdSet = useMemo(() => new Set(allowedBranchIds.map((x) => String(x))), [allowedBranchIds]);
 
   const branchesForUser = useMemo(() => {
-    if (!branchesFeatureEnabled) return [];
+    if (!branchesFeatureEnabled) return Array.isArray(branches) ? branches : [];
     if (!hasBranchRestriction) return branches;
     return (Array.isArray(branches) ? branches : []).filter((b) => allowedBranchIdSet.has(String(b?.id)));
   }, [branches, hasBranchRestriction, allowedBranchIdSet, branchesFeatureEnabled]);
 
   const warehousesForUser = useMemo(() => {
-    if (!warehousesFeatureEnabled) return [];
+    if (!warehousesFeatureEnabled) return Array.isArray(warehouses) ? warehouses : [];
     if (!hasBranchRestriction) return warehouses;
     return (Array.isArray(warehouses) ? warehouses : []).filter((w) => allowedBranchIdSet.has(String(w?.branchId)));
   }, [warehouses, hasBranchRestriction, allowedBranchIdSet, warehousesFeatureEnabled]);
@@ -11745,15 +11910,6 @@ const AppShell = () => {
           ],
         },
         {
-          key: 'gst',
-          title: 'GST',
-          items: [
-            { key: 'gstr1', label: 'GSTR-1' },
-            { key: 'gstr3b', label: 'GSTR-3B' },
-            { key: 'gstr2bReco', label: 'GSTR-2B Reconciliation' },
-          ],
-        },
-        {
           key: 'sales',
           title: 'Sales',
           items: [
@@ -11952,6 +12108,19 @@ const AppShell = () => {
       },
       { type: 'item', key: 'journalEntries', label: 'Journal Entries', icon: PhJournal, ph: true, tone: 'journal', perm: 'ACCOUNTING::Journal Entries::VIEW' },
       { type: 'item', key: 'approvals', label: 'Approvals', icon: PhApprovals, ph: true, tone: 'approvals', feature: 'approvals' },
+      {
+        type: 'group',
+        key: 'complianceMenu',
+        label: 'Compliance',
+        tone: 'reports',
+        icon: PhApprovals,
+        ph: true,
+        items: [
+          { key: 'gstCompliance', label: 'GST', icon: BadgePercent, permAny: ['REPORTS::GSTR-1::VIEW', 'REPORTS::GSTR-3B::VIEW'] },
+          { key: 'tds', label: 'TDS', icon: FileText },
+          { key: 'msmeCompliance', label: 'MSME', icon: Building2, perm: 'MASTERS::Vendors::VIEW' },
+        ],
+      },
       { type: 'item', key: 'reports', label: 'Reports', icon: PhReports, ph: true, tone: 'reports', permAny: ['REPORTS::Trial Balance::VIEW','REPORTS::Profit & Loss::VIEW','REPORTS::Balance Sheet::VIEW','REPORTS::Cash Flow::VIEW','REPORTS::Sales Reports::VIEW','REPORTS::GSTR-1::VIEW','REPORTS::GSTR-3B::VIEW'] },
       {
         type: 'group',
@@ -12502,6 +12671,19 @@ const AppShell = () => {
     if (typeof reloadWarehouses === 'function') reloadWarehouses();
   }, [isAuthenticated, branchesLoading, branches, reloadWarehouses]);
 
+  /* A disabled warehouse feature still has one accounting location. Keep it
+     selected as the immutable default so every document can display and post
+     to it without asking the user to make a warehouse decision. */
+  useEffect(() => {
+    if (!isAuthenticated || warehousesFeatureEnabled || warehousesLoading) return;
+    if (String(activeWarehouseId || '').trim()) return;
+    const first = (Array.isArray(warehousesForUser) ? warehousesForUser : [])[0];
+    if (!first?.id) return;
+    const id = String(first.id);
+    localStorage.setItem('activeWarehouseId', id);
+    setActiveWarehouseId(id);
+  }, [activeWarehouseId, isAuthenticated, warehousesFeatureEnabled, warehousesForUser, warehousesLoading]);
+
   const setActiveWarehouse = useCallback(
     (warehouseId) => {
       const nextId = warehouseId ? String(warehouseId) : '';
@@ -12688,6 +12870,8 @@ const AppShell = () => {
       cashFlow: 'Cash Flow',
       gstr1: 'GSTR-1',
       gstr3b: 'GSTR-3B',
+      gstCompliance: 'GST',
+      msmeCompliance: 'MSME',
       salesReports: 'Sales Reports',
       // Reached from the account menu rather than the rail, so the loop over
       // navModel below never finds them.
@@ -12946,11 +13130,13 @@ const AppShell = () => {
                 open: true,
                 initial: {
                   customerId: inv?.customerId,
+                  customerName: inv?.customerName || inv?.partyName || '',
                   amount: Math.max(0, Number(inv?.total ?? 0) - Number(inv?.paidAmount ?? 0)),
                   // Ticked and allocated, or the money lands on account and the
                   // invoice it was paid against stays open.
                   allocateInvoiceId: inv?.id,
                   reference: inv?.number || '',
+                  narration: inv?.number ? `Receipt against sales invoice ${inv.number}` : '',
                 },
               });
               setActive('receipts');
@@ -13823,12 +14009,19 @@ const AppShell = () => {
             currentCompany={currentCompany}
             onNavigate={(key) => setActive(key)}
             isEnabled={isEnabled}
+            branches={branchesForUser}
+            warehouses={warehousesForUser}
+            defaultBranchId={activeBranchId}
+            defaultWarehouseId={activeWarehouseId}
           />
         );
+      case 'gstCompliance':
       case 'gstr1':
-        return <Gstr1Report db={dbForUser} currentCompany={currentCompany} />;
+        return <GstComplianceWorkspace db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} initialReport="gstr1" />;
       case 'gstr3b':
-        return <Gstr3bReport db={dbForUser} currentCompany={currentCompany} />;
+        return <GstComplianceWorkspace db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} initialReport="gstr3b" />;
+      case 'msmeCompliance':
+        return <MsmeComplianceWorkspace db={dbForUser} currentCompany={currentCompany} />;
       case 'gstRates':
         return <GstRatesList db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'invoiceTemplates':
@@ -13990,7 +14183,7 @@ const AppShell = () => {
       case 'reorderAlerts':
         return <ReorderAlerts db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'gstr2bReco':
-        return <Gstr2bReco db={dbForUser} currentCompany={currentCompany} />;
+        return <GstComplianceWorkspace db={dbForUser} currentCompany={currentCompany} branches={branchesForUser} initialReport="reconciliation" />;
       case 'paymentReminders':
         return <PaymentReminders db={dbForUser} setDb={setDb} currentCompany={currentCompany} />;
       case 'salesBySalesman':
@@ -14253,6 +14446,7 @@ const AppShell = () => {
           localStorage.setItem('token', token);
 
           const onboarding = typeof payload === 'object' ? payload?.onboarding : null;
+          setOnboardingRequested(Boolean(onboarding?.orgId));
           if (onboarding?.orgId) {
             localStorage.setItem('activeOrgId', String(onboarding.orgId));
           }
@@ -14380,6 +14574,7 @@ const AppShell = () => {
           itself is untouched — this paints over --app-bg, never replaces it. */}
       <div className="ui-ambient ui-ambient-quiet ui-ambient-fixed" aria-hidden="true" />
       <Toaster />
+      <ResizableTables />
       {showOnboarding ? (
         <OnboardingWizard
           setDb={setDb}
@@ -14387,8 +14582,9 @@ const AppShell = () => {
           onDone={() => {
             // Persisted as well as dismissed. Setting only React state meant
             // the answer lasted until the next reload.
-            markOnboardingSeen(currentCompany);
-            setOnboardDismissed(true);
+             markOnboardingSeen(currentCompany);
+             setOnboardDismissed(true);
+             setOnboardingRequested(false);
           }}
           onCreateInvoice={() => {
             setActive('invoices');
@@ -14531,14 +14727,16 @@ const AppShell = () => {
                 one warehouse showed nothing at all — so a new org, which has
                 none, had no warehouse control and no route to make one. They
                 show from the first one now, and say so when there are none. */}
-            {branchesFeatureEnabled && branchesForUser.length >= 1 ? (
+            {branchesForUser.length >= 1 ? (
               <span className="ui-scope-field hidden md:inline-flex">
                 <PhBranch size={16} weight="fill" aria-hidden="true" />
               <select
                 value={activeBranchId || ''}
                 onChange={(e) => setActiveBranch(e.target.value)}
+                disabled={!branchesFeatureEnabled}
                 className="ui-select ui-scope-select max-w-[16rem] text-sm"
-                aria-label="Active branch"
+                aria-label={branchesFeatureEnabled ? 'Active branch' : 'Default branch (locked)'}
+                title={branchesFeatureEnabled ? 'Active branch' : 'Branches are disabled; the default branch is used automatically.'}
               >
                 {branchesForUser.map((b) => (
                   <option key={b.id} value={String(b.id)}>
@@ -14549,16 +14747,18 @@ const AppShell = () => {
               </span>
             ) : null}
 
-            {warehousesFeatureEnabled && warehousesForActiveBranch.length >= 1 ? (
+            {warehousesForActiveBranch.length >= 1 ? (
               <span className="ui-scope-field hidden md:inline-flex">
                 <PhWarehouse size={16} weight="fill" aria-hidden="true" />
               <select
                 value={activeWarehouseId || ''}
                 onChange={(e) => setActiveWarehouse(e.target.value)}
+                disabled={!warehousesFeatureEnabled}
                 className="ui-select ui-scope-select max-w-[16rem] text-sm"
-                aria-label="Active warehouse"
+                aria-label={warehousesFeatureEnabled ? 'Active warehouse' : 'Default warehouse (locked)'}
+                title={warehousesFeatureEnabled ? 'Active warehouse' : 'Warehouses are disabled; the default warehouse is used automatically.'}
               >
-                <option value="">All warehouses</option>
+                {warehousesFeatureEnabled ? <option value="">All warehouses</option> : null}
                 {warehousesForActiveBranch.map((w) => (
                   <option key={w.id} value={String(w.id)}>
                     {w.name || `Warehouse ${w.id}`}
@@ -15056,7 +15256,7 @@ const AppShell = () => {
           id="main-content"
           key={active}
           inert={featuresOpen || undefined}
-          className="min-w-0 flex-1 ui-content overflow-y-auto overflow-x-hidden min-h-0 px-4 lg:px-6 py-5"
+          className="min-w-0 flex-1 ui-content overflow-y-auto overflow-x-hidden min-h-0 px-2 py-3 lg:px-3"
           /*
            * Two fixes, because the two families of scrollbar break this
            * differently.

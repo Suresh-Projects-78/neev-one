@@ -6,7 +6,6 @@ import { notify } from '../ui/notify';
 import PartyFormLayout from './PartyFormLayout';
 import { tdsGroupSide } from '../../utils/tdsLedgers';
 import { CUSTOMER_CFG } from './partyFormConfig';
-import { useFeatures } from '../../permissions/useFeatures';
 import { AddressTab, ContactsTab, CURRENCY_OPTIONS, CUSTOMER_TABS, FormRow } from './customerFormParts';
 import Modal from '../ui/Modal';
 import Popover from '../ui/Popover';
@@ -20,6 +19,7 @@ import { rankedSearch, soleConfidentMatch } from '../../utils/rankedSearch';
 import { useListboxKeys, openOnKey, focusNextAfter } from './useListboxKeys';
 import { useRecentPicks } from './useRecentPicks';
 import { useRemoteSearch } from './useRemoteSearch';
+import { nextCustomerCode } from '../../utils/masterCodes';
 
 export const CustomerForm = ({
   db,
@@ -334,8 +334,6 @@ export const CustomerForm = ({
     () => activePriceListOptions({ db, companyId: currentCompany.id, onDate: new Date().toISOString().slice(0, 10) }),
     [db, currentCompany.id]
   );
-  const { isEnabled: featureOn } = useFeatures();
-  const codesEnabled = featureOn('partyCodes');
 
   /* Shared by "Clear the form" and by Save and add another. */
   const resetForm = () =>
@@ -798,7 +796,8 @@ export const CustomerForm = ({
             setGroupDraftName(typed);
             setGroupCreateOpen(true);
           }}
-          codesEnabled={codesEnabled}
+          codesEnabled={true}
+          automaticCode={isEdit ? String(formData.code || '') : nextCustomerCode(db?.customers)}
           priceListOptions={priceListOptions}
           onDuplicate={isEdit && onDuplicate ? () => onDuplicate(formData) : null}
           gstinFetching={gstinFetching}

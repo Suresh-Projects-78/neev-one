@@ -77,9 +77,19 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       return match ? String(match.id) : '';
     };
 
+    const requestedCustomerId =
+      d?.customerId !== undefined && d?.customerId !== null && String(d.customerId) !== ''
+        ? String(d.customerId)
+        : '';
+    const requestedCustomerExists = requestedCustomerId && (Array.isArray(db?.customers) ? db.customers : []).some(
+      (c) => String(c?.companyId) === String(companyId) && String(c?.id) === requestedCustomerId
+    );
+
     return {
       date: String(d?.date || '').trim() || new Date().toISOString().slice(0, 10),
-      customerId: d?.customerId !== undefined && d?.customerId !== null && String(d.customerId) !== '' ? String(d.customerId) : byName(),
+      // Server invoices can carry the server party id here. Use it only when
+      // it is a real local customer id; otherwise resolve the customer name.
+      customerId: requestedCustomerExists ? requestedCustomerId : byName(),
       amount: d?.amount !== undefined && d?.amount !== null ? String(d.amount) : '',
       mode: String(d?.mode || '').trim() || 'Cash',
       ledgerAccountId: String(d?.ledgerAccountId || '').trim(),
@@ -198,9 +208,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       const wantName = String(initialData?.customerName || '').trim().toLowerCase();
       return Boolean(wantName) && String(c?.name || '').trim().toLowerCase() === wantName;
     });
-    const accountId = String(seededCustomer?.accountId ?? '').trim();
+    const companyAccounts = safeArray(db?.chartOfAccounts).filter((a) => String(a?.companyId) === String(companyId));
+    const linkedAccountId = String(seededCustomer?.accountId ?? '').trim();
+    const linkedAccountExists = companyAccounts.some((a) => String(a?.id) === linkedAccountId);
+    const customerName = String(getCustomerDisplayName(seededCustomer) || seededCustomer?.name || '').trim().toLowerCase();
+    const matchedAccount = companyAccounts.find((a) => {
+      if (String(a?.customerId ?? '') === String(seededCustomer?.id ?? '')) return true;
+      if (String(a?.partyId ?? '') === String(seededCustomer?.backendPartyId ?? '') && seededCustomer?.backendPartyId) return true;
+      return customerName && String(a?.name || '').trim().toLowerCase() === customerName;
+    });
+    const accountId = linkedAccountExists ? linkedAccountId : String(matchedAccount?.id ?? '').trim();
     if (!accountId) return [emptyAllocationRow()];
-    return [{ ...emptyAllocationRow(), ledgerId: accountId }];
+    return [{ ...emptyAllocationRow(), ledgerId: accountId, amount: initial.amount }];
   });
 
   /*
@@ -248,7 +267,10 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     return (db?.chartOfAccounts || [])
       .filter((a) => Number(a?.companyId) === cid && a?.isActive !== false)
       .filter((a) => String(a.id) !== String(ledgerAccountId))
-      .map((a) => ({ id: a.id, name: a.name }))
+      // LedgerField scopes options by company. Preserve that identity here;
+      // reducing rows to only id/name made a correctly preselected customer
+      // ledger render as an empty field.
+      .map((a) => ({ id: a.id, name: a.name, code: a.code, groupName: a.groupName, companyId: a.companyId, isActive: a.isActive }))
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
   }, [db?.chartOfAccounts, currentCompany?.id, ledgerAccountId]);
 

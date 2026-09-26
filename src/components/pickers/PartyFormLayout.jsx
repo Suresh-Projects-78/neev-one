@@ -81,6 +81,7 @@ export function PartyFormLayout({
   groupOptions,
   onCreateGroup,
   codesEnabled,
+  automaticCode = '',
   priceListOptions = [],
   onDuplicate = null,
   gstinFetching,
@@ -477,6 +478,46 @@ export function PartyFormLayout({
                 />
                 <p className="ui-caption mt-1">Permanent Account Number.</p>
               </div>
+              {cfg.kind === 'VENDOR' ? (
+                <>
+                  <div>
+                    <label className="ui-label" htmlFor="vendor-msme-registered">MSME registered</label>
+                    <select
+                      id="vendor-msme-registered"
+                      value={formData.msmeRegistered ? 'yes' : 'no'}
+                      onChange={(e) => {
+                        const registered = e.target.value === 'yes';
+                        setFormData((p) => ({
+                          ...p,
+                          msmeRegistered: registered,
+                          msmeNumber: registered ? p.msmeNumber : '',
+                        }));
+                      }}
+                      className="ui-select w-full"
+                    >
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                    <p className="ui-caption mt-1">Record whether this vendor is registered under MSME/Udyam.</p>
+                  </div>
+                  {formData.msmeRegistered ? (
+                    <div>
+                      <label className="ui-label" htmlFor="vendor-msme-number">MSME / Udyam number</label>
+                      <input
+                        id="vendor-msme-number"
+                        type="text"
+                        value={formData.msmeNumber || ''}
+                        onChange={(e) => setFormData((p) => ({ ...p, msmeNumber: e.target.value.toUpperCase() }))}
+                        className="ui-input ui-mono w-full"
+                        placeholder="UDYAM-XX-00-0000000"
+                        required
+                      />
+                      <p className="ui-caption mt-1">A registered micro or small supplier must be paid within the applicable MSME period.</p>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <>
               <div>
                 <label className="ui-label" htmlFor="cust-gst-treatment">GST Registration / Treatment</label>
                 {/*
@@ -757,6 +798,8 @@ export function PartyFormLayout({
                 />
                 <p className="ui-caption mt-1">Any additional statutory numbers or notes.</p>
               </div>
+                </>
+              )}
             </div>
             </section>
           ) : null}
@@ -780,12 +823,13 @@ export function PartyFormLayout({
                 <input
                   id="cust-code"
                   type="text"
-                  value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  className="ui-input ui-mono w-full"
-                  placeholder="Generated on save"
+                  value={formData.code || automaticCode}
+                  readOnly
+                  aria-readonly="true"
+                  className="ui-input ui-mono w-full cursor-not-allowed"
+                  placeholder="No codes available"
                 />
-                <p className="ui-caption mt-1">Left blank, a code is allotted in the format set under Settings.</p>
+                <p className="ui-caption mt-1">Automatically allotted and cannot be edited.</p>
               </div>
               ) : null}
               {/*

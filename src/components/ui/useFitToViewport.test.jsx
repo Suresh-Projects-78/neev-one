@@ -20,13 +20,13 @@ globalThis.ResizeObserver = globalThis.ResizeObserver || StubResizeObserver;
  * twice — what happens to the height when the page still does not fit.
  */
 
-const Harness = ({ dep = 0 }) => {
+const Harness = ({ dep = 0, fillViewport = false }) => {
   const ref = useRef(null);
   useFitToViewport(dep);
   return (
     <main id="main-content" ref={ref}>
       <div className="ui-card">
-        <div className="ui-table-scroll" data-testid="scroller" />
+        <div className="ui-table-scroll" data-fill-viewport={fillViewport ? '' : undefined} data-testid="scroller" />
         <div className="pagination" />
       </div>
     </main>
@@ -89,5 +89,13 @@ describe('the region gets what the window has left', () => {
     const scroller = layout({ top: 280, below: 40, overflow: 0 });
     await frame(() => window.dispatchEvent(new Event('resize')));
     expect(varOf(scroller)).toBe('160px');
+  });
+
+  it('keeps a full-page report scrollbar at the viewport bottom', async () => {
+    window.innerHeight = 900;
+    render(<Harness fillViewport />);
+    const scroller = layout({ top: 300, below: 0, overflow: 140 });
+    await frame(() => window.dispatchEvent(new Event('resize')));
+    expect(varOf(scroller)).toBe('598px');
   });
 });

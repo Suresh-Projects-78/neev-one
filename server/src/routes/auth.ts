@@ -378,7 +378,7 @@ authRouter.get('/me', async (req: Request, res: Response) => {
        * safe on the server the whole time; the browser simply had no way to
        * ask what company it was looking at.
        */
-      org: { select: { id: true, name: true, slug: true, profileJson: true } },
+      org: { select: { id: true, name: true, slug: true, profileJson: true, createdByUserId: true } },
     },
     orderBy: { createdAt: 'asc' },
   });
@@ -407,7 +407,12 @@ authRouter.get('/me', async (req: Request, res: Response) => {
       where: { accountId: activeAccountId, orgId: activeOrgId, userId: auth.userId },
       select: { role: { select: { roleType: true, name: true } } },
     });
-    isOrgAdmin = assignments.some((a) => String(a?.role?.roleType || '') === RoleType.ADMIN);
+    // Legacy organisations may predate the explicit ADMIN role assignment.
+    // The tenant and RBAC middleware already recognise the organisation creator
+    // as its administrator, so the session context must report the same rule.
+    isOrgAdmin =
+      activeMembership?.org?.createdByUserId === auth.userId ||
+      assignments.some((a) => String(a?.role?.roleType || '') === RoleType.ADMIN);
 
     if (isOrgAdmin) {
       const branches = await prisma.branch.findMany({

@@ -231,7 +231,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
       ? new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 }).format(number)
       : raw;
   };
-  const displayTextValue = (raw) => (isNumber || isDate ? displayValue(raw) : String(raw || '').toUpperCase());
+  const displayTextValue = (raw) => (isNumber || isDate ? displayValue(raw) : String(raw || ''));
   const shown = search.trim()
     ? all.filter((v) => `${v} ${displayValue(v)}`.toLowerCase().includes(search.trim().toLowerCase()))
     : all;
@@ -373,7 +373,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
           <input
             type="text"
             value={value}
-            onChange={(e) => setValue(isNumber ? e.target.value : e.target.value.toUpperCase())}
+            onChange={(e) => setValue(e.target.value)}
             disabled={!op || op === 'empty' || op === 'notEmpty'}
             className="ui-input w-24 px-2 text-xs ui-ctl-compact"
             placeholder="Value"
@@ -400,9 +400,9 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
         <input
           type="text"
           value={search}
-          onChange={(e) => setSearch(e.target.value.toUpperCase())}
+          onChange={(e) => setSearch(e.target.value)}
           className="ui-input w-full pl-7 pr-2 text-xs ui-ctl-compact"
-          placeholder="SEARCH (ALL)"
+          placeholder="Search (All)"
           aria-label="Search values"
         />
       </div>
@@ -423,7 +423,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
               })
             }
           />
-          (SELECT ALL)
+          (Select All)
         </label>
         {shown.length === 0 ? <div className="ui-muted text-xs px-1">No values</div> : null}
         {isDate ? dateTree.map(([year, months]) => (
@@ -448,7 +448,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
         )) : shown.map((v) => (
           <label key={v || '(blank)'} className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" className="ui-checkbox" checked={checked.has(v)} onChange={() => toggle(v)} />
-            <span className="truncate">{v === '' ? '(BLANK)' : displayTextValue(v)}</span>
+            <span className="truncate">{v === '' ? '(Blank)' : displayTextValue(v)}</span>
           </label>
         ))}
       </div>
@@ -469,7 +469,7 @@ const FilterPanel = ({ column, state, anchorRect, onClose }) => {
  * A header cell that carries its own filter, the way a spreadsheet does: the
  * label stays put and a caret on the right opens the panel. No second row.
  */
-export const ColumnHeader = ({ label, col, state, className = '', align = 'left', type = 'text' }) => {
+export const ColumnHeader = ({ label, col, state, className = '', align = 'left', type = 'text', onResizeStart }) => {
   const [rect, setRect] = useState(null);
   const [localOpen, setLocalOpen] = useState(false);
   const shared = typeof state?.setOpenKey === 'function';
@@ -487,7 +487,7 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
   }
 
   return (
-    <th scope="col" className={className}>
+    <th scope="col" className={`relative ${className}`}>
       <button
         type="button"
         onClick={(e) => {
@@ -500,12 +500,12 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
            the pointer and the whole of it was under the 24px a pointer
            target is meant to be. `-my-1.5` gives the padding back to the cell
            so no row gets taller. */
-        className={`w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} rounded-lg px-1 -mx-1 py-1.5 -my-1.5 ui-hover-sunken`}
+        className={`report-column-heading-button w-full flex items-center gap-1 ${align === 'right' ? 'justify-end' : 'justify-between'} py-1.5 -my-1.5`}
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={`Sort and filter ${typeof label === 'string' ? label : col}`}
       >
-        <span className="truncate">{label}</span>
+        <span className="whitespace-nowrap">{label}</span>
         <span className="flex items-center gap-0.5 shrink-0">
           {sorted ? <span aria-hidden="true" className="text-xs">{state.sort.dir === 'asc' ? '\u25b2' : '\u25bc'}</span> : null}
           <ChevronDown
@@ -515,6 +515,15 @@ export const ColumnHeader = ({ label, col, state, className = '', align = 'left'
           />
         </span>
       </button>
+
+      {onResizeStart ? <span
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={`Resize ${typeof label === 'string' ? label : col} column`}
+        className="report-column-resizer"
+        onPointerDown={(event) => onResizeStart(event, col)}
+        onClick={(event) => event.stopPropagation()}
+      /> : null}
 
       {open && rect ? (
         <FilterPanel

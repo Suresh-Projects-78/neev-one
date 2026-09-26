@@ -1,6 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import FormSection from '../../components/ui/FormSection';
-import { Ban, Calculator, ClipboardList, Download, FileText, Package, Plus, Printer, Receipt, Settings2, Trash2, Truck } from 'lucide-react';
+import { Ban, Calculator, ClipboardList, Download, FileText, MoreVertical, Package, Pencil, Plus, Printer, Receipt, Settings2, Trash2, Truck } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '../../components/ui/Primitives';
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { useListSearch } from '../../components/ListToolbar';
@@ -13,7 +14,7 @@ import Modal from '../../components/ui/Modal';
 import { useDocumentFormKeys } from '../../components/ui/useDocumentFormKeys';
 import { getVisibleCustomFields } from '../../utils/invoicePrefs';
 import { useColumnFilters, ColumnHeader } from '../../components/ColumnFilters';
-import { notify } from '../../components/ui/notify';
+import { confirmDialog, notify } from '../../components/ui/notify';
 import ItemPicker from '../../components/pickers/ItemPicker';
 import CustomerPicker from '../../components/pickers/CustomerPicker';
 import { bumpCompanyNextNumber, getDocSettings, nextFreeVoucherNumber } from '../../utils/docSettings';
@@ -23,7 +24,7 @@ import { amountInWordsInr, formatMoney } from '../../utils/money';
 import { computeGstForLines } from '../../utils/gst';
 import { getCompanyGstProfile, getPartyGstProfile, isIntraStateSupply } from '../../utils/gst';
 import { resolveSaleRate } from '../../utils/pricing';
-import { createDocApi, hasApiSession } from '../../api/purchaseDocs';
+import { createDocApi, deleteDocApi, hasApiSession, updateDocApi } from '../../api/purchaseDocs';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '../../components/docs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '../../components/list/exportMenu';
 
@@ -35,6 +36,70 @@ import { exportFormatFromKey, exportMenuItem, runListExport } from '../../compon
  * quantities are computed from those documents, never stored, so the pending
  * report cannot drift from reality.
  */
+function SalesOrderRowActions({ order, progress, onEdit, onInvoice, onPrint, onDelete }) {
+  const [position, setPosition] = useState(null);
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+  const open = Boolean(position);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const closeOutside = (event) => {
+      if (buttonRef.current?.contains(event.target) || menuRef.current?.contains(event.target)) return;
+      setPosition(null);
+    };
+    const closeOnEscape = (event) => { if (event.key === 'Escape') setPosition(null); };
+    const closeOnViewportChange = () => setPosition(null);
+    document.addEventListener('pointerdown', closeOutside, true);
+    document.addEventListener('keydown', closeOnEscape, true);
+    window.addEventListener('resize', closeOnViewportChange);
+    window.addEventListener('scroll', closeOnViewportChange, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside, true);
+      document.removeEventListener('keydown', closeOnEscape, true);
+      window.removeEventListener('resize', closeOnViewportChange);
+      window.removeEventListener('scroll', closeOnViewportChange, true);
+    };
+  }, [open]);
+
+  const toggle = () => {
+    if (open) { setPosition(null); return; }
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const width = 210;
+    const estimatedHeight = 168;
+    const opensAbove = window.innerHeight - rect.bottom < estimatedHeight + 12;
+    setPosition({
+      left: Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)),
+      ...(opensAbove ? { bottom: Math.max(8, window.innerHeight - rect.top + 6) } : { top: rect.bottom + 6 }),
+      width,
+    });
+  };
+
+  const choose = (action) => { setPosition(null); action(); };
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="ui-icon-btn"
+        aria-label={`Actions for sales order ${order.number}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={toggle}
+      ><MoreVertical size={16} /></button>
+      {position ? createPortal(
+        <div ref={menuRef} className="fixed z-[1000] rounded-lg border bg-[rgb(var(--surface))] p-1 text-start shadow-xl ui-border-c" style={position} role="menu">
+            <button type="button" role="menuitem" className="report-menu-item" onClick={() => choose(onEdit)}><Pencil size={14} /> Edit</button>
+            {progress.billed < progress.ordered ? <button type="button" role="menuitem" className="report-menu-item" onClick={() => choose(onInvoice)}><Receipt size={14} /> Convert to Invoice</button> : null}
+            <button type="button" role="menuitem" className="report-menu-item" onClick={() => choose(onPrint)} aria-label={`Print sales order ${order.number}`}><Printer size={14} /> Print</button>
+            <button type="button" role="menuitem" className="report-menu-item text-[rgb(var(--neg-ink))]" onClick={() => choose(onDelete)}><Trash2 size={14} /> Delete</button>
+          </div>
+      , document.body) : null}
+    </>
+  );
+}
+
 export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvoice }) {
   const companyId = currentCompany.id;
   const orders = useMemo(
@@ -49,6 +114,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
   const itemsMaster = (db.items || []).filter((i) => i.companyId === companyId);
 
   const [open, setOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
   const [showPending, setShowPending] = useState(false);
   const [previewOrder, setPreviewOrder] = useState(null);
   const emptyLine = { itemId: '', description: '', quantity: 1, rate: 0, gstRate: 0, discountPct: 0, unit: '', hsnSac: '' };
@@ -72,6 +138,19 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
     setForm((p) => ({ ...p, customFields: { ...(p.customFields || {}), [key]: value } }));
 
   const formRef = useRef(null);
+  const savingRef = useRef(false);
+
+  const emptyForm = () => ({ date: new Date().toISOString().slice(0, 10), expectedDate: '', customerId: '', salesmanId: '', notes: '', customFields: {}, items: [{ ...emptyLine }] });
+  const openNewOrder = () => { setEditingOrder(null); setForm(emptyForm()); setOpen(true); };
+  const openEditOrder = (order) => {
+    setEditingOrder(order);
+    setForm({
+      date: String(order.date || new Date().toISOString()).slice(0, 10), expectedDate: order.expectedDate || '', customerId: String(order.customerId || ''),
+      salesmanId: order.salesmanId || '', notes: order.notes || '', customFields: { ...(order.customFields || {}) },
+      items: (order.items || []).length ? order.items.map((line) => ({ ...emptyLine, ...line })) : [{ ...emptyLine }],
+    });
+    setOpen(true);
+  };
   const addLine = () => setForm((p) => ({ ...p, items: [...p.items, emptyLine] }));
   const duplicateLine = (idx) =>
     setForm((p) => {
@@ -182,6 +261,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
   };
 
   const save = async () => {
+    if (savingRef.current) return;
     if (!form.customerId) {
       notify.error('Customer is required');
       return;
@@ -192,12 +272,19 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       return;
     }
     const customer = customers.find((c) => c.id === parseInt(form.customerId));
+    const orderNumber = String(editingOrder?.number || nextOrderNumber || '').trim();
+    if (!orderNumber) {
+      notify.error('Sales order number is required');
+      return;
+    }
+    savingRef.current = true;
 
     let backendDocId = null;
     let serverNumber = '';
     if (hasApiSession()) {
       try {
-        const saved = await createDocApi('salesOrder', {
+        const payload = {
+          number: orderNumber,
           date: form.date,
           expectedDate: form.expectedDate || null,
           partyId: customer?.backendPartyId ? String(customer.backendPartyId) : null,
@@ -209,21 +296,29 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
           notes: form.notes || null,
           salesmanId: form.salesmanId || undefined,
           items: computed.lines.filter((l) => String(l.itemId || '').trim()),
-        });
-        backendDocId = saved?.id || null;
+        };
+        const saved = editingOrder?.backendDocId
+          ? await updateDocApi('salesOrder', editingOrder.backendDocId, payload)
+          : await createDocApi('salesOrder', payload);
+        backendDocId = saved?.id || editingOrder?.backendDocId || null;
         serverNumber = String(saved?.number || '');
       } catch (err) {
+        savingRef.current = false;
         notify.error(String(err?.message || 'Sales order not saved to the server.'));
         return;
       }
     }
 
-    const nextId = (db.salesOrders || []).reduce((m, o) => Math.max(m, Number(o.id) || 0), 0) + 1;
+    const nextId = editingOrder?.id || (db.salesOrders || []).reduce((m, o) => Math.max(m, Number(o.id) || 0), 0) + 1;
     const order = {
+      ...(editingOrder || {}),
       id: nextId,
       companyId,
       backendDocId,
-      number: serverNumber || nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'salesOrder', branchId: branchIdForNumbering || null, takenNumbers: (db.salesOrders || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || `SO-${nextId}`,
+      /* The configured series is authoritative. The same number is sent to
+         the server, so a backend default can never replace it with another
+         fiscal-year pattern. */
+      number: orderNumber || serverNumber || `SO-${nextId}`,
       date: form.date,
       expectedDate: form.expectedDate || '',
       customerId: form.customerId,
@@ -241,12 +336,15 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
       customFields: { ...(form.customFields || {}) },
       branchId: branchIdForNumbering || '',
       warehouseId: warehouseIdForEntry || '',
-      createdAt: new Date().toISOString(),
+      createdAt: editingOrder?.createdAt || new Date().toISOString(),
+      updatedAt: editingOrder ? new Date().toISOString() : undefined,
     };
     setDb((prev) => ({
       ...prev,
-      salesOrders: [...(prev.salesOrders || []), order],
-      companies: bumpCompanyNextNumber({
+      salesOrders: editingOrder
+        ? (prev.salesOrders || []).map((row) => String(row.id) === String(editingOrder.id) ? order : row)
+        : [...(prev.salesOrders || []), order],
+      companies: editingOrder ? prev.companies : bumpCompanyNextNumber({
         db: prev,
         companyId,
         voucherKey: 'salesOrder',
@@ -254,35 +352,27 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
         branchId: branchIdForNumbering || null,
       }),
     }));
+    savingRef.current = false;
     setOpen(false);
-    setForm({ date: new Date().toISOString().slice(0, 10), expectedDate: '', customerId: '', salesmanId: '', notes: '', customFields: {}, items: [emptyLine] });
-    notify.success(`Sales order ${order.number} created.`);
+    setEditingOrder(null);
+    setForm(emptyForm());
+    notify.success(`Sales order ${order.number} ${editingOrder ? 'updated' : 'created'}.`);
   };
 
-  /** SO → Delivery Challan for the still-undelivered quantities. */
-  const toChallan = (order) => {
+  const deleteOrder = async (order) => {
     const prog = progressOf(order);
-    const nextId = (db.deliveryChallans || []).reduce((m, c) => Math.max(m, Number(c.id) || 0), 0) + 1;
-    const challan = {
-      id: nextId,
-      companyId,
-      number: nextFreeVoucherNumber({db, company: currentCompany, voucherKey: 'deliveryChallan', branchId: branchIdForNumbering || null, takenNumbers: (db.deliveryChallans || []).filter((x) => x.companyId === currentCompany.id).map((x) => String(x.number || '').trim()) }) || `DC-${nextId}`,
-      date: new Date().toISOString().slice(0, 10),
-      customerId: order.customerId,
-      customerName: order.customerName,
-      purpose: 'Supply on Approval',
-      vehicleNo: '',
-      notes: `Against ${order.number}`,
-      branchId: String(order.branchId || branchIdForNumbering || ''),
-      warehouseId: String(order.warehouseId || warehouseIdForEntry || ''),
-      sourceSalesOrderId: order.id,
-      items: (order.items || []).map((l) => ({ itemId: l.itemId, description: l.description, quantity: Number(l.quantity) || 1, rate: Number(l.rate) || 0 })),
-      value: Number(order.subtotal || 0),
-      status: 'Open',
-      createdAt: new Date().toISOString(),
-    };
-    setDb((prev) => ({ ...prev, deliveryChallans: [...(prev.deliveryChallans || []), challan] }));
-    notify.success(`Delivery challan ${challan.number} created against ${order.number}.${prog.delivered ? ' (Already-delivered qty not re-split — adjust lines on the challan.)' : ''}`);
+    if (prog.delivered > 0 || prog.billed > 0) {
+      notify.error('This order already has a challan or invoice and cannot be deleted.');
+      return;
+    }
+    const ok = await confirmDialog({ title: `Delete ${order.number}?`, message: 'This permanently removes the sales order.', confirmLabel: 'Delete' });
+    if (!ok) return;
+    if (order.backendDocId && hasApiSession()) {
+      try { await deleteDocApi('salesOrder', order.backendDocId); }
+      catch (err) { notify.error(String(err?.message || 'Sales order was not deleted.')); return; }
+    }
+    setDb((prev) => ({ ...prev, salesOrders: (prev.salesOrders || []).filter((row) => String(row.id) !== String(order.id)) }));
+    notify.success(`Sales order ${order.number} deleted.`);
   };
 
   const toInvoice = (order) => {
@@ -395,11 +485,10 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
               every way out of it on the right, pinned so Create stays reachable
               from the last line. */}
           <DocFormActions
-      title="New Sales Order"
-            onBack={() => setOpen(false)}
+      title={editingOrder ? `Edit Sales Order ${editingOrder.number}` : 'New Sales Order'}
+            onBack={() => { setOpen(false); setEditingOrder(null); }}
             sticky
-            primaryLabel="Create Sales Order"
-            onPrimary={save}
+            primaryLabel={editingOrder ? 'Update Sales Order' : 'Create Sales Order'}
           />
           {/*
             The head of the document, in the invoice's two columns: who it is
@@ -448,7 +537,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                   className="min-w-0"
                   id="so-number"
                   label="Order No."
-                  value={nextOrderNumber}
+                  value={editingOrder?.number || nextOrderNumber}
                   onChange={() => {}}
                   disabled
                   voucherKey="salesOrder"
@@ -675,7 +764,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
         });
       }}
       primary={
-        <button type="button" onClick={() => setOpen(true)} className="ui-btn ui-btn-primary">
+        <button type="button" onClick={openNewOrder} className="ui-btn ui-btn-primary">
           <Plus size={16} aria-hidden="true" /> New Sales Order
         </button>
       }
@@ -703,22 +792,20 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
         <table className="ui-table ui-table-wide ui-table-sticky">
             <thead>
               <tr>
-                <ColumnHeader label="SO #" col="number" state={soFilters} />
-                <ColumnHeader label="Date" col="date" state={soFilters} />
-                <ColumnHeader label="Customer" col="customer" state={soFilters} />
-                <ColumnHeader label="Amount" col="total" state={soFilters} className="ui-num" align="right" />
-                {/* Three numbers, one column: an order is read by how far along
-                    it is, and three separate columns of quantities read as
-                    three unrelated figures. */}
-                <th scope="col">Ordered / Delivered / Billed</th>
+                <ColumnHeader label="Sales Order No." col="number" state={soFilters} />
+                <ColumnHeader label="Order Date" col="date" state={soFilters} />
+                <th scope="col">Expected Date</th>
+                <ColumnHeader label="Customer Name" col="customer" state={soFilters} />
+                <th scope="col" className="ui-num">Taxable Amount (₹)</th>
+                <ColumnHeader label="Total Amount (₹)" col="total" state={soFilters} className="ui-num" align="right" />
                 <ColumnHeader label="Status" col="status" state={soFilters} />
-                <th scope="col"><span className="sr-only">Actions</span></th>
+                <th scope="col" className="text-center">Action</th>
               </tr>
             </thead>
             <tbody className="ui-rows">
               {shown.length === 0 ? (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="8">
                     <EmptyState
                       icon={ClipboardList}
                       kind="new"
@@ -735,12 +822,12 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                               {
                                 label: 'Take an order now',
                                 description: 'Pick a customer, enter what they ordered, set the expected date.',
-                                onSelect: () => setOpen(true),
+                                onSelect: openNewOrder,
                               },
                               {
                                 label: 'Start from a quotation',
                                 description: 'Convert a quote the customer has accepted.',
-                                onSelect: () => setOpen(true),
+                                onSelect: openNewOrder,
                               },
                             ]
                       }
@@ -754,32 +841,21 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                   <tr key={o.id}>
                     <td className="ui-col-id"><DocumentNumber value={o.number} label="sales order" /></td>
                     <td className="ui-col-date"><SalesDate value={o.date} /></td>
+                    <td className="ui-col-date">{o.expectedDate ? <DueDate value={o.expectedDate} /> : '—'}</td>
                     <td className="ui-col-entity">{o.customerName}</td>
+                    <td className="ui-col-amount"><MoneyValue value={o.subtotal} company={currentCompany} /></td>
                     <td className="ui-col-amount"><MoneyValue value={o.total} company={currentCompany} /></td>
-                    <td className="ui-col-meta">
-                      {prog.ordered} / {prog.delivered} / {prog.billed}
-                    </td>
                     <td><StatusPill status={prog.status} /></td>
-                    <td className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPreviewOrder(o)}
-                          aria-label={`Print sales order ${o.number}`}
-                          className="ui-btn ui-btn-secondary ui-btn-sm text-xs"
-                        >
-                          <Printer size={14} aria-hidden="true" /> Print
-                        </button>
-                        {prog.delivered < prog.ordered ? (
-                          <button type="button" onClick={() => toChallan(o)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-                            → Challan
-                          </button>
-                        ) : null}
-                        {prog.billed < prog.ordered ? (
-                          <button type="button" onClick={() => toInvoice(o)} className="ui-btn ui-btn-secondary ui-btn-sm text-xs">
-                            → Invoice
-                          </button>
-                        ) : null}
+                    <td className="text-center">
+                      <div className="inline-flex">
+                        <SalesOrderRowActions
+                          order={o}
+                          progress={prog}
+                          onEdit={() => openEditOrder(o)}
+                          onInvoice={() => toInvoice(o)}
+                          onPrint={() => setPreviewOrder(o)}
+                          onDelete={() => deleteOrder(o)}
+                        />
                       </div>
                     </td>
                   </tr>

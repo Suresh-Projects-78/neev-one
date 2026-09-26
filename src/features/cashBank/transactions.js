@@ -45,13 +45,21 @@ export const cashBankIndex = (db, companyId) => {
 
   const accounts = safeArray(db?.chartOfAccounts)
     .filter((a) => Number(a?.companyId) === cid)
-    .filter((a) => [...CASH_BANK_ROOTS].some((root) => isUnderNamedRoot(groupById, a.groupId, root)));
+    .filter((a) => {
+      const explicitKind = [a?.controlKind, a?.ledgerCategory, a?.accountType, a?.type].map(lower);
+      const explicitlyCashBank = explicitKind.some((value) =>
+        value === 'cash' || value === 'bank' || value === 'cash_in_hand' || value === 'cash-in-hand' || value === 'bank_account'
+      );
+      return explicitlyCashBank || [...CASH_BANK_ROOTS].some((root) => isUnderNamedRoot(groupById, a.groupId, root));
+    });
 
   const byKey = new Map();
   for (const a of accounts) {
     byKey.set(String(a.id), a);
-    const server = String(a.serverLedgerAccountId || '').trim();
-    if (server) byKey.set(server, a);
+    for (const key of [a.serverLedgerAccountId, a.backendLedgerId, a.backendAccountId, a.ledgerAccountId, a.uuid]) {
+      const value = String(key || '').trim();
+      if (value) byKey.set(value, a);
+    }
   }
   return { accounts, byKey };
 };
@@ -69,7 +77,7 @@ const partyOf = (p) =>
  */
 export const cashBankTransactions = (db, companyId, { accountId = '', from = '', to = '' } = {}) => {
   const cid = Number(companyId);
-  const { byKey } = cashBankIndex(db, cid);
+  const { accounts, byKey } = cashBankIndex(db, cid);
   const want = String(accountId || '').trim();
 
   const inWindow = (d) => {
@@ -87,7 +95,16 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
     /* A voucher raised from a statement line is represented by that statement
        line below. Showing both would turn one bank movement into two rows. */
     if (p?.sourceBankTransactionId !== null && p?.sourceBankTransactionId !== undefined && String(p.sourceBankTransactionId) !== '') continue;
-    const account = byKey.get(String(p?.ledgerAccountId || '').trim());
+    const accountKeys = [p?.ledgerAccountId, p?.cashBankAccountId, p?.bankAccountId, p?.accountId, p?.modeAccountId];
+    let account = accountKeys.map((key) => byKey.get(String(key || '').trim())).find(Boolean) || null;
+    if (!account) {
+      const wantedName = lower(p?.accountName || p?.cashBankAccountName || p?.bankName);
+      if (wantedName) account = accounts.find((candidate) => lower(candidate?.name) === wantedName) || null;
+    }
+    // Receipt/payment forms auto-select the only cash/bank ledger. Older rows
+    // did not always persist that selection, but the accounting answer is
+    // unambiguous when the company has exactly one such account.
+    if (!account && accounts.length === 1) account = accounts[0];
     if (!account) continue;
     if (want && String(account.id) !== want) continue;
     if (!inWindow(p.date)) continue;

@@ -680,7 +680,7 @@
   --st-all-soft: 244 244 245; --st-all-strong: 228 228 231; --st-all-key: 39 39 42; --st-all-ink: 24 24 27;
   --nav-fg: 24 24 27; --nav-fg-muted: 82 82 91; --nav-fg-subtle: 113 113 122;
   --rail-bg: 255 255 255; --rail-border: 228 228 231; --rail-hover: 244 244 245; --rail-active: 228 228 231;
-  --heading-bg: 228 228 231; --heading-hover: 212 212 216;
+  --heading-bg: 245 247 250; --heading-hover: 238 242 247;
   --nav-dashboard: 212 212 216; --nav-sales: 212 212 216; --nav-crm: 212 212 216;
   --nav-purchases: 212 212 216; --nav-cashbank: 212 212 216; --nav-expenses: 212 212 216;
   --nav-inventory: 212 212 216; --nav-journal: 212 212 216; --nav-approvals: 212 212 216;
@@ -1039,7 +1039,7 @@
      label above an input is read as prose, not as a column heading. */
   .ui-label {
     display: block;
-    font-size: 0.8125rem;  /* 13px — a step under the value it introduces */
+    font-size: 0.75rem;    /* 12px — one point below the previous scale */
     line-height: 1.125rem; /* 18px */
     font-weight: 500;
     /* Muted, because a label set at the same size, weight and value as its
@@ -2043,6 +2043,7 @@
   }
 
   .ui-table-scroll {
+    height: var(--table-scroll-h, calc(100dvh - 21rem));
     max-height: var(--table-scroll-h, calc(100dvh - 21rem));
     min-height: 8rem;
     overflow: auto;
@@ -2531,11 +2532,11 @@
     line-height: 1.25rem;     /* 20px */
   }
   .ui-t-cell {
-    font-size: 0.8125rem;     /* 13px */
+    font-size: 0.75rem;       /* 12px */
     line-height: 1.125rem;    /* 18px */
   }
   .ui-t-label {
-    font-size: 0.75rem;       /* 12px */
+    font-size: 0.6875rem;     /* 11px */
     line-height: 1rem;        /* 16px */
     font-weight: 500;
     letter-spacing: 0.04em;
@@ -2673,12 +2674,12 @@
     letter-spacing: -0.02em;
   }
   .ui-card-label {
-    font-size: 0.875rem;      /* 14px */
+    font-size: 0.8125rem;     /* 13px */
     font-weight: 500;
     color: rgb(var(--fg-muted));
   }
-  .ui-body { font-size: 0.9375rem; line-height: 1.6; }  /* 15px */
-  .ui-caption { font-size: 0.8125rem; line-height: 1.125rem; color: rgb(var(--fg-muted)); }  /* 13px */
+  .ui-body { font-size: 0.875rem; line-height: 1.6; }  /* 14px */
+  .ui-caption { font-size: 0.75rem; line-height: 1.125rem; color: rgb(var(--fg-muted)); }  /* 12px */
 
   /* The one action a card is allowed. Text and arrow, no button chrome —
      a card full of buttons competes with the page's real primary action. */
@@ -3818,7 +3819,7 @@ h1, h2, h3, h4, h5, h6,
    page/document headings keep the established larger hierarchy. */
 .ui-content, .ui-nav-item, .ui-btn, .ui-input, .ui-select,
 input, select, textarea, .ui-table tbody, .ui-t-body {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   line-height: 1.25rem;
 }
 .ui-content, .ui-input, .ui-select, input, select, textarea,
@@ -3830,7 +3831,7 @@ input, select, textarea, .ui-table tbody, .ui-t-body {
 /* Match the full selector strength of the original rail rules. The earlier
    light child rule was more specific than the general typography override,
    which is why the sidebar still appeared unchanged. */
-.ui-rail .ui-nav-item { font-size: 0.875rem; font-weight: 600; }
+.ui-rail .ui-nav-item { font-size: 0.8125rem; font-weight: 600; }
 .ui-rail .ui-nav-item[data-level='module'] { font-weight: 700; }
 .ui-rail .ui-nav-item:not([data-level='module']):not(.ui-nav-collapse) { font-weight: 600; }
 .ui-rail .ui-nav-item[data-active='true'],
@@ -3845,7 +3846,7 @@ input, select, textarea, .ui-table tbody, .ui-t-body {
   background-color: rgb(var(--heading-bg));
 }
 .ui-table thead th {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 800;
 }
 
@@ -3859,22 +3860,140 @@ body, button, input, select, textarea, table,
 }
 
 h1, h1[class], .ui-t-page {
-  font-size: 1.75rem !important;
+  font-size: 1.6875rem !important;
   line-height: 2.25rem !important;
   letter-spacing: -0.025em;
 }
 h2, h2[class], .ui-t-doc {
-  font-size: 1.25rem !important;
+  font-size: 1.1875rem !important;
   line-height: 1.75rem !important;
   letter-spacing: -0.015em;
 }
 h3, h3[class], .ui-t-sec, .ui-card-title {
-  font-size: 1rem !important;
+  font-size: 0.9375rem !important;
   line-height: 1.5rem !important;
   letter-spacing: -0.005em;
 }
 h4, h4[class], h5, h5[class], h6, h6[class] {
-  font-size: 0.875rem !important;
+  font-size: 0.8125rem !important;
   line-height: 1.25rem !important;
   letter-spacing: 0;
 }
+.report-menu-item {
+  display: block;
+  width: 100%;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.625rem;
+  color: #0f172a;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+.report-menu-item:hover { background: #f5f7fa; }
+.report-layout-choice {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.625rem;
+  color: #0f172a;
+  text-align: left;
+}
+.report-layout-choice:hover { background: #f5f7fa; }
+.report-layout-choice.is-active { background: #e8f1ff; color: #0b6ffb; }
+.report-layout-choice small { display: block; margin-top: 0.125rem; color: #64748b; font-size: 0.6875rem; }
+.report-layout-drag-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.75rem;
+  background: #fff;
+  cursor: grab;
+  transition: background-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+}
+.report-layout-drag-row:last-child { border-bottom: 0; }
+.report-layout-drag-row:active { cursor: grabbing; }
+.report-layout-drag-row.is-dragging { opacity: 0.45; background: #f8fafc; }
+.report-layout-drag-row.is-drop-target { box-shadow: inset 0 3px 0 #0b6ffb; background: #e8f1ff; }
+.report-layout-drag-row.is-drop-target-after { box-shadow: inset 0 -3px 0 #0b6ffb; background: #e8f1ff; }
+.report-layout-drag-handle { color: #64748b; font-weight: 700; letter-spacing: -2px; cursor: grab; user-select: none; }
+.report-column-resizer {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -6px;
+  z-index: 4;
+  width: 13px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.report-column-resizer::after {
+  content: '';
+  position: absolute;
+  inset-block: 20%;
+  inset-inline-start: 6px;
+  width: 1px;
+  background: rgb(var(--border));
+}
+.report-column-resizer:hover::after,
+.is-resizing-report-column .report-column-resizer::after { background: #0b6ffb; }
+.is-resizing-report-column, .is-resizing-report-column * { cursor: col-resize !important; user-select: none !important; }
+.global-resizable-heading { position: relative; }
+.global-column-resizer {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: -6px;
+  z-index: 6;
+  width: 13px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.global-column-resizer::after {
+  content: '';
+  position: absolute;
+  inset-block: 20%;
+  inset-inline-start: 6px;
+  width: 1px;
+  background: rgb(var(--border));
+}
+.global-column-resizer:hover::after { width: 2px; background: #0b6ffb; }
+.report-column-heading-button {
+  min-width: max-content;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding-inline: 0;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+.report-column-heading-button:hover,
+.report-column-heading-button:focus-visible { background: transparent !important; }
+
+/* Table headings use ordinary title case. Weight and a quiet surface provide
+   hierarchy without wide tracking or all-caps consuming column width. */
+.ui-table thead th,
+th.ui-th {
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  color: rgb(var(--fg));
+}
+.ui-table thead th { background-color: rgb(var(--heading-bg)); }
+.ui-table thead th:hover { background-color: rgb(var(--heading-hover)); }
+.report-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.report-status-posted, .report-status-paid, .report-status-recorded { color: #15803d; background: #dcfce7; }
+.report-status-partially-paid, .report-status-partly-paid { color: #b45309; background: #fef3c7; }
+.report-status-draft { color: #1d4ed8; background: #dbeafe; }
+.report-status-overdue, .report-status-cancelled, .report-status-canceled, .report-status-error { color: #dc2626; background: #fee2e2; }

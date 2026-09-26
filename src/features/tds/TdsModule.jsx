@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Download, FileText, Landmark, Plus, Receipt, Scale, TrendingDown } from 'lucide-react';
+import { AlertTriangle, Download, FileText, Filter, Landmark, Plus, Receipt, Scale, Search, SlidersHorizontal } from 'lucide-react';
 
 import DocumentListShell from '../../components/list/DocumentListShell';
 import { LIST_PERIODS, usePeriodFilter } from '../../components/ListControls';
@@ -35,15 +35,16 @@ import {
  * what is shown here is what was actually deducted and posted.
  */
 
-const VIEWS = [
-  { value: 'register', label: 'Register', tone: 'all' },
-  { value: 'party', label: 'Party-wise', tone: 'sent' },
-  { value: 'nature', label: 'Nature-wise', tone: 'paid' },
-  { value: 'periods', label: 'Periods', tone: 'all' },
-  { value: 'challans', label: 'Challans', tone: 'draft' },
-  { value: 'exceptions', label: 'Exceptions', tone: 'overdue' },
-  { value: 'reconciliation', label: 'Reconciliation', tone: 'outstanding' },
-  { value: 'return', label: 'Return', tone: 'paid' },
+const REPORTS = [
+  { value: 'payable', label: 'TDS Payable', view: 'register', side: 'PAYABLE' },
+  { value: 'receivable', label: 'TDS Receivable', view: 'register', side: 'RECEIVABLE' },
+  { value: 'register', label: 'TDS Deduction Register', view: 'register', side: '' },
+  { value: 'challans', label: 'TDS Payment / Challan', view: 'challans', side: 'PAYABLE' },
+  { value: 'return', label: 'TDS Returns', view: 'return', side: 'PAYABLE' },
+  { value: 'reconciliation', label: 'TDS Reconciliation', view: 'reconciliation', side: 'PAYABLE' },
+  { value: 'nature', label: 'Section-wise Summary', view: 'nature', side: '' },
+  { value: 'party', label: 'Party-wise Summary', view: 'party', side: '' },
+  { value: 'exceptions', label: 'TDS Exceptions', view: 'exceptions', side: '' },
 ];
 
 const SEVERITY_STYLE = {
@@ -59,13 +60,24 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
   const profile = companyTdsProfile(currentCompany);
   const period = usePeriodFilter();
   const [view, setView] = useState('register');
+  const [selectedReport, setSelectedReport] = useState('payable');
+  const [search, setSearch] = useState('');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [compactLayout, setCompactLayout] = useState(false);
   const [quarter, setQuarter] = useState('');
-  const [side, setSide] = useState('');
+  const [side, setSide] = useState('PAYABLE');
   const [partyId, setPartyId] = useState('');
   const [natureCode, setNatureCode] = useState('');
   const [status, setStatus] = useState('');
   const [branchId, setBranchId] = useState('');
   const [ledgerId, setLedgerId] = useState('');
+
+  const selectReport = (value) => {
+    const report = REPORTS.find((item) => item.value === value) || REPORTS[0];
+    setSelectedReport(report.value);
+    setView(report.view);
+    setSide(report.side);
+  };
 
   const filter = useMemo(
     () => ({ from: period.dateFrom, to: period.dateTo, quarter, side, partyId, natureCode, status, branchId: branchesEnabled ? branchId : '', ledgerId }),
@@ -94,6 +106,11 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
   const payable = useMemo(() => payableSummary(db, companyId, filter), [db, companyId, filter]);
   const receivable = useMemo(() => receivableSummary(db, companyId, filter), [db, companyId, filter]);
   const events = useMemo(() => tdsEvents(db, companyId, filter), [db, companyId, filter]);
+  const visibleEvents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return events;
+    return events.filter((event) => [event.partyName, event.panSnapshot, event.sourceNumber, event.sourceType, event.sectionReference, event.sectionCode, event.returnQuarter].some((value) => String(value || '').toLowerCase().includes(query)));
+  }, [events, search]);
   const challans = useMemo(() => challanRegister(db, companyId), [db, companyId]);
   const exceptions = useMemo(() => tdsExceptions(db, companyId, filter), [db, companyId, filter]);
   const recon = useMemo(() => tdsReconciliation(db, companyId, filter), [db, companyId, filter]);
@@ -190,15 +207,20 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
     URL.revokeObjectURL(url);
   };
 
-  const unallocatedChallans = challans.filter((c) => c.unallocated > 0.005);
-  const blocking = exceptions.filter((x) => x.severity === 'BLOCK');
   const dues = useMemo(() => dueSummary(db, companyId), [db, companyId]);
 
-  /* A card that can take you somewhere does: figure → the filtered view
-     under it. Same tiles, same visual system as every accounting list. */
-  const goRegister = (wantSide) => {
-    setView('register');
-    setSide(wantSide);
+  const exportRegister = () => {
+    const lines = [
+      ['Date', 'Party', 'PAN', 'Voucher No.', 'TDS Section', 'Gross Amount', 'TDS Rate', 'TDS Amount', 'Status'],
+      ...visibleEvents.map((event) => [event.transactionDate, event.partyName, event.panSnapshot, event.sourceNumber || event.sourceId, event.sectionReference || event.sectionCode, event.baseAmount, event.rate, event.tdsAmount, event.status]),
+    ];
+    const csv = lines.map((line) => line.map((cell) => `"${String(cell ?? '').replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${selectedReport}-tds-report.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   /* TDS switched off is not an empty register — it is a company that does not
@@ -223,40 +245,20 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
     <DocumentListShell
       entity="tds"
       title="TDS"
+      description="View, analyse and manage TDS compliance"
       company={currentCompany}
-      primary={
-        onNewChallan ? (
-          <button type="button" onClick={onNewChallan} className="ui-btn ui-btn-primary">
-            <Plus size={16} aria-hidden="true" /> Record challan
-          </button>
-        ) : null
-      }
+      headerExtras={<><div><label className="ui-label" htmlFor="tds-financial-year">Financial Year</label><select id="tds-financial-year" className="ui-select" value={String(quarter || '').match(/FY \d{4}-\d{2}/)?.[0] || ''} onChange={(e) => { const fy = e.target.value; const match = quarters.find((item) => String(item.quarter).startsWith(fy)); setQuarter(match?.quarter || ''); }}><option value="">All financial years</option>{[...new Set(quarters.map((item) => String(item.quarter || '').match(/FY \d{4}-\d{2}/)?.[0]).filter(Boolean))].map((fy) => <option key={fy} value={fy}>{fy}</option>)}</select></div><div><label className="ui-label" htmlFor="tds-header-period">Quarter / Period</label><select id="tds-header-period" className="ui-select" value={quarter} onChange={(e) => setQuarter(e.target.value)}><option value="">All quarters</option>{quarters.map((item) => <option key={item.quarter} value={item.quarter}>{item.quarter}</option>)}</select></div></>}
+      primary={onNewChallan ? <button type="button" onClick={onNewChallan} className="ui-btn ui-btn-primary"><Plus size={16} aria-hidden="true" /> Record challan</button> : null}
       cards={[
-        { label: 'TDS payable', value: payable.outstanding, tone: 'outstanding', Icon: Landmark, onSelect: () => goRegister('PAYABLE') },
-        { label: 'TDS receivable', value: receivable.deducted, tone: 'paid', Icon: Receipt, onSelect: () => goRegister('RECEIVABLE') },
-        /* Deposit discipline: the 7th-of-next-month clock, with March's
-           30 April exception — the part of the payable already late. */
-        {
-          label: 'Due / overdue',
-          value: dues.overdue,
-          tone: dues.overdue > 0.005 ? 'overdue' : 'paid',
-          Icon: TrendingDown,
-          hint: dues.overdue > 0.005 ? `${dues.overdueCount} deduction(s) past deposit date` : 'Nothing past its deposit date',
-          onSelect: () => setView('challans'),
-        },
-        { label: 'Unallocated challans', value: unallocatedChallans.length, count: true, tone: 'draft', Icon: FileText, onSelect: () => setView('challans') },
-        { label: 'Return exceptions', value: exceptions.length, count: true, tone: blocking.length ? 'overdue' : 'draft', Icon: AlertTriangle, onSelect: () => setView('exceptions') },
-        {
-          label: 'Unmapped TDS',
-          value: unmapped.length,
-          count: true,
-          tone: unmapped.length ? 'overdue' : 'draft',
-          Icon: Scale,
-          onSelect: onOpenSettings ? () => onOpenSettings('settingsTds') : undefined,
-        },
+        { label: 'TDS Deducted', value: payable.deducted, tone: 'all', Icon: Scale, hint: `${payable.count} deduction transactions`, onSelect: () => selectReport('register') },
+        { label: 'TDS Payable', value: payable.outstanding, tone: 'outstanding', Icon: Landmark, hint: `${dues.overdueCount} overdue transaction(s)`, onSelect: () => selectReport('payable') },
+        { label: 'TDS Paid', value: payable.allocated, tone: 'paid', Icon: FileText, hint: `${challans.length} challan(s) recorded`, onSelect: () => selectReport('challans') },
+        { label: 'TDS Receivable', value: receivable.deducted, tone: 'sent', Icon: Receipt, hint: `${receivable.count} customer deductions`, onSelect: () => selectReport('receivable') },
       ]}
       above={
+        <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-0 sm:w-72"><label className="ui-label" htmlFor="tds-report-select">Select Report</label><select id="tds-report-select" className="ui-select w-full font-semibold" value={selectedReport} onChange={(e) => selectReport(e.target.value)}>{REPORTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div>
           <div className="min-w-0 sm:w-56">
             <PopupSelect
               label="Period"
@@ -268,31 +270,9 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               showValueSubtext={false}
             />
           </div>
-          <div className="min-w-0 sm:w-64">
-            <PopupSelect
-              label="Return quarter"
-      title="quarters"
-              value={quarter}
-              onChange={(next) => setQuarter(String(next || ''))}
-              options={[
-                { value: '', label: 'All quarters' },
-                ...quarters.map((q) => ({ value: q.quarter, label: `${q.quarter} · ${q.count} entries` })),
-              ]}
-              placeholder="All quarters"
-              showValueSubtext={false}
-            />
-          </div>
           {/* §22's filters: side, party, nature, status, branch, ledger —
               every list derived from the events, every choice feeding the
               one filter the whole report layer reads. */}
-          <div className="min-w-0 w-36">
-            <label className="ui-label" htmlFor="tds-f-side">Side</label>
-            <select id="tds-f-side" className="ui-select w-full" value={side} onChange={(e) => setSide(e.target.value)}>
-              <option value="">Both</option>
-              <option value="PAYABLE">Payable</option>
-              <option value="RECEIVABLE">Receivable</option>
-            </select>
-          </div>
           <div className="min-w-0 w-48">
             <label className="ui-label" htmlFor="tds-f-party">Party</label>
             <select id="tds-f-party" className="ui-select w-full" value={partyId} onChange={(e) => setPartyId(e.target.value)}>
@@ -303,7 +283,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
             </select>
           </div>
           <div className="min-w-0 w-48">
-            <label className="ui-label" htmlFor="tds-f-nature">Nature</label>
+            <label className="ui-label" htmlFor="tds-f-nature">TDS Section</label>
             <select id="tds-f-nature" className="ui-select w-full" value={natureCode} onChange={(e) => setNatureCode(e.target.value)}>
               <option value="">All natures</option>
               {TDS_NATURES.filter((n) => n.active !== false).map((n) => (
@@ -311,7 +291,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               ))}
             </select>
           </div>
-          <div className="min-w-0 w-36">
+          {advancedOpen ? <div className="min-w-0 w-36">
             <label className="ui-label" htmlFor="tds-f-status">Status</label>
             <select id="tds-f-status" className="ui-select w-full" value={status} onChange={(e) => setStatus(e.target.value)}>
               <option value="">All statuses</option>
@@ -319,7 +299,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               <option value="Reversed">Reversed</option>
               <option value="Reversal">Reversal</option>
             </select>
-          </div>
+          </div> : null}
           {branchesEnabled && branchOptions.length ? (
             <div className="min-w-0 w-40">
               <label className="ui-label" htmlFor="tds-f-branch">Branch</label>
@@ -331,7 +311,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               </select>
             </div>
           ) : null}
-          {ledgerOptions.length ? (
+          {advancedOpen && ledgerOptions.length ? (
             <div className="min-w-0 w-48">
               <label className="ui-label" htmlFor="tds-f-ledger">Ledger</label>
               <select id="tds-f-ledger" className="ui-select w-full" value={ledgerId} onChange={(e) => setLedgerId(e.target.value)}>
@@ -342,28 +322,21 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
               </select>
             </div>
           ) : null}
+          <button type="button" className="ui-btn ui-btn-primary" onClick={() => setAdvancedOpen(false)}>Apply</button>
+          <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setAdvancedOpen((open) => !open)} aria-expanded={advancedOpen}><Filter size={15} /> Filter</button>
+          <button type="button" className="ui-btn ui-btn-secondary" onClick={() => setCompactLayout((compact) => !compact)}><SlidersHorizontal size={15} /> Layout</button>
+          <button type="button" className="ui-btn ui-btn-secondary" onClick={exportRegister}><Download size={15} /> Export</button>
           {unmapped.length ? (
             <p className="ui-caption">
               No ledger is mapped to {unmapped.map((u) => u.natureName).join(', ')} — deductions under it cannot post.
             </p>
           ) : null}
         </div>
+        <div className="flex flex-wrap gap-2">{(selectedReport === 'receivable' ? [['Invoice amount', receivable.deducted], ['TDS receivable', receivable.deducted], ['Pending TDS', receivable.deducted]] : selectedReport === 'nature' ? natureWise(db, companyId, filter).slice(0, 4).map((row) => [row.references.join(', ') || row.natureCode, row.tdsAmount]) : [['Gross amount', visibleEvents.reduce((sum, event) => sum + Number(event.baseAmount || 0), 0)], ['TDS deducted', payable.deducted], ['TDS paid', payable.allocated], ['TDS payable', payable.outstanding], ['Overdue', dues.overdue]]).map(([label, amount]) => <div key={label} className="ui-card min-w-36 px-4 py-3"><div className="ui-caption">{label}</div><div className="font-bold">{formatMoney(amount, currentCompany)}</div></div>)}</div>
+        </div>
       }
-      tabs={VIEWS}
-      tabsLabel="View"
-      statusValue={view}
-      statusCounts={{
-        register: events.length,
-        party: partyWise(db, companyId, filter).length,
-        nature: natureWise(db, companyId, filter).length,
-        periods: quarters.length,
-        challans: challans.length,
-        exceptions: exceptions.length,
-        reconciliation: recon.ledgers.length,
-        return: dataset.lines.length,
-      }}
-      onStatusChange={setView}
     >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b ui-border-c p-3"><div><h2 className="ui-t-sec">{REPORTS.find((item) => item.value === selectedReport)?.label}</h2><p className="ui-caption">TDS compliance report for the selected period</p></div><div className="relative"><Search size={15} className="ui-muted absolute start-3 top-1/2 -translate-y-1/2" /><input aria-label="Search TDS report" className="ui-input w-64 ps-9" placeholder="Search party, PAN, voucher…" value={search} onChange={(e) => setSearch(e.target.value)} /></div></div>
       <div className="ui-table-scroll">
         {view === 'register' ? (
           <table className="ui-table ui-table-wide ui-table-sticky">
@@ -372,20 +345,20 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                 <th scope="col">Date</th>
                 <th scope="col">Party</th>
                 <th scope="col">PAN</th>
-                <th scope="col">Nature</th>
+                {!compactLayout ? <th scope="col">Nature</th> : null}
                 <th scope="col">Section</th>
                 <th scope="col">Source</th>
                 <th scope="col" className="text-end">Base</th>
                 <th scope="col" className="text-end">Rate</th>
                 <th scope="col" className="text-end">TDS</th>
-                <th scope="col">Quarter</th>
+                {!compactLayout ? <th scope="col">Quarter</th> : null}
                 <th scope="col">Status</th>
               </tr>
             </thead>
             <tbody>
-              {events.length === 0 ? (
+              {visibleEvents.length === 0 ? (
                 <tr>
-                  <td colSpan={11}>
+                  <td colSpan={compactLayout ? 9 : 11}>
                     <EmptyState
       title="Nothing deducted in this window"
                       message="A bill, a payment or a receipt that deducts writes its record here, with the rule it was computed under."
@@ -393,12 +366,12 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                   </td>
                 </tr>
               ) : (
-                events.map((e) => (
+                visibleEvents.map((e) => (
                   <tr key={e.id}>
                     <td>{e.transactionDate}</td>
                     <td className="truncate">{e.partyName || '—'}</td>
                     <td className="ui-mono">{e.panSnapshot || '—'}</td>
-                    <td className="truncate">{natureByCode(e.natureCode)?.name || e.natureCode || '—'}</td>
+                    {!compactLayout ? <td className="truncate">{natureByCode(e.natureCode)?.name || e.natureCode || '—'}</td> : null}
                     {/* The reference it carried when it was posted, not the one
                         in force today — that is the whole point of the snapshot. */}
                     <td className="ui-mono">{e.sectionReference || e.sectionCode || '—'}</td>
@@ -410,7 +383,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
                     <td className={`ui-money ${String(e.side).toUpperCase() === 'RECEIVABLE' ? 'text-[rgb(var(--pos-ink))]' : ''}`}>
                       {formatMoney(e.tdsAmount, currentCompany)}
                     </td>
-                    <td>{e.returnQuarter || '—'}</td>
+                    {!compactLayout ? <td>{e.returnQuarter || '—'}</td> : null}
                     <td><StatusPill status={e.status} /></td>
                   </tr>
                 ))

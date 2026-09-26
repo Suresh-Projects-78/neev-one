@@ -11,7 +11,7 @@
  * code.
  */
 
-const TIMESTAMP_FALLBACK = () => `ITM${Date.now()}`;
+const DEFAULT_START = { service: 10000, goods: 20000 };
 
 /** 'Service' → 'service'; anything else is goods. */
 export const itemTypeKey = (type) => (String(type || '').trim().toLowerCase() === 'service' ? 'service' : 'goods');
@@ -22,10 +22,10 @@ export const itemCodeSeries = (company, type) => {
   const key = itemTypeKey(type);
   const series = cfg?.[key] || {};
   return {
-    enabled: Boolean(cfg.enabled),
-    prefix: String(series.prefix ?? (key === 'service' ? 'SV-' : 'GD-')),
-    digits: Math.max(1, Math.min(12, Number(series.digits ?? 4) || 4)),
-    nextNumber: Math.max(1, Number(series.nextNumber ?? 1) || 1),
+    enabled: true,
+    prefix: '',
+    digits: 5,
+    nextNumber: Math.max(DEFAULT_START[key], Number(series.nextNumber) || DEFAULT_START[key]),
   };
 };
 
@@ -38,8 +38,6 @@ export const itemCodeSeries = (company, type) => {
  */
 export const nextItemCode = (db, company, type) => {
   const series = itemCodeSeries(company, type);
-  if (!series.enabled) return TIMESTAMP_FALLBACK();
-
   const taken = new Set(
     (Array.isArray(db?.items) ? db.items : [])
       .filter((it) => Number(it?.companyId) === Number(company?.id))
@@ -47,12 +45,12 @@ export const nextItemCode = (db, company, type) => {
   );
 
   let n = series.nextNumber;
-  for (let guard = 0; guard < 10000; guard += 1) {
+  const end = itemTypeKey(type) === 'service' ? 19999 : 99999;
+  for (; n <= end; n += 1) {
     const code = `${series.prefix}${String(n).padStart(series.digits, '0')}`;
     if (!taken.has(code.toUpperCase())) return code;
-    n += 1;
   }
-  return TIMESTAMP_FALLBACK();
+  return '';
 };
 
 /** Advance the series past the code just used. Returns the next companies array. */
