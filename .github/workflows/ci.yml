@@ -9,6 +9,35 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+
+    # The suite needs a PostgreSQL server.
+    #
+    # It used to need nothing: every test ran against a SQLite file the run
+    # created and threw away. Since the platform moved to PostgreSQL, the
+    # server tests create a database per run — `clor_test_<pid>`, three
+    # schemas, row-level security policies applied and granted — and a runner
+    # with no server to create it on fails at globalSetup before a single test
+    # is read. Which is exactly what it did.
+    #
+    # Same major version as production (16), so a query that passes here fails
+    # here rather than on the box.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: clor_ci
+          POSTGRES_PASSWORD: clor_ci
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        # Steps start the moment the container does, which is several seconds
+        # before it will answer; without this the first connection is refused.
+        options: >-
+          --health-cmd "pg_isready -U clor_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v4
 
@@ -42,6 +71,22 @@ jobs:
         working-directory: server
         env:
           JWT_SECRET: ci-test-secret
+          # Two connections, and the difference between them is the point.
+          #
+          # PGADMIN_URL is the superuser the run borrows to create its own
+          # database, push the schemas and apply the policies. DATABASE_URL is
+          # the role the TESTS connect as, and it must not be that superuser:
+          # PostgreSQL skips every row-level-security policy for a superuser,
+          # so pointing both at clor_ci made rowLevelSecurity.test.ts read
+          # another company's rows — and fail, correctly. The suite had been
+          # asked to prove RLS through a role the policies do not apply to.
+          #
+          # globalSetup creates clor_app with this password, NOSUPERUSER and
+          # NOBYPASSRLS, which is the arrangement production runs.
+          PGADMIN_URL: postgresql://clor_ci:clor_ci@localhost:5432/postgres
+          DATABASE_URL: postgresql://clor_app:clor_ci_app@localhost:5432/postgres
+          CLOR_APP_ROLE: clor_app
+          CLOR_APP_PASSWORD: clor_ci_app
 
       - name: Build frontend
         run: npm run build

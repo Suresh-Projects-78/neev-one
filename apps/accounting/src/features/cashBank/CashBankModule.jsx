@@ -3,6 +3,7 @@ import { notify, confirmDialog } from '@ui/components/ui/notify';
 import { CheckCircle2, ClipboardList, Download, FileSpreadsheet, Link2, MoreVertical, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 
 import Modal from '@ui/components/ui/Modal';
+import { postJournalToLedger } from '@ui/utils/journalSync';
 import { useDismissable } from '@ui/components/ui/useDismissable';
 import AllocationDialog from './AllocationDialog';
 import { allocationSummary, allocationsForTxn } from './allocations';
@@ -1257,7 +1258,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
       notify.error('Unable to read the statement file.');
       return;
     }
-    importStatementText(text, String(file?.name || '').trim());
+    await importStatementText(text, String(file?.name || '').trim());
   };
 
   /*
@@ -1268,7 +1269,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
    * dialog and the upload button feed the same function rather than two
    * parsers that drift.
    */
-  const importStatementText = (text, sourceName = '') => {
+  const importStatementText = async (text, sourceName = '') => {
     if (!cashBankAccounts.length) {
       notify.error('No cash/bank accounts found. Please create one first.');
       return;
@@ -1495,7 +1496,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
         return;
       }
 
-      commitImport(newTxns, { unknownAccounts, firstImportedAccountId, sourceName });
+      await commitImport(newTxns, { unknownAccounts, firstImportedAccountId, sourceName });
     } catch (err) {
       // Avoid silent failures when a helper or parse step throws.
       console.error('Upload/import failed', err);
@@ -1505,7 +1506,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
 
   /** Writes the rows somebody decided to keep. The batch stamp and the
       immutability that follows from `imported: true` live here, once. */
-  const commitImport = (txnsToImport, { unknownAccounts = new Set(), firstImportedAccountId = null, sourceName = '' } = {}) => {
+  const commitImport = async (txnsToImport, { unknownAccounts = new Set(), firstImportedAccountId = null, sourceName = '' } = {}) => {
     const newTxns = txnsToImport;
     /*
      * One batch per import, stamped on every row it brought in.
@@ -1517,6 +1518,48 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
      * in its own fields beside it.
      */
     const importBatchId = `imp-${companyId}-${Date.now()}`;
+
+    /*
+     * The ledger first, then the browser's copy.
+     *
+     * An imported row that names a ledger account is a posting: cash moved
+     * between two accounts and the trial balance has to know. This built the
+     * journal entries inside the setDb updater, which is synchronous, so they
+     * were written to this device and never sent — the books balanced here and
+     * were missing the entries on the server and on every other machine.
+     *
+     * Posting is asynchronous, so it happens out here, before the write, which
+     * is the same shape AllocationDialog uses for the same reason. Each entry
+     * that reaches the server comes back with its id, and that id is attached
+     * to the local row inside the updater below; one that cannot be posted —
+     * no session, an account with no server twin — is still recorded locally
+     * and simply carries no backend id, exactly as postJournalToLedger's own
+     * contract describes.
+     */
+    const accounts = safeArray(db.chartOfAccounts).filter((a) => Number(a.companyId) === Number(companyId));
+    const postedByTxnId = new Map();
+    for (const txn of newTxns) {
+      if (!txn.ledgerId) continue;
+      const incoming = String(txn.direction || '').toUpperCase() === 'IN';
+      const fromId = incoming ? String(txn.ledgerId) : String(txn.cashBankAccountId);
+      const toId = incoming ? String(txn.cashBankAccountId) : String(txn.ledgerId);
+      const from = accounts.find((a) => String(a.id) === fromId);
+      const to = accounts.find((a) => String(a.id) === toId);
+      if (!from || !to) continue;
+      const patch = await postJournalToLedger({
+        chartRows: accounts,
+        entry: {
+          date: txn.date,
+          narration: txn.narration || `Transfer from ${from.name} to ${to.name}`,
+          lines: [
+            { accountId: toId, accountName: to.name || '', accountCode: to.code || '', debit: txn.amount, credit: 0 },
+            { accountId: fromId, accountName: from.name || '', accountCode: from.code || '', debit: 0, credit: txn.amount },
+          ],
+        },
+      });
+      if (patch?.backendEntryId) postedByTxnId.set(String(txn.sourceRow ?? txn.reference ?? txn.date) + txn.amount, patch.backendEntryId);
+    }
+
     setDb((prev) => {
       const list = safeArray(prev.bankTransactions);
       let nextId = list.reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0) + 1;
@@ -1565,6 +1608,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
           totalCredit: txn.amount,
           voucherKind: txn.transactionType === 'Contra' ? 'contra' : 'bank-allocation',
           sourceBankTransactionId: txn.id,
+          /* The server's id for the same entry, where it reached the server.
+             Absent means this device holds it alone — see the note above. */
+          backendEntryId: postedByTxnId.get(String(txn.sourceRow ?? txn.reference ?? txn.date) + txn.amount) || null,
           createdAt: new Date().toISOString(),
         });
         return { ...txn, linkedJournalEntryId: journalId, allocationStatus: 'Allocated' };
@@ -2038,9 +2084,9 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                   type="button"
                   className="ui-btn ui-btn-primary"
                   disabled={!importReview.rows.some((r) => r.take)}
-                  onClick={() => {
+                  onClick={async () => {
                     const chosen = importReview.rows.filter((r) => r.take);
-                    commitImport(chosen, {
+                    await commitImport(chosen, {
                       unknownAccounts: new Set(importReview.unknownAccounts),
                       firstImportedAccountId: importReview.firstImportedAccountId,
                       sourceName: importReview.sourceName,
@@ -2080,7 +2126,7 @@ const CashBankModule = ({ db, setDb, currentCompany, openModal, openLedgerCreate
                   className="ui-btn ui-btn-primary"
                   disabled={!pasteText.trim()}
                   onClick={() => {
-                    importStatementText(pasteText);
+                    void importStatementText(pasteText);
                     setPasteOpen(false);
                   }}
                 >

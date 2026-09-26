@@ -3,7 +3,7 @@ import { Landmark, Percent } from 'lucide-react';
 
 import { cashReceiptWarning } from '@ui/utils/cashLimits';
 import { useDocumentFormKeys } from '@ui/components/ui/useDocumentFormKeys';
-import { DocFormActions } from '@ui/components/DocumentForm';
+import { DocFormActions, DocFormFootnote } from '@ui/components/DocumentForm';
 import { notify } from '@ui/components/ui/notify';
 import { blockIfClosed } from '@ui/utils/bookClose';
 import { useFieldErrors } from '@ui/components/ui/useFieldErrors';
@@ -830,6 +830,12 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
    * commits, and Enter moves to the next field instead of posting the moment
    * the cursor is in the amount box.
    */
+  /* How many invoices the operator has ticked, for the running bar. */
+  const selectedInvoiceCount = useMemo(
+    () => Object.values(allocations).filter((v) => Boolean(v?.selected)).length,
+    [allocations]
+  );
+
   const onFormKeyDown = useDocumentFormKeys({ formRef });
 
   return (
@@ -1186,7 +1192,52 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           />
         </div>
 
-      <FieldErrorSummary errors={fieldErrors.errors} />
+      {/*
+       * The receipt in one column, put back — see the note in
+       * RecordDisbursementForm: commit 09525c9 removed both summaries and left
+       * the tests asserting them. Three figures, because there are three: what
+       * the allocation came to, what the customer withheld, and what the bank
+       * will therefore show. It once listed eight, of which two named boxes
+       * that no longer exist and three were the same number under different
+       * words.
+       */}
+      <section className="ui-card p-4" aria-label="Receipt summary">
+        <div className="ui-t-sec">Receipt summary</div>
+        <dl className="mt-3 space-y-1.5 text-sm">
+          <div className="flex items-center justify-between gap-3">
+            <dt className="ui-muted">Total allocation</dt>
+            <dd className="ui-money">{formatMoney(computed.totalAmount, currentCompany)}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <dt className="ui-muted">TDS deducted</dt>
+            <dd className="ui-money">{formatMoney(computed.tds, currentCompany)}</dd>
+          </div>
+          {computed.advance > 0 ? (
+            /* Only when there is one: money waiting on a party is worth saying,
+               and a line reading nought on every other receipt is not. */
+            <div className="flex items-center justify-between gap-3">
+              <dt className="ui-muted">On account (unallocated)</dt>
+              <dd className="ui-money">{formatMoney(computed.advance, currentCompany)}</dd>
+            </div>
+          ) : null}
+        </dl>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-3 ui-tile-brand">
+          <span className="text-sm font-medium">Net into the account</span>
+          <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
+        </div>
+      </section>
+
+      <DocFormFootnote declaration="the receipt above is against the documents selected, and the details are correct." />
+
+      {/* The figure that has to match the bank statement, kept on screen while
+          invoices are ticked off. */}
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Net into the account</span>
+        <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
+        <span className="ui-caption">{selectedInvoiceCount} invoice(s) allocated</span>
+        <FieldErrorSummary errors={fieldErrors.errors} />
+      </div>
     </form>
   );
 };

@@ -122,10 +122,43 @@ async function applyPolicies(url: string, migrationDir: string) {
  * every test fails on permission rather than on behaviour — which reads like a
  * broken product and is a missing GRANT.
  */
-async function grantToAppRole(database: string, schemas: string[]) {
+/**
+ * The application role, created if the server has never seen it.
+ *
+ * It was only ever granted to, never created — which worked on a developer's
+ * machine, where it had been made by hand months earlier, and failed on any
+ * server that had not: a fresh CI runner, a new laptop, a rebuilt database.
+ * The grant is the first thing to run, so the failure arrives before a single
+ * test is read and says nothing about a missing role.
+ *
+ * NOSUPERUSER NOBYPASSRLS, the same as production, and that is the point:
+ * PostgreSQL skips every policy for a superuser, so a suite that tested
+ * row-level security as one would pass while protecting nothing.
+ */
+async function ensureAppRole(database: string) {
   const role = String(process.env.CLOR_APP_ROLE || 'clor_app');
+  const password = String(process.env.CLOR_APP_PASSWORD || 'clor_app_test');
   const db = admin(database);
   try {
+    await db.$executeRawUnsafe(
+      `DO $$
+       BEGIN
+         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '${role}') THEN
+           EXECUTE format('CREATE ROLE %I LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD %L', '${role}', '${password}');
+         END IF;
+       END $$;`
+    );
+  } finally {
+    await db.$disconnect();
+  }
+}
+
+async function grantToAppRole(database: string, schemas: string[]) {
+  const role = String(process.env.CLOR_APP_ROLE || 'clor_app');
+  await ensureAppRole(database);
+  const db = admin(database);
+  try {
+    await db.$executeRawUnsafe(`GRANT CONNECT ON DATABASE "${database}" TO "${role}"`);
     for (const schema of schemas) {
       await db.$executeRawUnsafe(`GRANT USAGE ON SCHEMA "${schema}" TO "${role}"`);
       await db.$executeRawUnsafe(`GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "${schema}" TO "${role}"`);
