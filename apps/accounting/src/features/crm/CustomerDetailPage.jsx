@@ -28,7 +28,7 @@ const deltaPercent = (current, previous) => previous > 0 ? ((current - previous)
 function Trend({ value, label = 'vs last month' }) {
   const positive = value >= 0;
   const Icon = positive ? ArrowUpRight : ArrowDownRight;
-  return <span className={`inline-flex items-center gap-1 text-xs font-semibold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}><Icon size={13} />{Math.abs(value).toFixed(1)}% <span className="font-normal ui-subtle">{label}</span></span>;
+  return <span className={`inline-flex items-center gap-1 text-xs font-semibold ${positive ? 'ui-pos' : 'ui-neg'}`}><Icon size={13} />{Math.abs(value).toFixed(1)}% <span className="font-normal ui-subtle">{label}</span></span>;
 }
 
 function SummaryMetric({ label, value, hint, trend, icon: Icon, tone }) {
@@ -36,7 +36,7 @@ function SummaryMetric({ label, value, hint, trend, icon: Icon, tone }) {
     <div className="relative overflow-hidden rounded-2xl border p-4 ui-border-c ui-surface-raised">
       <div className={`absolute inset-x-0 top-0 h-1 ${tone}`} />
       <div className="flex items-start justify-between gap-3">
-        <div><div className="text-xs font-bold uppercase tracking-wide ui-subtle">{label}</div><div className="mt-2 text-2xl font-bold tracking-tight">{value}</div></div>
+        <div><div className="ui-label-eyebrow ui-subtle">{label}</div><div className="mt-2 ui-money-lg text-2xl tracking-tight">{value}</div></div>
         <span className="grid h-10 w-10 place-items-center rounded-xl bg-[rgb(var(--surface-2))]"><Icon size={18} /></span>
       </div>
       <div className="mt-2 min-h-5">{trend == null ? <span className="text-sm ui-subtle">{hint}</span> : <Trend value={trend} />}</div>
@@ -202,11 +202,11 @@ export default function CustomerDetailPage({ db, currentCompany, customer, onBac
 
       <section className="ui-card p-4">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full bg-emerald-100 text-lg font-bold text-emerald-800">{initials || 'CU'}</div>
+          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full ui-avatar-tint text-lg">{initials || 'CU'}</div>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl font-bold">{name}</h1>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">Active</span>
+              <span className="rounded-full ui-pill ui-pill-pos px-2 py-0.5 text-[11px] font-semibold">Active</span>
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm ui-subtle">
               <span>{customerCode(customer)}</span><span>{customer?.customerType || 'Regular Customer'}</span>
@@ -219,8 +219,8 @@ export default function CustomerDetailPage({ db, currentCompany, customer, onBac
             </div>
           </div>
           <div className="grid min-w-[18rem] grid-cols-2 gap-2">
-            <div className="rounded-xl bg-orange-50 px-4 py-3"><div className="text-[10px] font-semibold uppercase text-orange-700">Credit limit</div><div className="mt-1 font-bold">{formatMoney(num(customer?.creditLimit), currentCompany)}</div></div>
-            <div className="rounded-xl bg-slate-50 px-4 py-3"><div className="text-[10px] font-semibold uppercase ui-subtle">Payment terms</div><div className="mt-1 font-bold">{num(customer?.paymentTermDays || customer?.creditDays)} Days</div></div>
+            <div className="rounded-xl ui-tile-brand px-4 py-3"><div className="text-[10px] font-semibold uppercase ui-subtle">Credit limit</div><div className="mt-1 ui-money-lg">{formatMoney(num(customer?.creditLimit), currentCompany)}</div></div>
+            <div className="rounded-xl ui-tile px-4 py-3"><div className="text-[10px] font-semibold uppercase ui-subtle">Payment terms</div><div className="mt-1 ui-money">{num(customer?.paymentTermDays || customer?.creditDays)} Days</div></div>
           </div>
         </div>
       </section>
@@ -232,29 +232,29 @@ export default function CustomerDetailPage({ db, currentCompany, customer, onBac
           </div>
 
           {tab === 'Summary' ? (
-            <div className="space-y-5 bg-[rgb(var(--surface-2))] p-5">
+            <div className="space-y-6 bg-[rgb(var(--surface-2))] p-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div><h2 className="text-lg font-bold">Business overview</h2><p className="mt-1 text-sm ui-subtle">Sales, collections, returns and payment behaviour for this customer.</p></div>
                 <div className="rounded-full border bg-[rgb(var(--surface))] px-3 py-1.5 text-xs font-semibold ui-border-c">Updated from live transactions</div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <SummaryMetric label="Total sold" value={formatMoney(totalSales, currentCompany)} hint={`${invoices.length} sales invoice${invoices.length === 1 ? '' : 's'}`} trend={salesMom} icon={FileText} tone="bg-blue-500" />
-                <SummaryMetric label="Amount received" value={formatMoney(totalReceipts, currentCompany)} hint={`${collectionRate.toFixed(1)}% of sales collected`} trend={receiptsMom} icon={CreditCard} tone="bg-emerald-500" />
-                <SummaryMetric label="Average payment time" value={`${averagePaymentDays} days`} hint={`${settledInvoices.length} fully settled invoice${settledInvoices.length === 1 ? '' : 's'}`} icon={CalendarDays} tone="bg-violet-500" />
-                <SummaryMetric label="Credit notes" value={formatMoney(totalCreditNotes, currentCompany)} hint={`${returnPercent.toFixed(1)}% return against sales`} icon={FileText} tone="bg-amber-500" />
-                <SummaryMetric label="Average outstanding" value={formatMoney(averageOutstanding, currentCompany)} hint={`${openInvoices.length} open invoice${openInvoices.length === 1 ? '' : 's'}`} icon={Wallet} tone="bg-orange-500" />
-                <SummaryMetric label="Outstanding ratio" value={`${outstandingPercent.toFixed(1)}%`} hint={`${formatMoney(outstanding, currentCompany)} currently due`} icon={Wallet} tone="bg-rose-500" />
+                <SummaryMetric label="Total sold" value={formatMoney(totalSales, currentCompany)} hint={`${invoices.length} sales invoice${invoices.length === 1 ? '' : 's'}`} trend={salesMom} icon={FileText} tone="ui-bar-sales" />
+                <SummaryMetric label="Amount received" value={formatMoney(totalReceipts, currentCompany)} hint={`${collectionRate.toFixed(1)}% of sales collected`} trend={receiptsMom} icon={CreditCard} tone="ui-bar-receipts" />
+                <SummaryMetric label="Average payment time" value={`${averagePaymentDays} days`} hint={`${settledInvoices.length} fully settled invoice${settledInvoices.length === 1 ? '' : 's'}`} icon={CalendarDays} tone="ui-bar-invoiced" />
+                <SummaryMetric label="Credit notes" value={formatMoney(totalCreditNotes, currentCompany)} hint={`${returnPercent.toFixed(1)}% return against sales`} icon={FileText} tone="ui-bar-returns" />
+                <SummaryMetric label="Average outstanding" value={formatMoney(averageOutstanding, currentCompany)} hint={`${openInvoices.length} open invoice${openInvoices.length === 1 ? '' : 's'}`} icon={Wallet} tone="ui-bar-brand" />
+                <SummaryMetric label="Outstanding ratio" value={`${outstandingPercent.toFixed(1)}%`} hint={`${formatMoney(outstanding, currentCompany)} currently due`} icon={Wallet} tone="ui-bar-outstanding" />
               </div>
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(16rem,1fr)]">
                 <section className="rounded-2xl border bg-[rgb(var(--surface))] p-5 ui-border-c">
-                  <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">Sales and collections</h3><p className="mt-1 text-sm ui-subtle">Six-month movement</p></div><div className="flex gap-4 text-xs font-medium"><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-blue-500" />Sales</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Receipts</span></div></div>
+                  <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-bold">Sales and collections</h3><p className="mt-1 text-sm ui-subtle">Six-month movement</p></div><div className="flex gap-4 text-xs font-medium"><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full ui-bar-sales" />Sales</span><span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full ui-bar-receipts" />Receipts</span></div></div>
                   <div className="mt-6 grid h-52 grid-cols-6 items-end gap-3 border-b ui-border-c">
                     {monthlyActivity.map((month) => (
                       <div key={month.key} className="flex h-full min-w-0 flex-col justify-end">
                         <div className="flex h-[10rem] items-end justify-center gap-1.5">
-                          <div title={`Sales: ${formatMoney(month.sales, currentCompany)}`} className="w-3 rounded-t bg-blue-500/85 transition-all" style={{ height: `${Math.max(month.sales ? 6 : 1, (month.sales / chartMax) * 100)}%` }} />
-                          <div title={`Receipts: ${formatMoney(month.receipts, currentCompany)}`} className="w-3 rounded-t bg-emerald-500/85 transition-all" style={{ height: `${Math.max(month.receipts ? 6 : 1, (month.receipts / chartMax) * 100)}%` }} />
+                          <div title={`Sales: ${formatMoney(month.sales, currentCompany)}`} className="w-3 rounded-t ui-bar-sales transition-all" style={{ height: `${Math.max(month.sales ? 6 : 1, (month.sales / chartMax) * 100)}%` }} />
+                          <div title={`Receipts: ${formatMoney(month.receipts, currentCompany)}`} className="w-3 rounded-t ui-bar-receipts transition-all" style={{ height: `${Math.max(month.receipts ? 6 : 1, (month.receipts / chartMax) * 100)}%` }} />
                         </div>
                         <div className="mt-3 text-center text-xs font-medium ui-subtle">{month.label}</div>
                       </div>
@@ -266,10 +266,10 @@ export default function CustomerDetailPage({ db, currentCompany, customer, onBac
                   <div><h3 className="font-bold">Collection health</h3><p className="mt-1 text-sm ui-subtle">Share of sales collected</p></div>
                   <div className="mt-5 flex justify-center">
                     <div className="grid h-36 w-36 place-items-center rounded-full" style={{ background: `conic-gradient(rgb(var(--pos)) ${collectionRate}%, rgb(var(--surface-3)) 0)` }}>
-                      <div className="grid h-24 w-24 place-items-center rounded-full bg-[rgb(var(--surface))] text-center"><div><div className="text-2xl font-bold">{collectionRate.toFixed(0)}%</div><div className="text-xs ui-subtle">collected</div></div></div>
+                      <div className="grid h-24 w-24 place-items-center rounded-full bg-[rgb(var(--surface))] text-center"><div><div className="ui-money-lg text-2xl">{collectionRate.toFixed(0)}%</div><div className="text-xs ui-subtle">collected</div></div></div>
                     </div>
                   </div>
-                  <div className="mt-5 grid grid-cols-2 gap-2 text-sm"><div className="rounded-xl bg-emerald-50 p-3"><div className="text-xs text-emerald-700">Received</div><div className="mt-1 font-bold text-emerald-900">{formatMoney(totalReceipts, currentCompany)}</div></div><div className="rounded-xl bg-orange-50 p-3"><div className="text-xs text-orange-700">Outstanding</div><div className="mt-1 font-bold text-orange-900">{formatMoney(outstanding, currentCompany)}</div></div></div>
+                  <div className="mt-5 grid grid-cols-2 gap-2 text-sm"><div className="rounded-xl ui-tile-pos p-3"><div className="text-xs ui-pos">Received</div><div className="mt-1 ui-money ui-pos">{formatMoney(totalReceipts, currentCompany)}</div></div><div className="rounded-xl ui-tile-brand p-3"><div className="text-xs ui-subtle">Outstanding</div><div className="mt-1 ui-money ui-fg">{formatMoney(outstanding, currentCompany)}</div></div></div>
                 </section>
               </div>
             </div>
@@ -309,7 +309,7 @@ export default function CustomerDetailPage({ db, currentCompany, customer, onBac
                 <div className="overflow-x-auto ui-table-scroll">
                   <table className="ui-table w-full text-sm">
                     <thead><tr><th>Date</th><th>Type</th><th>Voucher No.</th><th className="ui-num">Debit</th><th className="ui-num">Credit</th><th className="ui-num">Balance</th></tr></thead>
-                    <tbody className="ui-rows">{displayed.map((row) => <tr key={row.id}><td className="ui-col-date"><DocDate value={row.date || '—'} /></td><td className="font-semibold">{row.type}</td><td className="ui-col-id"><DocumentNumber value={row.number || '—'} /></td><td className="ui-col-amount">{row.debit ? <MoneyValue value={row.debit} company={currentCompany} /> : '—'}</td><td className="ui-col-amount">{row.credit ? <MoneyValue value={row.credit} company={currentCompany} /> : '—'}</td><td className="ui-col-amount"><MoneyValue value={row.balance} company={currentCompany} /></td></tr>)}</tbody>
+                    <tbody className="ui-rows">{displayed.map((row) => <tr key={row.id}><td className="ui-col-date"><DocDate value={row.date || '—'} /></td><td className="ui-col-entity">{row.type}</td><td className="ui-col-id"><DocumentNumber value={row.number || '—'} /></td><td className="ui-col-amount">{row.debit ? <MoneyValue value={row.debit} company={currentCompany} /> : '—'}</td><td className="ui-col-amount">{row.credit ? <MoneyValue value={row.credit} company={currentCompany} /> : '—'}</td><td className="ui-col-amount"><MoneyValue value={row.balance} company={currentCompany} /></td></tr>)}</tbody>
                   </table>
                 </div>
               ) : <EmptyState icon={FileText} title="No transactions found" description={query ? 'Try a different search.' : 'Customer activity will appear here.'} />}

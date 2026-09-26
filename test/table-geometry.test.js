@@ -167,7 +167,19 @@ describe('no call site breaks the contract', () => {
     for (const file of jsx(SRC)) {
       const src = readFileSync(file, 'utf8');
       for (const m of src.matchAll(/<ColumnHeader[^>]*ui-num[^>]*\/>/g)) {
-        if (!m[0].includes('align="right"')) offenders.push(`${relative(SRC, file)}: ${m[0].slice(0, 60)}`);
+        /*
+         * A literal `align="right"`, or a computed one that can produce it.
+         *
+         * The reports workspace renders its headers from a column definition
+         * and writes `align={column.money ? 'right' : 'left'}` beside the same
+         * ternary that writes `ui-num` — the contract kept, one branch at a
+         * time. Demanding the literal reported it as an offender and would
+         * have been answered by hard-coding an alignment that is not always
+         * right. A header with no align at all still fails, which is the case
+         * this rule exists for.
+         */
+        const declaresRight = m[0].includes('align="right"') || /align=\{[^}]*'right'/.test(m[0]);
+        if (!declaresRight) offenders.push(`${relative(SRC, file)}: ${m[0].slice(0, 60)}`);
       }
     }
     expect(offenders).toEqual([]);

@@ -4139,3 +4139,65 @@ th.ui-th {
 .report-status-partially-paid, .report-status-partly-paid { color: #b45309; background: #fef3c7; }
 .report-status-draft { color: #1d4ed8; background: #dbeafe; }
 .report-status-overdue, .report-status-cancelled, .report-status-canceled, .report-status-error { color: #dc2626; background: #fee2e2; }
+
+/* ---------------------------------------------------------------------------
+   Tints and series hues for the customer and report screens
+   These arrived from main written as raw Tailwind palette classes —
+   bg-emerald-100, text-orange-700, bg-blue-500 — which is the one thing
+   DESIGN.md forbids in app chrome, because a fixed palette value cannot follow
+   the theme: every one of them stayed a light-mode colour on a dark ground.
+   Named here, from the tokens that already exist, so the same screens read in
+   both themes and the next screen has something to reach for.
+--------------------------------------------------------------------------- */
+@layer components {
+  /* Meaning, not decoration: the pair the rest of the product already uses
+     for money that came in and money that did not. */
+  .ui-pos { color: rgb(var(--pos)); }
+  .ui-neg { color: rgb(var(--neg)); }
+
+  /* A figure on the page ground. Sunken rather than raised: a tile inside a
+     card that also has a border would be a card in a card. */
+  .ui-tile { background-color: rgb(var(--surface-sunken)); }
+  .ui-tile-pos { background-color: rgb(var(--pos) / 0.10); }
+  .ui-tile-brand { background-color: rgb(var(--brand) / 0.10); }
+  .ui-avatar-tint {
+    background-color: rgb(var(--brand) / 0.14);
+    color: rgb(var(--brand));
+  }
+
+  /* The series hues, from the chart tokens rather than from whichever green
+     was to hand. Sales and receipts are a pair and must not both be green;
+     returns and outstanding are the two ways a sale goes wrong and are told
+     apart by hue, not by shade. */
+  .ui-bar-sales { background-color: rgb(var(--chart-blue)); }
+  .ui-bar-receipts { background-color: rgb(var(--chart-teal)); }
+  .ui-bar-returns { background-color: rgb(var(--warn)); }
+  .ui-bar-invoiced { background-color: rgb(var(--chart-purple)); }
+  .ui-bar-outstanding { background-color: rgb(var(--neg)); }
+  .ui-bar-brand { background-color: rgb(var(--brand)); }
+}
+
+@layer components {
+  /* The small capitalised label over a figure. It was written as
+     `text-xs font-bold uppercase` at each call site, which is weight standing
+     in for hierarchy on a word that is already a label by position. */
+  .ui-label-eyebrow {
+    font-size: 0.6875rem;     /* 11px */
+    line-height: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 500;
+  }
+
+  /* The row a table ends on. Structure, so it is said once here rather than
+     by setting every figure in the row bold — which reads as a row of
+     emphasis, and a row of emphasis emphasises nothing. */
+  .ui-row-total {
+    background-color: rgb(var(--surface-sunken));
+    border-top: 1px solid rgb(var(--border));
+  }
+  .ui-row-total > td,
+  .ui-row-total > th {
+    font-weight: 500;
+  }
+}

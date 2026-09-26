@@ -332,7 +332,7 @@ export default function TdsModule({ db, setDb = null, currentCompany, onNewChall
             </p>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">{(selectedReport === 'receivable' ? [['Invoice amount', receivable.deducted], ['TDS receivable', receivable.deducted], ['Pending TDS', receivable.deducted]] : selectedReport === 'nature' ? natureWise(db, companyId, filter).slice(0, 4).map((row) => [row.references.join(', ') || row.natureCode, row.tdsAmount]) : [['Gross amount', visibleEvents.reduce((sum, event) => sum + Number(event.baseAmount || 0), 0)], ['TDS deducted', payable.deducted], ['TDS paid', payable.allocated], ['TDS payable', payable.outstanding], ['Overdue', dues.overdue]]).map(([label, amount]) => <div key={label} className="ui-card min-w-36 px-4 py-3"><div className="ui-caption">{label}</div><div className="font-bold">{formatMoney(amount, currentCompany)}</div></div>)}</div>
+        <div className="flex flex-wrap gap-2">{(selectedReport === 'receivable' ? [['Invoice amount', receivable.deducted], ['TDS receivable', receivable.deducted], ['Pending TDS', receivable.deducted]] : selectedReport === 'nature' ? natureWise(db, companyId, filter).slice(0, 4).map((row) => [row.references.join(', ') || row.natureCode, row.tdsAmount]) : [['Gross amount', visibleEvents.reduce((sum, event) => sum + Number(event.baseAmount || 0), 0)], ['TDS deducted', payable.deducted], ['TDS paid', payable.allocated], ['TDS payable', payable.outstanding], ['Overdue', dues.overdue]]).map(([label, amount]) => <div key={label} className="ui-card min-w-36 px-4 py-3"><div className="ui-caption">{label}</div><div className="ui-money-lg">{formatMoney(amount, currentCompany)}</div></div>)}</div>
         </div>
       }
     >

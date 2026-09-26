@@ -89,7 +89,7 @@ function SalesOrderRowActions({ order, progress, onEdit, onInvoice, onPrint, onD
         onClick={toggle}
       ><MoreVertical size={16} /></button>
       {position ? createPortal(
-        <div ref={menuRef} className="fixed z-[1000] rounded-lg border bg-[rgb(var(--surface))] p-1 text-start shadow-xl ui-border-c" style={position} role="menu">
+        <div ref={menuRef} className="fixed rounded-lg border bg-[rgb(var(--surface))] p-1 text-start shadow-xl ui-border-c" style={{ ...position, zIndex: 'var(--z-popover)' }} role="menu">
             <button type="button" role="menuitem" className="report-menu-item" onClick={() => choose(onEdit)}><Pencil size={14} /> Edit</button>
             {progress.billed < progress.ordered ? <button type="button" role="menuitem" className="report-menu-item" onClick={() => choose(onInvoice)}><Receipt size={14} /> Convert to Invoice</button> : null}
             <button type="button" role="menuitem" className="report-menu-item" onClick={() => choose(onPrint)} aria-label={`Print sales order ${order.number}`}><Printer size={14} /> Print</button>
@@ -802,7 +802,7 @@ export default function SalesOrders({ db, setDb, currentCompany, onConvertToInvo
                 <ColumnHeader label="Customer Name" col="customer" state={soFilters} />
                 <th scope="col" className="ui-num">Taxable Amount (₹)</th>
                 <ColumnHeader label="Total Amount (₹)" col="total" state={soFilters} className="ui-num" align="right" />
-                <ColumnHeader label="Status" col="status" state={soFilters} />
+                <ColumnHeader label="Status" col="status" state={soFilters} align="center" />
                 <th scope="col" className="text-center">Action</th>
               </tr>
             </thead>

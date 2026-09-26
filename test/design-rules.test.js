@@ -104,8 +104,20 @@ describe('DESIGN.md rules', () => {
    * its light-mode colour on a dark ground. The exception is paper.
    */
   it('app chrome carries no raw palette classes', () => {
+    /*
+     * Every hue Tailwind ships, not the eleven somebody listed first.
+     *
+     * The short list let emerald, orange, rose, violet and teal through, and a
+     * customer screen arrived carrying twenty of them — text-emerald-800 on
+     * bg-emerald-100, a rose figure, three chart bars — none of which follows
+     * the theme, all of which stayed light-mode colours on a dark ground. A
+     * rule that covers most of a palette teaches people the palette is fine.
+     *
+     * Bracketed literals too: `text-[#0F172A]` is the same decision with the
+     * lookup done by hand.
+     */
     const PALETTE =
-      /\b(?:bg|text|border)-(?:gray|slate|zinc|neutral|stone|red|green|blue|amber|yellow|indigo|purple)-\d{2,3}\b/g;
+      /\b(?:bg|text|border|fill|stroke|ring|from|via|to)-(?:gray|slate|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-\d{2,3}\b|\b(?:bg|text|border)-\[#[0-9A-Fa-f]{3,8}\]/g;
     const offenders = [];
     for (const { path, text } of sources()) {
       if (PRINT_SURFACES.includes(path)) continue;

@@ -170,7 +170,9 @@ const jsxFiles = (dir) =>
     return [full];
   });
 
-const MONEY_MARK = /ui-col-amount|ui-cell-money|ui-detail-mono|ui-money|ui-amount|ui-mono|MoneyValue/;
+/* `ui-num` is the tabular face a table cell takes (index.css) and was missing
+   from this list, so six correctly-marked cells read as offenders. */
+const MONEY_MARK = /ui-col-amount|ui-cell-money|ui-detail-mono|ui-money|ui-amount|ui-mono|ui-num|MoneyValue/;
 
 describe('every amount wears the money face', () => {
   it('no element renders formatMoney in the sans face', () => {

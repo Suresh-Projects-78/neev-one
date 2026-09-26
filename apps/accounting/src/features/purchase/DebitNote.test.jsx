@@ -1,7 +1,18 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('@ui/permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
+/*
+ * Warehouses on, everything else off.
+ *
+ * The bill form hides its warehouse field unless the feature is on, so a mock
+ * that answers false to everything renders a form these tests then cannot
+ * find their way around. BillBranch.test.jsx was given a switchable version
+ * when that gate arrived; its five siblings were not, and every one of them
+ * has been red since.
+ */
+vi.mock('@ui/permissions/useFeatures', () => ({
+  useFeatures: () => ({ isEnabled: (key) => key === 'warehouses' }),
+}));
 vi.mock('@ui/api/purchaseDocs', () => ({
   createDocApi: vi.fn(async () => ({})),
   hasApiSession: () => false,
