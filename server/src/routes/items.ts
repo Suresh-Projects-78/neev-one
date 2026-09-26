@@ -43,6 +43,30 @@ const itemSchema = z.object({
 
 const dec = (v: number | undefined, fallback = 0) => new Prisma.Decimal(Number(v ?? fallback).toFixed(4));
 
+const validItemCode = (itemType: string, code: string) =>
+  itemType === 'SERVICE' ? /^1\d{4}$/.test(code) : /^[2-9]\d{4}$/.test(code);
+
+async function nextItemCode(accountId: string, orgId: string, itemType: string) {
+  const start = itemType === 'SERVICE' ? 10000 : 20000;
+  const end = itemType === 'SERVICE' ? 19999 : 99999;
+
+  /* The highest code in this range, not every code in the org — see the same
+     change in routes/parties.ts for why reading them all was refused, and why
+     a `take` would have been the wrong way to quieten it. */
+  const highest = await prisma.itemMaster.findFirst({
+    where: { accountId, orgId, code: { gte: String(start), lte: String(end) } },
+    select: { code: true },
+    orderBy: { code: 'desc' },
+  });
+
+  const last = Number(highest?.code);
+  const next = Number.isFinite(last) && last >= start ? last + 1 : start;
+  if (next > end) {
+    throw new Error(`No ${itemType === 'SERVICE' ? 'service' : 'goods'} item codes remain in the configured range`);
+  }
+  return String(next);
+}
+
 const normalize = (row: any) => ({
   ...row,
   gstRate: Number(row.gstRate),
@@ -83,6 +107,18 @@ itemsRouter.post('/orgs/:orgId/items', CREATE, async (req, res) => {
   if (!orgOk(req, res)) return;
   const { accountId, orgId } = req.tenant!;
   const body = itemSchema.parse(req.body);
+  const itemType = body.itemType || 'STOCK';
+  const requestedCode = String(body.code || '').trim();
+  if (requestedCode && !validItemCode(itemType, requestedCode)) {
+    return res.status(400).json({
+      error: itemType === 'SERVICE'
+        ? 'Service item code must be 5 digits and start with 1'
+        : 'Goods item code must be 5 digits and start with 2 through 9',
+    });
+  }
+  const itemCode = requestedCode || (await nextItemCode(accountId, orgId, itemType));
+  const duplicateCode = await prisma.itemMaster.findFirst({ where: { accountId, orgId, code: itemCode }, select: { id: true } });
+  if (duplicateCode) return res.status(409).json({ error: `Item code ${itemCode} is already in use` });
 
   // Batch and serial tracking only makes sense for something that moves.
   if (body.trackBy && body.trackBy !== 'NONE' && (body.itemType || 'STOCK') === 'SERVICE') {
@@ -94,10 +130,10 @@ itemsRouter.post('/orgs/:orgId/items', CREATE, async (req, res) => {
       data: {
         accountId,
         orgId,
-        code: body.code ?? null,
+        code: itemCode,
         name: body.name.trim(),
         description: body.description ?? null,
-        itemType: body.itemType || 'STOCK',
+        itemType,
         unit: body.unit || 'Pcs',
         hsnSac: body.hsnSac ?? null,
         gstRate: dec(body.gstRate),
@@ -128,6 +164,22 @@ itemsRouter.patch('/orgs/:orgId/items/:itemId', EDIT, async (req, res) => {
   if (!existing) return res.status(404).json({ error: 'Item not found' });
 
   const body = itemSchema.partial().parse(req.body);
+  const nextType = body.itemType || existing.itemType;
+  if (body.code != null && !validItemCode(nextType, String(body.code).trim())) {
+    return res.status(400).json({
+      error: nextType === 'SERVICE'
+        ? 'Service item code must be 5 digits and start with 1'
+        : 'Goods item code must be 5 digits and start with 2 through 9',
+    });
+  }
+  if (body.code != null) {
+    const code = String(body.code).trim();
+    const duplicateCode = await prisma.itemMaster.findFirst({
+      where: { accountId, orgId, code, id: { not: existing.id } },
+      select: { id: true },
+    });
+    if (duplicateCode) return res.status(409).json({ error: `Item code ${code} is already in use` });
+  }
   const data: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(body)) {
     if (v === undefined) continue;

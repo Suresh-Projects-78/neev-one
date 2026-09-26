@@ -45,7 +45,13 @@ export function useFitToViewport(dep) {
            at one breakpoint and 24 at another, and guessing it low leaves the
            page scrolling by exactly the few pixels that were guessed wrong. */
         const gutter = parseFloat(getComputedStyle(root).paddingBottom) || 0;
-        const available = window.innerHeight - top - below - gutter - 2;
+        const rootBottom = root.getBoundingClientRect().bottom;
+        const viewportBottom = el.hasAttribute('data-fill-viewport')
+          ? window.innerHeight
+          : rootBottom > top
+          ? Math.min(window.innerHeight, rootBottom)
+          : window.innerHeight;
+        const available = viewportBottom - top - below - gutter - 2;
         /* Below this a table is not worth showing and the page may scroll. */
         el.style.setProperty('--table-scroll-h', `${Math.max(160, Math.round(available))}px`);
       }
@@ -63,7 +69,15 @@ export function useFitToViewport(dep) {
       const over = root.scrollHeight - root.clientHeight;
       if (over <= 0) return;
 
-      const tallest = scrollers.reduce((a, b) =>
+      /* Full-page report grids deliberately own all remaining screen height.
+         Their pager floats inside the grid, so there is no content after the
+         scroller to compensate for. Including them in the overflow correction
+         shortened the grid by the old report card height and left a large
+         blank strip below its horizontal scrollbar. */
+      const correctableScrollers = scrollers.filter((el) => !el.hasAttribute('data-fill-viewport'));
+      if (!correctableScrollers.length) return;
+
+      const tallest = correctableScrollers.reduce((a, b) =>
         a.getBoundingClientRect().height >= b.getBoundingClientRect().height ? a : b
       );
       const now = tallest.getBoundingClientRect().height;

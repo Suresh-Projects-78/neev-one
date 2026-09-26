@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../utils/prisma.js';
-import { isFeatureEnabled } from '../services/features.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -125,31 +124,44 @@ const partySchema = z.object({
  * identifies a record, and it must never draw from the counter a GST return is
  * reconciled against.
  */
-async function partyCodeFormat(accountId: string, orgId: string, kind: string) {
-  const org = await prisma.org.findFirst({ where: { accountId, id: orgId }, select: { profileJson: true } });
-  let cfg: any = {};
-  try {
-    cfg = JSON.parse(String(org?.profileJson || '{}'))?.partyCodes || {};
-  } catch {
-    cfg = {};
+async function nextPartyCode(accountId: string, orgId: string, kind: string) {
+  const start = kind === 'VENDOR' ? 600000 : 200000;
+  const end = kind === 'VENDOR' ? 999999 : 599999;
+
+  /*
+   * The highest code in this range, not every code in the org.
+   *
+   * The first version read the whole party table and built a Set to find the
+   * first unused number. That is one row read per customer the business has
+   * ever had, every time somebody adds one — the slowest request is the one
+   * their best year produces — and listsAreBounded refused it for exactly that
+   * reason. A `take` would have quietened the test and broken the function: a
+   * truncated set makes a used code look free, and the next insert dies on the
+   * unique index.
+   *
+   * So the database answers the question instead of handing over the data. One
+   * row, ordered, bounded by the index.
+   *
+   * It does mean a deleted party's code is not handed out again. That is worth
+   * having rather than working around: a code that meant one customer in March
+   * and another in June makes every statement printed between them ambiguous.
+   */
+  const highest = await prisma.party.findFirst({
+    where: { accountId, orgId, code: { gte: String(start), lte: String(end) } },
+    select: { code: true },
+    orderBy: { code: 'desc' },
+  });
+
+  const last = Number(highest?.code);
+  const next = Number.isFinite(last) && last >= start ? last + 1 : start;
+  if (next > end) {
+    throw new Error(`No ${kind === 'VENDOR' ? 'vendor' : 'customer'} codes remain in the configured range`);
   }
-  const isVendor = kind === 'VENDOR';
-  const prefix = String((isVendor ? cfg.vendorPrefix : cfg.customerPrefix) || (isVendor ? 'VEN-' : 'CUS-'));
-  const padding = Math.min(10, Math.max(1, Number(cfg.padding) || 4));
-  return { prefix, padding };
+  return String(next);
 }
 
-async function nextPartyCode(accountId: string, orgId: string, kind: string) {
-  const { prefix, padding } = await partyCodeFormat(accountId, orgId, kind);
-  const last = await prisma.party.findFirst({
-    where: { accountId, orgId, code: { startsWith: prefix } },
-    orderBy: { code: 'desc' },
-    select: { code: true },
-  });
-  const tail = String(last?.code || '').slice(prefix.length).replace(/\D/g, '');
-  const n = (Number(tail) || 0) + 1;
-  return `${prefix}${String(n).padStart(padding, '0')}`;
-}
+const validPartyCode = (kind: PartyKind, code: string) =>
+  kind === 'VENDOR' ? /^[6-9]\d{5}$/.test(code) : /^[2-5]\d{5}$/.test(code);
 
 /** The scalar columns added for the customer master. */
 const extraScalars = (body: any) => ({
@@ -331,6 +343,17 @@ function register(kind: PartyKind, basePath: string) {
     if (!orgOk(req, res)) return;
     const { accountId, orgId } = req.tenant!;
     const body = partySchema.parse(req.body);
+    const requestedCode = String(body.code || '').trim();
+    if (requestedCode && !validPartyCode(kind, requestedCode)) {
+      return res.status(400).json({
+        error: kind === 'VENDOR'
+          ? 'Vendor code must be 6 digits and start with 6, 7, 8, or 9'
+          : 'Customer code must be 6 digits and start with 2, 3, 4, or 5',
+      });
+    }
+    const partyCode = requestedCode || (await nextPartyCode(accountId, orgId, kind));
+    const duplicateCode = await prisma.party.findFirst({ where: { accountId, orgId, code: partyCode }, select: { id: true } });
+    if (duplicateCode) return res.status(409).json({ error: `Party code ${partyCode} is already in use` });
 
     if (body.gstin) {
       // Throws a 400-shaped error when the checksum or state code is wrong.
@@ -349,7 +372,7 @@ function register(kind: PartyKind, basePath: string) {
            * Nothing is allotted when the feature is off. A code the business
            * does not use is still a column somebody has to explain later.
            */
-          code: body.code?.trim() || ((await isFeatureEnabled(accountId, orgId, 'partyCodes')) ? await nextPartyCode(accountId, orgId, kind) : null),
+          code: partyCode,
           name: body.name.trim(),
           legalName: body.legalName ?? null,
           gstin: body.gstin ? body.gstin.trim().toUpperCase() : null,
@@ -409,6 +432,21 @@ function register(kind: PartyKind, basePath: string) {
     }
 
     const body = partySchema.partial().parse(req.body);
+    if (body.code != null && !validPartyCode(kind, String(body.code).trim())) {
+      return res.status(400).json({
+        error: kind === 'VENDOR'
+          ? 'Vendor code must be 6 digits and start with 6, 7, 8, or 9'
+          : 'Customer code must be 6 digits and start with 2, 3, 4, or 5',
+      });
+    }
+    if (body.code != null) {
+      const code = String(body.code).trim();
+      const duplicateCode = await prisma.party.findFirst({
+        where: { accountId, orgId, code, id: { not: existing.id } },
+        select: { id: true },
+      });
+      if (duplicateCode) return res.status(409).json({ error: `Party code ${code} is already in use` });
+    }
     if (body.gstin) {
       validateGstinOrThrow(body.gstin, body.billingState || existing.billingState || '');
     }

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@ui/permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
@@ -131,9 +131,10 @@ describe('printing a sales order', () => {
    * The one thing an order could not do: leave the screen. Nothing outside
    * invoices and bills could be put on paper at all.
    */
-  it('puts the order on paper', () => {
+  it('puts the order on paper', async () => {
     render(<SalesOrders db={dbWith({ salesOrders: [ORDER] })} setDb={() => {}} currentCompany={COMPANY} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Print sales order SO-7' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for sales order SO-7' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Print sales order SO-7' }));
     const paper = document.querySelector('.printable');
     expect(paper).toBeTruthy();
     expect(within(paper).getByText('SALES ORDER')).toBeInTheDocument();
@@ -143,11 +144,24 @@ describe('printing a sales order', () => {
   });
 
   /* An order is not a tax invoice and the paper has to say so. */
-  it('does not call itself a tax invoice', () => {
+  it('does not call itself a tax invoice', async () => {
     render(<SalesOrders db={dbWith({ salesOrders: [ORDER] })} setDb={() => {}} currentCompany={COMPANY} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Print sales order SO-7' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Actions for sales order SO-7' }));
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'Print sales order SO-7' }));
     const paper = document.querySelector('.printable');
     expect(within(paper).queryByText('TAX INVOICE')).toBeNull();
     expect(within(paper).getByText(/not a tax invoice/i)).toBeInTheDocument();
+  });
+
+  it('keeps row actions inside the three-dot menu', async () => {
+    render(<SalesOrders db={dbWith({ salesOrders: [ORDER] })} setDb={() => {}} currentCompany={COMPANY} onConvertToInvoice={() => {}} />);
+    expect(screen.queryByRole('menuitem', { name: 'Edit' })).toBeNull();
+    const actions = screen.getByRole('button', { name: 'Actions for sales order SO-7' });
+    fireEvent.click(actions);
+    expect(actions).toHaveAttribute('aria-expanded', 'true');
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument());
+    expect(screen.getByRole('menuitem', { name: 'Convert to Invoice' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Print sales order SO-7' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
 });

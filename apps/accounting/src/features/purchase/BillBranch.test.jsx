@@ -2,7 +2,10 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@ui/permissions/useFeatures', () => ({ useFeatures: () => ({ isEnabled: () => false }) }));
+const featureState = vi.hoisted(() => ({ branches: true, warehouses: true }));
+vi.mock('@ui/permissions/useFeatures', () => ({
+  useFeatures: () => ({ isEnabled: (key) => key === 'branches' ? featureState.branches : key === 'warehouses' ? featureState.warehouses : false }),
+}));
 vi.mock('@ui/api/purchaseDocs', () => ({
   createDocApi: vi.fn(async () => ({})),
   hasApiSession: () => false,
@@ -69,7 +72,11 @@ const optionLabels = () =>
 describe('the branch on a bill', () => {
   /* The form remembers the last branch chosen, as the invoice does — so each
      test starts from a company nobody has raised a document for yet. */
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    featureState.branches = true;
+    featureState.warehouses = true;
+  });
 
   it('asks for one', () => {
     renderForm();
@@ -142,5 +149,25 @@ describe('the branch on a bill', () => {
     expect(row.className).toMatch(/sm:grid-cols-2/);
     expect(within(row).getByRole('combobox', { name: 'Warehouse *' })).toBeInTheDocument();
     expect(within(row).queryByText('Select Vendor')).toBeNull();
+  });
+
+  it('shows the default branch and warehouse as locked when both features are disabled', () => {
+    featureState.branches = false;
+    featureState.warehouses = false;
+    renderForm({ defaultWarehouseId: 'w-blr' });
+
+    expect(screen.queryByRole('combobox', { name: 'Branch' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Warehouse *' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Branch' })).toHaveValue('Bengaluru');
+    expect(screen.getByRole('textbox', { name: 'Warehouse' })).toHaveValue('Bengaluru Store');
+  });
+
+  it('shows only the selector for the enabled feature', () => {
+    featureState.branches = false;
+    featureState.warehouses = true;
+    renderForm({ defaultWarehouseId: 'w-blr' });
+    expect(screen.queryByRole('combobox', { name: 'Branch' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Branch' })).toHaveValue('Bengaluru');
+    expect(screen.getByRole('textbox', { name: 'Warehouse' })).toHaveValue('Bengaluru Store');
   });
 });

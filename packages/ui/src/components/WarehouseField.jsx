@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Lock } from 'lucide-react';
 
 import PopupSelect from './pickers/PopupSelect';
+import { useFeatures } from '../permissions/useFeatures';
 
 /**
  * The warehouse a document belongs to.
@@ -41,19 +42,23 @@ const WarehouseField = ({
   ...ignoredLegacyProps
 }) => {
   void ignoredLegacyProps;
+  const { isEnabled } = useFeatures();
+  const featureLocked = !isEnabled('warehouses');
   const active = String(activeWarehouseId || '').trim();
-  const locked = Boolean(active) && !isEdit;
+  const fallback = String(value || active || options[0]?.id || '').trim();
+  const lockedValue = featureLocked ? fallback : active;
+  const locked = featureLocked || (Boolean(active) && !isEdit);
 
   // Keep the form's value on the header selection while it is locked.
   useEffect(() => {
     if (!locked) return;
-    if (String(value || '') === active) return;
-    onChange?.(active);
-  }, [locked, active, value, onChange]);
+    if (!lockedValue || String(value || '') === lockedValue) return;
+    onChange?.(lockedValue);
+  }, [locked, lockedValue, value, onChange]);
 
   if (locked) {
-    const picked = options.find((w) => String(w.id) === active);
-    const name = picked?.name || `Warehouse ${active}`;
+    const picked = options.find((w) => String(w.id) === lockedValue);
+    const name = picked?.name || (lockedValue ? `Warehouse ${lockedValue}` : 'Default warehouse');
     const pinned = `${branchLabel ? `${branchLabel} · ` : ''}${name}`;
     return (
       <div>

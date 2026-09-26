@@ -91,7 +91,7 @@ export const AllocationTable = ({
         <table className="ui-table w-full">
           <thead className="ui-sunken">
             <tr>
-              <th className="ui-th w-12">#</th>
+              <th className="ui-th w-8 px-2">#</th>
               {/*
                 The ledger used to take 42% and the amount was pushed to the
                 far right of whatever was left, so a figure sat half a screen
@@ -115,7 +115,7 @@ export const AllocationTable = ({
                 data-leaving={leaving === i ? 'true' : undefined}
                 data-entering={entering === i ? 'true' : undefined}
               >
-                <td className="px-3 py-2 ui-muted text-sm">
+                <td className="px-2 py-2 ui-muted text-sm">
                   <div className="ui-row-slot"><div>{i + 1}</div></div>
                 </td>
                 <td className="px-3 py-2">

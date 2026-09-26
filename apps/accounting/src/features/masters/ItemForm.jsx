@@ -473,11 +473,12 @@ const ItemForm = ({
                 id="item-code"
                 type="text"
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                className="ui-input ui-mono w-full"
-                placeholder="Generated on save"
+                readOnly
+                aria-readonly="true"
+                className="ui-input ui-mono w-full cursor-not-allowed"
+                placeholder="No codes available"
               />
-              <p className="ui-caption mt-1">Automatically generated</p>
+              <p className="ui-caption mt-1">Automatically allotted and cannot be edited.</p>
             </PartyFormRow>
 
             <PartyFormRow className="lg:col-start-2 lg:row-start-2" label="Category / Item Group" htmlFor="item-category">

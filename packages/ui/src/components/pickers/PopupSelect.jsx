@@ -1,6 +1,7 @@
 import { createElement, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Lock } from 'lucide-react';
 import { fieldIconFor } from '../ui/entityIdentity';
+import { useFeatures } from '../../permissions/useFeatures';
 
 import Popover from '../ui/Popover';
 import { rankedSearch } from '../../utils/rankedSearch';
@@ -46,6 +47,9 @@ const PopupSelect = ({
   ...ignoredLegacyProps
 }) => {
   void ignoredLegacyProps;
+  const { isEnabled } = useFeatures();
+  const featureLocked = String(title || '').trim().toLowerCase() === 'branches' && !isEnabled('branches');
+  const controlDisabled = disabled || featureLocked;
   /* The caller's icon wins; otherwise the label decides. An explicit `null`
      is a caller saying "no mark on this one" and is left alone. */
   /* A picker inside a grid row prints its name in the column heading, not in
@@ -90,8 +94,17 @@ const PopupSelect = ({
     return codeText ? `${codeText} - ${labelText}` : labelText;
   }, [normalizedValue, options]);
 
+  /* A disabled branch feature still has one bookkeeping branch. Select its
+     default once and keep the control visible as context, without asking the
+     operator to make a branch decision. */
+  useEffect(() => {
+    if (!featureLocked || normalizedValue) return;
+    const fallback = (options || []).find((option) => String(option?.value || '').trim());
+    if (fallback) onChange?.(String(fallback.value));
+  }, [featureLocked, normalizedValue, onChange, options]);
+
   const openPopup = () => {
-    if (disabled) return;
+    if (controlDisabled) return;
     setQuery('');
     // Open on what is already chosen, so Enter without touching anything is a
     // no-op rather than a silent change to the first row.
@@ -220,7 +233,7 @@ const PopupSelect = ({
           if (next.closest?.('[role="dialog"]')) return;
           setOpen(false);
         }}
-        disabled={disabled}
+        disabled={controlDisabled}
         role="combobox"
         /* The visible label is a plain <label> with nothing to point at — a
            button is not a form control it can be `for`. Without this the
@@ -237,13 +250,13 @@ const PopupSelect = ({
           made a row of four controls look like two pairs.
         */
         className={`ui-input flex items-center justify-between gap-2 text-left ${
-          disabled ? 'ui-sunken ui-muted cursor-not-allowed' : 'ui-hover-sunken'
+          controlDisabled ? 'ui-sunken ui-muted cursor-not-allowed' : 'ui-hover-sunken'
         }`}
       >
         <span className="flex min-w-0 items-center gap-2">
           {/* createElement: a capitalised local reads to the linter as a
               component declared in a render. It is a lookup. */}
-          {leading ? createElement(leading, { size: 16, className: 'ui-subtle shrink-0', 'aria-hidden': 'true' }) : null}
+          {featureLocked ? <Lock size={14} className="ui-muted shrink-0" aria-hidden="true" /> : leading ? createElement(leading, { size: 16, className: 'ui-subtle shrink-0', 'aria-hidden': 'true' }) : null}
           <span className={`truncate ${displayLabel ? 'ui-fg' : 'ui-subtle'}`}>{displayLabel || placeholder}</span>
         </span>
         <ChevronDown size={16} className="ui-muted shrink-0" />

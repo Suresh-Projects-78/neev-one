@@ -77,9 +77,19 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       return match ? String(match.id) : '';
     };
 
+    const requestedCustomerId =
+      d?.customerId !== undefined && d?.customerId !== null && String(d.customerId) !== ''
+        ? String(d.customerId)
+        : '';
+    const requestedCustomerExists = requestedCustomerId && (Array.isArray(db?.customers) ? db.customers : []).some(
+      (c) => String(c?.companyId) === String(companyId) && String(c?.id) === requestedCustomerId
+    );
+
     return {
       date: String(d?.date || '').trim() || new Date().toISOString().slice(0, 10),
-      customerId: d?.customerId !== undefined && d?.customerId !== null && String(d.customerId) !== '' ? String(d.customerId) : byName(),
+      // Server invoices can carry the server party id here. Use it only when
+      // it is a real local customer id; otherwise resolve the customer name.
+      customerId: requestedCustomerExists ? requestedCustomerId : byName(),
       amount: d?.amount !== undefined && d?.amount !== null ? String(d.amount) : '',
       mode: String(d?.mode || '').trim() || 'Cash',
       ledgerAccountId: String(d?.ledgerAccountId || '').trim(),
@@ -198,9 +208,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
       const wantName = String(initialData?.customerName || '').trim().toLowerCase();
       return Boolean(wantName) && String(c?.name || '').trim().toLowerCase() === wantName;
     });
-    const accountId = String(seededCustomer?.accountId ?? '').trim();
+    const companyAccounts = safeArray(db?.chartOfAccounts).filter((a) => String(a?.companyId) === String(companyId));
+    const linkedAccountId = String(seededCustomer?.accountId ?? '').trim();
+    const linkedAccountExists = companyAccounts.some((a) => String(a?.id) === linkedAccountId);
+    const customerName = String(getCustomerDisplayName(seededCustomer) || seededCustomer?.name || '').trim().toLowerCase();
+    const matchedAccount = companyAccounts.find((a) => {
+      if (String(a?.customerId ?? '') === String(seededCustomer?.id ?? '')) return true;
+      if (String(a?.partyId ?? '') === String(seededCustomer?.backendPartyId ?? '') && seededCustomer?.backendPartyId) return true;
+      return customerName && String(a?.name || '').trim().toLowerCase() === customerName;
+    });
+    const accountId = linkedAccountExists ? linkedAccountId : String(matchedAccount?.id ?? '').trim();
     if (!accountId) return [emptyAllocationRow()];
-    return [{ ...emptyAllocationRow(), ledgerId: accountId }];
+    return [{ ...emptyAllocationRow(), ledgerId: accountId, amount: initial.amount }];
   });
 
   /*
@@ -248,7 +267,10 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
     return (db?.chartOfAccounts || [])
       .filter((a) => Number(a?.companyId) === cid && a?.isActive !== false)
       .filter((a) => String(a.id) !== String(ledgerAccountId))
-      .map((a) => ({ id: a.id, name: a.name }))
+      // LedgerField scopes options by company. Preserve that identity here;
+      // reducing rows to only id/name made a correctly preselected customer
+      // ledger render as an empty field.
+      .map((a) => ({ id: a.id, name: a.name, code: a.code, groupName: a.groupName, companyId: a.companyId, isActive: a.isActive }))
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
   }, [db?.chartOfAccounts, currentCompany?.id, ledgerAccountId]);
 
@@ -860,9 +882,10 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
           <span className="ui-sec-mark" aria-hidden="true"><Landmark size={16} /></span>
           <h3>Receipt Details</h3>
         </div>
-        <div className="ui-doc-section grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
-        {!hideMode ? (
-          <div className="min-w-0">
+        <div className="ui-doc-section grid grid-cols-1 lg:grid-cols-12 gap-x-6 gap-y-4">
+          <div className="lg:col-span-7 space-y-4">
+          {!hideMode ? (
+            <div className="min-w-0">
             <label className="ui-label">
               Received into <span className="text-[rgb(var(--neg))]">*</span>
             </label>
@@ -894,8 +917,46 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
                 Accounts or Cash-in-Hand group, and it appears here.
               </p>
             ) : null}
+            </div>
+          ) : null}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
+              <input
+                id="rcpt-reference"
+                type="text"
+                value={formData.reference}
+                onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
+                className="ui-input w-full"
+                placeholder="Txn / UTR / Cheque no"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label className="ui-label" htmlFor="rcpt-mode">Receipt Mode</label>
+              <select
+                id="rcpt-mode"
+                value={receiptMode}
+                onChange={(e) => {
+                  setModeTouched(true);
+                  setFormData((p) => ({ ...p, mode: e.target.value }));
+                }}
+                className="ui-select w-full"
+              >
+                {(RECEIPT_MODES.includes(receiptMode) ? RECEIPT_MODES : [receiptMode, ...RECEIPT_MODES]).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
           </div>
-        ) : null}
+          </div>
+
+          <div
+            className="lg:col-span-5 lg:ps-6"
+            style={{ borderInlineStart: '1px solid rgb(var(--border))' }}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
             <DocNumberField
               className="min-w-0"
@@ -908,7 +969,7 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               }}
               disabled={lockReceiptNumber}
               voucherKey="receipt"
-      title="Receipt numbering"
+              title="Receipt numbering"
               sampleLabel="Next receipt will be"
               manualLabel="Typed on each receipt"
               branchId={receiptBranchId || null}
@@ -932,53 +993,8 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
               />
             </div>
 
-            {/*
-              Row two, in the same three columns, so each field sits under the
-              one it qualifies: the mode under the account the money landed in,
-              the instrument's number under the receipt's own number, and the
-              sentence under the date.
-            */}
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-mode">Receipt Mode</label>
-              <select
-                id="rcpt-mode"
-                value={receiptMode}
-                onChange={(e) => {
-                  setModeTouched(true);
-                  setFormData((p) => ({ ...p, mode: e.target.value }));
-                }}
-                className="ui-select w-full"
-              >
-                {/* A record saved under an older label still shows its own. */}
-                {(RECEIPT_MODES.includes(receiptMode) ? RECEIPT_MODES : [receiptMode, ...RECEIPT_MODES]).map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
             </div>
-
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-reference">Reference / UTR / Cheque No.</label>
-              <input
-                id="rcpt-reference"
-                type="text"
-                value={formData.reference}
-                onChange={(e) => setFormData((p) => ({ ...p, reference: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="Txn / UTR / Cheque no"
-              />
-            </div>
-
-            <div className="min-w-0">
-              <label className="ui-label" htmlFor="rcpt-narration">Narration / Description</label>
-              <input
-                id="rcpt-narration"
-                type="text"
-                value={formData.narration}
-                onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
-                className="ui-input w-full"
-                placeholder="E.g. Payment received, UTR, remarks etc."
-              />
-            </div>
+          </div>
         </div>
       </section>
 
@@ -1157,6 +1173,18 @@ const RecordReceiptForm = ({ db, setDb, currentCompany, onClose, initialData = n
             </p>
           ) : null}
         </section>
+
+        <div>
+          <label className="ui-label" htmlFor="rcpt-narration">Narration / Description</label>
+          <input
+            id="rcpt-narration"
+            type="text"
+            value={formData.narration}
+            onChange={(e) => setFormData((p) => ({ ...p, narration: e.target.value }))}
+            className="ui-input w-full"
+            placeholder="E.g. payment received, UTR, remarks etc."
+          />
+        </div>
 
       <FieldErrorSummary errors={fieldErrors.errors} />
     </form>

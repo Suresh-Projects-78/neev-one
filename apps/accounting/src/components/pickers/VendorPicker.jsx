@@ -16,11 +16,11 @@ import PartyFormLayout from './PartyFormLayout';
 import { tdsPayableLedgers } from '@ui/utils/tdsLedgers';
 import { VENDOR_CFG } from './partyFormConfig';
 import { CUSTOMER_TABS } from './customerFormParts';
-import { useFeatures } from '@ui/permissions/useFeatures';
 import { rankedSearch, soleConfidentMatch } from '@ui/utils/rankedSearch';
 import { useListboxKeys, openOnKey, focusNextAfter } from '@ui/components/pickers/useListboxKeys';
 import { useRecentPicks } from '@ui/components/pickers/useRecentPicks';
 import { useRemoteSearch } from '@ui/components/pickers/useRemoteSearch';
+import { nextVendorCode } from '@ui/utils/masterCodes';
 
 export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seedData = null, onCreated, onClose, onDuplicate = null }) => {
   const isEdit = Boolean(initialData);
@@ -82,6 +82,10 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
         creditLimit:
           initialData.creditLimit === undefined || initialData.creditLimit === null ? '' : String(initialData.creditLimit),
         priceListId: String(initialData.priceListId || ''),
+        msmeRegistered:
+          typeof initialData.msmeRegistered === 'boolean'
+            ? initialData.msmeRegistered
+            : Boolean(String(initialData.msmeNumber || '').trim()),
         msmeNumber: String(initialData.msmeNumber || ''),
         statutoryOther: String(initialData.statutoryOther || ''),
         tdsSection: String(initialData.tdsSection || ''),
@@ -157,6 +161,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
       currency: 'INR',
       creditLimit: '',
       priceListId: '',
+      msmeRegistered: false,
       msmeNumber: '',
       statutoryOther: '',
       tdsSection: '',
@@ -320,8 +325,6 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
     () => activePriceListOptions({ db, companyId: currentCompany.id, onDate: new Date().toISOString().slice(0, 10) }),
     [db, currentCompany.id]
   );
-  const { isEnabled: featureOn } = useFeatures();
-  const codesEnabled = featureOn('partyCodes');
 
   /*
    * The same row model the customer form uses: billing and shipping are the two
@@ -409,7 +412,7 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
     setFormData((p) => ({
       ...p,
       displayName: '', gstin: '', pan: '', code: '', openingBalance: 0,
-      msmeNumber: '', statutoryOther: '', priceListId: '', tdsSection: '',
+      msmeRegistered: false, msmeNumber: '', statutoryOther: '', priceListId: '', tdsSection: '',
       contacts: [{ name: '', position: '', email: '', mobile: '' }],
       shipToAddresses: [],
       billingAddress: { line1: '', line2: '', city: '', district: '', state: '', pincode: '', country: VENDOR_COUNTRY },
@@ -493,6 +496,12 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
 
     const gstinNormalized = normalizeGstin(formData.gstin);
     const panNormalized = normalizePan(formData.pan);
+
+    if (formData.msmeRegistered && !String(formData.msmeNumber || '').trim()) {
+      setTab('statutory');
+      notify.error('MSME / Udyam number is required for an MSME registered vendor.');
+      return;
+    }
 
     const gstRegistrationRequiresGstin = ['Registered', 'Composition', 'SEZ'].includes(formData.gstRegistration);
 
@@ -767,7 +776,8 @@ export const VendorForm = ({ db, setDb, currentCompany, initialData = null, seed
             setGroupDraftName(typed);
             setGroupCreateOpen(true);
           }}
-          codesEnabled={codesEnabled}
+          codesEnabled={true}
+          automaticCode={isEdit ? String(formData.code || '') : nextVendorCode(db?.vendors)}
           priceListOptions={priceListOptions}
           onDuplicate={isEdit && onDuplicate ? () => onDuplicate(formData) : null}
           gstinFetching={gstFetching}

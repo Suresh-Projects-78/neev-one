@@ -106,6 +106,26 @@ describe('what appears in the cash book', () => {
     expect(rows.map((r) => r.date)).toEqual(['2026-09-15', '2026-09-13']);
   });
 
+  it('shows receipts and payments saved with legacy or backend account fields', () => {
+    const compatibleDb = {
+      accountGroups: [],
+      chartOfAccounts: [
+        { id: 91, companyId: 1, name: 'ICICI Current Account', controlKind: 'BANK', backendLedgerId: 'backend-icici' },
+      ],
+      payments: [
+        { id: 81, companyId: 1, date: '2026-09-20', voucherType: 'receipt', ledgerAccountId: 'backend-icici', amount: 1200, customerName: 'Customer A' },
+        { id: 82, companyId: 1, date: '2026-09-21', voucherType: 'payment', cashBankAccountId: 91, amount: 400, vendorName: 'Vendor A' },
+        { id: 83, companyId: 1, date: '2026-09-22', voucherType: 'receipt', amount: 300, customerName: 'Legacy Customer' },
+      ],
+    };
+
+    expect(cashBankTransactions(compatibleDb, 1).map((row) => `${row.type}:${row.amount}`)).toEqual([
+      'Receipt:300',
+      'Payment:400',
+      'Receipt:1200',
+    ]);
+  });
+
   it('is newest first', () => {
     const dates = cashBankTransactions(db, 1).map((r) => r.date);
     expect(dates).toEqual([...dates].sort().reverse());

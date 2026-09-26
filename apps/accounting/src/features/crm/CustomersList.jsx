@@ -7,7 +7,7 @@ import { EmptyState, TableTotals } from '@ui/components/ui/Primitives';
 import { confirmDialog, notify } from '@ui/components/ui/notify';
 import DocumentListShell from '@ui/components/list/DocumentListShell';
 import { CustomerForm } from '../../components/pickers/CustomerPicker';
-import PartyDetail from '../parties/PartyDetail';
+import CustomerDetailPage from './CustomerDetailPage';
 import { getCustomerDisplayName } from '@ui/utils/contacts';
 import { formatMoney } from '@ui/utils/money';
 import { isGstRegistered, outstandingByParty, standingOf } from '@ui/utils/partyStanding';
@@ -20,7 +20,7 @@ import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/componen
  * screen in its own right, and a screen that cannot be rendered on its own
  * cannot be tested on its own either.
  */
-export default function CustomersList({ db, setDb, currentCompany }) {
+export default function CustomersList({ db, setDb, currentCompany, onNewTransaction }) {
   const customers = db.customers.filter((c) => c.companyId === currentCompany.id);
   const customerSearch = useListSearch(customers, [(c) => getCustomerDisplayName(c), 'phone', 'mobile', 'email', 'gstin']);
   const customerSearchFilters = useColumnFilters();
@@ -148,12 +148,11 @@ export default function CustomersList({ db, setDb, currentCompany }) {
 
   if (viewingCustomer) {
     return (
-      <PartyDetail
+      <CustomerDetailPage
         db={db}
         currentCompany={currentCompany}
-        party={viewingCustomer}
-        kind="customer"
-        displayName={getCustomerDisplayName(viewingCustomer)}
+        customer={viewingCustomer}
+        onNewTransaction={() => onNewTransaction?.(viewingCustomer)}
         onBack={() => setViewingCustomer(null)}
         onEdit={() => {
           const c = viewingCustomer;

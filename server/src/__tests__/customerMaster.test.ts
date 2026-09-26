@@ -125,59 +125,29 @@ describe('the rest of the master', () => {
    * code identifies a record, and it must never consume from the counter a GST
    * return is reconciled against.
    */
-  it('generates a customer code when none is given, and keeps one that is', async () => {
+  it('generates sequential six-digit customer codes in the 2–5 series', async () => {
     const a = await create({ name: `Auto ${rnd()}` }).expect(201);
-    expect(a.body.party.code).toMatch(/^CUS-\d{4}$/);
+    expect(a.body.party.code).toMatch(/^[2-5]\d{5}$/);
 
     const b = await create({ name: `Auto ${rnd()}` }).expect(201);
-    expect(b.body.party.code).not.toBe(a.body.party.code);
+    expect(Number(b.body.party.code)).toBe(Number(a.body.party.code) + 1);
 
-    const c = await create({ name: `Manual ${rnd()}`, code: 'LEGACY-77' }).expect(201);
-    expect(c.body.party.code).toBe('LEGACY-77');
+    const c = await create({ name: `Manual ${rnd()}`, code: '500001' }).expect(201);
+    expect(c.body.party.code).toBe('500001');
   });
 });
 
-describe('the customer code is a feature, in a format the business sets', () => {
-  /*
-   * Some books identify a customer by a code and some only ever by name. A code
-   * nobody uses is still a column somebody has to explain, so it is a switch —
-   * and where it is on, the shape of it belongs to the business rather than to
-   * whoever wrote the default.
-   */
-  const setPartyCodes = (orgId: string, cfg: Record<string, unknown> | null) =>
-    prisma.org.update({
-      where: { id: orgId },
-      data: { profileJson: cfg ? JSON.stringify({ partyCodes: cfg }) : null },
-    });
-
-  const setFeature = (accountId: string, orgId: string, enabled: boolean) =>
-    prisma.featureSetting.upsert({
-      where: { orgId_key: { orgId, key: 'partyCodes' } },
-      update: { enabled },
-      create: { accountId, orgId, key: 'partyCodes', enabled, updatedByUserId: 'test' },
-    });
-
-  it('allots nothing when the feature is off', async () => {
-    const org = await prisma.org.findUnique({ where: { id: owner.orgId }, select: { accountId: true } });
-    await setFeature(org!.accountId, owner.orgId, false);
-
-    const res = await create({ name: `NoCode ${rnd()}` }).expect(201);
-    expect(res.body.party.code).toBeNull();
-
-    await setFeature(org!.accountId, owner.orgId, true);
+describe('party code ranges', () => {
+  it('rejects customer codes outside the customer range', async () => {
+    await create({ name: `Bad customer ${rnd()}`, code: '600001' }).expect(400);
   });
 
-  it('follows the prefix and padding the business set', async () => {
-    await setPartyCodes(owner.orgId, { customerPrefix: 'ACME/C/', padding: 6 });
-    const res = await create({ name: `Custom ${rnd()}` }).expect(201);
-    expect(res.body.party.code).toMatch(/^ACME\/C\/\d{6}$/);
-    await setPartyCodes(owner.orgId, null);
-  });
-
-  it('still keeps a code that was typed, whatever the format says', async () => {
-    await setPartyCodes(owner.orgId, { customerPrefix: 'ACME/C/', padding: 6 });
-    const res = await create({ name: `Typed ${rnd()}`, code: 'LEGACY-9' }).expect(201);
-    expect(res.body.party.code).toBe('LEGACY-9');
-    await setPartyCodes(owner.orgId, null);
+  it('generates vendor codes in the 6–9 series', async () => {
+    const res = await request(app)
+      .post(`/api/orgs/${owner.orgId}/vendors`)
+      .set(auth(owner))
+      .send({ name: `Vendor ${rnd()}` })
+      .expect(201);
+    expect(res.body.party.code).toMatch(/^[6-9]\d{5}$/);
   });
 });

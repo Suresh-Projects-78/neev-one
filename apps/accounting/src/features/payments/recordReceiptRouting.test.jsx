@@ -138,4 +138,40 @@ describe('a receipt started from an invoice row', () => {
     const partyRow = (await screen.findByRole('button', { name: /View Bills/i })).closest('tr');
     expect(within(partyRow).getByRole('combobox').value).toBe('Acme Traders');
   });
+
+  it('prefills the customer ledger, amount and selected invoice from the routed sales invoice', async () => {
+    const { default: RecordReceiptForm } = await import('./RecordReceiptForm');
+    const invoice = {
+      id: 44,
+      companyId: 1,
+      number: 'INV-44',
+      customerId: 7,
+      customerName: 'Acme Traders',
+      date: '2026-09-20',
+      total: 1180,
+      paidAmount: 0,
+      status: 'Posted',
+    };
+    render(
+      <RecordReceiptForm
+        db={{ ...db, invoices: [invoice] }}
+        setDb={() => {}}
+        currentCompany={company}
+        onClose={() => {}}
+        initialData={{
+          customerId: 'server-party-7',
+          customerName: 'Acme Traders',
+          amount: 1180,
+          allocateInvoiceId: 44,
+          reference: 'INV-44',
+        }}
+      />
+    );
+
+    const partyRow = (await screen.findByRole('button', { name: /View Bills/i })).closest('tr');
+    expect(within(partyRow).getByRole('combobox').value).toBe('Acme Traders');
+    expect(within(partyRow).getByRole('spinbutton', { name: /Amount/i })).toHaveValue(1180);
+    expect(screen.getByDisplayValue('INV-44')).toBeInTheDocument();
+    expect(within(partyRow).getByText(/Against 1 invoice/i)).toBeInTheDocument();
+  });
 });
