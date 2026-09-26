@@ -71,14 +71,20 @@ jobs:
         working-directory: server
         env:
           JWT_SECRET: ci-test-secret
-          # Where the suite borrows a connection to create its own database.
-          # vitest.config.ts reads DATABASE_URL, points it at /postgres and
-          # works out the per-run names from there, so this one line is the
-          # whole of what CI has to say about the database.
-          DATABASE_URL: postgresql://clor_ci:clor_ci@localhost:5432/postgres
-          # The role the policies are granted to. It owns nothing and cannot
-          # bypass row-level security — the same arrangement as production,
-          # because a suite that tests RLS against a superuser tests nothing.
+          # Two connections, and the difference between them is the point.
+          #
+          # PGADMIN_URL is the superuser the run borrows to create its own
+          # database, push the schemas and apply the policies. DATABASE_URL is
+          # the role the TESTS connect as, and it must not be that superuser:
+          # PostgreSQL skips every row-level-security policy for a superuser,
+          # so pointing both at clor_ci made rowLevelSecurity.test.ts read
+          # another company's rows — and fail, correctly. The suite had been
+          # asked to prove RLS through a role the policies do not apply to.
+          #
+          # globalSetup creates clor_app with this password, NOSUPERUSER and
+          # NOBYPASSRLS, which is the arrangement production runs.
+          PGADMIN_URL: postgresql://clor_ci:clor_ci@localhost:5432/postgres
+          DATABASE_URL: postgresql://clor_app:clor_ci_app@localhost:5432/postgres
           CLOR_APP_ROLE: clor_app
           CLOR_APP_PASSWORD: clor_ci_app
 
