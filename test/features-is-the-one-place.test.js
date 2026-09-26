@@ -91,7 +91,7 @@ describe('what was deliberately left alone', () => {
     const picker = readFileSync('apps/accounting/src/features/settings/ModulePicker.jsx', 'utf8');
     for (const src of [model, picker]) expect(src).toContain('setFeatures');
     for (const frame of ['FeaturesPage.jsx', 'FeaturesPanel.jsx', 'FeatureCatalog.jsx']) {
-      expect(readFileSync(`src/features/features/${frame}`, 'utf8')).not.toContain('setFeatures(');
+      expect(readFileSync(`apps/accounting/src/features/features/${frame}`, 'utf8')).not.toContain('setFeatures(');
     }
     /* And no second store anywhere. */
     expect(model).not.toMatch(/featuresV2|businessOperationFlags|sidebarFeatureFlags/);

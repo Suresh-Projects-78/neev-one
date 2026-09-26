@@ -317,7 +317,7 @@ describe('Fetch from GSTIN', () => {
 
   it('fills an empty name and PAN from the portal', async () => {
     const user = userEvent.setup();
-    const { apiFetch } = await import('../../api/http');
+    const { apiFetch } = await import('@platform/http');
     apiFetch.mockResolvedValueOnce(portal);
 
     await openRegistered(user);
@@ -328,7 +328,7 @@ describe('Fetch from GSTIN', () => {
 
   /* The spec: do not silently overwrite manually entered information. */
   it('keeps a name that was already typed, and says so', async () => {
-    const { apiFetch } = await import('../../api/http');
+    const { apiFetch } = await import('@platform/http');
     apiFetch.mockResolvedValueOnce(portal);
 
     const user2 = userEvent.setup();

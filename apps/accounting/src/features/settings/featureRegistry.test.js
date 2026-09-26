@@ -103,7 +103,7 @@ describe('the switches that need somewhere to go next', () => {
   it('names a screen that actually exists', () => {
     /* A link to a screen the router does not know is a dead end, and nothing
        else would catch it. */
-    const app = readFileSync('src/App.jsx', 'utf8');
+    const app = readFileSync('apps/accounting/src/App.jsx', 'utf8');
     for (const key of ['branches', 'warehouses', 'multiCurrency']) {
       expect(app).toContain(`case '${settingsLinkFor(key).key}':`);
     }

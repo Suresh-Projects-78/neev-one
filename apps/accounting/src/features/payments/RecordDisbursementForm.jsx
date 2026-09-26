@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useRef } from 'react';
 import { useDocumentFormKeys } from '@ui/components/ui/useDocumentFormKeys';
-import { DocFormActions } from '@ui/components/DocumentForm';
+import { DocFormActions, DocFormFootnote, AmountInWordsBand } from '@ui/components/DocumentForm';
+import { amountInWordsInr } from '@ui/utils/money';
 import { notify } from '@ui/components/ui/notify';
 import { blockIfClosed } from '@ui/utils/bookClose';
 
@@ -839,6 +840,12 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
    * commits, and Enter moves to the next field instead of posting the moment
    * the cursor is in the amount box.
    */
+  /* How many bills the operator has ticked, for the running bar. */
+  const selectedCount = useMemo(
+    () => Object.values(allocations).filter((v) => Boolean(v?.selected)).length,
+    [allocations]
+  );
+
   const onFormKeyDown = useDocumentFormKeys({ formRef });
 
   return (
@@ -1139,7 +1146,70 @@ const RecordDisbursementForm = ({ db, setDb, currentCompany, onClose, screenTitl
       ) : null}
 
 
-      <FieldErrorSummary errors={fieldErrors.errors} />
+      {/*
+       * What the payment comes to, put back.
+       *
+       * Commit 09525c9 removed this block and the receipt's twin, and left the
+       * tests that assert them in place — so the screens that decide how much
+       * money leaves a bank account have been shipping without the figures
+       * that catch a mistake, and five tests have been red ever since. The
+       * numbers were never lost: `computed` still works all of them out. Only
+       * the display went.
+       *
+       * The two that catch a mistake are the last two: money put against
+       * nothing, and a payment that settles less than it moves.
+       */}
+      <section className="ui-card p-4" aria-label="Payment summary">
+        <h3 className="ui-t-sec">Payment summary</h3>
+        <dl className="mt-3 space-y-2 text-sm">
+          {[
+            ['Amount paid', computed.totalAmount],
+            ['TDS deduction', computed.tds],
+            ['Bank charges', computed.bankCharges],
+            ['Other deductions', computed.otherCharges],
+          ].map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between gap-3">
+              <dt className="ui-muted">{label}</dt>
+              <dd className="ui-money">{formatMoney(value, currentCompany)}</dd>
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between gap-3 border-t pt-2" style={{ borderColor: 'rgb(var(--border))' }}>
+            <dt className="ui-muted">Total deductions</dt>
+            <dd className="ui-money">{formatMoney(computed.deductions, currentCompany)}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <dt className="ui-muted">Total allocated</dt>
+            <dd className="ui-money">{formatMoney(computed.allocated, currentCompany)}</dd>
+          </div>
+        </dl>
+
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ui-tile-brand">
+          <span className="text-sm font-medium">Advance (unallocated)</span>
+          <span className="ui-money">{formatMoney(computed.advance, currentCompany)}</span>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-3 ui-tile-brand">
+          <span className="text-sm font-medium">Net payment amount</span>
+          <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
+        </div>
+
+        <AmountInWordsBand words={amountInWordsInr(computed.netCash)} />
+      </section>
+
+      {/* A payment against the wrong bill is a dispute six months later, and
+          this is the line that says somebody checked. */}
+      <DocFormFootnote declaration="the payment above is against the documents selected, and the details are correct." />
+
+      {/* The running figure, kept on screen while bills are ticked off: what
+          actually LEAVES the account, not what the bills came to. Reading the
+          gross here disagreed with the summary a few inches above it. */}
+      <div className="ui-entry-summary">
+        <span className="ui-t-label">Paid from the account</span>
+        <span className="ui-money-lg">{formatMoney(computed.netCash, currentCompany)}</span>
+        <span className="ui-caption">{selectedCount} bill(s) allocated</span>
+        <FieldErrorSummary errors={fieldErrors.errors} />
+      </div>
     </form>
   );
 };
