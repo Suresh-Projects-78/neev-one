@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { usePermissions } from '@ui/permissions/usePermissions';
 import { createRole } from '../../api/admin';
 
 const MODULES = [
@@ -20,6 +21,8 @@ export function RoleCreateForm({ orgId, onCreated }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [roleType, setRoleType] = useState('CUSTOM');
+  // The server lets only an administrator create an Administrator role.
+  const { isAdmin } = usePermissions();
 
   const [selected, setSelected] = useState(() => new Set());
 
@@ -75,7 +78,7 @@ export function RoleCreateForm({ orgId, onCreated }) {
         <div>
           <label className="ui-label" htmlFor="rolecreateform-role-type">Role Type</label>
           <select id="rolecreateform-role-type" className="ui-select w-full" value={roleType} onChange={(e) => setRoleType(e.target.value)}>
-            <option value="ADMIN">Admin</option>
+            {isAdmin ? <option value="ADMIN">Admin</option> : null}
             <option value="ACCOUNTANT">Accountant</option>
             <option value="SALES">Sales</option>
             <option value="CUSTOM">Custom</option>

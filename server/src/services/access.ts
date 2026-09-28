@@ -20,6 +20,8 @@ const ADMIN_FIELD_LEVEL = 99;
 
 export type EffectiveAccess = {
   roleIds: string[];
+  /** Holds at least one ADMIN-type role: field levels do not apply, and ADMIN roles may be administered. */
+  isAdmin: boolean;
   /** "MODULE::Resource::ACTION" */
   permissions: Set<string>;
   /** Highest field level granted per "MODULE::Resource::ACTION". */
@@ -68,7 +70,7 @@ export async function resolveAccess(
   const roleIds = await resolveRoleIds(accountId, orgId, userId, branchId);
 
   if (!roleIds.length) {
-    return { roleIds, permissions: new Set(), levels: new Map() };
+    return { roleIds, isAdmin: false, permissions: new Set(), levels: new Map() };
   }
 
   const rows = await prisma.rolePermission.findMany({
@@ -118,7 +120,7 @@ export async function resolveAccess(
     else if (!levels.has(k)) levels.set(k, r.permLevel);
   }
 
-  return { roleIds, permissions, levels };
+  return { roleIds, isAdmin, permissions, levels };
 }
 
 /** The field level this user holds for a given permission. */

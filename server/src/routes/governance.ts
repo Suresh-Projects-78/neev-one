@@ -5,6 +5,8 @@ import { prisma } from '../utils/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { RoleType } from '../constants/enums.js';
+import { ADMIN_ONLY_ERROR, cannotGrantError, rolePermissionKeys, unheldGrants } from '../services/roleGuards.js';
 import { PermissionAction } from '../constants/enums.js';
 import { ApprovalError, decide, notifyDecision } from '../services/approvals.js';
 import { ensureLedgerSetup, invoicePostingLines, postEntry } from '../services/ledger.js';
@@ -154,6 +156,25 @@ governanceRouter.post('/orgs/:orgId/users/:userId/role-profiles', USERS_EDIT, as
   });
   if (owned.length !== body.profileIds.length) {
     return res.status(400).json({ error: 'One or more profiles do not belong to this organisation' });
+  }
+
+  // A profile hands out every role inside it, so it is bounded the way a
+  // direct assignment is: only an administrator may hand out an Administrator
+  // role, and the caller must hold what the profile's roles grant.
+  if (owned.length) {
+    const links = await prisma.roleProfileRole.findMany({
+      where: { accountId, orgId, profileId: { in: owned.map((p) => p.id) } },
+      select: { roleId: true },
+    });
+    const roleIds = [...new Set(links.map((l) => l.roleId))];
+    if (roleIds.length) {
+      const adminRoles = await prisma.role.count({ where: { id: { in: roleIds }, roleType: RoleType.ADMIN } });
+      if (adminRoles > 0 && !req.isAdmin) return res.status(403).json(ADMIN_ONLY_ERROR);
+      const granted = new Set<string>();
+      for (const roleId of roleIds) for (const k of await rolePermissionKeys(roleId)) granted.add(k);
+      const missing = unheldGrants(req, granted);
+      if (missing.length) return res.status(403).json(cannotGrantError(missing));
+    }
   }
 
   await prisma.$transaction(async (tx) => {

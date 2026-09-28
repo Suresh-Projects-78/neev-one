@@ -73,6 +73,12 @@ APIs (core)
 Notes
 
 - All permission checks are server-side in `src/middleware/rbac.ts`.
+- Role administration is bounded (`src/services/roleGuards.ts`): a caller may only grant
+  permissions they hold themselves; ADMIN-type roles are created, edited, deleted and
+  assigned only by an administrator; the last active administrator cannot be removed,
+  deactivated or demoted, and an ADMIN role always keeps `SETTINGS::Roles::*` and
+  `SETTINGS::Users::*`. Refusals carry a `code`: `cannot_grant_unheld`, `admin_only`,
+  `last_admin`, `admin_lockout`, `role_in_use`.
 - GSTIN validation: `src/utils/gstin.ts` (format + checksum + state code match).
 
 Master data sharing (head office)

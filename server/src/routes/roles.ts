@@ -4,16 +4,29 @@ import { prisma } from '../utils/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
-import { PermissionAction, type PermissionAction as PermissionActionType } from '../constants/enums.js';
+import { PermissionAction, RoleType } from '../constants/enums.js';
+import { isKnownPermission, permKey } from '../constants/permissionCatalog.js';
 import { ensureDefaultRoles } from '../services/defaultRoles.js';
+import { ensurePermissionCatalog } from './permissions.js';
+import {
+  ADMIN_ONLY_ERROR,
+  ANTI_LOCKOUT_KEYS,
+  LAST_ADMIN_ERROR,
+  cannotGrantError,
+  countOtherAdmins,
+  rolePermissionKeys,
+  unheldGrants,
+} from '../services/roleGuards.js';
 
 export const rolesRouter = Router();
 rolesRouter.use(requireAuth, requireTenantContext);
 
+const ACTIONS = ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'APPROVE', 'EXPORT'] as const;
+
 const permissionObject = z.object({
   module: z.string().min(1),
   subModule: z.string().optional().nullable(),
-  action: z.enum(['VIEW', 'CREATE', 'EDIT', 'DELETE', 'APPROVE', 'EXPORT']),
+  action: z.enum(ACTIONS),
   allowed: z.boolean().default(true),
 });
 
@@ -34,7 +47,7 @@ const permissionInput = z.union([
       return {
         module,
         subModule: subModule === '*' ? null : subModule,
-        action: action as 'VIEW' | 'CREATE' | 'EDIT' | 'DELETE' | 'APPROVE' | 'EXPORT',
+        action: action as (typeof ACTIONS)[number],
         allowed: true,
       };
     }),
@@ -49,10 +62,46 @@ const roleSchema = z.object({
   permissions: z.array(permissionInput).default([]),
 });
 
-async function upsertPermission(module: string, subModule: string | null, action: PermissionActionType) {
-  const existing = await prisma.permission.findFirst({ where: { module, subModule, action } });
-  if (existing) return existing;
-  return prisma.permission.create({ data: { module, subModule, action } });
+type GrantInput = z.infer<typeof permissionInput>;
+
+/**
+ * The permission keys a request asks a role to hold.
+ *
+ * Only catalogued permissions are accepted, the same rule the matrix endpoint
+ * applies: a role must not hold a permission no route checks, and this must
+ * not be a way to smuggle in new keys. `allowed: false` entries grant nothing
+ * and are dropped rather than stored.
+ */
+function wantedKeys(grants: GrantInput[]): { keys: Set<string>; unknown: string[] } {
+  const keys = new Set<string>();
+  const unknown: string[] = [];
+  for (const g of grants) {
+    if (!g.allowed) continue;
+    const module = g.module.trim();
+    const subModule = g.subModule ? g.subModule.trim() : null;
+    const key = permKey(module, subModule, g.action);
+    if (!isKnownPermission(module, subModule, g.action)) {
+      unknown.push(key);
+      continue;
+    }
+    keys.add(key);
+  }
+  return { keys, unknown };
+}
+
+/** Permission ids by wire key, after making sure every catalogue row exists. */
+async function permissionIdsByKey() {
+  await ensurePermissionCatalog();
+  const rows = await prisma.permission.findMany({ select: { id: true, module: true, subModule: true, action: true } });
+  return new Map(rows.map((p) => [permKey(p.module, p.subModule, p.action), p.id]));
+}
+
+const roleWithPermissions = (roleId: string) =>
+  prisma.role.findUnique({ where: { id: roleId }, include: { permissions: { include: { permission: true } } } });
+
+async function branchBelongsToOrg(accountId: string, orgId: string, branchId: string) {
+  const branch = await prisma.branch.findFirst({ where: { id: branchId, accountId, orgId }, select: { id: true } });
+  return Boolean(branch);
 }
 
 rolesRouter.get('/orgs/:orgId/roles', requirePermission('SETTINGS', PermissionAction.VIEW, 'Roles'), async (req, res) => {
@@ -106,32 +155,44 @@ rolesRouter.post('/orgs/:orgId/roles', requirePermission('SETTINGS', PermissionA
 
   const body = roleSchema.parse(req.body);
 
-  const role = await prisma.role.create({
-    data: {
-      accountId,
-      orgId,
-      branchId: body.branchId ?? null,
-      name: body.name,
-      description: body.description ?? null,
-      roleType: body.roleType,
-      createdByUserId,
-    },
-  });
+  if (body.roleType === RoleType.ADMIN && !req.isAdmin) return res.status(403).json(ADMIN_ONLY_ERROR);
 
-  for (const p of body.permissions) {
-    const perm = await upsertPermission(p.module.trim(), p.subModule ? p.subModule.trim() : null, p.action as PermissionAction);
-    await prisma.rolePermission.create({
+  const { keys, unknown } = wantedKeys(body.permissions);
+  if (unknown.length) return res.status(400).json({ error: `Unknown permission: ${unknown[0]}`, permissions: unknown });
+
+  const missing = unheldGrants(req, keys);
+  if (missing.length) return res.status(403).json(cannotGrantError(missing));
+
+  if (body.branchId && !(await branchBelongsToOrg(accountId, orgId, body.branchId))) {
+    return res.status(400).json({ error: 'Branch does not belong to this organisation' });
+  }
+
+  const idByKey = keys.size ? await permissionIdsByKey() : new Map<string, string>();
+
+  const role = await prisma.$transaction(async (tx) => {
+    const created = await tx.role.create({
       data: {
         accountId,
         orgId,
-        roleId: role.id,
-        permissionId: perm.id,
-        allowed: Boolean(p.allowed),
+        branchId: body.branchId ?? null,
+        name: body.name,
+        description: body.description ?? null,
+        roleType: body.roleType,
+        createdByUserId,
       },
+      select: { id: true },
     });
-  }
+    for (const key of keys) {
+      const permissionId = idByKey.get(key);
+      if (!permissionId) continue;
+      await tx.rolePermission.create({
+        data: { accountId, orgId, roleId: created.id, permissionId, allowed: true },
+      });
+    }
+    return created;
+  });
 
-  const full = await prisma.role.findUnique({ where: { id: role.id }, include: { permissions: { include: { permission: true } } } });
+  const full = await roleWithPermissions(role.id);
   res.status(201).json({ role: full });
 });
 
@@ -146,34 +207,163 @@ rolesRouter.patch('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', Pe
   const role = await prisma.role.findFirst({ where: { id: roleId, accountId, orgId } });
   if (!role) return res.status(404).json({ error: 'Role not found' });
 
-  await prisma.role.update({
-    where: { id: roleId },
-    data: {
-      ...('name' in body ? { name: body.name } : {}),
-      ...('description' in body ? { description: body.description ?? null } : {}),
-      ...('roleType' in body ? { roleType: body.roleType } : {}),
-      ...('branchId' in body ? { branchId: body.branchId ?? null } : {}),
-    },
-  });
+  // An Administrator role, and anything becoming one, is administered only by
+  // an administrator.
+  const becomesAdmin = body.roleType === RoleType.ADMIN;
+  if ((role.roleType === RoleType.ADMIN || becomesAdmin) && !req.isAdmin) {
+    return res.status(403).json(ADMIN_ONLY_ERROR);
+  }
 
+  const nextType = body.roleType ?? role.roleType;
+  const isAdminRole = nextType === RoleType.ADMIN;
+
+  // Demoting the only Administrator role locks everybody out.
+  if (role.roleType === RoleType.ADMIN && !isAdminRole) {
+    if ((await countOtherAdmins(accountId, orgId, { roleId: role.id })) === 0) {
+      return res.status(409).json(LAST_ADMIN_ERROR);
+    }
+  }
+
+  if (body.branchId && !(await branchBelongsToOrg(accountId, orgId, body.branchId))) {
+    return res.status(400).json({ error: 'Branch does not belong to this organisation' });
+  }
+
+  let keys: Set<string> | null = null;
   if ('permissions' in body && body.permissions) {
-    // Replace permissions set for clarity (transaction safe in production)
-    await prisma.rolePermission.deleteMany({ where: { roleId } });
+    const wanted = wantedKeys(body.permissions);
+    if (wanted.unknown.length) {
+      return res.status(400).json({ error: `Unknown permission: ${wanted.unknown[0]}`, permissions: wanted.unknown });
+    }
+    keys = wanted.keys;
 
-    for (const p of body.permissions) {
-      const perm = await upsertPermission(p.module.trim(), p.subModule ? p.subModule.trim() : null, p.action as PermissionAction);
-      await prisma.rolePermission.create({
-        data: {
-          accountId,
-          orgId,
-          roleId,
-          permissionId: perm.id,
-          allowed: Boolean(p.allowed),
-        },
+    // Only permissions newly added need to be held by the grantor; a role may
+    // always be trimmed.
+    const held = await rolePermissionKeys(role.id);
+    const added = [...keys].filter((k) => !held.has(k));
+    const missing = unheldGrants(req, added);
+    if (missing.length) return res.status(403).json(cannotGrantError(missing));
+  }
+
+  if (isAdminRole) {
+    const effective = keys ?? (await rolePermissionKeys(role.id));
+    const lost = ANTI_LOCKOUT_KEYS.filter((k) => !effective.has(k));
+    if (lost.length) {
+      return res.status(400).json({
+        error: 'An Administrator role must keep the permissions to manage users and roles',
+        code: 'admin_lockout',
+        permissions: lost,
       });
     }
   }
 
-  const full = await prisma.role.findUnique({ where: { id: roleId }, include: { permissions: { include: { permission: true } } } });
+  const idByKey = keys && keys.size ? await permissionIdsByKey() : new Map<string, string>();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.role.update({
+      where: { id: roleId },
+      data: {
+        ...('name' in body ? { name: body.name } : {}),
+        ...('description' in body ? { description: body.description ?? null } : {}),
+        ...('roleType' in body ? { roleType: body.roleType } : {}),
+        ...('branchId' in body ? { branchId: body.branchId ?? null } : {}),
+      },
+    });
+
+    if (!keys) return;
+
+    /*
+     * Replace the set by diffing it. Clearing and re-inserting lost the field
+     * level on every permission the role kept, so a role edited on the Roles
+     * screen silently dropped back to level 0 everywhere the matrix had raised
+     * it.
+     */
+    const wantedIds = new Set([...keys].map((k) => idByKey.get(k)).filter(Boolean) as string[]);
+    const current = await tx.rolePermission.findMany({
+      where: { roleId },
+      select: { id: true, permissionId: true, allowed: true },
+    });
+    const currentByPermId = new Map(current.map((c) => [c.permissionId, c]));
+
+    for (const permissionId of wantedIds) {
+      const existing = currentByPermId.get(permissionId);
+      if (!existing) {
+        await tx.rolePermission.create({ data: { accountId, orgId, roleId, permissionId, allowed: true } });
+      } else if (!existing.allowed) {
+        await tx.rolePermission.update({ where: { id: existing.id }, data: { allowed: true } });
+      }
+    }
+    const toRemove = current.filter((c) => !wantedIds.has(c.permissionId)).map((c) => c.id);
+    if (toRemove.length) await tx.rolePermission.deleteMany({ where: { id: { in: toRemove } } });
+  });
+
+  const full = await roleWithPermissions(roleId);
   res.json({ role: full });
+});
+
+/**
+ * Deleting a role.
+ *
+ * The Roles screen has offered this since it was written; the server never
+ * answered it, so every attempt ended in a 404 dressed up as "Failed to
+ * delete role". A role still assigned to somebody, or named as the approver
+ * in an approval rule, is refused rather than silently unassigned: removing
+ * access should be a decision made on the user, not a side effect of tidying
+ * the role list.
+ */
+rolesRouter.delete('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', PermissionAction.DELETE, 'Roles'), async (req, res) => {
+  const accountId = req.tenant!.accountId;
+  const orgId = String(req.params.orgId);
+  const roleId = String(req.params.roleId);
+  if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
+
+  const role = await prisma.role.findFirst({ where: { id: roleId, accountId, orgId }, select: { id: true, name: true, roleType: true } });
+  if (!role) return res.status(404).json({ error: 'Role not found' });
+
+  if (role.roleType === RoleType.ADMIN && !req.isAdmin) return res.status(403).json(ADMIN_ONLY_ERROR);
+
+  const assigned = await prisma.userRoleAssignment.count({ where: { roleId: role.id } });
+  if (assigned > 0) {
+    return res.status(409).json({
+      error: `Role is assigned to ${assigned} user${assigned === 1 ? '' : 's'}; reassign them first`,
+      code: 'role_in_use',
+      assignedUsersCount: assigned,
+    });
+  }
+
+  const approvals = await prisma.approvalRule.count({ where: { accountId, orgId, approverRoleId: role.id } });
+  if (approvals > 0) {
+    return res.status(409).json({
+      error: `Role is the approver in ${approvals} approval rule${approvals === 1 ? '' : 's'}; change them first`,
+      code: 'role_in_use',
+      approvalRulesCount: approvals,
+    });
+  }
+
+  // With nobody assigned, an ADMIN role cannot be anybody's last one; but an
+  // org must not end up with no Administrator role at all to assign.
+  if (role.roleType === RoleType.ADMIN) {
+    const otherAdminRoles = await prisma.role.count({ where: { accountId, orgId, roleType: RoleType.ADMIN, NOT: { id: role.id } } });
+    if (otherAdminRoles === 0) return res.status(409).json(LAST_ADMIN_ERROR);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // RoleProfileRole has no relation to Role, so it does not cascade.
+    await tx.roleProfileRole.deleteMany({ where: { accountId, orgId, roleId: role.id } });
+    await tx.role.delete({ where: { id: role.id } });
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      accountId,
+      orgId,
+      branchId: req.tenant!.branchId,
+      entity: 'Role',
+      entityId: role.id,
+      action: 'DELETE',
+      message: `Role deleted: ${role.name}`,
+      createdByUserId: req.auth!.userId,
+    },
+  });
+
+  res.json({ ok: true });
 });

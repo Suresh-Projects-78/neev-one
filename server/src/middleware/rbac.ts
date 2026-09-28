@@ -12,6 +12,8 @@ declare module 'express-serve-static-core' {
   interface Request {
     permissions?: Set<string>;
     permissionLevels?: Map<string, number>;
+    /** Whether the caller holds an ADMIN-type role in this org and branch. */
+    isAdmin?: boolean;
   }
 }
 
@@ -124,6 +126,7 @@ export function requirePermission(module: string, action: PermissionActionType, 
     const allowed = access.permissions;
     req.permissions = allowed;
     req.permissionLevels = access.levels;
+    req.isAdmin = access.isAdmin;
 
     const want = permString(m, sm || null, action);
     if (!allowed.has(want)) {
