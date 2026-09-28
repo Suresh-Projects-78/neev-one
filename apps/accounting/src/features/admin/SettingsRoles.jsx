@@ -223,7 +223,7 @@ export function SettingsRoles({ orgId }) {
 
   const openCreate = () => {
     setEditRole(null);
-    setForm({ name: '', permissions: new Set() });
+    setForm({ name: '', ownDocumentsOnly: false, permissions: new Set() });
     setViewRoleId(null);
     setShowForm(true);
   };
@@ -243,6 +243,7 @@ export function SettingsRoles({ orgId }) {
     const normalized = normalizeRolePermissions(r.permissions || r._normalizedPermissions);
     setForm({
       name: r.name,
+      ownDocumentsOnly: Boolean(r.ownDocumentsOnly),
       permissions: permissionsToSet(normalized),
     });
     setShowForm(true);
@@ -306,6 +307,7 @@ export function SettingsRoles({ orgId }) {
     try {
       const payload = {
         name: String(form.name || '').trim(),
+        ownDocumentsOnly: Boolean(form.ownDocumentsOnly),
         permissions: setToPermissions(form.permissions),
       };
       if (editRole) {
@@ -474,6 +476,19 @@ export function SettingsRoles({ orgId }) {
             <label className="ui-label" htmlFor="settingsroles-role-name">Role Name *</label>
             <input id="settingsroles-role-name" className="ui-input w-full" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} required />
           </div>
+          <label className="flex items-start gap-2 text-sm ui-fg" htmlFor="settingsroles-own-docs">
+            <input
+              id="settingsroles-own-docs"
+              type="checkbox"
+              className="mt-0.5"
+              checked={Boolean(form.ownDocumentsOnly)}
+              onChange={(e) => setForm((p) => ({ ...p, ownDocumentsOnly: e.target.checked }))}
+            />
+            <span>
+              Own documents only
+              <span className="block ui-subtle text-xs">Holders see and edit only the invoices, bills, quotes and payments they raised themselves.</span>
+            </span>
+          </label>
           <div>
             <label className="block text-sm font-medium mb-2">Permissions</label>
             <div className="border rounded-lg overflow-hidden">

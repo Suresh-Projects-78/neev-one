@@ -21,6 +21,7 @@ export function RoleCreateForm({ orgId, onCreated }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [roleType, setRoleType] = useState('CUSTOM');
+  const [ownDocumentsOnly, setOwnDocumentsOnly] = useState(false);
   // The server lets only an administrator create an Administrator role.
   const { isAdmin } = usePermissions();
 
@@ -52,11 +53,13 @@ export function RoleCreateForm({ orgId, onCreated }) {
         name,
         description: description || null,
         roleType,
+        ownDocumentsOnly,
         permissions,
       });
       onCreated?.(res.role);
       setName('');
       setDescription('');
+      setOwnDocumentsOnly(false);
       setSelected(new Set());
     } catch (err) {
       setError(err.message || 'Failed');
@@ -90,6 +93,14 @@ export function RoleCreateForm({ orgId, onCreated }) {
         <label className="ui-label" htmlFor="rolecreateform-description">Description</label>
         <input id="rolecreateform-description" className="ui-input w-full" value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
+
+      <label className="flex items-start gap-2 text-sm ui-fg" htmlFor="rolecreateform-own-docs">
+        <input id="rolecreateform-own-docs" type="checkbox" className="mt-0.5" checked={ownDocumentsOnly} onChange={(e) => setOwnDocumentsOnly(e.target.checked)} />
+        <span>
+          Own documents only
+          <span className="block ui-subtle text-xs">Holders see and edit only the documents they raised themselves.</span>
+        </span>
+      </label>
 
       <div className="border rounded-xl overflow-hidden">
         <div className="px-4 py-2 ui-sunken border-b font-semibold">Permissions</div>

@@ -10,7 +10,7 @@ import { ensureLedgerSetup, invoicePostingLines, postEntry, reverseEntry } from 
 import { PosCheckoutError, assertPosSaleCancellable } from '../services/posCheckout.js';
 import { recalcDocumentSettlement } from '../services/settlement.js';
 import { MutationBlocked, assertInvoiceMutationAllowed } from '../services/invoiceMutation.js';
-import { allowsEntity, filterFieldsByLevel, levelFor, resolveAccess, resolveUserPermissions } from '../services/access.js';
+import { allowsEntity, filterFieldsByLevel, levelFor, ownDocsWhere, resolveAccess, resolveUserPermissions } from '../services/access.js';
 import { evaluateApproval, isPending } from '../services/approvals.js';
 import { fieldsFor } from '../constants/permissionCatalog.js';
 import { dueDateFor } from './parties.js';
@@ -314,7 +314,7 @@ invoicesRouter.get('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, Pe
   const limit = Math.min(1000, Math.max(1, Number(req.query.limit) || 500));
   const offset = Math.max(0, Number(req.query.offset) || 0);
   const rows = await prisma.invoice.findMany({
-    where: { accountId, orgId, branchId },
+    where: { accountId, orgId, branchId, ...ownDocsWhere(req) },
     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     take: limit,
     skip: offset,
@@ -542,7 +542,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
   const existing = await prisma.invoice.findFirst({
-    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId },
+    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId, ...ownDocsWhere(req) },
   });
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
@@ -642,7 +642,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
   const existing = await prisma.invoice.findFirst({
-    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId },
+    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId, ...ownDocsWhere(req) },
   });
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });
 
@@ -726,7 +726,7 @@ invoicesRouter.delete('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVO
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
   const existing = await prisma.invoice.findFirst({
-    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId },
+    where: { id: invoiceId, accountId, orgId, branchId: req.tenant!.branchId, ...ownDocsWhere(req) },
     select: { id: true, number: true, total: true, status: true },
   });
   if (!existing) return res.status(404).json({ error: 'Invoice not found' });

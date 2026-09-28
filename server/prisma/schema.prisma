@@ -271,6 +271,9 @@ model Role {
   // Stored as a string rather than a Postgres enum: adding a value to an enum
   // is a migration, and these lists grow. (ADMIN | ACCOUNTANT | SALES | CUSTOM)
   roleType    String
+  // Limits list and single-document reads to rows the holder created
+  // (Odoo "Own Documents Only"). One unrestricted role lifts it.
+  ownDocumentsOnly Boolean @default(false)
 
   createdByUserId String
   createdAt       DateTime @default(now())

@@ -365,6 +365,14 @@ describe('deleting a role', () => {
     await request(app).delete(`/api/orgs/${owner.orgId}/roles/${role.body.role.id}`).set(auth(owner)).expect(404);
   });
 
+  it('does not re-seed a standard role that was deleted on purpose', async () => {
+    const before = await request(app).get(`/api/orgs/${owner.orgId}/roles`).set(auth(owner)).expect(200);
+    const reports = before.body.roles.find((r: any) => r.name === 'Reports Only');
+    await request(app).delete(`/api/orgs/${owner.orgId}/roles/${reports.id}`).set(auth(owner)).expect(200);
+    const after = await request(app).get(`/api/orgs/${owner.orgId}/roles`).set(auth(owner)).expect(200);
+    expect(after.body.roles.map((r: any) => r.name)).not.toContain('Reports Only');
+  });
+
   it('refuses while somebody still holds it', async () => {
     const member = await makeMember(['SALES::Invoices::VIEW'], 'Holder');
     const res = await request(app).delete(`/api/orgs/${owner.orgId}/roles/${member.roleId}`).set(auth(owner)).expect(409);

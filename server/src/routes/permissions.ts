@@ -64,6 +64,8 @@ permissionsRouter.get(
         key,
         label: p.label,
         description: p.description,
+        roleType: p.roleType,
+        ownDocumentsOnly: Boolean(p.ownDocumentsOnly),
       })),
     });
   }
@@ -362,6 +364,8 @@ permissionsRouter.get('/orgs/:orgId/permissions/me', async (req, res) => {
     profiles: profiles.map((p) => p.profile),
     // Holds an ADMIN-type role: may administer Administrator roles and users.
     isAdmin: access.isAdmin,
+    // Document reads are limited to rows this user created.
+    ownDocumentsOnly: access.ownDocumentsOnly,
     permissions,
     // Highest field level held per permission; absent means level 0.
     levels,

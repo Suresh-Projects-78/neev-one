@@ -5,6 +5,7 @@ import { prisma } from '../utils/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { ownDocsWhere } from '../services/access.js';
 import { PermissionAction } from '../constants/enums.js';
 import { ensureLedgerSetup, postEntry, reverseEntry } from '../services/ledger.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
@@ -118,6 +119,7 @@ paymentsRouter.get('/orgs/:orgId/payments', async (req, res) => {
       orgId,
       branchId,
       direction,
+      ...ownDocsWhere(req),
       ...(String(req.query.unreconciled || '') === 'true' ? { reconciled: false } : {}),
     },
     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
@@ -411,7 +413,7 @@ paymentsRouter.post('/orgs/:orgId/payments/:paymentId/reverse', async (req, res)
   const { accountId, orgId, branchId } = req.tenant!;
 
   const payment = await prisma.payment.findFirst({
-    where: { id: String(req.params.paymentId), accountId, orgId },
+    where: { id: String(req.params.paymentId), accountId, orgId, ...ownDocsWhere(req) },
   });
   if (!payment) return res.status(404).json({ error: 'Payment not found' });
   if (payment.status === 'REVERSED') return res.status(409).json({ error: 'Already reversed' });
@@ -468,7 +470,7 @@ paymentsRouter.patch('/orgs/:orgId/payments/:paymentId/reconcile', async (req, r
   }
 
   const payment = await prisma.payment.findFirst({
-    where: { id: String(req.params.paymentId), accountId, orgId },
+    where: { id: String(req.params.paymentId), accountId, orgId, ...ownDocsWhere(req) },
   });
   if (!payment) return res.status(404).json({ error: 'Payment not found' });
 

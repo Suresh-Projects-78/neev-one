@@ -14,6 +14,8 @@ declare module 'express-serve-static-core' {
     permissionLevels?: Map<string, number>;
     /** Whether the caller holds an ADMIN-type role in this org and branch. */
     isAdmin?: boolean;
+    /** Reads of documents are limited to rows the caller created. */
+    ownDocumentsOnly?: boolean;
   }
 }
 
@@ -127,6 +129,7 @@ export function requirePermission(module: string, action: PermissionActionType, 
     req.permissions = allowed;
     req.permissionLevels = access.levels;
     req.isAdmin = access.isAdmin;
+    req.ownDocumentsOnly = access.ownDocumentsOnly;
 
     const want = permString(m, sm || null, action);
     if (!allowed.has(want)) {

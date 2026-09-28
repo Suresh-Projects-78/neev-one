@@ -6,7 +6,7 @@ import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction, RoleType } from '../constants/enums.js';
 import { isKnownPermission, permKey } from '../constants/permissionCatalog.js';
-import { ensureDefaultRoles } from '../services/defaultRoles.js';
+import { ROLE_DELETED_PREFIX, ensureDefaultRoles } from '../services/defaultRoles.js';
 import { ensurePermissionCatalog } from './permissions.js';
 import {
   ADMIN_ONLY_ERROR,
@@ -59,6 +59,8 @@ const roleSchema = z.object({
   roleType: z.enum(['ADMIN', 'ACCOUNTANT', 'SALES', 'CUSTOM']).default('CUSTOM'),
   // optional branch-scoped role
   branchId: z.string().optional().nullable(),
+  // Reads limited to documents the holder created (Odoo "Own Documents Only").
+  ownDocumentsOnly: z.boolean().optional(),
   permissions: z.array(permissionInput).default([]),
 });
 
@@ -178,6 +180,7 @@ rolesRouter.post('/orgs/:orgId/roles', requirePermission('SETTINGS', PermissionA
         name: body.name,
         description: body.description ?? null,
         roleType: body.roleType,
+        ownDocumentsOnly: Boolean(body.ownDocumentsOnly),
         createdByUserId,
       },
       select: { id: true },
@@ -266,6 +269,7 @@ rolesRouter.patch('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', Pe
         ...('description' in body ? { description: body.description ?? null } : {}),
         ...('roleType' in body ? { roleType: body.roleType } : {}),
         ...('branchId' in body ? { branchId: body.branchId ?? null } : {}),
+        ...(typeof body.ownDocumentsOnly === 'boolean' ? { ownDocumentsOnly: body.ownDocumentsOnly } : {}),
       },
     });
 
@@ -360,7 +364,8 @@ rolesRouter.delete('/orgs/:orgId/roles/:roleId', requirePermission('SETTINGS', P
       entity: 'Role',
       entityId: role.id,
       action: 'DELETE',
-      message: `Role deleted: ${role.name}`,
+      // ensureDefaultRoles reads this back so a deleted preset is not re-seeded.
+      message: `${ROLE_DELETED_PREFIX}${role.name}`,
       createdByUserId: req.auth!.userId,
     },
   });

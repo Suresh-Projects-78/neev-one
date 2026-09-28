@@ -14,13 +14,8 @@ import { ensurePermissionCatalog } from '../routes/permissions.js';
  * respected — a name that has been used and removed is not resurrected.
  */
 
-const PRESET_ROLE_TYPE: Record<string, string> = {
-  ADMIN: 'ADMIN',
-  ACCOUNTANT: 'ACCOUNTANT',
-  SALES: 'SALES',
-  STORE: 'CUSTOM',
-  VIEWER: 'CUSTOM',
-};
+/** The audit message the role delete route writes; the seeder reads it back. */
+export const ROLE_DELETED_PREFIX = 'Role deleted: ';
 
 export async function ensureDefaultRoles(accountId: string, orgId: string, userId: string) {
   const existing = await prisma.role.findMany({
@@ -28,6 +23,20 @@ export async function ensureDefaultRoles(accountId: string, orgId: string, userI
     select: { name: true },
   });
   const have = new Set(existing.map((r) => r.name.toLowerCase()));
+
+  /*
+   * A seeded role that was deleted stays deleted.
+   *
+   * Nothing recorded deletions, so the next visit to the Roles screen put the
+   * role straight back — which nobody noticed while the delete route did not
+   * exist. The delete route writes an audit row naming the role; a preset
+   * whose label appears there is left alone.
+   */
+  const deleted = await prisma.auditLog.findMany({
+    where: { accountId, orgId, entity: 'Role', action: 'DELETE', message: { startsWith: ROLE_DELETED_PREFIX } },
+    select: { message: true },
+  });
+  for (const d of deleted) have.add(String(d.message || '').slice(ROLE_DELETED_PREFIX.length).trim().toLowerCase());
 
   const missing = Object.entries(ROLE_PRESETS).filter(([, p]) => !have.has(p.label.toLowerCase()));
   if (!missing.length) return;
@@ -49,7 +58,8 @@ export async function ensureDefaultRoles(accountId: string, orgId: string, userI
             branchId: null,
             name: preset.label,
             description: preset.description,
-            roleType: PRESET_ROLE_TYPE[presetKey] || 'CUSTOM',
+            roleType: preset.roleType || 'CUSTOM',
+            ownDocumentsOnly: Boolean(preset.ownDocumentsOnly),
             createdByUserId: userId,
           },
         });

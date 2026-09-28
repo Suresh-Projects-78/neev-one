@@ -79,6 +79,14 @@ Notes
   deactivated or demoted, and an ADMIN role always keeps `SETTINGS::Roles::*` and
   `SETTINGS::Users::*`. Refusals carry a `code`: `cannot_grant_unheld`, `admin_only`,
   `last_admin`, `admin_lockout`, `role_in_use`.
+- Stock roles (`src/constants/permissionCatalog.ts` → `ROLE_PRESETS`, seeded per org on first
+  listing): Administrator · Billing Clerk · Accountant · Accounts Manager · Sales Representative
+  (own documents only) · Sales User · Sales Manager · Purchase User · Purchase Manager · Store
+  Keeper · Store Manager · Payroll User · Payroll Manager · Auditor · Reports Only · Viewer.
+  A deleted stock role is not re-seeded.
+- `Role.ownDocumentsOnly` limits invoice, bill, credit/debit note, expense, estimate, order
+  and payment reads to rows the holder created (`ownDocsWhere` in `src/services/access.ts`).
+  Additive: any unrestricted role lifts it.
 - GSTIN validation: `src/utils/gstin.ts` (format + checksum + state code match).
 
 Master data sharing (head office)
