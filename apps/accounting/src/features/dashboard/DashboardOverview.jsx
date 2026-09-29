@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '@ui/utils/money';
+import { usePermissions } from '@ui/permissions/usePermissions';
 import { bookState, setupSteps, BOOK_NEW, BOOK_SETUP, BOOK_RUNNING } from './bookState';
 import {
   CashFlowPanel,
@@ -541,7 +542,8 @@ function SetupChecklist({ steps, onGo }) {
               <button
                 type="button"
                 onClick={() => onGo?.(step.go)}
-                className="w-full text-left px-4 py-2.5 flex items-center gap-3 ui-hover-sunken relative"
+                disabled={step.allowed === false}
+                className="w-full text-left px-4 py-2.5 flex items-center gap-3 ui-hover-sunken relative disabled:cursor-default"
                 style={
                   isNext
                     ? {
@@ -573,8 +575,11 @@ function SetupChecklist({ steps, onGo }) {
                 </span>
                 {/* The word as well as the ring, so "what is left" does not
                     depend on telling two greys apart. */}
-                <span className="ms-auto ui-caption shrink-0" style={step.done ? undefined : { color: 'rgb(var(--brand-ink))', fontWeight: 600 }}>
-                  {step.done ? 'Done' : step.cta}
+                <span
+                  className="ms-auto ui-caption shrink-0"
+                  style={step.done || step.allowed === false ? undefined : { color: 'rgb(var(--brand-ink))', fontWeight: 600 }}
+                >
+                  {step.done ? 'Done' : step.allowed === false ? 'Needs an administrator' : step.cta}
                 </span>
               </button>
             </li>
@@ -853,7 +858,30 @@ export default function DashboardOverview({
    * issued one.
    */
   const state = useMemo(() => bookState(db, currentCompany), [db, currentCompany]);
-  const steps = useMemo(() => setupSteps(db, currentCompany), [db, currentCompany]);
+  /*
+   * Home offers only what the person may do.
+   *
+   * The server refuses the rest anyway, but a Sales Representative was shown
+   * "New bill" and "Reports" on their first screen and learned what they
+   * could not do by clicking it. Each shortcut names the permission it needs;
+   * a setup step the person cannot complete stays listed, marked for an
+   * administrator, so "what is left" is still true.
+   */
+  const { can, canModule } = usePermissions();
+  const steps = useMemo(() => {
+    const needs = {
+      company: 'SETTINGS::Company Profile::EDIT',
+      gstin: 'SETTINGS::Company Profile::EDIT',
+      customer: 'MASTERS::Customers::CREATE',
+      item: 'MASTERS::Items::CREATE',
+      invoice: 'SALES::Invoices::CREATE',
+      bank: 'CASHBANK::Cash & Bank::CREATE',
+    };
+    return setupSteps(db, currentCompany).map((step) => ({
+      ...step,
+      allowed: !needs[step.key] || can(needs[step.key]),
+    }));
+  }, [db, currentCompany, can]);
   const goTo = (where) => {
     if (where === 'newInvoice') return onNewInvoice?.();
     if (where === 'customers') return onOpenCustomers?.();
@@ -1150,11 +1178,11 @@ export default function DashboardOverview({
   }, [postedInvoices, openBills, db, currentCompany]);
 
   const quickActions = [
-    onNewInvoice ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice } : null,
-    onRecordReceipt ? { label: 'Record receipt', Icon: Receipt, onClick: onRecordReceipt } : null,
-    onNewBill ? { label: 'New bill', Icon: Wallet, onClick: onNewBill } : null,
-    onOpenCustomers ? { label: 'Add customer', Icon: Plus, onClick: onOpenCustomers } : null,
-    onOpenReports ? { label: 'Reports', Icon: TrendingUp, onClick: onOpenReports } : null,
+    onNewInvoice && can('SALES::Invoices::CREATE') ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice } : null,
+    onRecordReceipt && can('SALES::Receipts::CREATE') ? { label: 'Record receipt', Icon: Receipt, onClick: onRecordReceipt } : null,
+    onNewBill && can('PURCHASE::Bills::CREATE') ? { label: 'New bill', Icon: Wallet, onClick: onNewBill } : null,
+    onOpenCustomers && can('MASTERS::Customers::CREATE') ? { label: 'Add customer', Icon: Plus, onClick: onOpenCustomers } : null,
+    onOpenReports && canModule('REPORTS') ? { label: 'Reports', Icon: TrendingUp, onClick: onOpenReports } : null,
   ].filter(Boolean);
 
   /*
@@ -1176,6 +1204,7 @@ export default function DashboardOverview({
             Icon: AlertCircle,
             text: `${formatMoney(recvSplit.overdue, currentCompany)} overdue from customers`,
             onSelect: onOpenInvoices || nav('invoices'),
+            perm: 'SALES::Invoices::VIEW',
           }
         : null,
       paySplit.soon > 0
@@ -1185,6 +1214,7 @@ export default function DashboardOverview({
             Icon: Clock,
             text: `${formatMoney(paySplit.soon, currentCompany)} of bills due this week`,
             onSelect: nav('bills'),
+            perm: 'PURCHASE::Bills::VIEW',
           }
         : null,
       Number.isFinite(gst?.daysToGstr1) && gst.daysToGstr1 >= 0
@@ -1194,6 +1224,7 @@ export default function DashboardOverview({
             Icon: FileText,
             text: `GSTR-1 due in ${gst.daysToGstr1} day${gst.daysToGstr1 === 1 ? '' : 's'}`,
             onSelect: nav('gstr1'),
+            perm: 'REPORTS::GSTR-1::VIEW',
           }
         : null,
       draftCount
@@ -1203,9 +1234,10 @@ export default function DashboardOverview({
             Icon: FileText,
             text: `${draftCount} draft${draftCount === 1 ? '' : 's'} not sent yet`,
             onSelect: onOpenInvoices || nav('invoices'),
+            perm: 'SALES::Invoices::VIEW',
           }
         : null,
-    ].filter(Boolean);
+    ].filter((item) => item && (!item.perm || can(item.perm)));
 
     return (
       <div className="ui-hero-ground space-y-6">
@@ -1341,12 +1373,12 @@ export default function DashboardOverview({
             <ThingsToDo items={todo} onOpenAll={onOpenInvoices || nav('invoices')} />
             <QuickLinks
               links={[
-                { key: 'customer', label: 'Create customer', Icon: Users, tone: 'blue', onSelect: onOpenCustomers || nav('customers') },
-                { key: 'vendor', label: 'Create vendor', Icon: Users, tone: 'violet', onSelect: nav('vendors') },
-                { key: 'item', label: 'Add item or service', Icon: Package, tone: 'amber', onSelect: nav('items') },
-                { key: 'bank', label: 'Bank reconciliation', Icon: Landmark, tone: 'green', onSelect: onOpenCashBank || nav('cashBank') },
-                { key: 'reports', label: 'View reports', Icon: BarChart3, tone: 'blue', onSelect: onOpenReports || nav('reports') },
-              ].filter((l) => l.onSelect)}
+                { key: 'customer', label: 'Create customer', Icon: Users, tone: 'blue', onSelect: onOpenCustomers || nav('customers'), perm: 'MASTERS::Customers::CREATE' },
+                { key: 'vendor', label: 'Create vendor', Icon: Users, tone: 'violet', onSelect: nav('vendors'), perm: 'MASTERS::Vendors::CREATE' },
+                { key: 'item', label: 'Add item or service', Icon: Package, tone: 'amber', onSelect: nav('items'), perm: 'MASTERS::Items::CREATE' },
+                { key: 'bank', label: 'Bank reconciliation', Icon: Landmark, tone: 'green', onSelect: onOpenCashBank || nav('cashBank'), perm: 'CASHBANK::Bank Transactions::VIEW' },
+                { key: 'reports', label: 'View reports', Icon: BarChart3, tone: 'blue', onSelect: onOpenReports || nav('reports'), perm: 'REPORTS::Trial Balance::VIEW' },
+              ].filter((l) => l.onSelect && can(l.perm))}
             />
           </div>
         </div>
