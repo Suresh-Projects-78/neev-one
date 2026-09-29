@@ -56,6 +56,7 @@ import { importsRouter } from './routes/imports.js';
 import { batchSerialRouter } from './routes/batchSerial.js';
 import { paymentsRouter } from './routes/payments.js';
 import { gstinRouter } from './routes/gstin.js';
+import { stockDocumentsRouter } from './routes/stockDocuments.js';
 import { notFound, errorHandler } from './middleware/errors.js';
 
 export function buildApp() {
@@ -159,6 +160,7 @@ export function buildApp() {
   app.use('/api', gstinRouter);
   app.use('/api', branchesRouter);
   app.use('/api', warehousesRouter);
+  app.use('/api', stockDocumentsRouter);
   app.use('/api', rolesRouter);
   app.use('/api', usersRouter);
   app.use('/api', transfersRouter);

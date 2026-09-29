@@ -7,6 +7,7 @@ import { postJournalToLedger, reverseJournalOnLedger } from '@ui/utils/journalSy
 import { createDocApi, deleteDocApi, updateDocApi, hasApiSession as hasDocsApiSession } from '@ui/api/purchaseDocs';
 import { useServerDocSync } from '@ui/hooks/useServerDocSync';
 import useTdsSync from './features/tds/useTdsSync';
+import useStockSync from './features/inventory/useStockSync';
 import { useCompanyFromServer } from '@ui/hooks/useCompanyFromServer';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from '@ui/utils/gstrExport';
 import Toaster from '@ui/components/ui/Toaster';
@@ -11201,6 +11202,8 @@ const AppShell = () => {
   /* The TDS compliance stores follow the same rule as every master: local
      is the working copy, the server is where every device meets. */
   useTdsSync(db, setDb, isAuthenticated ? currentCompany : null);
+  // Stock adjustments and transfers, shared through the server like every other document.
+  useStockSync(db, setDb, isAuthenticated ? currentCompany : null);
 
 
   /*

@@ -462,6 +462,40 @@ model InventoryAdjustment {
   @@index([accountId, orgId, branchId, warehouseId, itemId])
 }
 
+/// A stock document the browser raised — an adjustment or an inter-branch
+/// transfer — kept on the server so every device and user sees one set.
+///
+/// The browser still computes stock from its documents, as it does from
+/// invoices and bills; this table makes those documents shared and durable.
+/// Identity across devices is `uid` (local ids do not travel). The columns are
+/// what the server checks — date against closed periods, warehouses against
+/// access — and `payloadJson` is the record as the screen keeps it.
+/// There is deliberately no stock balance here: the server does not yet see
+/// the invoices and bills that move stock, and a partial balance would lie.
+model StockDocument {
+  id                String  @id @default(cuid())
+  accountId         String
+  orgId             String
+  kind              String // ADJUSTMENT | TRANSFER
+  uid               String
+  number            String?
+  date              String // ISO date the stock moved
+  status            String?
+  branchId          String?
+  warehouseId       String?
+  targetBranchId    String?
+  targetWarehouseId String?
+  payloadJson       String
+
+  createdByUserId String
+  updatedByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([orgId, kind, uid])
+  @@index([accountId, orgId, kind])
+}
+
 // ----------------------------
 // Sales invoices
 // ----------------------------

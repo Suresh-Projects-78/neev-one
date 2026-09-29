@@ -20,6 +20,8 @@ import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/componen
 import { DocFormActions } from '@ui/components/DocumentForm';
 import { round2 } from '@ui/utils/money';
 import { blockIfClosed } from '@ui/utils/bookClose';
+import { deleteStockDocOnServer } from './useStockSync';
+import { syncFieldsOf } from './stockSync';
 
 const safeArray = (v) => (Array.isArray(v) ? v : []);
 
@@ -482,7 +484,11 @@ export const StockTransferEditor = ({
       setDb((prev) => {
         const list = safeArray(prev?.stockTransfers);
         const exists = list.some((t) => normalizeId(t?.id) === normalizeId(next.id));
-        const nextList = exists ? list.map((t) => (normalizeId(t?.id) === normalizeId(next.id) ? next : t)) : [...list, next];
+        // An edit rebuilds the record from the form; its sync identity is kept,
+        // or the server would receive it as a second transfer.
+        const nextList = exists
+          ? list.map((t) => (normalizeId(t?.id) === normalizeId(next.id) ? { ...next, ...syncFieldsOf(t) } : t))
+          : [...list, next];
         const companies = bumpCompanyNextNumber({
           db: prev,
           companyId: currentCompany?.id,
@@ -1493,6 +1499,8 @@ export const StockTransfersList = ({
   const removeTransfer = async (transfer) => {
     const ok = await confirmDialog({ title: 'Please confirm', message: `Delete stock transfer ${transfer?.number || ''}?`, confirmLabel: 'Yes, continue' });
     if (!ok) return;
+    const stored = safeArray(db?.stockTransfers).find((t) => normalizeId(t?.id) === normalizeId(transfer?.id)) || transfer;
+    if (!(await deleteStockDocOnServer('stockTransfers', stored))) return;
 
     setDb((prev) => {
       const list = safeArray(prev?.stockTransfers);
