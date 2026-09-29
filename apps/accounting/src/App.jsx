@@ -75,7 +75,9 @@ import RecordReceiptForm from './features/payments/RecordReceiptForm';
 import RecordDisbursementForm from './features/payments/RecordDisbursementForm';
 import { cashBankIndex } from './features/cashBank/transactions';
 
-const InvoicePreview = lazy(() => import('./features/sales/InvoicePreview'));
+/* Static, not lazy: the sales module imports it statically, so it is in the
+   main chunk either way and `lazy` only earned a build warning. */
+import InvoicePreview from './features/sales/InvoicePreview';
 
 /*
  * Screens reached from inside another screen rather than from the rail.
