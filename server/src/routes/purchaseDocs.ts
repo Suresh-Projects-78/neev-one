@@ -530,6 +530,50 @@ function register(kind: DocKind) {
     }
   );
 
+  /**
+   * Cancelling: the document stays, marked Cancelled, and its entry is
+   * reversed. The bills list offered Cancel and changed only the browser's
+   * copy, so a cancelled bill went on sitting in the server's payables.
+   * Refused while something leans on the document, as delete is.
+   */
+  purchaseDocsRouter.post(
+    `/orgs/:orgId/${cfg.path}/:docId/cancel`,
+    requirePermission(cfg.module, PermissionAction.EDIT, cfg.resource),
+    async (req, res) => {
+      if (!orgOk(req, res)) return;
+      const { accountId, orgId, branchId } = req.tenant!;
+      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId, ...ownDocsWhere(req) } });
+      if (!doc) return res.status(404).json({ error: `${cfg.resource} not found` });
+      if (String(doc.status || '').toLowerCase() === 'cancelled') return res.status(409).json({ error: 'Already cancelled' });
+
+      try {
+        await assertPurchaseDocRemovable({ accountId, orgId, kind, doc, verb: 'cancel' });
+      } catch (e: any) {
+        if (e instanceof SettledDocument) return res.status(e.status).json({ error: e.message, code: e.code });
+        throw e;
+      }
+
+      try {
+        const updated = await prisma.$transaction(async (tx) => {
+          const entries = await tx.journalEntry.findMany({
+            where: { accountId, orgId, sourceDocType: kind, sourceDocId: doc.id, status: 'POSTED' },
+            select: { id: true },
+          });
+          for (const e of entries) {
+            await reverseEntry(
+              { accountId, orgId, branchId, userId: req.auth!.userId, entryId: e.id, narration: `${cfg.resource} ${doc.number} cancelled` },
+              tx as any
+            );
+          }
+          return (tx as any)[cfg.model].update({ where: { id: doc.id }, data: { status: 'Cancelled' } });
+        });
+        res.json({ document: normalize(updated) });
+      } catch (e: any) {
+        return res.status(Number(e?.status || 400)).json({ error: `Not cancelled: ${String(e?.message || e)}` });
+      }
+    }
+  );
+
   /** Removal reverses the posting by contra entry; posted history is never edited. */
   purchaseDocsRouter.delete(
     `/orgs/:orgId/${cfg.path}/:docId`,

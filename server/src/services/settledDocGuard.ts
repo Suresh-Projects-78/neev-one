@@ -65,7 +65,7 @@ export async function assertPurchaseDocRemovable(opts: {
   kind: 'BILL' | 'EXPENSE' | 'CREDIT_NOTE' | 'DEBIT_NOTE';
   doc: { id: string; settledAmount?: unknown; extrasJson?: string | null };
   /** What is being refused, for the message: removing or changing. */
-  verb?: 'delete' | 'change';
+  verb?: 'delete' | 'change' | 'cancel';
 }) {
   const { accountId, orgId, kind, doc } = opts;
   const verb = opts.verb || 'delete';

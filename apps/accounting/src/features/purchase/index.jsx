@@ -16,7 +16,7 @@ import { notify, confirmDialog } from '@ui/components/ui/notify';
 import { useFieldErrors } from '@ui/components/ui/useFieldErrors';
 import { PermissionButton } from '@ui/permissions/ActionGuard';
 import { FieldError, FieldErrorSummary } from '@ui/components/ui/Primitives';
-import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi, updateDocApi } from '@ui/api/purchaseDocs';
+import { cancelDocApi, createDocApi, deleteDocApi, hasApiSession, saveSettlementApi, updateDocApi } from '@ui/api/purchaseDocs';
 import { resolvePurchaseRate } from '@ui/utils/pricing';
 import { isTracked, needsExpiry } from '@ui/utils/batches';
 import { Ban, Building2, SlidersHorizontal, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, Lock, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
@@ -744,22 +744,50 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
      * edited later.
      */
     const allTdsEvents = Array.isArray(db.tdsTransactions) ? db.tdsTransactions : [];
+    // The bill's own live event(s): what deleteBill reverses, found the same way.
     const priorTds = editing
-      ? allTdsEvents.find((t) => t?.source?.type === 'bill' && String(t?.source?.id) === String(initialData.id))
-      : null;
-    if (priorTds && (db.tdsChallanAllocations || []).some((a) => String(a.tdsTransactionId) === String(priorTds.id))) {
+      ? allTdsEvents.filter(
+          (e) =>
+            Number(e?.companyId) === Number(currentCompany.id) &&
+            String(e?.sourceType) === 'bill' &&
+            String(e?.sourceId) === String(initialData.id) &&
+            String(e?.status).toLowerCase() === 'posted' &&
+            !e?.reversalOfId
+        )
+      : [];
+    if (priorTds.some((t) => (db.tdsChallanAllocations || []).some((a) => String(a.tdsTransactionId) === String(t.id)))) {
       notify.error('The TDS on this bill is already allocated to a challan. Remove that allocation first, then change the bill.');
       return;
     }
-    // An edit replaces the bill's own event rather than adding a second one.
-    const tdsEvents = priorTds ? allTdsEvents.filter((t) => t !== priorTds) : allTdsEvents;
+    /*
+     * An edit is answered the way a delete is: the old events are marked
+     * Reversed and a reversal is written beside them, so the register and the
+     * return keep the history, and the new event is added after. Compliance
+     * events are never rewritten in place.
+     */
+    let nextTdsId = allTdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0);
+    const tdsStamp = new Date().toISOString();
+    const tdsReversals = priorTds.map((e) => ({
+      ...tdsReversalEventFrom(e, { reason: `Bill ${initialData?.number || initialData?.id} changed` }),
+      id: ++nextTdsId,
+    }));
+    const tdsEvents = priorTds.length
+      ? [
+          ...allTdsEvents.map((e) =>
+            priorTds.some((p) => p.id === e.id)
+              ? { ...e, status: 'Reversed', modifiedBy: tdsReversals[0]?.createdBy || 'User', modifiedAt: tdsStamp }
+              : e
+          ),
+          ...tdsReversals,
+        ]
+      : allTdsEvents;
     /* §20: a DRAFT is not a deduction. The compliance event exists only for
        a posted document — a draft bill writes nothing to the register, the
        challan queue or the return. */
     const tdsEvent =
       tdsAmount > 0 && !wantsDraft
         ? {
-            id: priorTds ? priorTds.id : allTdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
+            id: nextTdsId + 1,
             ...tdsEventFrom(tds, {
               company: currentCompany,
               party: vendorObj,
@@ -773,7 +801,7 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
     const batchesAfter = (db.batches || []).map((b) => updatedBatches.get(b.id) || b);
     setDb({
       ...db,
-      tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : priorTds ? tdsEvents : db.tdsTransactions,
+      tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : priorTds.length ? tdsEvents : db.tdsTransactions,
       bills: editing ? db.bills.map((b) => (String(b.id) === String(initialData.id) ? newBill : b)) : [...db.bills, newBill],
       batches: newBatches.length || updatedBatches.size ? [...batchesAfter, ...newBatches] : db.batches,
       companies: editing
@@ -2571,13 +2599,48 @@ export const BillsList = ({
    * that has been paid or partly returned is history, so it is cancelled, never
    * removed.
    */
+  /*
+   * Why this bill may not be cancelled or deleted, or ''. Payments against it
+   * have to be reversed first; deleting a paid bill also used to drop those
+   * payments from the browser's copy along with it.
+   */
+  const billChangeBlocked = (bill, verb) => {
+    const paid = Number(bill?.paidAmount || 0);
+    const payments = (Array.isArray(db.payments) ? db.payments : []).filter(
+      (p) =>
+        p?.companyId === currentCompany.id &&
+        String(p?.status || '').toLowerCase() !== 'reversed' &&
+        ((p?.voucherType === 'bill' && Number(p?.voucherId) === Number(bill?.id)) ||
+          (Array.isArray(p?.allocations) &&
+            p.allocations.some((a) => a?.voucherType === 'bill' && Number(a?.voucherId) === Number(bill?.id))))
+    );
+    if (payments.length || paid > 0.005) {
+      return `${bill?.number || 'This bill'} has payments against it — reverse them from the Payments list before you ${verb} the bill.`;
+    }
+    return '';
+  };
+
   const cancelBill = async (bill) => {
+    const blocked = billChangeBlocked(bill, 'cancel');
+    if (blocked) {
+      notify.error(blocked);
+      return;
+    }
     const ok = await confirmDialog({
       title: `Cancel ${bill?.number || 'this bill'}?`,
       message: 'The bill stays on record as cancelled, and stops counting towards payables and stock.',
       confirmLabel: 'Yes, cancel it',
     });
     if (!ok) return;
+    // The server reverses the bill's entry; the browser's copy follows.
+    if (bill?.backendDocId && hasApiSession()) {
+      try {
+        await cancelDocApi('bill', bill.backendDocId);
+      } catch (err) {
+        notify.error(String(err?.message || 'Unable to cancel the bill on the server.'));
+        return;
+      }
+    }
     setDb((prev) => ({
       ...prev,
       bills: (prev.bills || []).map((x) =>
@@ -2829,6 +2892,11 @@ const billStatusReason = (doc, status, company, nowMs) => {
   };
 
   const deleteBill = async (bill) => {
+    const blocked = billChangeBlocked(bill, 'delete');
+    if (blocked) {
+      notify.error(blocked);
+      return;
+    }
     const usedInDebitNotes = (Array.isArray(db.debitNotes) ? db.debitNotes : []).some(
       (dn) => dn?.companyId === currentCompany.id && Number(dn?.originalBillId) === Number(bill.id)
     );

@@ -137,6 +137,31 @@ describe('deleting a bill', () => {
   });
 });
 
+describe('cancelling a bill', () => {
+  const payable = async () => {
+    const res = await request(app).get(`/api/orgs/${owner.orgId}/ledger/trial-balance`).set(auth(owner)).expect(200);
+    const row = res.body.rows.find((r: any) => r.controlKind === 'AP');
+    return row ? Math.round((Number(row.credit || 0) - Number(row.debit || 0)) * 100) / 100 : 0;
+  };
+
+  it('reverses its entry and keeps it, marked Cancelled — once', async () => {
+    const before = await payable();
+    const bill = await request(app).post(`/api/orgs/${owner.orgId}/bills`).set(auth(owner)).send(docBody()).expect(201);
+    expect(await payable()).toBeCloseTo(before + 1000, 2);
+    const res = await request(app).post(`/api/orgs/${owner.orgId}/bills/${bill.body.document.id}/cancel`).set(auth(owner)).expect(200);
+    expect(res.body.document.status).toBe('Cancelled');
+    expect(await payable()).toBeCloseTo(before, 2);
+    await request(app).post(`/api/orgs/${owner.orgId}/bills/${bill.body.document.id}/cancel`).set(auth(owner)).expect(409);
+  });
+
+  it('is refused while a payment is allocated to it', async () => {
+    const bill = await request(app).post(`/api/orgs/${owner.orgId}/bills`).set(auth(owner)).send(docBody()).expect(201);
+    await pay('PAYMENT', 'BILL', bill.body.document.id, 200).expect(201);
+    const res = await request(app).post(`/api/orgs/${owner.orgId}/bills/${bill.body.document.id}/cancel`).set(auth(owner)).expect(409);
+    expect(res.body.error).toMatch(/then cancel it/);
+  });
+});
+
 describe('changing a saved expense or bill', () => {
   const tbPayable = async () => {
     const res = await request(app).get(`/api/orgs/${owner.orgId}/ledger/trial-balance`).set(auth(owner)).expect(200);
