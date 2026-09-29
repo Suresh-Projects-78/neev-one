@@ -139,16 +139,23 @@ if [ "${1:-}" = "--api" ]; then
   step "Backing up the database"
   # Before anything is installed, migrated or restarted. A backup taken after a
   # migration is a backup of the problem.
-  "${SSH[@]}" 'set -e
-    set -a; . /opt/neev/.env; set +a
+  "${SSH[@]}" 'set -eo pipefail
     mkdir -p /opt/neev/backups
     f="/opt/neev/backups/neevone-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
     # One dump of one database: every schema, consistent to the same instant.
     # That consistency is the whole reason the apps share a database.
-    # PGADMIN_URL points at `postgres`, the maintenance database every cluster
-    # has and the one place none of this data is. Same credentials, our database.
-    dump_url=$(printf %s "$PGADMIN_URL" | sed "s#/postgres\$#/neevone#")
-    pg_dump "$dump_url" | gzip > "$f"
+    #
+    # As the postgres superuser, the same as the nightly neev-backup and the
+    # CI deploy. Every tenant table FORCEs row-level security, which binds the
+    # owner too, so a dump as the owner is refused table by table. It used to
+    # run as the owner, and without pipefail the refusal vanished into gzip:
+    # every deploy since the policies shipped wrote a few kilobytes, printed
+    # its size as if that were a backup, and went on to migrate.
+    if ! sudo -u postgres pg_dump -d neevone | gzip > "$f"; then
+      rm -f "$f"
+      echo "  backup FAILED - nothing was installed, migrated or restarted" >&2
+      exit 1
+    fi
     ls -lh "$f" | awk "{print \"  \" \$5 \" \" \$9}"
     # Keep a fortnight. Older ones are on the operator, not on this script.
     ls -1t /opt/neev/backups/neevone-*.sql.gz | tail -n +15 | xargs -r rm --'

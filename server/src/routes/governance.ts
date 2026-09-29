@@ -5,6 +5,7 @@ import { prisma } from '../utils/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { resolveAccess } from '../services/access.js';
 import { RoleType } from '../constants/enums.js';
 import { ADMIN_ONLY_ERROR, cannotGrantError, rolePermissionKeys, unheldGrants } from '../services/roleGuards.js';
 import { PermissionAction } from '../constants/enums.js';
@@ -274,11 +275,25 @@ governanceRouter.delete('/orgs/:orgId/approval-rules/:ruleId', ROLES_EDIT, async
 governanceRouter.get('/orgs/:orgId/approvals', async (req, res) => {
   if (!orgOk(req, res)) return;
   const { accountId, orgId, branchId } = req.tenant!;
+  const userId = req.auth!.userId;
+
+  /*
+   * An inbox, not a register.
+   *
+   * This listed every request in the company — document, amount, who raised
+   * it — to anybody signed in. A person now sees what waits on a role they
+   * hold and what they raised themselves; an administrator sees everything.
+   */
+  const access = await resolveAccess(accountId, orgId, userId, branchId);
+  const scope = access.isAdmin
+    ? {}
+    : { OR: [{ requestedByUserId: userId }, { rule: { approverRoleId: { in: access.roleIds } } }] };
 
   const requests = await prisma.approvalRequest.findMany({
     where: {
       accountId,
       orgId,
+      ...scope,
       ...(String(req.query.status || 'PENDING') === 'ALL' ? {} : { status: String(req.query.status || 'PENDING') }),
       ...(String(req.query.allBranches || '') === 'true' ? {} : { branchId }),
     },
