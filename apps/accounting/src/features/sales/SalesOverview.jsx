@@ -38,6 +38,7 @@ import {
   prettyDate,
   shortDate,
 } from '../overview/OverviewParts';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 const LazySeriesBars = lazy(() =>
   import('@ui/components/charts/CircularCharts').then((m) => ({ default: m.SeriesBars }))
@@ -454,10 +455,10 @@ const SalesOverview = ({
      itself stays neutral so the one creation action is the only brand on the
      panel. */
   const quickActions = [
-    { label: 'Create Invoice', icon: Plus, primary: true, onClick: () => (onNewInvoice ? onNewInvoice() : go('invoices')) },
-    { label: 'Create Sales Order', icon: ClipboardList, tone: 'sales', onClick: () => go('salesOrders') },
-    { label: 'Record Payment', icon: Wallet, tone: 'banking', onClick: () => (onRecordReceipt ? onRecordReceipt() : go('receipts')) },
-    { label: 'Create Credit Note', icon: FileText, tone: 'purchase', onClick: () => (onNewCreditNote ? onNewCreditNote() : go('creditNotes')) },
+    { label: 'Create Invoice', perm: 'SALES::Invoices::CREATE', icon: Plus, primary: true, onClick: () => (onNewInvoice ? onNewInvoice() : go('invoices')) },
+    { label: 'Create Sales Order', perm: 'SALES::Sales Orders::CREATE', icon: ClipboardList, tone: 'sales', onClick: () => go('salesOrders') },
+    { label: 'Record Payment', perm: 'SALES::Receipts::CREATE', icon: Wallet, tone: 'banking', onClick: () => (onRecordReceipt ? onRecordReceipt() : go('receipts')) },
+    { label: 'Create Credit Note', perm: 'SALES::Credit Notes::CREATE', icon: FileText, tone: 'purchase', onClick: () => (onNewCreditNote ? onNewCreditNote() : go('creditNotes')) },
     { label: 'View All Invoices', icon: LayoutList, outlined: true, tone: 'sales', onClick: () => go('invoices') },
   ];
 
@@ -841,9 +842,9 @@ const SalesOverview = ({
           */}
           <div className="flex flex-col gap-2.5">
             {quickActions.map((a) => (
-              <button
+              <PermissionButton
                 key={a.label}
-                type="button"
+                permission={a.perm}
                 onClick={a.onClick}
                 className="ui-quick-action w-full rounded-lg ps-2 pe-3 py-2 text-sm font-semibold text-left flex items-center gap-2.5 min-h-[2.75rem]"
                 /* One brand button on the panel — the one that creates
@@ -874,7 +875,7 @@ const SalesOverview = ({
                 </span>
                 <span className="flex-1 min-w-0 whitespace-nowrap">{a.label}</span>
                 <ArrowRight size={14} aria-hidden="true" className="flex-shrink-0 opacity-60" />
-              </button>
+              </PermissionButton>
             ))}
           </div>
         </Panel>

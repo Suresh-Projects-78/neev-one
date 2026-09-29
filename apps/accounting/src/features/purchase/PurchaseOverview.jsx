@@ -34,6 +34,7 @@ import {
   prettyDate,
   shortDate,
 } from '../overview/OverviewParts';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 const LazySeriesBars = lazy(() =>
   import('@ui/components/charts/CircularCharts').then((m) => ({ default: m.SeriesBars }))
@@ -374,13 +375,13 @@ export default function PurchaseOverview({ db, currentCompany, onNavigate, onNew
             <Download size={16} aria-hidden="true" /> Export
           </button>
 
-          <button
+          <PermissionButton permission="PURCHASE::Bills::CREATE"
             type="button"
             onClick={() => (typeof onNewBill === 'function' ? onNewBill() : go('bills'))}
             className="ui-btn ui-btn-primary"
           >
             <Plus size={16} aria-hidden="true" /> New Bill
-          </button>
+          </PermissionButton>
 
           <div className="relative" ref={moreRef}>
             <button

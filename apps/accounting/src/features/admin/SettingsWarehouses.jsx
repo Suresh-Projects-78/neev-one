@@ -6,6 +6,7 @@ import { listBranches, listWarehouses, createWarehouse, updateWarehouse, deleteW
 import PopupSelect from '@ui/components/pickers/PopupSelect';
 import { GST_STATE_BY_CODE, getGstStateFromGstin } from '@ui/utils/gst';
 import Popover from '@ui/components/ui/Popover';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
   const [warehouses, setWarehouses] = useState([]);
@@ -300,13 +301,13 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="ui-t-sec">Warehouses</div>
-        <button
+        <PermissionButton permission="MASTERS::Company/Branch setup::CREATE"
           type="button"
           onClick={() => setShowForm(!showForm)}
           className="px-4 py-2 rounded-lg ui-btn ui-btn-primary"
         >
           + Create Warehouse
-        </button>
+        </PermissionButton>
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -687,9 +688,9 @@ export function SettingsWarehouses({ orgId, branchId, onWarehousesChanged }) {
                           <button type="button" onClick={() => beginEdit(w)} className="w-full text-left px-3 py-2 text-sm ui-hover-sunken">
                             Edit
                           </button>
-                          <button type="button" onClick={() => removeWarehouse(w.id)} className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]">
+                          <PermissionButton permission="MASTERS::Company/Branch setup::DELETE" type="button" onClick={() => removeWarehouse(w.id)} className="w-full text-left px-3 py-2 text-sm text-[rgb(var(--neg))] hover:bg-[rgb(var(--neg-soft))]">
                             Delete
-                          </button>
+                          </PermissionButton>
                         </Popover>
                       ) : null}
                     </div>

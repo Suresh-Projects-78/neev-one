@@ -44,10 +44,11 @@ const fresh = { ...running, invoices: [], bills: [], customers: [], payments: []
  * permission context. The default is an owner who may do everything; a test
  * about a restricted person passes its own `can`.
  */
-const asUser = (can = () => true) => ({
+const asUser = (can = () => true, held = []) => ({
   loading: false,
   error: '',
-  permissions: new Set(),
+  // ActionGuard treats an empty set as "not known yet" and fails open.
+  permissions: new Set(held),
   roles: [],
   restrictions: { branchIds: [], warehouseIds: [] },
   can,
@@ -132,13 +133,16 @@ describe('a panel with nothing in it says so', () => {
 });
 
 describe('the screen offers only what the person may do', () => {
-  const salesOnly = asUser((key) => String(key).startsWith('SALES::'));
+  const salesOnly = asUser((key) => String(key).startsWith('SALES::'), ['SALES::Invoices::CREATE', 'SALES::Invoices::VIEW']);
 
-  it('hides the bill and report shortcuts from someone with sales rights only', () => {
+  it('shows the bill shortcut disabled with the reason, and leaves out what cannot be viewed', () => {
     renderHome(running, { onNewBill: () => {}, onOpenReports: () => {}, onRecordReceipt: () => {} }, salesOnly);
-    expect(screen.queryByRole('button', { name: 'New bill' })).toBeNull();
+    const bill = screen.getByRole('button', { name: 'New bill' });
+    expect(bill).toHaveAttribute('aria-disabled', 'true');
+    expect(bill.getAttribute('title')).toMatch(/Purchase · Bills · Create/);
+    expect(screen.getByRole('button', { name: 'New invoice' })).not.toHaveAttribute('aria-disabled');
+    // Reports and the bills-due reminder are places to look: without VIEW, they are not offered.
     expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'New invoice' })).toBeInTheDocument();
     expect(screen.queryByText(/of bills due this week/)).toBeNull();
   });
 

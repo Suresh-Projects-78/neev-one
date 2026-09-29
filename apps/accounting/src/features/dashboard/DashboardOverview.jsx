@@ -859,13 +859,11 @@ export default function DashboardOverview({
    */
   const state = useMemo(() => bookState(db, currentCompany), [db, currentCompany]);
   /*
-   * Home offers only what the person may do.
-   *
-   * The server refuses the rest anyway, but a Sales Representative was shown
-   * "New bill" and "Reports" on their first screen and learned what they
-   * could not do by clicking it. Each shortcut names the permission it needs;
-   * a setup step the person cannot complete stays listed, marked for an
-   * administrator, so "what is left" is still true.
+   * Home follows ActionGuard's rule: what the person cannot VIEW is left out;
+   * anything else they cannot do is shown disabled, naming the permission,
+   * so a missing feature and a withheld one look different and the person
+   * knows what to ask an administrator for. A setup step they cannot
+   * complete stays listed, marked for an administrator.
    */
   const { can, canModule } = usePermissions();
   const steps = useMemo(() => {
@@ -1178,10 +1176,11 @@ export default function DashboardOverview({
   }, [postedInvoices, openBills, db, currentCompany]);
 
   const quickActions = [
-    onNewInvoice && can('SALES::Invoices::CREATE') ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice } : null,
-    onRecordReceipt && can('SALES::Receipts::CREATE') ? { label: 'Record receipt', Icon: Receipt, onClick: onRecordReceipt } : null,
-    onNewBill && can('PURCHASE::Bills::CREATE') ? { label: 'New bill', Icon: Wallet, onClick: onNewBill } : null,
-    onOpenCustomers && can('MASTERS::Customers::CREATE') ? { label: 'Add customer', Icon: Plus, onClick: onOpenCustomers } : null,
+    onNewInvoice ? { label: 'New invoice', Icon: FileText, onClick: onNewInvoice, permission: 'SALES::Invoices::CREATE' } : null,
+    onRecordReceipt ? { label: 'Record receipt', Icon: Receipt, onClick: onRecordReceipt, permission: 'SALES::Receipts::CREATE' } : null,
+    onNewBill ? { label: 'New bill', Icon: Wallet, onClick: onNewBill, permission: 'PURCHASE::Bills::CREATE' } : null,
+    onOpenCustomers ? { label: 'Add customer', Icon: Plus, onClick: onOpenCustomers, permission: 'MASTERS::Customers::CREATE' } : null,
+    // Reports is somewhere to look, not something to do: without it, it is left out.
     onOpenReports && canModule('REPORTS') ? { label: 'Reports', Icon: TrendingUp, onClick: onOpenReports } : null,
   ].filter(Boolean);
 
@@ -1373,12 +1372,12 @@ export default function DashboardOverview({
             <ThingsToDo items={todo} onOpenAll={onOpenInvoices || nav('invoices')} />
             <QuickLinks
               links={[
-                { key: 'customer', label: 'Create customer', Icon: Users, tone: 'blue', onSelect: onOpenCustomers || nav('customers'), perm: 'MASTERS::Customers::CREATE' },
-                { key: 'vendor', label: 'Create vendor', Icon: Users, tone: 'violet', onSelect: nav('vendors'), perm: 'MASTERS::Vendors::CREATE' },
-                { key: 'item', label: 'Add item or service', Icon: Package, tone: 'amber', onSelect: nav('items'), perm: 'MASTERS::Items::CREATE' },
-                { key: 'bank', label: 'Bank reconciliation', Icon: Landmark, tone: 'green', onSelect: onOpenCashBank || nav('cashBank'), perm: 'CASHBANK::Bank Transactions::VIEW' },
-                { key: 'reports', label: 'View reports', Icon: BarChart3, tone: 'blue', onSelect: onOpenReports || nav('reports'), perm: 'REPORTS::Trial Balance::VIEW' },
-              ].filter((l) => l.onSelect && can(l.perm))}
+                { key: 'customer', label: 'Create customer', Icon: Users, tone: 'blue', onSelect: onOpenCustomers || nav('customers'), permission: 'MASTERS::Customers::CREATE' },
+                { key: 'vendor', label: 'Create vendor', Icon: Users, tone: 'violet', onSelect: nav('vendors'), permission: 'MASTERS::Vendors::CREATE' },
+                { key: 'item', label: 'Add item or service', Icon: Package, tone: 'amber', onSelect: nav('items'), permission: 'MASTERS::Items::CREATE' },
+                { key: 'bank', label: 'Bank reconciliation', Icon: Landmark, tone: 'green', onSelect: onOpenCashBank || nav('cashBank'), view: 'CASHBANK::Bank Transactions::VIEW' },
+                { key: 'reports', label: 'View reports', Icon: BarChart3, tone: 'blue', onSelect: onOpenReports || nav('reports'), view: 'REPORTS::Trial Balance::VIEW' },
+              ].filter((l) => l.onSelect && (!l.view || can(l.view)))}
             />
           </div>
         </div>

@@ -17,6 +17,7 @@ import { runSchedulesNow } from '@ui/api/recurring';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
 import { DocFormActions, DocFormFootnote } from '@ui/components/DocumentForm';
 import { ColumnHeader, useColumnFilters } from '@ui/components/ColumnFilters';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 /**
  * Recurring invoice schedules — rent, AMC, subscriptions, retainers.
@@ -922,9 +923,9 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
         if (typeof onNavigate === 'function') onNavigate(k);
       }}
       primary={
-        <button type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
+        <PermissionButton permission="SALES::Invoices::CREATE" type="button" onClick={() => setCreatorOpen(true)} className="ui-btn ui-btn-primary">
           <Plus size={16} aria-hidden="true" /> New Schedule
-        </button>
+        </PermissionButton>
       }
       cards={[
         { label: 'Schedules', value: recHeadline.count, count: true, tone: 'draft', Icon: RefreshCw },

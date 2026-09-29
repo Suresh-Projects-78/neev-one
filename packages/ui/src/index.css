@@ -2781,6 +2781,23 @@
     white-space: nowrap;
   }
 
+  /*
+   * No-wrap columns end in an ellipsis instead of running into the next cell.
+   *
+   * ResizableTables sets `table-layout: fixed` on every table so columns can be
+   * dragged. Fixed layout divides the width evenly and never grows a column
+   * for its content, so a long email in a no-wrap cell was painted straight
+   * over the Role column beside it. Clipping is safe on these four roles —
+   * they hold text, not menus — and the column can still be widened by hand.
+   */
+  table[data-column-resize-ready='true'] .ui-col-entity,
+  table[data-column-resize-ready='true'] .ui-col-meta,
+  table[data-column-resize-ready='true'] .ui-col-date,
+  table[data-column-resize-ready='true'] .ui-col-id {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   /* Dates recede further still: they qualify the row, they are rarely what you
      came for, and there are usually two of them competing for the same glance. */
   .ui-col-date.ui-col-date {
@@ -2871,6 +2888,10 @@
     font-weight: 400;
     color: rgb(var(--fg-muted));
     text-align: center;
+    /* A long email or id has no break opportunity, so its grid cell could not
+       shrink below it and the text ran into the next column. `anywhere` also
+       lowers the min-content width, which is what lets the cell shrink. */
+    overflow-wrap: anywhere;
   }
   .ui-detail-value.ui-detail-mono {
     font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;

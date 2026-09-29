@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { formatMoney, formatMoneyCompact } from '@ui/utils/money';
+import { PermissionButton } from '@ui/permissions/ActionGuard';
 
 /**
  * Home, once the books are running.
@@ -133,8 +134,8 @@ export function QuickLinks({ links }) {
       <ul className="mt-3 space-y-1">
         {links.map((l) => (
           <li key={l.key}>
-            <button
-              type="button"
+            <PermissionButton
+              permission={l.permission}
               onClick={l.onSelect}
               disabled={!l.onSelect}
               className="ui-hover-sunken flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm disabled:cursor-default"
@@ -142,7 +143,7 @@ export function QuickLinks({ links }) {
               <l.Icon size={16} aria-hidden="true" style={{ color: TONES[l.tone]?.solid }} />
               <span className="min-w-0 flex-1 truncate">{l.label}</span>
               <ChevronRight size={14} aria-hidden="true" className="ui-subtle" />
-            </button>
+            </PermissionButton>
           </li>
         ))}
       </ul>
