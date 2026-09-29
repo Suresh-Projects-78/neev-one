@@ -18,6 +18,7 @@ import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/fx.js';
 import { SettledDocument, assertInvoiceCancellable } from '../services/settledDocGuard.js';
+import { refuseUnknownLineItems } from '../services/lineItems.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -333,6 +334,7 @@ invoicesRouter.post('/orgs/:orgId/invoices', requirePermission(INVOICE_MODULE, P
   const parsed = invoiceUpsertSchema.parse(req.body);
   const branchId = String(parsed.branchId || req.tenant!.branchId || '').trim();
   if (!branchId) return res.status(400).json({ error: 'Missing branchId' });
+  if (await refuseUnknownLineItems(res, accountId, orgId, parsed.items)) return;
 
   // Document restrictions: a user limited to certain customers may not raise an
   // invoice for anyone else.
@@ -558,6 +560,7 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId', requirePermission(INVOI
    */
   const sent = new Set(Object.keys((req.body ?? {}) as Record<string, unknown>));
   const parsedPatch = invoiceUpsertSchema.partial().parse(req.body);
+  if (parsedPatch.items !== undefined && (await refuseUnknownLineItems(res, accountId, orgId, parsedPatch.items))) return;
   const editAccess = await resolveAccess(accountId, orgId, req.auth!.userId, req.tenant!.branchId);
   const { value: body, stripped } = filterFieldsByLevel(
     parsedPatch,

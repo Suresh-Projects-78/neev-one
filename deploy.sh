@@ -194,6 +194,10 @@ if [ "${1:-}" = "--api" ]; then
     # after their signup simply never appeared in their menu. Idempotent: it
     # prints "nothing to do" when the catalogue and the grants agree.
     npx tsx scripts/backfillOwnerPermissions.ts --fix
+    # Document lines used to name items by a browser-local number that shifted
+    # on reload; this points them at the server id where it can be told for
+    # certain and reports the rest. Idempotent.
+    npx tsx scripts/backfillLineItemIds.ts --fix
     npm run build >/dev/null 2>&1
     sudo systemctl restart neev-api'
 fi

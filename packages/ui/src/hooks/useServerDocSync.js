@@ -656,13 +656,16 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
               .map((x) => String(x?.name || '').trim().toLowerCase())
               .filter(Boolean)
           );
-          let nextId = existing.reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0);
+          let nextId = existing.reduce((m, x) => Math.max(m, Number(x?.id) || 0), 0);
           const fresh = incoming
             .filter(
               (d) =>
                 !knownIds.has(String(d[idKey])) && !knownNames.has(String(d.name || '').trim().toLowerCase())
             )
-            .map((d) => ({ ...d, id: ++nextId }));
+            // An item is known by its server id (utils/itemIdentity.js): a
+            // load-order number shifted whenever an earlier-sorting item was
+            // added, and every stored line with it.
+            .map((d) => ({ ...d, id: collection === 'items' && d[idKey] ? String(d[idKey]) : ++nextId }));
           if (fresh.length) next[collection] = [...existing, ...fresh];
         }
 
@@ -728,7 +731,7 @@ export function useServerDocSync({ enabled, currentCompanyId, setDb }) {
               .map((x) => String(x?.number || '').trim())
               .filter(Boolean)
           );
-          let nextId = existing.reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0);
+          let nextId = existing.reduce((m, x) => Math.max(m, Number(x?.id) || 0), 0);
           const fresh = incoming
             .filter((d) => !knownIds.has(String(d[idKey])) && !knownNumbers.has(String(d.number).trim()))
             .map((d) => ({ ...d, id: ++nextId }));

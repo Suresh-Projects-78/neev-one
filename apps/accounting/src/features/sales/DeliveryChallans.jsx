@@ -178,7 +178,7 @@ export default function DeliveryChallans({ db, setDb, currentCompany, onConvert 
     setForm((p) => {
       const items = [...p.items];
       if (field === 'itemId') {
-        const item = picked || itemsMaster.find((i) => i.id === parseInt(value));
+        const item = picked || itemsMaster.find((i) => String(i.id) === String(value));
         if (item) items[idx] = { ...items[idx], itemId: value, description: item.name, rate: Number(item.salePrice || 0), unit: item.unit || '', hsnSac: item.hsnSac || '' };
       } else {
         items[idx] = { ...items[idx], [field]: value };

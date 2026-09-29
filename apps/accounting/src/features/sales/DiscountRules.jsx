@@ -97,8 +97,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
       type: form.type,
       value: Number(form.value) || 0,
       itemScope: form.itemScope,
-      itemId: form.itemScope === 'ITEM' ? Number(form.itemId) : null,
-      itemIds: form.itemScope === 'ITEMS' ? form.itemIds.map(Number) : [],
+      itemId: form.itemScope === 'ITEM' ? String(form.itemId) : null,
+      itemIds: form.itemScope === 'ITEMS' ? form.itemIds.map(String) : [],
       category: form.itemScope === 'CATEGORY' ? form.category.trim() : null,
       customerScope: form.customerScope,
       customerId: form.customerScope === 'CUSTOMER' ? Number(form.customerId) : null,
@@ -125,8 +125,8 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
           type: form.type,
           value: Number(form.value) || 0,
           itemScope: form.itemScope,
-          itemId: form.itemScope === 'ITEM' ? Number(form.itemId) : null,
-          itemIds: form.itemScope === 'ITEMS' ? form.itemIds.map(Number) : [],
+          itemId: form.itemScope === 'ITEM' ? String(form.itemId) : null,
+          itemIds: form.itemScope === 'ITEMS' ? form.itemIds.map(String) : [],
           category: form.itemScope === 'CATEGORY' ? form.category.trim() : null,
           customerScope: form.customerScope,
           customerId: form.customerScope === 'CUSTOMER' ? Number(form.customerId) : null,
@@ -164,7 +164,7 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
   const scopeLabel = (r) => {
     const itemPart =
       r.itemScope === 'ITEM'
-        ? items.find((i) => Number(i.id) === Number(r.itemId))?.name || 'item'
+        ? items.find((i) => String(i.id) === String(r.itemId))?.name || 'item'
         : r.itemScope === 'ITEMS'
           ? `${(r.itemIds || []).length} items`
           : r.itemScope === 'CATEGORY'
@@ -253,11 +253,11 @@ export default function DiscountRules({ db, setDb, currentCompany }) {
                       <input
                         type="checkbox"
                         className="ui-checkbox"
-                        checked={form.itemIds.includes(i.id)}
+                        checked={form.itemIds.map(String).includes(String(i.id))}
                         onChange={(e) =>
                           setForm((p) => ({
                             ...p,
-                            itemIds: e.target.checked ? [...p.itemIds, i.id] : p.itemIds.filter((x) => x !== i.id),
+                            itemIds: e.target.checked ? [...p.itemIds, i.id] : p.itemIds.filter((x) => String(x) !== String(i.id)),
                           }))
                         }
                       />

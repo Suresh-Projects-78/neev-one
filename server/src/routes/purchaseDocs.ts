@@ -17,6 +17,7 @@ import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/fx.js';
 import { SettledDocument, assertPurchaseDocRemovable } from '../services/settledDocGuard.js';
+import { refuseUnknownLineItems } from '../services/lineItems.js';
 
 /**
  * Bills, credit notes and debit notes.
@@ -267,6 +268,7 @@ function register(kind: DocKind) {
       const { accountId, orgId, branchId } = req.tenant!;
       const userId = req.auth!.userId;
       const body = docSchema.parse(req.body);
+      if (await refuseUnknownLineItems(res, req.tenant!.accountId, req.tenant!.orgId, body.items)) return;
 
       await ensureLedgerSetup(accountId, orgId, userId);
 
@@ -398,6 +400,7 @@ function register(kind: DocKind) {
       }
 
       const body = docSchema.parse(req.body);
+      if (await refuseUnknownLineItems(res, req.tenant!.accountId, req.tenant!.orgId, body.items)) return;
       const baseCurrency = await baseCurrencyFor(accountId, orgId);
       const docCurrency = String(body.currency || doc.currency || baseCurrency).toUpperCase();
       let fxRate = 1;

@@ -3259,7 +3259,7 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       // grid did not, so "Every line needs an item" sat there after the line
       // had one, and the count beside Save still said a field needed attention.
       fieldErrors.clearField('items');
-      const item = pickedItem || items.find((i) => i.id === parseInt(value));
+      const item = pickedItem || items.find((i) => String(i.id) === String(value));
       if (item) {
         // Price list first, then this customer's last paid rate, then master.
         const resolved = resolveSaleRate({
@@ -5464,7 +5464,7 @@ export const EstimateForm = ({ db, setDb, currentCompany, initialData = null, on
     const newItems = [...formData.items];
 
     if (field === 'itemId') {
-      const item = pickedItem || itemsMaster.find((i) => i.id === parseInt(value));
+      const item = pickedItem || itemsMaster.find((i) => String(i.id) === String(value));
       if (item) {
         newItems[index] = {
           ...newItems[index],
@@ -6085,7 +6085,7 @@ export const CreditNoteForm = ({ db, setDb, currentCompany, initialOriginalInvoi
     const newItems = [...formData.items];
 
     if (field === 'itemId') {
-      const item = pickedItem || itemsMaster.find((i) => i.id === parseInt(value));
+      const item = pickedItem || itemsMaster.find((i) => String(i.id) === String(value));
       if (item) {
         newItems[index] = {
           ...newItems[index],

@@ -38,7 +38,8 @@ export const saveItemToServer = async (item) => {
       reorderLevel: Number(item?.reorderLevel) > 0 ? Number(item.reorderLevel) : undefined,
     });
     const id = saved?.item?.id;
-    return id ? { backendItemId: String(id) } : {};
+    // The item is known by its server id from here on (utils/itemIdentity.js).
+    return id ? { backendItemId: String(id), id: String(id) } : {};
   } catch (e) {
     notify.error(`Saved on this device only — the server refused it: ${String(e?.message || e)}`);
     return {};

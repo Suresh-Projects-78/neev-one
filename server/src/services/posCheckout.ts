@@ -6,6 +6,7 @@ import { ensureLedgerSetup, invoicePostingLines, postEntry } from './ledger.js';
 import { allocateNumber, ensureDefaultSeries } from './numbering.js';
 import { INERT_PAYMENT_STATUSES, assertAllocationsFit, recalcSettlementForPayment } from './settlement.js';
 import { TENDER_CONTROL_KIND, isPosTender, type PosTender } from './receiptAccounts.js';
+import { UnknownLineItem, assertLineItemsKnown } from './lineItems.js';
 
 /**
  * A counter sale, as one transaction.
@@ -48,7 +49,9 @@ export type PosCheckoutCode =
   | 'POS_NUMBER_TAKEN'
   /** Paid at the counter: the ordinary cancellation would only half-reverse it. */
   | 'POS_REFUND_REQUIRED'
-  | 'POS_INVALID_SALE';
+  | 'POS_INVALID_SALE'
+  /** A line names an item this company does not have. */
+  | 'POS_UNKNOWN_ITEM';
 
 export class PosCheckoutError extends Error {
   code: PosCheckoutCode;
@@ -279,6 +282,12 @@ export async function checkoutPosSale(
   }
   if (!Array.isArray(input.items) || input.items.length === 0) {
     throw new PosCheckoutError('POS_INVALID_SALE', 'A counter sale has to have something in it.', 400);
+  }
+  try {
+    await assertLineItemsKnown(ctx.accountId, ctx.orgId, input.items);
+  } catch (e) {
+    if (e instanceof UnknownLineItem) throw new PosCheckoutError('POS_UNKNOWN_ITEM', e.message, 400);
+    throw e;
   }
 
   // Already rung up? Hand back the sale that exists rather than taking the
