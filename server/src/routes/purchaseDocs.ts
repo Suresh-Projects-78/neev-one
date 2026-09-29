@@ -5,6 +5,7 @@ import { prisma } from '../utils/prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
+import { ownDocsWhere } from '../services/access.js';
 import { PermissionAction } from '../constants/enums.js';
 import { billPostingLines,
   creditNotePostingLines,
@@ -247,7 +248,7 @@ function register(kind: DocKind) {
       const { accountId, orgId, branchId } = req.tenant!;
 
       const rows = await table().findMany({
-        where: { accountId, orgId, branchId },
+        where: { accountId, orgId, branchId, ...ownDocsWhere(req) },
         orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
         take: Math.min(500, Number(req.query.limit || 200)),
       });
@@ -380,7 +381,7 @@ function register(kind: DocKind) {
       if (!orgOk(req, res)) return;
       const { accountId, orgId } = req.tenant!;
 
-      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId } });
+      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId, ...ownDocsWhere(req) } });
       if (!doc) return res.status(404).json({ error: `${cfg.resource} not found` });
 
       const parsed = settlementSchema.safeParse(req.body);
@@ -411,7 +412,7 @@ function register(kind: DocKind) {
       if (!orgOk(req, res)) return;
       const { accountId, orgId, branchId } = req.tenant!;
 
-      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId } });
+      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId, ...ownDocsWhere(req) } });
       if (!doc) return res.status(404).json({ error: `${cfg.resource} not found` });
 
       const entries = await prisma.journalEntry.findMany({

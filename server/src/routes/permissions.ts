@@ -7,6 +7,13 @@ import { requirePermission } from '../middleware/rbac.js';
 import { resolveAccess, resolveUserPermissions } from '../services/access.js';
 import { PermissionAction } from '../constants/enums.js';
 import {
+  ADMIN_ONLY_ERROR,
+  ANTI_LOCKOUT_KEYS,
+  cannotGrantError,
+  unheldGrants,
+} from '../services/roleGuards.js';
+import { RoleType } from '../constants/enums.js';
+import {
   PERMISSION_CATALOG,
   ROLE_PRESETS,
   expandPreset,
@@ -57,6 +64,8 @@ permissionsRouter.get(
         key,
         label: p.label,
         description: p.description,
+        roleType: p.roleType,
+        ownDocumentsOnly: Boolean(p.ownDocumentsOnly),
       })),
     });
   }
@@ -116,10 +125,33 @@ permissionsRouter.put(
     const orgId = req.tenant!.orgId;
     const roleId = String(req.params.roleId);
 
-    const role = await prisma.role.findFirst({ where: { id: roleId, accountId, orgId }, select: { id: true, name: true } });
+    const role = await prisma.role.findFirst({
+      where: { id: roleId, accountId, orgId },
+      select: { id: true, name: true, roleType: true },
+    });
     if (!role) return res.status(404).json({ error: 'Role not found' });
 
+    const isAdminRole = role.roleType === RoleType.ADMIN;
+    if (isAdminRole && !req.isAdmin) return res.status(403).json(ADMIN_ONLY_ERROR);
+
     const body = putPermissionsSchema.parse(req.body);
+
+    /*
+     * An Administrator role keeps the permissions to manage users and roles.
+     * Anybody may trim their own access; nobody may leave the organisation
+     * with an administrator who can no longer administer.
+     */
+    if (isAdminRole) {
+      const sent = new Set(body.permissions.map(String));
+      const lost = ANTI_LOCKOUT_KEYS.filter((k) => !sent.has(k));
+      if (lost.length) {
+        return res.status(400).json({
+          error: 'An Administrator role must keep the permissions to manage users and roles',
+          code: 'admin_lockout',
+          permissions: lost,
+        });
+      }
+    }
 
     // Reject anything outside the catalog: a role must not hold a permission
     // that no route checks, and must not be a way to smuggle in new keys.
@@ -149,6 +181,16 @@ permissionsRouter.put(
       select: { id: true, permissionId: true, allowed: true, permLevel: true },
     });
     const currentByPermId = new Map(current.map((c) => [c.permissionId, c]));
+
+    // Nobody hands out more than they hold. Only what is newly granted is
+    // checked; a role may always be trimmed.
+    const keyById = new Map(permissions.map((p) => [p.id, permKey(p.module, p.subModule, p.action)]));
+    const added = [...wantedIds]
+      .filter((id) => !currentByPermId.get(id)?.allowed)
+      .map((id) => keyById.get(id)!)
+      .filter(Boolean);
+    const missing = unheldGrants(req, added);
+    if (missing.length) return res.status(403).json(cannotGrantError(missing));
 
     await prisma.$transaction(async (tx) => {
       const levelByPermId = new Map<string, number>();
@@ -320,6 +362,10 @@ permissionsRouter.get('/orgs/:orgId/permissions/me', async (req, res) => {
   res.json({
     roles,
     profiles: profiles.map((p) => p.profile),
+    // Holds an ADMIN-type role: may administer Administrator roles and users.
+    isAdmin: access.isAdmin,
+    // Document reads are limited to rows this user created.
+    ownDocumentsOnly: access.ownDocumentsOnly,
     permissions,
     // Highest field level held per permission; absent means level 0.
     levels,

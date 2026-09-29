@@ -8,6 +8,16 @@ import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction } from '../constants/enums.js';
 import { sendTemplate } from '../services/mailer.js';
+import { RoleType } from '../constants/enums.js';
+import {
+  ADMIN_ONLY_ERROR,
+  LAST_ADMIN_ERROR,
+  cannotGrantError,
+  rolePermissionKeys,
+  unheldGrants,
+  userIsAdmin,
+  wouldRemoveLastAdmin,
+} from '../services/roleGuards.js';
 
 export const usersRouter = Router();
 usersRouter.use(requireAuth, requireTenantContext);
@@ -27,6 +37,45 @@ const setPrimaryRoleSchema = z.object({
 const changePasswordSchema = z.object({
   password: z.string().min(8).max(200),
 });
+
+const isMember = async (accountId: string, orgId: string, userId: string) =>
+  Boolean(await prisma.userOrgMembership.findFirst({ where: { accountId, orgId, userId }, select: { id: true } }));
+
+/**
+ * Why a role assignment must be refused, or null when it may go ahead.
+ *
+ * Assigning a role hands out every permission it holds, so it is bounded the
+ * same way editing a role is: the caller must hold what the role grants, only
+ * an administrator may hand out (or take away) an Administrator role, and the
+ * organisation's last administrator cannot be demoted. `role` null means the
+ * user's org-wide roles are being cleared.
+ */
+async function assignmentRefusal(
+  req: { isAdmin?: boolean; permissions?: Set<string> },
+  accountId: string,
+  orgId: string,
+  userId: string,
+  role: { id: string; roleType: string } | null,
+  scopeBranchId: string | null
+): Promise<{ status: number; body: Record<string, unknown> } | null> {
+  if (role?.roleType === RoleType.ADMIN && !req.isAdmin) return { status: 403, body: ADMIN_ONLY_ERROR };
+
+  if (role) {
+    const missing = unheldGrants(req, await rolePermissionKeys(role.id));
+    if (missing.length) return { status: 403, body: cannotGrantError(missing) };
+  }
+
+  // Org-wide assignments replace the user's org-wide role; a branch-scoped one
+  // adds to it and cannot demote anybody.
+  if (scopeBranchId) return null;
+
+  const targetIsAdmin = await userIsAdmin(accountId, orgId, userId);
+  if (!targetIsAdmin) return null;
+  if (!req.isAdmin) return { status: 403, body: ADMIN_ONLY_ERROR };
+  if (role?.roleType === RoleType.ADMIN) return null;
+  if (await wouldRemoveLastAdmin(accountId, orgId, userId)) return { status: 409, body: LAST_ADMIN_ERROR };
+  return null;
+}
 
 usersRouter.get('/orgs/:orgId/users', requirePermission('SETTINGS', PermissionAction.VIEW, 'Users'), async (req, res) => {
   const accountId = req.tenant!.accountId;
@@ -81,6 +130,11 @@ usersRouter.patch('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', Pe
   // Ensure target user is a member of this org.
   const member = await prisma.userOrgMembership.findFirst({ where: { accountId, orgId, userId }, select: { id: true } });
   if (!member) return res.status(404).json({ error: 'User not found in org' });
+
+  if (body.isActive === false) {
+    if (!req.isAdmin && (await userIsAdmin(accountId, orgId, userId))) return res.status(403).json(ADMIN_ONLY_ERROR);
+    if (await wouldRemoveLastAdmin(accountId, orgId, userId)) return res.status(409).json(LAST_ADMIN_ERROR);
+  }
 
   // Same global-uniqueness rule as user creation: login resolves by email
   // across every account, so an email may not be moved onto a taken address.
@@ -188,6 +242,13 @@ usersRouter.put('/users/:userId/companies', requirePermission('SETTINGS', Permis
   const toAdd = [...wanted].filter((id) => !have.has(id));
   const toRemove = [...have].filter((id) => !wanted.has(id));
 
+  // Taking a company away from its only administrator locks that company.
+  for (const orgId of toRemove) {
+    if (await wouldRemoveLastAdmin(accountId, orgId, userId)) {
+      return res.status(409).json({ ...LAST_ADMIN_ERROR, orgId });
+    }
+  }
+
   /*
    * Removing access removes the role with it.
    *
@@ -220,31 +281,23 @@ usersRouter.put('/orgs/:orgId/users/:userId/role', requirePermission('SETTINGS',
 
   const body = setPrimaryRoleSchema.parse(req.body);
 
-  // org membership required
-  await prisma.userOrgMembership.upsert({
-    where: { accountId_orgId_userId: { accountId, orgId, userId } },
-    update: {},
-    create: { accountId, orgId, userId },
+  if (!(await isMember(accountId, orgId, userId))) return res.status(404).json({ error: 'User not found in org' });
+
+  const role = body.roleId ? await prisma.role.findFirst({ where: { id: body.roleId, accountId, orgId } }) : null;
+  if (body.roleId && !role) return res.status(404).json({ error: 'Role not found' });
+
+  const refused = await assignmentRefusal(req, accountId, orgId, userId, role, null);
+  if (refused) return res.status(refused.status).json(refused.body);
+
+  await prisma.$transaction(async (tx) => {
+    // Clear org-wide roles
+    await tx.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId, branchId: null } });
+    if (role) {
+      await tx.userRoleAssignment.create({
+        data: { accountId, orgId, branchId: null, userId, roleId: role.id, createdByUserId },
+      });
+    }
   });
-
-  // Clear org-wide roles
-  await prisma.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId, branchId: null } });
-
-  if (body.roleId) {
-    const role = await prisma.role.findFirst({ where: { id: body.roleId, accountId, orgId } });
-    if (!role) return res.status(404).json({ error: 'Role not found' });
-
-    await prisma.userRoleAssignment.create({
-      data: {
-        accountId,
-        orgId,
-        branchId: null,
-        userId,
-        roleId: role.id,
-        createdByUserId,
-      },
-    });
-  }
 
   res.json({ ok: true });
 });
@@ -472,6 +525,9 @@ usersRouter.delete('/orgs/:orgId/users/:userId', requirePermission('SETTINGS', P
 
   if (orgId !== req.tenant!.orgId) return res.status(403).json({ error: 'orgId mismatch' });
 
+  if (!req.isAdmin && (await userIsAdmin(accountId, orgId, userId))) return res.status(403).json(ADMIN_ONLY_ERROR);
+  if (await wouldRemoveLastAdmin(accountId, orgId, userId)) return res.status(409).json(LAST_ADMIN_ERROR);
+
   // Remove user from this org (do not delete the global user record)
   await prisma.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId } });
   await prisma.userWarehouseAccess.deleteMany({ where: { accountId, orgId, userId } });
@@ -557,31 +613,27 @@ usersRouter.post('/orgs/:orgId/users/:userId/roles', requirePermission('SETTINGS
 
   const body = assignRoleSchema.parse(req.body);
 
-  // org membership required
-  await prisma.userOrgMembership.upsert({
-    where: { accountId_orgId_userId: { accountId, orgId, userId } },
-    update: {},
-    create: { accountId, orgId, userId },
-  });
+  if (!(await isMember(accountId, orgId, userId))) return res.status(404).json({ error: 'User not found in org' });
 
   const role = await prisma.role.findFirst({ where: { id: body.roleId, accountId, orgId } });
   if (!role) return res.status(404).json({ error: 'Role not found' });
 
   const scopeBranchId = body.branchId ?? null;
+  if (scopeBranchId) {
+    const branch = await prisma.branch.findFirst({ where: { id: scopeBranchId, accountId, orgId }, select: { id: true } });
+    if (!branch) return res.status(400).json({ error: 'Branch does not belong to this organisation' });
+  }
 
-  // Enforce a single role per scope (org-wide when branchId=null, or per-branch when provided)
-  await prisma.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId, branchId: scopeBranchId } });
+  const refused = await assignmentRefusal(req, accountId, orgId, userId, role, scopeBranchId);
+  if (refused) return res.status(refused.status).json(refused.body);
 
   try {
-    await prisma.userRoleAssignment.create({
-      data: {
-        accountId,
-        orgId,
-        branchId: scopeBranchId,
-        userId,
-        roleId: role.id,
-        createdByUserId,
-      },
+    await prisma.$transaction(async (tx) => {
+      // Enforce a single role per scope (org-wide when branchId=null, or per-branch when provided)
+      await tx.userRoleAssignment.deleteMany({ where: { accountId, orgId, userId, branchId: scopeBranchId } });
+      await tx.userRoleAssignment.create({
+        data: { accountId, orgId, branchId: scopeBranchId, userId, roleId: role.id, createdByUserId },
+      });
     });
   } catch (err: any) {
     // If the client sent duplicates or raced, keep endpoint idempotent.

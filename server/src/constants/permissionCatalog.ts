@@ -327,56 +327,259 @@ export const isKnownPermission = (module: string, subModule: string | null, acti
  * Preset role templates, equivalent to ERPNext's stock roles. Each lists the
  * permissions granted; anything not listed is denied.
  */
-export const ROLE_PRESETS: Record<string, { label: string; description: string; grants: Array<[string, string, string[]]> }> = {
+export type RolePreset = {
+  label: string;
+  description: string;
+  /** Seeded role type: ADMIN | ACCOUNTANT | SALES | CUSTOM. */
+  roleType: string;
+  /** Odoo's "own documents only": reads are limited to rows the holder created. */
+  ownDocumentsOnly?: boolean;
+  grants: Array<[string, string, string[]]>;
+};
+
+/*
+ * The preset list follows the tiers the established products use, so a
+ * business moving from them finds the roles it expects:
+ *
+ *   Odoo       — per app: User (own documents) / User (all documents) /
+ *                Administrator; Accounting: Billing / Accountant / Adviser.
+ *   ERPNext    — Manager / User per module, plus Auditor, HR & Payroll.
+ *   QuickBooks — Reports only.
+ *   Zoho Books — Admin, Staff, custom roles.
+ *
+ * "User" raises and edits; "Manager" additionally approves, deletes, exports
+ * and maintains the module's masters. Every grant is a catalogue row, so a
+ * preset can only ever hand out something a route actually checks.
+ */
+const USER = [A.VIEW, A.CREATE, A.EDIT];
+const USER_EXPORT = [A.VIEW, A.CREATE, A.EDIT, A.EXPORT];
+const READ = [A.VIEW, A.EXPORT];
+// Branch/warehouse lists are reference data every document form needs.
+const REFERENCE_DATA: Array<[string, string, string[]]> = [
+  ['MASTERS', 'Company/Branch setup', [A.VIEW]],
+  ['MASTERS', 'Items', [A.VIEW]],
+  ['MASTERS', 'GST Rates', [A.VIEW]],
+  ['MASTERS', 'Units of Measure', [A.VIEW]],
+];
+
+export const ROLE_PRESETS: Record<string, RolePreset> = {
   ADMIN: {
     label: 'Administrator',
     description: 'Full access to every module, including users and roles',
+    roleType: 'ADMIN',
     grants: PERMISSION_CATALOG.map((m) => [m.key, '*', ['*']] as [string, string, string[]]),
+  },
+
+  // ---- Accounting (Odoo: Billing / Accountant / Adviser) ----
+  BILLING: {
+    label: 'Billing Clerk',
+    description: 'Raise invoices, receipts and estimates; no ledger, no purchases',
+    roleType: 'CUSTOM',
+    grants: [
+      ['SALES', 'Invoices', USER],
+      ['SALES', 'Receipts', USER],
+      ['SALES', 'Estimates', USER],
+      ['SALES', 'Delivery Challans', USER],
+      ['MASTERS', 'Customers', USER],
+      ...REFERENCE_DATA,
+    ],
   },
   ACCOUNTANT: {
     label: 'Accountant',
     description: 'Full books and reporting; no user or role administration',
+    roleType: 'ACCOUNTANT',
     grants: [
-      ['SALES', '*', [A.VIEW, A.CREATE, A.EDIT, A.EXPORT]],
-      ['PURCHASE', '*', [A.VIEW, A.CREATE, A.EDIT, A.EXPORT]],
-      ['ACCOUNTING', '*', [A.VIEW, A.CREATE, A.EDIT, A.EXPORT]],
-      ['CASHBANK', '*', [A.VIEW, A.CREATE, A.EDIT, A.EXPORT]],
-      ['EXPENSES', '*', [A.VIEW, A.CREATE, A.EDIT, A.EXPORT]],
+      ['SALES', '*', USER_EXPORT],
+      ['PURCHASE', '*', USER_EXPORT],
+      ['ACCOUNTING', '*', USER_EXPORT],
+      ['CASHBANK', '*', USER_EXPORT],
+      ['EXPENSES', '*', USER_EXPORT],
       ['INVENTORY', '*', [A.VIEW]],
-      ['MASTERS', '*', [A.VIEW, A.CREATE, A.EDIT]],
-      ['REPORTS', '*', [A.VIEW, A.EXPORT]],
+      ['MASTERS', '*', USER],
+      ['REPORTS', '*', READ],
       ['SETTINGS', 'Company Profile', [A.VIEW]],
       ['SETTINGS', 'Tax Settings', [A.VIEW]],
+    ],
+  },
+  ACCOUNTS_MANAGER: {
+    label: 'Accounts Manager',
+    description: 'Everything an Accountant does, plus approvals, deletions, tax and numbering settings',
+    roleType: 'ACCOUNTANT',
+    grants: [
+      ['SALES', '*', ['*']],
+      ['PURCHASE', '*', ['*']],
+      ['ACCOUNTING', '*', ['*']],
+      ['CASHBANK', '*', ['*']],
+      ['EXPENSES', '*', ['*']],
+      ['INVENTORY', '*', [A.VIEW, A.APPROVE, A.EXPORT]],
+      ['MASTERS', '*', ['*']],
+      ['REPORTS', '*', READ],
+      ['SETTINGS', 'Company Profile', [A.VIEW]],
+      ['SETTINGS', 'Tax Settings', [A.VIEW, A.EDIT]],
+      ['SETTINGS', 'Document Numbering', [A.VIEW, A.EDIT]],
+      ['SETTINGS', 'Document Templates', [A.VIEW, A.EDIT]],
+      ['SETTINGS', 'Audit trail', READ],
+    ],
+  },
+
+  // ---- Sales (Odoo: own documents / all documents / administrator) ----
+  SALES_REP: {
+    label: 'Sales Representative',
+    description: 'Raise sales documents, but see only the ones they raised themselves',
+    roleType: 'SALES',
+    ownDocumentsOnly: true,
+    grants: [
+      ['SALES', '*', USER],
+      ['MASTERS', 'Customers', USER],
+      ['INVENTORY', '*', [A.VIEW]],
+      ...REFERENCE_DATA,
     ],
   },
   SALES: {
     label: 'Sales User',
     description: 'Raise sales documents and see customers; no purchase or ledger access',
+    roleType: 'SALES',
     grants: [
-      ['SALES', '*', [A.VIEW, A.CREATE, A.EDIT]],
-      ['MASTERS', 'Customers', [A.VIEW, A.CREATE, A.EDIT]],
-      ['MASTERS', 'Items', [A.VIEW]],
-      // Branch/warehouse lists are reference data every document form needs.
-      ['MASTERS', 'Company/Branch setup', [A.VIEW]],
+      ['SALES', '*', USER],
+      ['MASTERS', 'Customers', USER],
       ['INVENTORY', '*', [A.VIEW]],
       ['REPORTS', 'Sales Reports', [A.VIEW]],
+      ...REFERENCE_DATA,
     ],
   },
+  SALES_MANAGER: {
+    label: 'Sales Manager',
+    description: 'All sales documents with approval, deletion and export; customers and salesmen',
+    roleType: 'SALES',
+    grants: [
+      ['SALES', '*', ['*']],
+      ['MASTERS', 'Customers', ['*']],
+      ['MASTERS', 'Salesmen', ['*']],
+      ['INVENTORY', '*', [A.VIEW]],
+      ['REPORTS', 'Sales Reports', READ],
+      ['REPORTS', 'GSTR-1', READ],
+      ...REFERENCE_DATA,
+    ],
+  },
+
+  // ---- Purchase (ERPNext: Purchase User / Purchase Manager) ----
+  PURCHASE: {
+    label: 'Purchase User',
+    description: 'Record bills and purchase orders and pay vendors; no sales or ledger access',
+    roleType: 'CUSTOM',
+    grants: [
+      ['PURCHASE', 'Bills', USER],
+      ['PURCHASE', 'Purchase Orders', USER],
+      ['PURCHASE', 'Payments', USER],
+      ['EXPENSES', 'Expenses', USER],
+      ['MASTERS', 'Vendors', USER],
+      ['INVENTORY', '*', [A.VIEW]],
+      ...REFERENCE_DATA,
+    ],
+  },
+  PURCHASE_MANAGER: {
+    label: 'Purchase Manager',
+    description: 'All purchase documents with approval, deletion and export; debit notes and vendors',
+    roleType: 'CUSTOM',
+    grants: [
+      ['PURCHASE', '*', ['*']],
+      ['EXPENSES', '*', ['*']],
+      ['MASTERS', 'Vendors', ['*']],
+      ['INVENTORY', '*', [A.VIEW]],
+      ['REPORTS', 'GSTR-3B', READ],
+      ...REFERENCE_DATA,
+    ],
+  },
+
+  // ---- Inventory (Odoo: User / Administrator) ----
   STORE: {
     label: 'Store Keeper',
     description: 'Stock movements for the branches and warehouses assigned to the user',
+    roleType: 'CUSTOM',
     grants: [
-      ['INVENTORY', '*', [A.VIEW, A.CREATE, A.EDIT]],
-      ['MASTERS', 'Items', [A.VIEW]],
-      // Branch/warehouse lists are reference data every stock form needs.
-      ['MASTERS', 'Company/Branch setup', [A.VIEW]],
+      ['INVENTORY', '*', USER],
       ['SALES', 'Invoices', [A.VIEW]],
+      ['SALES', 'Delivery Challans', USER],
       ['PURCHASE', 'Bills', [A.VIEW]],
+      ...REFERENCE_DATA,
     ],
+  },
+  STORE_MANAGER: {
+    label: 'Store Manager',
+    description: 'All stock movements with approval and deletion; maintains items and units',
+    roleType: 'CUSTOM',
+    grants: [
+      ['INVENTORY', '*', ['*']],
+      ['SALES', 'Invoices', [A.VIEW]],
+      ['SALES', 'Delivery Challans', ['*']],
+      ['PURCHASE', 'Bills', [A.VIEW]],
+      ['PURCHASE', 'Purchase Orders', [A.VIEW]],
+      ['MASTERS', 'Items', ['*']],
+      ['MASTERS', 'Units of Measure', ['*']],
+      ['MASTERS', 'Company/Branch setup', [A.VIEW]],
+      ['MASTERS', 'GST Rates', [A.VIEW]],
+    ],
+  },
+
+  // ---- Payroll (ERPNext: HR User / HR Manager) ----
+  PAYROLL_USER: {
+    label: 'Payroll User',
+    description: 'Prepare payroll: structures, assignments, runs and adjustments; no approval or posting',
+    roleType: 'CUSTOM',
+    grants: [
+      ['PAYROLL', 'Salary Structures', USER],
+      ['PAYROLL', 'Salary Assignments', USER],
+      ['PAYROLL', 'Salary Revisions', USER],
+      ['PAYROLL', 'Payroll Runs', USER],
+      ['PAYROLL', 'Salary Slips', READ],
+      ['PAYROLL', 'Payroll Adjustments', USER],
+      ['PAYROLL', 'Payroll Loans', USER],
+      ['PAYROLL', 'Employee Payroll Profile', USER],
+      ['PAYROLL', 'Payroll Settings', [A.VIEW]],
+      ['PAYROLL', 'Payroll Reports', [A.VIEW]],
+      ['MASTERS', 'Company/Branch setup', [A.VIEW]],
+    ],
+  },
+  PAYROLL_MANAGER: {
+    label: 'Payroll Manager',
+    description: 'Run, approve, pay and post payroll; payroll settings and reports',
+    roleType: 'CUSTOM',
+    grants: [
+      ['PAYROLL', '*', ['*']],
+      ['MASTERS', 'Company/Branch setup', [A.VIEW]],
+    ],
+  },
+
+  // ---- Read-only (ERPNext: Auditor; QuickBooks: Reports only) ----
+  AUDITOR: {
+    label: 'Auditor',
+    description: 'Read and export every book, document, report and the audit trail; change nothing',
+    roleType: 'CUSTOM',
+    grants: [
+      ['SALES', '*', READ],
+      ['PURCHASE', '*', READ],
+      ['INVENTORY', '*', READ],
+      ['ACCOUNTING', '*', READ],
+      ['CASHBANK', '*', READ],
+      ['EXPENSES', '*', READ],
+      ['MASTERS', '*', [A.VIEW]],
+      ['REPORTS', '*', READ],
+      ['SETTINGS', 'Company Profile', [A.VIEW]],
+      ['SETTINGS', 'Tax Settings', [A.VIEW]],
+      ['SETTINGS', 'Company data', READ],
+      ['SETTINGS', 'Audit trail', READ],
+    ],
+  },
+  REPORTS_ONLY: {
+    label: 'Reports Only',
+    description: 'Financial and GST reports, nothing else',
+    roleType: 'CUSTOM',
+    grants: [['REPORTS', '*', READ]],
   },
   VIEWER: {
     label: 'Viewer',
     description: 'Read-only across the product',
+    roleType: 'CUSTOM',
     grants: PERMISSION_CATALOG.map((m) => [m.key, '*', [A.VIEW]] as [string, string, string[]]),
   },
 };

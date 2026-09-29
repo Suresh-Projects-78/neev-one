@@ -20,6 +20,14 @@ const ADMIN_FIELD_LEVEL = 99;
 
 export type EffectiveAccess = {
   roleIds: string[];
+  /** Holds at least one ADMIN-type role: field levels do not apply, and ADMIN roles may be administered. */
+  isAdmin: boolean;
+  /**
+   * Every held role is limited to the holder's own documents, so reads are
+   * filtered to rows they created. One unrestricted role lifts it; so does
+   * an ADMIN role.
+   */
+  ownDocumentsOnly: boolean;
   /** "MODULE::Resource::ACTION" */
   permissions: Set<string>;
   /** Highest field level granted per "MODULE::Resource::ACTION". */
@@ -68,7 +76,7 @@ export async function resolveAccess(
   const roleIds = await resolveRoleIds(accountId, orgId, userId, branchId);
 
   if (!roleIds.length) {
-    return { roleIds, permissions: new Set(), levels: new Map() };
+    return { roleIds, isAdmin: false, ownDocumentsOnly: false, permissions: new Set(), levels: new Map() };
   }
 
   const rows = await prisma.rolePermission.findMany({
@@ -96,10 +104,12 @@ export async function resolveAccess(
    * to type. Restricted roles are unaffected: they keep exactly the level they
    * were granted.
    */
-  const adminRoles = await prisma.role.count({
-    where: { id: { in: roleIds }, roleType: RoleType.ADMIN },
+  const heldRoles = await prisma.role.findMany({
+    where: { id: { in: roleIds } },
+    select: { roleType: true, ownDocumentsOnly: true },
   });
-  const isAdmin = adminRoles > 0;
+  const isAdmin = heldRoles.some((r) => r.roleType === RoleType.ADMIN);
+  const ownDocumentsOnly = !isAdmin && heldRoles.length > 0 && heldRoles.every((r) => r.ownDocumentsOnly);
 
   const permissions = new Set<string>();
   const levels = new Map<string, number>();
@@ -118,7 +128,16 @@ export async function resolveAccess(
     else if (!levels.has(k)) levels.set(k, r.permLevel);
   }
 
-  return { roleIds, permissions, levels };
+  return { roleIds, isAdmin, ownDocumentsOnly, permissions, levels };
+}
+
+/**
+ * The extra `where` a document query needs for a caller limited to their own
+ * documents. Spread it into every list and single-document lookup of a
+ * document family; for everyone else it is empty.
+ */
+export function ownDocsWhere(req: { ownDocumentsOnly?: boolean; auth?: { userId: string } }) {
+  return req.ownDocumentsOnly && req.auth?.userId ? { createdByUserId: req.auth.userId } : {};
 }
 
 /** The field level this user holds for a given permission. */

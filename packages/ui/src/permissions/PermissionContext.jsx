@@ -15,6 +15,8 @@ export const PermissionProvider = ({ children, enabled = true, reloadKey = 0 }) 
     error: '',
     permissions: new Set(),
     roles: [],
+    isAdmin: false,
+    ownDocumentsOnly: false,
     restrictions: { branchIds: [], warehouseIds: [] },
   });
 
@@ -31,6 +33,11 @@ export const PermissionProvider = ({ children, enabled = true, reloadKey = 0 }) 
           error: '',
           permissions: new Set(Array.isArray(data?.permissions) ? data.permissions : []),
           roles: Array.isArray(data?.roles) ? data.roles : [],
+          // Holds an ADMIN-type role. Only an administrator may create or
+          // hand out Administrator roles; the server refuses everyone else.
+          isAdmin: Boolean(data?.isAdmin),
+          // The server only returns documents this user created.
+          ownDocumentsOnly: Boolean(data?.ownDocumentsOnly),
           restrictions: data?.restrictions || { branchIds: [], warehouseIds: [] },
         })
       )
@@ -40,6 +47,8 @@ export const PermissionProvider = ({ children, enabled = true, reloadKey = 0 }) 
           error: String(e?.message || e),
           permissions: new Set(),
           roles: [],
+          isAdmin: false,
+          ownDocumentsOnly: false,
           restrictions: { branchIds: [], warehouseIds: [] },
         })
       );

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 
+import { PermissionContext } from '@ui/permissions/context';
 import DashboardOverview from './DashboardOverview';
 
 /**
@@ -38,17 +39,36 @@ const running = {
 
 const fresh = { ...running, invoices: [], bills: [], customers: [], payments: [] };
 
-const renderHome = (db, props = {}) =>
+/**
+ * Home only offers what the person may do, so the screen is rendered inside a
+ * permission context. The default is an owner who may do everything; a test
+ * about a restricted person passes its own `can`.
+ */
+const asUser = (can = () => true) => ({
+  loading: false,
+  error: '',
+  permissions: new Set(),
+  roles: [],
+  restrictions: { branchIds: [], warehouseIds: [] },
+  can,
+  canAny: (keys) => (Array.isArray(keys) ? keys : [keys]).some(can),
+  canModule: (mod) => can(`${mod}::`),
+  reload: () => {},
+});
+
+const renderHome = (db, props = {}, permissions = asUser()) =>
   render(
-    <DashboardOverview
-      db={db}
-      currentCompany={co}
-      userName="manickam"
-      onNewInvoice={() => {}}
-      onOpenInvoices={() => {}}
-      onNavigate={() => {}}
-      {...props}
-    />
+    <PermissionContext.Provider value={permissions}>
+      <DashboardOverview
+        db={db}
+        currentCompany={co}
+        userName="manickam"
+        onNewInvoice={() => {}}
+        onOpenInvoices={() => {}}
+        onNavigate={() => {}}
+        {...props}
+      />
+    </PermissionContext.Provider>
   );
 
 describe('the screen follows the state of the books', () => {
@@ -108,5 +128,23 @@ describe('a panel with nothing in it says so', () => {
     const todo = screen.getByRole('region', { name: 'Things to do' });
     /* No bills at all, so no "due this week" line — not a ₹0.00 one. */
     expect(within(todo).queryByText(/bills due this week/)).toBeNull();
+  });
+});
+
+describe('the screen offers only what the person may do', () => {
+  const salesOnly = asUser((key) => String(key).startsWith('SALES::'));
+
+  it('hides the bill and report shortcuts from someone with sales rights only', () => {
+    renderHome(running, { onNewBill: () => {}, onOpenReports: () => {}, onRecordReceipt: () => {} }, salesOnly);
+    expect(screen.queryByRole('button', { name: 'New bill' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reports' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'New invoice' })).toBeInTheDocument();
+    expect(screen.queryByText(/of bills due this week/)).toBeNull();
+  });
+
+  it('keeps a setup step the person cannot do on the list, marked for an administrator', () => {
+    renderHome(fresh, {}, salesOnly);
+    expect(screen.getAllByText('Needs an administrator').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('New invoice').length).toBeGreaterThan(0);
   });
 });
