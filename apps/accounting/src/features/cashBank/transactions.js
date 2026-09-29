@@ -159,7 +159,8 @@ export const cashBankTransactions = (db, companyId, { accountId = '', from = '',
     if (!inWindow(j.date)) continue;
     const lines = safeArray(j.lines);
     if (lines.length < 2) continue;
-    const resolved = lines.map((l) => byKey.get(String(l?.accountId || '').trim()) || null);
+    // A journal loaded from the server names its accounts by the server's id.
+    const resolved = lines.map((l) => byKey.get(String(l?.accountId || l?.serverLedgerAccountId || '').trim()) || null);
     if (resolved.some((a) => !a)) continue;
 
     /* Out of the credited account, into the debited one. */

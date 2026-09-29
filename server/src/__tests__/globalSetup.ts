@@ -229,6 +229,7 @@ export default async function setup() {
   await applyPolicies(asOwner(accounting), 'prisma/migrations/20260924120000_row_level_security');
   // Later tables carry their own policy in their own migration.
   await applyPolicies(asOwner(accounting), 'prisma/migrations/20260929120000_stock_documents');
+  await applyPolicies(asOwner(accounting), 'prisma/migrations/20260929180000_reconciliation_on_server');
   await applyPolicies(asOwner(payroll), 'prisma/payroll/migrations/20260924120000_row_level_security');
   await applyPolicies(asOwner(people), 'prisma/people/migrations/20260924120000_row_level_security');
 

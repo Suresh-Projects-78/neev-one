@@ -265,6 +265,11 @@ const mapJournalEntry = (e, companyId) => ({
   totalDebit: num((e.lines || []).reduce((t, l) => t + num(l.debit), 0)),
   totalCredit: num((e.lines || []).reduce((t, l) => t + num(l.credit), 0)),
   status: e.status || 'POSTED',
+  // A contra's reconciliation lives on the server now; without it a
+  // reconciled contra read unreconciled after every reload.
+  reconciled: e.reconciled === true,
+  bankDate: e.bankDate ? String(e.bankDate).slice(0, 10) : null,
+  statementRef: e.statementRef || '',
   createdAt: e.createdAt,
   hydratedFromServer: true,
 });

@@ -462,6 +462,33 @@ model InventoryAdjustment {
   @@index([accountId, orgId, branchId, warehouseId, itemId])
 }
 
+/// Every change to a bank date, on any movement the reconciliation screen
+/// confirms: a payment or receipt, a bank-statement line, or a contra.
+///
+/// A bank date is a claim about the bank's records; one somebody changed must
+/// say from what, to what, by whom and when. This used to live only in the
+/// browser, so the history was gone on the next reload. Written by the server
+/// in the same transaction as the reconcile itself, so the two cannot differ.
+model BankDateAudit {
+  id               String   @id @default(cuid())
+  accountId        String
+  orgId            String
+  kind             String // PAYMENT | STATEMENT | CONTRA
+  sourceId         String // the Payment, BankBookEntry or JournalEntry id
+  voucherNo        String?
+  ledgerAccountId  String?
+  transactionDate  String
+  previousBankDate String?
+  bankDate         String?
+  action           String // RECONCILED | UNRECONCILED | REDATED
+  statementRef     String?
+  byUserId         String
+  at               DateTime @default(now())
+
+  @@index([accountId, orgId, kind, sourceId])
+  @@index([accountId, orgId, at])
+}
+
 /// A stock document the browser raised — an adjustment or an inter-branch
 /// transfer — kept on the server so every device and user sees one set.
 ///
@@ -1181,6 +1208,13 @@ model JournalEntry {
   // Tamper-evidence: sha256(prevHash + canonical payload) per branch chain.
   prevHash String?
   hash     String?
+
+  /// Bank reconciliation, for a contra (cash/bank to cash/bank) entry. Not
+  /// part of the hash: the chain proves what was posted, and reconciling
+  /// states what the bank shows, which does not change the posting.
+  reconciled   Boolean   @default(false)
+  bankDate     DateTime?
+  statementRef String?
 
   createdByUserId String
   createdAt       DateTime @default(now())
