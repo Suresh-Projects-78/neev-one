@@ -17,6 +17,7 @@ import { dueDateFor } from './parties.js';
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/fx.js';
+import { SettledDocument, assertInvoiceCancellable } from '../services/settledDocGuard.js';
 
 export const invoicesRouter = Router();
 invoicesRouter.use(requireAuth, requireTenantContext);
@@ -679,6 +680,16 @@ invoicesRouter.patch('/orgs/:orgId/invoices/:invoiceId/status', requirePermissio
       });
     } catch (e: any) {
       if (e instanceof PosCheckoutError) return res.status(e.status).json({ error: e.message, code: e.code });
+      throw e;
+    }
+
+    /* Nor may any other invoice something already leans on: a receipt
+       allocated to it, or a credit note raised against it. Cancelling would
+       take the sale out of the ledger and leave those standing. */
+    try {
+      await assertInvoiceCancellable({ accountId, orgId, invoice: existing });
+    } catch (e: any) {
+      if (e instanceof SettledDocument) return res.status(e.status).json({ error: e.message, code: e.code });
       throw e;
     }
 

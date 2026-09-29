@@ -7,6 +7,7 @@ import { postJournalToLedger, reverseJournalOnLedger } from '@ui/utils/journalSy
 import { createDocApi, deleteDocApi, updateDocApi, hasApiSession as hasDocsApiSession } from '@ui/api/purchaseDocs';
 import { useServerDocSync } from '@ui/hooks/useServerDocSync';
 import useTdsSync from './features/tds/useTdsSync';
+import useStockSync from './features/inventory/useStockSync';
 import { useCompanyFromServer } from '@ui/hooks/useCompanyFromServer';
 import { buildGstr1Json, buildGstr3bJson, downloadJson } from '@ui/utils/gstrExport';
 import Toaster from '@ui/components/ui/Toaster';
@@ -56,7 +57,6 @@ import {
   bumpCompanyNextNumber,
   formatVoucherNumberPreview,
   getDocSettings,
-  getVoucherDef,
 } from '@ui/utils/docSettings';
 import {
   computeGstForLine,
@@ -74,8 +74,11 @@ import {
 import RecordReceiptForm from './features/payments/RecordReceiptForm';
 import RecordDisbursementForm from './features/payments/RecordDisbursementForm';
 import { cashBankIndex } from './features/cashBank/transactions';
+import { invoiceChangeBlockReason } from './features/sales/invoiceChangeGuard';
 
-const InvoicePreview = lazy(() => import('./features/sales/InvoicePreview'));
+/* Static, not lazy: the sales module imports it statically, so it is in the
+   main chunk either way and `lazy` only earned a build warning. */
+import InvoicePreview from './features/sales/InvoicePreview';
 
 /*
  * Screens reached from inside another screen rather than from the rail.
@@ -644,6 +647,13 @@ export const ExpensesList = ({ db, setDb, openModal, currentCompany }) => {
   };
 
   const deleteExpense = async (expense) => {
+    // A paid expense is undone by reversing its payment first; the server
+    // refuses too, but an expense kept only in this browser had no check.
+    const settled = Number(expense?.paidAmount || expense?.settledAmount || 0);
+    if (settled > 0.005 || /^(paid|partial|partially paid|partly paid)$/i.test(String(expense?.status || '').trim())) {
+      notify.error(`${expense?.number || 'This expense'} has been paid in whole or part. Reverse the payment first, then delete it.`);
+      return;
+    }
     const ok = await confirmDialog({
       title: 'Delete expense?',
       message: `Delete expense ${expense?.number || ''}?`,
@@ -4821,11 +4831,10 @@ const LedgerView = ({
 
   const openRowActions = (row) => {
     if (!openModal) {
-      const choice = window.prompt('Action: type view, edit or delete', 'view');
+      const choice = window.prompt('Action: type view or edit', 'view');
       const c = String(choice || '').trim().toLowerCase();
       if (c === 'view') return handleView(row);
       if (c === 'edit') return handleEdit(row);
-      if (c === 'delete') return handleDelete(row);
       return;
     }
 
@@ -4835,7 +4844,9 @@ const LedgerView = ({
         <div className="flex flex-col">
           <button type="button" onClick={() => { openModal(null); handleView(row); }} className="text-left px-3 py-2 ui-hover-sunken">View</button>
           <button type="button" onClick={() => { openModal(null); handleEdit(row); }} className="text-left px-3 py-2 ui-hover-sunken">Edit</button>
-          <button type="button" onClick={() => { openModal(null); handleDelete(row); }} className="text-left px-3 py-2 ui-hover-sunken text-[rgb(var(--neg))]">Delete</button>
+          {/* No Delete here. A ledger is a report: documents are deleted from
+              their own lists, which refuse paid ones and update the server.
+              This one removed any voucher from the browser's copy only. */}
         </div>
         <div className="flex justify-end">
           <button type="button" onClick={() => openModal(null)} className="ui-btn ui-btn-secondary">Close</button>
@@ -4865,123 +4876,24 @@ const LedgerView = ({
     const meta = row?.meta || {};
     const key = String(meta.voucherKey || '').trim();
     const id = meta.voucherId ?? meta.voucherId;
+    /*
+     * A line with no document behind it is shown, not edited. This used to
+     * open a raw-JSON editor that wrote a one-line — unbalanced — journal
+     * entry into the browser's copy of the books and nowhere else.
+     */
     if (!key || !id) {
-      // If underlying voucher is not available, open a generic row editor that allows
-      // editing the ledger row or creating a journal entry.
-      if (!openModal) {
-        const txt = window.prompt('Edit entry JSON', JSON.stringify(row || {}, null, 2));
-        if (!txt) return;
-        try {
-          const parsed = JSON.parse(txt);
-          // try to create a journal entry from parsed
-          const debit = Number(parsed.debit || parsed.amount || 0);
-          const credit = Number(parsed.credit || 0);
-          const date = parsed.date || new Date().toISOString().slice(0, 10);
-          const narration = parsed.particulars || parsed.narration || 'Edited entry';
-          const nextId = ((Array.isArray(db.journalEntries) ? db.journalEntries : []).reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0) || 0) + 1;
-          const je = { id: nextId, companyId: currentCompany.id, date, narration, lines: [{ accountId: String(ledgerId), debit, credit }], createdAt: new Date().toISOString() };
-          setDb((prev) => ({ ...prev, journalEntries: [...(Array.isArray(prev.journalEntries) ? prev.journalEntries : []), je] }));
-        } catch {
-          notify.error('Invalid JSON');
-        }
-        return;
-      }
-      const GenericRowEditor = ({ initial, onClose }) => {
-        const [useForm, setUseForm] = useState(true);
-        const [txt, setTxt] = useState(JSON.stringify(initial || {}, null, 2));
-        const [form, setForm] = useState({
-          date: initial?.date || new Date().toISOString().slice(0, 10),
-          particulars: initial?.particulars || initial?.narration || '',
-          debit: initial?.debit ?? 0,
-          credit: initial?.credit ?? 0,
-        });
-
-        const save = () => {
-          try {
-            let parsed = null;
-            if (useForm) {
-              parsed = { ...initial, date: form.date, particulars: form.particulars, debit: Number(form.debit || 0), credit: Number(form.credit || 0) };
-            } else {
-              parsed = JSON.parse(txt);
-            }
-
-            // If parsed contains voucherKey/listKey/id then update that voucher
-            const pKey = String(parsed?.meta?.voucherKey || parsed?.voucherKey || '').trim();
-            const pId = parsed?.meta?.voucherId ?? parsed?.voucherId;
-            const def = pKey ? getVoucherDef(pKey) : null;
-            const listKey = def?.listKey || null;
-            if (listKey && pId) {
-              setDb((prev) => {
-                const next = { ...prev };
-                next[listKey] = (prev[listKey] || []).map((it) => (String(it?.id) === String(pId) ? { ...it, ...parsed } : it));
-                return next;
-              });
-              onClose && onClose();
-              return;
-            }
-
-            // Otherwise create a journal entry representing this row
-            const debit = Number(parsed.debit || parsed.amount || 0);
-            const credit = Number(parsed.credit || 0);
-            const date = parsed.date || new Date().toISOString().slice(0, 10);
-            const narration = parsed.particulars || parsed.narration || 'Edited entry';
-            const nextId = ((Array.isArray(db.journalEntries) ? db.journalEntries : []).reduce((m, x) => Math.max(m, Number(x?.id || 0)), 0) || 0) + 1;
-            const je = { id: nextId, companyId: currentCompany.id, date, narration, lines: [{ accountId: String(ledgerId), debit, credit }], createdAt: new Date().toISOString() };
-            setDb((prev) => ({ ...prev, journalEntries: [...(Array.isArray(prev.journalEntries) ? prev.journalEntries : []), je] }));
-            onClose && onClose();
-          } catch (e) {
-            notify.error('Invalid JSON: ' + e.message);
-          }
-        };
-
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm ui-muted">Edit entry — simple form or JSON.</div>
-              <div>
-                <label className="text-xs ui-muted mr-2" htmlFor="app-raw-json">Raw JSON</label>
-                <input id="app-raw-json" type="checkbox" checked={!useForm} onChange={() => setUseForm((v) => !v)} />
-              </div>
-            </div>
-            {useForm ? (
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="ui-label" htmlFor="app-date">Date</label>
-                  <input id="app-date" type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="app-particulars">Particulars</label>
-                  <input id="app-particulars" value={form.particulars} onChange={(e) => setForm((p) => ({ ...p, particulars: e.target.value }))} className="ui-input w-full" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="app-debit">Debit</label>
-                  <input id="app-debit" value={form.debit} onChange={(e) => setForm((p) => ({ ...p, debit: e.target.value }))} className="ui-input w-full" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="app-credit">Credit</label>
-                  <input id="app-credit" value={form.credit} onChange={(e) => setForm((p) => ({ ...p, credit: e.target.value }))} className="ui-input w-full" />
-                </div>
-              </div>
-            ) : (
-              <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="ui-input w-full h-64 p-2 text-xs font-mono" />
-            )}
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { onClose && onClose(); }} className="ui-btn ui-btn-secondary">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">Save</button>
-            </div>
-          </div>
-        );
-      };
-
-      openModal(<GenericRowEditor initial={row} onClose={() => openModal(null)} />);
+      handleView(row);
       return;
     }
-    const def = getVoucherDef(key);
-    const listKey = def?.listKey || null;
-
     // If a dedicated form component exists, use it.
     if (key === 'invoice') {
       const inv = (Array.isArray(db.invoices) ? db.invoices : []).find((x) => String(x?.id) === String(id));
+      // The same rule the invoice list applies before it opens an edit.
+      const blocked = invoiceChangeBlockReason(db, currentCompany, inv, 'edit');
+      if (blocked) {
+        notify.error(blocked);
+        return;
+      }
       openModal(
         <InvoiceForm
           db={db}
@@ -5064,121 +4976,12 @@ const LedgerView = ({
       return;
     }
 
-    // Generic editor fallback: edit raw JSON for any voucher list
-    if (listKey && Array.isArray(db[listKey])) {
-      const existing = db[listKey].find((x) => String(x?.id) === String(id)) || null;
-      const GenericVoucherEditor = ({ initial, onClose }) => {
-        const [useForm, setUseForm] = useState(true);
-        const [txt, setTxt] = useState(JSON.stringify(initial || {}, null, 2));
-        const [form, setForm] = useState({
-          date: initial?.date || initial?.issueDate || '',
-          number: initial?.number || initial?.voucherNo || '',
-          total: initial?.total ?? initial?.amount ?? initial?.grandTotal ?? '',
-        });
-
-        const save = () => {
-          try {
-            let parsed = null;
-            if (useForm) {
-              parsed = { ...initial, date: form.date, number: form.number };
-              if (form.total !== undefined && form.total !== '') parsed.total = Number(form.total);
-            } else {
-              parsed = JSON.parse(txt);
-            }
-            setDb((prev) => {
-              const next = { ...prev };
-              next[listKey] = (prev[listKey] || []).map((it) => (String(it?.id) === String(id) ? parsed : it));
-              return next;
-            });
-            onClose && onClose();
-          } catch (e) {
-            notify.error('Invalid JSON: ' + e.message);
-          }
-        };
-
-        return (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="text-sm ui-muted">Edit voucher — simple form or JSON.</div>
-              <div>
-                <label className="text-xs ui-muted mr-2" htmlFor="app-raw-json-2">Raw JSON</label>
-                <input id="app-raw-json-2" type="checkbox" checked={!useForm} onChange={() => setUseForm((v) => !v)} />
-              </div>
-            </div>
-            {useForm ? (
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="ui-label" htmlFor="app-date-2">Date</label>
-                  <input id="app-date-2" type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="ui-input w-full" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="app-number">Number</label>
-                  <input id="app-number" value={form.number} onChange={(e) => setForm((p) => ({ ...p, number: e.target.value }))} className="ui-input w-full" />
-                </div>
-                <div>
-                  <label className="ui-label" htmlFor="app-total">Total</label>
-                  <input id="app-total" value={form.total} onChange={(e) => setForm((p) => ({ ...p, total: e.target.value }))} className="ui-input w-full" />
-                </div>
-              </div>
-            ) : (
-              <textarea value={txt} onChange={(e) => setTxt(e.target.value)} className="ui-input w-full h-64 p-2 text-xs font-mono" />
-            )}
-            <div className="flex gap-2">
-              <button type="button" onClick={() => { onClose && onClose(); }} className="ui-btn ui-btn-secondary">Cancel</button>
-              <button type="button" onClick={save} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">Save</button>
-            </div>
-          </div>
-        );
-      };
-
-      openModal(<GenericVoucherEditor initial={existing} onClose={() => openModal(null)} />);
-      return;
-    }
-
-    // fallback: view details
+    // Anything without its own form is shown read-only. The raw-JSON editor
+    // that stood here changed amounts in the browser's copy and never
+    // reached the server or the other side of the entry.
     handleView(row);
   };
 
-  const handleDelete = async (row) => {
-    const meta = row?.meta || {};
-    const key = String(meta.voucherKey || '').trim();
-    const id = meta.voucherId ?? meta.voucherId;
-    if (!key || !id) return notify.error('Cannot delete this entry');
-    const ok = await confirmDialog({ title: 'Please confirm', message: 'Delete this voucher? This action cannot be undone.', confirmLabel: 'Yes, continue' });
-    if (!ok) return;
-
-    const def = getVoucherDef(key);
-    const listKey = def?.listKey || null;
-    if (!listKey) return notify.error('Delete not supported for this voucher type');
-
-    setDb((prev) => {
-      const next = { ...prev };
-      const deleted = (Array.isArray(prev[listKey]) ? prev[listKey] : []).find((x) => String(x?.id) === String(id)) || null;
-      next[listKey] = (Array.isArray(prev[listKey]) ? prev[listKey] : []).filter((x) => String(x?.id) !== String(id));
-      // show undo modal
-      setTimeout(() => {
-        if (!openModal) return;
-        openModal(
-          <div className="space-y-4">
-            <div className="text-sm ui-fg">Deleted voucher.</div>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => openModal(null)} className="ui-btn ui-btn-secondary">Close</button>
-              <button type="button" onClick={() => {
-                // restore
-                setDb((prev2) => {
-                  const next2 = { ...prev2 };
-                  next2[listKey] = [...(Array.isArray(prev2[listKey]) ? prev2[listKey] : []), deleted].filter(Boolean);
-                  return next2;
-                });
-                openModal(null);
-              }} className="px-4 py-2 rounded-lg ui-btn ui-btn-primary">Undo</button>
-            </div>
-          </div>
-        );
-      }, 50);
-      return next;
-    });
-  };
   const statement = useMemo(() => {
     return buildLedgerStatement(db, currentCompany.id, ledgerId);
   }, [db, currentCompany.id, ledgerId]);
@@ -11399,6 +11202,8 @@ const AppShell = () => {
   /* The TDS compliance stores follow the same rule as every master: local
      is the working copy, the server is where every device meets. */
   useTdsSync(db, setDb, isAuthenticated ? currentCompany : null);
+  // Stock adjustments and transfers, shared through the server like every other document.
+  useStockSync(db, setDb, isAuthenticated ? currentCompany : null);
 
 
   /*

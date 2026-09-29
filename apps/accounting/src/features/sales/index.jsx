@@ -76,6 +76,7 @@ import { blockIfClosed } from '@ui/utils/bookClose';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
 import { usePostingLock } from './usePostingLock';
 import { orgId as platformOrgId } from '@platform/context';
+import { invoiceChangeBlockReason } from './invoiceChangeGuard';
 
 
 /** Columns the invoices grid can show or hide. Identity and actions stay. */
@@ -542,38 +543,7 @@ const statusReason = (doc, status, company, nowMs) => {
    * invoice. Deliberately no auto-unlink: an automatic cascade through
    * payment allocations is how books get corrupted quietly.
    */
-  const invoiceChangeBlocked = (invoice, verb) => {
-    const safeArray = (v) => (Array.isArray(v) ? v : []);
-    const paid = Number(invoice?.paidAmount || 0);
-    const receipts = safeArray(db.payments).filter(
-      (p) =>
-        p.companyId === currentCompany.id &&
-        ((String(p.voucherType) === 'invoice' && Number(p.voucherId) === Number(invoice?.id)) ||
-          safeArray(p.allocations).some((a) => String(a?.voucherType) === 'invoice' && Number(a?.voucherId) === Number(invoice?.id))) &&
-        p.status !== 'Reversed'
-    );
-    const notes = safeArray(db.creditNotes).filter(
-      (n) =>
-        n.companyId === currentCompany.id &&
-        String(n?.status || '').toLowerCase() !== 'cancelled' &&
-        (String(n?.originalInvoiceId ?? '') === String(invoice?.id) ||
-          safeArray(n?.allocations).some((a) => String(a?.docId ?? a?.voucherId ?? '') === String(invoice?.id)))
-    );
-    if (receipts.length) {
-      return `${invoice?.number || 'This invoice'} has ${receipts.length} receipt(s) against it — reverse ${
-        receipts.length === 1 ? 'it' : 'them'
-      } from the Receipts list before you ${verb} the invoice.`;
-    }
-    if (notes.length) {
-      return `${invoice?.number || 'This invoice'} has ${notes.length} credit note(s) against it — cancel ${
-        notes.length === 1 ? 'it' : 'them'
-      } before you ${verb} the invoice.`;
-    }
-    if (paid > 0.005) {
-      return `${invoice?.number || 'This invoice'} carries ₹${paid.toLocaleString('en-IN')} of settlement — undo it before you ${verb} the invoice.`;
-    }
-    return '';
-  };
+  const invoiceChangeBlocked = (invoice, verb) => invoiceChangeBlockReason(db, currentCompany, invoice, verb);
 
   const openEditInvoice = (invoice) => {
     {
@@ -2851,11 +2821,9 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
    * allocated to a document that no longer exists.
    */
   const cancelInvoice = async () => {
-    const settled = Number(existingInvoiceRecord?.paidAmount ?? 0);
-    if (settled > 0) {
-      notify.error(
-        `${formatMoney(settled, currentCompany)} is already received against this invoice. Unlink the receipt before cancelling it.`
-      );
+    const blocked = invoiceChangeBlockReason(db, currentCompany, existingInvoiceRecord, 'cancel');
+    if (blocked) {
+      notify.error(blocked);
       return;
     }
     const ok = await confirmDialog({
@@ -2866,6 +2834,19 @@ export const InvoiceForm = ({ db, setDb, currentCompany, initialData = null, onC
       confirmLabel: 'Cancel invoice',
     });
     if (!ok) return;
+    /* The server reverses the sale and its GST. This used to change only the
+       browser's copy, so the invoice read Cancelled here while the books on
+       the server still carried the sale. */
+    const backendInvoiceId = String(existingInvoiceRecord?.backendInvoiceId || '').trim();
+    const hasSession = Boolean(String(localStorage.getItem('token') || '').trim() && String(platformOrgId() || '').trim());
+    if (hasSession && backendInvoiceId) {
+      try {
+        await updateInvoiceStatusApi(backendInvoiceId, { status: 'Cancelled' });
+      } catch (e) {
+        notify.error(String(e?.message || 'Unable to cancel the invoice.'));
+        return;
+      }
+    }
     setDb((prev) => ({
       ...prev,
       invoices: (prev.invoices || []).map((inv) =>

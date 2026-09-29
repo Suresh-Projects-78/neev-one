@@ -14,6 +14,7 @@ import { computeGstForLines } from '@ui/utils/gst';
 import { DocumentNumber, SalesDate, DueDate, MoneyValue, SalesBalance } from '@ui/components/docs';
 import { patchSchedule, removeSchedule, saveSchedule } from '@ui/utils/recurringSync';
 import { runSchedulesNow } from '@ui/api/recurring';
+import { hasApiSession as hasRecurringSession } from '@ui/api/purchaseDocs';
 import { exportFormatFromKey, exportMenuItem, runListExport } from '@ui/components/list/exportMenu';
 import { DocFormActions, DocFormFootnote } from '@ui/components/DocumentForm';
 import { ColumnHeader, useColumnFilters } from '@ui/components/ColumnFilters';
@@ -292,7 +293,26 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
   };
 
   /** Materialise every due period for one schedule right now. */
-  const runNow = (t) => {
+  const runNow = async (t) => {
+    /*
+     * A schedule the server keeps is run by the server — the same call as
+     * the header's Run now, which claims each period so it can never be
+     * billed twice. Running it here as well raised a second set of drafts
+     * in this browser that the server knew nothing about.
+     */
+    if (t?.backendScheduleId && hasRecurringSession()) {
+      try {
+        const r = await runSchedulesNow();
+        notify.success(
+          r?.raised
+            ? `${r.raised} draft invoice${r.raised === 1 ? '' : 's'} raised — review and save to post.`
+            : 'Nothing is due right now.'
+        );
+      } catch (e) {
+        notify.error(`Could not run the schedule: ${String(e?.message || e)}`);
+      }
+      return;
+    }
     const today = new Date().toISOString().slice(0, 10);
     let createdCount = 0;
     setDb((prev) => {
@@ -323,7 +343,8 @@ export default function RecurringInvoices({ db, setDb, currentCompany, onNavigat
           recurringTemplateId: t.id,
           createdAt: new Date().toISOString(),
         });
-        run = advanceRunDate(run, t.frequency);
+        // "Every second month" has to skip a month here too.
+        run = advanceRunDate(run, t.frequency, Math.max(1, Number(t.interval) || 1));
       }
       if (!createdCount) return prev;
       return {

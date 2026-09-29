@@ -16,7 +16,7 @@ import { notify, confirmDialog } from '@ui/components/ui/notify';
 import { useFieldErrors } from '@ui/components/ui/useFieldErrors';
 import { PermissionButton } from '@ui/permissions/ActionGuard';
 import { FieldError, FieldErrorSummary } from '@ui/components/ui/Primitives';
-import { createDocApi, deleteDocApi, hasApiSession, saveSettlementApi } from '@ui/api/purchaseDocs';
+import { cancelDocApi, createDocApi, deleteDocApi, hasApiSession, saveSettlementApi, updateDocApi } from '@ui/api/purchaseDocs';
 import { resolvePurchaseRate } from '@ui/utils/pricing';
 import { isTracked, needsExpiry } from '@ui/utils/batches';
 import { Ban, Building2, SlidersHorizontal, ClipboardList, Copy, CreditCard, Download, Eye, FileStack, FileText, Lock, MoreVertical, NotebookPen, Package, Pencil, Plus, Printer, Receipt, RefreshCw, ShoppingCart, Trash2, Truck, Upload, X } from 'lucide-react';
@@ -181,8 +181,25 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
         }))
       : base.items;
 
+    /*
+     * Editing keeps the bill's identity. The form used to treat every
+     * initialData as a template — a fresh number, today's date — so "Edit"
+     * opened what was really a new bill, and saving it either clashed with the
+     * bill's own number or posted a second bill to the server. A duplicate
+     * arrives without an id and still starts fresh.
+     */
+    const identity = initialData.id
+      ? {
+          number: String(initialData.number || ''),
+          date: initialData.date || base.date,
+          dueDate: initialData.dueDate || base.dueDate,
+          status: initialData.status || base.status,
+        }
+      : {};
+
     return {
       ...base,
+      ...identity,
       refNo: initialData.refNo || '',
       refDate: initialData.refDate || '',
       vendorId:
@@ -490,14 +507,36 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
     /* What the field is showing — which for an untouched automatic number is
        the series as it stands now, not as it stood when the form opened. */
+    const editing = Boolean(initialData?.id);
     let billNumber = String(billNumberValue || '').trim();
-    if (isBillAuto) {
+    // An existing bill keeps the number it has; the series is for new ones.
+    if (isBillAuto && !editing) {
       if (lockBillNumber) billNumber = String(generatedBillNumber || '').trim();
       else if (!billNumber) billNumber = String(generatedBillNumber || '').trim();
     }
+    if (editing && !billNumber) billNumber = String(initialData.number || '').trim();
+
+    // A paid bill is changed by reversing the payment first; the server
+    // refuses otherwise, and saying so here saves the round trip.
+    // "Unpaid" contains "paid": match the settled statuses whole.
+    if (editing && (Number(initialData.paidAmount) > 0 || /^(paid|partially paid|partly paid)$/i.test(String(initialData.status || '').trim()))) {
+      notify.error('This bill has payments against it. Reverse the payment first, then change it.');
+      return;
+    }
+    if (editing && wantsDraft && initialData.backendDocId) {
+      notify.error('A posted bill cannot go back to draft. Delete it instead, if nothing is paid against it.');
+      return;
+    }
+
     // Everything about a field, gathered in one pass and shown at the fields —
-    // not one at a time in the opposite corner of the screen.
-    const billNumberClash = db.bills.some((b) => b.companyId === currentCompany.id && String(b.number || '').trim() === billNumber);
+    // not one at a time in the opposite corner of the screen. The bill being
+    // edited does not clash with itself.
+    const billNumberClash = db.bills.some(
+      (b) =>
+        b.companyId === currentCompany.id &&
+        String(b.number || '').trim() === billNumber &&
+        !(editing && String(b.id) === String(initialData.id))
+    );
 
     fieldErrors.reset();
     fieldErrors.require('number', billNumber, 'Bill number is required');
@@ -553,11 +592,11 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
 
     // Server first: a non-draft bill is a liability and must reach the books.
     // The local copy mirrors it for the UI; drafts stay local until real.
-    let backendDocId = null;
+    let backendDocId = editing ? initialData.backendDocId || null : null;
     let serverNumber = '';
     if (!wantsDraft && hasApiSession()) {
       try {
-        const saved = await createDocApi('bill', {
+        const payload = {
           branchId: String(branchIdInList || branchIdForNumbering || effectiveDefaultBranchId || '').trim() || undefined,
           warehouseId: String(formData.warehouseId || effectiveDefaultWarehouseId || '').trim() || undefined,
           number: billNumber || undefined,
@@ -591,8 +630,11 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           tdsSectionCode: tdsAmount > 0 ? tds.sectionCode : undefined,
           tdsRate: tdsAmount > 0 ? tds.rate : undefined,
           tdsRuleVersionId: tdsAmount > 0 ? tds.ruleVersionId : undefined,
-        });
-        backendDocId = saved?.id || null;
+        };
+        /* An edit changes the server's copy — reversing and reposting it there
+           — instead of creating a second bill beside it. */
+        const saved = backendDocId ? await updateDocApi('bill', backendDocId, payload) : await createDocApi('bill', payload);
+        backendDocId = saved?.id || backendDocId;
         serverNumber = String(saved?.number || '');
       } catch (err) {
         notify.error(String(err?.message || 'Bill not saved to the server.'));
@@ -600,8 +642,10 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       }
     }
 
+    /* `length + 1` reused the id of whatever bill came after a deleted one. */
+    const nextBillId = (db.bills || []).reduce((m, b) => Math.max(m, Number(b?.id) || 0), 0) + 1;
     const newBill = {
-      id: db.bills.length + 1,
+      id: editing ? initialData.id : nextBillId,
       companyId: currentCompany.id,
       ...formData,
       backendDocId,
@@ -632,18 +676,41 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
       igstTotal: computed.igstTotal,
       gstTotal: computed.gstTotal,
       total: computed.total,
-      paidAmount: 0,
+      paidAmount: editing ? Number(initialData.paidAmount) || 0 : 0,
       status: wantsDraft ? 'Draft' : 'Unpaid',
       sourcePurchaseOrderId: formData.sourcePurchaseOrderId ?? null,
-      createdAt: new Date().toISOString(),
+      createdAt: editing && initialData.createdAt ? initialData.createdAt : new Date().toISOString(),
+      ...(editing ? { updatedAt: new Date().toISOString() } : {}),
     };
 
-    // Batch-tracked lines create their batch records on receipt.
+    // Batch-tracked lines create their batch records on receipt. An edit
+    // updates this bill's batches in place rather than receiving them again:
+    // a batch that is no longer on the bill drops to nothing received, and
+    // keeps its record because sales may already name it.
+    const priorBatches = editing
+      ? (db.batches || []).filter(
+          (b) => b.companyId === currentCompany.id && String(b.sourceBillNumber || '') === String(initialData.number || '')
+        )
+      : [];
+    const priorByKey = new Map(priorBatches.map((b) => [`${b.itemId}::${String(b.batchNo || '').trim()}`, b]));
+    const updatedBatches = new Map();
+    for (const b of priorBatches) updatedBatches.set(b.id, { ...b, qtyIn: 0, sourceBillNumber: newBill.number });
     const newBatches = [];
     let nextBatchId = (db.batches || []).reduce((m, b) => Math.max(m, Number(b.id) || 0), 0);
     for (const l of computed.lines) {
       const master = itemsByIdForBatch.get(String(l.itemId));
       if (!isTracked(master)) continue;
+      const prior = priorByKey.get(`${l.itemId}::${String(l.batchNo || '').trim()}`);
+      if (prior) {
+        const current = updatedBatches.get(prior.id);
+        updatedBatches.set(prior.id, {
+          ...current,
+          mfgDate: l.mfgDate || '',
+          expiryDate: l.expiryDate || '',
+          qtyIn: (Number(current.qtyIn) || 0) + (Number(l.quantity) || 0),
+        });
+        continue;
+      }
       if (String(l.batchNo || '').trim()) {
         newBatches.push({
           id: ++nextBatchId,
@@ -676,14 +743,51 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
      * reference, the base and the rate, so none of them moves when a master is
      * edited later.
      */
-    const tdsEvents = Array.isArray(db.tdsTransactions) ? db.tdsTransactions : [];
+    const allTdsEvents = Array.isArray(db.tdsTransactions) ? db.tdsTransactions : [];
+    // The bill's own live event(s): what deleteBill reverses, found the same way.
+    const priorTds = editing
+      ? allTdsEvents.filter(
+          (e) =>
+            Number(e?.companyId) === Number(currentCompany.id) &&
+            String(e?.sourceType) === 'bill' &&
+            String(e?.sourceId) === String(initialData.id) &&
+            String(e?.status).toLowerCase() === 'posted' &&
+            !e?.reversalOfId
+        )
+      : [];
+    if (priorTds.some((t) => (db.tdsChallanAllocations || []).some((a) => String(a.tdsTransactionId) === String(t.id)))) {
+      notify.error('The TDS on this bill is already allocated to a challan. Remove that allocation first, then change the bill.');
+      return;
+    }
+    /*
+     * An edit is answered the way a delete is: the old events are marked
+     * Reversed and a reversal is written beside them, so the register and the
+     * return keep the history, and the new event is added after. Compliance
+     * events are never rewritten in place.
+     */
+    let nextTdsId = allTdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0);
+    const tdsStamp = new Date().toISOString();
+    const tdsReversals = priorTds.map((e) => ({
+      ...tdsReversalEventFrom(e, { reason: `Bill ${initialData?.number || initialData?.id} changed` }),
+      id: ++nextTdsId,
+    }));
+    const tdsEvents = priorTds.length
+      ? [
+          ...allTdsEvents.map((e) =>
+            priorTds.some((p) => p.id === e.id)
+              ? { ...e, status: 'Reversed', modifiedBy: tdsReversals[0]?.createdBy || 'User', modifiedAt: tdsStamp }
+              : e
+          ),
+          ...tdsReversals,
+        ]
+      : allTdsEvents;
     /* §20: a DRAFT is not a deduction. The compliance event exists only for
        a posted document — a draft bill writes nothing to the register, the
        challan queue or the return. */
     const tdsEvent =
       tdsAmount > 0 && !wantsDraft
         ? {
-            id: tdsEvents.reduce((m, t) => Math.max(m, Number(t?.id) || 0), 0) + 1,
+            id: nextTdsId + 1,
             ...tdsEventFrom(tds, {
               company: currentCompany,
               party: vendorObj,
@@ -694,15 +798,22 @@ export const BillForm = ({ db, setDb, currentCompany, initialData, onClose, ware
           }
         : null;
 
+    const batchesAfter = (db.batches || []).map((b) => updatedBatches.get(b.id) || b);
     setDb({
       ...db,
-      tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : db.tdsTransactions,
-      bills: [...db.bills, newBill],
-      batches: newBatches.length ? [...(db.batches || []), ...newBatches] : db.batches,
-      companies: bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'bill', usedNumber: billNumber, branchId: branchIdForNumbering }),
+      tdsTransactions: tdsEvent ? [...tdsEvents, tdsEvent] : priorTds.length ? tdsEvents : db.tdsTransactions,
+      bills: editing ? db.bills.map((b) => (String(b.id) === String(initialData.id) ? newBill : b)) : [...db.bills, newBill],
+      batches: newBatches.length || updatedBatches.size ? [...batchesAfter, ...newBatches] : db.batches,
+      companies: editing
+        ? db.companies
+        : bumpCompanyNextNumber({ db, companyId: currentCompany.id, voucherKey: 'bill', usedNumber: billNumber, branchId: branchIdForNumbering }),
     });
     onClose?.();
-    notify.success(`Bill created successfully!${newBatches.length ? ` ${newBatches.length} batch(es) received.` : ''}`);
+    notify.success(
+      editing
+        ? 'Bill updated.'
+        : `Bill created successfully!${newBatches.length ? ` ${newBatches.length} batch(es) received.` : ''}`
+    );
   };
 
   // The shared document contract: same keys on a bill as on an invoice.
@@ -2488,13 +2599,48 @@ export const BillsList = ({
    * that has been paid or partly returned is history, so it is cancelled, never
    * removed.
    */
+  /*
+   * Why this bill may not be cancelled or deleted, or ''. Payments against it
+   * have to be reversed first; deleting a paid bill also used to drop those
+   * payments from the browser's copy along with it.
+   */
+  const billChangeBlocked = (bill, verb) => {
+    const paid = Number(bill?.paidAmount || 0);
+    const payments = (Array.isArray(db.payments) ? db.payments : []).filter(
+      (p) =>
+        p?.companyId === currentCompany.id &&
+        String(p?.status || '').toLowerCase() !== 'reversed' &&
+        ((p?.voucherType === 'bill' && Number(p?.voucherId) === Number(bill?.id)) ||
+          (Array.isArray(p?.allocations) &&
+            p.allocations.some((a) => a?.voucherType === 'bill' && Number(a?.voucherId) === Number(bill?.id))))
+    );
+    if (payments.length || paid > 0.005) {
+      return `${bill?.number || 'This bill'} has payments against it — reverse them from the Payments list before you ${verb} the bill.`;
+    }
+    return '';
+  };
+
   const cancelBill = async (bill) => {
+    const blocked = billChangeBlocked(bill, 'cancel');
+    if (blocked) {
+      notify.error(blocked);
+      return;
+    }
     const ok = await confirmDialog({
       title: `Cancel ${bill?.number || 'this bill'}?`,
       message: 'The bill stays on record as cancelled, and stops counting towards payables and stock.',
       confirmLabel: 'Yes, cancel it',
     });
     if (!ok) return;
+    // The server reverses the bill's entry; the browser's copy follows.
+    if (bill?.backendDocId && hasApiSession()) {
+      try {
+        await cancelDocApi('bill', bill.backendDocId);
+      } catch (err) {
+        notify.error(String(err?.message || 'Unable to cancel the bill on the server.'));
+        return;
+      }
+    }
     setDb((prev) => ({
       ...prev,
       bills: (prev.bills || []).map((x) =>
@@ -2746,6 +2892,11 @@ const billStatusReason = (doc, status, company, nowMs) => {
   };
 
   const deleteBill = async (bill) => {
+    const blocked = billChangeBlocked(bill, 'delete');
+    if (blocked) {
+      notify.error(blocked);
+      return;
+    }
     const usedInDebitNotes = (Array.isArray(db.debitNotes) ? db.debitNotes : []).some(
       (dn) => dn?.companyId === currentCompany.id && Number(dn?.originalBillId) === Number(bill.id)
     );

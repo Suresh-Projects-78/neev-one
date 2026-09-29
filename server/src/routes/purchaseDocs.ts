@@ -16,6 +16,7 @@ import { billPostingLines,
 import { allocateNumber, ensureDefaultSeries } from '../services/numbering.js';
 import { isFeatureEnabled } from '../services/features.js';
 import { FxError, baseCurrencyFor, isBase, rateFor, toBase } from '../services/fx.js';
+import { SettledDocument, assertPurchaseDocRemovable } from '../services/settledDocGuard.js';
 
 /**
  * Bills, credit notes and debit notes.
@@ -366,6 +367,131 @@ function register(kind: DocKind) {
   );
 
   /**
+   * Changing a saved document.
+   *
+   * The screens have always offered Edit, and the expense form sent it here —
+   * to a route that did not exist, so every edit of a synced expense ended in
+   * a 404 and changed nothing. A posted document is never edited in place:
+   * its entry is reversed, the row is updated, and a fresh entry is posted,
+   * all in one transaction so the books cannot be left holding neither. A
+   * document something already leans on — a payment, a note, a settlement —
+   * is refused, as it is for delete. A locked period refuses on its own,
+   * because both the reversal and the new posting go through the ledger.
+   */
+  purchaseDocsRouter.patch(
+    `/orgs/:orgId/${cfg.path}/:docId`,
+    requirePermission(cfg.module, PermissionAction.EDIT, cfg.resource),
+    async (req, res) => {
+      if (!orgOk(req, res)) return;
+      if (!(await featureOn(req, res))) return;
+      const { accountId, orgId, branchId } = req.tenant!;
+      const userId = req.auth!.userId;
+
+      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId, ...ownDocsWhere(req) } });
+      if (!doc) return res.status(404).json({ error: `${cfg.resource} not found` });
+
+      try {
+        await assertPurchaseDocRemovable({ accountId, orgId, kind, doc, verb: 'change' });
+      } catch (e: any) {
+        if (e instanceof SettledDocument) return res.status(e.status).json({ error: e.message, code: e.code });
+        throw e;
+      }
+
+      const body = docSchema.parse(req.body);
+      const baseCurrency = await baseCurrencyFor(accountId, orgId);
+      const docCurrency = String(body.currency || doc.currency || baseCurrency).toUpperCase();
+      let fxRate = 1;
+      try {
+        fxRate = isBase(docCurrency, baseCurrency)
+          ? 1
+          : await rateFor({ accountId, orgId, currency: docCurrency, date: body.date, baseCurrency });
+      } catch (e: any) {
+        if (e instanceof FxError) return res.status(400).json({ error: e.message });
+        throw e;
+      }
+
+      const number = String(body.number || '').trim() || doc.number;
+      try {
+        const updated = await prisma.$transaction(
+          async (tx) => {
+            const entries = await tx.journalEntry.findMany({
+              where: { accountId, orgId, sourceDocType: kind, sourceDocId: doc.id, status: 'POSTED' },
+              select: { id: true },
+            });
+            for (const e of entries) {
+              await reverseEntry(
+                { accountId, orgId, branchId, userId, entryId: e.id, date: doc.date, narration: `${cfg.resource} ${doc.number} changed` },
+                tx as any
+              );
+            }
+
+            const row = await (tx as any)[cfg.model].update({
+              where: { id: doc.id },
+              data: {
+                number,
+                date: body.date,
+                dueDate: body.dueDate ?? null,
+                refNo: body.refNo ?? null,
+                refDate: body.refDate ?? null,
+                againstDocId: body.againstDocId ?? null,
+                partyId: body.partyId ?? null,
+                partyName: body.partyName,
+                partyGstin: body.partyGstin ?? null,
+                placeOfSupplyState: body.placeOfSupplyState ?? null,
+                taxType: body.taxType ?? null,
+                subtotal: new Prisma.Decimal(num(body.subtotal).toFixed(2)),
+                cgstTotal: new Prisma.Decimal(num(body.cgstTotal).toFixed(2)),
+                sgstTotal: new Prisma.Decimal(num(body.sgstTotal).toFixed(2)),
+                igstTotal: new Prisma.Decimal(num(body.igstTotal).toFixed(2)),
+                gstTotal: new Prisma.Decimal(num(body.gstTotal).toFixed(2)),
+                total: new Prisma.Decimal(num(body.total).toFixed(2)),
+                status: body.status || doc.status,
+                itemsJson: JSON.stringify(body.items || []),
+                extrasJson: extrasOf(req.body),
+                currency: docCurrency,
+                exchangeRate: new Prisma.Decimal(String(fxRate)),
+                baseTotal: new Prisma.Decimal(toBase(num(body.total), fxRate).toFixed(2)),
+                ...(cfg.extraData ? cfg.extraData(body) : {}),
+              },
+            });
+
+            await postEntry(
+              {
+                accountId,
+                orgId,
+                branchId,
+                userId,
+                date: body.date,
+                journalCode: cfg.journalCode,
+                narration: `${cfg.resource} ${number} - ${body.partyName}${fxRate === 1 ? '' : ` (${docCurrency} at ${fxRate})`}`,
+                sourceDocType: kind,
+                sourceDocId: doc.id,
+                lines: cfg.lines({
+                  partyId: body.partyId ?? null,
+                  partyName: body.partyName,
+                  subtotal: toBase(num(body.subtotal), fxRate),
+                  cgstTotal: toBase(num(body.cgstTotal), fxRate),
+                  sgstTotal: toBase(num(body.sgstTotal), fxRate),
+                  igstTotal: toBase(num(body.igstTotal), fxRate),
+                  total: toBase(num(body.total), fxRate),
+                  tdsAmount: toBase(num((req.body as any)?.tdsAmount), fxRate),
+                }),
+              },
+              tx as any
+            );
+            return row;
+          },
+          { timeout: 20_000 }
+        );
+        res.json({ document: normalize(updated) });
+      } catch (e: any) {
+        if (String(e?.code) === 'P2002') return res.status(409).json({ error: `Number ${number} is already used` });
+        return res.status(Number(e?.status || 400)).json({ error: `Not saved: ${String(e?.message || e)}` });
+      }
+    }
+  );
+
+  /**
    * Settlement detail — which bills a note raised on account has been knocked
    * off against, and how much against each.
    *
@@ -404,6 +530,50 @@ function register(kind: DocKind) {
     }
   );
 
+  /**
+   * Cancelling: the document stays, marked Cancelled, and its entry is
+   * reversed. The bills list offered Cancel and changed only the browser's
+   * copy, so a cancelled bill went on sitting in the server's payables.
+   * Refused while something leans on the document, as delete is.
+   */
+  purchaseDocsRouter.post(
+    `/orgs/:orgId/${cfg.path}/:docId/cancel`,
+    requirePermission(cfg.module, PermissionAction.EDIT, cfg.resource),
+    async (req, res) => {
+      if (!orgOk(req, res)) return;
+      const { accountId, orgId, branchId } = req.tenant!;
+      const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId, ...ownDocsWhere(req) } });
+      if (!doc) return res.status(404).json({ error: `${cfg.resource} not found` });
+      if (String(doc.status || '').toLowerCase() === 'cancelled') return res.status(409).json({ error: 'Already cancelled' });
+
+      try {
+        await assertPurchaseDocRemovable({ accountId, orgId, kind, doc, verb: 'cancel' });
+      } catch (e: any) {
+        if (e instanceof SettledDocument) return res.status(e.status).json({ error: e.message, code: e.code });
+        throw e;
+      }
+
+      try {
+        const updated = await prisma.$transaction(async (tx) => {
+          const entries = await tx.journalEntry.findMany({
+            where: { accountId, orgId, sourceDocType: kind, sourceDocId: doc.id, status: 'POSTED' },
+            select: { id: true },
+          });
+          for (const e of entries) {
+            await reverseEntry(
+              { accountId, orgId, branchId, userId: req.auth!.userId, entryId: e.id, narration: `${cfg.resource} ${doc.number} cancelled` },
+              tx as any
+            );
+          }
+          return (tx as any)[cfg.model].update({ where: { id: doc.id }, data: { status: 'Cancelled' } });
+        });
+        res.json({ document: normalize(updated) });
+      } catch (e: any) {
+        return res.status(Number(e?.status || 400)).json({ error: `Not cancelled: ${String(e?.message || e)}` });
+      }
+    }
+  );
+
   /** Removal reverses the posting by contra entry; posted history is never edited. */
   purchaseDocsRouter.delete(
     `/orgs/:orgId/${cfg.path}/:docId`,
@@ -414,6 +584,14 @@ function register(kind: DocKind) {
 
       const doc = await table().findFirst({ where: { id: String(req.params.docId), accountId, orgId, ...ownDocsWhere(req) } });
       if (!doc) return res.status(404).json({ error: `${cfg.resource} not found` });
+
+      // Not while a payment, a note or a settlement still leans on it.
+      try {
+        await assertPurchaseDocRemovable({ accountId, orgId, kind, doc });
+      } catch (e: any) {
+        if (e instanceof SettledDocument) return res.status(e.status).json({ error: e.message, code: e.code });
+        throw e;
+      }
 
       const entries = await prisma.journalEntry.findMany({
         where: { accountId, orgId, sourceDocType: kind, sourceDocId: doc.id, status: 'POSTED' },
