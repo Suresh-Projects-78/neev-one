@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { postJournalToLedger, reverseJournalOnLedger } from '@ui/utils/journalSync';
+import { postJournalToLedger } from '@ui/utils/journalSync';
+import { reverseTransferGst as reverseTransferGstFor } from './transferGst';
 import { notify, confirmDialog } from '@ui/components/ui/notify';
 import { AlertTriangle, Check, ClipboardCheck, Download, MoreVertical, Package, PackageCheck, Pencil, Plus, Trash2, Truck, X } from 'lucide-react';
 import { EmptyState, StatusPill, TableTotals } from '@ui/components/ui/Primitives';
@@ -1582,37 +1583,8 @@ export const StockTransfersList = ({
    * They lived inline in the row menu, which is why the document view could
    * not offer them: there was nothing to call.
    */
-  /*
-   * Undo the IGST journal a dispatched inter-state transfer posted.
-   *
-   * Submitting posts Dr Input IGST / Cr Output IGST to the ledger; rejecting
-   * or cancelling the transfer left that entry standing, on the server too.
-   * Reversed the way the journal list reverses — an opposite entry, never an
-   * erasure — and on the server first, so a refusal there stops the reject
-   * rather than leaving the two books apart. Returns false when it could not.
-   */
-  const reverseTransferGst = async (t) => {
-    const jid = t?.gstJournalId;
-    if (!jid) return true;
-    const journal = safeArray(db?.journalEntries).find(
-      (j) => j.companyId === currentCompany?.id && String(j.id) === String(jid)
-    );
-    if (!journal || String(journal.status || '').toUpperCase() === 'REVERSED') return true;
-    if (journal.backendEntryId) {
-      const { reversed } = await reverseJournalOnLedger(journal);
-      if (!reversed) return false;
-    }
-    setDb((prev) => ({
-      ...prev,
-      journalEntries: (prev.journalEntries || []).map((j) =>
-        j.companyId === currentCompany?.id && String(j.id) === String(jid) ? { ...j, status: 'REVERSED' } : j
-      ),
-      stockTransfers: (prev.stockTransfers || []).map((x) =>
-        normalizeId(x?.id) === normalizeId(t?.id) ? { ...x, gstJournalId: null, gstJournalReversedId: jid } : x
-      ),
-    }));
-    return true;
-  };
+  const reverseTransferGst = (t) =>
+    reverseTransferGstFor({ db, setDb, companyId: currentCompany?.id, transfer: t });
 
   const rejectTransfer = async (t) => {
     const ok = await confirmDialog({
