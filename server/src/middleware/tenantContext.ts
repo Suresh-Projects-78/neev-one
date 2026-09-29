@@ -161,6 +161,35 @@ export async function requireTenantContext(req: Request, res: Response, next: Ne
   next();
 }
 
+const isOrgCreator = async (accountId: string, orgId: string, userId: string) => {
+  const org = await prisma.org.findFirst({ where: { accountId, id: orgId }, select: { createdByUserId: true } });
+  return org?.createdByUserId === userId;
+};
+
+/**
+ * Whether this person may act in this branch / warehouse, for routes that
+ * name one in the body rather than the header.
+ *
+ * The same rule the header path above applies — an explicit grant, or the
+ * org's creator reaching anything that is really in their org — in one place.
+ * Stock adjustments and inter-branch transfers read the grant tables
+ * directly, so the creator of a company was told "No access to warehouse"
+ * there and nowhere else.
+ */
+export async function userMayUseBranch(accountId: string, orgId: string, userId: string, branchId: string) {
+  const m = await prisma.userBranchMembership.findFirst({ where: { accountId, orgId, branchId, userId }, select: { id: true } });
+  if (m) return true;
+  if (!(await isOrgCreator(accountId, orgId, userId))) return false;
+  return Boolean(await prisma.branch.findFirst({ where: { id: branchId, accountId, orgId }, select: { id: true } }));
+}
+
+export async function userMayUseWarehouse(accountId: string, orgId: string, userId: string, warehouseId: string) {
+  const m = await prisma.userWarehouseAccess.findFirst({ where: { accountId, orgId, warehouseId, userId }, select: { id: true } });
+  if (m) return true;
+  if (!(await isOrgCreator(accountId, orgId, userId))) return false;
+  return Boolean(await prisma.warehouse.findFirst({ where: { id: warehouseId, accountId, orgId }, select: { id: true } }));
+}
+
 /**
  * Enforces warehouse access, for routes that actually operate on stock.
  *

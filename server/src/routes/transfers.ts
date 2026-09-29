@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireTenantContext } from '../middleware/tenantContext.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { PermissionAction, TransferStatus } from '../constants/enums.js';
+import { userMayUseBranch, userMayUseWarehouse } from '../middleware/tenantContext.js';
 
 export const transfersRouter = Router();
 transfersRouter.use(requireAuth, requireTenantContext);
@@ -25,15 +26,9 @@ const createTransferSchema = z.object({
     .min(1),
 });
 
-async function ensureUserHasBranch(accountId: string, orgId: string, userId: string, branchId: string) {
-  const m = await prisma.userBranchMembership.findFirst({ where: { accountId, orgId, userId, branchId } });
-  return Boolean(m);
-}
-
-async function ensureUserHasWarehouse(accountId: string, orgId: string, userId: string, warehouseId: string) {
-  const m = await prisma.userWarehouseAccess.findFirst({ where: { accountId, orgId, userId, warehouseId } });
-  return Boolean(m);
-}
+// The shared rule, org-creator safety net included; see tenantContext.ts.
+const ensureUserHasBranch = userMayUseBranch;
+const ensureUserHasWarehouse = userMayUseWarehouse;
 
 async function nextTransferNo(orgId: string): Promise<string> {
   // In production use a dedicated counter table with row-level lock.
